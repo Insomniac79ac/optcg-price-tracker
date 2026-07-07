@@ -1,50 +1,35 @@
-# Skeleton only — no services are runnable yet. Placeholders for future implementation.
-
-version: "3.9"
+# worker and web will be added back once those services are implemented.
 
 services:
   postgres:
-    # image: postgres:16
-    # ports:
-    #   - "5432:5432"
-    # environment:
-    #   POSTGRES_USER: opcg
-    #   POSTGRES_PASSWORD: opcg
-    #   POSTGRES_DB: opcg
-    # volumes:
-    #   - postgres_data:/var/lib/postgresql/data
+    image: postgres:16
+    container_name: opcg-postgres
+    environment:
+      POSTGRES_DB: opcg
+      POSTGRES_USER: opcg
+      POSTGRES_PASSWORD: opcg
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
-    # image: redis:7
-    # ports:
-    #   - "6379:6379"
+    image: redis:7
+    container_name: opcg-redis
+    ports:
+      - "6379:6379"
 
   api:
-    # build: ./services/api
-    # ports:
-    #   - "8000:8000"
-    # env_file:
-    #   - .env
-    # depends_on:
-    #   - postgres
-    #   - redis
+    build: ./services/api
+    container_name: opcg-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://opcg:opcg@postgres:5432/opcg
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
 
-  worker:
-    # build: ./services/worker
-    # env_file:
-    #   - .env
-    # depends_on:
-    #   - postgres
-    #   - redis
-
-  web:
-    # build: ./apps/web
-    # ports:
-    #   - "3000:3000"
-    # env_file:
-    #   - .env
-    # depends_on:
-    #   - api
-
-# volumes:
-#   postgres_data:
+volumes:
+  postgres_data:
