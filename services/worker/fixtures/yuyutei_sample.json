@@ -1,0 +1,12 @@
+{
+  "OP01-001": {
+    "sell_price": 1200,
+    "buy_price": 800,
+    "stock_status": "in_stock"
+  },
+  "OP01-013": {
+    "sell_price": 450,
+    "buy_price": 300,
+    "stock_status": "out_of_stock"
+  }
+}

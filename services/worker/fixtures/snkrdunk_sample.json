@@ -1,0 +1,15 @@
+{
+  "OP01-001": {
+    "floor_price": 1500,
+    "listing_count": 12,
+    "sold_prices": [
+      { "price_jpy": 1400, "observed_at": "2026-07-01T00:00:00Z" },
+      { "price_jpy": 1450, "observed_at": "2026-07-03T00:00:00Z" }
+    ]
+  },
+  "OP01-013": {
+    "floor_price": 600,
+    "listing_count": 3,
+    "sold_prices": []
+  }
+}

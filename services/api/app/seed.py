@@ -1,5 +1,5 @@
 from app.db import SessionLocal
-from app.models import Card, Source
+from app.models import Card, Source, SourceCardMapping
 
 SOURCES = [
     {"name": "yuyutei", "base_url": "https://yuyu-tei.jp"},
@@ -17,6 +17,15 @@ CARDS = [
     {"card_code": "OP03-013", "name_en": "Yamato", "name_jp": "ヤマト", "set_code": "OP03", "rarity": "SR", "variant": "base", "language": "jp"},
     {"card_code": "OP04-004", "name_en": "Shanks", "name_jp": "シャンクス", "set_code": "OP04", "rarity": "SEC", "variant": "base", "language": "jp"},
     {"card_code": "OP05-119", "name_en": "Kaido", "name_jp": "カイドウ", "set_code": "OP05", "rarity": "SEC", "variant": "alt_art", "language": "jp"},
+]
+
+# Maps seeded cards to seeded sources. `source_card_id` matches the keys used
+# in services/worker/fixtures/*.json so the mock worker has data to read.
+MAPPINGS = [
+    {"card_code": "OP01-001", "source_name": "yuyutei", "source_card_id": "OP01-001", "source_url": "https://yuyu-tei.jp/sell/opc/card/OP01-001"},
+    {"card_code": "OP01-001", "source_name": "snkrdunk", "source_card_id": "OP01-001", "source_url": "https://snkrdunk.com/cards/OP01-001"},
+    {"card_code": "OP01-013", "source_name": "yuyutei", "source_card_id": "OP01-013", "source_url": "https://yuyu-tei.jp/sell/opc/card/OP01-013"},
+    {"card_code": "OP01-013", "source_name": "snkrdunk", "source_card_id": "OP01-013", "source_url": "https://snkrdunk.com/cards/OP01-013"},
 ]
 
 
@@ -42,6 +51,29 @@ def seed() -> None:
             )
             if exists is None:
                 db.add(Card(**card_data))
+
+        db.flush()
+
+        for mapping_data in MAPPINGS:
+            card = db.query(Card).filter_by(card_code=mapping_data["card_code"]).one_or_none()
+            source = db.query(Source).filter_by(name=mapping_data["source_name"]).one_or_none()
+            if card is None or source is None:
+                continue
+
+            exists = (
+                db.query(SourceCardMapping)
+                .filter_by(card_id=card.id, source_id=source.id)
+                .one_or_none()
+            )
+            if exists is None:
+                db.add(
+                    SourceCardMapping(
+                        card_id=card.id,
+                        source_id=source.id,
+                        source_card_id=mapping_data["source_card_id"],
+                        source_url=mapping_data["source_url"],
+                    )
+                )
 
         db.commit()
     finally:
