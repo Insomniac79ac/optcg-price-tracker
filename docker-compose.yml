@@ -25,7 +25,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://opcg:opcg@postgres:5432/opcg
+      DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - postgres
