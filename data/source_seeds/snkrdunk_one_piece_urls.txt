@@ -1,0 +1,3 @@
+# Seed URLs for SNKRDUNK One Piece Card Game discovery.
+# One public search/listing URL per line.
+https://snkrdunk.com/trading-cards/search?category=one-piece-card-game

@@ -1,23 +1,36 @@
 import argparse
+import logging
 
 from sqlalchemy.orm import Session
 
 from worker.adapters.base import SourceAdapter
 from worker.adapters.mock_snkrdunk import MockSnkrdunkAdapter
 from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
+from worker.adapters.yuyutei import YuyuTeiAdapter
 from worker.db import SessionLocal
 from worker.models import PriceObservation, RawSnapshot, Source, SourceCardMapping
 from worker.settings import settings
 
-ADAPTERS: dict[str, SourceAdapter] = {
+logger = logging.getLogger(__name__)
+
+MOCK_ADAPTERS: dict[str, SourceAdapter] = {
     "yuyutei": MockYuyuTeiAdapter(),
     "snkrdunk": MockSnkrdunkAdapter(),
 }
 
 
-def refresh_prices(limit: int, db: Session) -> int:
-    if settings.SCRAPING_MODE != "mock":
-        raise NotImplementedError("Only SCRAPING_MODE=mock is supported right now.")
+def _build_adapters() -> dict[str, SourceAdapter]:
+    if settings.SCRAPING_MODE == "mock":
+        return MOCK_ADAPTERS
+    if settings.SCRAPING_MODE == "live":
+        # Only yuyutei has a live adapter so far; snkrdunk is skipped below.
+        return {"yuyutei": YuyuTeiAdapter()}
+    raise ValueError(f"Unknown SCRAPING_MODE '{settings.SCRAPING_MODE}'.")
+
+
+def refresh_prices(limit: int, db: Session, adapters: dict[str, SourceAdapter] | None = None) -> int:
+    if adapters is None:
+        adapters = _build_adapters()
 
     sources_by_id = {source.id: source for source in db.query(Source).all()}
     mappings = (
@@ -30,12 +43,25 @@ def refresh_prices(limit: int, db: Session) -> int:
         if source is None:
             continue
 
-        adapter = ADAPTERS.get(source.name)
+        adapter = adapters.get(source.name)
         if adapter is None:
-            print(f"No adapter for source '{source.name}', skipping mapping {mapping.id}.")
+            logger.info(
+                "No %s adapter for source '%s', skipping mapping %s.",
+                settings.SCRAPING_MODE,
+                source.name,
+                mapping.id,
+            )
             continue
 
-        snapshot_data = adapter.fetch_card(mapping)
+        try:
+            snapshot_data = adapter.fetch_card(mapping)
+        except Exception:
+            logger.exception(
+                "Failed to fetch mapping %s from source '%s', skipping.",
+                mapping.id,
+                source.name,
+            )
+            continue
 
         raw_snapshot = RawSnapshot(
             source_id=source.id,
@@ -49,7 +75,17 @@ def refresh_prices(limit: int, db: Session) -> int:
         db.add(raw_snapshot)
         db.flush()
 
-        for observation in adapter.parse_snapshot(snapshot_data):
+        try:
+            observations = adapter.parse_snapshot(snapshot_data)
+        except Exception:
+            logger.exception(
+                "Failed to parse mapping %s from source '%s', skipping.",
+                mapping.id,
+                source.name,
+            )
+            continue
+
+        for observation in observations:
             db.add(
                 PriceObservation(
                     card_id=mapping.card_id,

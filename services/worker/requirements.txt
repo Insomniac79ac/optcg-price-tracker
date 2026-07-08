@@ -2,3 +2,5 @@ sqlalchemy>=2.0
 psycopg[binary]
 pydantic-settings
 pytest
+httpx
+beautifulsoup4
