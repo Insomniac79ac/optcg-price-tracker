@@ -14,6 +14,12 @@ export function AppHeader() {
           <Link href="/dashboard" className="hover:text-neutral-100">
             Dashboard
           </Link>
+          <Link
+            href="/admin/snkrdunk-candidates"
+            className="hover:text-neutral-100"
+          >
+            SNKRDUNK candidates
+          </Link>
         </nav>
       </div>
     </header>
