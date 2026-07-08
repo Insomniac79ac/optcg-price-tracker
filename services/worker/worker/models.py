@@ -120,6 +120,9 @@ class PriceObservation(Base):
     raw_snapshot_id: Mapped[int | None] = mapped_column(
         ForeignKey("raw_snapshots.id", ondelete="SET NULL"), nullable=True
     )
+    candidate_id: Mapped[int | None] = mapped_column(
+        ForeignKey("snkrdunk_candidates.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
 
 class SnkrdunkDiscoveryRun(Base):
