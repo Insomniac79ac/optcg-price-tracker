@@ -5,14 +5,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
 
-RUN_STATUSES = ("running", "completed", "completed_with_warnings", "blocked", "failed")
+RUN_STATUSES = (
+    "running",
+    "completed",
+    "completed_with_warnings",
+    "blocked",
+    "failed",
+    "manual_import",
+)
 
 
 class SnkrdunkDiscoveryRun(Base):
     __tablename__ = "snkrdunk_discovery_runs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('running', 'completed', 'completed_with_warnings', 'blocked', 'failed')",
+            "status IN ('running', 'completed', 'completed_with_warnings', 'blocked', "
+            "'failed', 'manual_import')",
             name="ck_snkrdunk_discovery_runs_status",
         ),
     )

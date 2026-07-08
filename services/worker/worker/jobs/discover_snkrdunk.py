@@ -13,22 +13,8 @@ from worker.adapters.snkrdunk_discovery import (
     is_blocked_response,
 )
 from worker.db import SessionLocal
-from worker.matching.opcg_normalizer import (
-    extract_card_code,
-    extract_rarity,
-    extract_set_code,
-    extract_variant,
-    normalize_title,
-)
-from worker.matching.snkrdunk_matcher import match_candidate
-from worker.models import (
-    Card,
-    RawSnapshot,
-    SnkrdunkCandidate,
-    SnkrdunkDiscoveryRun,
-    Source,
-    SourceCardMapping,
-)
+from worker.matching.candidate_store import apply_match, get_snkrdunk_source, upsert_candidate
+from worker.models import Card, RawSnapshot, SnkrdunkDiscoveryRun
 from worker.path_utils import find_project_root
 from worker.settings import settings
 
@@ -77,95 +63,6 @@ def _read_seed_urls(path: Path) -> list[str]:
     return urls
 
 
-def _get_snkrdunk_source(db: Session) -> Source:
-    source = db.query(Source).filter_by(name="snkrdunk").one_or_none()
-    if source is None:
-        raise RuntimeError("No 'snkrdunk' row in sources table; run db seed data first.")
-    return source
-
-
-def _upsert_candidate(
-    db: Session, discovery_run_id: int, parsed: SnkrdunkCandidateData
-) -> tuple[SnkrdunkCandidate, bool]:
-    basis_text = parsed.title or parsed.raw_text
-    normalized = normalize_title(basis_text)
-    card_code = extract_card_code(basis_text)
-    set_code = extract_set_code(basis_text, card_code)
-    rarity = extract_rarity(basis_text)
-    variant = extract_variant(basis_text)
-
-    existing = db.query(SnkrdunkCandidate).filter_by(source_url=parsed.source_url).one_or_none()
-
-    fields = dict(
-        discovery_run_id=discovery_run_id,
-        title=parsed.title,
-        price_jpy=parsed.price_jpy,
-        image_url=parsed.image_url,
-        listing_count=parsed.listing_count,
-        condition_label=parsed.condition_label,
-        raw_text=parsed.raw_text,
-        normalized_title=normalized,
-        detected_card_code=card_code,
-        detected_set_code=set_code,
-        detected_rarity=rarity,
-        detected_variant=variant,
-    )
-
-    if existing is None:
-        candidate = SnkrdunkCandidate(source_url=parsed.source_url, **fields)
-        db.add(candidate)
-        db.flush()
-        return candidate, True
-
-    for key, value in fields.items():
-        setattr(existing, key, value)
-    return existing, False
-
-
-def _apply_match(
-    db: Session,
-    source: Source,
-    candidate: SnkrdunkCandidate,
-    cards: list[Card],
-    auto_match_threshold: float,
-) -> str:
-    result = match_candidate(candidate, cards, auto_match_threshold)
-    candidate.matched_card_id = result.matched_card_id
-    candidate.match_confidence = result.match_confidence
-    candidate.match_status = result.match_status
-
-    if result.match_status == "auto_matched":
-        existing_mapping = (
-            db.query(SourceCardMapping)
-            .filter_by(card_id=result.matched_card_id, source_id=source.id)
-            .one_or_none()
-        )
-        if existing_mapping is not None and existing_mapping.manual_verified:
-            logger.info(
-                "Not overriding manually verified mapping for card_id=%s source=snkrdunk (candidate %s).",
-                result.matched_card_id,
-                candidate.source_url,
-            )
-        elif existing_mapping is not None:
-            existing_mapping.source_card_id = candidate.detected_card_code or candidate.source_url
-            existing_mapping.source_url = candidate.source_url
-            existing_mapping.match_confidence = result.match_confidence
-            existing_mapping.manual_verified = False
-        else:
-            db.add(
-                SourceCardMapping(
-                    card_id=result.matched_card_id,
-                    source_id=source.id,
-                    source_card_id=candidate.detected_card_code or candidate.source_url,
-                    source_url=candidate.source_url,
-                    match_confidence=result.match_confidence,
-                    manual_verified=False,
-                )
-            )
-
-    return result.match_status
-
-
 def discover_snkrdunk(
     db: Session,
     max_pages: int = 5,
@@ -185,7 +82,7 @@ def discover_snkrdunk(
     owns_adapter = adapter is None
     adapter = adapter or SnkrdunkDiscoveryAdapter()
 
-    source = _get_snkrdunk_source(db)
+    source = get_snkrdunk_source(db)
     cards = db.query(Card).all()
 
     run = SnkrdunkDiscoveryRun(seed_url=seed_urls[0] if seed_urls else "", status="running")
@@ -257,7 +154,7 @@ def discover_snkrdunk(
                         break
 
                     try:
-                        candidate, _is_new = _upsert_candidate(db, run.id, parsed)
+                        candidate, _is_new = upsert_candidate(db, run.id, parsed)
                     except Exception:
                         logger.exception("Failed to store candidate %s, skipping.", parsed.source_url)
                         continue
@@ -267,7 +164,7 @@ def discover_snkrdunk(
                     if candidate.match_status != "pending":
                         continue
 
-                    status = _apply_match(db, source, candidate, cards, threshold)
+                    status = apply_match(db, source, candidate, cards, threshold)
                     if status == "auto_matched":
                         candidates_matched += 1
                         logger.info(
