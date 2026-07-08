@@ -1,10 +1,14 @@
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
 import pytest
 
+from worker.adapters.base import PriceObservationData, RawSnapshotData
 from worker.adapters.yuyutei import YuyuTeiAdapter, YuyuTeiFetchError
+from worker.jobs.refresh_prices import refresh_prices
+from worker.models import Card, PriceObservation, RawSnapshot, Source, SourceCardMapping
 
 FIXTURE_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "yuyutei_product_sample.html"
 FIXTURE_HTML = FIXTURE_PATH.read_text(encoding="utf-8")
@@ -130,3 +134,109 @@ def test_fetch_card_rate_limits_between_consecutive_requests():
     adapter.fetch_card(mapping)
 
     assert sleep_calls == [pytest.approx(0.09)]
+
+
+class StubAdapter:
+    """Minimal SourceAdapter stand-in for exercising the refresh job without
+    real network calls."""
+
+    def __init__(self, source_name: str, fail_for: set[str] | None = None):
+        self.source_name = source_name
+        self._fail_for = fail_for or set()
+
+    def fetch_card(self, mapping) -> RawSnapshotData:
+        if mapping.source_card_id in self._fail_for:
+            raise YuyuTeiFetchError(f"boom: {mapping.source_card_id}")
+        return RawSnapshotData(
+            source_url=mapping.source_url or "",
+            fetched_at=datetime.now(timezone.utc),
+            http_status=200,
+            content_hash="deadbeef",
+            raw_content="<html></html>",
+            parser_version="stub-v1",
+        )
+
+    def parse_snapshot(self, snapshot: RawSnapshotData) -> list[PriceObservationData]:
+        return [
+            PriceObservationData(
+                price_type="sell",
+                price_jpy=1000,
+                observed_at=snapshot.fetched_at,
+                stock_status="in_stock",
+            )
+        ]
+
+
+def seed_source_and_card(db_session, source_name: str, card_code: str) -> tuple[Source, Card]:
+    source = Source(name=source_name, base_url=f"https://{source_name}.example")
+    card = Card(
+        card_code=card_code, name_en="Test Card", name_jp=None,
+        set_code="OP01", rarity="L", variant=None, language="jp",
+    )
+    db_session.add(source)
+    db_session.add(card)
+    db_session.flush()
+    return source, card
+
+
+def make_source_card_mapping(db_session, source: Source, card: Card, source_card_id: str) -> SourceCardMapping:
+    mapping = SourceCardMapping(
+        card_id=card.id,
+        source_id=source.id,
+        source_card_id=source_card_id,
+        source_url=f"https://yuyu-tei.jp/sell/opc/card/op01/{source_card_id}",
+    )
+    db_session.add(mapping)
+    db_session.flush()
+    return mapping
+
+
+def test_live_mode_skips_unsupported_sources_safely(db_session):
+    yuyutei_source, yuyutei_card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    snkrdunk_source, snkrdunk_card = seed_source_and_card(db_session, "snkrdunk", "OP01-002")
+    make_source_card_mapping(db_session, yuyutei_source, yuyutei_card, "OP01-001")
+    make_source_card_mapping(db_session, snkrdunk_source, snkrdunk_card, "OP01-002")
+
+    # Simulates SCRAPING_MODE=live, where only yuyutei has a live adapter.
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    processed = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert processed == 1
+    observations = db_session.query(PriceObservation).all()
+    assert len(observations) == 1
+    assert observations[0].card_id == yuyutei_card.id
+
+
+def test_failed_fetch_does_not_crash_refresh_job(db_session):
+    source, card_ok = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    card_fail = Card(
+        card_code="OP01-002", name_en="Test Card 2", name_jp=None,
+        set_code="OP01", rarity="L", variant=None, language="jp",
+    )
+    db_session.add(card_fail)
+    db_session.flush()
+    make_source_card_mapping(db_session, source, card_fail, "OP01-002")
+    make_source_card_mapping(db_session, source, card_ok, "OP01-001")
+
+    adapters = {"yuyutei": StubAdapter("yuyutei", fail_for={"OP01-002"})}
+
+    processed = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert processed == 1
+    observations = db_session.query(PriceObservation).all()
+    assert len(observations) == 1
+    assert observations[0].card_id == card_ok.id
+
+
+def test_dry_run_creates_no_database_rows(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    processed = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
+
+    assert processed == 1
+    assert db_session.query(RawSnapshot).count() == 0
+    assert db_session.query(PriceObservation).count() == 0
