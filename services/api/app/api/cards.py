@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Card, PriceObservation
+from app.models import Card, PriceObservation, Source
 from app.schemas import CardOut, PriceObservationOut
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -29,8 +29,25 @@ def get_card_prices(card_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Card not found")
 
     stmt = (
-        select(PriceObservation)
+        select(PriceObservation, Source.name)
+        .join(Source, Source.id == PriceObservation.source_id)
         .where(PriceObservation.card_id == card_id)
         .order_by(PriceObservation.observed_at.asc())
     )
-    return db.scalars(stmt).all()
+    rows = db.execute(stmt).all()
+    return [
+        PriceObservationOut(
+            id=observation.id,
+            card_id=observation.card_id,
+            source_id=observation.source_id,
+            source=source_name,
+            observed_at=observation.observed_at,
+            price_type=observation.price_type,
+            price_jpy=observation.price_jpy,
+            condition_label=observation.condition_label,
+            stock_status=observation.stock_status,
+            listing_count=observation.listing_count,
+            raw_snapshot_id=observation.raw_snapshot_id,
+        )
+        for observation, source_name in rows
+    ]

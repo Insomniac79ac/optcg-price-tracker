@@ -75,6 +75,7 @@ def test_get_card_prices_ordered_by_observed_at(client, seeded_db):
     assert response.status_code == 200
     data = response.json()
     assert [p["price_jpy"] for p in data] == [1000, 1200]
+    assert all(p["source"] == "yuyutei" for p in data)
 
 
 def test_get_card_prices_not_found_returns_404(client, seeded_db):

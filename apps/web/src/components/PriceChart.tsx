@@ -2,6 +2,7 @@
 
 import {
   CartesianGrid,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -17,10 +18,19 @@ interface PriceChartProps {
   observations: PriceObservation[];
 }
 
-interface ChartPoint {
-  observed_at: string;
-  price_jpy: number;
+interface SeriesDef {
+  key: string;
+  label: string;
+  source: string;
+  priceType: string;
+  color: string;
 }
+
+const SERIES: SeriesDef[] = [
+  { key: "yuyutei_sell", label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell", color: "#38bdf8" },
+  { key: "yuyutei_buy", label: "Yuyu-Tei buy", source: "yuyutei", priceType: "buy", color: "#a78bfa" },
+  { key: "snkrdunk_floor", label: "SNKRDUNK floor", source: "snkrdunk", priceType: "floor", color: "#34d399" },
+];
 
 export function PriceChart({ observations }: PriceChartProps) {
   if (observations.length === 0) {
@@ -31,16 +41,39 @@ export function PriceChart({ observations }: PriceChartProps) {
     );
   }
 
-  const data: ChartPoint[] = observations
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(a.observed_at).getTime() - new Date(b.observed_at).getTime(),
-    )
-    .map((obs) => ({
-      observed_at: obs.observed_at,
-      price_jpy: obs.price_jpy,
-    }));
+  // Any source/price_type combos beyond the three known lines still get
+  // plotted, so the chart never silently drops data.
+  const seriesDefs = [...SERIES];
+  for (const obs of observations) {
+    const key = `${obs.source}_${obs.price_type}`;
+    if (!seriesDefs.some((s) => s.key === key)) {
+      seriesDefs.push({
+        key,
+        label: `${obs.source} ${obs.price_type}`,
+        source: obs.source,
+        priceType: obs.price_type,
+        color: "#f472b6",
+      });
+    }
+  }
+
+  const dates = Array.from(
+    new Set(observations.map((obs) => obs.observed_at)),
+  ).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+  const data = dates.map((date) => {
+    const row: Record<string, string | number> = { observed_at: date };
+    for (const series of seriesDefs) {
+      const match = observations.find(
+        (obs) =>
+          obs.observed_at === date &&
+          obs.source === series.source &&
+          obs.price_type === series.priceType,
+      );
+      if (match) row[series.key] = match.price_jpy;
+    }
+    return row;
+  });
 
   return (
     <div className="h-64 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
@@ -69,16 +102,22 @@ export function PriceChart({ observations }: PriceChartProps) {
             }}
             labelStyle={{ color: "#a3a3a3" }}
             labelFormatter={(value) => formatDate(String(value))}
-            formatter={(value) => [formatJpy(Number(value)), "Price"]}
+            formatter={(value, name) => [formatJpy(Number(value)), String(name)]}
           />
-          <Line
-            type="monotone"
-            dataKey="price_jpy"
-            stroke="#38bdf8"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4 }}
-          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {seriesDefs.map((series) => (
+            <Line
+              key={series.key}
+              type="monotone"
+              dataKey={series.key}
+              name={series.label}
+              stroke={series.color}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              connectNulls
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

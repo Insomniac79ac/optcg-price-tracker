@@ -25,6 +25,7 @@ class PriceObservationOut(BaseModel):
     id: int
     card_id: int
     source_id: int
+    source: str
     observed_at: datetime
     price_type: str
     price_jpy: int
@@ -68,3 +69,34 @@ class SnkrdunkCandidateListOut(BaseModel):
 class SnkrdunkCandidateMatchIn(BaseModel):
     card_id: int
     manual_verified: bool = True
+
+
+class MarketPriceOut(BaseModel):
+    source: str
+    price_type: str
+    price_jpy: int
+    observed_at: datetime
+    condition_label: str | None
+    stock_status: str | None
+    listing_count: int | None
+
+
+class MarketSignalsOut(BaseModel):
+    change_24h_pct: float | None
+    change_7d_pct: float | None
+    change_30d_pct: float | None
+    yuyutei_spread_jpy: int | None
+    snkrdunk_floor_vs_yuyutei_buy_jpy: int | None
+
+
+class MarketMoverOut(BaseModel):
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    latest_prices: list[MarketPriceOut]
+    signals: MarketSignalsOut

@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { PriceChart } from "@/components/PriceChart";
+import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
+import { SourceBadge } from "@/components/SourceBadge";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
 import {
   type Card,
@@ -17,6 +19,34 @@ import {
 import { cardDisplayName, formatDateTime, formatJpy } from "@/lib/format";
 
 type Status = "loading" | "error" | "ready";
+
+interface KeyPriceLine {
+  label: string;
+  source: string;
+  priceType: string;
+}
+
+const KEY_PRICE_LINES: KeyPriceLine[] = [
+  { label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell" },
+  { label: "Yuyu-Tei buy", source: "yuyutei", priceType: "buy" },
+  { label: "SNKRDUNK floor", source: "snkrdunk", priceType: "floor" },
+];
+
+function latestFor(
+  prices: PriceObservation[],
+  source: string,
+  priceType: string,
+): PriceObservation | null {
+  const matches = prices.filter(
+    (p) => p.source === source && p.price_type === priceType,
+  );
+  if (matches.length === 0) return null;
+  return matches.reduce((latest, p) =>
+    new Date(p.observed_at).getTime() > new Date(latest.observed_at).getTime()
+      ? p
+      : latest,
+  );
+}
 
 export default function CardDetailPage() {
   const params = useParams<{ id: string }>();
@@ -130,6 +160,31 @@ export default function CardDetailPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {KEY_PRICE_LINES.map((line) => {
+                const observation = latestFor(prices, line.source, line.priceType);
+                return (
+                  <div
+                    key={line.label}
+                    className="rounded-lg border border-neutral-800 bg-neutral-900 p-3"
+                  >
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <SourceBadge source={line.source} />
+                      <PriceTypeBadge priceType={line.priceType} />
+                    </div>
+                    <div className="text-lg font-semibold text-neutral-100">
+                      {observation ? formatJpy(observation.price_jpy) : "—"}
+                    </div>
+                    <div className="text-xs text-neutral-500">
+                      {observation
+                        ? formatDateTime(observation.observed_at)
+                        : "No observations yet"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <div>
               <h2 className="mb-2 text-sm font-semibold text-neutral-100">
                 Price history
@@ -172,11 +227,11 @@ export default function CardDetailPage() {
                           <td className="px-3 py-2 text-neutral-300">
                             {formatDateTime(obs.observed_at)}
                           </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            Source #{obs.source_id}
+                          <td className="px-3 py-2">
+                            <SourceBadge source={obs.source} />
                           </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {obs.price_type}
+                          <td className="px-3 py-2">
+                            <PriceTypeBadge priceType={obs.price_type} />
                           </td>
                           <td className="px-3 py-2 text-right text-neutral-200">
                             {formatJpy(obs.price_jpy)}
