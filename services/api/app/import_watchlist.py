@@ -28,6 +28,8 @@ class ImportSummary:
     cards_updated: int = 0
     mappings_created: int = 0
     mappings_updated: int = 0
+    mappings_skipped_empty_url: int = 0
+    duplicate_urls_skipped: int = 0
     skipped_rows: int = 0
 
     def print_report(self) -> None:
@@ -35,6 +37,8 @@ class ImportSummary:
         print(f"cards_updated: {self.cards_updated}")
         print(f"mappings_created: {self.mappings_created}")
         print(f"mappings_updated: {self.mappings_updated}")
+        print(f"mappings_skipped_empty_url: {self.mappings_skipped_empty_url}")
+        print(f"duplicate_urls_skipped: {self.duplicate_urls_skipped}")
         print(f"skipped_rows: {self.skipped_rows}")
 
 
@@ -56,7 +60,52 @@ def _get_or_create_source(db: Session, name: str) -> Source:
     return source
 
 
-def _import_row(db: Session, row: dict[str, str], summary: ImportSummary) -> None:
+def _upsert_mapping(
+    db: Session,
+    card: Card,
+    source: Source,
+    card_code: str,
+    url: str,
+    manual_verified: bool,
+    seen_urls: set[tuple[int, str]],
+    summary: ImportSummary,
+) -> None:
+    """Upsert a source_card_mappings row keyed by (source_id, source_url), so
+    a card can have multiple mappings per source (raw/graded pages, reprints,
+    multiple listings, etc)."""
+    key = (source.id, url)
+    if key in seen_urls:
+        summary.duplicate_urls_skipped += 1
+        return
+    seen_urls.add(key)
+
+    mapping = (
+        db.query(SourceCardMapping)
+        .filter_by(source_id=source.id, source_url=url)
+        .one_or_none()
+    )
+    if mapping is None:
+        db.add(
+            SourceCardMapping(
+                card_id=card.id,
+                source_id=source.id,
+                source_card_id=card_code,
+                source_url=url,
+                manual_verified=manual_verified,
+            )
+        )
+        summary.mappings_created += 1
+    else:
+        mapping.card_id = card.id
+        mapping.source_card_id = card_code
+        mapping.manual_verified = manual_verified
+        mapping.match_confidence = None
+        summary.mappings_updated += 1
+
+
+def _import_row(
+    db: Session, row: dict[str, str], summary: ImportSummary, seen_urls: set[tuple[int, str]]
+) -> None:
     if any(not _clean(row.get(column)) for column in REQUIRED_COLUMNS):
         summary.skipped_rows += 1
         return
@@ -99,29 +148,11 @@ def _import_row(db: Session, row: dict[str, str], summary: ImportSummary) -> Non
     for source_name, column in SOURCE_URL_COLUMNS.items():
         url = _clean(row.get(column))
         if not url:
+            summary.mappings_skipped_empty_url += 1
             continue
 
         source = _get_or_create_source(db, source_name)
-        mapping = (
-            db.query(SourceCardMapping)
-            .filter_by(card_id=card.id, source_id=source.id)
-            .one_or_none()
-        )
-        if mapping is None:
-            db.add(
-                SourceCardMapping(
-                    card_id=card.id,
-                    source_id=source.id,
-                    source_card_id=card_code,
-                    source_url=url,
-                    manual_verified=manual_verified,
-                )
-            )
-            summary.mappings_created += 1
-        else:
-            mapping.source_url = url
-            mapping.manual_verified = manual_verified
-            summary.mappings_updated += 1
+        _upsert_mapping(db, card, source, card_code, url, manual_verified, seen_urls, summary)
 
 
 def import_watchlist(csv_path: str, db: Session | None = None) -> ImportSummary:
@@ -131,10 +162,11 @@ def import_watchlist(csv_path: str, db: Session | None = None) -> ImportSummary:
         db = SessionLocal()
 
     try:
+        seen_urls: set[tuple[int, str]] = set()
         with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                _import_row(db, row, summary)
+                _import_row(db, row, summary, seen_urls)
         db.commit()
     finally:
         if owns_session:

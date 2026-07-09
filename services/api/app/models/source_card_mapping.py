@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -9,7 +9,8 @@ from app.db import Base
 class SourceCardMapping(Base):
     __tablename__ = "source_card_mappings"
     __table_args__ = (
-        UniqueConstraint("card_id", "source_id", name="uq_source_card_mappings_card_source"),
+        UniqueConstraint("source_id", "source_url", name="uq_source_card_mappings_source_url"),
+        Index("ix_source_card_mappings_card_id_source_id", "card_id", "source_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
