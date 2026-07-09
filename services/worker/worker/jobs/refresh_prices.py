@@ -42,17 +42,24 @@ class RefreshRunSummary:
     observations_inserted: int = 0
     error_message: str | None = None
 
-    def print_report(self) -> None:
-        print(f"refresh_run_id: {self.id}")
-        print(f"status: {self.status}")
-        print(f"mappings_checked: {self.mappings_checked}")
-        print(f"mappings_processed: {self.mappings_processed}")
-        print(f"mappings_failed: {self.mappings_failed}")
-        print(f"snapshots_created: {self.snapshots_created}")
-        print(f"observations_parsed: {self.observations_parsed}")
-        print(f"observations_inserted: {self.observations_inserted}")
+    def report_lines(self) -> list[str]:
+        lines = [
+            f"refresh_run_id: {self.id}",
+            f"status: {self.status}",
+            f"mappings_checked: {self.mappings_checked}",
+            f"mappings_processed: {self.mappings_processed}",
+            f"mappings_failed: {self.mappings_failed}",
+            f"snapshots_created: {self.snapshots_created}",
+            f"observations_parsed: {self.observations_parsed}",
+            f"observations_inserted: {self.observations_inserted}",
+        ]
         if self.error_message:
-            print(f"error_message: {self.error_message}")
+            lines.append(f"error_message: {self.error_message}")
+        return lines
+
+    def print_report(self) -> None:
+        for line in self.report_lines():
+            print(line)
 
 
 def _build_adapters(source: str | None = None) -> dict[str, SourceAdapter]:

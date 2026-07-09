@@ -4,3 +4,4 @@ pydantic-settings
 pytest
 httpx
 beautifulsoup4
+celery[redis]

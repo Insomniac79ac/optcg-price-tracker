@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     SNKRDUNK_REQUEST_DELAY_MS: int = 1000
     SNKRDUNK_AUTO_MATCH_THRESHOLD: float = 0.92
     SNKRDUNK_SEED_FILE: str | None = None
+    # How often Celery Beat schedules the automatic Yuyu-Tei price refresh.
+    PRICE_REFRESH_INTERVAL_HOURS: int = 6
 
     @field_validator("SCRAPING_MODE")
     @classmethod

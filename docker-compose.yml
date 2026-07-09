@@ -35,10 +35,31 @@ services:
   worker:
     build: ./services/worker
     container_name: opcg-worker
+    command: celery -A worker.celery_app worker --loglevel=info
     environment:
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
       SCRAPING_MODE: mock
+      YUYUTEI_REQUEST_DELAY_MS: 3000
+      PRICE_REFRESH_INTERVAL_HOURS: 6
+      PROJECT_ROOT: /app
+      SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - postgres
+      - redis
+
+  beat:
+    build: ./services/worker
+    container_name: opcg-beat
+    command: celery -A worker.celery_app beat --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
+      REDIS_URL: redis://redis:6379/0
+      SCRAPING_MODE: mock
+      YUYUTEI_REQUEST_DELAY_MS: 3000
+      PRICE_REFRESH_INTERVAL_HOURS: 6
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
     volumes:
