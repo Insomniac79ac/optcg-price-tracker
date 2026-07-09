@@ -1,5 +1,5 @@
 .PHONY: help dev-up dev-down test-api test-worker migrate seed import-watchlist \
-	refresh-yuyutei-dry refresh-yuyutei-live logs-api logs-worker logs-beat
+	refresh-yuyutei-dry refresh-yuyutei-live logs-api logs-worker logs-beat check-secrets
 
 # Override on the command line, e.g. `make import-watchlist WATCHLIST=path/to.csv`
 WATCHLIST ?= data/watchlists/opcg_watchlist.csv
@@ -17,6 +17,7 @@ help:
 	@echo "make logs-api             - tail api logs"
 	@echo "make logs-worker          - tail worker logs"
 	@echo "make logs-beat            - tail beat logs"
+	@echo "make check-secrets        - fail if git is tracking any real .env file"
 
 dev-up:
 	docker compose up -d
@@ -53,3 +54,6 @@ logs-worker:
 
 logs-beat:
 	docker compose logs -f beat
+
+check-secrets:
+	./scripts/check_secrets.sh

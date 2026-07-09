@@ -20,7 +20,7 @@ cp .env.production.example .env.production
 | `APP_ENV` | yes | Must be `production`. The API refuses to start in production without `ADMIN_TOKEN` set (see `services/api/app/config_check.py`). |
 | `DATABASE_URL` | yes | Full SQLAlchemy URL, e.g. `postgresql+psycopg://opcg:<password>@postgres:5432/opcg`. The user/password/db must match `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` below. |
 | `REDIS_URL` | yes | e.g. `redis://redis:6379/0`. Used as the Celery broker/backend. |
-| `ADMIN_TOKEN` | yes in production | Shared secret for `/admin/*` API routes - see [Admin token usage](#5-admin-token-usage). Generate with e.g. `openssl rand -hex 32`. |
+| `ADMIN_TOKEN` | yes in production | Shared secret for `/admin/*` API routes - see [Admin token usage](#9-admin-token-usage). Generate with e.g. `openssl rand -hex 32`. |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes | Used to initialize the `postgres` container. Keep in sync with `DATABASE_URL`. |
 | `SCRAPING_MODE` | yes | `mock` or `live`. Set to `live` for a real deployment. |
 | `YUYUTEI_REQUEST_DELAY_MS` / `SNKRDUNK_REQUEST_DELAY_MS` | yes | Positive integers (milliseconds) - throttling between scrape requests. |
@@ -31,7 +31,38 @@ cp .env.production.example .env.production
 Compose does **not** auto-load `.env.production` (it only auto-loads a file literally named
 `.env`). Always pass `--env-file .env.production` explicitly, as shown below.
 
-## 2. Database migrations
+## 2. Secret handling
+
+`.env.production` holds real secrets (`ADMIN_TOKEN`, `POSTGRES_PASSWORD`, `DATABASE_URL`,
+optionally `TELEGRAM_BOT_TOKEN`) and **must never be committed or pushed**. `.gitignore` ignores
+all `.env*` files except `.env.example` and `.env.production.example` (which must only ever
+contain placeholders, never real-looking values), and `scripts/check_secrets.sh` (`make
+check-secrets`) fails the build if git is ever tracking a real env file - run it before pushing if
+you're unsure.
+
+In a real hosting environment, don't rely on an `.env.production` file on disk at all where you
+can avoid it - configure these values through your hosting provider's own secret/environment
+variable system instead (e.g. a cloud provider's secrets manager, your CI/CD platform's encrypted
+environment variables, Docker/Kubernetes secrets, etc.), and generate `.env.production` from that
+system at deploy time rather than storing it as a plain file on a shared machine.
+
+**If a secret was ever committed to git** (even in a since-deleted commit - git history keeps
+it), treat it as compromised: rotate it immediately (generate a new `ADMIN_TOKEN`, change the
+Postgres password, regenerate the Telegram bot token, etc.) and update `.env.production`
+everywhere it's deployed. Deleting the file or force-pushing history afterward does not undo
+exposure to anyone who already cloned/fetched it.
+
+To confirm your resolved production config (with real values filled in) is well-formed, without
+ever writing those values anywhere they could get committed:
+
+```
+docker compose --env-file .env.production -f docker-compose.prod.yml config
+```
+
+This prints the fully-interpolated compose config to your terminal for review - don't redirect it
+into a file inside the repo.
+
+## 3. Database migrations
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production run --rm api \
@@ -41,7 +72,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production run --rm ap
 Run this once per deployment, after `postgres` is up and before `api`/`worker`/`beat` start
 serving/processing (or immediately after, before relying on new tables/columns).
 
-## 3. Seed reference data
+## 4. Seed reference data
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production exec api \
@@ -51,7 +82,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec api \
 Creates/updates the `sources` table (`yuyutei`, `snkrdunk`) only. Do **not** pass `--demo-data`
 in production - that flag seeds placeholder cards for local dev/testing.
 
-## 4. Import the card watchlist
+## 5. Import the card watchlist
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production exec api \
@@ -61,7 +92,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec api \
 Imports/updates the real card catalog and its Yuyu-Tei/SNKRDUNK source mappings from a CSV (see
 `data/watchlists/`). Safe to re-run - it upserts by card identity.
 
-## 5. Starting production services
+## 6. Starting production services
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production build
@@ -73,7 +104,7 @@ to the host - put a reverse proxy (nginx, Caddy, Traefik, a cloud load balancer,
 them for external traffic, terminating TLS there. `postgres` and `redis` are not published to the
 host at all; only reachable from other containers on the compose network.
 
-## 6. Checking health
+## 7. Checking health
 
 From another container on the same network, or through your reverse proxy:
 
@@ -104,7 +135,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec worker
 Both print config/connectivity status and exit non-zero if misconfigured - useful in deploy
 health checks.
 
-## 7. Checking logs
+## 8. Checking logs
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f api
@@ -113,7 +144,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production logs -f bea
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f web
 ```
 
-## 8. Admin token usage
+## 9. Admin token usage
 
 `/admin/alert-events`, `/admin/alert-rules`, `/admin/refresh-runs`, and `/snkrdunk/candidates`
 all require the `X-Admin-Token` header to match `ADMIN_TOKEN`:
