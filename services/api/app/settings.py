@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,20 @@ class Settings(BaseSettings):
     ENVIRONMENT: str | None = None
     APP_ENV: str | None = None
     ADMIN_TOKEN: str | None = None
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _validate_database_url(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("DATABASE_URL must not be empty.")
+        return value
+
+    @field_validator("REDIS_URL")
+    @classmethod
+    def _validate_redis_url(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("REDIS_URL must not be empty.")
+        return value
 
 
 settings = Settings()

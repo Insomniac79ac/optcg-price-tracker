@@ -7,6 +7,18 @@ from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.refresh_runs import router as refresh_runs_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
+from app.config_check import validate_config
+
+# Fail fast and loud: a misconfigured production deployment (no ADMIN_TOKEN)
+# should never come up serving traffic. This only runs once, at process
+# import, using whatever ENVIRONMENT/APP_ENV/ADMIN_TOKEN the OS environment
+# actually has at boot - tests exercise validate_config() directly instead
+# of relying on re-triggering this import-time check.
+_startup_check = validate_config()
+if not _startup_check.ok:
+    raise RuntimeError(
+        "Invalid API configuration - refusing to start: " + "; ".join(_startup_check.errors)
+    )
 
 app = FastAPI(title="optcg-price-tracker API")
 
