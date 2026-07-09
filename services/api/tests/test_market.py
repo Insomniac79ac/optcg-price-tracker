@@ -3,14 +3,14 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.models import Card, PriceObservation, Source
-from app.seed import CARDS, SOURCES
+from app.seed import DEMO_CARDS, SOURCES
 
 
 @pytest.fixture()
 def seeded_db(db_session):
     for data in SOURCES:
         db_session.add(Source(**data))
-    for data in CARDS:
+    for data in DEMO_CARDS:
         db_session.add(Card(**data))
     db_session.commit()
     return db_session
@@ -40,7 +40,7 @@ def test_movers_card_without_price_observations(client, seeded_db):
     response = client.get("/market/movers")
     assert response.status_code == 200
     body = response.json()
-    assert len(body) == len(CARDS)
+    assert len(body) == len(DEMO_CARDS)
 
     luffy_entry = next(m for m in body if m["card_code"] == "OP01-001")
     assert luffy_entry["latest_prices"] == []
@@ -197,5 +197,5 @@ def test_movers_pagination(client, seeded_db):
     assert response.status_code == 200
     assert len(response.json()) == 2
 
-    response = client.get("/market/movers", params={"limit": 100, "offset": len(CARDS) - 1})
+    response = client.get("/market/movers", params={"limit": 100, "offset": len(DEMO_CARDS) - 1})
     assert len(response.json()) == 1

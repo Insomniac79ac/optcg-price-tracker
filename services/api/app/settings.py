@@ -6,6 +6,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+psycopg://opcg:opcg@postgres:5432/opcg"
     REDIS_URL: str = "redis://redis:6379/0"
+    ENVIRONMENT: str | None = None
+    APP_ENV: str | None = None
 
 
 settings = Settings()

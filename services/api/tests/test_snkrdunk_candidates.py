@@ -1,14 +1,14 @@
 import pytest
 
 from app.models import Card, SnkrdunkCandidate, Source, SourceCardMapping
-from app.seed import CARDS, SOURCES
+from app.seed import DEMO_CARDS, SOURCES
 
 
 @pytest.fixture()
 def seeded_db(db_session):
     for data in SOURCES:
         db_session.add(Source(**data))
-    for data in CARDS:
+    for data in DEMO_CARDS:
         db_session.add(Card(**data))
     db_session.commit()
     return db_session

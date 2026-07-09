@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 import pytest
 
 from app.models import Card, PriceObservation, Source
-from app.seed import CARDS, SOURCES
+from app.seed import DEMO_CARDS, SOURCES
 
 
 @pytest.fixture()
 def seeded_db(db_session):
     for data in SOURCES:
         db_session.add(Source(**data))
-    for data in CARDS:
+    for data in DEMO_CARDS:
         db_session.add(Card(**data))
     db_session.commit()
     return db_session
@@ -26,8 +26,8 @@ def test_list_cards_returns_seeded_cards(client, seeded_db):
     response = client.get("/cards")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == len(CARDS)
-    assert {card["card_code"] for card in data} == {c["card_code"] for c in CARDS}
+    assert len(data) == len(DEMO_CARDS)
+    assert {card["card_code"] for card in data} == {c["card_code"] for c in DEMO_CARDS}
 
 
 def test_get_card_returns_one_card(client, seeded_db):
