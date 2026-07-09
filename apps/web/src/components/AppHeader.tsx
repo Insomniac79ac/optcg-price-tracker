@@ -15,6 +15,12 @@ export function AppHeader() {
             Dashboard
           </Link>
           <Link
+            href="/admin/refresh-runs"
+            className="hover:text-neutral-100"
+          >
+            Refresh runs
+          </Link>
+          <Link
             href="/admin/snkrdunk-candidates"
             className="hover:text-neutral-100"
           >

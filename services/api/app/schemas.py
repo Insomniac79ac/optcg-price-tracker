@@ -100,3 +100,30 @@ class MarketMoverOut(BaseModel):
     language: str
     latest_prices: list[MarketPriceOut]
     signals: MarketSignalsOut
+
+
+class PriceRefreshRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    scraping_mode: str
+    source_filter: str | None
+    limit_count: int
+    dry_run: bool
+    mappings_checked: int
+    snapshots_created: int
+    observations_parsed: int
+    observations_inserted: int
+    observations_skipped_duplicate: int
+    mappings_failed: int
+    error_message: str | None
+
+
+class PriceRefreshRunListOut(BaseModel):
+    items: list[PriceRefreshRunOut]
+    total: int
+    limit: int
+    offset: int
