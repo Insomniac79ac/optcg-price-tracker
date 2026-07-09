@@ -5,6 +5,7 @@ from datetime import timedelta
 from celery import Celery
 
 from worker.db import SessionLocal
+from worker.jobs.check_alerts import check_alerts
 from worker.jobs.refresh_prices import refresh_prices
 from worker.settings import settings
 
@@ -42,6 +43,11 @@ def refresh_yuyutei_prices(limit: int = SCHEDULED_YUYUTEI_REFRESH_LIMIT) -> dict
     db = SessionLocal()
     try:
         summary = refresh_prices(limit=limit, db=db, source="yuyutei")
+        try:
+            check_alerts(db)
+        except Exception:
+            # Alerting must never take down the scheduled refresh itself.
+            logger.exception("check_alerts failed after refresh run %s.", summary.id)
     finally:
         db.close()
 

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     SNKRDUNK_SEED_FILE: str | None = None
     # How often Celery Beat schedules the automatic Yuyu-Tei price refresh.
     PRICE_REFRESH_INTERVAL_HOURS: int = 6
+    # Telegram alerting - if either is unset, alert sends are logged and
+    # skipped rather than attempted (see worker.alerts.telegram).
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_CHAT_ID: str | None = None
 
     @field_validator("SCRAPING_MODE")
     @classmethod
