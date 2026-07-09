@@ -2,11 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_admin_token
 from app.db import get_db
 from app.models.price_refresh_run import RUN_STATUSES, PriceRefreshRun
 from app.schemas import PriceRefreshRunListOut, PriceRefreshRunOut
 
-router = APIRouter(prefix="/admin/refresh-runs", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/refresh-runs", tags=["admin"], dependencies=[Depends(require_admin_token)]
+)
 
 
 @router.get("", response_model=PriceRefreshRunListOut)

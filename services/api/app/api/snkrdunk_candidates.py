@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_admin_token
 from app.db import get_db
 from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import MATCH_STATUSES, SnkrdunkCandidate
@@ -12,7 +13,9 @@ from app.schemas import (
     SnkrdunkCandidateOut,
 )
 
-router = APIRouter(prefix="/snkrdunk", tags=["snkrdunk"])
+router = APIRouter(
+    prefix="/snkrdunk", tags=["snkrdunk"], dependencies=[Depends(require_admin_token)]
+)
 
 
 def _to_out(candidate: SnkrdunkCandidate, card: Card | None) -> SnkrdunkCandidateOut:

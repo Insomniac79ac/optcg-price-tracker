@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: development
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     volumes:
       - ./data:/app/data
     depends_on:

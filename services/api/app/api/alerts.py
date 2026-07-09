@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_admin_token
 from app.db import get_db
 from app.models import AlertEvent, AlertRule, Card, Source
 from app.models.alert_event import EVENT_STATUSES, EVENT_TYPES
 from app.schemas import AlertEventListOut, AlertEventOut, AlertRuleOut, AlertRuleUpdateIn
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_token)])
 
 
 def _card_name(card: Card | None) -> str | None:

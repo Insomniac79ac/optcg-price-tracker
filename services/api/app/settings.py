@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
     ENVIRONMENT: str | None = None
     APP_ENV: str | None = None
+    ADMIN_TOKEN: str | None = None
 
 
 settings = Settings()

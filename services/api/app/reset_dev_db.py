@@ -5,6 +5,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
+from app.env import DEV_ENVIRONMENT_VALUE, is_development_environment
 from app.models import (
     Card,
     PriceObservation,
@@ -15,8 +16,6 @@ from app.models import (
 )
 from app.seed import seed_sources
 from app.settings import settings
-
-DEV_ENVIRONMENT_VALUE = "development"
 
 # ORM-backed tables, deleted in FK-safe order (children before parents).
 MODEL_DELETE_ORDER: list[tuple[str, type]] = [
@@ -48,11 +47,6 @@ class ResetSummary:
         print(f"sources_reseeded: {self.sources_reseeded}")
 
 
-def _is_development_environment() -> bool:
-    env = (settings.ENVIRONMENT or settings.APP_ENV or "").strip().lower()
-    return env == DEV_ENVIRONMENT_VALUE
-
-
 def reset_dev_db(db: Session, confirm: bool = False, reseed_sources: bool = True) -> ResetSummary:
     """Deletes local dev data (cards, mappings, snapshots, price observations,
     SNKRDUNK discovery data). Refuses to run without explicit confirmation,
@@ -63,7 +57,7 @@ def reset_dev_db(db: Session, confirm: bool = False, reseed_sources: bool = True
             "Refusing to reset the database: pass confirm=True (CLI: --confirm)."
         )
 
-    if not _is_development_environment():
+    if not is_development_environment():
         raise RuntimeError(
             "Refusing to reset the database: ENVIRONMENT or APP_ENV must be "
             f"'{DEV_ENVIRONMENT_VALUE}' (got ENVIRONMENT={settings.ENVIRONMENT!r}, "

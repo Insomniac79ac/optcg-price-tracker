@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+import { AdminAuthGate } from "@/components/AdminAuthGate";
+import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { RunStatusBadge } from "@/components/RunStatusBadge";
-import { type PriceRefreshRun, fetchRefreshRuns } from "@/lib/api";
+import {
+  AdminAuthRequiredError,
+  type PriceRefreshRun,
+  fetchRefreshRuns,
+} from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 
 const STATUS_FILTERS = [
@@ -19,9 +25,9 @@ export default function RefreshRunsPage() {
   const [runs, setRuns] = useState<PriceRefreshRun[]>([]);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
-  const [status, setStatus] = useState<"loading" | "error" | "ready">(
-    "loading",
-  );
+  const [status, setStatus] = useState<
+    "loading" | "error" | "unauthorized" | "ready"
+  >("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -33,9 +39,9 @@ export default function RefreshRunsPage() {
         setTotal(data.total);
         setStatus("ready");
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        setStatus("error");
+        setStatus(err instanceof AdminAuthRequiredError ? "unauthorized" : "error");
       });
 
     return () => {
@@ -51,11 +57,14 @@ export default function RefreshRunsPage() {
           <h1 className="text-lg font-semibold text-neutral-100">
             Price refresh runs
           </h1>
-          {status === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {total} run{total === 1 ? "" : "s"}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {status === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {total} run{total === 1 ? "" : "s"}
+              </span>
+            )}
+            <AdminLogoutButton />
+          </div>
         </div>
 
         <div className="mb-4 flex gap-1">
@@ -73,6 +82,10 @@ export default function RefreshRunsPage() {
             </button>
           ))}
         </div>
+
+        {status === "unauthorized" && (
+          <AdminAuthGate onTokenSaved={() => window.location.reload()} />
+        )}
 
         {status === "loading" && (
           <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
