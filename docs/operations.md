@@ -8,6 +8,37 @@ like `opcg-postgres`); for production swap in `docker compose -f docker-compose.
 Local/dev shortcuts for the commands below also exist as `make` targets - run `make help` or see
 the `Makefile` in the repo root.
 
+## Smoke test
+
+`scripts/smoke_test.sh` (`make smoke-test`) checks that a running stack is actually healthy: API
+`/health` (status + database connectivity), `/market/movers` returns valid data, admin auth
+correctly rejects an unauthenticated request and accepts a valid `X-Admin-Token`, and the web app
+responds. It prints `PASS`/`FAIL` per check and exits non-zero if anything failed - safe to use as
+a deploy health gate.
+
+**Locally** (against the dev stack from `docker compose up -d`):
+
+```
+ADMIN_TOKEN=<your dev ADMIN_TOKEN> make smoke-test
+```
+
+If `ADMIN_TOKEN` isn't set on the dev API at all, the API treats requests as development-mode
+(see `docs/deployment.md`) and the "without a token" check will legitimately return something
+other than 401 - set `ADMIN_TOKEN` for both the API container and this script if you want to
+exercise the real auth path locally.
+
+**After a deployment**, point it at the deployed URLs with the real admin token:
+
+```
+API_URL=https://api.example.com \
+WEB_URL=https://app.example.com \
+ADMIN_TOKEN=<production ADMIN_TOKEN> \
+./scripts/smoke_test.sh
+```
+
+`API_URL` defaults to `http://localhost:8000`, `WEB_URL` to `http://localhost:3000`. `ADMIN_TOKEN`
+is always required - the script fails the admin check if it's missing rather than skipping it.
+
 ## Run Yuyu-Tei refresh manually
 
 ```
