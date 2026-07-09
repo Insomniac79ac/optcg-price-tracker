@@ -1,0 +1,99 @@
+# Production compose file. Run with the production env file explicitly, since
+# Compose only auto-loads a file literally named `.env` - it will NOT pick up
+# .env.production on its own:
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production build
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# `name:` pins a project name distinct from the dev stack's (docker-compose.yml,
+# which defaults to the directory name) - without this, running both compose
+# files from the same directory makes Compose treat same-named services
+# (postgres, redis, ...) as the same project and recreate/replace each
+# other's containers.
+#
+# See docs/deployment.md for the full runbook.
+
+name: optcg-prod
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: opcg-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - opcg_postgres_data_prod:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: opcg-redis-prod
+    restart: unless-stopped
+    volumes:
+      - opcg_redis_data_prod:/data
+
+  api:
+    build: ./services/api
+    container_name: opcg-api-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    expose:
+      - "8000"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build: ./services/worker
+    container_name: opcg-worker-prod
+    restart: unless-stopped
+    command: celery -A worker.celery_app worker --loglevel=info
+    env_file:
+      - .env.production
+    environment:
+      PROJECT_ROOT: /app
+      SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - postgres
+      - redis
+
+  beat:
+    build: ./services/worker
+    container_name: opcg-beat-prod
+    restart: unless-stopped
+    command: celery -A worker.celery_app beat --loglevel=info
+    env_file:
+      - .env.production
+    environment:
+      PROJECT_ROOT: /app
+      SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    container_name: opcg-web-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    expose:
+      - "3000"
+    depends_on:
+      - api
+
+volumes:
+  opcg_postgres_data_prod:
+  opcg_redis_data_prod:
