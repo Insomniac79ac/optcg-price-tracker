@@ -113,6 +113,12 @@ export default function DashboardPage() {
           >
             SNKRDUNK candidates
           </Link>
+          <Link
+            href="/admin/alerts"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Alerts
+          </Link>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">

@@ -26,6 +26,9 @@ export function AppHeader() {
           >
             SNKRDUNK candidates
           </Link>
+          <Link href="/admin/alerts" className="hover:text-neutral-100">
+            Alerts
+          </Link>
         </nav>
       </div>
     </header>

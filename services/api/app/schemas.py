@@ -127,3 +127,47 @@ class PriceRefreshRunListOut(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class AlertEventOut(BaseModel):
+    id: int
+    created_at: datetime
+    event_type: str
+    card_id: int | None
+    card_code: str | None
+    card_name: str | None
+    source_name: str | None
+    price_observation_id: int | None
+    refresh_run_id: int | None
+    title: str
+    message: str
+    dedupe_key: str
+    sent_at: datetime | None
+    status: str
+    error_message: str | None
+
+
+class AlertEventListOut(BaseModel):
+    items: list[AlertEventOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class AlertRuleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    name: str
+    rule_type: str
+    source_name: str | None
+    price_type: str | None
+    threshold_pct: float | None
+    is_active: bool
+
+
+class AlertRuleUpdateIn(BaseModel):
+    is_active: bool | None = None
+    threshold_pct: float | None = None
