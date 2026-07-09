@@ -1,6 +1,7 @@
 from app.db import Base
 from app.models.card import Card
 from app.models.price_observation import PriceObservation
+from app.models.price_refresh_run import PriceRefreshRun
 from app.models.raw_snapshot import RawSnapshot
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
@@ -14,6 +15,7 @@ __all__ = [
     "SourceCardMapping",
     "RawSnapshot",
     "PriceObservation",
+    "PriceRefreshRun",
     "SnkrdunkDiscoveryRun",
     "SnkrdunkCandidate",
 ]
