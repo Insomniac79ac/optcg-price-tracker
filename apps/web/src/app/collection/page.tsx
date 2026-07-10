@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
+import { FormField } from "@/components/FormField";
 import { RarityBadge } from "@/components/RarityBadge";
 import {
+  COLLECTION_STATUS_OPTIONS,
   type Card,
   type CollectionItem,
   type CollectionItemInput,
@@ -19,7 +21,7 @@ import {
 } from "@/lib/api";
 import { cardDisplayName, formatDate, formatJpy } from "@/lib/format";
 
-const STATUS_OPTIONS = ["hold", "watch", "sell", "sold", "grading"];
+const STATUS_OPTIONS: readonly string[] = COLLECTION_STATUS_OPTIONS;
 
 const STATUS_FILTERS = [
   { value: "", label: "All" },
@@ -640,22 +642,5 @@ function StatCard({
         {value}
       </div>
     </div>
-  );
-}
-
-function FormField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

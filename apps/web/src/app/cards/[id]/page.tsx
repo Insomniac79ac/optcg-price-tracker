@@ -5,16 +5,23 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
+import { FormField } from "@/components/FormField";
 import { PriceChart } from "@/components/PriceChart";
 import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SourceBadge } from "@/components/SourceBadge";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
 import {
+  COLLECTION_STATUS_OPTIONS,
   type Card,
+  type CollectionItem,
+  type CollectionItemInput,
   type PriceObservation,
+  createCollectionItem,
   fetchCard,
   fetchCardPrices,
+  fetchCollectionItems,
 } from "@/lib/api";
 import { cardDisplayName, formatDateTime, formatJpy } from "@/lib/format";
 
@@ -56,6 +63,9 @@ export default function CardDetailPage() {
   const [prices, setPrices] = useState<PriceObservation[]>([]);
   const [status, setStatus] = useState<Status>("loading");
 
+  const [collectionItems, setCollectionItems] = useState<CollectionItem[]>([]);
+  const [collectionStatus, setCollectionStatus] = useState<Status>("loading");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -74,6 +84,20 @@ export default function CardDetailPage() {
     return () => {
       cancelled = true;
     };
+  }, [cardId]);
+
+  function refreshCollectionItems() {
+    fetchCollectionItems({ card_id: Number(cardId) })
+      .then((data) => {
+        setCollectionItems(data.items);
+        setCollectionStatus("ready");
+      })
+      .catch(() => setCollectionStatus("error"));
+  }
+
+  useEffect(() => {
+    refreshCollectionItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId]);
 
   const latestFirst = prices
@@ -159,6 +183,13 @@ export default function CardDetailPage() {
                 </dl>
               </div>
             </div>
+
+            <CollectionSection
+              cardId={card.id}
+              status={collectionStatus}
+              items={collectionItems}
+              onChanged={refreshCollectionItems}
+            />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {KEY_PRICE_LINES.map((line) => {
@@ -256,5 +287,312 @@ export default function CardDetailPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function CollectionSection({
+  cardId,
+  status,
+  items,
+  onChanged,
+}: {
+  cardId: number;
+  status: Status;
+  items: CollectionItem[];
+  onChanged: () => void;
+}) {
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-neutral-100">Collection</h2>
+        <Link
+          href="/collection"
+          className="text-xs text-sky-400 hover:text-sky-300"
+        >
+          View collection →
+        </Link>
+      </div>
+
+      {status === "loading" && (
+        <p className="text-sm text-neutral-500">Loading collection status…</p>
+      )}
+
+      {status === "error" && (
+        <p className="text-sm text-rose-300">
+          Failed to load collection status.
+        </p>
+      )}
+
+      {status === "ready" && items.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm text-neutral-300">
+            You own{" "}
+            <span className="font-semibold text-neutral-100">
+              {totalQuantity}
+            </span>{" "}
+            cop{totalQuantity === 1 ? "y" : "ies"}.
+          </p>
+          <div className="divide-y divide-neutral-800 rounded border border-neutral-800">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm"
+              >
+                <span className="font-medium text-neutral-200">
+                  {item.quantity}×
+                </span>
+                <span className="text-neutral-400">
+                  {item.condition_label ?? "raw"}
+                </span>
+                <span className="text-neutral-200">
+                  {formatJpy(item.purchase_price_jpy)}
+                </span>
+                <CollectionStatusBadge status={item.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {status === "ready" && items.length === 0 && (
+        <QuickAddForm cardId={cardId} onAdded={onChanged} />
+      )}
+    </div>
+  );
+}
+
+interface QuickAddFormState {
+  quantity: string;
+  condition_label: string;
+  purchase_price_jpy: string;
+  purchase_date: string;
+  purchase_source: string;
+  target_sell_price_jpy: string;
+  status: string;
+  notes: string;
+}
+
+const EMPTY_QUICK_ADD_FORM: QuickAddFormState = {
+  quantity: "1",
+  condition_label: "raw",
+  purchase_price_jpy: "",
+  purchase_date: "",
+  purchase_source: "",
+  target_sell_price_jpy: "",
+  status: "hold",
+  notes: "",
+};
+
+function QuickAddForm({
+  cardId,
+  onAdded,
+}: {
+  cardId: number;
+  onAdded: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [form, setForm] = useState<QuickAddFormState>(EMPTY_QUICK_ADD_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function updateField<K extends keyof QuickAddFormState>(
+    key: K,
+    value: QuickAddFormState[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function validateForm(): CollectionItemInput | null {
+    const quantity = form.quantity === "" ? 1 : Number(form.quantity);
+    if (Number.isNaN(quantity) || quantity < 1) {
+      setFormError("Quantity must be at least 1.");
+      return null;
+    }
+
+    let purchasePrice: number | null = null;
+    if (form.purchase_price_jpy !== "") {
+      purchasePrice = Number(form.purchase_price_jpy);
+      if (Number.isNaN(purchasePrice) || purchasePrice < 0) {
+        setFormError("Purchase price must be 0 or greater.");
+        return null;
+      }
+    }
+
+    let targetSell: number | null = null;
+    if (form.target_sell_price_jpy !== "") {
+      targetSell = Number(form.target_sell_price_jpy);
+      if (Number.isNaN(targetSell) || targetSell < 0) {
+        setFormError("Target sell price must be 0 or greater.");
+        return null;
+      }
+    }
+
+    if (!(COLLECTION_STATUS_OPTIONS as readonly string[]).includes(form.status)) {
+      setFormError("Invalid status.");
+      return null;
+    }
+
+    return {
+      card_id: cardId,
+      quantity,
+      condition_label: form.condition_label || null,
+      purchase_price_jpy: purchasePrice,
+      purchase_date: form.purchase_date || null,
+      purchase_source: form.purchase_source || null,
+      target_sell_price_jpy: targetSell,
+      notes: form.notes || null,
+      status: form.status,
+    };
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    const body = validateForm();
+    if (!body) return;
+
+    setSaving(true);
+    try {
+      await createCollectionItem(body);
+      setForm(EMPTY_QUICK_ADD_FORM);
+      setExpanded(false);
+      onAdded();
+    } catch {
+      setFormError("Failed to add this card to your collection.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white"
+      >
+        + Add to collection
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      {formError && (
+        <div className="rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          {formError}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FormField label="Quantity">
+          <input
+            type="number"
+            min={1}
+            value={form.quantity}
+            onChange={(e) => updateField("quantity", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+
+        <FormField label="Condition">
+          <input
+            type="text"
+            value={form.condition_label}
+            onChange={(e) => updateField("condition_label", e.target.value)}
+            placeholder="raw, PSA 10, …"
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+          />
+        </FormField>
+
+        <FormField label="Purchase price (JPY)">
+          <input
+            type="number"
+            min={0}
+            value={form.purchase_price_jpy}
+            onChange={(e) => updateField("purchase_price_jpy", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+
+        <FormField label="Purchase date">
+          <input
+            type="date"
+            value={form.purchase_date}
+            onChange={(e) => updateField("purchase_date", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+
+        <FormField label="Purchase source">
+          <input
+            type="text"
+            value={form.purchase_source}
+            onChange={(e) => updateField("purchase_source", e.target.value)}
+            placeholder="Yuyu-Tei, SNKRDUNK, …"
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+          />
+        </FormField>
+
+        <FormField label="Target sell price (JPY)">
+          <input
+            type="number"
+            min={0}
+            value={form.target_sell_price_jpy}
+            onChange={(e) =>
+              updateField("target_sell_price_jpy", e.target.value)
+            }
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+
+        <FormField label="Status">
+          <select
+            value={form.status}
+            onChange={(e) => updateField("status", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          >
+            {COLLECTION_STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </FormField>
+
+        <FormField label="Notes">
+          <input
+            type="text"
+            value={form.notes}
+            onChange={(e) => updateField("notes", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Add to collection"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded(false);
+            setForm(EMPTY_QUICK_ADD_FORM);
+            setFormError(null);
+          }}
+          disabled={saving}
+          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }

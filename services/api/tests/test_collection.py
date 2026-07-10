@@ -154,6 +154,20 @@ def test_list_collection_items_filters_by_card_code(client, db_session):
     assert body["items"][0]["card_code"] == "OP01-002"
 
 
+def test_list_collection_items_filters_by_card_id(client, db_session):
+    card_a = make_card(db_session, card_code="OP01-001")
+    card_b = make_card(db_session, card_code="OP01-002")
+    make_item(db_session, card_a)
+    make_item(db_session, card_b)
+
+    response = client.get("/collection", params={"card_id": card_b.id})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["card_id"] == card_b.id
+
+
 def test_get_collection_item(client, db_session):
     card = make_card(db_session)
     item = make_item(db_session, card)

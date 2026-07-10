@@ -58,6 +58,7 @@ def _get_card_or_404(db: Session, card_id: int) -> Card:
 def list_collection_items(
     status: str | None = Query(default=None),
     card_code: str | None = Query(default=None),
+    card_id: int | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -73,6 +74,8 @@ def list_collection_items(
         filters.append(CollectionItem.status == status)
     if card_code is not None:
         filters.append(Card.card_code == card_code)
+    if card_id is not None:
+        filters.append(CollectionItem.card_id == card_id)
 
     base = select(CollectionItem).join(Card, CollectionItem.card_id == Card.id).where(*filters)
     count_base = (
