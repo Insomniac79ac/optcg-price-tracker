@@ -74,6 +74,12 @@ class SourceCardMapping(Base):
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     match_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    review_status: Mapped[str] = mapped_column(
+        String(32), default="approved", server_default="approved"
+    )
+    review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

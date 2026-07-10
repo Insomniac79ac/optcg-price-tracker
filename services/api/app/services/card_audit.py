@@ -292,9 +292,9 @@ def _check_cards_without_source_mappings(
 
 
 def _check_cards_with_prices_but_no_active_mapping(
-    priced_card_ids: set[int], mapped_card_ids: set[int]
+    priced_card_ids: set[int], active_mapped_card_ids: set[int]
 ) -> list[AuditIssue]:
-    orphaned = sorted(priced_card_ids - mapped_card_ids)
+    orphaned = sorted(priced_card_ids - active_mapped_card_ids)
     if not orphaned:
         return []
     return [
@@ -304,7 +304,8 @@ def _check_cards_with_prices_but_no_active_mapping(
             card_ids=orphaned,
             card_code=None,
             message=(
-                f"{len(orphaned)} card(s) have price_observations but no source_card_mappings"
+                f"{len(orphaned)} card(s) have price_observations but no active "
+                "source_card_mappings"
             ),
             suggested_action="restore_source_mapping",
         )
@@ -318,6 +319,7 @@ def run_card_audit(db: Session) -> CardAuditReport:
     cards_by_id = {c.id: c for c in cards}
 
     mapped_card_ids = {m.card_id for m in mappings}
+    active_mapped_card_ids = {m.card_id for m in mappings if m.is_active}
     priced_card_ids = set(db.scalars(select(PriceObservation.card_id).distinct()).all())
 
     issues: list[AuditIssue] = [
@@ -327,7 +329,7 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_duplicate_source_url(mappings, sources_by_id),
         *_check_source_card_code_mismatch(mappings, cards_by_id),
         *_check_cards_without_source_mappings(cards, mapped_card_ids),
-        *_check_cards_with_prices_but_no_active_mapping(priced_card_ids, mapped_card_ids),
+        *_check_cards_with_prices_but_no_active_mapping(priced_card_ids, active_mapped_card_ids),
     ]
 
     return CardAuditReport(total_cards=len(cards), issues=issues)

@@ -1,0 +1,244 @@
+from app.models import Card, Source, SourceCardMapping
+
+
+def make_card(db_session, **overrides) -> Card:
+    fields = dict(
+        card_code="OP01-001",
+        name_en="Monkey D. Luffy",
+        name_jp="モンキー・D・ルフィ",
+        set_code="OP01",
+        rarity="L",
+        variant="leader",
+        language="en",
+    )
+    fields.update(overrides)
+    card = Card(**fields)
+    db_session.add(card)
+    db_session.commit()
+    db_session.refresh(card)
+    return card
+
+
+def make_source(db_session, name: str = "yuyutei") -> Source:
+    source = Source(name=name, base_url=f"https://{name}.example")
+    db_session.add(source)
+    db_session.commit()
+    db_session.refresh(source)
+    return source
+
+
+def make_mapping(db_session, card: Card, source: Source, **overrides) -> SourceCardMapping:
+    fields = dict(
+        card_id=card.id,
+        source_id=source.id,
+        source_card_id=card.card_code,
+        source_url=f"https://{source.name}.example/{card.card_code}",
+    )
+    fields.update(overrides)
+    mapping = SourceCardMapping(**fields)
+    db_session.add(mapping)
+    db_session.commit()
+    db_session.refresh(mapping)
+    return mapping
+
+
+def test_list_source_mappings_empty(client, db_session):
+    response = client.get("/admin/source-mappings")
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "total": 0, "limit": 100, "offset": 0}
+
+
+def test_list_source_mappings_returns_mappings(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session, "yuyutei")
+    mapping = make_mapping(db_session, card, source)
+
+    response = client.get("/admin/source-mappings")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    item = body["items"][0]
+    assert item["id"] == mapping.id
+    assert item["card_id"] == card.id
+    assert item["card_code"] == "OP01-001"
+    assert item["name_en"] == "Monkey D. Luffy"
+    assert item["source_name"] == "yuyutei"
+    assert item["source_url"] == mapping.source_url
+    assert item["manual_verified"] is False
+    assert item["is_active"] is True
+    assert item["review_status"] == "approved"
+    assert item["review_notes"] is None
+    assert item["last_verified_at"] is None
+
+
+def test_list_source_mappings_filters_by_source(client, db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    make_mapping(db_session, card, yuyutei)
+    make_mapping(db_session, card, snkrdunk)
+
+    response = client.get("/admin/source-mappings", params={"source": "snkrdunk"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["source_name"] == "snkrdunk"
+
+
+def test_list_source_mappings_rejects_invalid_source(client, db_session):
+    response = client.get("/admin/source-mappings", params={"source": "bogus"})
+    assert response.status_code == 400
+
+
+def test_list_source_mappings_filters_by_review_status(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    make_mapping(db_session, card, source, source_url="https://yuyutei.example/a", review_status="approved")
+    make_mapping(
+        db_session, card, source, source_url="https://yuyutei.example/b", review_status="needs_review"
+    )
+
+    response = client.get("/admin/source-mappings", params={"review_status": "needs_review"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["review_status"] == "needs_review"
+
+
+def test_list_source_mappings_rejects_invalid_review_status(client, db_session):
+    response = client.get("/admin/source-mappings", params={"review_status": "bogus"})
+    assert response.status_code == 400
+
+
+def test_list_source_mappings_filters_by_is_active(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    make_mapping(db_session, card, source, source_url="https://yuyutei.example/active", is_active=True)
+    make_mapping(
+        db_session, card, source, source_url="https://yuyutei.example/inactive", is_active=False
+    )
+
+    response = client.get("/admin/source-mappings", params={"is_active": "false"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["is_active"] is False
+
+
+def test_list_source_mappings_filters_by_card_code(client, db_session):
+    card_a = make_card(db_session, card_code="OP01-001")
+    card_b = make_card(db_session, card_code="OP01-002")
+    source = make_source(db_session)
+    make_mapping(db_session, card_a, source)
+    make_mapping(db_session, card_b, source)
+
+    response = client.get("/admin/source-mappings", params={"card_code": "OP01-002"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["card_code"] == "OP01-002"
+
+
+def test_get_source_mapping_returns_mapping(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    mapping = make_mapping(db_session, card, source)
+
+    response = client.get(f"/admin/source-mappings/{mapping.id}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == mapping.id
+
+
+def test_get_source_mapping_not_found(client, db_session):
+    response = client.get("/admin/source-mappings/999999")
+    assert response.status_code == 404
+
+
+def test_patch_source_mapping_updates_fields(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    mapping = make_mapping(db_session, card, source)
+
+    response = client.patch(
+        f"/admin/source-mappings/{mapping.id}",
+        json={
+            "source_url": "https://yuyutei.example/updated",
+            "manual_verified": True,
+            "review_notes": "looks right",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_url"] == "https://yuyutei.example/updated"
+    assert body["manual_verified"] is True
+    assert body["review_notes"] == "looks right"
+
+    db_session.expire_all()
+    updated = db_session.get(SourceCardMapping, mapping.id)
+    assert updated.source_url == "https://yuyutei.example/updated"
+    assert updated.manual_verified is True
+    assert updated.review_notes == "looks right"
+
+
+def test_patch_source_mapping_rejects_invalid_review_status(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    mapping = make_mapping(db_session, card, source)
+
+    response = client.patch(
+        f"/admin/source-mappings/{mapping.id}", json={"review_status": "bogus"}
+    )
+
+    assert response.status_code == 400
+
+
+def test_patch_source_mapping_not_found(client, db_session):
+    response = client.patch("/admin/source-mappings/999999", json={"is_active": False})
+    assert response.status_code == 404
+
+
+def test_reject_source_mapping(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    mapping = make_mapping(db_session, card, source)
+
+    response = client.post(f"/admin/source-mappings/{mapping.id}/reject")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_active"] is False
+    assert body["review_status"] == "rejected"
+
+    db_session.expire_all()
+    updated = db_session.get(SourceCardMapping, mapping.id)
+    assert updated.is_active is False
+    assert updated.review_status == "rejected"
+
+
+def test_approve_source_mapping(client, db_session):
+    card = make_card(db_session)
+    source = make_source(db_session)
+    mapping = make_mapping(
+        db_session, card, source, is_active=False, review_status="needs_review"
+    )
+
+    response = client.post(f"/admin/source-mappings/{mapping.id}/approve")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_active"] is True
+    assert body["review_status"] == "approved"
+    assert body["last_verified_at"] is not None
+
+    db_session.expire_all()
+    updated = db_session.get(SourceCardMapping, mapping.id)
+    assert updated.is_active is True
+    assert updated.review_status == "approved"
+    assert updated.last_verified_at is not None

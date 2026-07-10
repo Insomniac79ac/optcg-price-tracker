@@ -132,6 +132,8 @@ def match_candidate(
     mapping.source_url = candidate.source_url
     mapping.match_confidence = 1.0
     mapping.manual_verified = body.manual_verified
+    mapping.is_active = True
+    mapping.review_status = "approved" if body.manual_verified else "needs_review"
 
     db.commit()
     db.refresh(candidate)

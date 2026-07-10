@@ -129,6 +129,29 @@ def test_match_candidate_creates_mapping(client, candidate, seeded_db):
     )
     assert mapping.manual_verified is True
     assert mapping.source_url == candidate.source_url
+    assert mapping.is_active is True
+    assert mapping.review_status == "approved"
+
+
+def test_match_candidate_without_manual_verification_needs_review(client, candidate, seeded_db):
+    luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
+
+    response = client.post(
+        f"/snkrdunk/candidates/{candidate.id}/match",
+        json={"card_id": luffy.id, "manual_verified": False},
+    )
+
+    assert response.status_code == 200
+
+    snkrdunk_source = seeded_db.query(Source).filter_by(name="snkrdunk").one()
+    mapping = (
+        seeded_db.query(SourceCardMapping)
+        .filter_by(card_id=luffy.id, source_id=snkrdunk_source.id)
+        .one()
+    )
+    assert mapping.manual_verified is False
+    assert mapping.is_active is True
+    assert mapping.review_status == "needs_review"
 
 
 def test_match_candidate_updates_existing_mapping(client, candidate, seeded_db):

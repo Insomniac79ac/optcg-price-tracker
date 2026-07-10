@@ -8,6 +8,7 @@ from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.refresh_runs import router as refresh_runs_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
+from app.api.source_mappings import router as source_mappings_router
 from app.config_check import validate_config
 
 # Fail fast and loud: a misconfigured production deployment (no ADMIN_TOKEN)
@@ -37,3 +38,4 @@ app.include_router(snkrdunk_candidates_router)
 app.include_router(refresh_runs_router)
 app.include_router(alerts_router)
 app.include_router(card_audit_router)
+app.include_router(source_mappings_router)

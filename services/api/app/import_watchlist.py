@@ -85,15 +85,14 @@ def _upsert_mapping(
         .one_or_none()
     )
     if mapping is None:
-        db.add(
-            SourceCardMapping(
-                card_id=card.id,
-                source_id=source.id,
-                source_card_id=card_code,
-                source_url=url,
-                manual_verified=manual_verified,
-            )
+        mapping = SourceCardMapping(
+            card_id=card.id,
+            source_id=source.id,
+            source_card_id=card_code,
+            source_url=url,
+            manual_verified=manual_verified,
         )
+        db.add(mapping)
         summary.mappings_created += 1
     else:
         mapping.card_id = card.id
@@ -101,6 +100,14 @@ def _upsert_mapping(
         mapping.manual_verified = manual_verified
         mapping.match_confidence = None
         summary.mappings_updated += 1
+
+    # A row the watchlist itself vouches for (manual_verified=true) is
+    # authoritative - re-importing it should un-reject/re-activate it even if
+    # an earlier review had flagged it, since a curated watchlist entry is a
+    # stronger signal than a prior auto-match review decision.
+    if manual_verified:
+        mapping.is_active = True
+        mapping.review_status = "approved"
 
 
 def _import_row(

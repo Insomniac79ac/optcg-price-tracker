@@ -115,6 +115,60 @@ def test_import_creates_source_mappings(tmp_path, db_session):
     assert sources == {"yuyutei", "snkrdunk"}
 
 
+def test_import_creates_active_approved_mappings_when_manual_verified(tmp_path, db_session):
+    csv_path = write_csv(
+        tmp_path,
+        [
+            base_row(
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                manual_verified="true",
+            )
+        ],
+    )
+
+    import_watchlist(csv_path, db=db_session)
+
+    card = db_session.query(Card).filter_by(card_code="OP01-001").one()
+    mapping = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
+    assert mapping.is_active is True
+    assert mapping.review_status == "approved"
+
+
+def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path, db_session):
+    csv_path = write_csv(
+        tmp_path,
+        [
+            base_row(
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                manual_verified="false",
+            )
+        ],
+    )
+    import_watchlist(csv_path, db=db_session)
+
+    card = db_session.query(Card).filter_by(card_code="OP01-001").one()
+    mapping = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
+    mapping.is_active = False
+    mapping.review_status = "rejected"
+    db_session.commit()
+
+    reimport_csv = write_csv(
+        tmp_path,
+        [
+            base_row(
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                manual_verified="true",
+            )
+        ],
+    )
+    import_watchlist(reimport_csv, db=db_session)
+
+    db_session.expire_all()
+    updated = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
+    assert updated.is_active is True
+    assert updated.review_status == "approved"
+
+
 def test_import_skips_empty_source_urls(tmp_path, db_session):
     csv_path = write_csv(
         tmp_path,

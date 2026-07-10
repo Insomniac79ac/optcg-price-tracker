@@ -102,6 +102,9 @@ def apply_match(
             existing_mapping.source_url = candidate.source_url
             existing_mapping.match_confidence = result.match_confidence
             existing_mapping.manual_verified = False
+            # Auto-matched (not manually verified) mappings are flagged for
+            # admin review rather than silently trusted.
+            existing_mapping.review_status = "needs_review"
         else:
             db.add(
                 SourceCardMapping(
@@ -111,6 +114,7 @@ def apply_match(
                     source_url=candidate.source_url,
                     match_confidence=result.match_confidence,
                     manual_verified=False,
+                    review_status="needs_review",
                 )
             )
 

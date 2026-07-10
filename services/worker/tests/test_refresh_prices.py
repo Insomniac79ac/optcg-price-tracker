@@ -62,13 +62,17 @@ def seed_source_and_card(db_session, source_name: str, card_code: str) -> tuple[
     return source, card
 
 
-def make_source_card_mapping(db_session, source: Source, card: Card, source_card_id: str) -> SourceCardMapping:
-    mapping = SourceCardMapping(
+def make_source_card_mapping(
+    db_session, source: Source, card: Card, source_card_id: str, **overrides
+) -> SourceCardMapping:
+    fields = dict(
         card_id=card.id,
         source_id=source.id,
         source_card_id=source_card_id,
         source_url=f"https://yuyu-tei.jp/sell/opc/card/op01/{source_card_id}",
     )
+    fields.update(overrides)
+    mapping = SourceCardMapping(**fields)
     db_session.add(mapping)
     db_session.flush()
     return mapping
@@ -89,6 +93,28 @@ def test_live_mode_skips_unsupported_sources_safely(db_session):
     observations = db_session.query(PriceObservation).all()
     assert len(observations) == 1
     assert observations[0].card_id == yuyutei_card.id
+
+
+def test_inactive_mappings_are_skipped(db_session):
+    source, active_card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    inactive_card = Card(
+        card_code="OP01-002", name_en="Inactive Card", name_jp=None,
+        set_code="OP01", rarity="L", variant=None, language="jp",
+    )
+    db_session.add(inactive_card)
+    db_session.flush()
+    make_source_card_mapping(db_session, source, active_card, "OP01-001")
+    make_source_card_mapping(db_session, source, inactive_card, "OP01-002", is_active=False)
+
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.mappings_checked == 1
+    assert summary.mappings_processed == 1
+    observations = db_session.query(PriceObservation).all()
+    assert len(observations) == 1
+    assert observations[0].card_id == active_card.id
 
 
 def test_refresh_run_is_created(db_session):

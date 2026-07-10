@@ -114,6 +114,8 @@ def test_import_auto_matches_exact_card_code(db_session, tmp_path):
     mapping = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
     assert mapping.manual_verified is False
     assert mapping.source_url == candidate.source_url
+    assert mapping.review_status == "needs_review"
+    assert mapping.is_active is True
 
 
 def test_import_marks_unclear_candidate_as_needs_review(db_session, tmp_path):

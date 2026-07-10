@@ -118,6 +118,7 @@ def refresh_prices(
             query = (
                 db.query(SourceCardMapping)
                 .join(Source, SourceCardMapping.source_id == Source.id)
+                .filter(SourceCardMapping.is_active.is_(True))
             )
             if source and source != "all":
                 query = query.filter(Source.name == source)

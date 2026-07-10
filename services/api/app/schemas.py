@@ -174,6 +174,41 @@ class AlertRuleUpdateIn(BaseModel):
     threshold_pct: float | None = None
 
 
+class SourceCardMappingOut(BaseModel):
+    id: int
+    card_id: int
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    source_name: str | None
+    source_url: str | None
+    source_card_id: str
+    manual_verified: bool
+    match_confidence: float | None
+    is_active: bool
+    review_status: str
+    review_notes: str | None
+    created_at: datetime
+    updated_at: datetime
+    last_verified_at: datetime | None
+
+
+class SourceCardMappingListOut(BaseModel):
+    items: list[SourceCardMappingOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class SourceCardMappingUpdateIn(BaseModel):
+    source_url: str | None = None
+    source_card_id: str | None = None
+    manual_verified: bool | None = None
+    is_active: bool | None = None
+    review_status: str | None = None
+    review_notes: str | None = None
+
+
 class CardAuditIssueOut(BaseModel):
     issue_type: str
     severity: str
