@@ -2,6 +2,7 @@ from app.db import Base
 from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
 from app.models.card import Card
+from app.models.collection_item import CollectionItem
 from app.models.price_observation import PriceObservation
 from app.models.price_refresh_run import PriceRefreshRun
 from app.models.raw_snapshot import RawSnapshot
@@ -13,6 +14,7 @@ from app.models.source_card_mapping import SourceCardMapping
 __all__ = [
     "Base",
     "Card",
+    "CollectionItem",
     "Source",
     "SourceCardMapping",
     "RawSnapshot",

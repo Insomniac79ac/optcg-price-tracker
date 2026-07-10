@@ -1,7 +1,7 @@
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CardOut(BaseModel):
@@ -207,6 +207,71 @@ class SourceCardMappingUpdateIn(BaseModel):
     is_active: bool | None = None
     review_status: str | None = None
     review_notes: str | None = None
+
+
+CollectionItemStatus = Literal["hold", "watch", "sell", "sold", "grading"]
+
+
+class CollectionItemOut(BaseModel):
+    id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    quantity: int
+    condition_label: str | None
+    purchase_price_jpy: int | None
+    purchase_date: date | None
+    purchase_source: str | None
+    target_sell_price_jpy: int | None
+    notes: str | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class CollectionItemListOut(BaseModel):
+    items: list[CollectionItemOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class CollectionItemCreateIn(BaseModel):
+    card_id: int
+    quantity: int = Field(default=1, ge=1)
+    condition_label: str | None = None
+    purchase_price_jpy: int | None = Field(default=None, ge=0)
+    purchase_date: date | None = None
+    purchase_source: str | None = None
+    target_sell_price_jpy: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+    status: CollectionItemStatus = "hold"
+
+
+class CollectionItemUpdateIn(BaseModel):
+    card_id: int | None = None
+    quantity: int | None = Field(default=None, ge=1)
+    condition_label: str | None = None
+    purchase_price_jpy: int | None = Field(default=None, ge=0)
+    purchase_date: date | None = None
+    purchase_source: str | None = None
+    target_sell_price_jpy: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+    status: CollectionItemStatus | None = None
+
+
+class CollectionSummaryOut(BaseModel):
+    total_items: int
+    total_quantity: int
+    total_cost_basis_jpy: int
+    items_with_purchase_price: int
+    items_missing_purchase_price: int
+    items_by_status: dict[str, int]
 
 
 class CardAuditIssueOut(BaseModel):

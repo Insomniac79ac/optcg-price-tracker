@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
+from app.api.collection import router as collection_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.refresh_runs import router as refresh_runs_router
@@ -39,3 +40,4 @@ app.include_router(refresh_runs_router)
 app.include_router(alerts_router)
 app.include_router(card_audit_router)
 app.include_router(source_mappings_router)
+app.include_router(collection_router)
