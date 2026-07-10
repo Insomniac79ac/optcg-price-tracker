@@ -29,6 +29,9 @@ export function AppHeader() {
           <Link href="/admin/alerts" className="hover:text-neutral-100">
             Alerts
           </Link>
+          <Link href="/admin/card-audit" className="hover:text-neutral-100">
+            Card audit
+          </Link>
         </nav>
       </div>
     </header>

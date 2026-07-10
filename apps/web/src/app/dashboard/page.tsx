@@ -119,6 +119,12 @@ export default function DashboardPage() {
           >
             Alerts
           </Link>
+          <Link
+            href="/admin/card-audit"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Card audit
+          </Link>
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2">

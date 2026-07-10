@@ -23,10 +23,10 @@ services:
     ports:
       - "8000:8000"
     environment:
+      APP_ENV: ${APP_ENV:-development}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-dev-admin-token}
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
-      ENVIRONMENT: development
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     volumes:
       - ./data:/app/data
     depends_on:
@@ -38,11 +38,13 @@ services:
     container_name: opcg-worker
     command: celery -A worker.celery_app worker --loglevel=info
     environment:
+      APP_ENV: ${APP_ENV:-development}
+      SCRAPING_MODE: ${SCRAPING_MODE:-mock}
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
-      SCRAPING_MODE: mock
-      YUYUTEI_REQUEST_DELAY_MS: 3000
-      PRICE_REFRESH_INTERVAL_HOURS: 6
+      YUYUTEI_REQUEST_DELAY_MS: ${YUYUTEI_REQUEST_DELAY_MS:-3000}
+      SNKRDUNK_REQUEST_DELAY_MS: ${SNKRDUNK_REQUEST_DELAY_MS:-3000}
+      PRICE_REFRESH_INTERVAL_HOURS: ${PRICE_REFRESH_INTERVAL_HOURS:-6}
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
     volumes:
@@ -56,11 +58,13 @@ services:
     container_name: opcg-beat
     command: celery -A worker.celery_app beat --loglevel=info
     environment:
+      APP_ENV: ${APP_ENV:-development}
+      SCRAPING_MODE: ${SCRAPING_MODE:-mock}
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
-      SCRAPING_MODE: mock
-      YUYUTEI_REQUEST_DELAY_MS: 3000
-      PRICE_REFRESH_INTERVAL_HOURS: 6
+      YUYUTEI_REQUEST_DELAY_MS: ${YUYUTEI_REQUEST_DELAY_MS:-3000}
+      SNKRDUNK_REQUEST_DELAY_MS: ${SNKRDUNK_REQUEST_DELAY_MS:-3000}
+      PRICE_REFRESH_INTERVAL_HOURS: ${PRICE_REFRESH_INTERVAL_HOURS:-6}
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
     volumes:
@@ -75,7 +79,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - api
 
