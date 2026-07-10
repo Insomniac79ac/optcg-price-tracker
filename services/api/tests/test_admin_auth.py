@@ -8,6 +8,7 @@ ADMIN_PATHS = [
     "/admin/refresh-runs",
     "/admin/alert-events",
     "/admin/alert-rules",
+    "/admin/card-audit",
     "/snkrdunk/candidates",
 ]
 

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.alerts import router as alerts_router
+from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
@@ -35,3 +36,4 @@ app.include_router(market_router)
 app.include_router(snkrdunk_candidates_router)
 app.include_router(refresh_runs_router)
 app.include_router(alerts_router)
+app.include_router(card_audit_router)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -171,3 +172,25 @@ class AlertRuleOut(BaseModel):
 class AlertRuleUpdateIn(BaseModel):
     is_active: bool | None = None
     threshold_pct: float | None = None
+
+
+class CardAuditIssueOut(BaseModel):
+    issue_type: str
+    severity: str
+    card_ids: list[int]
+    card_code: str | None = None
+    message: str
+    suggested_action: str
+    details: dict[str, Any] | None = None
+
+
+class CardAuditSummaryOut(BaseModel):
+    total_cards: int
+    total_issues: int
+    critical_issues: int
+    warning_issues: int
+
+
+class CardAuditReportOut(BaseModel):
+    summary: CardAuditSummaryOut
+    issues: list[CardAuditIssueOut]
