@@ -9,6 +9,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import {
   AdminAuthRequiredError,
+  AdminInvalidResponseError,
+  AdminNetworkError,
+  AdminNotFoundError,
+  AdminProxyError,
+  AdminTimeoutError,
   type CardAuditReport,
   fetchCardAudit,
 } from "@/lib/api";
@@ -19,28 +24,63 @@ const SEVERITY_FILTERS = [
   { value: "warning", label: "Warning" },
 ];
 
+type PageStatus =
+  | "loading"
+  | "ready"
+  | "unauthorized"
+  | "not_found"
+  | "timeout"
+  | "network_error"
+  | "proxy_error"
+  | "no_data"
+  | "error";
+
+interface ProxyErrorDetails {
+  message: string;
+  backendStatus?: number;
+  bodyPreview?: string;
+}
+
 export default function CardAuditPage() {
   const [report, setReport] = useState<CardAuditReport | null>(null);
-  const [status, setStatus] = useState<
-    "loading" | "error" | "unauthorized" | "ready"
-  >("loading");
+  const [status, setStatus] = useState<PageStatus>("loading");
+  const [proxyError, setProxyError] = useState<ProxyErrorDetails | null>(null);
   const [severityFilter, setSeverityFilter] = useState("");
   const [issueTypeFilter, setIssueTypeFilter] = useState("");
 
   useEffect(() => {
     let cancelled = false;
+    let succeeded = false;
 
     fetchCardAudit()
       .then((data) => {
         if (cancelled) return;
         setReport(data);
-        setStatus("ready");
+        succeeded = true;
       })
       .catch((err) => {
         if (cancelled) return;
-        setStatus(
-          err instanceof AdminAuthRequiredError ? "unauthorized" : "error",
-        );
+        if (err instanceof AdminAuthRequiredError) setStatus("unauthorized");
+        else if (err instanceof AdminNotFoundError) setStatus("not_found");
+        else if (err instanceof AdminTimeoutError) setStatus("timeout");
+        else if (err instanceof AdminNetworkError) setStatus("network_error");
+        else if (err instanceof AdminProxyError) {
+          setProxyError({
+            message: err.message,
+            backendStatus: err.backendStatus,
+            bodyPreview: err.bodyPreview,
+          });
+          setStatus("proxy_error");
+        } else if (err instanceof AdminInvalidResponseError)
+          setStatus("no_data");
+        else setStatus("error");
+      })
+      .finally(() => {
+        // Always clear the loading state - success sets "ready" here rather
+        // than in .then() so a request that never resolves or rejects can't
+        // leave the page stuck on "Loading catalog audit…" forever.
+        if (cancelled) return;
+        if (succeeded) setStatus("ready");
       });
 
     return () => {
@@ -85,6 +125,49 @@ export default function CardAuditPage() {
         {status === "loading" && (
           <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
             Loading catalog audit…
+          </div>
+        )}
+
+        {status === "not_found" && (
+          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+            The card audit endpoint was not found (404). Is the backend up to
+            date?
+          </div>
+        )}
+
+        {status === "timeout" && (
+          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+            Timed out waiting for the catalog audit (15s). Is the backend
+            running and reachable?
+          </div>
+        )}
+
+        {status === "network_error" && (
+          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+            Could not reach the API proxy. Check that the web and api
+            containers are both running.
+          </div>
+        )}
+
+        {status === "proxy_error" && proxyError && (
+          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-6 text-sm text-rose-300">
+            <p className="font-medium">{proxyError.message}</p>
+            {proxyError.backendStatus !== undefined && (
+              <p className="mt-1 text-rose-400">
+                backend_status: {proxyError.backendStatus}
+              </p>
+            )}
+            {proxyError.bodyPreview && (
+              <pre className="mt-3 max-h-48 overflow-auto rounded border border-rose-900/50 bg-rose-950/40 p-3 text-xs whitespace-pre-wrap text-rose-200">
+                {proxyError.bodyPreview}
+              </pre>
+            )}
+          </div>
+        )}
+
+        {status === "no_data" && (
+          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+            No data received from API
           </div>
         )}
 
