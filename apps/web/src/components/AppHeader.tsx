@@ -14,6 +14,9 @@ export function AppHeader() {
           <Link href="/dashboard" className="hover:text-neutral-100">
             Dashboard
           </Link>
+          <Link href="/collection" className="hover:text-neutral-100">
+            Collection
+          </Link>
           <Link
             href="/admin/refresh-runs"
             className="hover:text-neutral-100"

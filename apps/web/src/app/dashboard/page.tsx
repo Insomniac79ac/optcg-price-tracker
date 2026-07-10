@@ -102,6 +102,12 @@ export default function DashboardPage() {
 
         <div className="mb-4 flex gap-3 text-xs text-neutral-500">
           <Link
+            href="/collection"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Collection
+          </Link>
+          <Link
             href="/admin/refresh-runs"
             className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
           >
