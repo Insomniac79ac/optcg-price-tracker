@@ -4,6 +4,7 @@ from app.models.alert_rule import AlertRule
 from app.models.card import Card
 from app.models.collection_item import CollectionItem
 from app.models.price_observation import PriceObservation
+from app.models.portfolio_valuation_snapshot import PortfolioValuationSnapshot
 from app.models.price_refresh_run import PriceRefreshRun
 from app.models.raw_snapshot import RawSnapshot
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
@@ -20,6 +21,7 @@ __all__ = [
     "RawSnapshot",
     "PriceObservation",
     "PriceRefreshRun",
+    "PortfolioValuationSnapshot",
     "SnkrdunkDiscoveryRun",
     "SnkrdunkCandidate",
     "AlertEvent",

@@ -357,6 +357,27 @@ class PortfolioValuationOut(BaseModel):
     items: list[PortfolioValuationItemOut]
 
 
+class PortfolioValuationSnapshotOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    total_items: int
+    total_quantity: int
+    total_cost_basis_jpy: int | None
+    retail_value_jpy: int | None
+    liquidation_value_jpy: int | None
+    market_floor_value_jpy: int | None
+    pnl_vs_retail_jpy: int | None
+    pnl_vs_liquidation_jpy: int | None
+    pnl_vs_market_floor_jpy: int | None
+    items_missing_yuyutei_sell: int
+    items_missing_yuyutei_buy: int
+    items_missing_snkrdunk_floor: int
+    items_missing_cost_basis: int
+    cards_above_target_sell: int
+
+
 class CardAuditIssueOut(BaseModel):
     issue_type: str
     severity: str

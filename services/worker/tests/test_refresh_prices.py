@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 import pytest
 
 from worker.adapters.base import PriceObservationData, RawSnapshotData
+from worker.jobs import refresh_prices as refresh_prices_module
 from worker.jobs.refresh_prices import build_arg_parser, log_run_config, refresh_prices
 from worker.models import (
     Card,
+    PortfolioValuationSnapshot,
     PriceObservation,
     PriceRefreshRun,
     RawSnapshot,
@@ -177,6 +179,56 @@ def test_failed_mapping_increments_mappings_failed_and_marks_completed_with_warn
     observations = db_session.query(PriceObservation).all()
     assert len(observations) == 1
     assert observations[0].card_id == card_ok.id
+
+
+def test_successful_non_dry_run_creates_portfolio_snapshot(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.status == "completed"
+    assert summary.portfolio_snapshot_id is not None
+    snapshot = (
+        db_session.query(PortfolioValuationSnapshot)
+        .filter_by(id=summary.portfolio_snapshot_id)
+        .one()
+    )
+    assert snapshot.total_items == 0
+    assert f"portfolio_snapshot_id={summary.portfolio_snapshot_id}" in summary.report_lines()
+
+
+def test_dry_run_does_not_create_portfolio_snapshot(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
+
+    assert summary.portfolio_snapshot_id is None
+    assert db_session.query(PortfolioValuationSnapshot).count() == 0
+
+
+def test_portfolio_snapshot_failure_does_not_crash_refresh_job(db_session, monkeypatch):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    def boom(db):
+        raise RuntimeError("snapshot exploded")
+
+    monkeypatch.setattr(refresh_prices_module, "create_portfolio_valuation_snapshot", boom)
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.status == "completed"
+    assert summary.mappings_processed == 1
+    assert summary.portfolio_snapshot_id is None
+    assert db_session.query(PortfolioValuationSnapshot).count() == 0
+    # Session must still be usable afterward - a leftover failed transaction
+    # would break any caller that keeps using db after refresh_prices returns.
+    assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
 
 
 def test_dry_run_creates_no_database_rows(db_session):

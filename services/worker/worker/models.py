@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -286,3 +287,57 @@ class AlertEvent(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending", server_default="pending")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class CollectionItem(Base):
+    __tablename__ = "collection_items"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('hold', 'watch', 'sell', 'sold', 'grading')",
+            name="ck_collection_items_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    card_id: Mapped[int] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    condition_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    purchase_price_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    purchase_source: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    target_sell_price_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), default="hold", server_default="hold", index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class PortfolioValuationSnapshot(Base):
+    __tablename__ = "portfolio_valuation_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    total_items: Mapped[int] = mapped_column(Integer)
+    total_quantity: Mapped[int] = mapped_column(Integer)
+    total_cost_basis_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    retail_value_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    liquidation_value_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    market_floor_value_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pnl_vs_retail_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pnl_vs_liquidation_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pnl_vs_market_floor_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    items_missing_yuyutei_sell: Mapped[int] = mapped_column(Integer)
+    items_missing_yuyutei_buy: Mapped[int] = mapped_column(Integer)
+    items_missing_snkrdunk_floor: Mapped[int] = mapped_column(Integer)
+    items_missing_cost_basis: Mapped[int] = mapped_column(Integer)
+    cards_above_target_sell: Mapped[int] = mapped_column(Integer)

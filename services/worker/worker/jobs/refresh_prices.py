@@ -11,6 +11,7 @@ from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
 from worker.adapters.yuyutei import YuyuTeiAdapter
 from worker.db import SessionLocal
 from worker.models import PriceObservation, PriceRefreshRun, RawSnapshot, Source, SourceCardMapping
+from worker.portfolio_valuation import create_portfolio_valuation_snapshot
 from worker.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class RefreshRunSummary:
     observations_parsed: int = 0
     observations_inserted: int = 0
     error_message: str | None = None
+    portfolio_snapshot_id: int | None = None
 
     def report_lines(self) -> list[str]:
         lines = [
@@ -55,6 +57,8 @@ class RefreshRunSummary:
         ]
         if self.error_message:
             lines.append(f"error_message: {self.error_message}")
+        if self.portfolio_snapshot_id is not None:
+            lines.append(f"portfolio_snapshot_id={self.portfolio_snapshot_id}")
         return lines
 
     def print_report(self) -> None:
@@ -228,6 +232,21 @@ def refresh_prices(
     run.error_message = error_message
     db.commit()
 
+    portfolio_snapshot_id: int | None = None
+    if not dry_run and status != "failed":
+        try:
+            portfolio_snapshot_id = create_portfolio_valuation_snapshot(db).id
+        except Exception:
+            # Snapshotting the portfolio is a nice-to-have on top of the
+            # refresh itself - a failure here (e.g. a transient DB error)
+            # must never mark an otherwise-successful refresh run as failed.
+            db.rollback()
+            logger.warning(
+                "Failed to create portfolio valuation snapshot after refresh run %s.",
+                run_id,
+                exc_info=True,
+            )
+
     return RefreshRunSummary(
         id=run_id,
         status=status,
@@ -241,6 +260,7 @@ def refresh_prices(
         snapshots_created=snapshots_created,
         observations_parsed=observations_parsed,
         observations_inserted=observations_inserted,
+        portfolio_snapshot_id=portfolio_snapshot_id,
         error_message=error_message,
     )
 

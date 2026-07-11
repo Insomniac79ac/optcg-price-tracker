@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Card, CollectionItem
+from app.models import Card, CollectionItem, PortfolioValuationSnapshot
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
 from app.schemas import (
     CollectionItemCreateIn,
@@ -12,6 +14,7 @@ from app.schemas import (
     CollectionItemUpdateIn,
     CollectionSummaryOut,
     PortfolioValuationOut,
+    PortfolioValuationSnapshotOut,
 )
 from app.services.portfolio_valuation import get_portfolio_valuation
 
@@ -134,6 +137,37 @@ def get_collection_summary(db: Session = Depends(get_db)):
 @router.get("/valuation", response_model=PortfolioValuationOut)
 def get_collection_valuation(db: Session = Depends(get_db)):
     return get_portfolio_valuation(db)
+
+
+@router.get("/valuation/history", response_model=list[PortfolioValuationSnapshotOut])
+def get_collection_valuation_history(
+    days: str = Query(default="30"),
+    limit: int = Query(default=500, ge=1, le=2000),
+    db: Session = Depends(get_db),
+):
+    filters = []
+    if days != "all":
+        try:
+            days_int = int(days)
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="days must be a positive integer or 'all'"
+            )
+        if days_int <= 0:
+            raise HTTPException(
+                status_code=400, detail="days must be a positive integer or 'all'"
+            )
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_int)
+        filters.append(PortfolioValuationSnapshot.created_at >= cutoff)
+
+    snapshots = db.scalars(
+        select(PortfolioValuationSnapshot)
+        .where(*filters)
+        .order_by(PortfolioValuationSnapshot.created_at.asc())
+        .limit(limit)
+    ).all()
+
+    return [PortfolioValuationSnapshotOut.model_validate(s) for s in snapshots]
 
 
 @router.post("", response_model=CollectionItemOut, status_code=201)
