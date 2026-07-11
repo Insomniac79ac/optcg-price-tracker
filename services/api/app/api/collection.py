@@ -11,7 +11,9 @@ from app.schemas import (
     CollectionItemOut,
     CollectionItemUpdateIn,
     CollectionSummaryOut,
+    PortfolioValuationOut,
 )
+from app.services.portfolio_valuation import get_portfolio_valuation
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
@@ -127,6 +129,11 @@ def get_collection_summary(db: Session = Depends(get_db)):
         items_missing_purchase_price=items_missing_purchase_price,
         items_by_status=items_by_status,
     )
+
+
+@router.get("/valuation", response_model=PortfolioValuationOut)
+def get_collection_valuation(db: Session = Depends(get_db)):
+    return get_portfolio_valuation(db)
 
 
 @router.post("", response_model=CollectionItemOut, status_code=201)

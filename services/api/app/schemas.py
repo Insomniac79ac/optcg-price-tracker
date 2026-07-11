@@ -274,6 +274,89 @@ class CollectionSummaryOut(BaseModel):
     items_by_status: dict[str, int]
 
 
+class YuyuteiPriceSnapshotOut(BaseModel):
+    price_jpy: int
+    observed_at: datetime
+
+
+class SnkrdunkFloorSnapshotOut(BaseModel):
+    price_jpy: int
+    observed_at: datetime
+    listing_count: int | None
+    condition_label: str | None
+
+
+class ValuationLatestPricesOut(BaseModel):
+    yuyutei_sell: YuyuteiPriceSnapshotOut | None
+    yuyutei_buy: YuyuteiPriceSnapshotOut | None
+    snkrdunk_floor: SnkrdunkFloorSnapshotOut | None
+
+
+class ValuationDetailOut(BaseModel):
+    retail_value_jpy: int | None
+    liquidation_value_jpy: int | None
+    market_floor_value_jpy: int | None
+    pnl_vs_retail_jpy: int | None
+    pnl_vs_retail_pct: float | None
+    pnl_vs_liquidation_jpy: int | None
+    pnl_vs_liquidation_pct: float | None
+    pnl_vs_market_floor_jpy: int | None
+    pnl_vs_market_floor_pct: float | None
+
+
+class ValuationFlagsOut(BaseModel):
+    missing_yuyutei_sell: bool
+    missing_yuyutei_buy: bool
+    missing_snkrdunk_floor: bool
+    missing_cost_basis: bool
+    above_target_sell: bool
+
+
+class PortfolioValuationItemOut(BaseModel):
+    collection_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    quantity: int
+    condition_label: str | None
+    purchase_price_jpy: int | None
+    cost_basis_jpy: int | None
+    target_sell_price_jpy: int | None
+    latest_prices: ValuationLatestPricesOut
+    valuations: ValuationDetailOut
+    flags: ValuationFlagsOut
+
+
+class PortfolioValuationSummaryOut(BaseModel):
+    total_items: int
+    total_quantity: int
+    total_cost_basis_jpy: int
+    retail_value_jpy: int
+    liquidation_value_jpy: int
+    market_floor_value_jpy: int
+    pnl_vs_retail_jpy: int
+    pnl_vs_retail_pct: float
+    pnl_vs_liquidation_jpy: int
+    pnl_vs_liquidation_pct: float
+    pnl_vs_market_floor_jpy: int
+    pnl_vs_market_floor_pct: float
+    items_missing_yuyutei_sell: int
+    items_missing_yuyutei_buy: int
+    items_missing_snkrdunk_floor: int
+    items_missing_cost_basis: int
+    cards_above_target_sell: int
+
+
+class PortfolioValuationOut(BaseModel):
+    summary: PortfolioValuationSummaryOut
+    items: list[PortfolioValuationItemOut]
+
+
 class CardAuditIssueOut(BaseModel):
     issue_type: str
     severity: str
