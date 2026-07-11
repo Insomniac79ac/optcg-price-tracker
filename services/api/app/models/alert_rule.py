@@ -10,6 +10,9 @@ RULE_TYPES = (
     "yuyutei_buy_change_pct",
     "stock_status_change",
     "refresh_failed",
+    "owned_card_above_target_sell",
+    "owned_card_below_cost_basis",
+    "portfolio_value_change_pct",
 )
 
 
@@ -18,7 +21,8 @@ class AlertRule(Base):
     __table_args__ = (
         CheckConstraint(
             "rule_type IN ('price_change_pct', 'yuyutei_buy_change_pct', "
-            "'stock_status_change', 'refresh_failed')",
+            "'stock_status_change', 'refresh_failed', 'owned_card_above_target_sell', "
+            "'owned_card_below_cost_basis', 'portfolio_value_change_pct')",
             name="ck_alert_rules_rule_type",
         ),
     )
