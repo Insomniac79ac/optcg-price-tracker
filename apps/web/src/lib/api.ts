@@ -326,16 +326,27 @@ const ADMIN_FETCH_TIMEOUT_MS = 15_000;
  * route - attaching the stored admin token if one exists, but still trying
  * the request without it otherwise (some admin endpoints allow unauthenticated
  * access in development). Distinguishes 401/404/timeout/network failures so
- * callers can render a state more specific than a generic error. */
-export async function fetchAdminJson<T>(path: string): Promise<T> {
+ * callers can render a state more specific than a generic error.
+ *
+ * Defaults to GET; pass `options.method`/`options.body` for mutations
+ * (POST/PATCH) through the same proxy-aware error handling. */
+export async function fetchAdminJson<T>(
+  path: string,
+  options?: { method?: string; body?: unknown },
+): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ADMIN_FETCH_TIMEOUT_MS);
 
   let res: Response;
   try {
     res = await fetch(path, {
+      method: options?.method,
       cache: "no-store",
-      headers: adminHeaders(),
+      headers: {
+        ...adminHeaders(),
+        ...(options?.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     });
   } catch (err) {
@@ -811,6 +822,121 @@ export function fetchMarketSignals(params?: {
   return fetchAdminJson<MarketSignalsResponse>(
     `/api/market/signals${qs ? `?${qs}` : ""}`,
   );
+}
+
+export const MARKET_SIGNAL_EVENT_STATUSES = [
+  "open",
+  "watching",
+  "dismissed",
+  "resolved",
+] as const;
+
+export const MARKET_SUGGESTED_ACTIONS = [
+  "review_buy_opportunity",
+  "review_sell_opportunity",
+  "monitor_momentum",
+  "monitor_drop",
+  "review_mapping",
+  "update_prices",
+  "add_collection_target",
+  "none",
+] as const;
+
+export interface MarketSignalEvent {
+  id: number;
+  signal_type: string;
+  status: string;
+  severity: string;
+  suggested_action: string | null;
+  card_id: number | null;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string | null;
+  rarity: string | null;
+  variant: string | null;
+  language: string | null;
+  collection_item_id: number | null;
+  owned_quantity: number;
+  message: string | null;
+  notes: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  seen_count: number;
+  last_payload: Record<string, unknown> | null;
+  dismissed_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketSignalEventsSummary {
+  total_events: number;
+  open_events: number;
+  watching_events: number;
+  dismissed_events: number;
+  resolved_events: number;
+  by_signal_type: Record<string, number>;
+  by_suggested_action: Record<string, number>;
+}
+
+export interface MarketSignalEventListResponse {
+  summary: MarketSignalEventsSummary;
+  events: MarketSignalEvent[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/signal-events/route.ts) - same reasoning as
+ * fetchMarketSignals. */
+export function fetchMarketSignalEvents(params?: {
+  status?: string;
+  signal_type?: string;
+  suggested_action?: string;
+  card_code?: string;
+  owned?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<MarketSignalEventListResponse> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.signal_type) query.set("signal_type", params.signal_type);
+  if (params?.suggested_action) query.set("suggested_action", params.suggested_action);
+  if (params?.card_code) query.set("card_code", params.card_code);
+  if (params?.owned !== undefined) query.set("owned", String(params.owned));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MarketSignalEventListResponse>(
+    `/api/market/signal-events${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export function patchMarketSignalEvent(
+  id: number,
+  body: { status?: string; notes?: string },
+): Promise<MarketSignalEvent> {
+  return fetchAdminJson<MarketSignalEvent>(`/api/market/signal-events/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+export function dismissMarketSignalEvent(id: number): Promise<MarketSignalEvent> {
+  return fetchAdminJson<MarketSignalEvent>(`/api/market/signal-events/${id}/dismiss`, {
+    method: "POST",
+  });
+}
+
+export function watchMarketSignalEvent(id: number): Promise<MarketSignalEvent> {
+  return fetchAdminJson<MarketSignalEvent>(`/api/market/signal-events/${id}/watch`, {
+    method: "POST",
+  });
+}
+
+export function resolveMarketSignalEvent(id: number): Promise<MarketSignalEvent> {
+  return fetchAdminJson<MarketSignalEvent>(`/api/market/signal-events/${id}/resolve`, {
+    method: "POST",
+  });
 }
 
 export async function fetchCardAudit(): Promise<CardAuditReport> {

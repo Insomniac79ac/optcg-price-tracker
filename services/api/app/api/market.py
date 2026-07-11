@@ -279,6 +279,7 @@ def dismiss_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "dismissed"
     event.dismissed_at = datetime.now(timezone.utc)
+    event.resolved_at = None
     db.commit()
     db.refresh(event)
     return _build_event_out(db, event)
@@ -289,6 +290,7 @@ def watch_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "watching"
     event.dismissed_at = None
+    event.resolved_at = None
     db.commit()
     db.refresh(event)
     return _build_event_out(db, event)
@@ -299,6 +301,7 @@ def resolve_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "resolved"
     event.resolved_at = datetime.now(timezone.utc)
+    event.dismissed_at = None
     db.commit()
     db.refresh(event)
     return _build_event_out(db, event)

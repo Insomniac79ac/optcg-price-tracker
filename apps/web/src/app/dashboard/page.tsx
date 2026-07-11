@@ -114,6 +114,12 @@ export default function DashboardPage() {
             Market signals
           </Link>
           <Link
+            href="/market/signal-events"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Signal events
+          </Link>
+          <Link
             href="/admin/refresh-runs"
             className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
           >

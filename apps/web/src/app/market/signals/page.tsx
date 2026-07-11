@@ -206,9 +206,17 @@ export default function MarketSignalsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">
-            Market signals
-          </h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">
+              Market signals
+            </h1>
+            <Link
+              href="/market/signal-events"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Review signal events
+            </Link>
+          </div>
           {status === "ready" && (
             <span className="text-sm text-neutral-500">
               {visibleSignals.length} of {signals.length} signal

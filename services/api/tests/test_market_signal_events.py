@@ -330,6 +330,22 @@ def test_dismiss_endpoint_works(client, db_session):
     assert body["dismissed_at"] is not None
 
 
+def test_dismiss_clears_resolved_at(client, db_session):
+    """Regression: dismissing a previously-resolved event must clear
+    resolved_at, or the event would show a stale resolved timestamp while
+    its status says dismissed."""
+    event = make_event(
+        db_session, status="resolved", resolved_at=datetime.now(timezone.utc)
+    )
+
+    response = client.post(f"/market/signal-events/{event.id}/dismiss")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "dismissed"
+    assert body["resolved_at"] is None
+
+
 def test_watch_endpoint_works(client, db_session):
     event = make_event(
         db_session, status="dismissed", dismissed_at=datetime.now(timezone.utc)
@@ -343,6 +359,22 @@ def test_watch_endpoint_works(client, db_session):
     assert body["dismissed_at"] is None
 
 
+def test_watch_clears_resolved_at(client, db_session):
+    """Regression: watching a previously-resolved event must clear
+    resolved_at, or the event would show a stale resolved timestamp while
+    its status says watching."""
+    event = make_event(
+        db_session, status="resolved", resolved_at=datetime.now(timezone.utc)
+    )
+
+    response = client.post(f"/market/signal-events/{event.id}/watch")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "watching"
+    assert body["resolved_at"] is None
+
+
 def test_resolve_endpoint_works(client, db_session):
     event = make_event(db_session, status="open")
 
@@ -352,3 +384,19 @@ def test_resolve_endpoint_works(client, db_session):
     body = response.json()
     assert body["status"] == "resolved"
     assert body["resolved_at"] is not None
+
+
+def test_resolve_clears_dismissed_at(client, db_session):
+    """Regression: resolving a previously-dismissed event must clear
+    dismissed_at, or the event would show a stale dismissed timestamp while
+    its status says resolved."""
+    event = make_event(
+        db_session, status="dismissed", dismissed_at=datetime.now(timezone.utc)
+    )
+
+    response = client.post(f"/market/signal-events/{event.id}/resolve")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "resolved"
+    assert body["dismissed_at"] is None
