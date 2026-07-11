@@ -461,6 +461,7 @@ class MarketSignalOut(BaseModel):
     variant: str | None
     language: str
     owned_quantity: int
+    collection_item_id: int | None = None
     latest_prices: MarketSignalLatestPricesOut
     metrics: MarketSignalMetricsOut
     message: str
@@ -478,3 +479,51 @@ class MarketSignalsSummaryOut(BaseModel):
 class MarketSignalsResponseOut(BaseModel):
     summary: MarketSignalsSummaryOut
     signals: list[MarketSignalOut]
+
+
+class MarketSignalEventOut(BaseModel):
+    id: int
+    signal_type: str
+    status: str
+    severity: str
+    suggested_action: str | None
+    card_id: int | None
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    set_code: str | None
+    rarity: str | None
+    variant: str | None
+    language: str | None
+    collection_item_id: int | None
+    owned_quantity: int
+    message: str | None
+    notes: str | None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    seen_count: int
+    last_payload: dict[str, Any] | None
+    dismissed_at: datetime | None
+    resolved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketSignalEventsSummaryOut(BaseModel):
+    total_events: int
+    open_events: int
+    watching_events: int
+    dismissed_events: int
+    resolved_events: int
+    by_signal_type: dict[str, int]
+    by_suggested_action: dict[str, int]
+
+
+class MarketSignalEventListOut(BaseModel):
+    summary: MarketSignalEventsSummaryOut
+    events: list[MarketSignalEventOut]
+
+
+class MarketSignalEventUpdateIn(BaseModel):
+    status: str | None = None
+    notes: str | None = None

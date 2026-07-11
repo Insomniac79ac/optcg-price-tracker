@@ -1,12 +1,14 @@
 """Surfaces cards that may be worth a second look - buy opportunities, sell
 opportunities, momentum, liquidity, ownership-relative moves, and data
 quality gaps - derived purely from price_observations, source_card_mappings,
-and collection_items. No scraping; this only reads what refresh_prices and
-the collection tracker have already recorded.
+and collection_items.
 
-Each card can produce zero or more signal rows (one per applicable
-signal_type). All twelve signal types are computed independently per card,
-then filtered/paginated as a flat list.
+Mirrors services/api/app/services/market_signals.py's detection formulas
+exactly (the worker has no shared code with the api service - see
+worker/models.py, which already duplicates the api's ORM models
+table-for-table). This copy skips the Pydantic response schema, filtering,
+and pagination the api's HTTP endpoint needs - the worker only ever wants
+the full current signal set, to snapshot into market_signal_events.
 """
 
 from collections import defaultdict
@@ -16,14 +18,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping
-from app.schemas import (
-    MarketSignalLatestPricesOut,
-    MarketSignalMetricsOut,
-    MarketSignalOut,
-    MarketSignalsResponseOut,
-    MarketSignalsSummaryOut,
-)
+from worker.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping
 
 SIGNAL_TYPES = (
     "price_up_7d",
@@ -40,12 +35,9 @@ SIGNAL_TYPES = (
     "stale_mapping_price",
 )
 
-OWNED_SIGNAL_TYPES = ("owned_above_target_sell", "owned_below_cost_basis")
-DATA_QUALITY_SIGNAL_TYPES = ("missing_recent_price", "stale_mapping_price")
-
-# Same source+price_type priority used by get_market_movers - the single
-# series that backs the price_up/down_7d/30d signals when a card has more
-# than one available.
+# Same source+price_type priority used by the api's get_market_movers/
+# get_market_signals - the single series that backs the price_up/down_7d/30d
+# signals when a card has more than one available.
 PRIMARY_SIGNAL_PAIRS = (("yuyutei", "sell"), ("snkrdunk", "floor"), ("yuyutei", "buy"))
 
 PRICE_UP_7D_THRESHOLD_PCT = 10.0
@@ -77,7 +69,7 @@ def _card_label(card: Card) -> str:
 
 
 @dataclass
-class _CandidateSignal:
+class CandidateSignal:
     signal_type: str
     severity: str
     source: str | None
@@ -94,34 +86,37 @@ class _CandidateSignal:
     gap_jpy: int | None = None
     collection_item_id: int | None = None
 
-    def to_out(self) -> MarketSignalOut:
-        return MarketSignalOut(
-            signal_type=self.signal_type,
-            severity=self.severity,
-            card_id=self.card.id,
-            card_code=self.card.card_code,
-            name_en=self.card.name_en,
-            name_jp=self.card.name_jp,
-            set_code=self.card.set_code,
-            rarity=self.card.rarity,
-            variant=self.card.variant,
-            language=self.card.language,
-            owned_quantity=self.owned_quantity,
-            collection_item_id=self.collection_item_id,
-            latest_prices=MarketSignalLatestPricesOut(
-                yuyutei_sell=self.yuyutei_sell,
-                yuyutei_buy=self.yuyutei_buy,
-                snkrdunk_floor=self.snkrdunk_floor,
-            ),
-            metrics=MarketSignalMetricsOut(
-                change_pct=self.change_pct,
-                spread_pct=self.spread_pct,
-                gap_pct=self.gap_pct,
-                gap_jpy=self.gap_jpy,
-            ),
-            message=self.message,
-            suggested_action=self.suggested_action,
-        )
+    def to_payload_dict(self) -> dict:
+        """Same JSON shape as the api's MarketSignalOut.model_dump(), so
+        events created here look identical to ones created by the api's CLI
+        regardless of which side snapshotted them."""
+        return {
+            "signal_type": self.signal_type,
+            "severity": self.severity,
+            "card_id": self.card.id,
+            "card_code": self.card.card_code,
+            "name_en": self.card.name_en,
+            "name_jp": self.card.name_jp,
+            "set_code": self.card.set_code,
+            "rarity": self.card.rarity,
+            "variant": self.card.variant,
+            "language": self.card.language,
+            "owned_quantity": self.owned_quantity,
+            "collection_item_id": self.collection_item_id,
+            "latest_prices": {
+                "yuyutei_sell": self.yuyutei_sell,
+                "yuyutei_buy": self.yuyutei_buy,
+                "snkrdunk_floor": self.snkrdunk_floor,
+            },
+            "metrics": {
+                "change_pct": self.change_pct,
+                "spread_pct": self.spread_pct,
+                "gap_pct": self.gap_pct,
+                "gap_jpy": self.gap_jpy,
+            },
+            "message": self.message,
+            "suggested_action": self.suggested_action,
+        }
 
 
 def _latest_price_trio(
@@ -170,8 +165,8 @@ def _price_movement_signals(
     by_source_type: dict[tuple[str, str], list[PriceObservation]],
     latest_trio: dict[str, int | None],
     owned_quantity: int,
-) -> list[_CandidateSignal]:
-    signals: list[_CandidateSignal] = []
+) -> list[CandidateSignal]:
+    signals: list[CandidateSignal] = []
 
     primary = None
     for src, pt in PRIMARY_SIGNAL_PAIRS:
@@ -203,7 +198,7 @@ def _price_movement_signals(
 
         if pct >= up_threshold:
             signals.append(
-                _CandidateSignal(
+                CandidateSignal(
                     signal_type=up_type,
                     severity="info",
                     source=src,
@@ -219,7 +214,7 @@ def _price_movement_signals(
             )
         elif pct <= down_threshold:
             signals.append(
-                _CandidateSignal(
+                CandidateSignal(
                     signal_type=down_type,
                     severity="info",
                     source=src,
@@ -239,8 +234,8 @@ def _price_movement_signals(
 
 def _yuyutei_spread_signals(
     card: Card, latest_trio: dict[str, int | None], owned_quantity: int
-) -> list[_CandidateSignal]:
-    signals: list[_CandidateSignal] = []
+) -> list[CandidateSignal]:
+    signals: list[CandidateSignal] = []
     sell = latest_trio["yuyutei_sell"]
     buy = latest_trio["yuyutei_buy"]
     if sell is None or buy is None:
@@ -254,7 +249,7 @@ def _yuyutei_spread_signals(
 
     if spread_pct <= YUYUTEI_SPREAD_COMPRESSED_THRESHOLD_PCT:
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="yuyutei_buy_sell_spread_compressed",
                 severity="info",
                 source="yuyutei",
@@ -268,7 +263,7 @@ def _yuyutei_spread_signals(
         )
     elif spread_pct >= YUYUTEI_SPREAD_WIDE_THRESHOLD_PCT:
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="yuyutei_buy_sell_spread_wide",
                 severity="info",
                 source="yuyutei",
@@ -286,8 +281,8 @@ def _yuyutei_spread_signals(
 
 def _snkrdunk_gap_signals(
     card: Card, latest_trio: dict[str, int | None], owned_quantity: int
-) -> list[_CandidateSignal]:
-    signals: list[_CandidateSignal] = []
+) -> list[CandidateSignal]:
+    signals: list[CandidateSignal] = []
     floor = latest_trio["snkrdunk_floor"]
     sell = latest_trio["yuyutei_sell"]
     if floor is None or sell is None:
@@ -302,7 +297,7 @@ def _snkrdunk_gap_signals(
 
     if gap_pct <= -SNKRDUNK_VS_YUYUTEI_GAP_THRESHOLD_PCT:
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="snkrdunk_floor_below_yuyutei_sell",
                 severity="info",
                 source="snkrdunk",
@@ -317,7 +312,7 @@ def _snkrdunk_gap_signals(
         )
     elif gap_pct >= SNKRDUNK_VS_YUYUTEI_GAP_THRESHOLD_PCT:
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="snkrdunk_floor_above_yuyutei_sell",
                 severity="info",
                 source="snkrdunk",
@@ -339,13 +334,12 @@ def _owned_signals(
     card_items: list[CollectionItem],
     latest_trio: dict[str, int | None],
     owned_quantity: int,
-) -> list[_CandidateSignal]:
+) -> list[CandidateSignal]:
     """One owned_above_target_sell / owned_below_cost_basis signal per
     qualifying collection_item (not per card) - each carries that item's
-    collection_item_id, which the market_signal_events system needs for a
-    stable per-item event identity distinct from other items of the same
-    card."""
-    signals: list[_CandidateSignal] = []
+    collection_item_id, which market_signal_events needs for a stable
+    per-item event identity distinct from other items of the same card."""
+    signals: list[CandidateSignal] = []
     current = _resolve_current_value(latest_trio)
     if current is None:
         return signals
@@ -358,7 +352,7 @@ def _owned_signals(
             gap_jpy = value_jpy - item.target_sell_price_jpy
             gap_pct = _pct(gap_jpy, item.target_sell_price_jpy)
             signals.append(
-                _CandidateSignal(
+                CandidateSignal(
                     signal_type="owned_above_target_sell",
                     severity="info",
                     source=basis,
@@ -381,7 +375,7 @@ def _owned_signals(
             gap_jpy = value_jpy - item.purchase_price_jpy
             gap_pct = _pct(gap_jpy, item.purchase_price_jpy)
             signals.append(
-                _CandidateSignal(
+                CandidateSignal(
                     signal_type="owned_below_cost_basis",
                     severity="warning",
                     source=basis,
@@ -410,7 +404,7 @@ def _data_quality_signals(
     latest_trio: dict[str, int | None],
     owned_quantity: int,
     now_naive: datetime,
-) -> list[_CandidateSignal]:
+) -> list[CandidateSignal]:
     """At most one missing_recent_price and one stale_mapping_price signal
     per card, aggregating every affected source into a single message - the
     market_signal_events dedupe key for these two types is card-level
@@ -418,7 +412,7 @@ def _data_quality_signals(
     simultaneously-missing/stale mapping (e.g. both yuyutei and snkrdunk)
     must not produce more than one row of each type, or upserting would hit
     the same dedupe_key twice in one snapshot."""
-    signals: list[_CandidateSignal] = []
+    signals: list[CandidateSignal] = []
     label = _card_label(card)
 
     missing_sources: list[str] = []
@@ -442,7 +436,7 @@ def _data_quality_signals(
 
     if missing_sources:
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="missing_recent_price",
                 severity="warning",
                 source=missing_sources[0],
@@ -462,7 +456,7 @@ def _data_quality_signals(
             f"{name} (last observed {obs.observed_at.isoformat()})" for name, obs in stale_sources
         )
         signals.append(
-            _CandidateSignal(
+            CandidateSignal(
                 signal_type="stale_mapping_price",
                 severity="warning",
                 source=stale_sources[0][0],
@@ -477,38 +471,13 @@ def _data_quality_signals(
     return signals
 
 
-def _empty_response() -> MarketSignalsResponseOut:
-    return MarketSignalsResponseOut(
-        summary=MarketSignalsSummaryOut(
-            total_signals=0,
-            by_signal_type={signal_type: 0 for signal_type in SIGNAL_TYPES},
-            owned_signal_count=0,
-            market_signal_count=0,
-            data_quality_signal_count=0,
-        ),
-        signals=[],
-    )
-
-
-def get_market_signals(
-    db: Session,
-    signal_type: str | None = None,
-    set_code: str | None = None,
-    rarity: str | None = None,
-    source: str | None = None,
-    owned: bool | None = None,
-    limit: int = 100,
-    offset: int = 0,
-) -> MarketSignalsResponseOut:
-    card_filters = []
-    if set_code is not None:
-        card_filters.append(Card.set_code == set_code)
-    if rarity is not None:
-        card_filters.append(Card.rarity == rarity)
-
-    cards = db.scalars(select(Card).where(*card_filters).order_by(Card.id)).all()
+def compute_all_signals(db: Session) -> list[CandidateSignal]:
+    """Every currently-applicable signal across the whole catalog - no
+    filtering or pagination, since market_signal_events needs the complete
+    current set to upsert/resolve against."""
+    cards = db.scalars(select(Card).order_by(Card.id)).all()
     if not cards:
-        return _empty_response()
+        return []
 
     card_ids = [c.id for c in cards]
     sources_by_id = {s.id: s.name for s in db.scalars(select(Source)).all()}
@@ -541,7 +510,7 @@ def get_market_signals(
 
     now_naive = _naive(datetime.now(timezone.utc))
 
-    all_signals: list[_CandidateSignal] = []
+    all_signals: list[CandidateSignal] = []
     for card in cards:
         card_items = items_by_card.get(card.id, [])
         owned_quantity = sum(item.quantity for item in card_items)
@@ -571,35 +540,5 @@ def get_market_signals(
             )
         )
 
-    filtered = [
-        s
-        for s in all_signals
-        if (signal_type is None or s.signal_type == signal_type)
-        and (source is None or s.source == source)
-        and (owned is None or (s.owned_quantity > 0) == owned)
-    ]
-    filtered.sort(key=lambda s: (s.card.id, s.signal_type))
-
-    by_signal_type = {st: 0 for st in SIGNAL_TYPES}
-    owned_signal_count = 0
-    market_signal_count = 0
-    data_quality_signal_count = 0
-    for s in filtered:
-        by_signal_type[s.signal_type] += 1
-        if s.signal_type in OWNED_SIGNAL_TYPES:
-            owned_signal_count += 1
-        elif s.signal_type in DATA_QUALITY_SIGNAL_TYPES:
-            data_quality_signal_count += 1
-        else:
-            market_signal_count += 1
-
-    summary = MarketSignalsSummaryOut(
-        total_signals=len(filtered),
-        by_signal_type=by_signal_type,
-        owned_signal_count=owned_signal_count,
-        market_signal_count=market_signal_count,
-        data_quality_signal_count=data_quality_signal_count,
-    )
-
-    page = filtered[offset : offset + limit]
-    return MarketSignalsResponseOut(summary=summary, signals=[s.to_out() for s in page])
+    all_signals.sort(key=lambda s: (s.card.id, s.signal_type))
+    return all_signals

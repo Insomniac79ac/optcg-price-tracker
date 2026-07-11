@@ -247,6 +247,27 @@ def test_detects_missing_recent_price(client, db_session):
     assert signal["suggested_action"] == "review_mapping"
 
 
+def test_missing_recent_price_consolidates_multiple_sources_into_one_signal(client, db_session):
+    """A card with active mappings on more than one source, all missing
+    price data, must still produce exactly one missing_recent_price row -
+    market_signal_events dedupes this signal type at card granularity, so
+    two rows for the same card would collide on insert."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    make_mapping(db_session, card, yuyutei)
+    make_mapping(db_session, card, snkrdunk)
+
+    response = client.get("/market/signals")
+    body = response.json()
+
+    matches = [s for s in body["signals"] if s["signal_type"] == "missing_recent_price"]
+    assert len(matches) == 1
+    assert matches[0]["card_id"] == card.id
+    assert "yuyutei" in matches[0]["message"]
+    assert "snkrdunk" in matches[0]["message"]
+
+
 def test_detects_stale_mapping_price(client, db_session):
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")

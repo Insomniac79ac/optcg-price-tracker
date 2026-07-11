@@ -7,6 +7,8 @@ from worker.jobs import refresh_prices as refresh_prices_module
 from worker.jobs.refresh_prices import build_arg_parser, log_run_config, refresh_prices
 from worker.models import (
     Card,
+    CollectionItem,
+    MarketSignalEvent,
     PortfolioValuationSnapshot,
     PriceObservation,
     PriceRefreshRun,
@@ -229,6 +231,42 @@ def test_portfolio_snapshot_failure_does_not_crash_refresh_job(db_session, monke
     # Session must still be usable afterward - a leftover failed transaction
     # would break any caller that keeps using db after refresh_prices returns.
     assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
+
+
+def test_successful_non_dry_run_snapshots_market_signals(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    db_session.add(CollectionItem(card_id=card.id, quantity=1, target_sell_price_jpy=500))
+    db_session.flush()
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.status == "completed"
+    assert summary.market_signal_events_created == 1
+    assert summary.market_signal_events_updated == 0
+    assert summary.market_signal_events_resolved == 0
+
+    event = db_session.query(MarketSignalEvent).one()
+    assert event.signal_type == "owned_above_target_sell"
+    assert event.card_id == card.id
+
+    assert "market_signal_events_created=1 updated=0 resolved=0" in summary.report_lines()
+
+
+def test_dry_run_does_not_snapshot_market_signals(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    db_session.add(CollectionItem(card_id=card.id, quantity=1, target_sell_price_jpy=500))
+    db_session.flush()
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters, dry_run=True)
+
+    assert summary.market_signal_events_created is None
+    assert summary.market_signal_events_updated is None
+    assert summary.market_signal_events_resolved is None
+    assert db_session.query(MarketSignalEvent).count() == 0
 
 
 def test_dry_run_creates_no_database_rows(db_session):
