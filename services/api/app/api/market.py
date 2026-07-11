@@ -14,9 +14,11 @@ from app.schemas import (
     MarketSignalEventsSummaryOut,
     MarketSignalEventUpdateIn,
     MarketSignalsResponseOut,
+    OpportunitiesResponseOut,
 )
 from app.services.market import get_market_movers
 from app.services.market_signals import SIGNAL_TYPES, get_market_signals
+from app.services.opportunity_scoring import CATEGORIES, get_opportunities
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -305,3 +307,32 @@ def resolve_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(event)
     return _build_event_out(db, event)
+
+
+@router.get("/opportunities", response_model=OpportunitiesResponseOut)
+def market_opportunities(
+    category: str | None = Query(default=None),
+    owned: bool | None = Query(default=None),
+    set_code: str | None = Query(default=None),
+    rarity: str | None = Query(default=None),
+    min_score: int | None = Query(default=None, ge=0, le=100),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    if category is not None and category not in CATEGORIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid category. Must be one of {list(CATEGORIES)}",
+        )
+
+    return get_opportunities(
+        db,
+        category=category,
+        owned=owned,
+        set_code=set_code,
+        rarity=rarity,
+        min_score=min_score,
+        limit=limit,
+        offset=offset,
+    )

@@ -527,3 +527,40 @@ class MarketSignalEventListOut(BaseModel):
 class MarketSignalEventUpdateIn(BaseModel):
     status: str | None = None
     notes: str | None = None
+
+
+class OpportunitiesSummaryOut(BaseModel):
+    total_opportunities: int
+    average_score: float
+    highest_score: int
+    by_category: dict[str, int]
+
+
+class OpportunityOut(BaseModel):
+    score: int
+    category: str
+    event_id: int
+    signal_type: str
+    status: str
+    severity: str
+    suggested_action: str | None
+    card_id: int | None
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    set_code: str | None
+    rarity: str | None
+    variant: str | None
+    language: str | None
+    owned_quantity: int
+    message: str | None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    seen_count: int
+    score_reasons: list[str]
+    last_payload: dict[str, Any] | None
+
+
+class OpportunitiesResponseOut(BaseModel):
+    summary: OpportunitiesSummaryOut
+    opportunities: list[OpportunityOut]

@@ -209,9 +209,17 @@ export default function MarketSignalEventsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">
-            Signal events
-          </h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">
+              Signal events
+            </h1>
+            <Link
+              href="/market/opportunities"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Ranked opportunities
+            </Link>
+          </div>
           {status === "ready" && (
             <span className="text-sm text-neutral-500">
               {events.length} event{events.length === 1 ? "" : "s"}

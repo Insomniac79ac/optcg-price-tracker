@@ -23,6 +23,9 @@ export function AppHeader() {
           <Link href="/market/signal-events" className="hover:text-neutral-100">
             Signal events
           </Link>
+          <Link href="/market/opportunities" className="hover:text-neutral-100">
+            Opportunities
+          </Link>
           <Link
             href="/admin/refresh-runs"
             className="hover:text-neutral-100"

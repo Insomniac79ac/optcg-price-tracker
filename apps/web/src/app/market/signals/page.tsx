@@ -216,6 +216,12 @@ export default function MarketSignalsPage() {
             >
               Review signal events
             </Link>
+            <Link
+              href="/market/opportunities"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Ranked opportunities
+            </Link>
           </div>
           {status === "ready" && (
             <span className="text-sm text-neutral-500">

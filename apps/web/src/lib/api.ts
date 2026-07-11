@@ -939,6 +939,78 @@ export function resolveMarketSignalEvent(id: number): Promise<MarketSignalEvent>
   });
 }
 
+export const OPPORTUNITY_CATEGORIES = [
+  "buy",
+  "sell",
+  "momentum",
+  "drop",
+  "data_quality",
+  "owned",
+] as const;
+
+export interface MarketOpportunity {
+  score: number;
+  category: string;
+  event_id: number;
+  signal_type: string;
+  status: string;
+  severity: string;
+  suggested_action: string | null;
+  card_id: number | null;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string | null;
+  rarity: string | null;
+  variant: string | null;
+  language: string | null;
+  owned_quantity: number;
+  message: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  seen_count: number;
+  score_reasons: string[];
+  last_payload: Record<string, unknown> | null;
+}
+
+export interface MarketOpportunitiesSummary {
+  total_opportunities: number;
+  average_score: number;
+  highest_score: number;
+  by_category: Record<string, number>;
+}
+
+export interface MarketOpportunitiesResponse {
+  summary: MarketOpportunitiesSummary;
+  opportunities: MarketOpportunity[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/opportunities/route.ts) - same reasoning as
+ * fetchMarketSignals. */
+export function fetchMarketOpportunities(params?: {
+  category?: string;
+  owned?: boolean;
+  set_code?: string;
+  rarity?: string;
+  min_score?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<MarketOpportunitiesResponse> {
+  const query = new URLSearchParams();
+  if (params?.category) query.set("category", params.category);
+  if (params?.owned !== undefined) query.set("owned", String(params.owned));
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.min_score !== undefined) query.set("min_score", String(params.min_score));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MarketOpportunitiesResponse>(
+    `/api/market/opportunities${qs ? `?${qs}` : ""}`,
+  );
+}
+
 export async function fetchCardAudit(): Promise<CardAuditReport> {
   // Routed through the Next.js server proxy (see
   // src/app/api/admin/card-audit/route.ts) rather than NEXT_PUBLIC_API_URL,
