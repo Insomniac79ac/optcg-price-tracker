@@ -615,6 +615,43 @@ export interface PortfolioValuationItem {
   flags: ValuationFlags;
 }
 
+export type ValuationBasis = "market_floor" | "retail";
+
+export interface BestWorstPerformer {
+  collection_item_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  pnl_jpy: number;
+  pnl_pct: number | null;
+  basis: ValuationBasis;
+}
+
+export interface RetailLiquidationGap {
+  collection_item_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  gap_jpy: number;
+  gap_pct: number | null;
+}
+
+export interface HighestValueItem {
+  collection_item_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  value_jpy: number;
+  basis: ValuationBasis;
+}
+
+export interface PortfolioValuationInsights {
+  best_performing_item: BestWorstPerformer | null;
+  worst_performing_item: BestWorstPerformer | null;
+  largest_retail_liquidation_gap: RetailLiquidationGap | null;
+  highest_value_item: HighestValueItem | null;
+}
+
 export interface PortfolioValuationSummary {
   total_items: number;
   total_quantity: number;
@@ -633,6 +670,7 @@ export interface PortfolioValuationSummary {
   items_missing_snkrdunk_floor: number;
   items_missing_cost_basis: number;
   cards_above_target_sell: number;
+  insights: PortfolioValuationInsights;
 }
 
 export interface PortfolioValuation {

@@ -13,9 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, CollectionItem, PriceObservation, Source
 from app.schemas import (
+    BestWorstPerformerOut,
+    HighestValueItemOut,
+    PortfolioValuationInsightsOut,
     PortfolioValuationItemOut,
     PortfolioValuationOut,
     PortfolioValuationSummaryOut,
+    RetailLiquidationGapOut,
     SnkrdunkFloorSnapshotOut,
     ValuationDetailOut,
     ValuationFlagsOut,
@@ -33,6 +37,15 @@ def _pct(pnl_jpy: int, cost_basis_jpy: int) -> float | None:
     if not cost_basis_jpy:
         return None
     return round(pnl_jpy / cost_basis_jpy * 100, 2)
+
+
+def _empty_insights() -> PortfolioValuationInsightsOut:
+    return PortfolioValuationInsightsOut(
+        best_performing_item=None,
+        worst_performing_item=None,
+        largest_retail_liquidation_gap=None,
+        highest_value_item=None,
+    )
 
 
 def _empty_summary() -> PortfolioValuationSummaryOut:
@@ -54,6 +67,99 @@ def _empty_summary() -> PortfolioValuationSummaryOut:
         items_missing_snkrdunk_floor=0,
         items_missing_cost_basis=0,
         cards_above_target_sell=0,
+        insights=_empty_insights(),
+    )
+
+
+def _resolve_current_value(item: PortfolioValuationItemOut) -> tuple[int, str] | None:
+    """Prefers the SNKRDUNK market floor value, falling back to the Yuyu-Tei
+    retail (sell) value when the floor is missing. Returns None if neither is
+    available for this item."""
+    if item.valuations.market_floor_value_jpy is not None:
+        return item.valuations.market_floor_value_jpy, "market_floor"
+    if item.valuations.retail_value_jpy is not None:
+        return item.valuations.retail_value_jpy, "retail"
+    return None
+
+
+def _compute_insights(items: list[PortfolioValuationItemOut]) -> PortfolioValuationInsightsOut:
+    best_performing_item: BestWorstPerformerOut | None = None
+    worst_performing_item: BestWorstPerformerOut | None = None
+    largest_retail_liquidation_gap: RetailLiquidationGapOut | None = None
+    highest_value_item: HighestValueItemOut | None = None
+
+    best_pnl_jpy: int | None = None
+    worst_pnl_jpy: int | None = None
+    largest_gap_jpy: int | None = None
+    highest_value_jpy: int | None = None
+
+    for item in items:
+        current = _resolve_current_value(item)
+
+        if current is not None and item.cost_basis_jpy is not None:
+            value_jpy, basis = current
+            pnl_jpy = value_jpy - item.cost_basis_jpy
+            pnl_pct = _pct(pnl_jpy, item.cost_basis_jpy)
+
+            if best_pnl_jpy is None or pnl_jpy > best_pnl_jpy:
+                best_pnl_jpy = pnl_jpy
+                best_performing_item = BestWorstPerformerOut(
+                    collection_item_id=item.collection_item_id,
+                    card_code=item.card_code,
+                    name_en=item.name_en,
+                    name_jp=item.name_jp,
+                    pnl_jpy=pnl_jpy,
+                    pnl_pct=pnl_pct,
+                    basis=basis,
+                )
+
+            if worst_pnl_jpy is None or pnl_jpy < worst_pnl_jpy:
+                worst_pnl_jpy = pnl_jpy
+                worst_performing_item = BestWorstPerformerOut(
+                    collection_item_id=item.collection_item_id,
+                    card_code=item.card_code,
+                    name_en=item.name_en,
+                    name_jp=item.name_jp,
+                    pnl_jpy=pnl_jpy,
+                    pnl_pct=pnl_pct,
+                    basis=basis,
+                )
+
+        retail_value_jpy = item.valuations.retail_value_jpy
+        liquidation_value_jpy = item.valuations.liquidation_value_jpy
+        if retail_value_jpy is not None and liquidation_value_jpy is not None:
+            gap_jpy = retail_value_jpy - liquidation_value_jpy
+            gap_pct = _pct(gap_jpy, retail_value_jpy)
+
+            if largest_gap_jpy is None or gap_jpy > largest_gap_jpy:
+                largest_gap_jpy = gap_jpy
+                largest_retail_liquidation_gap = RetailLiquidationGapOut(
+                    collection_item_id=item.collection_item_id,
+                    card_code=item.card_code,
+                    name_en=item.name_en,
+                    name_jp=item.name_jp,
+                    gap_jpy=gap_jpy,
+                    gap_pct=gap_pct,
+                )
+
+        if current is not None:
+            value_jpy, basis = current
+            if highest_value_jpy is None or value_jpy > highest_value_jpy:
+                highest_value_jpy = value_jpy
+                highest_value_item = HighestValueItemOut(
+                    collection_item_id=item.collection_item_id,
+                    card_code=item.card_code,
+                    name_en=item.name_en,
+                    name_jp=item.name_jp,
+                    value_jpy=value_jpy,
+                    basis=basis,
+                )
+
+    return PortfolioValuationInsightsOut(
+        best_performing_item=best_performing_item,
+        worst_performing_item=worst_performing_item,
+        largest_retail_liquidation_gap=largest_retail_liquidation_gap,
+        highest_value_item=highest_value_item,
     )
 
 
@@ -256,6 +362,7 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
         items_missing_snkrdunk_floor=items_missing_snkrdunk_floor,
         items_missing_cost_basis=items_missing_cost_basis,
         cards_above_target_sell=cards_above_target_sell,
+        insights=_compute_insights(result_items),
     )
 
     return PortfolioValuationOut(summary=summary, items=result_items)

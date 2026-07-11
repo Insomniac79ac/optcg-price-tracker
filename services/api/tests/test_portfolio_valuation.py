@@ -77,6 +77,12 @@ def test_valuation_empty_collection_returns_zero_summary(client, db_session):
         "items_missing_snkrdunk_floor": 0,
         "items_missing_cost_basis": 0,
         "cards_above_target_sell": 0,
+        "insights": {
+            "best_performing_item": None,
+            "worst_performing_item": None,
+            "largest_retail_liquidation_gap": None,
+            "highest_value_item": None,
+        },
     }
 
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
+import { PortfolioInsightCards } from "@/components/PortfolioInsightCards";
 import {
   type HistoryTimeframe,
   PortfolioValuationHistoryChart,
@@ -477,6 +478,7 @@ export default function CollectionPage() {
                 value={valuation.summary.items_missing_cost_basis}
               />
             </div>
+            <PortfolioInsightCards insights={valuation.summary.insights} />
           </div>
         )}
 

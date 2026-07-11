@@ -332,6 +332,41 @@ class PortfolioValuationItemOut(BaseModel):
     flags: ValuationFlagsOut
 
 
+class BestWorstPerformerOut(BaseModel):
+    collection_item_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    pnl_jpy: int
+    pnl_pct: float | None
+    basis: str
+
+
+class RetailLiquidationGapOut(BaseModel):
+    collection_item_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    gap_jpy: int
+    gap_pct: float | None
+
+
+class HighestValueItemOut(BaseModel):
+    collection_item_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    value_jpy: int
+    basis: str
+
+
+class PortfolioValuationInsightsOut(BaseModel):
+    best_performing_item: BestWorstPerformerOut | None
+    worst_performing_item: BestWorstPerformerOut | None
+    largest_retail_liquidation_gap: RetailLiquidationGapOut | None
+    highest_value_item: HighestValueItemOut | None
+
+
 class PortfolioValuationSummaryOut(BaseModel):
     total_items: int
     total_quantity: int
@@ -350,6 +385,7 @@ class PortfolioValuationSummaryOut(BaseModel):
     items_missing_snkrdunk_floor: int
     items_missing_cost_basis: int
     cards_above_target_sell: int
+    insights: PortfolioValuationInsightsOut
 
 
 class PortfolioValuationOut(BaseModel):
