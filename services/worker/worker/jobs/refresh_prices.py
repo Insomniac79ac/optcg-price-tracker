@@ -10,6 +10,7 @@ from worker.adapters.mock_snkrdunk import MockSnkrdunkAdapter
 from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
 from worker.adapters.yuyutei import YuyuTeiAdapter
 from worker.db import SessionLocal
+from worker.market_report import generate_market_report
 from worker.market_signal_events import snapshot_market_signals
 from worker.models import PriceObservation, PriceRefreshRun, RawSnapshot, Source, SourceCardMapping
 from worker.portfolio_valuation import create_portfolio_valuation_snapshot
@@ -47,6 +48,7 @@ class RefreshRunSummary:
     market_signal_events_created: int | None = None
     market_signal_events_updated: int | None = None
     market_signal_events_resolved: int | None = None
+    market_report_id: int | None = None
 
     def report_lines(self) -> list[str]:
         lines = [
@@ -69,6 +71,8 @@ class RefreshRunSummary:
                 f"updated={self.market_signal_events_updated} "
                 f"resolved={self.market_signal_events_resolved}"
             )
+        if self.market_report_id is not None:
+            lines.append(f"market_report_id={self.market_report_id}")
         return lines
 
     def print_report(self) -> None:
@@ -276,6 +280,22 @@ def refresh_prices(
                 exc_info=True,
             )
 
+    market_report_id: int | None = None
+    if not dry_run and status != "failed":
+        try:
+            market_report_id = generate_market_report(db).id
+        except Exception:
+            # Same rationale as the portfolio snapshot and market signal
+            # events above - report generation is a nice-to-have on top of
+            # the refresh itself and must never mark an otherwise-successful
+            # refresh run as failed.
+            db.rollback()
+            logger.warning(
+                "Failed to generate market intelligence report after refresh run %s.",
+                run_id,
+                exc_info=True,
+            )
+
     return RefreshRunSummary(
         id=run_id,
         status=status,
@@ -293,6 +313,7 @@ def refresh_prices(
         market_signal_events_created=market_signal_events_created,
         market_signal_events_updated=market_signal_events_updated,
         market_signal_events_resolved=market_signal_events_resolved,
+        market_report_id=market_report_id,
         error_message=error_message,
     )
 

@@ -564,3 +564,103 @@ class OpportunityOut(BaseModel):
 class OpportunitiesResponseOut(BaseModel):
     summary: OpportunitiesSummaryOut
     opportunities: list[OpportunityOut]
+
+
+class MarketReportPortfolioSnapshotOut(BaseModel):
+    total_cost_basis_jpy: int | None
+    retail_value_jpy: int | None
+    liquidation_value_jpy: int | None
+    market_floor_value_jpy: int | None
+    pnl_vs_market_floor_jpy: int | None
+    pnl_vs_market_floor_pct: float | None
+    items_missing_cost_basis: int
+    items_missing_prices: int
+
+
+class MarketReportOpportunitySummaryOut(BaseModel):
+    total_opportunities: int
+    highest_score: int | None
+    average_score: float | None
+    by_category: dict[str, int]
+
+
+class MarketReportTopOpportunitiesOut(BaseModel):
+    top_5: list[OpportunityOut]
+    top_buy: OpportunityOut | None
+    top_sell: OpportunityOut | None
+    top_momentum: OpportunityOut | None
+    top_drop: OpportunityOut | None
+    top_owned: OpportunityOut | None
+    top_data_quality: OpportunityOut | None
+
+
+class MarketReportCollectionQualityOut(BaseModel):
+    missing_purchase_price_count: int
+    missing_condition_count: int
+    missing_target_sell_count: int
+    total_quality_issues: int
+
+
+class MarketReportSignalEventSummaryOut(BaseModel):
+    open_events: int
+    watching_events: int
+    dismissed_events: int
+    resolved_events: int
+    most_common_signal_type: str | None
+    most_common_suggested_action: str | None
+
+
+class MarketReportSummaryOut(BaseModel):
+    total_opportunities: int
+    highest_score: int | None
+    average_score: float | None
+
+
+class MarketReportPayloadOut(BaseModel):
+    summary: MarketReportSummaryOut
+    portfolio_snapshot: MarketReportPortfolioSnapshotOut
+    opportunity_summary: MarketReportOpportunitySummaryOut
+    top_opportunities: MarketReportTopOpportunitiesOut
+    collection_quality: MarketReportCollectionQualityOut
+    signal_event_summary: MarketReportSignalEventSummaryOut
+    deterministic_summary_lines: list[str]
+
+
+class MarketIntelligenceReportOut(BaseModel):
+    id: int
+    created_at: datetime
+    report_date: date
+    summary: MarketReportSummaryOut
+    portfolio_snapshot: MarketReportPortfolioSnapshotOut
+    opportunity_summary: MarketReportOpportunitySummaryOut
+    top_opportunities: MarketReportTopOpportunitiesOut
+    collection_quality: MarketReportCollectionQualityOut
+    signal_event_summary: MarketReportSignalEventSummaryOut
+    deterministic_summary_lines: list[str]
+    payload: dict[str, Any]
+
+
+class MarketIntelligenceReportSummaryOut(BaseModel):
+    id: int
+    created_at: datetime
+    report_date: date
+    total_opportunities: int
+    highest_score: int | None
+    average_score: float | None
+    buy_opportunities_count: int
+    sell_opportunities_count: int
+    momentum_count: int
+    drop_count: int
+    data_quality_count: int
+    owned_count: int
+    portfolio_market_floor_value_jpy: int | None
+    portfolio_retail_value_jpy: int | None
+    portfolio_liquidation_value_jpy: int | None
+    portfolio_pnl_vs_market_floor_jpy: int | None
+
+
+class MarketIntelligenceReportListOut(BaseModel):
+    reports: list[MarketIntelligenceReportSummaryOut]
+    total: int
+    limit: int
+    offset: int

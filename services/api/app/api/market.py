@@ -5,9 +5,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Card, CollectionItem, MarketSignalEvent
+from app.models import Card, CollectionItem, MarketIntelligenceReport, MarketSignalEvent
 from app.models.market_signal_event import STATUSES as EVENT_STATUSES
 from app.schemas import (
+    MarketIntelligenceReportListOut,
+    MarketIntelligenceReportOut,
+    MarketIntelligenceReportSummaryOut,
     MarketMoverOut,
     MarketSignalEventListOut,
     MarketSignalEventOut,
@@ -336,3 +339,82 @@ def market_opportunities(
         limit=limit,
         offset=offset,
     )
+
+
+def _report_to_out(report: MarketIntelligenceReport) -> MarketIntelligenceReportOut:
+    payload = report.report_payload_json
+    return MarketIntelligenceReportOut(
+        id=report.id,
+        created_at=report.created_at,
+        report_date=report.report_date,
+        summary=payload["summary"],
+        portfolio_snapshot=payload["portfolio_snapshot"],
+        opportunity_summary=payload["opportunity_summary"],
+        top_opportunities=payload["top_opportunities"],
+        collection_quality=payload["collection_quality"],
+        signal_event_summary=payload["signal_event_summary"],
+        deterministic_summary_lines=payload["deterministic_summary_lines"],
+        payload=payload,
+    )
+
+
+def _report_to_summary_out(report: MarketIntelligenceReport) -> MarketIntelligenceReportSummaryOut:
+    return MarketIntelligenceReportSummaryOut(
+        id=report.id,
+        created_at=report.created_at,
+        report_date=report.report_date,
+        total_opportunities=report.total_opportunities,
+        highest_score=report.highest_score,
+        average_score=report.average_score,
+        buy_opportunities_count=report.buy_opportunities_count,
+        sell_opportunities_count=report.sell_opportunities_count,
+        momentum_count=report.momentum_count,
+        drop_count=report.drop_count,
+        data_quality_count=report.data_quality_count,
+        owned_count=report.owned_count,
+        portfolio_market_floor_value_jpy=report.portfolio_market_floor_value_jpy,
+        portfolio_retail_value_jpy=report.portfolio_retail_value_jpy,
+        portfolio_liquidation_value_jpy=report.portfolio_liquidation_value_jpy,
+        portfolio_pnl_vs_market_floor_jpy=report.portfolio_pnl_vs_market_floor_jpy,
+    )
+
+
+@router.get("/report/latest", response_model=MarketIntelligenceReportOut)
+def get_latest_market_report(db: Session = Depends(get_db)):
+    report = db.scalar(
+        select(MarketIntelligenceReport).order_by(
+            MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc()
+        )
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="No market intelligence reports found")
+    return _report_to_out(report)
+
+
+@router.get("/reports", response_model=MarketIntelligenceReportListOut)
+def list_market_reports(
+    limit: int = Query(default=30, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    total = db.scalar(select(func.count()).select_from(MarketIntelligenceReport)) or 0
+    reports = db.scalars(
+        select(MarketIntelligenceReport)
+        .order_by(MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc())
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    return MarketIntelligenceReportListOut(
+        reports=[_report_to_summary_out(r) for r in reports],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/reports/{report_id}", response_model=MarketIntelligenceReportOut)
+def get_market_report(report_id: int, db: Session = Depends(get_db)):
+    report = db.get(MarketIntelligenceReport, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Market intelligence report not found")
+    return _report_to_out(report)
