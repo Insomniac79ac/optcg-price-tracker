@@ -434,3 +434,47 @@ class CardAuditSummaryOut(BaseModel):
 class CardAuditReportOut(BaseModel):
     summary: CardAuditSummaryOut
     issues: list[CardAuditIssueOut]
+
+
+class MarketSignalLatestPricesOut(BaseModel):
+    yuyutei_sell: int | None
+    yuyutei_buy: int | None
+    snkrdunk_floor: int | None
+
+
+class MarketSignalMetricsOut(BaseModel):
+    change_pct: float | None
+    spread_pct: float | None
+    gap_pct: float | None
+    gap_jpy: int | None
+
+
+class MarketSignalOut(BaseModel):
+    signal_type: str
+    severity: str
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    owned_quantity: int
+    latest_prices: MarketSignalLatestPricesOut
+    metrics: MarketSignalMetricsOut
+    message: str
+    suggested_action: str
+
+
+class MarketSignalsSummaryOut(BaseModel):
+    total_signals: int
+    by_signal_type: dict[str, int]
+    owned_signal_count: int
+    market_signal_count: int
+    data_quality_signal_count: int
+
+
+class MarketSignalsResponseOut(BaseModel):
+    summary: MarketSignalsSummaryOut
+    signals: list[MarketSignalOut]
