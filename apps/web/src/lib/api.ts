@@ -727,6 +727,92 @@ export function deleteCollectionItem(itemId: number): Promise<void> {
   return apiDelete(`/collection/${itemId}`);
 }
 
+export const MARKET_SIGNAL_TYPES = [
+  "price_up_7d",
+  "price_down_7d",
+  "price_up_30d",
+  "price_down_30d",
+  "yuyutei_buy_sell_spread_compressed",
+  "yuyutei_buy_sell_spread_wide",
+  "snkrdunk_floor_below_yuyutei_sell",
+  "snkrdunk_floor_above_yuyutei_sell",
+  "owned_above_target_sell",
+  "owned_below_cost_basis",
+  "missing_recent_price",
+  "stale_mapping_price",
+] as const;
+
+export interface MarketSignalLatestPrices {
+  yuyutei_sell: number | null;
+  yuyutei_buy: number | null;
+  snkrdunk_floor: number | null;
+}
+
+export interface MarketSignalMetrics {
+  change_pct: number | null;
+  spread_pct: number | null;
+  gap_pct: number | null;
+  gap_jpy: number | null;
+}
+
+export interface MarketSignal {
+  signal_type: string;
+  severity: string;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  owned_quantity: number;
+  latest_prices: MarketSignalLatestPrices;
+  metrics: MarketSignalMetrics;
+  message: string;
+  suggested_action: string;
+}
+
+export interface MarketSignalsSummary {
+  total_signals: number;
+  by_signal_type: Record<string, number>;
+  owned_signal_count: number;
+  market_signal_count: number;
+  data_quality_signal_count: number;
+}
+
+export interface MarketSignalsResponse {
+  summary: MarketSignalsSummary;
+  signals: MarketSignal[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/signals/route.ts) rather than NEXT_PUBLIC_API_URL,
+ * since browser-side fetches to the backend's host port are unreliable in
+ * Codespaces/forwarded-port environments - same reasoning as fetchCardAudit. */
+export function fetchMarketSignals(params?: {
+  signal_type?: string;
+  set_code?: string;
+  rarity?: string;
+  source?: string;
+  owned?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<MarketSignalsResponse> {
+  const query = new URLSearchParams();
+  if (params?.signal_type) query.set("signal_type", params.signal_type);
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.source) query.set("source", params.source);
+  if (params?.owned !== undefined) query.set("owned", String(params.owned));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MarketSignalsResponse>(
+    `/api/market/signals${qs ? `?${qs}` : ""}`,
+  );
+}
+
 export async function fetchCardAudit(): Promise<CardAuditReport> {
   // Routed through the Next.js server proxy (see
   // src/app/api/admin/card-audit/route.ts) rather than NEXT_PUBLIC_API_URL,

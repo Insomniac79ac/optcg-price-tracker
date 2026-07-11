@@ -17,6 +17,9 @@ export function AppHeader() {
           <Link href="/collection" className="hover:text-neutral-100">
             Collection
           </Link>
+          <Link href="/market/signals" className="hover:text-neutral-100">
+            Market signals
+          </Link>
           <Link
             href="/admin/refresh-runs"
             className="hover:text-neutral-100"

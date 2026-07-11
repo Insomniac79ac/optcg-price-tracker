@@ -108,6 +108,12 @@ export default function DashboardPage() {
             Collection
           </Link>
           <Link
+            href="/market/signals"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Market signals
+          </Link>
+          <Link
             href="/admin/refresh-runs"
             className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
           >
