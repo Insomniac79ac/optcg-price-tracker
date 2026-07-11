@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
+import {
+  type HistoryTimeframe,
+  PortfolioValuationHistoryChart,
+} from "@/components/PortfolioValuationHistoryChart";
 import { RarityBadge } from "@/components/RarityBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
@@ -14,6 +18,7 @@ import {
   type CollectionSummary,
   type PortfolioValuation,
   type PortfolioValuationItem,
+  type PortfolioValuationSnapshot,
   type SnkrdunkFloorSnapshot,
   type YuyuteiPriceSnapshot,
   createCollectionItem,
@@ -22,6 +27,7 @@ import {
   fetchCollectionItems,
   fetchCollectionSummary,
   fetchCollectionValuation,
+  fetchCollectionValuationHistory,
   updateCollectionItem,
 } from "@/lib/api";
 import {
@@ -96,6 +102,13 @@ export default function CollectionPage() {
     "loading" | "error" | "ready"
   >("loading");
 
+  const [historyTimeframe, setHistoryTimeframe] =
+    useState<HistoryTimeframe>("30");
+  const [history, setHistory] = useState<PortfolioValuationSnapshot[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<
+    "loading" | "error" | "ready"
+  >("loading");
+
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [cardSearch, setCardSearch] = useState("");
 
@@ -144,6 +157,16 @@ export default function CollectionPage() {
       .catch(() => setValuationStatus("error"));
   }
 
+  function refreshHistory(days: HistoryTimeframe) {
+    setHistoryStatus("loading");
+    fetchCollectionValuationHistory(days)
+      .then((data) => {
+        setHistory(data);
+        setHistoryStatus("ready");
+      })
+      .catch(() => setHistoryStatus("error"));
+  }
+
   function refreshList() {
     fetchCollectionItems({
       status: statusFilter || undefined,
@@ -167,6 +190,11 @@ export default function CollectionPage() {
     refreshSummary();
     refreshValuation();
   }, []);
+
+  useEffect(() => {
+    refreshHistory(historyTimeframe);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyTimeframe]);
 
   const valuationByItemId = useMemo(() => {
     const map = new Map<number, PortfolioValuationItem>();
@@ -451,6 +479,13 @@ export default function CollectionPage() {
             </div>
           </div>
         )}
+
+        <PortfolioValuationHistoryChart
+          snapshots={history}
+          status={historyStatus}
+          timeframe={historyTimeframe}
+          onTimeframeChange={setHistoryTimeframe}
+        />
 
         {summary && (
           <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
