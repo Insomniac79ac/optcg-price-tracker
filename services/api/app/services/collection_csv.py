@@ -1,0 +1,389 @@
+import csv
+import io
+from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models import Card, CollectionItem
+from app.models.collection_item import COLLECTION_ITEM_STATUSES
+
+EXPORT_COLUMNS = (
+    "card_code",
+    "name_en",
+    "name_jp",
+    "set_code",
+    "rarity",
+    "variant",
+    "language",
+    "quantity",
+    "condition_label",
+    "purchase_price_jpy",
+    "purchase_date",
+    "purchase_source",
+    "target_sell_price_jpy",
+    "status",
+    "notes",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_IMPORT_COLUMNS = ("card_code", "quantity")
+
+IMPORT_MODES = ("upsert", "append")
+
+DEFAULT_STATUS = "hold"
+
+
+def _blank(value: str) -> str:
+    return "" if value is None else str(value)
+
+
+def export_collection_csv(db: Session) -> str:
+    """Renders the current collection_items (joined with their card) as CSV
+    text, one row per collection item. Missing/null values are exported as
+    blank cells rather than the literal string "None"."""
+    items = db.scalars(
+        select(CollectionItem)
+        .join(Card, CollectionItem.card_id == Card.id)
+        .order_by(CollectionItem.id)
+    ).all()
+
+    card_ids = {item.card_id for item in items}
+    cards_by_id: dict[int, Card] = {}
+    if card_ids:
+        cards_by_id = {
+            card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
+        }
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=EXPORT_COLUMNS)
+    writer.writeheader()
+
+    for item in items:
+        card = cards_by_id[item.card_id]
+        writer.writerow(
+            {
+                "card_code": card.card_code,
+                "name_en": _blank(card.name_en),
+                "name_jp": _blank(card.name_jp),
+                "set_code": card.set_code,
+                "rarity": card.rarity,
+                "variant": _blank(card.variant),
+                "language": card.language,
+                "quantity": item.quantity,
+                "condition_label": _blank(item.condition_label),
+                "purchase_price_jpy": _blank(item.purchase_price_jpy),
+                "purchase_date": item.purchase_date.isoformat() if item.purchase_date else "",
+                "purchase_source": _blank(item.purchase_source),
+                "target_sell_price_jpy": _blank(item.target_sell_price_jpy),
+                "status": item.status,
+                "notes": _blank(item.notes),
+                "created_at": item.created_at.isoformat() if item.created_at else "",
+                "updated_at": item.updated_at.isoformat() if item.updated_at else "",
+            }
+        )
+
+    return buffer.getvalue()
+
+
+def export_filename(today: date | None = None) -> str:
+    day = today or datetime.now(timezone.utc).date()
+    return f"collection_export_{day.strftime('%Y%m%d')}.csv"
+
+
+@dataclass
+class ParsedRow:
+    row_number: int
+    card_code: str
+    card_id: int
+    quantity: int
+    condition_label: str | None
+    purchase_price_jpy: int | None
+    purchase_date: date | None
+    purchase_source: str | None
+    target_sell_price_jpy: int | None
+    status: str
+    notes: str | None
+
+
+@dataclass
+class RowError:
+    row_number: int
+    card_code: str | None
+    error: str
+
+
+@dataclass
+class RowOutcome:
+    row_number: int
+    card_code: str
+    matched_card_id: int
+    action: str
+    quantity: int
+    status: str
+
+
+@dataclass
+class ImportResult:
+    dry_run: bool
+    mode: str
+    total_rows: int = 0
+    valid_rows: int = 0
+    error_rows: int = 0
+    created: int = 0
+    updated: int = 0
+    skipped: int = 0
+    errors: list[RowError] = field(default_factory=list)
+    preview: list[RowOutcome] = field(default_factory=list)
+
+
+def _clean(value: str | None) -> str | None:
+    value = (value or "").strip()
+    return value or None
+
+
+def _parse_row(
+    db: Session, row_number: int, row: dict[str, str]
+) -> tuple[ParsedRow | None, RowError | None]:
+    card_code = _clean(row.get("card_code"))
+    if card_code is None:
+        return None, RowError(row_number, None, "card_code is required")
+
+    matches = db.scalars(select(Card).where(Card.card_code == card_code)).all()
+    if len(matches) == 0:
+        return None, RowError(row_number, card_code, "Card code not found")
+    if len(matches) > 1:
+        return None, RowError(
+            row_number,
+            card_code,
+            f"Card code matches {len(matches)} cards; ambiguous match",
+        )
+    card = matches[0]
+
+    quantity_raw = _clean(row.get("quantity"))
+    if quantity_raw is None:
+        return None, RowError(row_number, card_code, "quantity is required")
+    try:
+        quantity = int(quantity_raw)
+    except ValueError:
+        return None, RowError(row_number, card_code, "quantity must be a valid integer")
+    if quantity < 1:
+        return None, RowError(row_number, card_code, "quantity must be >= 1")
+
+    purchase_price_raw = _clean(row.get("purchase_price_jpy"))
+    purchase_price_jpy: int | None = None
+    if purchase_price_raw is not None:
+        try:
+            purchase_price_jpy = int(purchase_price_raw)
+        except ValueError:
+            return None, RowError(
+                row_number, card_code, "purchase_price_jpy must be a valid integer"
+            )
+        if purchase_price_jpy < 0:
+            return None, RowError(
+                row_number, card_code, "purchase_price_jpy must be >= 0"
+            )
+
+    target_sell_raw = _clean(row.get("target_sell_price_jpy"))
+    target_sell_price_jpy: int | None = None
+    if target_sell_raw is not None:
+        try:
+            target_sell_price_jpy = int(target_sell_raw)
+        except ValueError:
+            return None, RowError(
+                row_number, card_code, "target_sell_price_jpy must be a valid integer"
+            )
+        if target_sell_price_jpy < 0:
+            return None, RowError(
+                row_number, card_code, "target_sell_price_jpy must be >= 0"
+            )
+
+    status_raw = _clean(row.get("status"))
+    status = status_raw if status_raw is not None else DEFAULT_STATUS
+    if status not in COLLECTION_ITEM_STATUSES:
+        return None, RowError(
+            row_number,
+            card_code,
+            f"Invalid status '{status}'. Must be one of {list(COLLECTION_ITEM_STATUSES)}",
+        )
+
+    purchase_date_raw = _clean(row.get("purchase_date"))
+    purchase_date_value: date | None = None
+    if purchase_date_raw is not None:
+        try:
+            purchase_date_value = datetime.strptime(purchase_date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            return None, RowError(
+                row_number,
+                card_code,
+                "purchase_date must be in YYYY-MM-DD format",
+            )
+
+    return (
+        ParsedRow(
+            row_number=row_number,
+            card_code=card_code,
+            card_id=card.id,
+            quantity=quantity,
+            condition_label=_clean(row.get("condition_label")),
+            purchase_price_jpy=purchase_price_jpy,
+            purchase_date=purchase_date_value,
+            purchase_source=_clean(row.get("purchase_source")),
+            target_sell_price_jpy=target_sell_price_jpy,
+            status=status,
+            notes=_clean(row.get("notes")),
+        ),
+        None,
+    )
+
+
+def _upsert_key(parsed: ParsedRow) -> tuple[int, str | None, str | None]:
+    return (parsed.card_id, parsed.condition_label, parsed.purchase_source)
+
+
+def _find_existing_item(db: Session, parsed: ParsedRow) -> CollectionItem | None:
+    filters = [CollectionItem.card_id == parsed.card_id]
+    if parsed.condition_label is None:
+        filters.append(CollectionItem.condition_label.is_(None))
+    else:
+        filters.append(CollectionItem.condition_label == parsed.condition_label)
+    if parsed.purchase_source is None:
+        filters.append(CollectionItem.purchase_source.is_(None))
+    else:
+        filters.append(CollectionItem.purchase_source == parsed.purchase_source)
+    return db.scalars(select(CollectionItem).where(*filters)).first()
+
+
+def _apply_row_to_item(item: CollectionItem, parsed: ParsedRow) -> None:
+    item.quantity = parsed.quantity
+    item.condition_label = parsed.condition_label
+    item.purchase_price_jpy = parsed.purchase_price_jpy
+    item.purchase_date = parsed.purchase_date
+    item.purchase_source = parsed.purchase_source
+    item.target_sell_price_jpy = parsed.target_sell_price_jpy
+    item.status = parsed.status
+    item.notes = parsed.notes
+
+
+def _create_item(db: Session, parsed: ParsedRow) -> CollectionItem:
+    item = CollectionItem(
+        card_id=parsed.card_id,
+        quantity=parsed.quantity,
+        condition_label=parsed.condition_label,
+        purchase_price_jpy=parsed.purchase_price_jpy,
+        purchase_date=parsed.purchase_date,
+        purchase_source=parsed.purchase_source,
+        target_sell_price_jpy=parsed.target_sell_price_jpy,
+        status=parsed.status,
+        notes=parsed.notes,
+    )
+    db.add(item)
+    db.flush()
+    return item
+
+
+def _outcome(parsed: ParsedRow, action: str) -> RowOutcome:
+    return RowOutcome(
+        row_number=parsed.row_number,
+        card_code=parsed.card_code,
+        matched_card_id=parsed.card_id,
+        action=action,
+        quantity=parsed.quantity,
+        status=parsed.status,
+    )
+
+
+def import_collection_csv(
+    db: Session, csv_text: str, *, dry_run: bool, mode: str
+) -> ImportResult:
+    """Parses and (optionally) applies a collection CSV import. When
+    dry_run is True, no DB writes occur - the preview shows the actions that
+    *would* be taken (would_create/would_update). When False, rows are
+    written and the preview shows what actually happened (created/updated).
+
+    In upsert mode, rows within the same batch that share a
+    (card_id, condition_label, purchase_source) key target the same
+    collection item - the first such row in the file creates it, later rows
+    in the same file update it - whether or not this is a dry run.
+    """
+    if mode not in IMPORT_MODES:
+        raise ValueError(f"mode must be one of {IMPORT_MODES}")
+
+    reader = csv.DictReader(io.StringIO(csv_text))
+    fieldnames = reader.fieldnames or []
+    missing_columns = [c for c in REQUIRED_IMPORT_COLUMNS if c not in fieldnames]
+    if missing_columns:
+        raise ValueError(f"CSV is missing required columns: {missing_columns}")
+
+    result = ImportResult(dry_run=dry_run, mode=mode)
+
+    # Tracks upsert targets claimed earlier in *this* batch, so repeated rows
+    # for the same card/condition/source update the same row instead of each
+    # creating a new one - even under dry_run, where nothing is persisted yet.
+    batch_upsert_targets: dict[tuple[int, str | None, str | None], int | None] = {}
+
+    for row_number, row in enumerate(reader, start=2):
+        result.total_rows += 1
+        parsed, error = _parse_row(db, row_number, row)
+        if error is not None:
+            result.error_rows += 1
+            result.skipped += 1
+            result.errors.append(error)
+            continue
+
+        assert parsed is not None
+        result.valid_rows += 1
+
+        if mode == "append":
+            if dry_run:
+                result.preview.append(_outcome(parsed, "would_create"))
+            else:
+                _create_item(db, parsed)
+                result.created += 1
+                result.preview.append(_outcome(parsed, "created"))
+            continue
+
+        # mode == "upsert": rows sharing a (card_id, condition_label,
+        # purchase_source) key within this batch target the same row - the
+        # first claims/creates it, later ones update it.
+        key = _upsert_key(parsed)
+        if key in batch_upsert_targets:
+            existing_item_id = batch_upsert_targets[key]
+            if dry_run:
+                result.preview.append(_outcome(parsed, "would_update"))
+            else:
+                item = db.get(CollectionItem, existing_item_id)
+                assert item is not None
+                _apply_row_to_item(item, parsed)
+                result.updated += 1
+                result.preview.append(_outcome(parsed, "updated"))
+            continue
+
+        existing_item = _find_existing_item(db, parsed)
+        if existing_item is not None:
+            if dry_run:
+                batch_upsert_targets[key] = existing_item.id
+                result.preview.append(_outcome(parsed, "would_update"))
+            else:
+                _apply_row_to_item(existing_item, parsed)
+                result.updated += 1
+                batch_upsert_targets[key] = existing_item.id
+                result.preview.append(_outcome(parsed, "updated"))
+        else:
+            if dry_run:
+                batch_upsert_targets[key] = None
+                result.preview.append(_outcome(parsed, "would_create"))
+            else:
+                item = _create_item(db, parsed)
+                result.created += 1
+                batch_upsert_targets[key] = item.id
+                result.preview.append(_outcome(parsed, "created"))
+
+    if dry_run:
+        db.rollback()
+    else:
+        db.commit()
+
+    return result

@@ -265,6 +265,38 @@ class CollectionItemUpdateIn(BaseModel):
     status: CollectionItemStatus | None = None
 
 
+class CollectionImportRowErrorOut(BaseModel):
+    row_number: int
+    card_code: str | None
+    error: str
+
+
+class CollectionImportPreviewRowOut(BaseModel):
+    row_number: int
+    card_code: str
+    matched_card_id: int
+    action: str
+    quantity: int
+    status: str
+
+
+class CollectionImportSummaryOut(BaseModel):
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    created: int
+    updated: int
+    skipped: int
+
+
+class CollectionImportResponseOut(BaseModel):
+    dry_run: bool
+    mode: str
+    summary: CollectionImportSummaryOut
+    errors: list[CollectionImportRowErrorOut]
+    preview: list[CollectionImportPreviewRowOut]
+
+
 class CollectionSummaryOut(BaseModel):
     total_items: int
     total_quantity: int

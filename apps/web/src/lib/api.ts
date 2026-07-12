@@ -751,6 +751,119 @@ export function deleteCollectionItem(itemId: number): Promise<void> {
   return apiDelete(`/collection/${itemId}`);
 }
 
+export const COLLECTION_IMPORT_MODES = ["upsert", "append"] as const;
+export type CollectionImportMode = (typeof COLLECTION_IMPORT_MODES)[number];
+
+export interface CollectionImportRowError {
+  row_number: number;
+  card_code: string | null;
+  error: string;
+}
+
+export interface CollectionImportPreviewRow {
+  row_number: number;
+  card_code: string;
+  matched_card_id: number;
+  action: string;
+  quantity: number;
+  status: string;
+}
+
+export interface CollectionImportSummary {
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface CollectionImportResponse {
+  dry_run: boolean;
+  mode: string;
+  summary: CollectionImportSummary;
+  errors: CollectionImportRowError[];
+  preview: CollectionImportPreviewRow[];
+}
+
+function filenameFromContentDisposition(value: string | null): string | null {
+  if (!value) return null;
+  const match = /filename=([^;]+)/.exec(value);
+  return match ? match[1].trim().replace(/^"|"$/g, "") : null;
+}
+
+/** Downloads /collection/export.csv through the Next.js proxy (see
+ * src/app/api/collection/export/route.ts) and triggers a browser file
+ * download, using the filename the backend set via Content-Disposition. */
+export async function downloadCollectionCsv(): Promise<void> {
+  const res = await fetch("/api/collection/export", {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Export failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) ||
+    "collection_export.csv";
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Uploads a collection CSV through the Next.js proxy (see
+ * src/app/api/collection/import/route.ts). dry_run defaults to true on the
+ * backend if omitted, but callers here always pass it explicitly. */
+export async function importCollectionCsv(
+  file: File,
+  params: { dryRun: boolean; mode: CollectionImportMode },
+): Promise<CollectionImportResponse> {
+  const query = new URLSearchParams({
+    dry_run: String(params.dryRun),
+    mode: params.mode,
+  });
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/collection/import?${query.toString()}`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: formData,
+  });
+
+  const details = await res
+    .json()
+    .catch(
+      () =>
+        null as
+          | (Partial<CollectionImportResponse> & { error?: string; detail?: string })
+          | null,
+    );
+
+  if (!res.ok || !details) {
+    throw new Error(
+      details?.error || details?.detail || `Import failed with status ${res.status}`,
+    );
+  }
+
+  return details as CollectionImportResponse;
+}
+
 export const MARKET_SIGNAL_TYPES = [
   "price_up_7d",
   "price_down_7d",

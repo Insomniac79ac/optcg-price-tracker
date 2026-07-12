@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -8,6 +9,10 @@ from app.db import get_db
 from app.models import Card, CollectionItem, PortfolioValuationSnapshot
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
 from app.schemas import (
+    CollectionImportPreviewRowOut,
+    CollectionImportResponseOut,
+    CollectionImportRowErrorOut,
+    CollectionImportSummaryOut,
     CollectionItemCreateIn,
     CollectionItemListOut,
     CollectionItemOut,
@@ -15,6 +20,12 @@ from app.schemas import (
     CollectionSummaryOut,
     PortfolioValuationOut,
     PortfolioValuationSnapshotOut,
+)
+from app.services.collection_csv import (
+    IMPORT_MODES,
+    export_collection_csv,
+    export_filename,
+    import_collection_csv,
 )
 from app.services.portfolio_valuation import get_portfolio_valuation
 
@@ -168,6 +179,71 @@ def get_collection_valuation_history(
     ).all()
 
     return [PortfolioValuationSnapshotOut.model_validate(s) for s in snapshots]
+
+
+@router.get("/export.csv")
+def export_collection_items_csv(db: Session = Depends(get_db)):
+    csv_text = export_collection_csv(db)
+    filename = export_filename()
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.post("/import.csv", response_model=CollectionImportResponseOut)
+async def import_collection_items_csv(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(default=True),
+    mode: str = Query(default="upsert"),
+    db: Session = Depends(get_db),
+):
+    if mode not in IMPORT_MODES:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid mode. Must be one of {list(IMPORT_MODES)}"
+        )
+
+    raw = await file.read()
+    try:
+        csv_text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"File is not valid UTF-8: {exc}") from exc
+
+    try:
+        result = import_collection_csv(db, csv_text, dry_run=dry_run, mode=mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return CollectionImportResponseOut(
+        dry_run=result.dry_run,
+        mode=result.mode,
+        summary=CollectionImportSummaryOut(
+            total_rows=result.total_rows,
+            valid_rows=result.valid_rows,
+            error_rows=result.error_rows,
+            created=result.created,
+            updated=result.updated,
+            skipped=result.skipped,
+        ),
+        errors=[
+            CollectionImportRowErrorOut(
+                row_number=e.row_number, card_code=e.card_code, error=e.error
+            )
+            for e in result.errors
+        ],
+        preview=[
+            CollectionImportPreviewRowOut(
+                row_number=p.row_number,
+                card_code=p.card_code,
+                matched_card_id=p.matched_card_id,
+                action=p.action,
+                quantity=p.quantity,
+                status=p.status,
+            )
+            for p in result.preview
+        ],
+    )
 
 
 @router.post("", response_model=CollectionItemOut, status_code=201)
