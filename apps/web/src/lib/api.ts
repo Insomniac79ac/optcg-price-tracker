@@ -1480,3 +1480,128 @@ export function fetchMarketWorkflowRuns(params?: {
 export function fetchMarketWorkflowRun(runId: number): Promise<MarketWorkflowRun> {
   return fetchAdminJson<MarketWorkflowRun>(`/api/admin/market-workflow-runs/${runId}`);
 }
+
+// --- Backup / restore --------------------------------------------------
+
+export const BACKUP_RESTORE_MODES = ["merge", "replace"] as const;
+export type BackupRestoreMode = (typeof BACKUP_RESTORE_MODES)[number];
+
+export interface BackupValidateResponse {
+  valid: boolean;
+  backup_version: number | null;
+  summary: Record<string, number>;
+  warnings: string[];
+  errors: string[];
+}
+
+export interface BackupRestoreResponse {
+  dry_run: boolean;
+  mode: string;
+  valid: boolean;
+  backup_version: number | null;
+  summary: {
+    created: Record<string, number>;
+    updated: Record<string, number>;
+    deleted: Record<string, number>;
+    skipped: Record<string, number>;
+  };
+  warnings: string[];
+  errors: string[];
+  preview: Record<string, Record<string, number>>;
+}
+
+/** Downloads /admin/backup/export through the Next.js proxy (see
+ * src/app/api/admin/backup/export/route.ts) and triggers a browser file
+ * download, using the filename the backend set via Content-Disposition. */
+export async function downloadBackup(params: {
+  includePrices: boolean;
+  includeRawSnapshots: boolean;
+  includeRefreshRuns: boolean;
+}): Promise<void> {
+  const query = new URLSearchParams({
+    include_prices: String(params.includePrices),
+    include_raw_snapshots: String(params.includeRawSnapshots),
+    include_refresh_runs: String(params.includeRefreshRuns),
+  });
+
+  const res = await fetch(`/api/admin/backup/export?${query.toString()}`, {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+
+  if (res.status === 401) throw new AdminAuthRequiredError();
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Export failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) ||
+    "opcg_backup.json";
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function postBackupFile<T>(
+  path: string,
+  file: File,
+  query: Record<string, string>,
+): Promise<T> {
+  const qs = new URLSearchParams(query).toString();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${path}${qs ? `?${qs}` : ""}`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: formData,
+  });
+
+  if (res.status === 401) throw new AdminAuthRequiredError();
+
+  const details = await res
+    .json()
+    .catch(() => null as (Partial<T> & { error?: string; detail?: string }) | null);
+
+  if (!res.ok || !details) {
+    throw new Error(
+      (details as { error?: string; detail?: string } | null)?.error ||
+        (details as { error?: string; detail?: string } | null)?.detail ||
+        `Request failed with status ${res.status}`,
+    );
+  }
+
+  return details as T;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/backup/validate/route.ts). */
+export function validateBackup(file: File): Promise<BackupValidateResponse> {
+  return postBackupFile<BackupValidateResponse>("/api/admin/backup/validate", file, {});
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/backup/restore/route.ts). */
+export function restoreBackup(
+  file: File,
+  params: { dryRun: boolean; mode: BackupRestoreMode; confirm?: string },
+): Promise<BackupRestoreResponse> {
+  const query: Record<string, string> = {
+    dry_run: String(params.dryRun),
+    mode: params.mode,
+  };
+  if (params.confirm) query.confirm = params.confirm;
+  return postBackupFile<BackupRestoreResponse>("/api/admin/backup/restore", file, query);
+}

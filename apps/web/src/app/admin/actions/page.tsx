@@ -499,6 +499,12 @@ export default function AdminActionsPage() {
                 Market workflow runs
               </Link>
               <Link
+                href="/admin/backup"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Backup &amp; restore
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

@@ -56,6 +56,9 @@ export function AppHeader() {
           <Link href="/admin/actions" className="hover:text-neutral-100">
             Actions
           </Link>
+          <Link href="/admin/backup" className="hover:text-neutral-100">
+            Backup
+          </Link>
         </nav>
       </div>
     </header>

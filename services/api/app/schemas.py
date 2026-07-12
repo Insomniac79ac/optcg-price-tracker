@@ -698,6 +698,25 @@ class MarketIntelligenceReportListOut(BaseModel):
     offset: int
 
 
+class BackupValidateResponseOut(BaseModel):
+    valid: bool
+    backup_version: int | None
+    summary: dict[str, int]
+    warnings: list[str]
+    errors: list[str]
+
+
+class BackupRestoreResponseOut(BaseModel):
+    dry_run: bool
+    mode: str
+    valid: bool
+    backup_version: int | None
+    summary: dict[str, dict[str, int]]
+    warnings: list[str]
+    errors: list[str]
+    preview: dict[str, dict[str, int]]
+
+
 class AdminRefreshPricesRequest(BaseModel):
     source: str = "all"
     limit: int | None = Field(default=None, ge=1)
