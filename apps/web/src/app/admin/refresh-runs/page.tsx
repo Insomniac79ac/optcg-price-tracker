@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AdminAuthGate } from "@/components/AdminAuthGate";
@@ -54,9 +55,17 @@ export default function RefreshRunsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">
-            Price refresh runs
-          </h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">
+              Price refresh runs
+            </h1>
+            <Link
+              href="/admin/actions"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Admin actions
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             {status === "ready" && (
               <span className="text-sm text-neutral-500">

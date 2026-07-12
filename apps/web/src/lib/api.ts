@@ -366,15 +366,28 @@ export async function fetchAdminJson<T>(
     // The proxy route reports backend-fetch/parsing failures as a JSON body
     // with an `error` field rather than an HTTP-level failure, so surface
     // that message and its details instead of a generic status-code error.
+    // A `detail` field instead means the proxy successfully forwarded a real
+    // FastAPI error response (e.g. a 400/422/502 from the backend itself).
     const details = await res
       .json()
-      .catch(() => null as { error?: string; backend_status?: number; body_preview?: string } | null);
+      .catch(
+        () =>
+          null as {
+            error?: string;
+            detail?: string;
+            backend_status?: number;
+            body_preview?: string;
+          } | null,
+      );
     if (details?.error) {
       throw new AdminProxyError(
         details.error,
         details.backend_status,
         details.body_preview,
       );
+    }
+    if (details?.detail) {
+      throw new Error(details.detail);
     }
     throw new Error(`Request to ${path} failed with status ${res.status}`);
   }
@@ -1140,4 +1153,101 @@ export function fetchMarketReports(params?: {
  * src/app/api/market/reports/[id]/route.ts). */
 export function fetchMarketReport(reportId: number): Promise<MarketIntelligenceReport> {
   return fetchAdminJson<MarketIntelligenceReport>(`/api/market/reports/${reportId}`);
+}
+
+export const ADMIN_ACTION_SOURCES = ["all", "yuyutei", "snkrdunk"] as const;
+
+export interface RefreshPricesRequest {
+  source: string;
+  limit?: number | null;
+  dry_run?: boolean;
+}
+
+export interface RefreshPricesResponse {
+  run_id: number | null;
+  job_id: string | null;
+  status: string | null;
+  warnings: string[];
+}
+
+export interface SnapshotPortfolioResponse {
+  snapshot_id: number;
+}
+
+export interface SnapshotMarketSignalsResponse {
+  created_count: number;
+  updated_count: number;
+  resolved_count: number;
+}
+
+export interface GenerateMarketReportResponse {
+  report_id: number;
+}
+
+export interface FullMarketRefreshRequest {
+  source: string;
+  limit?: number | null;
+  dry_run?: boolean;
+}
+
+export interface FullMarketRefreshResponse {
+  price_refresh_run_id: number | null;
+  portfolio_snapshot_id: number | null;
+  market_signal_snapshot: {
+    created: number;
+    updated: number;
+    resolved: number;
+  };
+  market_report_id: number | null;
+  dry_run: boolean;
+  warnings: string[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/refresh-prices/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function triggerRefreshPrices(
+  body: RefreshPricesRequest,
+): Promise<RefreshPricesResponse> {
+  return fetchAdminJson<RefreshPricesResponse>("/api/admin/actions/refresh-prices", {
+    method: "POST",
+    body,
+  });
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/snapshot-portfolio/route.ts). */
+export function triggerSnapshotPortfolio(): Promise<SnapshotPortfolioResponse> {
+  return fetchAdminJson<SnapshotPortfolioResponse>("/api/admin/actions/snapshot-portfolio", {
+    method: "POST",
+  });
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/snapshot-market-signals/route.ts). */
+export function triggerSnapshotMarketSignals(): Promise<SnapshotMarketSignalsResponse> {
+  return fetchAdminJson<SnapshotMarketSignalsResponse>(
+    "/api/admin/actions/snapshot-market-signals",
+    { method: "POST" },
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/generate-market-report/route.ts). */
+export function triggerGenerateMarketReport(): Promise<GenerateMarketReportResponse> {
+  return fetchAdminJson<GenerateMarketReportResponse>(
+    "/api/admin/actions/generate-market-report",
+    { method: "POST" },
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/full-market-refresh/route.ts). */
+export function triggerFullMarketRefresh(
+  body: FullMarketRefreshRequest,
+): Promise<FullMarketRefreshResponse> {
+  return fetchAdminJson<FullMarketRefreshResponse>("/api/admin/actions/full-market-refresh", {
+    method: "POST",
+    body,
+  });
 }

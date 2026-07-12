@@ -664,3 +664,51 @@ class MarketIntelligenceReportListOut(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class AdminRefreshPricesRequest(BaseModel):
+    source: str = "all"
+    limit: int | None = Field(default=None, ge=1)
+    dry_run: bool = False
+
+
+class AdminRefreshPricesResponse(BaseModel):
+    run_id: int | None
+    job_id: str | None
+    status: str | None
+    warnings: list[str] = []
+
+
+class AdminSnapshotPortfolioResponse(BaseModel):
+    snapshot_id: int
+
+
+class AdminSnapshotMarketSignalsResponse(BaseModel):
+    created_count: int
+    updated_count: int
+    resolved_count: int
+
+
+class AdminGenerateMarketReportResponse(BaseModel):
+    report_id: int
+
+
+class AdminFullMarketRefreshRequest(BaseModel):
+    source: str = "all"
+    limit: int | None = Field(default=None, ge=1)
+    dry_run: bool = False
+
+
+class AdminMarketSignalSnapshotCounts(BaseModel):
+    created: int
+    updated: int
+    resolved: int
+
+
+class AdminFullMarketRefreshResponse(BaseModel):
+    price_refresh_run_id: int | None
+    portfolio_snapshot_id: int | None
+    market_signal_snapshot: AdminMarketSignalSnapshotCounts
+    market_report_id: int | None
+    dry_run: bool
+    warnings: list[str] = []

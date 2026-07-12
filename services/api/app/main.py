@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.admin_actions import router as admin_actions_router
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
@@ -41,3 +42,4 @@ app.include_router(alerts_router)
 app.include_router(card_audit_router)
 app.include_router(source_mappings_router)
 app.include_router(collection_router)
+app.include_router(admin_actions_router)

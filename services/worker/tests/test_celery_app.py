@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import worker.celery_app as celery_app_module
-from worker.celery_app import app, refresh_yuyutei_prices
+from worker.celery_app import app, refresh_yuyutei_prices, run_price_refresh
 from worker.models import Card, PriceObservation, PriceRefreshRun, Source, SourceCardMapping
 from worker.settings import Settings, settings
 
@@ -74,3 +74,48 @@ def test_task_does_not_force_live_mode(db_session, monkeypatch):
 
 def test_mock_mode_remains_default():
     assert Settings.model_fields["SCRAPING_MODE"].default == "mock"
+
+
+def test_run_price_refresh_task_can_be_imported():
+    assert run_price_refresh.name == "worker.celery_app.run_price_refresh"
+    assert "worker.celery_app.run_price_refresh" in app.tasks
+
+
+def test_run_price_refresh_delegates_to_same_refresh_logic(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+    _source, card, _mapping = seed_yuyutei_mapping(db_session)
+    card_id = card.id
+
+    result = run_price_refresh(source="yuyutei", limit=5, dry_run=False)
+
+    assert result["status"] == "completed"
+    assert result["source_filter"] == "yuyutei"
+
+    run = db_session.query(PriceRefreshRun).filter_by(id=result["id"]).one()
+    assert run.source_filter == "yuyutei"
+    assert run.dry_run is False
+
+    observations = db_session.query(PriceObservation).filter_by(card_id=card_id).all()
+    assert len(observations) == 2
+
+
+def test_run_price_refresh_respects_dry_run(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+    seed_yuyutei_mapping(db_session)
+
+    result = run_price_refresh(source="yuyutei", limit=5, dry_run=True)
+
+    assert result["dry_run"] is True
+    assert result["observations_inserted"] == 0
+
+
+def test_run_price_refresh_defaults_to_all_sources(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+    seed_yuyutei_mapping(db_session)
+
+    result = run_price_refresh(limit=5)
+
+    assert result["source_filter"] == "all"

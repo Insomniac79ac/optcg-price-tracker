@@ -47,6 +47,9 @@ export function AppHeader() {
           <Link href="/admin/card-audit" className="hover:text-neutral-100">
             Card audit
           </Link>
+          <Link href="/admin/actions" className="hover:text-neutral-100">
+            Actions
+          </Link>
         </nav>
       </div>
     </header>
