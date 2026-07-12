@@ -1022,3 +1022,122 @@ export async function fetchCardAudit(): Promise<CardAuditReport> {
   }
   return data;
 }
+
+export interface MarketReportPortfolioSnapshot {
+  total_cost_basis_jpy: number | null;
+  retail_value_jpy: number | null;
+  liquidation_value_jpy: number | null;
+  market_floor_value_jpy: number | null;
+  pnl_vs_market_floor_jpy: number | null;
+  pnl_vs_market_floor_pct: number | null;
+  items_missing_cost_basis: number;
+  items_missing_prices: number;
+}
+
+export interface MarketReportOpportunitySummary {
+  total_opportunities: number;
+  highest_score: number | null;
+  average_score: number | null;
+  by_category: Record<string, number>;
+}
+
+export interface MarketReportTopOpportunities {
+  top_5: MarketOpportunity[];
+  top_buy: MarketOpportunity | null;
+  top_sell: MarketOpportunity | null;
+  top_momentum: MarketOpportunity | null;
+  top_drop: MarketOpportunity | null;
+  top_owned: MarketOpportunity | null;
+  top_data_quality: MarketOpportunity | null;
+}
+
+export interface MarketReportCollectionQuality {
+  missing_purchase_price_count: number;
+  missing_condition_count: number;
+  missing_target_sell_count: number;
+  total_quality_issues: number;
+}
+
+export interface MarketReportSignalEventSummary {
+  open_events: number;
+  watching_events: number;
+  dismissed_events: number;
+  resolved_events: number;
+  most_common_signal_type: string | null;
+  most_common_suggested_action: string | null;
+}
+
+export interface MarketReportSummary {
+  total_opportunities: number;
+  highest_score: number | null;
+  average_score: number | null;
+}
+
+export interface MarketIntelligenceReport {
+  id: number;
+  created_at: string;
+  report_date: string;
+  summary: MarketReportSummary;
+  portfolio_snapshot: MarketReportPortfolioSnapshot;
+  opportunity_summary: MarketReportOpportunitySummary;
+  top_opportunities: MarketReportTopOpportunities;
+  collection_quality: MarketReportCollectionQuality;
+  signal_event_summary: MarketReportSignalEventSummary;
+  deterministic_summary_lines: string[];
+  payload: Record<string, unknown>;
+}
+
+export interface MarketIntelligenceReportSummary {
+  id: number;
+  created_at: string;
+  report_date: string;
+  total_opportunities: number;
+  highest_score: number | null;
+  average_score: number | null;
+  buy_opportunities_count: number;
+  sell_opportunities_count: number;
+  momentum_count: number;
+  drop_count: number;
+  data_quality_count: number;
+  owned_count: number;
+  portfolio_market_floor_value_jpy: number | null;
+  portfolio_retail_value_jpy: number | null;
+  portfolio_liquidation_value_jpy: number | null;
+  portfolio_pnl_vs_market_floor_jpy: number | null;
+}
+
+export interface MarketIntelligenceReportListResponse {
+  reports: MarketIntelligenceReportSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/report/latest/route.ts) - same reasoning as
+ * fetchMarketSignals. Throws AdminNotFoundError when no report has been
+ * generated yet. */
+export function fetchLatestMarketReport(): Promise<MarketIntelligenceReport> {
+  return fetchAdminJson<MarketIntelligenceReport>("/api/market/report/latest");
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/reports/route.ts). */
+export function fetchMarketReports(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<MarketIntelligenceReportListResponse> {
+  const query = new URLSearchParams();
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MarketIntelligenceReportListResponse>(
+    `/api/market/reports${qs ? `?${qs}` : ""}`,
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/market/reports/[id]/route.ts). */
+export function fetchMarketReport(reportId: number): Promise<MarketIntelligenceReport> {
+  return fetchAdminJson<MarketIntelligenceReport>(`/api/market/reports/${reportId}`);
+}

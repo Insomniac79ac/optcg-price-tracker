@@ -160,6 +160,12 @@ export default function MarketOpportunitiesPage() {
             >
               Market signals
             </Link>
+            <Link
+              href="/market/report"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Market report
+            </Link>
           </div>
           {status === "ready" && (
             <span className="text-sm text-neutral-500">

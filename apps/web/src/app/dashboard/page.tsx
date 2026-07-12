@@ -126,6 +126,12 @@ export default function DashboardPage() {
             Opportunities
           </Link>
           <Link
+            href="/market/report"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Market report
+          </Link>
+          <Link
             href="/admin/refresh-runs"
             className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
           >
