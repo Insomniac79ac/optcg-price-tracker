@@ -712,3 +712,16 @@ class AdminFullMarketRefreshResponse(BaseModel):
     market_report_id: int | None
     dry_run: bool
     warnings: list[str] = []
+
+
+class AdminSendMarketReportDigestRequest(BaseModel):
+    dry_run: bool = False
+    force: bool = False
+
+
+class AdminSendMarketReportDigestResponse(BaseModel):
+    report_id: int | None
+    status: str | None
+    sent: bool
+    skipped_reason: str | None
+    message_preview: str | None

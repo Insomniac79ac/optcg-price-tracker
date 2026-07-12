@@ -12,6 +12,7 @@ ACTION_PATHS = [
     "/admin/actions/snapshot-market-signals",
     "/admin/actions/generate-market-report",
     "/admin/actions/full-market-refresh",
+    "/admin/actions/send-market-report-digest",
 ]
 
 
@@ -261,6 +262,116 @@ def test_full_market_refresh_surfaces_trigger_failure_as_502(client, monkeypatch
     response = client.post("/admin/actions/full-market-refresh", json={})
 
     assert response.status_code == 502
+
+
+def test_full_market_refresh_does_not_fail_when_digest_fails(client, monkeypatch, db_session):
+    monkeypatch.setattr(
+        admin_actions_module,
+        "trigger_price_refresh",
+        lambda source, limit, dry_run: ("job-9", {"id": 11, "status": "completed"}),
+    )
+
+    def failing_digest(db, dry_run=False, force=False):
+        raise RuntimeError("telegram api down")
+
+    monkeypatch.setattr(admin_actions_module, "send_market_report_digest", failing_digest)
+
+    response = client.post("/admin/actions/full-market-refresh", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["market_report_id"] is not None
+    assert any("telegram api down" in w for w in body["warnings"])
+
+
+def test_full_market_refresh_dry_run_never_sends_digest(client, monkeypatch, db_session):
+    monkeypatch.setattr(
+        admin_actions_module,
+        "trigger_price_refresh",
+        lambda source, limit, dry_run: ("job-9", {"id": 12, "status": "completed"}),
+    )
+
+    def _unexpected_digest_call(*args, **kwargs):
+        raise AssertionError("send_market_report_digest must not be called on a dry run")
+
+    monkeypatch.setattr(admin_actions_module, "send_market_report_digest", _unexpected_digest_call)
+
+    response = client.post(
+        "/admin/actions/full-market-refresh", json={"source": "all", "dry_run": True}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["dry_run"] is True
+
+
+# --- POST /admin/actions/send-market-report-digest ---------------------------
+
+
+def test_send_market_report_digest_no_report_found(client, db_session):
+    response = client.post("/admin/actions/send-market-report-digest", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["report_id"] is None
+    assert body["sent"] is False
+    assert body["skipped_reason"] == "No market report found."
+
+
+def test_send_market_report_digest_dry_run(client, monkeypatch, db_session):
+    from app.services.market_report import generate_market_report
+
+    generate_market_report(db_session)
+
+    response = client.post(
+        "/admin/actions/send-market-report-digest", json={"dry_run": True}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "pending"
+    assert body["sent"] is False
+    assert "OPCG Market Report" in body["message_preview"]
+
+
+def test_send_market_report_digest_skipped_without_telegram_config(client, db_session):
+    from app.services.market_report import generate_market_report
+
+    generate_market_report(db_session)
+
+    response = client.post("/admin/actions/send-market-report-digest", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "skipped"
+    assert body["sent"] is False
+    assert "not configured" in body["skipped_reason"]
+
+
+def test_send_market_report_digest_sends_when_configured(client, monkeypatch, db_session):
+    from app.services.market_report import generate_market_report
+    from app.settings import settings
+
+    monkeypatch.setattr(settings, "TELEGRAM_BOT_TOKEN", "bot-token")
+    monkeypatch.setattr(settings, "TELEGRAM_CHAT_ID", "12345")
+    monkeypatch.setattr(
+        "app.services.telegram_market_digest.send_telegram_message", lambda text: None
+    )
+    generate_market_report(db_session)
+
+    response = client.post("/admin/actions/send-market-report-digest", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "sent"
+    assert body["sent"] is True
+
+    second = client.post("/admin/actions/send-market-report-digest", json={})
+    assert second.json()["status"] == "skipped"
+
+    forced = client.post(
+        "/admin/actions/send-market-report-digest", json={"force": True}
+    )
+    assert forced.json()["status"] == "sent"
 
 
 def test_full_market_refresh_rejects_invalid_source(client):

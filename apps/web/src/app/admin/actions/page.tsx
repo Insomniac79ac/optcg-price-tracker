@@ -13,6 +13,7 @@ import {
   triggerFullMarketRefresh,
   triggerGenerateMarketReport,
   triggerRefreshPrices,
+  triggerSendMarketReportDigest,
   triggerSnapshotMarketSignals,
   triggerSnapshotPortfolio,
 } from "@/lib/api";
@@ -22,7 +23,8 @@ type ActionKey =
   | "snapshot-portfolio"
   | "snapshot-market-signals"
   | "generate-market-report"
-  | "full-market-refresh";
+  | "full-market-refresh"
+  | "send-market-report-digest";
 
 const ACTION_LABELS: Record<ActionKey, string> = {
   "refresh-prices": "Refresh prices",
@@ -30,6 +32,7 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   "snapshot-market-signals": "Market signal snapshot",
   "generate-market-report": "Generate market report",
   "full-market-refresh": "Full market refresh",
+  "send-market-report-digest": "Send market report digest",
 };
 
 interface ActionResult {
@@ -81,6 +84,16 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
         { label: "Dry run", value: d.dry_run ? "yes" : "no" },
       ];
     }
+    case "send-market-report-digest":
+      return [
+        { label: "Report ID", value: d.report_id != null ? String(d.report_id) : "not available" },
+        { label: "Status", value: d.status ? String(d.status) : "not available" },
+        { label: "Sent", value: d.sent ? "yes" : "no" },
+        {
+          label: "Skipped reason",
+          value: d.skipped_reason ? String(d.skipped_reason) : "not available",
+        },
+      ];
     default:
       return [];
   }
@@ -90,6 +103,12 @@ function warningsOf(data: unknown): string[] {
   if (!data || typeof data !== "object") return [];
   const warnings = (data as Record<string, unknown>).warnings;
   return Array.isArray(warnings) ? warnings.filter((w): w is string => typeof w === "string") : [];
+}
+
+function messagePreviewOf(action: ActionKey, data: unknown): string | null {
+  if (action !== "send-market-report-digest" || !data || typeof data !== "object") return null;
+  const preview = (data as Record<string, unknown>).message_preview;
+  return typeof preview === "string" ? preview : null;
 }
 
 export default function AdminActionsPage() {
@@ -104,6 +123,9 @@ export default function AdminActionsPage() {
   const [fullSource, setFullSource] = useState<string>("all");
   const [fullLimit, setFullLimit] = useState("");
   const [fullDryRun, setFullDryRun] = useState(false);
+
+  const [digestDryRun, setDigestDryRun] = useState(false);
+  const [digestForce, setDigestForce] = useState(false);
 
   useEffect(() => {
     setUnauthorized(!getAdminToken());
@@ -312,6 +334,47 @@ export default function AdminActionsPage() {
                   Run full market refresh
                 </ActionButton>
               </ActionCard>
+
+              <ActionCard title="Send market report digest" className="md:col-span-2">
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={digestDryRun}
+                      onChange={(e) => setDigestDryRun(e.target.checked)}
+                      disabled={isBusy}
+                    />
+                    Dry run
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={digestForce}
+                      onChange={(e) => setDigestForce(e.target.checked)}
+                      disabled={isBusy}
+                    />
+                    Force (resend even if already sent)
+                  </label>
+                  <p className="text-xs text-neutral-500">
+                    Sends a concise Telegram digest of the latest market intelligence report.
+                    Skipped if Telegram is not configured or already sent for this report.
+                  </p>
+                </div>
+                <ActionButton
+                  disabled={isBusy}
+                  pending={pendingAction === "send-market-report-digest"}
+                  onClick={() =>
+                    runAction("send-market-report-digest", () =>
+                      triggerSendMarketReportDigest({
+                        dry_run: digestDryRun,
+                        force: digestForce,
+                      }),
+                    )
+                  }
+                >
+                  Send Telegram digest
+                </ActionButton>
+              </ActionCard>
             </div>
 
             {result && <ResultPanel result={result} />}
@@ -414,6 +477,7 @@ function ActionButton({
 function ResultPanel({ result }: { result: ActionResult }) {
   const warnings = result.success ? warningsOf(result.data) : [];
   const summary = result.success ? summarizeResult(result.action, result.data) : [];
+  const messagePreview = result.success ? messagePreviewOf(result.action, result.data) : null;
 
   return (
     <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
@@ -446,6 +510,15 @@ function ResultPanel({ result }: { result: ActionResult }) {
               <div className="text-sm font-medium text-neutral-100">{item.value}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {messagePreview && (
+        <div className="mb-2 rounded border border-neutral-800 bg-neutral-950 p-3">
+          <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">
+            Message preview
+          </div>
+          <pre className="whitespace-pre-wrap text-xs text-neutral-300">{messagePreview}</pre>
         </div>
       )}
 

@@ -27,6 +27,8 @@ services:
       ADMIN_TOKEN: ${ADMIN_TOKEN:-local-dev-admin-token}
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - ./data:/app/data
     depends_on:
@@ -47,6 +49,8 @@ services:
       PRICE_REFRESH_INTERVAL_HOURS: ${PRICE_REFRESH_INTERVAL_HOURS:-6}
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - ./data:/app/data:ro
     depends_on:

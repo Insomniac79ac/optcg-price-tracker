@@ -1251,3 +1251,27 @@ export function triggerFullMarketRefresh(
     body,
   });
 }
+
+export interface SendMarketReportDigestRequest {
+  dry_run?: boolean;
+  force?: boolean;
+}
+
+export interface SendMarketReportDigestResponse {
+  report_id: number | null;
+  status: string | null;
+  sent: boolean;
+  skipped_reason: string | null;
+  message_preview: string | null;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/send-market-report-digest/route.ts). */
+export function triggerSendMarketReportDigest(
+  body: SendMarketReportDigestRequest,
+): Promise<SendMarketReportDigestResponse> {
+  return fetchAdminJson<SendMarketReportDigestResponse>(
+    "/api/admin/actions/send-market-report-digest",
+    { method: "POST", body },
+  );
+}

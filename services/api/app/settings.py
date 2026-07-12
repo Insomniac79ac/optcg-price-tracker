@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str | None = None
     APP_ENV: str | None = None
     ADMIN_TOKEN: str | None = None
+    # Telegram alerting - if either is unset, digest sends are logged and
+    # skipped rather than attempted (see app.services.telegram_client).
+    TELEGRAM_BOT_TOKEN: str | None = None
+    TELEGRAM_CHAT_ID: str | None = None
 
     @field_validator("DATABASE_URL")
     @classmethod
