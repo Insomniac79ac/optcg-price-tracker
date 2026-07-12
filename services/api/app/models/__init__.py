@@ -2,7 +2,12 @@ from app.db import Base
 from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
 from app.models.card import Card
+from app.models.card_tag import CardTag
 from app.models.collection_item import CollectionItem
+from app.models.collection_item_group import CollectionItemGroup
+from app.models.collection_item_tag import CollectionItemTag
+from app.models.collector_group import CollectorGroup
+from app.models.collector_tag import CollectorTag
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
 from app.models.market_signal_event import MarketSignalEvent
@@ -34,4 +39,9 @@ __all__ = [
     "MarketIntelligenceReport",
     "MarketReportDigestSend",
     "MarketWorkflowRun",
+    "CollectorTag",
+    "CollectorGroup",
+    "CardTag",
+    "CollectionItemTag",
+    "CollectionItemGroup",
 ]

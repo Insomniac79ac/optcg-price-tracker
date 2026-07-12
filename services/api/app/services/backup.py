@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session
 from app.models import (
     AlertRule,
     Card,
+    CardTag,
     CollectionItem,
+    CollectionItemGroup,
+    CollectionItemTag,
+    CollectorGroup,
+    CollectorTag,
     MarketIntelligenceReport,
     MarketReportDigestSend,
     MarketSignalEvent,
@@ -23,7 +28,11 @@ from app.models import (
     SourceCardMapping,
 )
 
-BACKUP_VERSION = 1
+# Bumped from 1 -> 2 when collector tags/groups tables were added as
+# required tables - a version-1 backup predates them entirely, so it's
+# clearer to reject it with an explicit version mismatch than a generic
+# "missing required table" error.
+BACKUP_VERSION = 2
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -33,12 +42,17 @@ APP_NAME = "opcg-price-tracker"
 MODEL_BY_TABLE: dict[str, type] = {
     "cards": Card,
     "sources": Source,
+    "collector_tags": CollectorTag,
+    "collector_groups": CollectorGroup,
     "alert_rules": AlertRule,
     "portfolio_valuation_snapshots": PortfolioValuationSnapshot,
     "price_refresh_runs": PriceRefreshRun,
     "raw_snapshots": RawSnapshot,
     "source_card_mappings": SourceCardMapping,
     "collection_items": CollectionItem,
+    "card_tags": CardTag,
+    "collection_item_tags": CollectionItemTag,
+    "collection_item_groups": CollectionItemGroup,
     "price_observations": PriceObservation,
     "market_intelligence_reports": MarketIntelligenceReport,
     "market_signal_events": MarketSignalEvent,
@@ -59,6 +73,11 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "market_intelligence_reports",
     "market_report_digest_sends",
     "market_workflow_runs",
+    "collector_tags",
+    "collector_groups",
+    "card_tags",
+    "collection_item_tags",
+    "collection_item_groups",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (

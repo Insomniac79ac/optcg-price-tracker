@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CollectorGroupLabel } from "@/components/CollectorGroupLabel";
+import { CollectorTagBadge } from "@/components/CollectorTagBadge";
 import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStatusBadge";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
 import { RarityBadge } from "@/components/RarityBadge";
@@ -50,6 +52,8 @@ export default function MarketOpportunitiesPage() {
   const [minScoreInput, setMinScoreInput] = useState("");
   const [minScoreFilter, setMinScoreFilter] = useState<number | undefined>(undefined);
   const [limit, setLimit] = useState<number>(100);
+  const [tagFilter, setTagFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
 
   const [actionMessage, setActionMessage] = useState<
     { type: "success" | "error"; text: string } | null
@@ -96,6 +100,44 @@ export default function MarketOpportunitiesPage() {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter, ownedFilter, setCodeFilter, rarityFilter, minScoreFilter, limit]);
+
+  // The backend doesn't support filtering opportunities by tag/group, so
+  // these two filters apply client-side to whatever page of rows is already
+  // loaded - the tag/group dropdown options are likewise derived only from
+  // those loaded rows, not a separate full tag/group list.
+  const tagOptions = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const opp of opportunities) {
+      for (const tag of opp.tags) seen.set(tag.id, tag.name);
+    }
+    return [
+      ALL_OPTION,
+      ...Array.from(seen.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, name]) => ({ value: String(id), label: name })),
+    ];
+  }, [opportunities]);
+
+  const groupOptions = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const opp of opportunities) {
+      for (const group of opp.groups) seen.set(group.id, group.name);
+    }
+    return [
+      ALL_OPTION,
+      ...Array.from(seen.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([id, name]) => ({ value: String(id), label: name })),
+    ];
+  }, [opportunities]);
+
+  const filteredOpportunities = useMemo(() => {
+    return opportunities.filter((opp) => {
+      if (tagFilter && !opp.tags.some((t) => String(t.id) === tagFilter)) return false;
+      if (groupFilter && !opp.groups.some((g) => String(g.id) === groupFilter)) return false;
+      return true;
+    });
+  }, [opportunities, tagFilter, groupFilter]);
 
   async function handleWatch(opp: MarketOpportunity) {
     setActionMessage(null);
@@ -169,7 +211,8 @@ export default function MarketOpportunitiesPage() {
           </div>
           {status === "ready" && (
             <span className="text-sm text-neutral-500">
-              {opportunities.length} opportunit{opportunities.length === 1 ? "y" : "ies"}
+              {filteredOpportunities.length} of {opportunities.length} opportunit
+              {opportunities.length === 1 ? "y" : "ies"}
             </span>
           )}
         </div>
@@ -239,6 +282,18 @@ export default function MarketOpportunitiesPage() {
             onChange={(v) => setLimit(Number(v))}
             options={LIMIT_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
           />
+          <FilterSelect
+            label="Tag"
+            value={tagFilter}
+            onChange={setTagFilter}
+            options={tagOptions}
+          />
+          <FilterSelect
+            label="Group"
+            value={groupFilter}
+            onChange={setGroupFilter}
+            options={groupOptions}
+          />
         </div>
 
         {actionMessage && (
@@ -271,7 +326,13 @@ export default function MarketOpportunitiesPage() {
           </div>
         )}
 
-        {status === "ready" && opportunities.length > 0 && (
+        {status === "ready" && opportunities.length > 0 && filteredOpportunities.length === 0 && (
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
+            No opportunities match the selected filters.
+          </div>
+        )}
+
+        {status === "ready" && filteredOpportunities.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-neutral-800">
             <table className="w-full border-collapse text-xs">
               <thead>
@@ -285,6 +346,8 @@ export default function MarketOpportunitiesPage() {
                   <th className="px-2 py-1.5 font-medium">Set</th>
                   <th className="px-2 py-1.5 font-medium">Rarity</th>
                   <th className="px-2 py-1.5 font-medium">Owned</th>
+                  <th className="px-2 py-1.5 font-medium">Tags</th>
+                  <th className="px-2 py-1.5 font-medium">Groups</th>
                   <th className="px-2 py-1.5 font-medium">Message</th>
                   <th className="px-2 py-1.5 font-medium">Seen</th>
                   <th className="px-2 py-1.5 font-medium">Last seen</th>
@@ -293,7 +356,7 @@ export default function MarketOpportunitiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {opportunities.map((opp) => {
+                {filteredOpportunities.map((opp) => {
                   const isPending = pendingActionId === opp.event_id;
                   return (
                     <tr
@@ -335,6 +398,28 @@ export default function MarketOpportunitiesPage() {
                           </Link>
                         ) : (
                           0
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {opp.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {opp.tags.map((tag) => (
+                              <CollectorTagBadge key={tag.id} tag={tag} />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {opp.groups.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {opp.groups.map((group) => (
+                              <CollectorGroupLabel key={group.id} group={group} />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-600">—</span>
                         )}
                       </td>
                       <td className="max-w-[16rem] px-2 py-1.5 text-neutral-400">

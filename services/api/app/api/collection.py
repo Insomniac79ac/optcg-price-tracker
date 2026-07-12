@@ -6,7 +6,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Card, CollectionItem, PortfolioValuationSnapshot
+from app.models import (
+    Card,
+    CollectionItem,
+    CollectionItemGroup,
+    CollectionItemTag,
+    CollectorGroup,
+    CollectorTag,
+    PortfolioValuationSnapshot,
+)
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
 from app.schemas import (
     CollectionImportPreviewRowOut,
@@ -27,12 +35,18 @@ from app.services.collection_csv import (
     export_filename,
     import_collection_csv,
 )
+from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
 from app.services.portfolio_valuation import get_portfolio_valuation
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
 
-def _to_out(item: CollectionItem, card: Card) -> CollectionItemOut:
+def _to_out(
+    item: CollectionItem,
+    card: Card,
+    tags: list[CollectorTag] | None = None,
+    groups: list[CollectorGroup] | None = None,
+) -> CollectionItemOut:
     return CollectionItemOut(
         id=item.id,
         card_id=item.card_id,
@@ -51,9 +65,17 @@ def _to_out(item: CollectionItem, card: Card) -> CollectionItemOut:
         target_sell_price_jpy=item.target_sell_price_jpy,
         notes=item.notes,
         status=item.status,
+        tags=tags or [],
+        groups=groups or [],
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
+
+
+def _to_out_single(db: Session, item: CollectionItem, card: Card) -> CollectionItemOut:
+    tags = get_tags_for_collection_items(db, {item.id}).get(item.id, [])
+    groups = get_groups_for_collection_items(db, {item.id}).get(item.id, [])
+    return _to_out(item, card, tags, groups)
 
 
 def _get_item_or_404(db: Session, item_id: int) -> CollectionItem:
@@ -68,6 +90,20 @@ def _get_card_or_404(db: Session, card_id: int) -> Card:
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found")
     return card
+
+
+def _get_tag_or_404(db: Session, tag_id: int) -> CollectorTag:
+    tag = db.get(CollectorTag, tag_id)
+    if tag is None:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return tag
+
+
+def _get_group_or_404(db: Session, group_id: int) -> CollectorGroup:
+    group = db.get(CollectorGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group
 
 
 @router.get("", response_model=CollectionItemListOut)
@@ -113,7 +149,19 @@ def list_collection_items(
             card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
         }
 
-    out_items = [_to_out(item, cards_by_id[item.card_id]) for item in items]
+    item_ids = {item.id for item in items}
+    tags_by_item = get_tags_for_collection_items(db, item_ids)
+    groups_by_item = get_groups_for_collection_items(db, item_ids)
+
+    out_items = [
+        _to_out(
+            item,
+            cards_by_id[item.card_id],
+            tags_by_item.get(item.id, []),
+            groups_by_item.get(item.id, []),
+        )
+        for item in items
+    ]
     return CollectionItemListOut(items=out_items, total=total, limit=limit, offset=offset)
 
 
@@ -240,9 +288,13 @@ async def import_collection_items_csv(
                 action=p.action,
                 quantity=p.quantity,
                 status=p.status,
+                tags=p.tags,
+                groups=p.groups,
             )
             for p in result.preview
         ],
+        tags_created=result.tags_created,
+        groups_created=result.groups_created,
     )
 
 
@@ -261,7 +313,7 @@ def create_collection_item(body: CollectionItemCreateIn, db: Session = Depends(g
 def get_collection_item(item_id: int, db: Session = Depends(get_db)):
     item = _get_item_or_404(db, item_id)
     card = db.get(Card, item.card_id)
-    return _to_out(item, card)
+    return _to_out_single(db, item, card)
 
 
 @router.patch("/{item_id}", response_model=CollectionItemOut)
@@ -280,7 +332,7 @@ def update_collection_item(
     db.commit()
     db.refresh(item)
     card = db.get(Card, item.card_id)
-    return _to_out(item, card)
+    return _to_out_single(db, item, card)
 
 
 @router.delete("/{item_id}", status_code=204)
@@ -289,3 +341,77 @@ def delete_collection_item(item_id: int, db: Session = Depends(get_db)):
     db.delete(item)
     db.commit()
     return None
+
+
+@router.post("/{item_id}/tags/{tag_id}", response_model=CollectionItemOut)
+def assign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depends(get_db)):
+    item = _get_item_or_404(db, item_id)
+    card = db.get(Card, item.card_id)
+    _get_tag_or_404(db, tag_id)
+
+    existing = db.scalar(
+        select(CollectionItemTag).where(
+            CollectionItemTag.collection_item_id == item_id, CollectionItemTag.tag_id == tag_id
+        )
+    )
+    if existing is None:
+        db.add(CollectionItemTag(collection_item_id=item_id, tag_id=tag_id))
+        db.commit()
+
+    return _to_out_single(db, item, card)
+
+
+@router.delete("/{item_id}/tags/{tag_id}", response_model=CollectionItemOut)
+def unassign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depends(get_db)):
+    item = _get_item_or_404(db, item_id)
+    card = db.get(Card, item.card_id)
+    _get_tag_or_404(db, tag_id)
+
+    assignment = db.scalar(
+        select(CollectionItemTag).where(
+            CollectionItemTag.collection_item_id == item_id, CollectionItemTag.tag_id == tag_id
+        )
+    )
+    if assignment is not None:
+        db.delete(assignment)
+        db.commit()
+
+    return _to_out_single(db, item, card)
+
+
+@router.post("/{item_id}/groups/{group_id}", response_model=CollectionItemOut)
+def assign_collection_item_group(item_id: int, group_id: int, db: Session = Depends(get_db)):
+    item = _get_item_or_404(db, item_id)
+    card = db.get(Card, item.card_id)
+    _get_group_or_404(db, group_id)
+
+    existing = db.scalar(
+        select(CollectionItemGroup).where(
+            CollectionItemGroup.collection_item_id == item_id,
+            CollectionItemGroup.group_id == group_id,
+        )
+    )
+    if existing is None:
+        db.add(CollectionItemGroup(collection_item_id=item_id, group_id=group_id))
+        db.commit()
+
+    return _to_out_single(db, item, card)
+
+
+@router.delete("/{item_id}/groups/{group_id}", response_model=CollectionItemOut)
+def unassign_collection_item_group(item_id: int, group_id: int, db: Session = Depends(get_db)):
+    item = _get_item_or_404(db, item_id)
+    card = db.get(Card, item.card_id)
+    _get_group_or_404(db, group_id)
+
+    assignment = db.scalar(
+        select(CollectionItemGroup).where(
+            CollectionItemGroup.collection_item_id == item_id,
+            CollectionItemGroup.group_id == group_id,
+        )
+    )
+    if assignment is not None:
+        db.delete(assignment)
+        db.commit()
+
+    return _to_out_single(db, item, card)

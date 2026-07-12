@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
 import { PriceChart } from "@/components/PriceChart";
@@ -17,11 +18,15 @@ import {
   type Card,
   type CollectionItem,
   type CollectionItemInput,
+  type CollectorTag,
   type PriceObservation,
+  assignCardTag,
   createCollectionItem,
   fetchCard,
   fetchCardPrices,
   fetchCollectionItems,
+  fetchCollectorTags,
+  unassignCardTag,
 } from "@/lib/api";
 import { cardDisplayName, formatDateTime, formatJpy } from "@/lib/format";
 
@@ -66,6 +71,9 @@ export default function CardDetailPage() {
   const [collectionItems, setCollectionItems] = useState<CollectionItem[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<Status>("loading");
 
+  const [allTags, setAllTags] = useState<CollectorTag[]>([]);
+  const [tagError, setTagError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -85,6 +93,32 @@ export default function CardDetailPage() {
       cancelled = true;
     };
   }, [cardId]);
+
+  useEffect(() => {
+    fetchCollectorTags()
+      .then(setAllTags)
+      .catch(() => setAllTags([]));
+  }, []);
+
+  async function handleAssignTag(tagId: number) {
+    setTagError(null);
+    try {
+      const updated = await assignCardTag(Number(cardId), tagId);
+      setCard(updated);
+    } catch {
+      setTagError("Failed to assign tag.");
+    }
+  }
+
+  async function handleUnassignTag(tagId: number) {
+    setTagError(null);
+    try {
+      const updated = await unassignCardTag(Number(cardId), tagId);
+      setCard(updated);
+    } catch {
+      setTagError("Failed to remove tag.");
+    }
+  }
 
   function refreshCollectionItems() {
     fetchCollectionItems({ card_id: Number(cardId) })
@@ -182,6 +216,21 @@ export default function CardDetailPage() {
                   </div>
                 </dl>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+              <h2 className="mb-2 text-sm font-semibold text-neutral-100">Card tags</h2>
+              {tagError && (
+                <div className="mb-2 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+                  {tagError}
+                </div>
+              )}
+              <CollectionItemTagsCell
+                assigned={card.tags}
+                available={allTags}
+                onAssign={handleAssignTag}
+                onUnassign={handleUnassignTag}
+              />
             </div>
 
             <CollectionSection

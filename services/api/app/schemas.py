@@ -1,7 +1,91 @@
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class CollectorTagOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    slug: str
+    color: str | None
+    description: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CollectorTagCreateIn(BaseModel):
+    name: str = Field(min_length=1)
+    color: str | None = None
+    description: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
+
+
+class CollectorTagUpdateIn(BaseModel):
+    name: str | None = None
+    color: str | None = None
+    description: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
+
+
+class CollectorGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    slug: str
+    description: str | None
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class CollectorGroupCreateIn(BaseModel):
+    name: str = Field(min_length=1)
+    description: str | None = None
+    sort_order: int = 0
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
+
+
+class CollectorGroupUpdateIn(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    sort_order: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
 
 
 class CardOut(BaseModel):
@@ -16,6 +100,7 @@ class CardOut(BaseModel):
     variant: str | None
     language: str
     image_url: str | None
+    tags: list[CollectorTagOut] = []
     created_at: datetime
     updated_at: datetime
 
@@ -230,6 +315,8 @@ class CollectionItemOut(BaseModel):
     target_sell_price_jpy: int | None
     notes: str | None
     status: str
+    tags: list[CollectorTagOut] = []
+    groups: list[CollectorGroupOut] = []
     created_at: datetime
     updated_at: datetime
 
@@ -278,6 +365,8 @@ class CollectionImportPreviewRowOut(BaseModel):
     action: str
     quantity: int
     status: str
+    tags: list[str] = []
+    groups: list[str] = []
 
 
 class CollectionImportSummaryOut(BaseModel):
@@ -295,6 +384,8 @@ class CollectionImportResponseOut(BaseModel):
     summary: CollectionImportSummaryOut
     errors: list[CollectionImportRowErrorOut]
     preview: list[CollectionImportPreviewRowOut]
+    tags_created: list[str] = []
+    groups_created: list[str] = []
 
 
 class CollectionSummaryOut(BaseModel):
@@ -362,6 +453,8 @@ class PortfolioValuationItemOut(BaseModel):
     latest_prices: ValuationLatestPricesOut
     valuations: ValuationDetailOut
     flags: ValuationFlagsOut
+    tags: list[CollectorTagOut] = []
+    groups: list[CollectorGroupOut] = []
 
 
 class BestWorstPerformerOut(BaseModel):
@@ -591,6 +684,8 @@ class OpportunityOut(BaseModel):
     seen_count: int
     score_reasons: list[str]
     last_payload: dict[str, Any] | None
+    tags: list[CollectorTagOut] = []
+    groups: list[CollectorGroupOut] = []
 
 
 class OpportunitiesResponseOut(BaseModel):

@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { CollectionItemGroupsCell } from "@/components/CollectionItemGroupsCell";
+import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
+import { CollectorTagsGroupsManager } from "@/components/CollectorTagsGroupsManager";
 import { FormField } from "@/components/FormField";
 import { PortfolioInsightCards } from "@/components/PortfolioInsightCards";
 import {
@@ -20,11 +23,15 @@ import {
   type CollectionItem,
   type CollectionItemInput,
   type CollectionSummary,
+  type CollectorGroup,
+  type CollectorTag,
   type PortfolioValuation,
   type PortfolioValuationItem,
   type PortfolioValuationSnapshot,
   type SnkrdunkFloorSnapshot,
   type YuyuteiPriceSnapshot,
+  assignCollectionItemGroup,
+  assignCollectionItemTag,
   createCollectionItem,
   deleteCollectionItem,
   downloadCollectionCsv,
@@ -33,7 +40,11 @@ import {
   fetchCollectionSummary,
   fetchCollectionValuation,
   fetchCollectionValuationHistory,
+  fetchCollectorGroups,
+  fetchCollectorTags,
   importCollectionCsv,
+  unassignCollectionItemGroup,
+  unassignCollectionItemTag,
   updateCollectionItem,
 } from "@/lib/api";
 import {
@@ -125,9 +136,14 @@ export default function CollectionPage() {
   const [conditionFilter, setConditionFilter] = useState("");
   const [setCodeFilter, setSetCodeFilter] = useState("");
   const [rarityFilter, setRarityFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
   const [missingPricesOnly, setMissingPricesOnly] = useState(false);
   const [missingCostBasisOnly, setMissingCostBasisOnly] = useState(false);
   const [aboveTargetOnly, setAboveTargetOnly] = useState(false);
+
+  const [allTags, setAllTags] = useState<CollectorTag[]>([]);
+  const [allGroups, setAllGroups] = useState<CollectorGroup[]>([]);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -153,6 +169,19 @@ export default function CollectionPage() {
     fetchCards()
       .then(setAllCards)
       .catch(() => setAllCards([]));
+  }, []);
+
+  function refreshTagsAndGroups() {
+    fetchCollectorTags()
+      .then(setAllTags)
+      .catch(() => setAllTags([]));
+    fetchCollectorGroups()
+      .then(setAllGroups)
+      .catch(() => setAllGroups([]));
+  }
+
+  useEffect(() => {
+    refreshTagsAndGroups();
   }, []);
 
   useEffect(() => {
@@ -239,6 +268,16 @@ export default function CollectionPage() {
     return [ALL_OPTION, ...values.map((v) => ({ value: v, label: v }))];
   }, [items]);
 
+  const tagOptions = useMemo(
+    () => [ALL_OPTION, ...allTags.map((t) => ({ value: String(t.id), label: t.name }))],
+    [allTags],
+  );
+
+  const groupOptions = useMemo(
+    () => [ALL_OPTION, ...allGroups.map((g) => ({ value: String(g.id), label: g.name }))],
+    [allGroups],
+  );
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (conditionFilter && (item.condition_label ?? "") !== conditionFilter) {
@@ -246,6 +285,8 @@ export default function CollectionPage() {
       }
       if (setCodeFilter && item.set_code !== setCodeFilter) return false;
       if (rarityFilter && item.rarity !== rarityFilter) return false;
+      if (tagFilter && !item.tags.some((t) => String(t.id) === tagFilter)) return false;
+      if (groupFilter && !item.groups.some((g) => String(g.id) === groupFilter)) return false;
 
       const v = valuationByItemId.get(item.id);
 
@@ -277,6 +318,8 @@ export default function CollectionPage() {
     conditionFilter,
     setCodeFilter,
     rarityFilter,
+    tagFilter,
+    groupFilter,
     missingPricesOnly,
     missingCostBasisOnly,
     aboveTargetOnly,
@@ -419,6 +462,46 @@ export default function CollectionPage() {
       setActionError("Failed to delete collection item.");
     } finally {
       setPendingDeleteId(null);
+    }
+  }
+
+  async function handleAssignTag(itemId: number, tagId: number) {
+    try {
+      await assignCollectionItemTag(itemId, tagId);
+      refreshList();
+      refreshValuation();
+    } catch {
+      setActionError("Failed to assign tag.");
+    }
+  }
+
+  async function handleUnassignTag(itemId: number, tagId: number) {
+    try {
+      await unassignCollectionItemTag(itemId, tagId);
+      refreshList();
+      refreshValuation();
+    } catch {
+      setActionError("Failed to remove tag.");
+    }
+  }
+
+  async function handleAssignGroup(itemId: number, groupId: number) {
+    try {
+      await assignCollectionItemGroup(itemId, groupId);
+      refreshList();
+      refreshValuation();
+    } catch {
+      setActionError("Failed to assign group.");
+    }
+  }
+
+  async function handleUnassignGroup(itemId: number, groupId: number) {
+    try {
+      await unassignCollectionItemGroup(itemId, groupId);
+      refreshList();
+      refreshValuation();
+    } catch {
+      setActionError("Failed to remove group.");
     }
   }
 
@@ -651,6 +734,14 @@ export default function CollectionPage() {
             </div>
           )}
         </section>
+
+        <div className="mb-6">
+          <CollectorTagsGroupsManager
+            tags={allTags}
+            groups={allGroups}
+            onChanged={refreshTagsAndGroups}
+          />
+        </div>
 
         {valuationStatus === "loading" && (
           <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-center text-xs text-neutral-500">
@@ -937,6 +1028,18 @@ export default function CollectionPage() {
               onChange={setRarityFilter}
               options={rarityOptions}
             />
+            <FilterSelect
+              label="Tag"
+              value={tagFilter}
+              onChange={setTagFilter}
+              options={tagOptions}
+            />
+            <FilterSelect
+              label="Group"
+              value={groupFilter}
+              onChange={setGroupFilter}
+              options={groupOptions}
+            />
             <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-400">
               <input
                 type="checkbox"
@@ -1024,6 +1127,8 @@ export default function CollectionPage() {
                   <th className="px-2 py-1.5 font-medium">P/L vs floor</th>
                   <th className="px-2 py-1.5 font-medium">Target sell</th>
                   <th className="px-2 py-1.5 font-medium">Flags</th>
+                  <th className="px-2 py-1.5 font-medium">Tags</th>
+                  <th className="px-2 py-1.5 font-medium">Groups</th>
                   <th className="px-2 py-1.5 font-medium">Status</th>
                   <th className="px-2 py-1.5 font-medium">Actions</th>
                 </tr>
@@ -1111,6 +1216,22 @@ export default function CollectionPage() {
                         ) : (
                           <span className="text-neutral-600">—</span>
                         )}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <CollectionItemTagsCell
+                          assigned={item.tags}
+                          available={allTags}
+                          onAssign={(tagId) => handleAssignTag(item.id, tagId)}
+                          onUnassign={(tagId) => handleUnassignTag(item.id, tagId)}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <CollectionItemGroupsCell
+                          assigned={item.groups}
+                          available={allGroups}
+                          onAssign={(groupId) => handleAssignGroup(item.id, groupId)}
+                          onUnassign={(groupId) => handleUnassignGroup(item.id, groupId)}
+                        />
                       </td>
                       <td className="px-2 py-1.5">
                         <CollectionStatusBadge status={item.status} />

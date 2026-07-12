@@ -26,6 +26,7 @@ from app.schemas import (
     ValuationLatestPricesOut,
     YuyuteiPriceSnapshotOut,
 )
+from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
 
 # (source name, price_type) pairs backing each valuation perspective.
 YUYUTEI_SELL = ("yuyutei", "sell")
@@ -173,6 +174,10 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
         card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
     }
     sources_by_id = {s.id: s.name for s in db.scalars(select(Source)).all()}
+
+    item_ids = {item.id for item in items}
+    tags_by_item = get_tags_for_collection_items(db, item_ids)
+    groups_by_item = get_groups_for_collection_items(db, item_ids)
 
     observations = db.scalars(
         select(PriceObservation)
@@ -330,6 +335,8 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
                     missing_cost_basis=cost_basis_jpy is None,
                     above_target_sell=above_target_sell,
                 ),
+                tags=tags_by_item.get(item.id, []),
+                groups=groups_by_item.get(item.id, []),
             )
         )
 

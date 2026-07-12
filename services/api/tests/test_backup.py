@@ -14,7 +14,7 @@ from app.models import (
     Source,
     SourceCardMapping,
 )
-from app.services.backup import OPTIONAL_TABLES, REQUIRED_TABLES, export_backup
+from app.services.backup import BACKUP_VERSION, OPTIONAL_TABLES, REQUIRED_TABLES, export_backup
 from app.services.market_report import generate_market_report
 
 # --- factories --------------------------------------------------------------
@@ -148,7 +148,7 @@ def empty_backup(**table_overrides) -> dict:
     return {
         "metadata": {
             "app": "opcg-price-tracker",
-            "backup_version": 1,
+            "backup_version": BACKUP_VERSION,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "include_prices": False,
             "include_raw_snapshots": False,
@@ -173,7 +173,7 @@ def test_export_backup_returns_json(client, db_session):
 
     body = response.json()
     assert body["metadata"]["app"] == "opcg-price-tracker"
-    assert body["metadata"]["backup_version"] == 1
+    assert body["metadata"]["backup_version"] == BACKUP_VERSION
     for table in REQUIRED_TABLES:
         assert table in body["tables"]
     assert len(body["tables"]["cards"]) == 1
@@ -265,7 +265,7 @@ def test_validate_valid_backup(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["valid"] is True
-    assert body["backup_version"] == 1
+    assert body["backup_version"] == BACKUP_VERSION
     assert body["summary"]["cards"] == 1
     assert body["summary"]["collection_items"] == 1
     assert body["errors"] == []
@@ -577,7 +577,7 @@ def test_cli_export_works(db_session, tmp_path, monkeypatch):
 
     assert output_path.exists()
     data = json.loads(output_path.read_text())
-    assert data["metadata"]["backup_version"] == 1
+    assert data["metadata"]["backup_version"] == BACKUP_VERSION
     assert len(data["tables"]["cards"]) == 1
 
 

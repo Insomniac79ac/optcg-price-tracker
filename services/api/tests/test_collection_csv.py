@@ -2,7 +2,7 @@ import csv
 import io
 import sys
 
-from app.models import Card, CollectionItem
+from app.models import Card, CollectionItem, CollectionItemTag, CollectorGroup, CollectorTag
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -354,3 +354,101 @@ def test_cli_import_dry_run_works(db_session, tmp_path, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert "dry_run: True" in captured.out
     assert "created: 0" in captured.out
+
+
+# --- tags / groups -------------------------------------------------------
+
+
+def test_export_includes_tags_and_groups_columns(client, db_session):
+    card = make_card(db_session, card_code="OP01-001")
+    item = make_item(db_session, card)
+    tag = CollectorTag(name="Foils", slug="foils")
+    group = CollectorGroup(name="Manga wants", slug="manga-wants")
+    db_session.add_all([tag, group])
+    db_session.commit()
+    client.post(f"/collection/{item.id}/tags/{tag.id}")
+    client.post(f"/collection/{item.id}/groups/{group.id}")
+
+    response = client.get("/collection/export.csv")
+
+    rows = list(csv.DictReader(io.StringIO(response.text)))
+    assert rows[0]["tags"] == "Foils"
+    assert rows[0]["groups"] == "Manga wants"
+
+
+def test_import_creates_missing_tags_and_groups(client, db_session):
+    make_card(db_session, card_code="OP01-001")
+    csv_text = (
+        "card_code,quantity,tags,groups\n"
+        "OP01-001,1,Foils;Grade candidates,Manga wants\n"
+    )
+
+    response = upload(client, csv_text, dry_run=False, mode="append")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert sorted(body["tags_created"]) == ["Foils", "Grade candidates"]
+    assert body["groups_created"] == ["Manga wants"]
+
+    db_session.expire_all()
+    tag_names = {t.name for t in db_session.query(CollectorTag).all()}
+    assert tag_names == {"Foils", "Grade candidates"}
+    group_names = {g.name for g in db_session.query(CollectorGroup).all()}
+    assert group_names == {"Manga wants"}
+
+    item = db_session.query(CollectionItem).one()
+    assigned_tags = {
+        t.name
+        for t in db_session.query(CollectorTag)
+        .join(CollectionItemTag, CollectionItemTag.tag_id == CollectorTag.id)
+        .filter(CollectionItemTag.collection_item_id == item.id)
+    }
+    assert assigned_tags == {"Foils", "Grade candidates"}
+
+
+def test_import_reuses_existing_tags_and_groups(client, db_session):
+    make_card(db_session, card_code="OP01-001")
+    existing_tag = CollectorTag(name="Foils", slug="foils")
+    db_session.add(existing_tag)
+    db_session.commit()
+
+    csv_text = "card_code,quantity,tags\nOP01-001,1,Foils\n"
+    response = upload(client, csv_text, dry_run=False, mode="append")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["tags_created"] == []
+
+    db_session.expire_all()
+    assert db_session.query(CollectorTag).count() == 1
+
+
+def test_import_dry_run_previews_tag_and_group_creation(client, db_session):
+    make_card(db_session, card_code="OP01-001")
+    csv_text = "card_code,quantity,tags,groups\nOP01-001,1,New Tag,New Group\n"
+
+    response = upload(client, csv_text, dry_run=True, mode="append")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["tags_created"] == ["New Tag"]
+    assert body["groups_created"] == ["New Group"]
+    assert body["preview"][0]["tags"] == ["New Tag"]
+    assert body["preview"][0]["groups"] == ["New Group"]
+
+    db_session.expire_all()
+    assert db_session.query(CollectorTag).count() == 0
+    assert db_session.query(CollectorGroup).count() == 0
+
+
+def test_import_blank_tags_and_groups_allowed(client, db_session):
+    make_card(db_session, card_code="OP01-001")
+    csv_text = "card_code,quantity,tags,groups\nOP01-001,1,,\n"
+
+    response = upload(client, csv_text, dry_run=False, mode="append")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["tags_created"] == []
+    assert body["groups_created"] == []
+    assert body["summary"]["error_rows"] == 0

@@ -1,6 +1,38 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export interface CollectorTag {
+  id: number;
+  name: string;
+  slug: string;
+  color: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectorTagInput {
+  name: string;
+  color?: string | null;
+  description?: string | null;
+}
+
+export interface CollectorGroup {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectorGroupInput {
+  name: string;
+  description?: string | null;
+  sort_order?: number;
+}
+
 export interface Card {
   id: number;
   card_code: string;
@@ -11,6 +43,7 @@ export interface Card {
   variant: string | null;
   language: string;
   image_url: string | null;
+  tags: CollectorTag[];
   created_at: string;
   updated_at: string;
 }
@@ -205,6 +238,8 @@ export interface CollectionItem {
   target_sell_price_jpy: number | null;
   notes: string | null;
   status: string;
+  tags: CollectorTag[];
+  groups: CollectorGroup[];
   created_at: string;
   updated_at: string;
 }
@@ -394,15 +429,23 @@ export async function fetchAdminJson<T>(
   return res.json() as Promise<T>;
 }
 
+/** Parses a FastAPI-style {detail: "..."} error body when present, so
+ * validation/conflict errors (missing name, duplicate name, bad color, ...)
+ * surface their actual message instead of a generic status-code string. */
+async function _errorFromResponse(res: Response, path: string): Promise<Error> {
+  const details = await res
+    .json()
+    .catch(() => null as { detail?: string } | null);
+  return new Error(details?.detail || `Request to ${path} failed with status ${res.status}`);
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     cache: "no-store",
     headers: adminHeaders(),
   });
   if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) {
-    throw new Error(`Request to ${path} failed with status ${res.status}`);
-  }
+  if (!res.ok) throw await _errorFromResponse(res, path);
   return res.json() as Promise<T>;
 }
 
@@ -413,9 +456,7 @@ async function apiPost<T>(path: string, body?: unknown): Promise<T> {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) {
-    throw new Error(`Request to ${path} failed with status ${res.status}`);
-  }
+  if (!res.ok) throw await _errorFromResponse(res, path);
   return res.json() as Promise<T>;
 }
 
@@ -426,9 +467,7 @@ async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) {
-    throw new Error(`Request to ${path} failed with status ${res.status}`);
-  }
+  if (!res.ok) throw await _errorFromResponse(res, path);
   return res.json() as Promise<T>;
 }
 
@@ -438,9 +477,20 @@ async function apiDelete(path: string): Promise<void> {
     headers: adminHeaders(),
   });
   if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) {
-    throw new Error(`Request to ${path} failed with status ${res.status}`);
-  }
+  if (!res.ok) throw await _errorFromResponse(res, path);
+}
+
+/** Like apiDelete, but for unassign-style endpoints (e.g.
+ * DELETE /cards/{id}/tags/{tagId}) that return the updated parent resource
+ * instead of 204 No Content. */
+async function apiDeleteReturning<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
+  if (res.status === 401) throw new AdminAuthRequiredError();
+  if (!res.ok) throw await _errorFromResponse(res, path);
+  return res.json() as Promise<T>;
 }
 
 export function fetchCards(): Promise<Card[]> {
@@ -637,6 +687,8 @@ export interface PortfolioValuationItem {
   latest_prices: ValuationLatestPrices;
   valuations: ValuationDetail;
   flags: ValuationFlags;
+  tags: CollectorTag[];
+  groups: CollectorGroup[];
 }
 
 export type ValuationBasis = "market_floor" | "retail";
@@ -1097,6 +1149,8 @@ export interface MarketOpportunity {
   seen_count: number;
   score_reasons: string[];
   last_payload: Record<string, unknown> | null;
+  tags: CollectorTag[];
+  groups: CollectorGroup[];
 }
 
 export interface MarketOpportunitiesSummary {
@@ -1604,4 +1658,80 @@ export function restoreBackup(
   };
   if (params.confirm) query.confirm = params.confirm;
   return postBackupFile<BackupRestoreResponse>("/api/admin/backup/restore", file, query);
+}
+
+// --- Collector tags / groups ------------------------------------------
+
+export function fetchCollectorTags(): Promise<CollectorTag[]> {
+  return apiGet<CollectorTag[]>("/collector/tags");
+}
+
+export function createCollectorTag(body: CollectorTagInput): Promise<CollectorTag> {
+  return apiPost<CollectorTag>("/collector/tags", body);
+}
+
+export function updateCollectorTag(
+  tagId: number,
+  body: Partial<CollectorTagInput>,
+): Promise<CollectorTag> {
+  return apiPatch<CollectorTag>(`/collector/tags/${tagId}`, body);
+}
+
+export function deleteCollectorTag(tagId: number): Promise<void> {
+  return apiDelete(`/collector/tags/${tagId}`);
+}
+
+export function fetchCollectorGroups(): Promise<CollectorGroup[]> {
+  return apiGet<CollectorGroup[]>("/collector/groups");
+}
+
+export function createCollectorGroup(body: CollectorGroupInput): Promise<CollectorGroup> {
+  return apiPost<CollectorGroup>("/collector/groups", body);
+}
+
+export function updateCollectorGroup(
+  groupId: number,
+  body: Partial<CollectorGroupInput>,
+): Promise<CollectorGroup> {
+  return apiPatch<CollectorGroup>(`/collector/groups/${groupId}`, body);
+}
+
+export function deleteCollectorGroup(groupId: number): Promise<void> {
+  return apiDelete(`/collector/groups/${groupId}`);
+}
+
+export function assignCardTag(cardId: number, tagId: number): Promise<Card> {
+  return apiPost<Card>(`/cards/${cardId}/tags/${tagId}`);
+}
+
+export function unassignCardTag(cardId: number, tagId: number): Promise<Card> {
+  return apiDeleteReturning<Card>(`/cards/${cardId}/tags/${tagId}`);
+}
+
+export function assignCollectionItemTag(
+  itemId: number,
+  tagId: number,
+): Promise<CollectionItem> {
+  return apiPost<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
+}
+
+export function unassignCollectionItemTag(
+  itemId: number,
+  tagId: number,
+): Promise<CollectionItem> {
+  return apiDeleteReturning<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
+}
+
+export function assignCollectionItemGroup(
+  itemId: number,
+  groupId: number,
+): Promise<CollectionItem> {
+  return apiPost<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
+}
+
+export function unassignCollectionItemGroup(
+  itemId: number,
+  groupId: number,
+): Promise<CollectionItem> {
+  return apiDeleteReturning<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
 }

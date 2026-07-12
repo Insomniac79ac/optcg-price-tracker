@@ -11,8 +11,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, MarketSignalEvent
+from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, MarketSignalEvent
 from app.schemas import OpportunitiesResponseOut, OpportunitiesSummaryOut, OpportunityOut
+from app.services.collector import get_groups_for_cards, get_tags_for_cards
 
 # Dismissed/resolved events are noise for a "what should I look at" ranking -
 # a user already acted on them or they no longer apply.
@@ -183,9 +184,19 @@ def _score_event(event: MarketSignalEvent, card: Card | None, owned_quantity: in
     )
 
 
-def _to_out(scored: _ScoredEvent) -> OpportunityOut:
+def _to_out(
+    scored: _ScoredEvent,
+    tags_by_card: dict[int, list[CollectorTag]],
+    groups_by_card: dict[int, list[CollectorGroup]],
+) -> OpportunityOut:
     event = scored.event
     card = scored.card
+    # Tags/groups are a collector-organization concept over what's owned -
+    # deliberately left empty for unowned cards rather than showing
+    # card-level tags regardless of ownership.
+    owned = scored.owned_quantity > 0
+    tags = tags_by_card.get(event.card_id, []) if owned and event.card_id is not None else []
+    groups = groups_by_card.get(event.card_id, []) if owned and event.card_id is not None else []
     return OpportunityOut(
         score=scored.score,
         category=scored.category,
@@ -209,6 +220,8 @@ def _to_out(scored: _ScoredEvent) -> OpportunityOut:
         seen_count=event.seen_count,
         score_reasons=scored.reasons,
         last_payload=event.last_payload_json,
+        tags=tags,
+        groups=groups,
     )
 
 
@@ -267,6 +280,10 @@ def get_opportunities(
         ).all()
         owned_quantities = {cid: int(qty or 0) for cid, qty in rows}
 
+    owned_card_ids = {cid for cid, qty in owned_quantities.items() if qty > 0}
+    tags_by_card = get_tags_for_cards(db, owned_card_ids)
+    groups_by_card = get_groups_for_cards(db, owned_card_ids)
+
     scored = [
         _score_event(e, cards_by_id.get(e.card_id), owned_quantities.get(e.card_id, 0))
         for e in events
@@ -302,4 +319,7 @@ def get_opportunities(
     )
 
     page = scored[offset : offset + limit]
-    return OpportunitiesResponseOut(summary=summary, opportunities=[_to_out(s) for s in page])
+    return OpportunitiesResponseOut(
+        summary=summary,
+        opportunities=[_to_out(s, tags_by_card, groups_by_card) for s in page],
+    )

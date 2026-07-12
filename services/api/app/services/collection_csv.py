@@ -6,8 +6,16 @@ from datetime import date, datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem
+from app.models import Card, CollectionItem, CollectorGroup, CollectorTag
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
+from app.services.collector import (
+    ensure_collection_item_group,
+    ensure_collection_item_tag,
+    get_groups_for_collection_items,
+    get_or_create_group,
+    get_or_create_tag,
+    get_tags_for_collection_items,
+)
 
 EXPORT_COLUMNS = (
     "card_code",
@@ -25,9 +33,13 @@ EXPORT_COLUMNS = (
     "target_sell_price_jpy",
     "status",
     "notes",
+    "tags",
+    "groups",
     "created_at",
     "updated_at",
 )
+
+NAME_LIST_SEPARATOR = ";"
 
 REQUIRED_IMPORT_COLUMNS = ("card_code", "quantity")
 
@@ -57,6 +69,10 @@ def export_collection_csv(db: Session) -> str:
             card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
         }
 
+    item_ids = {item.id for item in items}
+    tags_by_item = get_tags_for_collection_items(db, item_ids)
+    groups_by_item = get_groups_for_collection_items(db, item_ids)
+
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=EXPORT_COLUMNS)
     writer.writeheader()
@@ -80,6 +96,10 @@ def export_collection_csv(db: Session) -> str:
                 "target_sell_price_jpy": _blank(item.target_sell_price_jpy),
                 "status": item.status,
                 "notes": _blank(item.notes),
+                "tags": NAME_LIST_SEPARATOR.join(t.name for t in tags_by_item.get(item.id, [])),
+                "groups": NAME_LIST_SEPARATOR.join(
+                    g.name for g in groups_by_item.get(item.id, [])
+                ),
                 "created_at": item.created_at.isoformat() if item.created_at else "",
                 "updated_at": item.updated_at.isoformat() if item.updated_at else "",
             }
@@ -106,6 +126,8 @@ class ParsedRow:
     target_sell_price_jpy: int | None
     status: str
     notes: str | None
+    tag_names: list[str]
+    group_names: list[str]
 
 
 @dataclass
@@ -123,6 +145,8 @@ class RowOutcome:
     action: str
     quantity: int
     status: str
+    tags: list[str] = field(default_factory=list)
+    groups: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -137,11 +161,26 @@ class ImportResult:
     skipped: int = 0
     errors: list[RowError] = field(default_factory=list)
     preview: list[RowOutcome] = field(default_factory=list)
+    tags_created: list[str] = field(default_factory=list)
+    groups_created: list[str] = field(default_factory=list)
 
 
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
+
+
+def _parse_name_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    names: list[str] = []
+    seen: set[str] = set()
+    for part in value.split(NAME_LIST_SEPARATOR):
+        name = part.strip()
+        if name and name not in seen:
+            seen.add(name)
+            names.append(name)
+    return names
 
 
 def _parse_row(
@@ -234,6 +273,8 @@ def _parse_row(
             target_sell_price_jpy=target_sell_price_jpy,
             status=status,
             notes=_clean(row.get("notes")),
+            tag_names=_parse_name_list(row.get("tags")),
+            group_names=_parse_name_list(row.get("groups")),
         ),
         None,
     )
@@ -292,7 +333,28 @@ def _outcome(parsed: ParsedRow, action: str) -> RowOutcome:
         action=action,
         quantity=parsed.quantity,
         status=parsed.status,
+        tags=parsed.tag_names,
+        groups=parsed.group_names,
     )
+
+
+def _assign_tags_and_groups(
+    db: Session,
+    item_id: int,
+    parsed: ParsedRow,
+    created_tag_names: set[str],
+    created_group_names: set[str],
+) -> None:
+    for name in parsed.tag_names:
+        tag, created = get_or_create_tag(db, name)
+        if created:
+            created_tag_names.add(name)
+        ensure_collection_item_tag(db, item_id, tag.id)
+    for name in parsed.group_names:
+        group, created = get_or_create_group(db, name)
+        if created:
+            created_group_names.add(name)
+        ensure_collection_item_group(db, item_id, group.id)
 
 
 def import_collection_csv(
@@ -324,6 +386,16 @@ def import_collection_csv(
     # creating a new one - even under dry_run, where nothing is persisted yet.
     batch_upsert_targets: dict[tuple[int, str | None, str | None], int | None] = {}
 
+    # Tag/group bookkeeping across the whole batch: under dry_run nothing is
+    # written, so `all_tag_names`/`all_group_names` collect every name seen
+    # and are diffed against the DB once, at the end, to report what *would*
+    # be created. Under a real run, `created_tag_names`/`created_group_names`
+    # are populated directly as rows are processed.
+    all_tag_names: set[str] = set()
+    all_group_names: set[str] = set()
+    created_tag_names: set[str] = set()
+    created_group_names: set[str] = set()
+
     for row_number, row in enumerate(reader, start=2):
         result.total_rows += 1
         parsed, error = _parse_row(db, row_number, row)
@@ -335,12 +407,17 @@ def import_collection_csv(
 
         assert parsed is not None
         result.valid_rows += 1
+        all_tag_names.update(parsed.tag_names)
+        all_group_names.update(parsed.group_names)
 
         if mode == "append":
             if dry_run:
                 result.preview.append(_outcome(parsed, "would_create"))
             else:
-                _create_item(db, parsed)
+                item = _create_item(db, parsed)
+                _assign_tags_and_groups(
+                    db, item.id, parsed, created_tag_names, created_group_names
+                )
                 result.created += 1
                 result.preview.append(_outcome(parsed, "created"))
             continue
@@ -357,6 +434,9 @@ def import_collection_csv(
                 item = db.get(CollectionItem, existing_item_id)
                 assert item is not None
                 _apply_row_to_item(item, parsed)
+                _assign_tags_and_groups(
+                    db, item.id, parsed, created_tag_names, created_group_names
+                )
                 result.updated += 1
                 result.preview.append(_outcome(parsed, "updated"))
             continue
@@ -368,6 +448,9 @@ def import_collection_csv(
                 result.preview.append(_outcome(parsed, "would_update"))
             else:
                 _apply_row_to_item(existing_item, parsed)
+                _assign_tags_and_groups(
+                    db, existing_item.id, parsed, created_tag_names, created_group_names
+                )
                 result.updated += 1
                 batch_upsert_targets[key] = existing_item.id
                 result.preview.append(_outcome(parsed, "updated"))
@@ -377,13 +460,36 @@ def import_collection_csv(
                 result.preview.append(_outcome(parsed, "would_create"))
             else:
                 item = _create_item(db, parsed)
+                _assign_tags_and_groups(
+                    db, item.id, parsed, created_tag_names, created_group_names
+                )
                 result.created += 1
                 batch_upsert_targets[key] = item.id
                 result.preview.append(_outcome(parsed, "created"))
 
     if dry_run:
+        existing_tag_names: set[str] = set()
+        existing_group_names: set[str] = set()
+        if all_tag_names:
+            existing_tag_names = {
+                t.name
+                for t in db.scalars(
+                    select(CollectorTag).where(CollectorTag.name.in_(all_tag_names))
+                ).all()
+            }
+        if all_group_names:
+            existing_group_names = {
+                g.name
+                for g in db.scalars(
+                    select(CollectorGroup).where(CollectorGroup.name.in_(all_group_names))
+                ).all()
+            }
+        result.tags_created = sorted(all_tag_names - existing_tag_names)
+        result.groups_created = sorted(all_group_names - existing_group_names)
         db.rollback()
     else:
+        result.tags_created = sorted(created_tag_names)
+        result.groups_created = sorted(created_group_names)
         db.commit()
 
     return result
