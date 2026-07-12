@@ -8,6 +8,7 @@ from app.api.cards import router as cards_router
 from app.api.collection import router as collection_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
+from app.api.market_workflow_runs import router as market_workflow_runs_router
 from app.api.refresh_runs import router as refresh_runs_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
 from app.api.source_mappings import router as source_mappings_router
@@ -43,3 +44,4 @@ app.include_router(card_audit_router)
 app.include_router(source_mappings_router)
 app.include_router(collection_router)
 app.include_router(admin_actions_router)
+app.include_router(market_workflow_runs_router)

@@ -1,8 +1,23 @@
 from datetime import timedelta
 
+from celery.schedules import crontab
+
 import worker.celery_app as celery_app_module
-from worker.celery_app import app, refresh_yuyutei_prices, run_price_refresh
-from worker.models import Card, PriceObservation, PriceRefreshRun, Source, SourceCardMapping
+from worker.celery_app import (
+    _build_beat_schedule,
+    app,
+    refresh_yuyutei_prices,
+    run_market_workflow_task,
+    run_price_refresh,
+)
+from worker.models import (
+    Card,
+    MarketWorkflowRun,
+    PriceObservation,
+    PriceRefreshRun,
+    Source,
+    SourceCardMapping,
+)
 from worker.settings import Settings, settings
 
 
@@ -119,3 +134,67 @@ def test_run_price_refresh_defaults_to_all_sources(db_session, monkeypatch):
     result = run_price_refresh(limit=5)
 
     assert result["source_filter"] == "all"
+
+
+# --- run_market_workflow_task / beat schedule -------------------------------
+
+
+def test_run_market_workflow_task_can_be_imported():
+    assert run_market_workflow_task.name == "worker.celery_app.run_market_workflow_task"
+    assert "worker.celery_app.run_market_workflow_task" in app.tasks
+
+
+def test_run_market_workflow_task_delegates_to_job(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+    seed_yuyutei_mapping(db_session)
+
+    result = run_market_workflow_task(source="yuyutei", limit=5)
+
+    assert result["status"] == "success"
+    assert result["market_workflow_run_id"] is not None
+
+    run = db_session.query(MarketWorkflowRun).filter_by(id=result["market_workflow_run_id"]).one()
+    assert run.source == "yuyutei"
+    assert run.limit == 5
+
+
+def test_beat_schedule_excludes_market_workflow_when_disabled():
+    disabled = Settings(_env_file=None, MARKET_WORKFLOW_ENABLED=False)
+
+    schedule = _build_beat_schedule(disabled)
+
+    assert "run-market-workflow" not in schedule
+    assert "refresh-yuyutei-prices" in schedule
+
+
+def test_beat_schedule_includes_market_workflow_when_enabled():
+    enabled = Settings(
+        _env_file=None,
+        MARKET_WORKFLOW_ENABLED=True,
+        MARKET_WORKFLOW_SOURCE="all",
+        MARKET_WORKFLOW_LIMIT=25,
+        MARKET_WORKFLOW_SEND_TELEGRAM=True,
+        MARKET_WORKFLOW_HOUR_UTC=3,
+        MARKET_WORKFLOW_MINUTE_UTC=45,
+    )
+
+    schedule = _build_beat_schedule(enabled)
+
+    entry = schedule["run-market-workflow"]
+    assert entry["task"] == "worker.celery_app.run_market_workflow_task"
+    assert entry["schedule"] == crontab(hour=3, minute=45)
+    assert entry["kwargs"] == {
+        "source": "all",
+        "limit": 25,
+        "send_telegram": True,
+        "dry_run": False,
+    }
+
+
+def test_module_level_beat_schedule_disabled_by_default():
+    # MARKET_WORKFLOW_ENABLED defaults to False and no test in this session
+    # sets it in the real environment, so the schedule actually built at
+    # import time must not include the workflow entry.
+    assert settings.MARKET_WORKFLOW_ENABLED is False
+    assert "run-market-workflow" not in app.conf.beat_schedule

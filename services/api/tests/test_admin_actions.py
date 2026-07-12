@@ -13,6 +13,7 @@ ACTION_PATHS = [
     "/admin/actions/generate-market-report",
     "/admin/actions/full-market-refresh",
     "/admin/actions/send-market-report-digest",
+    "/admin/actions/run-market-workflow",
 ]
 
 
@@ -34,7 +35,15 @@ def _no_real_celery(monkeypatch):
             "trigger_price_refresh was called without being monkeypatched in this test"
         )
 
+    def _unexpected_workflow_call(*args, **kwargs):
+        raise AssertionError(
+            "trigger_market_workflow was called without being monkeypatched in this test"
+        )
+
     monkeypatch.setattr(admin_actions_module, "trigger_price_refresh", _unexpected_call)
+    monkeypatch.setattr(
+        admin_actions_module, "trigger_market_workflow", _unexpected_workflow_call
+    )
 
 
 # --- Auth -------------------------------------------------------------------
@@ -378,3 +387,205 @@ def test_full_market_refresh_rejects_invalid_source(client):
     response = client.post("/admin/actions/full-market-refresh", json={"source": "ebay"})
 
     assert response.status_code == 400
+
+
+# --- POST /admin/actions/run-market-workflow ---------------------------------
+
+
+def test_run_market_workflow_happy_path(client, monkeypatch):
+    captured = {}
+
+    def fake_trigger(source, limit, send_telegram, dry_run):
+        captured.update(
+            source=source, limit=limit, send_telegram=send_telegram, dry_run=dry_run
+        )
+        return "job-1", {
+            "market_workflow_run_id": 1,
+            "status": "success",
+            "price_refresh_run_id": 10,
+            "portfolio_snapshot_id": 20,
+            "signal_events_created": 1,
+            "signal_events_updated": 2,
+            "signal_events_resolved": 0,
+            "market_report_id": 30,
+            "telegram_digest_status": "skipped",
+            "warnings": [],
+        }
+
+    monkeypatch.setattr(admin_actions_module, "trigger_market_workflow", fake_trigger)
+
+    response = client.post(
+        "/admin/actions/run-market-workflow", json={"source": "yuyutei"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "market_workflow_run_id": 1,
+        "status": "success",
+        "price_refresh_run_id": 10,
+        "portfolio_snapshot_id": 20,
+        "market_signal_snapshot": {"created": 1, "updated": 2, "resolved": 0},
+        "market_report_id": 30,
+        "telegram_digest_status": "skipped",
+        "warnings": [],
+    }
+    assert captured == {
+        "source": "yuyutei", "limit": 10, "send_telegram": False, "dry_run": False,
+    }
+
+
+def test_run_market_workflow_defaults_source_to_yuyutei(client, monkeypatch):
+    captured = {}
+
+    def fake_trigger(source, limit, send_telegram, dry_run):
+        captured["source"] = source
+        return "job-1", {"market_workflow_run_id": 1, "status": "success", "warnings": []}
+
+    monkeypatch.setattr(admin_actions_module, "trigger_market_workflow", fake_trigger)
+
+    response = client.post("/admin/actions/run-market-workflow", json={})
+
+    assert response.status_code == 200
+    assert captured["source"] == "yuyutei"
+
+
+def test_run_market_workflow_rejects_invalid_source(client):
+    response = client.post(
+        "/admin/actions/run-market-workflow", json={"source": "ebay"}
+    )
+
+    assert response.status_code == 400
+
+
+def test_run_market_workflow_surfaces_trigger_failure_as_502(client, monkeypatch):
+    def fake_trigger(source, limit, send_telegram, dry_run):
+        raise RuntimeError("broker unreachable")
+
+    monkeypatch.setattr(admin_actions_module, "trigger_market_workflow", fake_trigger)
+
+    response = client.post("/admin/actions/run-market-workflow", json={})
+
+    assert response.status_code == 502
+    assert "broker unreachable" in response.json()["detail"]
+
+
+def test_run_market_workflow_surfaces_partial_success_and_warnings(client, monkeypatch):
+    monkeypatch.setattr(
+        admin_actions_module,
+        "trigger_market_workflow",
+        lambda source, limit, send_telegram, dry_run: (
+            "job-1",
+            {
+                "market_workflow_run_id": 2,
+                "status": "partial_success",
+                "price_refresh_run_id": 11,
+                "portfolio_snapshot_id": None,
+                "signal_events_created": 0,
+                "signal_events_updated": 0,
+                "signal_events_resolved": 0,
+                "market_report_id": None,
+                "telegram_digest_status": None,
+                "warnings": ["Portfolio valuation snapshot was not created."],
+            },
+        ),
+    )
+
+    response = client.post("/admin/actions/run-market-workflow", json={})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "partial_success"
+    assert body["portfolio_snapshot_id"] is None
+    assert body["warnings"] == ["Portfolio valuation snapshot was not created."]
+
+
+# --- GET /admin/market-workflow-runs -----------------------------------------
+
+
+def make_market_workflow_run(db_session, **overrides):
+    from datetime import datetime, timezone
+
+    from app.models import MarketWorkflowRun
+
+    fields = dict(
+        started_at=datetime.now(timezone.utc),
+        finished_at=datetime.now(timezone.utc),
+        status="success",
+        source="yuyutei",
+        limit=10,
+        send_telegram=False,
+        price_refresh_run_id=None,
+        portfolio_snapshot_id=None,
+        market_report_id=None,
+        signal_events_created=0,
+        signal_events_updated=0,
+        signal_events_resolved=0,
+        telegram_digest_status=None,
+        warnings_json=[],
+        error_message=None,
+    )
+    fields.update(overrides)
+    run = MarketWorkflowRun(**fields)
+    db_session.add(run)
+    db_session.commit()
+    db_session.refresh(run)
+    return run
+
+
+def test_list_market_workflow_runs_empty(client, db_session):
+    response = client.get("/admin/market-workflow-runs")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "total": 0, "limit": 50, "offset": 0}
+
+
+def test_list_market_workflow_runs_returns_runs(client, db_session):
+    run = make_market_workflow_run(db_session)
+
+    response = client.get("/admin/market-workflow-runs")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["id"] == run.id
+    assert body["items"][0]["status"] == "success"
+    assert body["items"][0]["warnings"] == []
+
+
+def test_list_market_workflow_runs_filters_by_status(client, db_session):
+    make_market_workflow_run(db_session, status="failed", error_message="boom")
+    make_market_workflow_run(db_session, status="success")
+
+    response = client.get("/admin/market-workflow-runs?status=failed")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["status"] == "failed"
+
+
+def test_list_market_workflow_runs_rejects_invalid_status(client, db_session):
+    response = client.get("/admin/market-workflow-runs?status=bogus")
+
+    assert response.status_code == 400
+
+
+def test_get_market_workflow_run_detail(client, db_session):
+    run = make_market_workflow_run(
+        db_session, status="partial_success", warnings_json=["something failed"]
+    )
+
+    response = client.get(f"/admin/market-workflow-runs/{run.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == run.id
+    assert body["status"] == "partial_success"
+    assert body["warnings"] == ["something failed"]
+
+
+def test_get_market_workflow_run_404_for_missing_run(client, db_session):
+    response = client.get("/admin/market-workflow-runs/9999")
+
+    assert response.status_code == 404

@@ -13,6 +13,7 @@ import {
   triggerFullMarketRefresh,
   triggerGenerateMarketReport,
   triggerRefreshPrices,
+  triggerRunMarketWorkflow,
   triggerSendMarketReportDigest,
   triggerSnapshotMarketSignals,
   triggerSnapshotPortfolio,
@@ -24,7 +25,8 @@ type ActionKey =
   | "snapshot-market-signals"
   | "generate-market-report"
   | "full-market-refresh"
-  | "send-market-report-digest";
+  | "send-market-report-digest"
+  | "run-market-workflow";
 
 const ACTION_LABELS: Record<ActionKey, string> = {
   "refresh-prices": "Refresh prices",
@@ -33,6 +35,7 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   "generate-market-report": "Generate market report",
   "full-market-refresh": "Full market refresh",
   "send-market-report-digest": "Send market report digest",
+  "run-market-workflow": "Run scheduled market workflow manually",
 };
 
 interface ActionResult {
@@ -94,6 +97,35 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
           value: d.skipped_reason ? String(d.skipped_reason) : "not available",
         },
       ];
+    case "run-market-workflow": {
+      const signals = (d.market_signal_snapshot ?? {}) as Record<string, unknown>;
+      return [
+        {
+          label: "Workflow run ID",
+          value: d.market_workflow_run_id != null ? String(d.market_workflow_run_id) : "not available",
+        },
+        { label: "Status", value: d.status ? String(d.status) : "not available" },
+        {
+          label: "Price refresh run ID",
+          value: d.price_refresh_run_id != null ? String(d.price_refresh_run_id) : "not available",
+        },
+        {
+          label: "Portfolio snapshot ID",
+          value: d.portfolio_snapshot_id != null ? String(d.portfolio_snapshot_id) : "not available",
+        },
+        { label: "Signals created", value: String(signals.created ?? 0) },
+        { label: "Signals updated", value: String(signals.updated ?? 0) },
+        { label: "Signals resolved", value: String(signals.resolved ?? 0) },
+        {
+          label: "Market report ID",
+          value: d.market_report_id != null ? String(d.market_report_id) : "not available",
+        },
+        {
+          label: "Telegram digest status",
+          value: d.telegram_digest_status ? String(d.telegram_digest_status) : "not available",
+        },
+      ];
+    }
     default:
       return [];
   }
@@ -126,6 +158,11 @@ export default function AdminActionsPage() {
 
   const [digestDryRun, setDigestDryRun] = useState(false);
   const [digestForce, setDigestForce] = useState(false);
+
+  const [workflowSource, setWorkflowSource] = useState<string>("yuyutei");
+  const [workflowLimit, setWorkflowLimit] = useState("");
+  const [workflowSendTelegram, setWorkflowSendTelegram] = useState(false);
+  const [workflowDryRun, setWorkflowDryRun] = useState(false);
 
   useEffect(() => {
     setUnauthorized(!getAdminToken());
@@ -375,6 +412,75 @@ export default function AdminActionsPage() {
                   Send Telegram digest
                 </ActionButton>
               </ActionCard>
+
+              <ActionCard title="Run scheduled market workflow manually" className="md:col-span-2">
+                <div className="flex flex-col gap-2">
+                  <FieldRow label="Source">
+                    <select
+                      value={workflowSource}
+                      onChange={(e) => setWorkflowSource(e.target.value)}
+                      disabled={isBusy}
+                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                    >
+                      {ADMIN_ACTION_SOURCES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldRow>
+                  <FieldRow label="Limit">
+                    <input
+                      type="number"
+                      min={1}
+                      value={workflowLimit}
+                      onChange={(e) => setWorkflowLimit(e.target.value)}
+                      disabled={isBusy}
+                      placeholder="default 10"
+                      className="w-28 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
+                    />
+                  </FieldRow>
+                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={workflowSendTelegram}
+                      onChange={(e) => setWorkflowSendTelegram(e.target.checked)}
+                      disabled={isBusy}
+                    />
+                    Send Telegram digest
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <input
+                      type="checkbox"
+                      checked={workflowDryRun}
+                      onChange={(e) => setWorkflowDryRun(e.target.checked)}
+                      disabled={isBusy}
+                    />
+                    Dry run
+                  </label>
+                  <p className="text-xs text-neutral-500">
+                    Runs the same sequence as the scheduled daily workflow: refresh prices,
+                    snapshot the portfolio and market signals, generate a report, and
+                    optionally send a Telegram digest. Recorded as a market workflow run.
+                  </p>
+                </div>
+                <ActionButton
+                  disabled={isBusy}
+                  pending={pendingAction === "run-market-workflow"}
+                  onClick={() =>
+                    runAction("run-market-workflow", () =>
+                      triggerRunMarketWorkflow({
+                        source: workflowSource,
+                        limit: parseLimit(workflowLimit),
+                        send_telegram: workflowSendTelegram,
+                        dry_run: workflowDryRun,
+                      }),
+                    )
+                  }
+                >
+                  Run market workflow
+                </ActionButton>
+              </ActionCard>
             </div>
 
             {result && <ResultPanel result={result} />}
@@ -385,6 +491,12 @@ export default function AdminActionsPage() {
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
                 Refresh runs
+              </Link>
+              <Link
+                href="/admin/market-workflow-runs"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Market workflow runs
               </Link>
               <Link
                 href="/collection"

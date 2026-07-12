@@ -140,6 +140,12 @@ export default function MarketReportPage() {
             >
               Generate new report
             </Link>
+            <Link
+              href="/admin/market-workflow-runs"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Workflow runs
+            </Link>
           </div>
           {reportsList.length > 0 && (
             <label className="flex items-center gap-1.5 text-xs text-neutral-500">

@@ -36,6 +36,12 @@ export function AppHeader() {
             Refresh runs
           </Link>
           <Link
+            href="/admin/market-workflow-runs"
+            className="hover:text-neutral-100"
+          >
+            Workflow runs
+          </Link>
+          <Link
             href="/admin/snkrdunk-candidates"
             className="hover:text-neutral-100"
           >

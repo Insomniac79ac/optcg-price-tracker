@@ -1275,3 +1275,95 @@ export function triggerSendMarketReportDigest(
     { method: "POST", body },
   );
 }
+
+export const MARKET_WORKFLOW_RUN_STATUSES = [
+  "running",
+  "success",
+  "partial_success",
+  "failed",
+] as const;
+
+export interface RunMarketWorkflowRequest {
+  source: string;
+  limit?: number | null;
+  send_telegram?: boolean;
+  dry_run?: boolean;
+}
+
+export interface RunMarketWorkflowResponse {
+  market_workflow_run_id: number | null;
+  status: string | null;
+  price_refresh_run_id: number | null;
+  portfolio_snapshot_id: number | null;
+  market_signal_snapshot: {
+    created: number;
+    updated: number;
+    resolved: number;
+  };
+  market_report_id: number | null;
+  telegram_digest_status: string | null;
+  warnings: string[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/run-market-workflow/route.ts). */
+export function triggerRunMarketWorkflow(
+  body: RunMarketWorkflowRequest,
+): Promise<RunMarketWorkflowResponse> {
+  return fetchAdminJson<RunMarketWorkflowResponse>(
+    "/api/admin/actions/run-market-workflow",
+    { method: "POST", body },
+  );
+}
+
+export interface MarketWorkflowRun {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  source: string;
+  limit: number | null;
+  send_telegram: boolean;
+  price_refresh_run_id: number | null;
+  portfolio_snapshot_id: number | null;
+  market_report_id: number | null;
+  signal_events_created: number;
+  signal_events_updated: number;
+  signal_events_resolved: number;
+  telegram_digest_status: string | null;
+  warnings: string[];
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketWorkflowRunListResponse {
+  items: MarketWorkflowRun[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/market-workflow-runs/route.ts) - same reasoning as
+ * fetchMarketSignals. */
+export function fetchMarketWorkflowRuns(params?: {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<MarketWorkflowRunListResponse> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MarketWorkflowRunListResponse>(
+    `/api/admin/market-workflow-runs${qs ? `?${qs}` : ""}`,
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/market-workflow-runs/[id]/route.ts). */
+export function fetchMarketWorkflowRun(runId: number): Promise<MarketWorkflowRun> {
+  return fetchAdminJson<MarketWorkflowRun>(`/api/admin/market-workflow-runs/${runId}`);
+}

@@ -6,6 +6,7 @@ from app.models.collection_item import CollectionItem
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
 from app.models.market_signal_event import MarketSignalEvent
+from app.models.market_workflow_run import MarketWorkflowRun
 from app.models.price_observation import PriceObservation
 from app.models.portfolio_valuation_snapshot import PortfolioValuationSnapshot
 from app.models.price_refresh_run import PriceRefreshRun
@@ -32,4 +33,5 @@ __all__ = [
     "MarketSignalEvent",
     "MarketIntelligenceReport",
     "MarketReportDigestSend",
+    "MarketWorkflowRun",
 ]

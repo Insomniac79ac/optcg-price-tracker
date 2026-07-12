@@ -10,6 +10,8 @@ from app.schemas import (
     AdminMarketSignalSnapshotCounts,
     AdminRefreshPricesRequest,
     AdminRefreshPricesResponse,
+    AdminRunMarketWorkflowRequest,
+    AdminRunMarketWorkflowResponse,
     AdminSendMarketReportDigestRequest,
     AdminSendMarketReportDigestResponse,
     AdminSnapshotMarketSignalsResponse,
@@ -17,6 +19,7 @@ from app.schemas import (
 )
 from app.services.market_report import generate_market_report
 from app.services.market_signal_events import snapshot_market_signals
+from app.services.market_workflow_trigger import trigger_market_workflow
 from app.services.refresh_trigger import trigger_price_refresh
 from app.services.telegram_market_digest import send_market_report_digest
 from app.snapshot_portfolio_valuation import snapshot_portfolio_valuation
@@ -197,4 +200,37 @@ def send_market_report_digest_action(
         sent=result.sent,
         skipped_reason=result.skipped_reason,
         message_preview=_message_preview(result.message_text),
+    )
+
+
+@router.post("/run-market-workflow", response_model=AdminRunMarketWorkflowResponse)
+def run_market_workflow_action(body: AdminRunMarketWorkflowRequest):
+    _validate_source(body.source)
+    limit = body.limit if body.limit is not None else DEFAULT_REFRESH_LIMIT
+
+    try:
+        job_id, result = trigger_market_workflow(
+            source=body.source,
+            limit=limit,
+            send_telegram=body.send_telegram,
+            dry_run=body.dry_run,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to trigger market workflow: {exc}"
+        ) from exc
+
+    return AdminRunMarketWorkflowResponse(
+        market_workflow_run_id=result.get("market_workflow_run_id"),
+        status=result.get("status"),
+        price_refresh_run_id=result.get("price_refresh_run_id"),
+        portfolio_snapshot_id=result.get("portfolio_snapshot_id"),
+        market_signal_snapshot=AdminMarketSignalSnapshotCounts(
+            created=result.get("signal_events_created") or 0,
+            updated=result.get("signal_events_updated") or 0,
+            resolved=result.get("signal_events_resolved") or 0,
+        ),
+        market_report_id=result.get("market_report_id"),
+        telegram_digest_status=result.get("telegram_digest_status"),
+        warnings=result.get("warnings") or [],
     )

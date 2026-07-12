@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 VALID_SCRAPING_MODES = ("mock", "live")
+VALID_MARKET_WORKFLOW_SOURCES = ("all", "yuyutei", "snkrdunk")
 
 
 class Settings(BaseSettings):
@@ -27,6 +28,15 @@ class Settings(BaseSettings):
     # skipped rather than attempted (see worker.alerts.telegram).
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None
+    # Scheduled market intelligence workflow (worker.jobs.run_market_workflow) -
+    # disabled by default so Celery Beat never runs it unless explicitly
+    # opted into (see worker.celery_app._build_beat_schedule).
+    MARKET_WORKFLOW_ENABLED: bool = False
+    MARKET_WORKFLOW_SOURCE: str = "yuyutei"
+    MARKET_WORKFLOW_LIMIT: int | None = None
+    MARKET_WORKFLOW_SEND_TELEGRAM: bool = False
+    MARKET_WORKFLOW_HOUR_UTC: int = 0
+    MARKET_WORKFLOW_MINUTE_UTC: int = 0
 
     @field_validator("DATABASE_URL")
     @classmethod
@@ -65,6 +75,37 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"Invalid PRICE_REFRESH_INTERVAL_HOURS={value}. Must be a positive integer."
             )
+        return value
+
+    @field_validator("MARKET_WORKFLOW_SOURCE")
+    @classmethod
+    def _validate_market_workflow_source(cls, value: str) -> str:
+        if value not in VALID_MARKET_WORKFLOW_SOURCES:
+            raise ValueError(
+                f"Invalid MARKET_WORKFLOW_SOURCE={value}. "
+                f"Expected one of {VALID_MARKET_WORKFLOW_SOURCES}."
+            )
+        return value
+
+    @field_validator("MARKET_WORKFLOW_LIMIT")
+    @classmethod
+    def _validate_market_workflow_limit(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError(f"Invalid MARKET_WORKFLOW_LIMIT={value}. Must be a positive integer.")
+        return value
+
+    @field_validator("MARKET_WORKFLOW_HOUR_UTC")
+    @classmethod
+    def _validate_market_workflow_hour_utc(cls, value: int) -> int:
+        if not (0 <= value <= 23):
+            raise ValueError(f"Invalid MARKET_WORKFLOW_HOUR_UTC={value}. Must be 0-23.")
+        return value
+
+    @field_validator("MARKET_WORKFLOW_MINUTE_UTC")
+    @classmethod
+    def _validate_market_workflow_minute_utc(cls, value: int) -> int:
+        if not (0 <= value <= 59):
+            raise ValueError(f"Invalid MARKET_WORKFLOW_MINUTE_UTC={value}. Must be 0-59.")
         return value
 
     @model_validator(mode="after")

@@ -65,6 +65,12 @@ export default function RefreshRunsPage() {
             >
               Admin actions
             </Link>
+            <Link
+              href="/admin/market-workflow-runs"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Market workflow runs
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             {status === "ready" && (

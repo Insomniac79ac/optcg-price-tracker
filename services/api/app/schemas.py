@@ -725,3 +725,51 @@ class AdminSendMarketReportDigestResponse(BaseModel):
     sent: bool
     skipped_reason: str | None
     message_preview: str | None
+
+
+class MarketWorkflowRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    started_at: datetime
+    finished_at: datetime | None
+    status: str
+    source: str
+    limit: int | None
+    send_telegram: bool
+    price_refresh_run_id: int | None
+    portfolio_snapshot_id: int | None
+    market_report_id: int | None
+    signal_events_created: int
+    signal_events_updated: int
+    signal_events_resolved: int
+    telegram_digest_status: str | None
+    warnings: list[str]
+    error_message: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MarketWorkflowRunListOut(BaseModel):
+    items: list[MarketWorkflowRunOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class AdminRunMarketWorkflowRequest(BaseModel):
+    source: str = "yuyutei"
+    limit: int | None = Field(default=None, ge=1)
+    send_telegram: bool = False
+    dry_run: bool = False
+
+
+class AdminRunMarketWorkflowResponse(BaseModel):
+    market_workflow_run_id: int | None
+    status: str | None
+    price_refresh_run_id: int | None
+    portfolio_snapshot_id: int | None
+    market_signal_snapshot: AdminMarketSignalSnapshotCounts
+    market_report_id: int | None
+    telegram_digest_status: str | None
+    warnings: list[str] = []
