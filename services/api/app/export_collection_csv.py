@@ -14,11 +14,17 @@ def main() -> None:
         default=DEFAULT_OUTPUT,
         help=f"Output CSV file path (default: {DEFAULT_OUTPUT})",
     )
+    parser.add_argument(
+        "--user-id",
+        type=int,
+        required=True,
+        help="Id of the user whose collection to export",
+    )
     args = parser.parse_args()
 
     db = SessionLocal()
     try:
-        csv_text = export_collection_csv(db)
+        csv_text = export_collection_csv(db, user_id=args.user_id)
     finally:
         db.close()
 

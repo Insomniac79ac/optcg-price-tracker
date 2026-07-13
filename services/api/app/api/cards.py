@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import require_current_user, require_current_user_optional
 from app.db import get_db
-from app.models import Card, CardTag, CollectorTag, PriceObservation, Source
+from app.models import Card, CardTag, CollectorTag, PriceObservation, Source, User
 from app.schemas import CardOut, PriceObservationOut
 from app.services.collector import get_tags_for_cards
 
@@ -34,24 +35,33 @@ def _get_card_or_404(db: Session, card_id: int) -> Card:
     return card
 
 
-def _get_tag_or_404(db: Session, tag_id: int) -> CollectorTag:
+def _get_tag_or_404(db: Session, tag_id: int, user: User) -> CollectorTag:
     tag = db.get(CollectorTag, tag_id)
-    if tag is None:
+    if tag is None or tag.user_id != user.id:
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
 
 
 @router.get("", response_model=list[CardOut])
-def list_cards(db: Session = Depends(get_db)):
+def list_cards(
+    db: Session = Depends(get_db),
+    user: User | None = Depends(require_current_user_optional),
+):
     cards = db.scalars(select(Card)).all()
-    tags_by_card = get_tags_for_cards(db, {c.id for c in cards})
+    tags_by_card = (
+        get_tags_for_cards(db, {c.id for c in cards}, user_id=user.id) if user else {}
+    )
     return [_to_card_out(c, tags_by_card.get(c.id, [])) for c in cards]
 
 
 @router.get("/{card_id}", response_model=CardOut)
-def get_card(card_id: int, db: Session = Depends(get_db)):
+def get_card(
+    card_id: int,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(require_current_user_optional),
+):
     card = _get_card_or_404(db, card_id)
-    tags_by_card = get_tags_for_cards(db, {card_id})
+    tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id) if user else {}
     return _to_card_out(card, tags_by_card.get(card_id, []))
 
 
@@ -87,9 +97,14 @@ def get_card_prices(card_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{card_id}/tags/{tag_id}", response_model=CardOut)
-def assign_card_tag(card_id: int, tag_id: int, db: Session = Depends(get_db)):
+def assign_card_tag(
+    card_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
     card = _get_card_or_404(db, card_id)
-    _get_tag_or_404(db, tag_id)
+    _get_tag_or_404(db, tag_id, user)
 
     existing = db.scalar(
         select(CardTag).where(CardTag.card_id == card_id, CardTag.tag_id == tag_id)
@@ -98,14 +113,19 @@ def assign_card_tag(card_id: int, tag_id: int, db: Session = Depends(get_db)):
         db.add(CardTag(card_id=card_id, tag_id=tag_id))
         db.commit()
 
-    tags_by_card = get_tags_for_cards(db, {card_id})
+    tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id)
     return _to_card_out(card, tags_by_card.get(card_id, []))
 
 
 @router.delete("/{card_id}/tags/{tag_id}", response_model=CardOut)
-def unassign_card_tag(card_id: int, tag_id: int, db: Session = Depends(get_db)):
+def unassign_card_tag(
+    card_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
     card = _get_card_or_404(db, card_id)
-    _get_tag_or_404(db, tag_id)
+    _get_tag_or_404(db, tag_id, user)
 
     assignment = db.scalar(
         select(CardTag).where(CardTag.card_id == card_id, CardTag.tag_id == tag_id)
@@ -114,5 +134,5 @@ def unassign_card_tag(card_id: int, tag_id: int, db: Session = Depends(get_db)):
         db.delete(assignment)
         db.commit()
 
-    tags_by_card = get_tags_for_cards(db, {card_id})
+    tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id)
     return _to_card_out(card, tags_by_card.get(card_id, []))

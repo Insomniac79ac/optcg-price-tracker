@@ -35,12 +35,14 @@ def validate_color(color: str | None) -> str | None:
     return cleaned
 
 
-def generate_unique_slug(db: Session, model: type, name: str, *, exclude_id: int | None = None) -> str:
+def generate_unique_slug(
+    db: Session, model: type, name: str, *, user_id: int, exclude_id: int | None = None
+) -> str:
     base = slugify(name)
     slug = base
     counter = 2
     while True:
-        query = select(model).where(model.slug == slug)
+        query = select(model).where(model.slug == slug, model.user_id == user_id)
         if exclude_id is not None:
             query = query.where(model.id != exclude_id)
         if db.scalar(query) is None:
@@ -49,28 +51,42 @@ def generate_unique_slug(db: Session, model: type, name: str, *, exclude_id: int
         counter += 1
 
 
-def get_or_create_tag(db: Session, name: str) -> tuple[CollectorTag, bool]:
-    """Used by CSV import to resolve a tag by name, creating it (with a
-    fresh unique slug) if it doesn't already exist. Returns (tag, created)."""
+def get_or_create_tag(db: Session, name: str, *, user_id: int) -> tuple[CollectorTag, bool]:
+    """Used by CSV import to resolve a tag by name (within the current
+    user's own tags), creating it (with a fresh unique slug) if it doesn't
+    already exist. Returns (tag, created)."""
     cleaned_name = name.strip()
-    tag = db.scalar(select(CollectorTag).where(CollectorTag.name == cleaned_name))
+    tag = db.scalar(
+        select(CollectorTag).where(CollectorTag.name == cleaned_name, CollectorTag.user_id == user_id)
+    )
     if tag is not None:
         return tag, False
-    tag = CollectorTag(name=cleaned_name, slug=generate_unique_slug(db, CollectorTag, cleaned_name))
+    tag = CollectorTag(
+        user_id=user_id,
+        name=cleaned_name,
+        slug=generate_unique_slug(db, CollectorTag, cleaned_name, user_id=user_id),
+    )
     db.add(tag)
     db.flush()
     return tag, True
 
 
-def get_or_create_group(db: Session, name: str) -> tuple[CollectorGroup, bool]:
-    """Used by CSV import to resolve a group by name, creating it (with a
-    fresh unique slug) if it doesn't already exist. Returns (group, created)."""
+def get_or_create_group(db: Session, name: str, *, user_id: int) -> tuple[CollectorGroup, bool]:
+    """Used by CSV import to resolve a group by name (within the current
+    user's own groups), creating it (with a fresh unique slug) if it doesn't
+    already exist. Returns (group, created)."""
     cleaned_name = name.strip()
-    group = db.scalar(select(CollectorGroup).where(CollectorGroup.name == cleaned_name))
+    group = db.scalar(
+        select(CollectorGroup).where(
+            CollectorGroup.name == cleaned_name, CollectorGroup.user_id == user_id
+        )
+    )
     if group is not None:
         return group, False
     group = CollectorGroup(
-        name=cleaned_name, slug=generate_unique_slug(db, CollectorGroup, cleaned_name)
+        user_id=user_id,
+        name=cleaned_name,
+        slug=generate_unique_slug(db, CollectorGroup, cleaned_name, user_id=user_id),
     )
     db.add(group)
     db.flush()
@@ -101,15 +117,25 @@ def ensure_collection_item_group(db: Session, collection_item_id: int, group_id:
         db.flush()
 
 
-def get_tags_for_cards(db: Session, card_ids: set[int]) -> dict[int, list[CollectorTag]]:
+def get_tags_for_cards(
+    db: Session, card_ids: set[int], *, user_id: int | None = None
+) -> dict[int, list[CollectorTag]]:
     """Batch-loads card-level tags for a set of card ids in one query, so
-    list endpoints don't do a per-row lookup (N+1)."""
+    list endpoints don't do a per-row lookup (N+1). Cards are a shared public
+    catalog but tags are per-user, so callers that show this to a specific
+    person (app/api/cards.py's public read endpoints) MUST pass that user's
+    id to avoid mixing in other users' private tags - passing no user_id
+    (the default) returns every user's tags unfiltered, which is only
+    appropriate for the admin-only aggregate views (opportunity scoring)."""
     if not card_ids:
         return {}
+    filters = [CardTag.card_id.in_(card_ids)]
+    if user_id is not None:
+        filters.append(CollectorTag.user_id == user_id)
     rows = db.execute(
         select(CardTag.card_id, CollectorTag)
         .join(CollectorTag, CardTag.tag_id == CollectorTag.id)
-        .where(CardTag.card_id.in_(card_ids))
+        .where(*filters)
         .order_by(CollectorTag.name)
     ).all()
     result: dict[int, list[CollectorTag]] = defaultdict(list)

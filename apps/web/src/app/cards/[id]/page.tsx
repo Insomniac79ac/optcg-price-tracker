@@ -8,27 +8,35 @@ import { AppHeader } from "@/components/AppHeader";
 import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
+import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PriceChart } from "@/components/PriceChart";
 import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SourceBadge } from "@/components/SourceBadge";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
+import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
+import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
+  WISHLIST_PRIORITIES,
   type Card,
   type CollectionItem,
   type CollectionItemInput,
   type CollectorTag,
   type PriceObservation,
+  type WishlistItem,
+  type WishlistPriority,
   assignCardTag,
   createCollectionItem,
+  createWishlistItem,
   fetchCard,
   fetchCardPrices,
   fetchCollectionItems,
   fetchCollectorTags,
+  fetchWishlistItems,
   unassignCardTag,
 } from "@/lib/api";
-import { cardDisplayName, formatDateTime, formatJpy } from "@/lib/format";
+import { cardDisplayName, formatDateTime, formatJpy, formatSignedJpy } from "@/lib/format";
 
 type Status = "loading" | "error" | "ready";
 
@@ -70,6 +78,9 @@ export default function CardDetailPage() {
 
   const [collectionItems, setCollectionItems] = useState<CollectionItem[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<Status>("loading");
+
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [wishlistStatus, setWishlistStatus] = useState<Status>("loading");
 
   const [allTags, setAllTags] = useState<CollectorTag[]>([]);
   const [tagError, setTagError] = useState<string | null>(null);
@@ -133,6 +144,20 @@ export default function CardDetailPage() {
     refreshCollectionItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardId]);
+
+  function refreshWishlistItems(cardCode: string) {
+    fetchWishlistItems({ card_code: cardCode })
+      .then((data) => {
+        setWishlistItems(data.items.filter((i) => i.status !== "removed"));
+        setWishlistStatus("ready");
+      })
+      .catch(() => setWishlistStatus("error"));
+  }
+
+  useEffect(() => {
+    if (card) refreshWishlistItems(card.card_code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card?.card_code]);
 
   const latestFirst = prices
     .slice()
@@ -238,6 +263,13 @@ export default function CardDetailPage() {
               status={collectionStatus}
               items={collectionItems}
               onChanged={refreshCollectionItems}
+            />
+
+            <WishlistSection
+              cardId={card.id}
+              status={wishlistStatus}
+              items={wishlistItems}
+              onChanged={() => refreshWishlistItems(card.card_code)}
             />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -385,20 +417,41 @@ function CollectionSection({
           </p>
           <div className="divide-y divide-neutral-800 rounded border border-neutral-800">
             {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm"
-              >
-                <span className="font-medium text-neutral-200">
-                  {item.quantity}×
-                </span>
-                <span className="text-neutral-400">
-                  {item.condition_label ?? "raw"}
-                </span>
-                <span className="text-neutral-200">
-                  {formatJpy(item.purchase_price_jpy)}
-                </span>
-                <CollectionStatusBadge status={item.status} />
+              <div key={item.id} className="space-y-1.5 px-3 py-2">
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span className="font-medium text-neutral-200">
+                    {item.quantity}×
+                  </span>
+                  <span className="text-neutral-400">
+                    {item.condition_label ?? "raw"}
+                  </span>
+                  <span className="text-neutral-200">
+                    {formatJpy(item.purchase_price_jpy)}
+                  </span>
+                  <CollectionStatusBadge status={item.status} />
+                  {item.latest_grading_status && (
+                    <GradingStatusBadge status={item.latest_grading_status} />
+                  )}
+                  <Link
+                    href={`/grading?item_id=${item.id}`}
+                    className="text-xs font-medium text-violet-400 hover:text-violet-300"
+                  >
+                    Create grading submission
+                  </Link>
+                </div>
+                {item.grading_submissions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
+                    {item.grading_submissions.map((s) => (
+                      <span
+                        key={s.id}
+                        className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1"
+                      >
+                        {s.grading_company} · {s.submission_status.replace(/_/g, " ")}
+                        {s.final_grade ? ` · grade ${s.final_grade}` : ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -409,6 +462,212 @@ function CollectionSection({
         <QuickAddForm cardId={cardId} onAdded={onChanged} />
       )}
     </div>
+  );
+}
+
+function WishlistSection({
+  cardId,
+  status,
+  items,
+  onChanged,
+}: {
+  cardId: number;
+  status: Status;
+  items: WishlistItem[];
+  onChanged: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-neutral-100">Wishlist</h2>
+        <Link href="/wishlist" className="text-xs text-sky-400 hover:text-sky-300">
+          View wishlist →
+        </Link>
+      </div>
+
+      {status === "loading" && <p className="text-sm text-neutral-500">Loading wishlist status…</p>}
+
+      {status === "error" && <p className="text-sm text-rose-300">Failed to load wishlist status.</p>}
+
+      {status === "ready" && items.length > 0 && (
+        <div className="mb-3 divide-y divide-neutral-800 rounded border border-neutral-800">
+          {items.map((item) => (
+            <div key={item.id} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
+              <WishlistPriorityBadge priority={item.priority} />
+              <WishlistStatusBadge status={item.status} />
+              <span className="text-neutral-400">
+                Target: {item.target_buy_price_jpy !== null ? formatJpy(item.target_buy_price_jpy) : "not set"}
+              </span>
+              {item.target_hit && (
+                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+                  target hit
+                </span>
+              )}
+              {item.gap_to_target_jpy !== null && (
+                <span className="text-xs text-neutral-500">
+                  gap {formatSignedJpy(item.gap_to_target_jpy)}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === "ready" && items.length === 0 && (
+        <p className="mb-3 text-sm text-neutral-500">Not on your wishlist yet.</p>
+      )}
+
+      {status === "ready" && <QuickAddWishlistForm cardId={cardId} onAdded={onChanged} />}
+    </div>
+  );
+}
+
+interface QuickAddWishlistFormState {
+  priority: WishlistPriority;
+  target_buy_price_jpy: string;
+  preferred_condition: string;
+  preferred_source: string;
+}
+
+const EMPTY_QUICK_ADD_WISHLIST_FORM: QuickAddWishlistFormState = {
+  priority: "medium",
+  target_buy_price_jpy: "",
+  preferred_condition: "",
+  preferred_source: "",
+};
+
+function QuickAddWishlistForm({ cardId, onAdded }: { cardId: number; onAdded: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [form, setForm] = useState<QuickAddWishlistFormState>(EMPTY_QUICK_ADD_WISHLIST_FORM);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function updateField<K extends keyof QuickAddWishlistFormState>(
+    key: K,
+    value: QuickAddWishlistFormState[K],
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    let targetBuy: number | null = null;
+    if (form.target_buy_price_jpy !== "") {
+      targetBuy = Number(form.target_buy_price_jpy);
+      if (Number.isNaN(targetBuy) || targetBuy < 0) {
+        setFormError("Target buy price must be 0 or greater.");
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      await createWishlistItem({
+        card_id: cardId,
+        priority: form.priority,
+        target_buy_price_jpy: targetBuy,
+        preferred_condition: form.preferred_condition || null,
+        preferred_source: form.preferred_source || null,
+      });
+      setForm(EMPTY_QUICK_ADD_WISHLIST_FORM);
+      setExpanded(false);
+      onAdded();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to add this card to your wishlist.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white"
+      >
+        + Add to wishlist
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      {formError && (
+        <div className="rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          {formError}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FormField label="Priority">
+          <select
+            value={form.priority}
+            onChange={(e) => updateField("priority", e.target.value as WishlistPriority)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          >
+            {WISHLIST_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </FormField>
+
+        <FormField label="Target buy price (JPY)">
+          <input
+            type="number"
+            min={0}
+            value={form.target_buy_price_jpy}
+            onChange={(e) => updateField("target_buy_price_jpy", e.target.value)}
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+          />
+        </FormField>
+
+        <FormField label="Preferred condition">
+          <input
+            type="text"
+            value={form.preferred_condition}
+            onChange={(e) => updateField("preferred_condition", e.target.value)}
+            placeholder="raw, PSA 10, …"
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+          />
+        </FormField>
+
+        <FormField label="Preferred source">
+          <input
+            type="text"
+            value={form.preferred_source}
+            onChange={(e) => updateField("preferred_source", e.target.value)}
+            placeholder="yuyutei, snkrdunk, …"
+            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+          />
+        </FormField>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Add to wishlist"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded(false);
+            setForm(EMPTY_QUICK_ADD_WISHLIST_FORM);
+            setFormError(null);
+          }}
+          disabled={saving}
+          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 

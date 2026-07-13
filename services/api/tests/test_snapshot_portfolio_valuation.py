@@ -1,6 +1,13 @@
 from datetime import datetime, timezone
 
-from app.models import Card, CollectionItem, PortfolioValuationSnapshot, PriceObservation, Source
+from app.models import (
+    Card,
+    CollectionItem,
+    GradingSubmission,
+    PortfolioValuationSnapshot,
+    PriceObservation,
+    Source,
+)
 from app.snapshot_portfolio_valuation import snapshot_portfolio_valuation
 
 
@@ -31,7 +38,7 @@ def make_source(db_session, name: str) -> Source:
 
 
 def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -100,6 +107,43 @@ def test_snapshot_creates_row_with_collection_data(db_session):
     assert snapshot.pnl_vs_liquidation_jpy == -200
     assert snapshot.pnl_vs_market_floor_jpy == 1400
     assert snapshot.cards_above_target_sell == 1
+    # No grading submission exists yet, so the graded-adjusted figures fall
+    # back to the SNKRDUNK floor value for the one owned item.
+    assert snapshot.graded_adjusted_value_jpy == 3400
+    assert snapshot.items_using_graded_value == 0
+    assert snapshot.items_using_raw_fallback == 1
+    assert snapshot.items_missing_graded_adjusted_value == 0
 
     stored = db_session.query(PortfolioValuationSnapshot).filter_by(id=snapshot.id).one()
     assert stored.total_items == 1
+
+
+def test_snapshot_stores_graded_adjusted_fields(db_session):
+    card = make_card(db_session)
+    item = make_item(db_session, card, quantity=1, purchase_price_jpy=1000)
+    db_session.add(
+        GradingSubmission(
+            collection_item_id=item.id,
+            grading_company="PSA",
+            submission_status="received",
+            grading_fee_jpy=3000,
+            shipping_fee_jpy=1000,
+            insurance_fee_jpy=0,
+            other_fee_jpy=0,
+            final_grade="10",
+            graded_value_jpy=15000,
+        )
+    )
+    db_session.commit()
+
+    snapshot = snapshot_portfolio_valuation(db_session)
+
+    # cost basis 1000 + grading cost 4000 = 5000; pnl = 15000 - 5000 = 10000.
+    assert snapshot.graded_adjusted_value_jpy == 15000
+    assert snapshot.pnl_vs_graded_adjusted_jpy == 10000
+    assert snapshot.items_using_graded_value == 1
+    assert snapshot.items_using_raw_fallback == 0
+    assert snapshot.items_missing_graded_adjusted_value == 0
+
+    stored = db_session.query(PortfolioValuationSnapshot).filter_by(id=snapshot.id).one()
+    assert stored.graded_adjusted_value_jpy == 15000

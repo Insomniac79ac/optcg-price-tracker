@@ -108,6 +108,12 @@ export default function DashboardPage() {
             Collection
           </Link>
           <Link
+            href="/wishlist"
+            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
+          >
+            Wishlist
+          </Link>
+          <Link
             href="/market/signals"
             className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
           >

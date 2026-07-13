@@ -1,3 +1,5 @@
+import { getSession } from "next-auth/react";
+
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -220,6 +222,94 @@ export interface AlertRule {
   is_active: boolean;
 }
 
+export const GRADING_SUBMISSION_STATUSES = [
+  "planned",
+  "preparing",
+  "submitted",
+  "grading",
+  "shipped_back",
+  "received",
+  "cancelled",
+] as const;
+export type GradingSubmissionStatus = (typeof GRADING_SUBMISSION_STATUSES)[number];
+
+export const GRADING_COMPANY_OPTIONS = ["PSA", "BGS", "CGC", "ARS", "Other"] as const;
+
+export interface GradingSubmission {
+  id: number;
+  collection_item_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  quantity: number;
+  grading_company: string;
+  submission_name: string | null;
+  submission_status: string;
+  declared_value_jpy: number | null;
+  grading_fee_jpy: number | null;
+  shipping_fee_jpy: number | null;
+  insurance_fee_jpy: number | null;
+  other_fee_jpy: number | null;
+  total_cost_jpy: number | null;
+  submitted_at: string | null;
+  received_at: string | null;
+  expected_return_date: string | null;
+  tracking_number: string | null;
+  final_grade: string | null;
+  cert_number: string | null;
+  graded_value_jpy: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GradingSubmissionInput {
+  collection_item_id: number;
+  grading_company: string;
+  submission_name?: string | null;
+  submission_status?: string;
+  declared_value_jpy?: number | null;
+  grading_fee_jpy?: number | null;
+  shipping_fee_jpy?: number | null;
+  insurance_fee_jpy?: number | null;
+  other_fee_jpy?: number | null;
+  submitted_at?: string | null;
+  received_at?: string | null;
+  expected_return_date?: string | null;
+  tracking_number?: string | null;
+  final_grade?: string | null;
+  cert_number?: string | null;
+  graded_value_jpy?: number | null;
+  notes?: string | null;
+}
+
+export interface GradingSubmissionList {
+  items: GradingSubmission[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface GradingSummary {
+  total_submissions: number;
+  by_status: Record<string, number>;
+  total_declared_value_jpy: number;
+  total_grading_cost_jpy: number;
+  total_graded_value_jpy: number;
+  total_unrealized_gain_after_grading_jpy: number;
+  average_grade: number | null;
+  items_waiting_return: number;
+}
+
+export interface GradingInfo {
+  has_grading_submission: boolean;
+  latest_status: string | null;
+  grading_company: string | null;
+  final_grade: string | null;
+  total_grading_cost_jpy: number | null;
+  graded_value_jpy: number | null;
+}
+
 export interface CollectionItem {
   id: number;
   card_id: number;
@@ -240,6 +330,8 @@ export interface CollectionItem {
   status: string;
   tags: CollectorTag[];
   groups: CollectorGroup[];
+  grading_submissions: GradingSubmission[];
+  latest_grading_status: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -471,24 +563,80 @@ async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function apiDelete(path: string): Promise<void> {
+
+// --- Per-user (signed-in) requests --------------------------------------
+//
+// /collection, /grading, and /collector are gated by a real user session
+// (Google login via NextAuth), not the admin token. NextAuth mints a
+// short-lived bearer token in its session callback (see src/lib/auth.ts) -
+// these helpers fetch the current session client-side and attach it as
+// Authorization: Bearer, mirroring adminHeaders()/apiGet() above but for
+// per-user auth instead of the shared admin secret.
+
+export class AuthRequiredError extends Error {
+  constructor() {
+    super("Sign-in required");
+    this.name = "AuthRequiredError";
+  }
+}
+
+async function authedHeaders(): Promise<Record<string, string>> {
+  const session = await getSession();
+  return session?.apiToken ? { Authorization: `Bearer ${session.apiToken}` } : {};
+}
+
+async function authedGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    cache: "no-store",
+    headers: await authedHeaders(),
+  });
+  if (res.status === 401) throw new AuthRequiredError();
+  if (!res.ok) throw await _errorFromResponse(res, path);
+  return res.json() as Promise<T>;
+}
+
+async function authedPost<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      ...(await authedHeaders()),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) throw new AuthRequiredError();
+  if (!res.ok) throw await _errorFromResponse(res, path);
+  return res.json() as Promise<T>;
+}
+
+async function authedPatch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: { ...(await authedHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) throw new AuthRequiredError();
+  if (!res.ok) throw await _errorFromResponse(res, path);
+  return res.json() as Promise<T>;
+}
+
+async function authedDelete(path: string): Promise<void> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "DELETE",
-    headers: adminHeaders(),
+    headers: await authedHeaders(),
   });
-  if (res.status === 401) throw new AdminAuthRequiredError();
+  if (res.status === 401) throw new AuthRequiredError();
   if (!res.ok) throw await _errorFromResponse(res, path);
 }
 
-/** Like apiDelete, but for unassign-style endpoints (e.g.
- * DELETE /cards/{id}/tags/{tagId}) that return the updated parent resource
- * instead of 204 No Content. */
-async function apiDeleteReturning<T>(path: string): Promise<T> {
+/** Like authedDelete, but for unassign-style endpoints that return the
+ * updated parent resource instead of 204 No Content. */
+async function authedDeleteReturning<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "DELETE",
-    headers: adminHeaders(),
+    headers: await authedHeaders(),
   });
-  if (res.status === 401) throw new AdminAuthRequiredError();
+  if (res.status === 401) throw new AuthRequiredError();
   if (!res.ok) throw await _errorFromResponse(res, path);
   return res.json() as Promise<T>;
 }
@@ -624,11 +772,11 @@ export function fetchCollectionItems(params?: {
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return apiGet<CollectionItemList>(`/collection${qs ? `?${qs}` : ""}`);
+  return authedGet<CollectionItemList>(`/collection${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchCollectionSummary(): Promise<CollectionSummary> {
-  return apiGet<CollectionSummary>("/collection/summary");
+  return authedGet<CollectionSummary>("/collection/summary");
 }
 
 export interface YuyuteiPriceSnapshot {
@@ -669,6 +817,22 @@ export interface ValuationFlags {
   above_target_sell: boolean;
 }
 
+export type ValuationMode = "raw_market" | "graded_adjusted";
+
+export type GradedAdjustedBasis = "graded_value" | "snkrdunk_floor" | "yuyutei_sell";
+
+export interface GradedAdjustedValuation {
+  value_jpy: number | null;
+  basis: GradedAdjustedBasis | null;
+  grading_submission_id: number | null;
+  grading_company: string | null;
+  final_grade: string | null;
+  graded_value_jpy: number | null;
+  raw_fallback_basis: GradedAdjustedBasis | null;
+  pnl_jpy: number | null;
+  pnl_pct: number | null;
+}
+
 export interface PortfolioValuationItem {
   collection_item_id: number;
   card_id: number;
@@ -689,6 +853,8 @@ export interface PortfolioValuationItem {
   flags: ValuationFlags;
   tags: CollectorTag[];
   groups: CollectorGroup[];
+  grading: GradingInfo;
+  graded_adjusted: GradedAdjustedValuation;
 }
 
 export type ValuationBasis = "market_floor" | "retail";
@@ -747,6 +913,13 @@ export interface PortfolioValuationSummary {
   items_missing_cost_basis: number;
   cards_above_target_sell: number;
   insights: PortfolioValuationInsights;
+  valuation_mode: ValuationMode;
+  graded_adjusted_value_jpy: number;
+  pnl_vs_graded_adjusted_jpy: number;
+  pnl_vs_graded_adjusted_pct: number;
+  items_using_graded_value: number;
+  items_using_raw_fallback: number;
+  items_missing_graded_adjusted_value: number;
 }
 
 export interface PortfolioValuation {
@@ -754,8 +927,11 @@ export interface PortfolioValuation {
   items: PortfolioValuationItem[];
 }
 
-export function fetchCollectionValuation(): Promise<PortfolioValuation> {
-  return apiGet<PortfolioValuation>("/collection/valuation");
+export function fetchCollectionValuation(
+  valuationMode: ValuationMode = "raw_market",
+): Promise<PortfolioValuation> {
+  const query = new URLSearchParams({ valuation_mode: valuationMode });
+  return authedGet<PortfolioValuation>(`/collection/valuation?${query.toString()}`);
 }
 
 export interface PortfolioValuationSnapshot {
@@ -775,13 +951,18 @@ export interface PortfolioValuationSnapshot {
   items_missing_snkrdunk_floor: number;
   items_missing_cost_basis: number;
   cards_above_target_sell: number;
+  graded_adjusted_value_jpy: number | null;
+  pnl_vs_graded_adjusted_jpy: number | null;
+  items_using_graded_value: number | null;
+  items_using_raw_fallback: number | null;
+  items_missing_graded_adjusted_value: number | null;
 }
 
 export function fetchCollectionValuationHistory(
   days: string,
 ): Promise<PortfolioValuationSnapshot[]> {
   const query = new URLSearchParams({ days });
-  return apiGet<PortfolioValuationSnapshot[]>(
+  return authedGet<PortfolioValuationSnapshot[]>(
     `/collection/valuation/history?${query.toString()}`,
   );
 }
@@ -789,18 +970,18 @@ export function fetchCollectionValuationHistory(
 export function createCollectionItem(
   body: CollectionItemInput,
 ): Promise<CollectionItem> {
-  return apiPost<CollectionItem>("/collection", body);
+  return authedPost<CollectionItem>("/collection", body);
 }
 
 export function updateCollectionItem(
   itemId: number,
   body: Partial<CollectionItemInput>,
 ): Promise<CollectionItem> {
-  return apiPatch<CollectionItem>(`/collection/${itemId}`, body);
+  return authedPatch<CollectionItem>(`/collection/${itemId}`, body);
 }
 
 export function deleteCollectionItem(itemId: number): Promise<void> {
-  return apiDelete(`/collection/${itemId}`);
+  return authedDelete(`/collection/${itemId}`);
 }
 
 export const COLLECTION_IMPORT_MODES = ["upsert", "append"] as const;
@@ -1151,6 +1332,11 @@ export interface MarketOpportunity {
   last_payload: Record<string, unknown> | null;
   tags: CollectorTag[];
   groups: CollectorGroup[];
+  grading: GradingInfo;
+  wishlist_item_id: number | null;
+  wishlist_priority: string | null;
+  wishlist_target_buy_price_jpy: number | null;
+  wishlist_target_hit: boolean;
 }
 
 export interface MarketOpportunitiesSummary {
@@ -1158,6 +1344,7 @@ export interface MarketOpportunitiesSummary {
   average_score: number;
   highest_score: number;
   by_category: Record<string, number>;
+  wishlist_target_hit_count: number;
 }
 
 export interface MarketOpportunitiesResponse {
@@ -1212,6 +1399,7 @@ export interface MarketReportPortfolioSnapshot {
   pnl_vs_market_floor_pct: number | null;
   items_missing_cost_basis: number;
   items_missing_prices: number;
+  graded_adjusted_value_jpy: number | null;
 }
 
 export interface MarketReportOpportunitySummary {
@@ -1219,6 +1407,7 @@ export interface MarketReportOpportunitySummary {
   highest_score: number | null;
   average_score: number | null;
   by_category: Record<string, number>;
+  wishlist_target_hit_count: number;
 }
 
 export interface MarketReportTopOpportunities {
@@ -1663,75 +1852,412 @@ export function restoreBackup(
 // --- Collector tags / groups ------------------------------------------
 
 export function fetchCollectorTags(): Promise<CollectorTag[]> {
-  return apiGet<CollectorTag[]>("/collector/tags");
+  return authedGet<CollectorTag[]>("/collector/tags");
 }
 
 export function createCollectorTag(body: CollectorTagInput): Promise<CollectorTag> {
-  return apiPost<CollectorTag>("/collector/tags", body);
+  return authedPost<CollectorTag>("/collector/tags", body);
 }
 
 export function updateCollectorTag(
   tagId: number,
   body: Partial<CollectorTagInput>,
 ): Promise<CollectorTag> {
-  return apiPatch<CollectorTag>(`/collector/tags/${tagId}`, body);
+  return authedPatch<CollectorTag>(`/collector/tags/${tagId}`, body);
 }
 
 export function deleteCollectorTag(tagId: number): Promise<void> {
-  return apiDelete(`/collector/tags/${tagId}`);
+  return authedDelete(`/collector/tags/${tagId}`);
 }
 
 export function fetchCollectorGroups(): Promise<CollectorGroup[]> {
-  return apiGet<CollectorGroup[]>("/collector/groups");
+  return authedGet<CollectorGroup[]>("/collector/groups");
 }
 
 export function createCollectorGroup(body: CollectorGroupInput): Promise<CollectorGroup> {
-  return apiPost<CollectorGroup>("/collector/groups", body);
+  return authedPost<CollectorGroup>("/collector/groups", body);
 }
 
 export function updateCollectorGroup(
   groupId: number,
   body: Partial<CollectorGroupInput>,
 ): Promise<CollectorGroup> {
-  return apiPatch<CollectorGroup>(`/collector/groups/${groupId}`, body);
+  return authedPatch<CollectorGroup>(`/collector/groups/${groupId}`, body);
 }
 
 export function deleteCollectorGroup(groupId: number): Promise<void> {
-  return apiDelete(`/collector/groups/${groupId}`);
+  return authedDelete(`/collector/groups/${groupId}`);
 }
 
 export function assignCardTag(cardId: number, tagId: number): Promise<Card> {
-  return apiPost<Card>(`/cards/${cardId}/tags/${tagId}`);
+  return authedPost<Card>(`/cards/${cardId}/tags/${tagId}`);
 }
 
 export function unassignCardTag(cardId: number, tagId: number): Promise<Card> {
-  return apiDeleteReturning<Card>(`/cards/${cardId}/tags/${tagId}`);
+  return authedDeleteReturning<Card>(`/cards/${cardId}/tags/${tagId}`);
 }
 
 export function assignCollectionItemTag(
   itemId: number,
   tagId: number,
 ): Promise<CollectionItem> {
-  return apiPost<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
+  return authedPost<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
 }
 
 export function unassignCollectionItemTag(
   itemId: number,
   tagId: number,
 ): Promise<CollectionItem> {
-  return apiDeleteReturning<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
+  return authedDeleteReturning<CollectionItem>(`/collection/${itemId}/tags/${tagId}`);
 }
 
 export function assignCollectionItemGroup(
   itemId: number,
   groupId: number,
 ): Promise<CollectionItem> {
-  return apiPost<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
+  return authedPost<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
 }
 
 export function unassignCollectionItemGroup(
   itemId: number,
   groupId: number,
 ): Promise<CollectionItem> {
-  return apiDeleteReturning<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
+  return authedDeleteReturning<CollectionItem>(`/collection/${itemId}/groups/${groupId}`);
+}
+
+// --- Grading submissions -------------------------------------------------
+
+export function fetchGradingSubmissions(params?: {
+  status?: string;
+  grading_company?: string;
+  card_code?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<GradingSubmissionList> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.grading_company) query.set("grading_company", params.grading_company);
+  if (params?.card_code) query.set("card_code", params.card_code);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return authedGet<GradingSubmissionList>(`/grading/submissions${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchGradingSubmission(submissionId: number): Promise<GradingSubmission> {
+  return authedGet<GradingSubmission>(`/grading/submissions/${submissionId}`);
+}
+
+export function createGradingSubmission(
+  body: GradingSubmissionInput,
+): Promise<GradingSubmission> {
+  return authedPost<GradingSubmission>("/grading/submissions", body);
+}
+
+export function updateGradingSubmission(
+  submissionId: number,
+  body: Partial<GradingSubmissionInput>,
+): Promise<GradingSubmission> {
+  return authedPatch<GradingSubmission>(`/grading/submissions/${submissionId}`, body);
+}
+
+export function deleteGradingSubmission(submissionId: number): Promise<void> {
+  return authedDelete(`/grading/submissions/${submissionId}`);
+}
+
+export function fetchGradingSummary(): Promise<GradingSummary> {
+  return authedGet<GradingSummary>("/grading/summary");
+}
+
+// --- Wishlist / acquisition tracker --------------------------------------
+
+export const WISHLIST_PRIORITIES = ["low", "medium", "high", "grail"] as const;
+export type WishlistPriority = (typeof WISHLIST_PRIORITIES)[number];
+
+export const WISHLIST_STATUSES = [
+  "watching",
+  "target_hit",
+  "purchased",
+  "passed",
+  "removed",
+] as const;
+export type WishlistStatus = (typeof WISHLIST_STATUSES)[number];
+
+export interface WishlistLatestPrices {
+  yuyutei_sell: number | null;
+  yuyutei_buy: number | null;
+  snkrdunk_floor: number | null;
+}
+
+export interface WishlistItem {
+  id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  priority: string;
+  status: string;
+  target_buy_price_jpy: number | null;
+  max_buy_price_jpy: number | null;
+  preferred_condition: string | null;
+  preferred_source: string | null;
+  desired_quantity: number;
+  acquired_quantity: number;
+  acquired_collection_item_id: number | null;
+  notes: string | null;
+  owned_quantity: number;
+  latest_prices: WishlistLatestPrices;
+  preferred_current_price_jpy: number | null;
+  preferred_current_price_source: string | null;
+  target_hit: boolean;
+  gap_to_target_jpy: number | null;
+  gap_to_target_pct: number | null;
+  tags: CollectorTag[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WishlistItemList {
+  items: WishlistItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface WishlistItemInput {
+  card_id: number;
+  priority?: WishlistPriority;
+  target_buy_price_jpy?: number | null;
+  max_buy_price_jpy?: number | null;
+  preferred_condition?: string | null;
+  preferred_source?: string | null;
+  desired_quantity?: number;
+  notes?: string | null;
+}
+
+export interface WishlistItemUpdateInput {
+  priority?: WishlistPriority;
+  status?: WishlistStatus;
+  target_buy_price_jpy?: number | null;
+  max_buy_price_jpy?: number | null;
+  preferred_condition?: string | null;
+  preferred_source?: string | null;
+  desired_quantity?: number;
+  notes?: string | null;
+}
+
+export interface WishlistMarkPurchasedInput {
+  collection_item_id: number;
+  acquired_quantity?: number;
+}
+
+export interface WishlistConvertToCollectionInput {
+  quantity?: number;
+  condition_label?: string | null;
+  purchase_price_jpy?: number | null;
+  purchase_date?: string | null;
+  purchase_source?: string | null;
+  target_sell_price_jpy?: number | null;
+  status?: string;
+  notes?: string | null;
+}
+
+export interface WishlistConvertToCollectionResponse {
+  wishlist_item: WishlistItem;
+  collection_item: CollectionItem;
+}
+
+export interface WishlistSummary {
+  total_wishlist_items: number;
+  watching: number;
+  target_hit: number;
+  purchased: number;
+  passed: number;
+  removed: number;
+  grail_count: number;
+  high_priority_count: number;
+  total_target_budget_jpy: number;
+  total_max_budget_jpy: number;
+  items_owned_already: number;
+  items_with_target_hit: number;
+}
+
+export function fetchWishlistItems(params?: {
+  status?: string;
+  priority?: string;
+  card_code?: string;
+  set_code?: string;
+  rarity?: string;
+  target_hit?: boolean;
+  owned?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<WishlistItemList> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.priority) query.set("priority", params.priority);
+  if (params?.card_code) query.set("card_code", params.card_code);
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.target_hit !== undefined) query.set("target_hit", String(params.target_hit));
+  if (params?.owned !== undefined) query.set("owned", String(params.owned));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return authedGet<WishlistItemList>(`/wishlist${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchWishlistSummary(): Promise<WishlistSummary> {
+  return authedGet<WishlistSummary>("/wishlist/summary");
+}
+
+export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
+  return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
+}
+
+export function createWishlistItem(body: WishlistItemInput): Promise<WishlistItem> {
+  return authedPost<WishlistItem>("/wishlist", body);
+}
+
+export function updateWishlistItem(
+  wishlistItemId: number,
+  body: WishlistItemUpdateInput,
+): Promise<WishlistItem> {
+  return authedPatch<WishlistItem>(`/wishlist/${wishlistItemId}`, body);
+}
+
+/** Soft delete - the backend sets status=removed rather than physically
+ * deleting the row, and returns the updated item (not 204). */
+export function removeWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
+  const path = `/wishlist/${wishlistItemId}`;
+  return (async () => {
+    const headers = await authedHeaders();
+    const res = await fetch(`${API_URL}${path}`, { method: "DELETE", headers });
+    if (res.status === 401) throw new AuthRequiredError();
+    if (!res.ok) throw await _errorFromResponse(res, path);
+    return res.json() as Promise<WishlistItem>;
+  })();
+}
+
+export function markWishlistItemPurchased(
+  wishlistItemId: number,
+  body: WishlistMarkPurchasedInput,
+): Promise<WishlistItem> {
+  return authedPost<WishlistItem>(`/wishlist/${wishlistItemId}/mark-purchased`, body);
+}
+
+export function convertWishlistItemToCollection(
+  wishlistItemId: number,
+  body: WishlistConvertToCollectionInput,
+): Promise<WishlistConvertToCollectionResponse> {
+  return authedPost<WishlistConvertToCollectionResponse>(
+    `/wishlist/${wishlistItemId}/convert-to-collection`,
+    body,
+  );
+}
+
+export interface WishlistImportRowError {
+  row_number: number;
+  card_code: string | null;
+  error: string;
+}
+
+export interface WishlistImportPreviewRow {
+  row_number: number;
+  card_code: string;
+  matched_card_id: number;
+  action: string;
+  priority: string;
+  status: string;
+}
+
+export interface WishlistImportSummary {
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface WishlistImportResponse {
+  dry_run: boolean;
+  mode: string;
+  summary: WishlistImportSummary;
+  errors: WishlistImportRowError[];
+  preview: WishlistImportPreviewRow[];
+}
+
+/** Downloads /wishlist/export.csv through the Next.js proxy (see
+ * src/app/api/wishlist/export/route.ts) and triggers a browser file
+ * download, using the filename the backend set via Content-Disposition. */
+export async function downloadWishlistCsv(): Promise<void> {
+  const res = await fetch("/api/wishlist/export", {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Export failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) ||
+    "wishlist_export.csv";
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Uploads a wishlist CSV through the Next.js proxy (see
+ * src/app/api/wishlist/import/route.ts). dry_run defaults to true on the
+ * backend if omitted, but callers here always pass it explicitly. */
+export async function importWishlistCsv(
+  file: File,
+  params: { dryRun: boolean; mode: CollectionImportMode },
+): Promise<WishlistImportResponse> {
+  const query = new URLSearchParams({
+    dry_run: String(params.dryRun),
+    mode: params.mode,
+  });
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/wishlist/import?${query.toString()}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const details = await res
+    .json()
+    .catch(
+      () =>
+        null as
+          | (Partial<WishlistImportResponse> & { error?: string; detail?: string })
+          | null,
+    );
+
+  if (!res.ok || !details) {
+    throw new Error(
+      details?.error || details?.detail || `Import failed with status ${res.status}`,
+    );
+  }
+
+  return details as WishlistImportResponse;
 }

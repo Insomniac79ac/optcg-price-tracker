@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+
+import { auth } from "@/lib/auth";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Defaults to the docker-compose service DNS name so this route works from
@@ -7,10 +9,12 @@ import { NextRequest, NextResponse } from "next/server";
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 30_000;
 
-export async function GET(request: NextRequest) {
-  const adminToken = request.headers.get("x-admin-token");
-  const headers: Record<string, string> = {};
-  if (adminToken) headers["X-Admin-Token"] = adminToken;
+export async function GET() {
+  const session = await auth();
+  if (!session?.apiToken) {
+    return NextResponse.json({ error: "Sign-in required" }, { status: 401 });
+  }
+  const headers: Record<string, string> = { Authorization: `Bearer ${session.apiToken}` };
 
   const backendUrl = `${API_INTERNAL_URL}/collection/export.csv`;
 

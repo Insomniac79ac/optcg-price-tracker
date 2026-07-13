@@ -36,6 +36,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Import a collection CSV file.")
     parser.add_argument("csv_path", help="Path to the collection CSV file")
     parser.add_argument(
+        "--user-id",
+        type=int,
+        required=True,
+        help="Id of the user whose collection this import writes into",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview the import without writing to the database",
@@ -53,7 +59,9 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        result = import_collection_csv(db, csv_text, dry_run=args.dry_run, mode=args.mode)
+        result = import_collection_csv(
+            db, csv_text, dry_run=args.dry_run, mode=args.mode, user_id=args.user_id
+        )
     finally:
         db.close()
 

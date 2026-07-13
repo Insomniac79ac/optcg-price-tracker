@@ -11,9 +11,10 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, MarketSignalEvent
+from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, MarketSignalEvent, WishlistItem
 from app.schemas import OpportunitiesResponseOut, OpportunitiesSummaryOut, OpportunityOut
 from app.services.collector import get_groups_for_cards, get_tags_for_cards
+from app.services.grading import build_grading_info, get_submissions_for_cards, latest_submission
 
 # Dismissed/resolved events are noise for a "what should I look at" ranking -
 # a user already acted on them or they no longer apply.
@@ -61,6 +62,7 @@ SIGNAL_TYPE_MODIFIERS: dict[str, int] = {
     "owned_below_cost_basis": 15,
     "missing_recent_price": -10,
     "stale_mapping_price": -5,
+    "wishlist_target_hit": 30,
 }
 
 SIGNAL_TYPE_REASONS: dict[str, str] = {
@@ -76,7 +78,14 @@ SIGNAL_TYPE_REASONS: dict[str, str] = {
     "owned_below_cost_basis": "owned card below cost basis",
     "missing_recent_price": "missing recent price data",
     "stale_mapping_price": "stale mapping price data",
+    "wishlist_target_hit": "wishlist target hit",
 }
+
+# Applied to ANY opportunity for a wishlisted card, not just wishlist_target_hit
+# signals - a grail/high-priority card is worth surfacing more prominently
+# across all its opportunities (e.g. a plain buy-opportunity signal on a
+# grail card), not only when its specific target price is hit.
+WISHLIST_PRIORITY_MODIFIERS: dict[str, int] = {"grail": 20, "high": 10}
 
 
 def _category_for(event: MarketSignalEvent, owned_quantity: int) -> str:
@@ -129,9 +138,16 @@ class _ScoredEvent:
     score: int
     category: str
     reasons: list[str]
+    wishlist_item: WishlistItem | None = None
+    wishlist_target_hit: bool = False
 
 
-def _score_event(event: MarketSignalEvent, card: Card | None, owned_quantity: int) -> _ScoredEvent:
+def _score_event(
+    event: MarketSignalEvent,
+    card: Card | None,
+    owned_quantity: int,
+    wishlist_item: WishlistItem | None = None,
+) -> _ScoredEvent:
     action = event.suggested_action or "none"
     reasons: list[str] = []
 
@@ -142,6 +158,12 @@ def _score_event(event: MarketSignalEvent, card: Card | None, owned_quantity: in
     if signal_modifier:
         score += signal_modifier
         reasons.append(SIGNAL_TYPE_REASONS.get(event.signal_type, event.signal_type))
+
+    if wishlist_item is not None:
+        wishlist_modifier = WISHLIST_PRIORITY_MODIFIERS.get(wishlist_item.priority, 0)
+        if wishlist_modifier:
+            score += wishlist_modifier
+            reasons.append(f"wishlist priority: {wishlist_item.priority}")
 
     if owned_quantity > 0:
         score += 10
@@ -181,6 +203,7 @@ def _score_event(event: MarketSignalEvent, card: Card | None, owned_quantity: in
         score=score,
         category=category,
         reasons=reasons,
+        wishlist_item=wishlist_item,
     )
 
 
@@ -188,15 +211,21 @@ def _to_out(
     scored: _ScoredEvent,
     tags_by_card: dict[int, list[CollectorTag]],
     groups_by_card: dict[int, list[CollectorGroup]],
+    grading_by_card: dict[int, list],
 ) -> OpportunityOut:
     event = scored.event
     card = scored.card
-    # Tags/groups are a collector-organization concept over what's owned -
-    # deliberately left empty for unowned cards rather than showing
+    # Tags/groups/grading are a collector-organization concept over what's
+    # owned - deliberately left empty for unowned cards rather than showing
     # card-level tags regardless of ownership.
     owned = scored.owned_quantity > 0
     tags = tags_by_card.get(event.card_id, []) if owned and event.card_id is not None else []
     groups = groups_by_card.get(event.card_id, []) if owned and event.card_id is not None else []
+    grading = (
+        build_grading_info(latest_submission(grading_by_card, event.card_id))
+        if owned and event.card_id is not None
+        else build_grading_info(None)
+    )
     return OpportunityOut(
         score=scored.score,
         category=scored.category,
@@ -222,7 +251,35 @@ def _to_out(
         last_payload=event.last_payload_json,
         tags=tags,
         groups=groups,
+        grading=grading,
+        wishlist_item_id=scored.wishlist_item.id if scored.wishlist_item is not None else None,
+        wishlist_priority=scored.wishlist_item.priority if scored.wishlist_item is not None else None,
+        wishlist_target_buy_price_jpy=(
+            scored.wishlist_item.target_buy_price_jpy if scored.wishlist_item is not None else None
+        ),
+        wishlist_target_hit=scored.wishlist_target_hit,
     )
+
+
+_WISHLIST_PRIORITY_RANK = {"grail": 3, "high": 2, "medium": 1, "low": 0}
+
+
+def _best_wishlist_item_by_card(wishlist_items: list[WishlistItem]) -> dict[int, WishlistItem]:
+    """Picks one representative wishlist item per card (highest priority,
+    ties broken by lowest id) - a card can have several non-removed wishlist
+    entries (different conditions/sources, or across different people), but
+    the opportunities view surfaces just one set of wishlist metadata per
+    card, same simplification as market_signals.py's wishlist_target_hit
+    signal."""
+    best: dict[int, WishlistItem] = {}
+    for item in wishlist_items:
+        current = best.get(item.card_id)
+        if current is None or (
+            _WISHLIST_PRIORITY_RANK.get(item.priority, 0)
+            > _WISHLIST_PRIORITY_RANK.get(current.priority, 0)
+        ):
+            best[item.card_id] = item
+    return best
 
 
 def _empty_response() -> OpportunitiesResponseOut:
@@ -269,6 +326,7 @@ def get_opportunities(
     card_ids = {e.card_id for e in events if e.card_id is not None}
     cards_by_id: dict[int, Card] = {}
     owned_quantities: dict[int, int] = {}
+    wishlist_by_card: dict[int, WishlistItem] = {}
     if card_ids:
         cards_by_id = {
             c.id: c for c in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
@@ -279,15 +337,34 @@ def get_opportunities(
             .group_by(CollectionItem.card_id)
         ).all()
         owned_quantities = {cid: int(qty or 0) for cid, qty in rows}
+        wishlist_by_card = _best_wishlist_item_by_card(
+            db.scalars(
+                select(WishlistItem).where(
+                    WishlistItem.card_id.in_(card_ids), WishlistItem.status != "removed"
+                )
+            ).all()
+        )
+
+    # Not scoped to a single user - this admin-facing ranking view surfaces
+    # whichever wishlist item(s) exist for a card across everyone using this
+    # deployment, same as owned_quantity's cross-user aggregate above.
+    wishlist_target_hit_card_ids = {
+        e.card_id for e in events if e.signal_type == "wishlist_target_hit" and e.card_id is not None
+    }
 
     owned_card_ids = {cid for cid, qty in owned_quantities.items() if qty > 0}
     tags_by_card = get_tags_for_cards(db, owned_card_ids)
     groups_by_card = get_groups_for_cards(db, owned_card_ids)
+    grading_by_card = get_submissions_for_cards(db, owned_card_ids)
 
     scored = [
-        _score_event(e, cards_by_id.get(e.card_id), owned_quantities.get(e.card_id, 0))
+        _score_event(
+            e, cards_by_id.get(e.card_id), owned_quantities.get(e.card_id, 0), wishlist_by_card.get(e.card_id)
+        )
         for e in events
     ]
+    for s in scored:
+        s.wishlist_target_hit = s.event.card_id in wishlist_target_hit_card_ids
 
     if owned is not None:
         scored = [s for s in scored if (s.owned_quantity > 0) == owned]
@@ -310,16 +387,20 @@ def get_opportunities(
         else 0
     )
     highest_score = max((s.score for s in scored), default=0)
+    wishlist_target_hit_count = sum(1 for s in scored if s.wishlist_target_hit)
 
     summary = OpportunitiesSummaryOut(
         total_opportunities=total_opportunities,
         average_score=average_score,
         highest_score=highest_score,
         by_category=by_category,
+        wishlist_target_hit_count=wishlist_target_hit_count,
     )
 
     page = scored[offset : offset + limit]
     return OpportunitiesResponseOut(
         summary=summary,
-        opportunities=[_to_out(s, tags_by_card, groups_by_card) for s in page],
+        opportunities=[
+            _to_out(s, tags_by_card, groups_by_card, grading_by_card) for s in page
+        ],
     )

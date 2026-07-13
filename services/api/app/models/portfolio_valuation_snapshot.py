@@ -27,3 +27,10 @@ class PortfolioValuationSnapshot(Base):
     items_missing_snkrdunk_floor: Mapped[int] = mapped_column(Integer)
     items_missing_cost_basis: Mapped[int] = mapped_column(Integer)
     cards_above_target_sell: Mapped[int] = mapped_column(Integer)
+    graded_adjusted_value_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pnl_vs_graded_adjusted_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    items_using_graded_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    items_using_raw_fallback: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    items_missing_graded_adjusted_value: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )

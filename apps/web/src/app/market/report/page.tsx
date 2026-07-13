@@ -228,6 +228,10 @@ function ReportView({ report }: { report: MarketIntelligenceReport }) {
           <StatCard label="Drops" value={reportNumber(cat.drop ?? 0)} />
           <StatCard label="Data quality" value={reportNumber(cat.data_quality ?? 0)} />
           <StatCard label="Owned" value={reportNumber(cat.owned ?? 0)} />
+          <StatCard
+            label="Wishlist target hit"
+            value={reportNumber(report.opportunity_summary.wishlist_target_hit_count)}
+          />
         </div>
       </section>
 
@@ -242,6 +246,7 @@ function ReportView({ report }: { report: MarketIntelligenceReport }) {
           <StatCard label="P/L vs market floor %" value={reportPct(report.portfolio_snapshot.pnl_vs_market_floor_pct)} />
           <StatCard label="Items missing cost basis" value={reportNumber(report.portfolio_snapshot.items_missing_cost_basis)} />
           <StatCard label="Items missing prices" value={reportNumber(report.portfolio_snapshot.items_missing_prices)} />
+          <StatCard label="Graded-adjusted value" value={reportJpy(report.portfolio_snapshot.graded_adjusted_value_jpy)} />
         </div>
       </section>
 

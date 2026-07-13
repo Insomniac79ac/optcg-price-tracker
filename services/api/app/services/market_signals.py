@@ -16,13 +16,19 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping
+from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping, WishlistItem
 from app.schemas import (
     MarketSignalLatestPricesOut,
     MarketSignalMetricsOut,
     MarketSignalOut,
     MarketSignalsResponseOut,
     MarketSignalsSummaryOut,
+)
+from app.services.wishlist import (
+    ACTIVE_STATUSES as WISHLIST_ACTIVE_STATUSES,
+    compute_gap_to_target,
+    compute_target_hit,
+    resolve_preferred_current_price,
 )
 
 SIGNAL_TYPES = (
@@ -38,6 +44,7 @@ SIGNAL_TYPES = (
     "owned_below_cost_basis",
     "missing_recent_price",
     "stale_mapping_price",
+    "wishlist_target_hit",
 )
 
 OWNED_SIGNAL_TYPES = ("owned_above_target_sell", "owned_below_cost_basis")
@@ -477,6 +484,51 @@ def _data_quality_signals(
     return signals
 
 
+def _wishlist_signals(
+    card: Card,
+    wishlist_items: list[WishlistItem],
+    latest_trio: dict[str, int | None],
+    owned_quantity: int,
+) -> list[_CandidateSignal]:
+    """At most one wishlist_target_hit signal per card - this system-wide
+    scan (not scoped to a single user, matching owned_* signals) can see
+    several wishlist items across different people/conditions/sources for
+    the same card; the first (lowest id) one whose target is currently hit
+    represents the card-level signal, mirroring how _data_quality_signals
+    aggregates multiple sources into one message per card."""
+    for item in wishlist_items:
+        if item.status not in WISHLIST_ACTIVE_STATUSES or item.target_buy_price_jpy is None:
+            continue
+        current_price_jpy, _source = resolve_preferred_current_price(
+            item.preferred_source,
+            latest_trio["yuyutei_sell"],
+            latest_trio["yuyutei_buy"],
+            latest_trio["snkrdunk_floor"],
+        )
+        if not compute_target_hit(item.target_buy_price_jpy, current_price_jpy):
+            continue
+
+        gap_jpy, gap_pct = compute_gap_to_target(current_price_jpy, item.target_buy_price_jpy)
+        return [
+            _CandidateSignal(
+                signal_type="wishlist_target_hit",
+                severity="info",
+                source=None,
+                card=card,
+                owned_quantity=owned_quantity,
+                **latest_trio,
+                gap_jpy=gap_jpy,
+                gap_pct=gap_pct,
+                message=(
+                    f"Wishlist target hit: {card.card_code} is at or below your target buy price."
+                ),
+                suggested_action="review_buy_opportunity",
+            )
+        ]
+
+    return []
+
+
 def _empty_response() -> MarketSignalsResponseOut:
     return MarketSignalsResponseOut(
         summary=MarketSignalsSummaryOut(
@@ -539,6 +591,13 @@ def get_market_signals(
     for item in items:
         items_by_card[item.card_id].append(item)
 
+    wishlist_items = db.scalars(
+        select(WishlistItem).where(WishlistItem.card_id.in_(card_ids)).order_by(WishlistItem.id)
+    ).all()
+    wishlist_items_by_card: dict[int, list[WishlistItem]] = defaultdict(list)
+    for wi in wishlist_items:
+        wishlist_items_by_card[wi.card_id].append(wi)
+
     now_naive = _naive(datetime.now(timezone.utc))
 
     all_signals: list[_CandidateSignal] = []
@@ -569,6 +628,9 @@ def get_market_signals(
                 owned_quantity,
                 now_naive,
             )
+        )
+        all_signals.extend(
+            _wishlist_signals(card, wishlist_items_by_card.get(card.id, []), latest_trio, owned_quantity)
         )
 
     filtered = [

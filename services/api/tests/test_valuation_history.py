@@ -19,6 +19,11 @@ def make_snapshot(db_session, **overrides) -> PortfolioValuationSnapshot:
         items_missing_snkrdunk_floor=1,
         items_missing_cost_basis=0,
         cards_above_target_sell=1,
+        graded_adjusted_value_jpy=1300,
+        pnl_vs_graded_adjusted_jpy=300,
+        items_using_graded_value=1,
+        items_using_raw_fallback=0,
+        items_missing_graded_adjusted_value=0,
     )
     fields.update(overrides)
     snapshot = PortfolioValuationSnapshot(**fields)
@@ -56,6 +61,28 @@ def test_history_returns_snapshots(client, db_session):
     assert body[0]["items_missing_snkrdunk_floor"] == 1
     assert body[0]["cards_above_target_sell"] == 1
     assert "created_at" in body[0]
+
+
+def test_history_returns_graded_adjusted_fields(client, db_session):
+    snapshot = make_snapshot(
+        db_session,
+        graded_adjusted_value_jpy=1300,
+        pnl_vs_graded_adjusted_jpy=300,
+        items_using_graded_value=1,
+        items_using_raw_fallback=0,
+        items_missing_graded_adjusted_value=0,
+    )
+
+    response = client.get("/collection/valuation/history")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["id"] == snapshot.id
+    assert body[0]["graded_adjusted_value_jpy"] == 1300
+    assert body[0]["pnl_vs_graded_adjusted_jpy"] == 300
+    assert body[0]["items_using_graded_value"] == 1
+    assert body[0]["items_using_raw_fallback"] == 0
+    assert body[0]["items_missing_graded_adjusted_value"] == 0
 
 
 def test_history_days_filter_excludes_old_snapshots(client, db_session):

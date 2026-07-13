@@ -25,6 +25,7 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-local-dev-admin-token}
+      API_JWT_SECRET: ${API_JWT_SECRET:-local-dev-api-jwt-secret}
       DATABASE_URL: postgresql+psycopg://opcg:opcg@postgres:5432/opcg
       REDIS_URL: redis://redis:6379/0
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -87,6 +88,11 @@ services:
       PORT: 3000
       API_INTERNAL_URL: http://api:8000
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      API_JWT_SECRET: ${API_JWT_SECRET:-local-dev-api-jwt-secret}
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-auth-secret}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
     depends_on:
       - api
 

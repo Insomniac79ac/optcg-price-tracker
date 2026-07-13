@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -8,6 +9,7 @@ import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { CollectorTagsGroupsManager } from "@/components/CollectorTagsGroupsManager";
 import { FormField } from "@/components/FormField";
+import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PortfolioInsightCards } from "@/components/PortfolioInsightCards";
 import {
   type HistoryTimeframe,
@@ -25,10 +27,12 @@ import {
   type CollectionSummary,
   type CollectorGroup,
   type CollectorTag,
+  type GradedAdjustedValuation,
   type PortfolioValuation,
   type PortfolioValuationItem,
   type PortfolioValuationSnapshot,
   type SnkrdunkFloorSnapshot,
+  type ValuationMode,
   type YuyuteiPriceSnapshot,
   assignCollectionItemGroup,
   assignCollectionItemTag,
@@ -118,6 +122,7 @@ export default function CollectionPage() {
   const [valuationStatus, setValuationStatus] = useState<
     "loading" | "error" | "ready"
   >("loading");
+  const [valuationMode, setValuationMode] = useState<ValuationMode>("raw_market");
 
   const [historyTimeframe, setHistoryTimeframe] =
     useState<HistoryTimeframe>("30");
@@ -195,13 +200,18 @@ export default function CollectionPage() {
       .catch(() => setSummary(null));
   }
 
-  function refreshValuation() {
-    fetchCollectionValuation()
+  function refreshValuation(mode: ValuationMode = valuationMode) {
+    fetchCollectionValuation(mode)
       .then((data) => {
         setValuation(data);
         setValuationStatus("ready");
       })
       .catch(() => setValuationStatus("error"));
+  }
+
+  function handleValuationModeChange(mode: ValuationMode) {
+    setValuationMode(mode);
+    refreshValuation(mode);
   }
 
   function refreshHistory(days: HistoryTimeframe) {
@@ -236,6 +246,7 @@ export default function CollectionPage() {
   useEffect(() => {
     refreshSummary();
     refreshValuation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -557,9 +568,23 @@ export default function CollectionPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-6 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">
-            Collection
-          </h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">
+              Collection
+            </h1>
+            <Link
+              href="/grading"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Grading →
+            </Link>
+            <Link
+              href="/wishlist"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Wishlist →
+            </Link>
+          </div>
           {listStatus === "ready" && (
             <span className="text-sm text-neutral-500">
               {total} item{total === 1 ? "" : "s"}
@@ -743,6 +768,32 @@ export default function CollectionPage() {
           />
         </div>
 
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-xs uppercase tracking-wide text-neutral-500">
+            Valuation mode
+          </span>
+          <div className="flex gap-1">
+            {(
+              [
+                { value: "raw_market", label: "Raw market" },
+                { value: "graded_adjusted", label: "Graded adjusted" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleValuationModeChange(opt.value)}
+                className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                  valuationMode === opt.value
+                    ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
+                    : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {valuationStatus === "loading" && (
           <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-center text-xs text-neutral-500">
             Loading valuation…
@@ -801,6 +852,31 @@ export default function CollectionPage() {
                 value={valuation.summary.items_missing_cost_basis}
               />
             </div>
+            {valuationMode === "graded_adjusted" && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <StatCard
+                  label="Graded-adjusted value"
+                  value={formatJpy(valuation.summary.graded_adjusted_value_jpy)}
+                />
+                <PnlStatCard
+                  label="P/L vs graded-adjusted"
+                  jpy={valuation.summary.pnl_vs_graded_adjusted_jpy}
+                  pct={valuation.summary.pnl_vs_graded_adjusted_pct}
+                />
+                <StatCard
+                  label="Items using graded value"
+                  value={valuation.summary.items_using_graded_value}
+                />
+                <StatCard
+                  label="Items using raw fallback"
+                  value={valuation.summary.items_using_raw_fallback}
+                />
+                <StatCard
+                  label="Items missing graded-adjusted value"
+                  value={valuation.summary.items_missing_graded_adjusted_value}
+                />
+              </div>
+            )}
             <PortfolioInsightCards insights={valuation.summary.insights} />
           </div>
         )}
@@ -1127,8 +1203,18 @@ export default function CollectionPage() {
                   <th className="px-2 py-1.5 font-medium">P/L vs floor</th>
                   <th className="px-2 py-1.5 font-medium">Target sell</th>
                   <th className="px-2 py-1.5 font-medium">Flags</th>
+                  {valuationMode === "graded_adjusted" && (
+                    <>
+                      <th className="px-2 py-1.5 font-medium">Graded-adj. value</th>
+                      <th className="px-2 py-1.5 font-medium">Graded-adj. basis</th>
+                      <th className="px-2 py-1.5 font-medium">Final grade</th>
+                      <th className="px-2 py-1.5 font-medium">Grading company</th>
+                      <th className="px-2 py-1.5 font-medium">P/L vs graded-adj.</th>
+                    </>
+                  )}
                   <th className="px-2 py-1.5 font-medium">Tags</th>
                   <th className="px-2 py-1.5 font-medium">Groups</th>
+                  <th className="px-2 py-1.5 font-medium">Grading</th>
                   <th className="px-2 py-1.5 font-medium">Status</th>
                   <th className="px-2 py-1.5 font-medium">Actions</th>
                 </tr>
@@ -1217,6 +1303,12 @@ export default function CollectionPage() {
                           <span className="text-neutral-600">—</span>
                         )}
                       </td>
+                      {valuationMode === "graded_adjusted" && (
+                        <GradedAdjustedCells
+                          gradedAdjusted={v?.graded_adjusted ?? null}
+                          latestGradingStatus={item.latest_grading_status}
+                        />
+                      )}
                       <td className="px-2 py-1.5">
                         <CollectionItemTagsCell
                           assigned={item.tags}
@@ -1234,10 +1326,17 @@ export default function CollectionPage() {
                         />
                       </td>
                       <td className="px-2 py-1.5">
+                        {item.latest_grading_status ? (
+                          <GradingStatusBadge status={item.latest_grading_status} />
+                        ) : (
+                          <span className="text-neutral-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
                         <CollectionStatusBadge status={item.status} />
                       </td>
                       <td className="px-2 py-1.5">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => startEdit(item)}
                             className="text-xs font-medium text-sky-400 hover:text-sky-300"
@@ -1253,6 +1352,12 @@ export default function CollectionPage() {
                               ? "Deleting…"
                               : "Delete"}
                           </button>
+                          <Link
+                            href={`/grading?item_id=${item.id}`}
+                            className="text-xs font-medium text-violet-400 hover:text-violet-300"
+                          >
+                            Send to grading
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -1444,5 +1549,100 @@ function FlagsCell({
         </span>
       ))}
     </div>
+  );
+}
+
+function GradedAdjustedBasisLabel({
+  gradedAdjusted,
+}: {
+  gradedAdjusted: GradedAdjustedValuation;
+}) {
+  if (gradedAdjusted.basis === "graded_value") {
+    return (
+      <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300 ring-1 ring-inset ring-violet-500/30">
+        Graded value
+      </span>
+    );
+  }
+  if (gradedAdjusted.raw_fallback_basis) {
+    const label =
+      gradedAdjusted.raw_fallback_basis === "snkrdunk_floor"
+        ? "SNKRDUNK floor"
+        : "Yuyu-Tei sell";
+    return (
+      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-500/30">
+        Raw fallback ({label})
+      </span>
+    );
+  }
+  return <span className="italic text-neutral-600">no graded value</span>;
+}
+
+/** Five <td>s covering the graded-adjusted breakdown for one row - only
+ * rendered when the graded_adjusted valuation mode is selected, and never
+ * substitutes for the raw retail/liquidation/floor cells (which stay put
+ * regardless of mode). `gradedAdjusted` is null when the item is missing
+ * from the currently loaded valuation response entirely (e.g. mid-refresh),
+ * distinct from a loaded-but-empty graded_adjusted breakdown. */
+function GradedAdjustedCells({
+  gradedAdjusted,
+  latestGradingStatus,
+}: {
+  gradedAdjusted: GradedAdjustedValuation | null;
+  latestGradingStatus: string | null;
+}) {
+  if (!gradedAdjusted) {
+    return (
+      <>
+        <td className="px-2 py-1.5 text-neutral-600">—</td>
+        <td className="px-2 py-1.5 text-neutral-600">—</td>
+        <td className="px-2 py-1.5 text-neutral-600">—</td>
+        <td className="px-2 py-1.5 text-neutral-600">—</td>
+        <td className="px-2 py-1.5 text-neutral-600">—</td>
+      </>
+    );
+  }
+
+  const notReceivedYet =
+    gradedAdjusted.basis !== "graded_value" &&
+    latestGradingStatus !== null &&
+    latestGradingStatus !== "received";
+
+  return (
+    <>
+      <td className="px-2 py-1.5">
+        {gradedAdjusted.value_jpy === null ? (
+          <span className="italic text-neutral-600">no graded value</span>
+        ) : (
+          <span className="text-neutral-200">{formatJpy(gradedAdjusted.value_jpy)}</span>
+        )}
+      </td>
+      <td className="px-2 py-1.5">
+        <GradedAdjustedBasisLabel gradedAdjusted={gradedAdjusted} />
+        {notReceivedYet && (
+          <div className="mt-0.5 text-[10px] italic text-neutral-600">not received</div>
+        )}
+      </td>
+      <td className="px-2 py-1.5 text-neutral-300">
+        {gradedAdjusted.final_grade ?? "—"}
+      </td>
+      <td className="px-2 py-1.5 text-neutral-300">
+        {gradedAdjusted.grading_company ?? "—"}
+      </td>
+      <td className="px-2 py-1.5">
+        {gradedAdjusted.value_jpy === null ? (
+          <span className="italic text-neutral-600">no graded value</span>
+        ) : gradedAdjusted.pnl_jpy === null ? (
+          <span className="italic text-neutral-600">missing cost basis</span>
+        ) : (
+          <PnlCell
+            pnlJpy={gradedAdjusted.pnl_jpy}
+            pnlPct={gradedAdjusted.pnl_pct}
+            missingPrice={false}
+            missingCostBasis={false}
+          />
+        )}
+      </td>
+    </>
   );
 }

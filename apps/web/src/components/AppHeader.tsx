@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 export function AppHeader() {
   return (
@@ -10,12 +13,18 @@ export function AppHeader() {
         >
           OPTCG Price Tracker
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-neutral-400">
+        <nav className="flex flex-1 items-center gap-4 text-sm text-neutral-400">
           <Link href="/dashboard" className="hover:text-neutral-100">
             Dashboard
           </Link>
           <Link href="/collection" className="hover:text-neutral-100">
             Collection
+          </Link>
+          <Link href="/wishlist" className="hover:text-neutral-100">
+            Wishlist
+          </Link>
+          <Link href="/grading" className="hover:text-neutral-100">
+            Grading
           </Link>
           <Link href="/market/signals" className="hover:text-neutral-100">
             Market signals
@@ -60,7 +69,43 @@ export function AppHeader() {
             Backup
           </Link>
         </nav>
+        <AuthControl />
       </div>
     </header>
+  );
+}
+
+function AuthControl() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return <span className="text-xs text-neutral-600">…</span>;
+  }
+
+  if (!session) {
+    return (
+      <button
+        type="button"
+        onClick={() => signIn("google", { callbackUrl: "/collection" })}
+        className="rounded bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-white"
+      >
+        Sign in with Google
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-neutral-400">
+      <span className="max-w-[10rem] truncate" title={session.user?.email ?? undefined}>
+        {session.user?.name || session.user?.email}
+      </span>
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/dashboard" })}
+        className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100"
+      >
+        Sign out
+      </button>
+    </div>
   );
 }

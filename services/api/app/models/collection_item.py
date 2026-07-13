@@ -27,6 +27,9 @@ class CollectionItem(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     card_id: Mapped[int] = mapped_column(
         ForeignKey("cards.id", ondelete="CASCADE"), index=True
     )

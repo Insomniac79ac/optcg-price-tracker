@@ -126,6 +126,7 @@ def build_report_payload(db: Session) -> MarketReportPayloadOut:
         highest_score=highest_score,
         average_score=average_score,
         by_category=dict(opp_summary.by_category),
+        wishlist_target_hit_count=opp_summary.wishlist_target_hit_count,
     )
 
     def _first_of_category(category: str) -> OpportunityOut | None:
@@ -141,7 +142,7 @@ def build_report_payload(db: Session) -> MarketReportPayloadOut:
         top_data_quality=_first_of_category("data_quality"),
     )
 
-    valuation = get_portfolio_valuation(db)
+    valuation = get_portfolio_valuation(db, valuation_mode="graded_adjusted")
     portfolio_summary = valuation.summary
     # "Missing prices" here means no price data at all from any source -
     # distinct from the per-source missing_yuyutei_sell/buy/snkrdunk_floor
@@ -163,6 +164,7 @@ def build_report_payload(db: Session) -> MarketReportPayloadOut:
         pnl_vs_market_floor_pct=portfolio_summary.pnl_vs_market_floor_pct,
         items_missing_cost_basis=portfolio_summary.items_missing_cost_basis,
         items_missing_prices=items_missing_prices,
+        graded_adjusted_value_jpy=portfolio_summary.graded_adjusted_value_jpy,
     )
 
     collection_quality = _collection_quality(db)

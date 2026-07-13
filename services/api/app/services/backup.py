@@ -16,6 +16,7 @@ from app.models import (
     CollectionItemTag,
     CollectorGroup,
     CollectorTag,
+    GradingSubmission,
     MarketIntelligenceReport,
     MarketReportDigestSend,
     MarketSignalEvent,
@@ -26,13 +27,18 @@ from app.models import (
     RawSnapshot,
     Source,
     SourceCardMapping,
+    User,
+    WishlistItem,
 )
 
-# Bumped from 1 -> 2 when collector tags/groups tables were added as
-# required tables - a version-1 backup predates them entirely, so it's
-# clearer to reject it with an explicit version mismatch than a generic
+# Bumped 1 -> 2 when collector tags/groups tables were added, 2 -> 3 when
+# grading_submissions was added, 3 -> 4 when users was added (and
+# collector_tags/collector_groups/collection_items became user-scoped), and
+# 4 -> 5 when wishlist_items was added - these all became required tables,
+# so a backup from before any of these changes predates them entirely.
+# Rejecting with an explicit version mismatch is clearer than a generic
 # "missing required table" error.
-BACKUP_VERSION = 2
+BACKUP_VERSION = 5
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -40,6 +46,7 @@ APP_NAME = "opcg-price-tracker"
 # new backed-up table means adding one entry here, in a position after
 # whatever it references.
 MODEL_BY_TABLE: dict[str, type] = {
+    "users": User,
     "cards": Card,
     "sources": Source,
     "collector_tags": CollectorTag,
@@ -50,9 +57,11 @@ MODEL_BY_TABLE: dict[str, type] = {
     "raw_snapshots": RawSnapshot,
     "source_card_mappings": SourceCardMapping,
     "collection_items": CollectionItem,
+    "wishlist_items": WishlistItem,
     "card_tags": CardTag,
     "collection_item_tags": CollectionItemTag,
     "collection_item_groups": CollectionItemGroup,
+    "grading_submissions": GradingSubmission,
     "price_observations": PriceObservation,
     "market_intelligence_reports": MarketIntelligenceReport,
     "market_signal_events": MarketSignalEvent,
@@ -63,6 +72,7 @@ MODEL_BY_TABLE: dict[str, type] = {
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
 
 REQUIRED_TABLES: tuple[str, ...] = (
+    "users",
     "cards",
     "sources",
     "source_card_mappings",
@@ -78,6 +88,8 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "card_tags",
     "collection_item_tags",
     "collection_item_groups",
+    "grading_submissions",
+    "wishlist_items",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (

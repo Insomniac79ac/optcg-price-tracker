@@ -37,6 +37,11 @@ def validate_config() -> ConfigCheckResult:
             "ADMIN_TOKEN is required when APP_ENV/ENVIRONMENT is 'production'."
         )
 
+    if is_production_environment() and not settings.API_JWT_SECRET:
+        errors.append(
+            "API_JWT_SECRET is required when APP_ENV/ENVIRONMENT is 'production'."
+        )
+
     return ConfigCheckResult(ok=not errors, app_env=get_app_env(), errors=errors)
 
 

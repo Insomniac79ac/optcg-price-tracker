@@ -13,6 +13,7 @@ from app.models import (
     PortfolioValuationSnapshot,
     Source,
     SourceCardMapping,
+    WishlistItem,
 )
 from app.services.backup import BACKUP_VERSION, OPTIONAL_TABLES, REQUIRED_TABLES, export_backup
 from app.services.market_report import generate_market_report
@@ -57,7 +58,7 @@ def make_mapping(db_session, card: Card, source: Source, **overrides) -> SourceC
 
 
 def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -227,6 +228,8 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     report = generate_market_report(db_session)
     make_digest_send(db_session, report.id)
     make_workflow_run(db_session, market_report_id=report.id)
+    db_session.add(WishlistItem(user_id=1, card_id=card.id))
+    db_session.commit()
 
     response = client.get("/admin/backup/export")
 
@@ -240,6 +243,21 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     assert len(body["tables"]["market_intelligence_reports"]) == 1
     assert len(body["tables"]["market_report_digest_sends"]) == 1
     assert len(body["tables"]["market_workflow_runs"]) == 1
+    assert len(body["tables"]["wishlist_items"]) == 1
+
+
+def test_backup_export_includes_wishlist_items(client, db_session):
+    card = make_card(db_session)
+    db_session.add(WishlistItem(user_id=1, card_id=card.id, priority="grail"))
+    db_session.commit()
+
+    response = client.get("/admin/backup/export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "wishlist_items" in body["tables"]
+    assert len(body["tables"]["wishlist_items"]) == 1
+    assert body["tables"]["wishlist_items"][0]["priority"] == "grail"
 
 
 def test_export_requires_admin_token():

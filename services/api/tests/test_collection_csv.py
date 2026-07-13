@@ -24,7 +24,7 @@ def make_card(db_session, **overrides) -> Card:
 
 
 def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -323,7 +323,9 @@ def test_cli_export_works(db_session, tmp_path, monkeypatch):
 
     monkeypatch.setattr(export_cli, "SessionLocal", lambda: db_session)
     output_path = tmp_path / "out" / "collection.csv"
-    monkeypatch.setattr(sys, "argv", ["export_collection_csv", "--output", str(output_path)])
+    monkeypatch.setattr(
+        sys, "argv", ["export_collection_csv", "--output", str(output_path), "--user-id", "1"]
+    )
 
     export_cli.main()
 
@@ -343,7 +345,9 @@ def test_cli_import_dry_run_works(db_session, tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr(import_cli, "SessionLocal", lambda: db_session)
     monkeypatch.setattr(
-        sys, "argv", ["import_collection_csv", str(csv_path), "--dry-run", "--mode", "append"]
+        sys,
+        "argv",
+        ["import_collection_csv", str(csv_path), "--dry-run", "--mode", "append", "--user-id", "1"],
     )
 
     import_cli.main()
@@ -362,8 +366,8 @@ def test_cli_import_dry_run_works(db_session, tmp_path, monkeypatch, capsys):
 def test_export_includes_tags_and_groups_columns(client, db_session):
     card = make_card(db_session, card_code="OP01-001")
     item = make_item(db_session, card)
-    tag = CollectorTag(name="Foils", slug="foils")
-    group = CollectorGroup(name="Manga wants", slug="manga-wants")
+    tag = CollectorTag(user_id=1, name="Foils", slug="foils")
+    group = CollectorGroup(user_id=1, name="Manga wants", slug="manga-wants")
     db_session.add_all([tag, group])
     db_session.commit()
     client.post(f"/collection/{item.id}/tags/{tag.id}")
@@ -408,7 +412,7 @@ def test_import_creates_missing_tags_and_groups(client, db_session):
 
 def test_import_reuses_existing_tags_and_groups(client, db_session):
     make_card(db_session, card_code="OP01-001")
-    existing_tag = CollectorTag(name="Foils", slug="foils")
+    existing_tag = CollectorTag(user_id=1, name="Foils", slug="foils")
     db_session.add(existing_tag)
     db_session.commit()
 

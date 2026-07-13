@@ -27,6 +27,10 @@ cp .env.production.example .env.production
 | `PRICE_REFRESH_INTERVAL_HOURS` | yes | Positive integer - how often Celery Beat schedules the Yuyu-Tei refresh. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | optional | Both or neither. If only one is set, the worker logs a warning and skips sending alerts. |
 | `NEXT_PUBLIC_API_URL` | yes | Public URL the browser uses to reach the API. **Baked into the web image at build time** (Next.js inlines `NEXT_PUBLIC_*` vars at `next build`) - changing it requires rebuilding the `web` image, not just restarting the container. |
+| `API_JWT_SECRET` | yes in production | Shared between `api` and `web` - verifies the per-user bearer token the web app mints on sign-in. See [Per-user auth](#10-per-user-auth-google-login). Generate with e.g. `openssl rand -hex 32`, distinct from `ADMIN_TOKEN`. |
+| `AUTH_SECRET` | yes in production | Auth.js's own session-encryption secret (web only). Generate with `openssl rand -base64 33`. |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | yes in production | From a Google Cloud OAuth 2.0 Client ID (web only). See [Per-user auth](#10-per-user-auth-google-login). |
+| `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_ORIGIN_REGEX` | optional | Locks the API's CORS policy down to your deployed frontend's origin(s) instead of the dev default `*`. See `services/api/app/main.py`. |
 
 Compose does **not** auto-load `.env.production` (it only auto-loads a file literally named
 `.env`). Always pass `--env-file .env.production` explicitly, as shown below.
@@ -159,3 +163,67 @@ Missing/invalid token → `401`. If `ADMIN_TOKEN` is unset and `APP_ENV`/`ENVIRO
 In the web UI (`/admin/alerts`, `/admin/refresh-runs`, `/admin/snkrdunk-candidates`), the first
 visit prompts for the admin token and stores it in the browser's `localStorage`; each admin page
 has a "Clear admin token" button to log out. See `docs/operations.md` for day-to-day commands.
+
+## 10. Per-user auth (Google login)
+
+`/collection`, `/grading`, and `/collector` (tags/groups) require a signed-in user - each
+person's portfolio is isolated by `user_id`. This is a completely separate mechanism from the
+admin token above: `/admin/*` still requires only `X-Admin-Token`, with no interaction with user
+accounts at all.
+
+**How it works**: the web app uses [Auth.js](https://authjs.dev) (`next-auth@5`) with a Google
+provider, in stateless JWT session mode (no database adapter - Auth.js itself never touches
+Postgres). On sign-in, `apps/web/src/lib/auth.ts`'s `session` callback mints a *separate*,
+short-lived (1 hour) HS256 bearer token signed with `API_JWT_SECRET`, exposed to client code as
+`session.apiToken`. Every `/collection`/`/grading`/`/collector` request attaches this as
+`Authorization: Bearer <token>`; the API verifies it with the same `API_JWT_SECRET`
+(`services/api/app/auth.py::require_current_user`) and JIT-provisions a `User` row the first time
+a given Google account is seen - there is no separate signup step. This two-token design (Auth.js's
+own encrypted session cookie, plus this app-specific bearer token) exists because the API is
+typically deployed on a different host/domain than the web app (see the Railway+Vercel section
+below) - a cross-domain cookie would hit browser SameSite/third-party-cookie restrictions, and
+replicating Auth.js's own JWE session-decryption in Python is needlessly fragile. A plain shared
+secret + bearer header works identically regardless of hosting topology.
+
+**Setup**:
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth
+   2.0 Client ID of type "Web application".
+2. Add an authorized redirect URI: `<your-web-origin>/api/auth/callback/google` (e.g.
+   `https://your-app.vercel.app/api/auth/callback/google`, or `http://localhost:3000/api/auth/callback/google`
+   for local dev).
+3. Set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` (web) from that client's id/secret, `AUTH_SECRET`
+   (web) to a random value, and `API_JWT_SECRET` to the same random value on **both** `api` and
+   `web`.
+
+`/collection`/`/grading` pages are gated by `apps/web/middleware.ts`, which redirects an
+unauthenticated visitor to `/` with a `callbackUrl` query param rather than rendering the page.
+
+## 11. Split deployment: Vercel (web) + Railway (api/worker/beat/postgres/redis)
+
+Vercel only runs the Next.js frontend well - it has no support for the long-lived Postgres/Redis
+connections, Celery worker, or Celery beat scheduler this app also needs. A common split: deploy
+`web` to Vercel, and everything else (`postgres`, `redis`, `api`, `worker`, `beat`) to Railway (or
+Render/Fly.io - the same shape applies).
+
+**Railway**:
+- Use Railway's managed Postgres and Redis plugins rather than self-hosting those two containers.
+- Deploy `api`, `worker`, and `beat` from their existing Dockerfiles (`services/api/Dockerfile`,
+  `services/worker/Dockerfile`), with the same commands as `docker-compose.prod.yml` uses.
+- Railway's Postgres plugin injects `DATABASE_URL` as a bare `postgresql://` string - rewrite the
+  scheme to `postgresql+psycopg://` when setting it as the `api`/`worker`/`beat` env var (this app
+  uses sync SQLAlchemy via `psycopg`, not an async driver).
+- Set the same env vars as section 1 above (`ADMIN_TOKEN`, `API_JWT_SECRET`, etc.) on the `api`
+  service; `worker`/`beat` don't need `API_JWT_SECRET` (they never verify bearer tokens).
+- Run `alembic upgrade head` once against Railway's Postgres before serving traffic (a one-off
+  Railway CLI/dashboard command, same migration as section 3 above).
+- Only `api` needs a public domain; `worker`/`beat`/`postgres`/`redis` stay private.
+
+**Vercel**:
+- Import the repo with **Root Directory = `apps/web`** (a monorepo project setting).
+- Set `NEXT_PUBLIC_API_URL` and `API_INTERNAL_URL` to the Railway API's public HTTPS URL (the
+  former is inlined at build time; the latter replaces the docker-only `http://api:8000` default
+  used by the server-side proxy routes under `src/app/api/**`).
+- Set `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and `API_JWT_SECRET` (same value as
+  Railway's) as Production + Preview environment variables.
+- Set `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on the Railway `api` service to your Vercel
+  domain (and `https://.*\.vercel\.app` for preview deployments).

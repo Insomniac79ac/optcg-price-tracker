@@ -45,6 +45,11 @@ const SERIES: SeriesDef[] = [
     label: "SNKRDUNK market floor value",
     color: "#34d399",
   },
+  {
+    key: "graded_adjusted_value_jpy",
+    label: "Graded-adjusted value",
+    color: "#fb7185",
+  },
 ];
 
 interface PortfolioValuationHistoryChartProps {

@@ -28,7 +28,7 @@ def make_card(db_session, **overrides) -> Card:
 
 
 def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)

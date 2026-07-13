@@ -11,9 +11,10 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, PriceObservation, Source
+from app.models import Card, CollectionItem, GradingSubmission, PriceObservation, Source
 from app.schemas import (
     BestWorstPerformerOut,
+    GradedAdjustedValuationOut,
     HighestValueItemOut,
     PortfolioValuationInsightsOut,
     PortfolioValuationItemOut,
@@ -24,9 +25,17 @@ from app.schemas import (
     ValuationDetailOut,
     ValuationFlagsOut,
     ValuationLatestPricesOut,
+    ValuationMode,
     YuyuteiPriceSnapshotOut,
 )
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
+from app.services.grading import (
+    build_grading_info,
+    get_submissions_for_items,
+    latest_submission,
+    latest_updated_submission,
+    received_grading_cost_jpy,
+)
 
 # (source name, price_type) pairs backing each valuation perspective.
 YUYUTEI_SELL = ("yuyutei", "sell")
@@ -40,6 +49,85 @@ def _pct(pnl_jpy: int, cost_basis_jpy: int) -> float | None:
     return round(pnl_jpy / cost_basis_jpy * 100, 2)
 
 
+def _empty_graded_adjusted() -> GradedAdjustedValuationOut:
+    return GradedAdjustedValuationOut(
+        value_jpy=None,
+        basis=None,
+        grading_submission_id=None,
+        grading_company=None,
+        final_grade=None,
+        graded_value_jpy=None,
+        raw_fallback_basis=None,
+        pnl_jpy=None,
+        pnl_pct=None,
+    )
+
+
+def _compute_graded_adjusted(
+    submissions: list[GradingSubmission],
+    cost_basis_jpy: int | None,
+    market_floor_value_jpy: int | None,
+    retail_value_jpy: int | None,
+) -> tuple[GradedAdjustedValuationOut, int | None]:
+    """Resolves the graded-adjusted value for one item: the graded_value_jpy
+    of its most-recently-*updated* submission when that submission is
+    'received' and has a graded value, otherwise the same SNKRDUNK-floor
+    -then-Yuyu-Tei-sell fallback order used elsewhere for "current value".
+    Also returns the graded-adjusted cost basis (purchase cost plus grading
+    cost from 'received' submissions only) for the caller to aggregate."""
+    latest = latest_updated_submission(submissions)
+    grading_cost_jpy = received_grading_cost_jpy(submissions)
+
+    if (
+        latest is not None
+        and latest.submission_status == "received"
+        and latest.graded_value_jpy is not None
+    ):
+        value_jpy = latest.graded_value_jpy
+        basis = "graded_value"
+        grading_submission_id = latest.id
+        grading_company = latest.grading_company
+        final_grade = latest.final_grade
+        graded_value_jpy = latest.graded_value_jpy
+        raw_fallback_basis = None
+    elif market_floor_value_jpy is not None:
+        value_jpy = market_floor_value_jpy
+        basis = raw_fallback_basis = "snkrdunk_floor"
+        grading_submission_id = grading_company = final_grade = graded_value_jpy = None
+    elif retail_value_jpy is not None:
+        value_jpy = retail_value_jpy
+        basis = raw_fallback_basis = "yuyutei_sell"
+        grading_submission_id = grading_company = final_grade = graded_value_jpy = None
+    else:
+        value_jpy = basis = raw_fallback_basis = None
+        grading_submission_id = grading_company = final_grade = graded_value_jpy = None
+
+    adjusted_cost_basis_jpy = (
+        cost_basis_jpy + grading_cost_jpy if cost_basis_jpy is not None else None
+    )
+
+    if value_jpy is not None and adjusted_cost_basis_jpy is not None:
+        pnl_jpy = value_jpy - adjusted_cost_basis_jpy
+        pnl_pct = _pct(pnl_jpy, adjusted_cost_basis_jpy)
+    else:
+        pnl_jpy = pnl_pct = None
+
+    return (
+        GradedAdjustedValuationOut(
+            value_jpy=value_jpy,
+            basis=basis,
+            grading_submission_id=grading_submission_id,
+            grading_company=grading_company,
+            final_grade=final_grade,
+            graded_value_jpy=graded_value_jpy,
+            raw_fallback_basis=raw_fallback_basis,
+            pnl_jpy=pnl_jpy,
+            pnl_pct=pnl_pct,
+        ),
+        adjusted_cost_basis_jpy,
+    )
+
+
 def _empty_insights() -> PortfolioValuationInsightsOut:
     return PortfolioValuationInsightsOut(
         best_performing_item=None,
@@ -49,7 +137,7 @@ def _empty_insights() -> PortfolioValuationInsightsOut:
     )
 
 
-def _empty_summary() -> PortfolioValuationSummaryOut:
+def _empty_summary(valuation_mode: ValuationMode) -> PortfolioValuationSummaryOut:
     return PortfolioValuationSummaryOut(
         total_items=0,
         total_quantity=0,
@@ -69,6 +157,13 @@ def _empty_summary() -> PortfolioValuationSummaryOut:
         items_missing_cost_basis=0,
         cards_above_target_sell=0,
         insights=_empty_insights(),
+        valuation_mode=valuation_mode,
+        graded_adjusted_value_jpy=0,
+        pnl_vs_graded_adjusted_jpy=0,
+        pnl_vs_graded_adjusted_pct=0.0,
+        items_using_graded_value=0,
+        items_using_raw_fallback=0,
+        items_missing_graded_adjusted_value=0,
     )
 
 
@@ -164,10 +259,22 @@ def _compute_insights(items: list[PortfolioValuationItemOut]) -> PortfolioValuat
     )
 
 
-def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
-    items = db.scalars(select(CollectionItem).order_by(CollectionItem.id)).all()
+def get_portfolio_valuation(
+    db: Session, user_id: int | None = None, valuation_mode: ValuationMode = "raw_market"
+) -> PortfolioValuationOut:
+    """user_id scopes the valuation to one person's collection (the
+    interactive GET /collection/valuation endpoint always passes the
+    calling user's id). Left as None, every collection item across every
+    user is combined - this is intentional for the admin-only aggregate
+    callers (snapshot_portfolio_valuation.py, market_report.py), which are
+    not yet multi-tenant; see the "explicit scope boundary" note in the
+    auth/deployment plan."""
+    query = select(CollectionItem).order_by(CollectionItem.id)
+    if user_id is not None:
+        query = query.where(CollectionItem.user_id == user_id)
+    items = db.scalars(query).all()
     if not items:
-        return PortfolioValuationOut(summary=_empty_summary(), items=[])
+        return PortfolioValuationOut(summary=_empty_summary(valuation_mode), items=[])
 
     card_ids = {item.card_id for item in items}
     cards_by_id = {
@@ -178,6 +285,7 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
     item_ids = {item.id for item in items}
     tags_by_item = get_tags_for_collection_items(db, item_ids)
     groups_by_item = get_groups_for_collection_items(db, item_ids)
+    submissions_by_item = get_submissions_for_items(db, item_ids)
 
     observations = db.scalars(
         select(PriceObservation)
@@ -207,6 +315,11 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
     items_missing_snkrdunk_floor = 0
     items_missing_cost_basis = 0
     cards_above_target_sell = 0
+    graded_adjusted_value_total = 0
+    graded_adjusted_cost_basis_total = 0
+    items_using_graded_value = 0
+    items_using_raw_fallback = 0
+    items_missing_graded_adjusted_value = 0
 
     for item in items:
         card = cards_by_id[item.card_id]
@@ -273,6 +386,26 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
         if above_target_sell:
             cards_above_target_sell += 1
 
+        if valuation_mode == "graded_adjusted":
+            graded_adjusted, graded_adjusted_cost_basis_jpy = _compute_graded_adjusted(
+                submissions_by_item.get(item.id, []),
+                cost_basis_jpy,
+                market_floor_value_jpy,
+                retail_value_jpy,
+            )
+            if graded_adjusted.value_jpy is not None:
+                graded_adjusted_value_total += graded_adjusted.value_jpy
+            else:
+                items_missing_graded_adjusted_value += 1
+            if graded_adjusted_cost_basis_jpy is not None:
+                graded_adjusted_cost_basis_total += graded_adjusted_cost_basis_jpy
+            if graded_adjusted.basis == "graded_value":
+                items_using_graded_value += 1
+            elif graded_adjusted.raw_fallback_basis is not None:
+                items_using_raw_fallback += 1
+        else:
+            graded_adjusted = _empty_graded_adjusted()
+
         result_items.append(
             PortfolioValuationItemOut(
                 collection_item_id=item.id,
@@ -337,6 +470,8 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
                 ),
                 tags=tags_by_item.get(item.id, []),
                 groups=groups_by_item.get(item.id, []),
+                grading=build_grading_info(latest_submission(submissions_by_item, item.id)),
+                graded_adjusted=graded_adjusted,
             )
         )
 
@@ -346,6 +481,9 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
     summary_pnl_vs_retail_jpy = retail_value_total - total_cost_basis_jpy
     summary_pnl_vs_liquidation_jpy = liquidation_value_total - total_cost_basis_jpy
     summary_pnl_vs_market_floor_jpy = floor_value_total - total_cost_basis_jpy
+    summary_pnl_vs_graded_adjusted_jpy = (
+        graded_adjusted_value_total - graded_adjusted_cost_basis_total
+    )
 
     summary = PortfolioValuationSummaryOut(
         total_items=len(items),
@@ -370,6 +508,15 @@ def get_portfolio_valuation(db: Session) -> PortfolioValuationOut:
         items_missing_cost_basis=items_missing_cost_basis,
         cards_above_target_sell=cards_above_target_sell,
         insights=_compute_insights(result_items),
+        valuation_mode=valuation_mode,
+        graded_adjusted_value_jpy=graded_adjusted_value_total,
+        pnl_vs_graded_adjusted_jpy=summary_pnl_vs_graded_adjusted_jpy,
+        pnl_vs_graded_adjusted_pct=(
+            _pct(summary_pnl_vs_graded_adjusted_jpy, graded_adjusted_cost_basis_total) or 0.0
+        ),
+        items_using_graded_value=items_using_graded_value,
+        items_using_raw_fallback=items_using_raw_fallback,
+        items_missing_graded_adjusted_value=items_missing_graded_adjusted_value,
     )
 
     return PortfolioValuationOut(summary=summary, items=result_items)

@@ -10,6 +10,17 @@ class Settings(BaseSettings):
     ENVIRONMENT: str | None = None
     APP_ENV: str | None = None
     ADMIN_TOKEN: str | None = None
+    # Shared secret used to verify the short-lived bearer JWT the frontend
+    # mints (in its NextAuth session callback) for per-user requests to
+    # /collection, /grading, /collector - see app.auth.require_current_user.
+    API_JWT_SECRET: str | None = None
+    # CORS lockdown for production (e.g. the Vercel frontend's origin(s)).
+    # Both unset (the local/dev default) falls back to allow_origins=["*"] -
+    # see app/main.py. CORS_ALLOWED_ORIGINS is a comma-separated exact-origin
+    # list; CORS_ALLOW_ORIGIN_REGEX additionally covers Vercel preview
+    # deployments (e.g. "https://.*\\.vercel\\.app").
+    CORS_ALLOWED_ORIGINS: str | None = None
+    CORS_ALLOW_ORIGIN_REGEX: str | None = None
     # Telegram alerting - if either is unset, digest sends are logged and
     # skipped rather than attempted (see app.services.telegram_client).
     TELEGRAM_BOT_TOKEN: str | None = None

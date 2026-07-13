@@ -294,6 +294,124 @@ class SourceCardMappingUpdateIn(BaseModel):
     review_notes: str | None = None
 
 
+GradingSubmissionStatus = Literal[
+    "planned", "preparing", "submitted", "grading", "shipped_back", "received", "cancelled"
+]
+
+
+class GradingSubmissionOut(BaseModel):
+    id: int
+    collection_item_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    quantity: int
+    grading_company: str
+    submission_name: str | None
+    submission_status: str
+    declared_value_jpy: int | None
+    grading_fee_jpy: int | None
+    shipping_fee_jpy: int | None
+    insurance_fee_jpy: int | None
+    other_fee_jpy: int | None
+    total_cost_jpy: int | None
+    submitted_at: date | None
+    received_at: date | None
+    expected_return_date: date | None
+    tracking_number: str | None
+    final_grade: str | None
+    cert_number: str | None
+    graded_value_jpy: int | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class GradingSubmissionCreateIn(BaseModel):
+    collection_item_id: int
+    grading_company: str = Field(min_length=1)
+    submission_name: str | None = None
+    submission_status: GradingSubmissionStatus = "planned"
+    declared_value_jpy: int | None = Field(default=None, ge=0)
+    grading_fee_jpy: int | None = Field(default=None, ge=0)
+    shipping_fee_jpy: int | None = Field(default=None, ge=0)
+    insurance_fee_jpy: int | None = Field(default=None, ge=0)
+    other_fee_jpy: int | None = Field(default=None, ge=0)
+    submitted_at: date | None = None
+    received_at: date | None = None
+    expected_return_date: date | None = None
+    tracking_number: str | None = None
+    final_grade: str | None = None
+    cert_number: str | None = None
+    graded_value_jpy: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+    @field_validator("grading_company")
+    @classmethod
+    def _company_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("grading_company must not be blank")
+        return cleaned
+
+
+class GradingSubmissionUpdateIn(BaseModel):
+    collection_item_id: int | None = None
+    grading_company: str | None = None
+    submission_name: str | None = None
+    submission_status: GradingSubmissionStatus | None = None
+    declared_value_jpy: int | None = Field(default=None, ge=0)
+    grading_fee_jpy: int | None = Field(default=None, ge=0)
+    shipping_fee_jpy: int | None = Field(default=None, ge=0)
+    insurance_fee_jpy: int | None = Field(default=None, ge=0)
+    other_fee_jpy: int | None = Field(default=None, ge=0)
+    submitted_at: date | None = None
+    received_at: date | None = None
+    expected_return_date: date | None = None
+    tracking_number: str | None = None
+    final_grade: str | None = None
+    cert_number: str | None = None
+    graded_value_jpy: int | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+    @field_validator("grading_company")
+    @classmethod
+    def _company_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("grading_company must not be blank")
+        return cleaned
+
+
+class GradingSubmissionListOut(BaseModel):
+    items: list[GradingSubmissionOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class GradingSummaryOut(BaseModel):
+    total_submissions: int
+    by_status: dict[str, int]
+    total_declared_value_jpy: int
+    total_grading_cost_jpy: int
+    total_graded_value_jpy: int
+    total_unrealized_gain_after_grading_jpy: int
+    average_grade: float | None
+    items_waiting_return: int
+
+
+class GradingInfoOut(BaseModel):
+    has_grading_submission: bool
+    latest_status: str | None
+    grading_company: str | None
+    final_grade: str | None
+    total_grading_cost_jpy: int | None
+    graded_value_jpy: int | None
+
+
 CollectionItemStatus = Literal["hold", "watch", "sell", "sold", "grading"]
 
 
@@ -317,6 +435,8 @@ class CollectionItemOut(BaseModel):
     status: str
     tags: list[CollectorTagOut] = []
     groups: list[CollectorGroupOut] = []
+    grading_submissions: list[GradingSubmissionOut] = []
+    latest_grading_status: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -435,6 +555,21 @@ class ValuationFlagsOut(BaseModel):
     above_target_sell: bool
 
 
+ValuationMode = Literal["raw_market", "graded_adjusted"]
+
+
+class GradedAdjustedValuationOut(BaseModel):
+    value_jpy: int | None
+    basis: str | None
+    grading_submission_id: int | None
+    grading_company: str | None
+    final_grade: str | None
+    graded_value_jpy: int | None
+    raw_fallback_basis: str | None
+    pnl_jpy: int | None
+    pnl_pct: float | None
+
+
 class PortfolioValuationItemOut(BaseModel):
     collection_item_id: int
     card_id: int
@@ -455,6 +590,8 @@ class PortfolioValuationItemOut(BaseModel):
     flags: ValuationFlagsOut
     tags: list[CollectorTagOut] = []
     groups: list[CollectorGroupOut] = []
+    grading: GradingInfoOut
+    graded_adjusted: GradedAdjustedValuationOut
 
 
 class BestWorstPerformerOut(BaseModel):
@@ -511,6 +648,13 @@ class PortfolioValuationSummaryOut(BaseModel):
     items_missing_cost_basis: int
     cards_above_target_sell: int
     insights: PortfolioValuationInsightsOut
+    valuation_mode: ValuationMode
+    graded_adjusted_value_jpy: int
+    pnl_vs_graded_adjusted_jpy: int
+    pnl_vs_graded_adjusted_pct: float
+    items_using_graded_value: int
+    items_using_raw_fallback: int
+    items_missing_graded_adjusted_value: int
 
 
 class PortfolioValuationOut(BaseModel):
@@ -537,6 +681,11 @@ class PortfolioValuationSnapshotOut(BaseModel):
     items_missing_snkrdunk_floor: int
     items_missing_cost_basis: int
     cards_above_target_sell: int
+    graded_adjusted_value_jpy: int | None
+    pnl_vs_graded_adjusted_jpy: int | None
+    items_using_graded_value: int | None
+    items_using_raw_fallback: int | None
+    items_missing_graded_adjusted_value: int | None
 
 
 class CardAuditIssueOut(BaseModel):
@@ -659,6 +808,7 @@ class OpportunitiesSummaryOut(BaseModel):
     average_score: float
     highest_score: int
     by_category: dict[str, int]
+    wishlist_target_hit_count: int = 0
 
 
 class OpportunityOut(BaseModel):
@@ -686,6 +836,11 @@ class OpportunityOut(BaseModel):
     last_payload: dict[str, Any] | None
     tags: list[CollectorTagOut] = []
     groups: list[CollectorGroupOut] = []
+    grading: GradingInfoOut
+    wishlist_item_id: int | None = None
+    wishlist_priority: str | None = None
+    wishlist_target_buy_price_jpy: int | None = None
+    wishlist_target_hit: bool = False
 
 
 class OpportunitiesResponseOut(BaseModel):
@@ -702,6 +857,7 @@ class MarketReportPortfolioSnapshotOut(BaseModel):
     pnl_vs_market_floor_pct: float | None
     items_missing_cost_basis: int
     items_missing_prices: int
+    graded_adjusted_value_jpy: int | None
 
 
 class MarketReportOpportunitySummaryOut(BaseModel):
@@ -709,6 +865,7 @@ class MarketReportOpportunitySummaryOut(BaseModel):
     highest_score: int | None
     average_score: float | None
     by_category: dict[str, int]
+    wishlist_target_hit_count: int = 0
 
 
 class MarketReportTopOpportunitiesOut(BaseModel):
@@ -919,3 +1076,144 @@ class AdminRunMarketWorkflowResponse(BaseModel):
     market_report_id: int | None
     telegram_digest_status: str | None
     warnings: list[str] = []
+
+
+# --- Wishlist / acquisition tracker -----------------------------------------
+
+WishlistPriority = Literal["low", "medium", "high", "grail"]
+WishlistStatus = Literal["watching", "target_hit", "purchased", "passed", "removed"]
+
+
+class WishlistLatestPricesOut(BaseModel):
+    yuyutei_sell: int | None
+    yuyutei_buy: int | None
+    snkrdunk_floor: int | None
+
+
+class WishlistItemOut(BaseModel):
+    id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    priority: str
+    status: str
+    target_buy_price_jpy: int | None
+    max_buy_price_jpy: int | None
+    preferred_condition: str | None
+    preferred_source: str | None
+    desired_quantity: int
+    acquired_quantity: int
+    acquired_collection_item_id: int | None
+    notes: str | None
+    owned_quantity: int
+    latest_prices: WishlistLatestPricesOut
+    preferred_current_price_jpy: int | None
+    preferred_current_price_source: str | None
+    target_hit: bool
+    gap_to_target_jpy: int | None
+    gap_to_target_pct: float | None
+    tags: list[CollectorTagOut] = []
+    created_at: datetime
+    updated_at: datetime
+
+
+class WishlistItemListOut(BaseModel):
+    items: list[WishlistItemOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class WishlistItemCreateIn(BaseModel):
+    card_id: int
+    priority: WishlistPriority = "medium"
+    target_buy_price_jpy: int | None = Field(default=None, ge=0)
+    max_buy_price_jpy: int | None = Field(default=None, ge=0)
+    preferred_condition: str | None = None
+    preferred_source: str | None = None
+    desired_quantity: int = Field(default=1, ge=1)
+    notes: str | None = None
+
+
+class WishlistItemUpdateIn(BaseModel):
+    priority: WishlistPriority | None = None
+    status: WishlistStatus | None = None
+    target_buy_price_jpy: int | None = Field(default=None, ge=0)
+    max_buy_price_jpy: int | None = Field(default=None, ge=0)
+    preferred_condition: str | None = None
+    preferred_source: str | None = None
+    desired_quantity: int | None = Field(default=None, ge=1)
+    notes: str | None = None
+
+
+class WishlistMarkPurchasedIn(BaseModel):
+    collection_item_id: int
+    acquired_quantity: int = Field(default=1, ge=1)
+
+
+class WishlistConvertToCollectionIn(BaseModel):
+    quantity: int = Field(default=1, ge=1)
+    condition_label: str | None = None
+    purchase_price_jpy: int | None = Field(default=None, ge=0)
+    purchase_date: date | None = None
+    purchase_source: str | None = None
+    target_sell_price_jpy: int | None = Field(default=None, ge=0)
+    status: CollectionItemStatus = "hold"
+    notes: str | None = None
+
+
+class WishlistConvertToCollectionOut(BaseModel):
+    wishlist_item: WishlistItemOut
+    collection_item: CollectionItemOut
+
+
+class WishlistSummaryOut(BaseModel):
+    total_wishlist_items: int
+    watching: int
+    target_hit: int
+    purchased: int
+    passed: int
+    removed: int
+    grail_count: int
+    high_priority_count: int
+    total_target_budget_jpy: int
+    total_max_budget_jpy: int
+    items_owned_already: int
+    items_with_target_hit: int
+
+
+class WishlistImportRowErrorOut(BaseModel):
+    row_number: int
+    card_code: str | None
+    error: str
+
+
+class WishlistImportPreviewRowOut(BaseModel):
+    row_number: int
+    card_code: str
+    matched_card_id: int
+    action: str
+    priority: str
+    status: str
+
+
+class WishlistImportSummaryOut(BaseModel):
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    created: int
+    updated: int
+    skipped: int
+
+
+class WishlistImportResponseOut(BaseModel):
+    dry_run: bool
+    mode: str
+    summary: WishlistImportSummaryOut
+    errors: list[WishlistImportRowErrorOut]
+    preview: list[WishlistImportPreviewRowOut]

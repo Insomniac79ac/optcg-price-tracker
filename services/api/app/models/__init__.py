@@ -8,6 +8,7 @@ from app.models.collection_item_group import CollectionItemGroup
 from app.models.collection_item_tag import CollectionItemTag
 from app.models.collector_group import CollectorGroup
 from app.models.collector_tag import CollectorTag
+from app.models.grading_submission import GradingSubmission
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
 from app.models.market_signal_event import MarketSignalEvent
@@ -20,8 +21,12 @@ from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
 from app.models.source import Source
 from app.models.source_card_mapping import SourceCardMapping
+from app.models.user import User
+from app.models.wishlist_item import WishlistItem
 
 __all__ = [
+    "User",
+    "WishlistItem",
     "Base",
     "Card",
     "CollectionItem",
@@ -44,4 +49,5 @@ __all__ = [
     "CardTag",
     "CollectionItemTag",
     "CollectionItemGroup",
+    "GradingSubmission",
 ]

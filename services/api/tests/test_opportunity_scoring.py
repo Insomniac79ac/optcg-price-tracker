@@ -1,7 +1,7 @@
 import itertools
 from datetime import datetime, timezone
 
-from app.models import Card, CollectionItem, MarketSignalEvent
+from app.models import Card, CollectionItem, MarketSignalEvent, WishlistItem
 from app.services.opportunity_scoring import get_opportunities
 
 _dedupe_counter = itertools.count()
@@ -26,7 +26,7 @@ def make_card(db_session, **overrides) -> Card:
 
 
 def make_item(db_session, card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -171,6 +171,103 @@ def test_score_is_clamped_at_100(db_session):
     )
     # 65 + 15 + 10 (highly recurring) + 10 (watching) + 10 (critical) + 15 (metric) = 135, clamped
     assert opp.score == 100
+
+
+# --- wishlist integration ---------------------------------------------------
+
+
+def make_wishlist_item(db_session, card, **overrides) -> WishlistItem:
+    fields = dict(user_id=1, card_id=card.id, priority="medium", status="watching")
+    fields.update(overrides)
+    item = WishlistItem(**fields)
+    db_session.add(item)
+    db_session.commit()
+    db_session.refresh(item)
+    return item
+
+
+def test_wishlist_target_hit_signal_ranks_strongly(db_session):
+    opp = single(
+        db_session,
+        signal_type="wishlist_target_hit",
+        suggested_action="review_buy_opportunity",
+    )
+    assert opp.score == 90  # 60 base + 30 wishlist_target_hit modifier
+    assert "wishlist target hit" in opp.score_reasons
+
+
+def test_wishlist_grail_priority_modifier_applies_to_any_signal(db_session):
+    card = make_card(db_session)
+    make_wishlist_item(db_session, card, priority="grail", target_buy_price_jpy=1000)
+    make_event(
+        db_session,
+        card_id=card.id,
+        signal_type="snkrdunk_floor_below_yuyutei_sell",
+        suggested_action="review_buy_opportunity",
+    )
+
+    response = get_opportunities(db_session)
+    opp = response.opportunities[0]
+
+    # 60 base + 20 signal modifier + 20 grail wishlist modifier
+    assert opp.score == 100
+    assert "wishlist priority: grail" in opp.score_reasons
+    assert opp.wishlist_priority == "grail"
+    assert opp.wishlist_target_buy_price_jpy == 1000
+
+
+def test_wishlist_high_priority_modifier(db_session):
+    card = make_card(db_session)
+    make_wishlist_item(db_session, card, priority="high")
+    make_event(db_session, card_id=card.id, suggested_action="none")
+
+    response = get_opportunities(db_session)
+    opp = response.opportunities[0]
+
+    assert opp.score == 20  # 10 base + 10 high priority modifier
+    assert "wishlist priority: high" in opp.score_reasons
+
+
+def test_wishlist_metadata_absent_when_card_not_wishlisted(db_session):
+    opp = single(db_session, suggested_action="none")
+    assert opp.wishlist_item_id is None
+    assert opp.wishlist_priority is None
+    assert opp.wishlist_target_buy_price_jpy is None
+    assert opp.wishlist_target_hit is False
+
+
+def test_wishlist_target_hit_flag_true_for_other_signals_on_same_card(db_session):
+    card = make_card(db_session)
+    make_wishlist_item(db_session, card, target_buy_price_jpy=1000)
+    make_event(
+        db_session,
+        card_id=card.id,
+        signal_type="wishlist_target_hit",
+        suggested_action="review_buy_opportunity",
+    )
+    make_event(
+        db_session,
+        card_id=card.id,
+        signal_type="snkrdunk_floor_below_yuyutei_sell",
+        suggested_action="review_buy_opportunity",
+    )
+
+    response = get_opportunities(db_session)
+    assert len(response.opportunities) == 2
+    assert all(o.wishlist_target_hit for o in response.opportunities)
+    assert response.summary.wishlist_target_hit_count == 2
+
+
+def test_wishlist_removed_item_excluded_from_metadata(db_session):
+    card = make_card(db_session)
+    make_wishlist_item(db_session, card, priority="grail", status="removed")
+    make_event(db_session, card_id=card.id, suggested_action="none")
+
+    response = get_opportunities(db_session)
+    opp = response.opportunities[0]
+
+    assert opp.wishlist_item_id is None
+    assert opp.score == 10  # no wishlist modifier applied
 
 
 # --- exclusions ------------------------------------------------------------

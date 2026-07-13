@@ -22,7 +22,7 @@ def make_card(db_session, **overrides) -> Card:
 
 
 def make_item(db_session, card: Card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -83,6 +83,13 @@ def test_valuation_empty_collection_returns_zero_summary(client, db_session):
             "largest_retail_liquidation_gap": None,
             "highest_value_item": None,
         },
+        "valuation_mode": "raw_market",
+        "graded_adjusted_value_jpy": 0,
+        "pnl_vs_graded_adjusted_jpy": 0,
+        "pnl_vs_graded_adjusted_pct": 0.0,
+        "items_using_graded_value": 0,
+        "items_using_raw_fallback": 0,
+        "items_missing_graded_adjusted_value": 0,
     }
 
 

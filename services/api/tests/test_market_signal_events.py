@@ -54,7 +54,7 @@ def add_observation(db_session, card, source, *, price_type, price_jpy, observed
 
 
 def make_item(db_session, card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)

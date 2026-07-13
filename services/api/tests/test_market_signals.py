@@ -58,7 +58,7 @@ def make_mapping(db_session, card, source, **overrides) -> SourceCardMapping:
 
 
 def make_item(db_session, card, **overrides) -> CollectionItem:
-    fields = dict(card_id=card.id, quantity=1)
+    fields = dict(card_id=card.id, quantity=1, user_id=1)
     fields.update(overrides)
     item = CollectionItem(**fields)
     db_session.add(item)
@@ -372,6 +372,65 @@ def test_filters_by_owned(client, db_session):
     assert len(body["signals"]) == 1
     assert body["signals"][0]["card_id"] == unowned_card.id
     assert body["signals"][0]["owned_quantity"] == 0
+
+
+def test_wishlist_target_hit_signal_created(client, db_session):
+    from app.models import WishlistItem
+
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    add_observation(db_session, card, snkrdunk, price_type="floor", price_jpy=800, observed_at=datetime.now(timezone.utc))
+    db_session.add(
+        WishlistItem(user_id=1, card_id=card.id, target_buy_price_jpy=1000, status="watching")
+    )
+    db_session.commit()
+
+    response = client.get("/market/signals")
+    body = response.json()
+
+    signal = next(s for s in body["signals"] if s["signal_type"] == "wishlist_target_hit")
+    assert signal["card_id"] == card.id
+    assert signal["suggested_action"] == "review_buy_opportunity"
+    assert "OP01-001" in signal["message"]
+    assert body["summary"]["by_signal_type"]["wishlist_target_hit"] == 1
+
+
+def test_wishlist_target_hit_not_created_when_price_above_target(client, db_session):
+    from app.models import WishlistItem
+
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    add_observation(db_session, card, snkrdunk, price_type="floor", price_jpy=1500, observed_at=datetime.now(timezone.utc))
+    db_session.add(
+        WishlistItem(user_id=1, card_id=card.id, target_buy_price_jpy=1000, status="watching")
+    )
+    db_session.commit()
+
+    response = client.get("/market/signals")
+    body = response.json()
+
+    assert not any(s["signal_type"] == "wishlist_target_hit" for s in body["signals"])
+
+
+def test_wishlist_target_hit_ignores_purchased_and_removed_items(client, db_session):
+    from app.models import WishlistItem
+
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    add_observation(db_session, card, snkrdunk, price_type="floor", price_jpy=800, observed_at=datetime.now(timezone.utc))
+    db_session.add_all(
+        [
+            WishlistItem(user_id=1, card_id=card.id, target_buy_price_jpy=1000, status="purchased"),
+            WishlistItem(user_id=1, card_id=card.id, target_buy_price_jpy=1000, status="removed"),
+            WishlistItem(user_id=1, card_id=card.id, target_buy_price_jpy=1000, status="passed"),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/market/signals")
+    body = response.json()
+
+    assert not any(s["signal_type"] == "wishlist_target_hit" for s in body["signals"])
 
 
 def test_empty_data_returns_empty_signals(client, db_session):

@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_current_user
 from app.db import get_db
 from app.models import (
     Card,
@@ -14,6 +15,7 @@ from app.models import (
     CollectorGroup,
     CollectorTag,
     PortfolioValuationSnapshot,
+    User,
 )
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
 from app.schemas import (
@@ -28,6 +30,7 @@ from app.schemas import (
     CollectionSummaryOut,
     PortfolioValuationOut,
     PortfolioValuationSnapshotOut,
+    ValuationMode,
 )
 from app.services.collection_csv import (
     IMPORT_MODES,
@@ -36,6 +39,7 @@ from app.services.collection_csv import (
     import_collection_csv,
 )
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
+from app.services.grading import build_grading_submission_out, get_submissions_for_items
 from app.services.portfolio_valuation import get_portfolio_valuation
 
 router = APIRouter(prefix="/collection", tags=["collection"])
@@ -46,7 +50,11 @@ def _to_out(
     card: Card,
     tags: list[CollectorTag] | None = None,
     groups: list[CollectorGroup] | None = None,
+    grading_submissions: list | None = None,
 ) -> CollectionItemOut:
+    submissions_out = [
+        build_grading_submission_out(s, item, card) for s in (grading_submissions or [])
+    ]
     return CollectionItemOut(
         id=item.id,
         card_id=item.card_id,
@@ -67,6 +75,8 @@ def _to_out(
         status=item.status,
         tags=tags or [],
         groups=groups or [],
+        grading_submissions=submissions_out,
+        latest_grading_status=submissions_out[0].submission_status if submissions_out else None,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -75,12 +85,13 @@ def _to_out(
 def _to_out_single(db: Session, item: CollectionItem, card: Card) -> CollectionItemOut:
     tags = get_tags_for_collection_items(db, {item.id}).get(item.id, [])
     groups = get_groups_for_collection_items(db, {item.id}).get(item.id, [])
-    return _to_out(item, card, tags, groups)
+    submissions = get_submissions_for_items(db, {item.id}).get(item.id, [])
+    return _to_out(item, card, tags, groups, submissions)
 
 
-def _get_item_or_404(db: Session, item_id: int) -> CollectionItem:
+def _get_item_or_404(db: Session, item_id: int, user: User) -> CollectionItem:
     item = db.get(CollectionItem, item_id)
-    if item is None:
+    if item is None or item.user_id != user.id:
         raise HTTPException(status_code=404, detail="Collection item not found")
     return item
 
@@ -92,16 +103,16 @@ def _get_card_or_404(db: Session, card_id: int) -> Card:
     return card
 
 
-def _get_tag_or_404(db: Session, tag_id: int) -> CollectorTag:
+def _get_tag_or_404(db: Session, tag_id: int, user: User) -> CollectorTag:
     tag = db.get(CollectorTag, tag_id)
-    if tag is None:
+    if tag is None or tag.user_id != user.id:
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
 
 
-def _get_group_or_404(db: Session, group_id: int) -> CollectorGroup:
+def _get_group_or_404(db: Session, group_id: int, user: User) -> CollectorGroup:
     group = db.get(CollectorGroup, group_id)
-    if group is None:
+    if group is None or group.user_id != user.id:
         raise HTTPException(status_code=404, detail="Group not found")
     return group
 
@@ -114,6 +125,7 @@ def list_collection_items(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
 ):
     if status is not None and status not in COLLECTION_ITEM_STATUSES:
         raise HTTPException(
@@ -121,7 +133,7 @@ def list_collection_items(
             detail=f"Invalid status. Must be one of {list(COLLECTION_ITEM_STATUSES)}",
         )
 
-    filters = []
+    filters = [CollectionItem.user_id == user.id]
     if status is not None:
         filters.append(CollectionItem.status == status)
     if card_code is not None:
@@ -152,6 +164,7 @@ def list_collection_items(
     item_ids = {item.id for item in items}
     tags_by_item = get_tags_for_collection_items(db, item_ids)
     groups_by_item = get_groups_for_collection_items(db, item_ids)
+    submissions_by_item = get_submissions_for_items(db, item_ids)
 
     out_items = [
         _to_out(
@@ -159,6 +172,7 @@ def list_collection_items(
             cards_by_id[item.card_id],
             tags_by_item.get(item.id, []),
             groups_by_item.get(item.id, []),
+            submissions_by_item.get(item.id, []),
         )
         for item in items
     ]
@@ -166,8 +180,10 @@ def list_collection_items(
 
 
 @router.get("/summary", response_model=CollectionSummaryOut)
-def get_collection_summary(db: Session = Depends(get_db)):
-    items = db.scalars(select(CollectionItem)).all()
+def get_collection_summary(
+    db: Session = Depends(get_db), user: User = Depends(require_current_user)
+):
+    items = db.scalars(select(CollectionItem).where(CollectionItem.user_id == user.id)).all()
 
     total_items = len(items)
     total_quantity = sum(item.quantity for item in items)
@@ -194,8 +210,12 @@ def get_collection_summary(db: Session = Depends(get_db)):
 
 
 @router.get("/valuation", response_model=PortfolioValuationOut)
-def get_collection_valuation(db: Session = Depends(get_db)):
-    return get_portfolio_valuation(db)
+def get_collection_valuation(
+    valuation_mode: ValuationMode = Query(default="raw_market"),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    return get_portfolio_valuation(db, user_id=user.id, valuation_mode=valuation_mode)
 
 
 @router.get("/valuation/history", response_model=list[PortfolioValuationSnapshotOut])
@@ -203,6 +223,13 @@ def get_collection_valuation_history(
     days: str = Query(default="30"),
     limit: int = Query(default=500, ge=1, le=2000),
     db: Session = Depends(get_db),
+    # Login-gated like the rest of /collection, but intentionally NOT
+    # filtered by user - portfolio_valuation_snapshots is a single global
+    # timeline produced by the admin-triggered snapshot job (see
+    # snapshot_portfolio_valuation.py), not a per-user table. Every signed-in
+    # user currently sees the same aggregate history; see the "explicit scope
+    # boundary" note in the auth/deployment plan for why this stays global.
+    _user: User = Depends(require_current_user),
 ):
     filters = []
     if days != "all":
@@ -230,8 +257,10 @@ def get_collection_valuation_history(
 
 
 @router.get("/export.csv")
-def export_collection_items_csv(db: Session = Depends(get_db)):
-    csv_text = export_collection_csv(db)
+def export_collection_items_csv(
+    db: Session = Depends(get_db), user: User = Depends(require_current_user)
+):
+    csv_text = export_collection_csv(db, user_id=user.id)
     filename = export_filename()
     return Response(
         content=csv_text,
@@ -246,6 +275,7 @@ async def import_collection_items_csv(
     dry_run: bool = Query(default=True),
     mode: str = Query(default="upsert"),
     db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
 ):
     if mode not in IMPORT_MODES:
         raise HTTPException(
@@ -259,7 +289,7 @@ async def import_collection_items_csv(
         raise HTTPException(status_code=400, detail=f"File is not valid UTF-8: {exc}") from exc
 
     try:
-        result = import_collection_csv(db, csv_text, dry_run=dry_run, mode=mode)
+        result = import_collection_csv(db, csv_text, dry_run=dry_run, mode=mode, user_id=user.id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -299,10 +329,14 @@ async def import_collection_items_csv(
 
 
 @router.post("", response_model=CollectionItemOut, status_code=201)
-def create_collection_item(body: CollectionItemCreateIn, db: Session = Depends(get_db)):
+def create_collection_item(
+    body: CollectionItemCreateIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
     card = _get_card_or_404(db, body.card_id)
 
-    item = CollectionItem(**body.model_dump())
+    item = CollectionItem(user_id=user.id, **body.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -310,17 +344,22 @@ def create_collection_item(body: CollectionItemCreateIn, db: Session = Depends(g
 
 
 @router.get("/{item_id}", response_model=CollectionItemOut)
-def get_collection_item(item_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def get_collection_item(
+    item_id: int, db: Session = Depends(get_db), user: User = Depends(require_current_user)
+):
+    item = _get_item_or_404(db, item_id, user)
     card = db.get(Card, item.card_id)
     return _to_out_single(db, item, card)
 
 
 @router.patch("/{item_id}", response_model=CollectionItemOut)
 def update_collection_item(
-    item_id: int, body: CollectionItemUpdateIn, db: Session = Depends(get_db)
+    item_id: int,
+    body: CollectionItemUpdateIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
 ):
-    item = _get_item_or_404(db, item_id)
+    item = _get_item_or_404(db, item_id, user)
 
     updates = body.model_dump(exclude_unset=True)
     if "card_id" in updates:
@@ -336,18 +375,25 @@ def update_collection_item(
 
 
 @router.delete("/{item_id}", status_code=204)
-def delete_collection_item(item_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def delete_collection_item(
+    item_id: int, db: Session = Depends(get_db), user: User = Depends(require_current_user)
+):
+    item = _get_item_or_404(db, item_id, user)
     db.delete(item)
     db.commit()
     return None
 
 
 @router.post("/{item_id}/tags/{tag_id}", response_model=CollectionItemOut)
-def assign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def assign_collection_item_tag(
+    item_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    item = _get_item_or_404(db, item_id, user)
     card = db.get(Card, item.card_id)
-    _get_tag_or_404(db, tag_id)
+    _get_tag_or_404(db, tag_id, user)
 
     existing = db.scalar(
         select(CollectionItemTag).where(
@@ -362,10 +408,15 @@ def assign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depends(
 
 
 @router.delete("/{item_id}/tags/{tag_id}", response_model=CollectionItemOut)
-def unassign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def unassign_collection_item_tag(
+    item_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    item = _get_item_or_404(db, item_id, user)
     card = db.get(Card, item.card_id)
-    _get_tag_or_404(db, tag_id)
+    _get_tag_or_404(db, tag_id, user)
 
     assignment = db.scalar(
         select(CollectionItemTag).where(
@@ -380,10 +431,15 @@ def unassign_collection_item_tag(item_id: int, tag_id: int, db: Session = Depend
 
 
 @router.post("/{item_id}/groups/{group_id}", response_model=CollectionItemOut)
-def assign_collection_item_group(item_id: int, group_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def assign_collection_item_group(
+    item_id: int,
+    group_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    item = _get_item_or_404(db, item_id, user)
     card = db.get(Card, item.card_id)
-    _get_group_or_404(db, group_id)
+    _get_group_or_404(db, group_id, user)
 
     existing = db.scalar(
         select(CollectionItemGroup).where(
@@ -399,10 +455,15 @@ def assign_collection_item_group(item_id: int, group_id: int, db: Session = Depe
 
 
 @router.delete("/{item_id}/groups/{group_id}", response_model=CollectionItemOut)
-def unassign_collection_item_group(item_id: int, group_id: int, db: Session = Depends(get_db)):
-    item = _get_item_or_404(db, item_id)
+def unassign_collection_item_group(
+    item_id: int,
+    group_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    item = _get_item_or_404(db, item_id, user)
     card = db.get(Card, item.card_id)
-    _get_group_or_404(db, group_id)
+    _get_group_or_404(db, group_id, user)
 
     assignment = db.scalar(
         select(CollectionItemGroup).where(

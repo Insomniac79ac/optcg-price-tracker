@@ -16,6 +16,7 @@ from app.services.collector import (
     get_or_create_tag,
     get_tags_for_collection_items,
 )
+from app.services.grading import get_submissions_for_items, latest_submission
 
 EXPORT_COLUMNS = (
     "card_code",
@@ -35,6 +36,11 @@ EXPORT_COLUMNS = (
     "notes",
     "tags",
     "groups",
+    "grading_status",
+    "grading_company",
+    "final_grade",
+    "cert_number",
+    "graded_value_jpy",
     "created_at",
     "updated_at",
 )
@@ -52,13 +58,14 @@ def _blank(value: str) -> str:
     return "" if value is None else str(value)
 
 
-def export_collection_csv(db: Session) -> str:
-    """Renders the current collection_items (joined with their card) as CSV
-    text, one row per collection item. Missing/null values are exported as
-    blank cells rather than the literal string "None"."""
+def export_collection_csv(db: Session, *, user_id: int) -> str:
+    """Renders the current user's collection_items (joined with their card)
+    as CSV text, one row per collection item. Missing/null values are
+    exported as blank cells rather than the literal string "None"."""
     items = db.scalars(
         select(CollectionItem)
         .join(Card, CollectionItem.card_id == Card.id)
+        .where(CollectionItem.user_id == user_id)
         .order_by(CollectionItem.id)
     ).all()
 
@@ -72,6 +79,7 @@ def export_collection_csv(db: Session) -> str:
     item_ids = {item.id for item in items}
     tags_by_item = get_tags_for_collection_items(db, item_ids)
     groups_by_item = get_groups_for_collection_items(db, item_ids)
+    submissions_by_item = get_submissions_for_items(db, item_ids)
 
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=EXPORT_COLUMNS)
@@ -79,6 +87,7 @@ def export_collection_csv(db: Session) -> str:
 
     for item in items:
         card = cards_by_id[item.card_id]
+        latest = latest_submission(submissions_by_item, item.id)
         writer.writerow(
             {
                 "card_code": card.card_code,
@@ -100,6 +109,11 @@ def export_collection_csv(db: Session) -> str:
                 "groups": NAME_LIST_SEPARATOR.join(
                     g.name for g in groups_by_item.get(item.id, [])
                 ),
+                "grading_status": _blank(latest.submission_status if latest else None),
+                "grading_company": _blank(latest.grading_company if latest else None),
+                "final_grade": _blank(latest.final_grade if latest else None),
+                "cert_number": _blank(latest.cert_number if latest else None),
+                "graded_value_jpy": _blank(latest.graded_value_jpy if latest else None),
                 "created_at": item.created_at.isoformat() if item.created_at else "",
                 "updated_at": item.updated_at.isoformat() if item.updated_at else "",
             }
@@ -284,8 +298,8 @@ def _upsert_key(parsed: ParsedRow) -> tuple[int, str | None, str | None]:
     return (parsed.card_id, parsed.condition_label, parsed.purchase_source)
 
 
-def _find_existing_item(db: Session, parsed: ParsedRow) -> CollectionItem | None:
-    filters = [CollectionItem.card_id == parsed.card_id]
+def _find_existing_item(db: Session, parsed: ParsedRow, *, user_id: int) -> CollectionItem | None:
+    filters = [CollectionItem.card_id == parsed.card_id, CollectionItem.user_id == user_id]
     if parsed.condition_label is None:
         filters.append(CollectionItem.condition_label.is_(None))
     else:
@@ -308,8 +322,9 @@ def _apply_row_to_item(item: CollectionItem, parsed: ParsedRow) -> None:
     item.notes = parsed.notes
 
 
-def _create_item(db: Session, parsed: ParsedRow) -> CollectionItem:
+def _create_item(db: Session, parsed: ParsedRow, *, user_id: int) -> CollectionItem:
     item = CollectionItem(
+        user_id=user_id,
         card_id=parsed.card_id,
         quantity=parsed.quantity,
         condition_label=parsed.condition_label,
@@ -344,21 +359,23 @@ def _assign_tags_and_groups(
     parsed: ParsedRow,
     created_tag_names: set[str],
     created_group_names: set[str],
+    *,
+    user_id: int,
 ) -> None:
     for name in parsed.tag_names:
-        tag, created = get_or_create_tag(db, name)
+        tag, created = get_or_create_tag(db, name, user_id=user_id)
         if created:
             created_tag_names.add(name)
         ensure_collection_item_tag(db, item_id, tag.id)
     for name in parsed.group_names:
-        group, created = get_or_create_group(db, name)
+        group, created = get_or_create_group(db, name, user_id=user_id)
         if created:
             created_group_names.add(name)
         ensure_collection_item_group(db, item_id, group.id)
 
 
 def import_collection_csv(
-    db: Session, csv_text: str, *, dry_run: bool, mode: str
+    db: Session, csv_text: str, *, dry_run: bool, mode: str, user_id: int
 ) -> ImportResult:
     """Parses and (optionally) applies a collection CSV import. When
     dry_run is True, no DB writes occur - the preview shows the actions that
@@ -414,9 +431,9 @@ def import_collection_csv(
             if dry_run:
                 result.preview.append(_outcome(parsed, "would_create"))
             else:
-                item = _create_item(db, parsed)
+                item = _create_item(db, parsed, user_id=user_id)
                 _assign_tags_and_groups(
-                    db, item.id, parsed, created_tag_names, created_group_names
+                    db, item.id, parsed, created_tag_names, created_group_names, user_id=user_id
                 )
                 result.created += 1
                 result.preview.append(_outcome(parsed, "created"))
@@ -435,13 +452,13 @@ def import_collection_csv(
                 assert item is not None
                 _apply_row_to_item(item, parsed)
                 _assign_tags_and_groups(
-                    db, item.id, parsed, created_tag_names, created_group_names
+                    db, item.id, parsed, created_tag_names, created_group_names, user_id=user_id
                 )
                 result.updated += 1
                 result.preview.append(_outcome(parsed, "updated"))
             continue
 
-        existing_item = _find_existing_item(db, parsed)
+        existing_item = _find_existing_item(db, parsed, user_id=user_id)
         if existing_item is not None:
             if dry_run:
                 batch_upsert_targets[key] = existing_item.id
@@ -449,7 +466,12 @@ def import_collection_csv(
             else:
                 _apply_row_to_item(existing_item, parsed)
                 _assign_tags_and_groups(
-                    db, existing_item.id, parsed, created_tag_names, created_group_names
+                    db,
+                    existing_item.id,
+                    parsed,
+                    created_tag_names,
+                    created_group_names,
+                    user_id=user_id,
                 )
                 result.updated += 1
                 batch_upsert_targets[key] = existing_item.id
@@ -459,9 +481,9 @@ def import_collection_csv(
                 batch_upsert_targets[key] = None
                 result.preview.append(_outcome(parsed, "would_create"))
             else:
-                item = _create_item(db, parsed)
+                item = _create_item(db, parsed, user_id=user_id)
                 _assign_tags_and_groups(
-                    db, item.id, parsed, created_tag_names, created_group_names
+                    db, item.id, parsed, created_tag_names, created_group_names, user_id=user_id
                 )
                 result.created += 1
                 batch_upsert_targets[key] = item.id
@@ -474,14 +496,18 @@ def import_collection_csv(
             existing_tag_names = {
                 t.name
                 for t in db.scalars(
-                    select(CollectorTag).where(CollectorTag.name.in_(all_tag_names))
+                    select(CollectorTag).where(
+                        CollectorTag.name.in_(all_tag_names), CollectorTag.user_id == user_id
+                    )
                 ).all()
             }
         if all_group_names:
             existing_group_names = {
                 g.name
                 for g in db.scalars(
-                    select(CollectorGroup).where(CollectorGroup.name.in_(all_group_names))
+                    select(CollectorGroup).where(
+                        CollectorGroup.name.in_(all_group_names), CollectorGroup.user_id == user_id
+                    )
                 ).all()
             }
         result.tags_created = sorted(all_tag_names - existing_tag_names)

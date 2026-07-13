@@ -6,9 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { CollectorGroupLabel } from "@/components/CollectorGroupLabel";
 import { CollectorTagBadge } from "@/components/CollectorTagBadge";
+import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStatusBadge";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
 import { RarityBadge } from "@/components/RarityBadge";
+import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   OPPORTUNITY_CATEGORIES,
   type MarketOpportunitiesSummary,
@@ -18,7 +20,7 @@ import {
   resolveMarketSignalEvent,
   watchMarketSignalEvent,
 } from "@/lib/api";
-import { cardDisplayName, formatDateTime } from "@/lib/format";
+import { cardDisplayName, formatDateTime, formatJpy } from "@/lib/format";
 
 const ALL_OPTION = { value: "", label: "All" };
 const CATEGORY_OPTIONS = [
@@ -228,6 +230,7 @@ export default function MarketOpportunitiesPage() {
             <StatCard label="Drops" value={summary.by_category.drop ?? 0} />
             <StatCard label="Data quality" value={summary.by_category.data_quality ?? 0} />
             <StatCard label="Owned" value={summary.by_category.owned ?? 0} />
+            <StatCard label="Wishlist target hit" value={summary.wishlist_target_hit_count} />
           </div>
         )}
 
@@ -346,8 +349,10 @@ export default function MarketOpportunitiesPage() {
                   <th className="px-2 py-1.5 font-medium">Set</th>
                   <th className="px-2 py-1.5 font-medium">Rarity</th>
                   <th className="px-2 py-1.5 font-medium">Owned</th>
+                  <th className="px-2 py-1.5 font-medium">Wishlist</th>
                   <th className="px-2 py-1.5 font-medium">Tags</th>
                   <th className="px-2 py-1.5 font-medium">Groups</th>
+                  <th className="px-2 py-1.5 font-medium">Grading</th>
                   <th className="px-2 py-1.5 font-medium">Message</th>
                   <th className="px-2 py-1.5 font-medium">Seen</th>
                   <th className="px-2 py-1.5 font-medium">Last seen</th>
@@ -361,7 +366,9 @@ export default function MarketOpportunitiesPage() {
                   return (
                     <tr
                       key={opp.event_id}
-                      className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
+                      className={`border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60 ${
+                        opp.wishlist_target_hit ? "bg-emerald-500/[0.04]" : ""
+                      }`}
                     >
                       <td className="px-2 py-1.5">
                         <span className={`text-base font-bold ${scoreColor(opp.score)}`}>
@@ -401,6 +408,29 @@ export default function MarketOpportunitiesPage() {
                         )}
                       </td>
                       <td className="px-2 py-1.5">
+                        {opp.wishlist_item_id !== null ? (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              {opp.wishlist_priority && (
+                                <WishlistPriorityBadge priority={opp.wishlist_priority} />
+                              )}
+                              {opp.wishlist_target_hit && (
+                                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+                                  target hit
+                                </span>
+                              )}
+                            </div>
+                            {opp.wishlist_target_buy_price_jpy !== null && (
+                              <span className="text-[10px] text-neutral-500">
+                                target {formatJpy(opp.wishlist_target_buy_price_jpy)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
                         {opp.tags.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {opp.tags.map((tag) => (
@@ -417,6 +447,24 @@ export default function MarketOpportunitiesPage() {
                             {opp.groups.map((group) => (
                               <CollectorGroupLabel key={group.id} group={group} />
                             ))}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {opp.grading.has_grading_submission ? (
+                          <div className="flex flex-col gap-0.5">
+                            <GradingStatusBadge status={opp.grading.latest_status ?? "planned"} />
+                            {opp.category === "sell" &&
+                              opp.grading.latest_status &&
+                              ["submitted", "grading", "shipped_back"].includes(
+                                opp.grading.latest_status,
+                              ) && (
+                                <span className="text-[10px] text-amber-400">
+                                  away for grading
+                                </span>
+                              )}
                           </div>
                         ) : (
                           <span className="text-neutral-600">—</span>
