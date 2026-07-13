@@ -8,6 +8,7 @@ from app.models.collection_item_group import CollectionItemGroup
 from app.models.collection_item_tag import CollectionItemTag
 from app.models.collector_group import CollectorGroup
 from app.models.collector_tag import CollectorTag
+from app.models.dashboard_preference import DashboardPreference
 from app.models.grading_submission import GradingSubmission
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
@@ -27,6 +28,7 @@ from app.models.wishlist_item import WishlistItem
 __all__ = [
     "User",
     "WishlistItem",
+    "DashboardPreference",
     "Base",
     "Card",
     "CollectionItem",

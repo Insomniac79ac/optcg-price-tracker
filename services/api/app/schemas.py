@@ -1217,3 +1217,127 @@ class WishlistImportResponseOut(BaseModel):
     summary: WishlistImportSummaryOut
     errors: list[WishlistImportRowErrorOut]
     preview: list[WishlistImportPreviewRowOut]
+
+
+# --- Dashboard personalization -----------------------------------------
+
+DashboardTimeframe = Literal["7d", "30d", "90d", "all"]
+
+
+class DashboardPreferencesOut(BaseModel):
+    layout: list[str]
+    hidden_widgets: list[str]
+    pinned_cards: list[int]
+    default_timeframe: str
+    show_raw_market_value: bool
+    show_graded_adjusted_value: bool
+    show_wishlist_budget: bool
+    show_grading_costs: bool
+
+
+class DashboardPreferencesUpdateIn(BaseModel):
+    layout: list[str] | None = None
+    hidden_widgets: list[str] | None = None
+    pinned_cards: list[int] | None = None
+    default_timeframe: DashboardTimeframe | None = None
+    show_raw_market_value: bool | None = None
+    show_graded_adjusted_value: bool | None = None
+    show_wishlist_budget: bool | None = None
+    show_grading_costs: bool | None = None
+
+
+class PortfolioSummaryWidgetOut(BaseModel):
+    total_cost_basis_jpy: int | None
+    market_floor_value_jpy: int | None
+    graded_adjusted_value_jpy: int | None
+    pnl_vs_market_floor_jpy: int | None
+    pnl_vs_market_floor_pct: float | None
+    pnl_vs_graded_adjusted_jpy: int | None
+    pnl_vs_graded_adjusted_pct: float | None
+
+
+class PortfolioChartPointOut(BaseModel):
+    created_at: datetime
+    market_floor_value_jpy: int | None
+    graded_adjusted_value_jpy: int | None
+
+
+class PortfolioChartWidgetOut(BaseModel):
+    timeframe: str
+    points: list[PortfolioChartPointOut]
+
+
+class WishlistTargetsWidgetOut(BaseModel):
+    items: list[WishlistItemOut]
+    total_target_hit: int
+    total_target_budget_jpy: int
+    total_max_budget_jpy: int
+
+
+class TopOpportunitiesWidgetOut(BaseModel):
+    opportunities: list[OpportunityOut]
+
+
+class GradingStatusWidgetOut(BaseModel):
+    total_submissions: int
+    submitted_or_grading_count: int
+    received_count: int
+    total_grading_cost_jpy: int
+
+
+class MarketReportWidgetOut(BaseModel):
+    report_id: int | None
+    report_date: date | None
+    total_opportunities: int | None
+    highest_score: int | None
+    deterministic_summary_lines: list[str]
+
+
+class CollectionQualityWidgetOut(BaseModel):
+    missing_purchase_price_count: int
+    missing_condition_count: int
+    missing_target_sell_count: int
+
+
+class RecentSignalEventsWidgetOut(BaseModel):
+    events: list[MarketSignalEventOut]
+
+
+class DataFreshnessWidgetOut(BaseModel):
+    latest_refresh_at: datetime | None
+    latest_refresh_status: str | None
+    missing_recent_price_count: int
+    stale_mapping_price_count: int
+
+
+class BackupStatusWidgetOut(BaseModel):
+    tracked: bool
+    last_backup_at: datetime | None = None
+    message: str | None = None
+
+
+class WorkflowStatusWidgetOut(BaseModel):
+    run_id: int | None
+    status: str | None
+    market_report_id: int | None
+    telegram_digest_status: str | None
+    finished_at: datetime | None
+
+
+class DashboardWidgetsOut(BaseModel):
+    portfolio_summary: PortfolioSummaryWidgetOut
+    portfolio_chart: PortfolioChartWidgetOut
+    wishlist_targets: WishlistTargetsWidgetOut
+    top_opportunities: TopOpportunitiesWidgetOut
+    grading_status: GradingStatusWidgetOut
+    market_report: MarketReportWidgetOut
+    collection_quality: CollectionQualityWidgetOut
+    recent_signal_events: RecentSignalEventsWidgetOut
+    data_freshness: DataFreshnessWidgetOut
+    backup_status: BackupStatusWidgetOut
+    workflow_status: WorkflowStatusWidgetOut
+
+
+class DashboardOverviewOut(BaseModel):
+    preferences: DashboardPreferencesOut
+    widgets: DashboardWidgetsOut

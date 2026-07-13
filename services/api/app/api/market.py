@@ -20,6 +20,7 @@ from app.schemas import (
     OpportunitiesResponseOut,
 )
 from app.services.market import get_market_movers
+from app.services.market_signal_events import event_to_out, owned_quantity_for_card
 from app.services.market_signals import SIGNAL_TYPES, get_market_signals
 from app.services.opportunity_scoring import CATEGORIES, get_opportunities
 
@@ -93,49 +94,6 @@ def market_signals(
     )
 
 
-def _owned_quantity_for_card(db: Session, card_id: int | None) -> int:
-    if card_id is None:
-        return 0
-    total = db.scalar(
-        select(func.coalesce(func.sum(CollectionItem.quantity), 0)).where(
-            CollectionItem.card_id == card_id
-        )
-    )
-    return int(total or 0)
-
-
-def _event_to_out(
-    event: MarketSignalEvent, card: Card | None, owned_quantity: int
-) -> MarketSignalEventOut:
-    return MarketSignalEventOut(
-        id=event.id,
-        signal_type=event.signal_type,
-        status=event.status,
-        severity=event.severity,
-        suggested_action=event.suggested_action,
-        card_id=event.card_id,
-        card_code=card.card_code if card is not None else None,
-        name_en=card.name_en if card is not None else None,
-        name_jp=card.name_jp if card is not None else None,
-        set_code=card.set_code if card is not None else None,
-        rarity=card.rarity if card is not None else None,
-        variant=card.variant if card is not None else None,
-        language=card.language if card is not None else None,
-        collection_item_id=event.collection_item_id,
-        owned_quantity=owned_quantity,
-        message=event.message,
-        notes=event.notes,
-        first_seen_at=event.first_seen_at,
-        last_seen_at=event.last_seen_at,
-        seen_count=event.seen_count,
-        last_payload=event.last_payload_json,
-        dismissed_at=event.dismissed_at,
-        resolved_at=event.resolved_at,
-        created_at=event.created_at,
-        updated_at=event.updated_at,
-    )
-
-
 def _get_event_or_404(db: Session, event_id: int) -> MarketSignalEvent:
     event = db.get(MarketSignalEvent, event_id)
     if event is None:
@@ -145,8 +103,8 @@ def _get_event_or_404(db: Session, event_id: int) -> MarketSignalEvent:
 
 def _build_event_out(db: Session, event: MarketSignalEvent) -> MarketSignalEventOut:
     card = db.get(Card, event.card_id) if event.card_id is not None else None
-    owned_quantity = _owned_quantity_for_card(db, event.card_id)
-    return _event_to_out(event, card, owned_quantity)
+    owned_quantity = owned_quantity_for_card(db, event.card_id)
+    return event_to_out(event, card, owned_quantity)
 
 
 @router.get("/signal-events", response_model=MarketSignalEventListOut)
@@ -237,7 +195,7 @@ def list_market_signal_events(
     page = enriched[offset : offset + limit]
     return MarketSignalEventListOut(
         summary=summary,
-        events=[_event_to_out(event, card, qty) for event, card, qty in page],
+        events=[event_to_out(event, card, qty) for event, card, qty in page],
     )
 
 

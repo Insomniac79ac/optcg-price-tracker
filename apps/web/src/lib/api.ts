@@ -2261,3 +2261,188 @@ export async function importWishlistCsv(
 
   return details as WishlistImportResponse;
 }
+
+// --- Dashboard personalization --------------------------------------------
+
+export const DASHBOARD_WIDGET_IDS = [
+  "portfolio_summary",
+  "portfolio_chart",
+  "wishlist_targets",
+  "top_opportunities",
+  "grading_status",
+  "market_report",
+  "collection_quality",
+  "recent_signal_events",
+  "data_freshness",
+  "backup_status",
+  "workflow_status",
+] as const;
+export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
+
+export const DASHBOARD_TIMEFRAMES = ["7d", "30d", "90d", "all"] as const;
+export type DashboardTimeframe = (typeof DASHBOARD_TIMEFRAMES)[number];
+
+export interface DashboardPreferences {
+  layout: string[];
+  hidden_widgets: string[];
+  pinned_cards: number[];
+  default_timeframe: string;
+  show_raw_market_value: boolean;
+  show_graded_adjusted_value: boolean;
+  show_wishlist_budget: boolean;
+  show_grading_costs: boolean;
+}
+
+export interface DashboardPreferencesInput {
+  layout?: string[];
+  hidden_widgets?: string[];
+  pinned_cards?: number[];
+  default_timeframe?: DashboardTimeframe;
+  show_raw_market_value?: boolean;
+  show_graded_adjusted_value?: boolean;
+  show_wishlist_budget?: boolean;
+  show_grading_costs?: boolean;
+}
+
+/** Mirrors services/api/app/services/dashboard.py's DEFAULT_PREFERENCES -
+ * used by the frontend's "Reset to defaults" action, which just PATCHes this
+ * back rather than needing a dedicated reset endpoint. */
+export const DEFAULT_DASHBOARD_PREFERENCES: DashboardPreferences = {
+  layout: [
+    "portfolio_summary",
+    "wishlist_targets",
+    "top_opportunities",
+    "grading_status",
+    "market_report",
+    "collection_quality",
+    "recent_signal_events",
+    "data_freshness",
+  ],
+  hidden_widgets: [],
+  pinned_cards: [],
+  default_timeframe: "30d",
+  show_raw_market_value: true,
+  show_graded_adjusted_value: true,
+  show_wishlist_budget: true,
+  show_grading_costs: true,
+};
+
+export interface PortfolioSummaryWidget {
+  total_cost_basis_jpy: number | null;
+  market_floor_value_jpy: number | null;
+  graded_adjusted_value_jpy: number | null;
+  pnl_vs_market_floor_jpy: number | null;
+  pnl_vs_market_floor_pct: number | null;
+  pnl_vs_graded_adjusted_jpy: number | null;
+  pnl_vs_graded_adjusted_pct: number | null;
+}
+
+export interface PortfolioChartPoint {
+  created_at: string;
+  market_floor_value_jpy: number | null;
+  graded_adjusted_value_jpy: number | null;
+}
+
+export interface PortfolioChartWidget {
+  timeframe: string;
+  points: PortfolioChartPoint[];
+}
+
+export interface WishlistTargetsWidget {
+  items: WishlistItem[];
+  total_target_hit: number;
+  total_target_budget_jpy: number;
+  total_max_budget_jpy: number;
+}
+
+export interface TopOpportunitiesWidget {
+  opportunities: MarketOpportunity[];
+}
+
+export interface GradingStatusWidget {
+  total_submissions: number;
+  submitted_or_grading_count: number;
+  received_count: number;
+  total_grading_cost_jpy: number;
+}
+
+export interface MarketReportWidget {
+  report_id: number | null;
+  report_date: string | null;
+  total_opportunities: number | null;
+  highest_score: number | null;
+  deterministic_summary_lines: string[];
+}
+
+export interface CollectionQualityWidget {
+  missing_purchase_price_count: number;
+  missing_condition_count: number;
+  missing_target_sell_count: number;
+}
+
+export interface RecentSignalEventsWidget {
+  events: MarketSignalEvent[];
+}
+
+export interface DataFreshnessWidget {
+  latest_refresh_at: string | null;
+  latest_refresh_status: string | null;
+  missing_recent_price_count: number;
+  stale_mapping_price_count: number;
+}
+
+export interface BackupStatusWidget {
+  tracked: boolean;
+  last_backup_at: string | null;
+  message: string | null;
+}
+
+export interface WorkflowStatusWidget {
+  run_id: number | null;
+  status: string | null;
+  market_report_id: number | null;
+  telegram_digest_status: string | null;
+  finished_at: string | null;
+}
+
+export interface DashboardWidgets {
+  portfolio_summary: PortfolioSummaryWidget;
+  portfolio_chart: PortfolioChartWidget;
+  wishlist_targets: WishlistTargetsWidget;
+  top_opportunities: TopOpportunitiesWidget;
+  grading_status: GradingStatusWidget;
+  market_report: MarketReportWidget;
+  collection_quality: CollectionQualityWidget;
+  recent_signal_events: RecentSignalEventsWidget;
+  data_freshness: DataFreshnessWidget;
+  backup_status: BackupStatusWidget;
+  workflow_status: WorkflowStatusWidget;
+}
+
+export interface DashboardOverview {
+  preferences: DashboardPreferences;
+  widgets: DashboardWidgets;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/dashboard/preferences/route.ts), which forwards the caller's
+ * session as a bearer token - same reasoning as the collection/wishlist CSV
+ * proxy routes. */
+export function fetchDashboardPreferences(): Promise<DashboardPreferences> {
+  return fetchAdminJson<DashboardPreferences>("/api/dashboard/preferences");
+}
+
+export function updateDashboardPreferences(
+  body: DashboardPreferencesInput,
+): Promise<DashboardPreferences> {
+  return fetchAdminJson<DashboardPreferences>("/api/dashboard/preferences", {
+    method: "PATCH",
+    body,
+  });
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/dashboard/overview/route.ts). */
+export function fetchDashboardOverview(): Promise<DashboardOverview> {
+  return fetchAdminJson<DashboardOverview>("/api/dashboard/overview");
+}

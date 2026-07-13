@@ -230,6 +230,7 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     make_workflow_run(db_session, market_report_id=report.id)
     db_session.add(WishlistItem(user_id=1, card_id=card.id))
     db_session.commit()
+    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
 
     response = client.get("/admin/backup/export")
 
@@ -244,6 +245,7 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     assert len(body["tables"]["market_report_digest_sends"]) == 1
     assert len(body["tables"]["market_workflow_runs"]) == 1
     assert len(body["tables"]["wishlist_items"]) == 1
+    assert len(body["tables"]["dashboard_preferences"]) == 1
 
 
 def test_backup_export_includes_wishlist_items(client, db_session):
@@ -258,6 +260,18 @@ def test_backup_export_includes_wishlist_items(client, db_session):
     assert "wishlist_items" in body["tables"]
     assert len(body["tables"]["wishlist_items"]) == 1
     assert body["tables"]["wishlist_items"][0]["priority"] == "grail"
+
+
+def test_backup_export_includes_dashboard_preferences(client, db_session):
+    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
+
+    response = client.get("/admin/backup/export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "dashboard_preferences" in body["tables"]
+    assert len(body["tables"]["dashboard_preferences"]) == 1
+    assert body["tables"]["dashboard_preferences"][0]["preference_key"] == "main_dashboard"
 
 
 def test_export_requires_admin_token():

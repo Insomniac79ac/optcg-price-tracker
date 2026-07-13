@@ -16,6 +16,7 @@ from app.models import (
     CollectionItemTag,
     CollectorGroup,
     CollectorTag,
+    DashboardPreference,
     GradingSubmission,
     MarketIntelligenceReport,
     MarketReportDigestSend,
@@ -33,12 +34,12 @@ from app.models import (
 
 # Bumped 1 -> 2 when collector tags/groups tables were added, 2 -> 3 when
 # grading_submissions was added, 3 -> 4 when users was added (and
-# collector_tags/collector_groups/collection_items became user-scoped), and
-# 4 -> 5 when wishlist_items was added - these all became required tables,
-# so a backup from before any of these changes predates them entirely.
-# Rejecting with an explicit version mismatch is clearer than a generic
-# "missing required table" error.
-BACKUP_VERSION = 5
+# collector_tags/collector_groups/collection_items became user-scoped), 4 -> 5
+# when wishlist_items was added, and 5 -> 6 when dashboard_preferences was
+# added - these all became required tables, so a backup from before any of
+# these changes predates them entirely. Rejecting with an explicit version
+# mismatch is clearer than a generic "missing required table" error.
+BACKUP_VERSION = 6
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -67,6 +68,7 @@ MODEL_BY_TABLE: dict[str, type] = {
     "market_signal_events": MarketSignalEvent,
     "market_report_digest_sends": MarketReportDigestSend,
     "market_workflow_runs": MarketWorkflowRun,
+    "dashboard_preferences": DashboardPreference,
 }
 
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
@@ -90,6 +92,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "collection_item_groups",
     "grading_submissions",
     "wishlist_items",
+    "dashboard_preferences",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (

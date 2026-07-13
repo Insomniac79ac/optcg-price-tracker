@@ -6,10 +6,56 @@ instead of recomputed fresh on every page load.
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import MarketSignalEvent
+from app.models import Card, CollectionItem, MarketSignalEvent
+from app.schemas import MarketSignalEventOut
 from app.services.market_signals import get_market_signals
+
+
+def owned_quantity_for_card(db: Session, card_id: int | None) -> int:
+    """Global (not per-user) owned quantity across every collection - matches
+    the rest of the market-signals/opportunities subsystem, which is an
+    admin-facing aggregate view rather than a per-user one."""
+    if card_id is None:
+        return 0
+    total = db.scalar(
+        select(func.coalesce(func.sum(CollectionItem.quantity), 0)).where(
+            CollectionItem.card_id == card_id
+        )
+    )
+    return int(total or 0)
+
+
+def event_to_out(event: MarketSignalEvent, card: Card | None, owned_quantity: int) -> MarketSignalEventOut:
+    return MarketSignalEventOut(
+        id=event.id,
+        signal_type=event.signal_type,
+        status=event.status,
+        severity=event.severity,
+        suggested_action=event.suggested_action,
+        card_id=event.card_id,
+        card_code=card.card_code if card is not None else None,
+        name_en=card.name_en if card is not None else None,
+        name_jp=card.name_jp if card is not None else None,
+        set_code=card.set_code if card is not None else None,
+        rarity=card.rarity if card is not None else None,
+        variant=card.variant if card is not None else None,
+        language=card.language if card is not None else None,
+        collection_item_id=event.collection_item_id,
+        owned_quantity=owned_quantity,
+        message=event.message,
+        notes=event.notes,
+        first_seen_at=event.first_seen_at,
+        last_seen_at=event.last_seen_at,
+        seen_count=event.seen_count,
+        last_payload=event.last_payload_json,
+        dismissed_at=event.dismissed_at,
+        resolved_at=event.resolved_at,
+        created_at=event.created_at,
+        updated_at=event.updated_at,
+    )
 
 # Large enough to cover the entire catalog in one pass - snapshotting needs
 # the full current signal set, not a paginated page of it.

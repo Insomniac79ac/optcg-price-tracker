@@ -26,6 +26,9 @@ export function AppHeader() {
           <Link href="/grading" className="hover:text-neutral-100">
             Grading
           </Link>
+          <Link href="/market/movers" className="hover:text-neutral-100">
+            Market movers
+          </Link>
           <Link href="/market/signals" className="hover:text-neutral-100">
             Market signals
           </Link>
@@ -86,7 +89,7 @@ function AuthControl() {
     return (
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/collection" })}
+        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
         className="rounded bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-white"
       >
         Sign in with Google
