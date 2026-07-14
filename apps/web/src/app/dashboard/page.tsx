@@ -202,9 +202,19 @@ export default function DashboardPage() {
             Customize dashboard
           </button>
         </div>
-        <p className="mb-6 text-sm text-neutral-500">
+        <p className="mb-4 text-sm text-neutral-500">
           Your collection, wishlist, grading, and market signals in one view.
         </p>
+
+        <Link
+          href="/search"
+          className="mb-6 flex items-center justify-between rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+        >
+          <span>Search cards, collection, wishlist, notes, signals…</span>
+          <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-600">
+            Ctrl/Cmd+K
+          </span>
+        </Link>
 
         {status === "loading" && (
           <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">

@@ -16,6 +16,7 @@ from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.market_workflow_runs import router as market_workflow_runs_router
 from app.api.refresh_runs import router as refresh_runs_router
+from app.api.search import router as search_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
 from app.api.source_mappings import router as source_mappings_router
 from app.api.wishlist import router as wishlist_router
@@ -65,3 +66,4 @@ app.include_router(dashboard_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(market_workflow_runs_router)
+app.include_router(search_router)

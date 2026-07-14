@@ -20,6 +20,7 @@ from app.models.price_observation import PriceObservation
 from app.models.portfolio_valuation_snapshot import PortfolioValuationSnapshot
 from app.models.price_refresh_run import PriceRefreshRun
 from app.models.raw_snapshot import RawSnapshot
+from app.models.search_history import SearchHistory
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
 from app.models.source import Source
@@ -56,4 +57,5 @@ __all__ = [
     "GradingSubmission",
     "CollectorNote",
     "CollectorActivityEvent",
+    "SearchHistory",
 ]

@@ -2446,3 +2446,86 @@ export function updateDashboardPreferences(
 export function fetchDashboardOverview(): Promise<DashboardOverview> {
   return fetchAdminJson<DashboardOverview>("/api/dashboard/overview");
 }
+
+// --- Search --------------------------------------------------------------
+
+export const SEARCH_TYPES = [
+  "cards",
+  "collection",
+  "wishlist",
+  "grading",
+  "notes",
+  "activity",
+  "signals",
+  "opportunities",
+  "reports",
+] as const;
+export type SearchType = (typeof SEARCH_TYPES)[number];
+
+export interface SearchResult {
+  type: SearchType;
+  id: number;
+  score: number;
+  title: string;
+  subtitle: string;
+  matched_fields: string[];
+  card_id: number | null;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  url: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SearchSummary {
+  total_results: number;
+  by_type: Record<SearchType, number>;
+}
+
+export interface SearchResponse {
+  query: string;
+  summary: SearchSummary;
+  results: SearchResult[];
+}
+
+export interface SearchSuggestion {
+  label: string;
+  type: string;
+  url: string;
+}
+
+export interface SearchSuggestionsResponse {
+  suggestions: SearchSuggestion[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/search/route.ts), which forwards the caller's session as a
+ * bearer token - same reasoning as the dashboard overview/preferences proxy
+ * routes. */
+export function fetchSearch(params: {
+  q: string;
+  types?: SearchType[];
+  limit?: number;
+  offset?: number;
+}): Promise<SearchResponse> {
+  const query = new URLSearchParams({ q: params.q });
+  if (params.types && params.types.length > 0) query.set("types", params.types.join(","));
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  return fetchAdminJson<SearchResponse>(`/api/search?${query.toString()}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/search/suggestions/route.ts). */
+export function fetchSearchSuggestions(params?: {
+  q?: string;
+  limit?: number;
+}): Promise<SearchSuggestionsResponse> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  const qs = query.toString();
+  return fetchAdminJson<SearchSuggestionsResponse>(
+    `/api/search/suggestions${qs ? `?${qs}` : ""}`,
+  );
+}

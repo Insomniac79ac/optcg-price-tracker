@@ -14,7 +14,9 @@ from app.models import (
     CollectionItem,
     CollectionItemGroup,
     CollectionItemTag,
+    CollectorActivityEvent,
     CollectorGroup,
+    CollectorNote,
     CollectorTag,
     DashboardPreference,
     GradingSubmission,
@@ -26,6 +28,7 @@ from app.models import (
     PriceObservation,
     PriceRefreshRun,
     RawSnapshot,
+    SearchHistory,
     Source,
     SourceCardMapping,
     User,
@@ -35,11 +38,13 @@ from app.models import (
 # Bumped 1 -> 2 when collector tags/groups tables were added, 2 -> 3 when
 # grading_submissions was added, 3 -> 4 when users was added (and
 # collector_tags/collector_groups/collection_items became user-scoped), 4 -> 5
-# when wishlist_items was added, and 5 -> 6 when dashboard_preferences was
-# added - these all became required tables, so a backup from before any of
-# these changes predates them entirely. Rejecting with an explicit version
-# mismatch is clearer than a generic "missing required table" error.
-BACKUP_VERSION = 6
+# when wishlist_items was added, 5 -> 6 when dashboard_preferences was added,
+# and 6 -> 7 when collector_notes/collector_activity_events (missed when
+# those tables were first added) and search_history were added - these all
+# became required tables, so a backup from before any of these changes
+# predates them entirely. Rejecting with an explicit version mismatch is
+# clearer than a generic "missing required table" error.
+BACKUP_VERSION = 7
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -68,7 +73,10 @@ MODEL_BY_TABLE: dict[str, type] = {
     "market_signal_events": MarketSignalEvent,
     "market_report_digest_sends": MarketReportDigestSend,
     "market_workflow_runs": MarketWorkflowRun,
+    "collector_notes": CollectorNote,
+    "collector_activity_events": CollectorActivityEvent,
     "dashboard_preferences": DashboardPreference,
+    "search_history": SearchHistory,
 }
 
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
@@ -93,6 +101,9 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "grading_submissions",
     "wishlist_items",
     "dashboard_preferences",
+    "collector_notes",
+    "collector_activity_events",
+    "search_history",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (

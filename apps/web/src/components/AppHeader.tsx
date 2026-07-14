@@ -1,9 +1,24 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 
 export function AppHeader() {
+  const router = useRouter();
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        router.push("/search");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [router]);
+
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
       <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-4">
@@ -16,6 +31,13 @@ export function AppHeader() {
         <nav className="flex flex-1 items-center gap-4 text-sm text-neutral-400">
           <Link href="/dashboard" className="hover:text-neutral-100">
             Dashboard
+          </Link>
+          <Link
+            href="/search"
+            className="hover:text-neutral-100"
+            title="Search (Ctrl/Cmd+K)"
+          >
+            Search
           </Link>
           <Link href="/collection" className="hover:text-neutral-100">
             Collection

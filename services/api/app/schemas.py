@@ -1460,3 +1460,42 @@ class DashboardWidgetsOut(BaseModel):
 class DashboardOverviewOut(BaseModel):
     preferences: DashboardPreferencesOut
     widgets: DashboardWidgetsOut
+
+
+# --- search --------------------------------------------------------------
+
+
+class SearchResultOut(BaseModel):
+    type: str
+    id: int
+    score: int
+    title: str
+    subtitle: str
+    matched_fields: list[str]
+    card_id: int | None
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    url: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SearchSummaryOut(BaseModel):
+    total_results: int
+    by_type: dict[str, int]
+
+
+class SearchResponseOut(BaseModel):
+    query: str
+    summary: SearchSummaryOut
+    results: list[SearchResultOut]
+
+
+class SearchSuggestionOut(BaseModel):
+    label: str
+    type: str
+    url: str
+
+
+class SearchSuggestionsResponseOut(BaseModel):
+    suggestions: list[SearchSuggestionOut]
