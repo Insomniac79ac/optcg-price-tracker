@@ -6,7 +6,9 @@ from app.models.card_tag import CardTag
 from app.models.collection_item import CollectionItem
 from app.models.collection_item_group import CollectionItemGroup
 from app.models.collection_item_tag import CollectionItemTag
+from app.models.collector_activity_event import CollectorActivityEvent
 from app.models.collector_group import CollectorGroup
+from app.models.collector_note import CollectorNote
 from app.models.collector_tag import CollectorTag
 from app.models.dashboard_preference import DashboardPreference
 from app.models.grading_submission import GradingSubmission
@@ -52,4 +54,6 @@ __all__ = [
     "CollectionItemTag",
     "CollectionItemGroup",
     "GradingSubmission",
+    "CollectorNote",
+    "CollectorActivityEvent",
 ]

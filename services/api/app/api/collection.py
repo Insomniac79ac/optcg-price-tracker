@@ -38,6 +38,7 @@ from app.services.collection_csv import (
     export_filename,
     import_collection_csv,
 )
+from app.services.activity_timeline import record_activity_event
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
 from app.services.grading import build_grading_submission_out, get_submissions_for_items
 from app.services.portfolio_valuation import get_portfolio_valuation
@@ -340,6 +341,17 @@ def create_collection_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    record_activity_event(
+        db,
+        event_type="collection_item_added",
+        event_source="collection",
+        title=f"Added {card.name_en or card.card_code} to collection",
+        message=f"Quantity: {item.quantity}",
+        card_id=item.card_id,
+        collection_item_id=item.id,
+    )
+
     return _to_out(item, card)
 
 
@@ -365,12 +377,25 @@ def update_collection_item(
     if "card_id" in updates:
         _get_card_or_404(db, updates["card_id"])
 
+    previous_status = item.status
     for field, value in updates.items():
         setattr(item, field, value)
 
     db.commit()
     db.refresh(item)
     card = db.get(Card, item.card_id)
+
+    if "status" in updates and updates["status"] != previous_status:
+        record_activity_event(
+            db,
+            event_type="collection_item_status_changed",
+            event_source="collection",
+            title=f"{card.name_en or card.card_code} marked as {item.status}",
+            message=f"{previous_status} -> {item.status}",
+            card_id=item.card_id,
+            collection_item_id=item.id,
+        )
+
     return _to_out_single(db, item, card)
 
 
@@ -379,8 +404,21 @@ def delete_collection_item(
     item_id: int, db: Session = Depends(get_db), user: User = Depends(require_current_user)
 ):
     item = _get_item_or_404(db, item_id, user)
+    card = db.get(Card, item.card_id)
+    card_id = item.card_id
+    card_label = (card.name_en or card.card_code) if card is not None else "item"
+
     db.delete(item)
     db.commit()
+
+    record_activity_event(
+        db,
+        event_type="collection_item_removed",
+        event_source="collection",
+        title=f"Removed {card_label} from collection",
+        card_id=card_id,
+    )
+
     return None
 
 

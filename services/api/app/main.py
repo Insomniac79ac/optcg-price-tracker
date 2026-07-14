@@ -8,6 +8,8 @@ from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
 from app.api.collection import router as collection_router
 from app.api.collector import router as collector_router
+from app.api.collector_activity import router as collector_activity_router
+from app.api.collector_notes import router as collector_notes_router
 from app.api.dashboard import router as dashboard_router
 from app.api.grading import router as grading_router
 from app.api.health import router as health_router
@@ -55,6 +57,8 @@ app.include_router(card_audit_router)
 app.include_router(source_mappings_router)
 app.include_router(collection_router)
 app.include_router(collector_router)
+app.include_router(collector_notes_router)
+app.include_router(collector_activity_router)
 app.include_router(grading_router)
 app.include_router(wishlist_router)
 app.include_router(dashboard_router)

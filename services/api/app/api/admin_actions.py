@@ -17,6 +17,7 @@ from app.schemas import (
     AdminSnapshotMarketSignalsResponse,
     AdminSnapshotPortfolioResponse,
 )
+from app.services.activity_timeline import record_activity_event
 from app.services.market_report import generate_market_report
 from app.services.market_signal_events import snapshot_market_signals
 from app.services.market_workflow_trigger import trigger_market_workflow
@@ -88,6 +89,19 @@ def snapshot_portfolio_action(db: Session = Depends(get_db)):
 @router.post("/snapshot-market-signals", response_model=AdminSnapshotMarketSignalsResponse)
 def snapshot_market_signals_action(db: Session = Depends(get_db)):
     result = snapshot_market_signals(db)
+
+    record_activity_event(
+        db,
+        event_type="market_signal_snapshot",
+        event_source="market_signal",
+        title="Market signal snapshot taken",
+        message=(
+            f"Created: {result.created}, updated: {result.updated}, "
+            f"resolved: {result.resolved}"
+        ),
+        payload={"created": result.created, "updated": result.updated, "resolved": result.resolved},
+    )
+
     return AdminSnapshotMarketSignalsResponse(
         created_count=result.created,
         updated_count=result.updated,
@@ -98,6 +112,15 @@ def snapshot_market_signals_action(db: Session = Depends(get_db)):
 @router.post("/generate-market-report", response_model=AdminGenerateMarketReportResponse)
 def generate_market_report_action(db: Session = Depends(get_db)):
     report = generate_market_report(db)
+
+    record_activity_event(
+        db,
+        event_type="market_report_generated",
+        event_source="market_report",
+        title="Market intelligence report generated",
+        market_report_id=report.id,
+    )
+
     return AdminGenerateMarketReportResponse(report_id=report.id)
 
 
@@ -167,6 +190,23 @@ def full_market_refresh_action(
                 db.rollback()
                 warnings.append(f"Market report digest failed: {exc}")
 
+    if not body.dry_run:
+        record_activity_event(
+            db,
+            event_type="full_market_refresh",
+            event_source="workflow",
+            title="Full market refresh completed" if not warnings else "Full market refresh completed with warnings",
+            message="; ".join(warnings) if warnings else None,
+            market_report_id=market_report_id,
+            payload={
+                "price_refresh_run_id": result.get("id"),
+                "portfolio_snapshot_id": portfolio_snapshot_id,
+                "signal_events_created": created,
+                "signal_events_updated": updated,
+                "signal_events_resolved": resolved,
+            },
+        )
+
     return AdminFullMarketRefreshResponse(
         price_refresh_run_id=result.get("id"),
         portfolio_snapshot_id=portfolio_snapshot_id,
@@ -204,7 +244,7 @@ def send_market_report_digest_action(
 
 
 @router.post("/run-market-workflow", response_model=AdminRunMarketWorkflowResponse)
-def run_market_workflow_action(body: AdminRunMarketWorkflowRequest):
+def run_market_workflow_action(body: AdminRunMarketWorkflowRequest, db: Session = Depends(get_db)):
     _validate_source(body.source)
     limit = body.limit if body.limit is not None else DEFAULT_REFRESH_LIMIT
 
@@ -219,6 +259,25 @@ def run_market_workflow_action(body: AdminRunMarketWorkflowRequest):
         raise HTTPException(
             status_code=502, detail=f"Failed to trigger market workflow: {exc}"
         ) from exc
+
+    if not body.dry_run:
+        warnings = result.get("warnings") or []
+        record_activity_event(
+            db,
+            event_type="market_workflow_run",
+            event_source="workflow",
+            title=f"Market workflow run: {result.get('status')}",
+            message="; ".join(warnings) if warnings else None,
+            market_report_id=result.get("market_report_id"),
+            market_workflow_run_id=result.get("market_workflow_run_id"),
+            payload={
+                "price_refresh_run_id": result.get("price_refresh_run_id"),
+                "portfolio_snapshot_id": result.get("portfolio_snapshot_id"),
+                "signal_events_created": result.get("signal_events_created"),
+                "signal_events_updated": result.get("signal_events_updated"),
+                "signal_events_resolved": result.get("signal_events_resolved"),
+            },
+        )
 
     return AdminRunMarketWorkflowResponse(
         market_workflow_run_id=result.get("market_workflow_run_id"),

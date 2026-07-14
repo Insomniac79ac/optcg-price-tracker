@@ -13,6 +13,7 @@ from app.schemas import (
     GradingSubmissionUpdateIn,
     GradingSummaryOut,
 )
+from app.services.activity_timeline import record_activity_event
 from app.services.grading import (
     build_grading_submission_out,
     build_grading_summary,
@@ -154,6 +155,17 @@ def create_grading_submission(
     db.refresh(submission)
 
     card = db.get(Card, item.card_id)
+    record_activity_event(
+        db,
+        event_type="grading_submission_created",
+        event_source="grading",
+        title=f"Submitted {card.name_en or card.card_code} for grading",
+        message=f"Grading company: {submission.grading_company}",
+        card_id=item.card_id,
+        collection_item_id=item.id,
+        grading_submission_id=submission.id,
+    )
+
     return build_grading_submission_out(submission, item, card)
 
 
@@ -180,6 +192,7 @@ def update_grading_submission(
     if "collection_item_id" in updates:
         _get_item_or_404(db, updates["collection_item_id"], user)
 
+    previous_status = submission.submission_status
     for field, value in updates.items():
         setattr(submission, field, value)
 
@@ -190,6 +203,19 @@ def update_grading_submission(
 
     item = db.get(CollectionItem, submission.collection_item_id)
     card = db.get(Card, item.card_id)
+
+    if "submission_status" in updates and updates["submission_status"] != previous_status:
+        record_activity_event(
+            db,
+            event_type="grading_submission_status_changed",
+            event_source="grading",
+            title=f"{card.name_en or card.card_code} grading status: {submission.submission_status}",
+            message=f"{previous_status} -> {submission.submission_status}",
+            card_id=item.card_id,
+            collection_item_id=item.id,
+            grading_submission_id=submission.id,
+        )
+
     return build_grading_submission_out(submission, item, card)
 
 

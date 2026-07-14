@@ -37,11 +37,13 @@ from app.schemas import (
     PortfolioChartPointOut,
     PortfolioChartWidgetOut,
     PortfolioSummaryWidgetOut,
+    RecentActivityWidgetOut,
     RecentSignalEventsWidgetOut,
     TopOpportunitiesWidgetOut,
     WishlistTargetsWidgetOut,
     WorkflowStatusWidgetOut,
 )
+from app.services.activity_timeline import get_recent_activity_events
 from app.services.grading import build_grading_summary
 from app.services.market_signal_events import event_to_out, owned_quantity_for_card
 from app.services.market_signals import get_market_signals
@@ -61,6 +63,7 @@ ALLOWED_WIDGET_IDS = (
     "data_freshness",
     "backup_status",
     "workflow_status",
+    "recent_activity",
 )
 
 ALLOWED_TIMEFRAMES = ("7d", "30d", "90d", "all")
@@ -77,6 +80,7 @@ DEFAULT_PREFERENCES: dict = {
         "collection_quality",
         "recent_signal_events",
         "data_freshness",
+        "recent_activity",
     ],
     "hidden_widgets": [],
     "pinned_cards": [],
@@ -316,6 +320,10 @@ def _build_workflow_status(db: Session) -> WorkflowStatusWidgetOut:
     )
 
 
+def _build_recent_activity(db: Session) -> RecentActivityWidgetOut:
+    return RecentActivityWidgetOut(events=get_recent_activity_events(db))
+
+
 def build_overview(db: Session, user_id: int) -> DashboardOverviewOut:
     pref = get_or_create_preferences(db)
     preferences_out = DashboardPreferencesOut(**pref.preference_value_json)
@@ -332,5 +340,6 @@ def build_overview(db: Session, user_id: int) -> DashboardOverviewOut:
         data_freshness=_build_data_freshness(db),
         backup_status=_build_backup_status(),
         workflow_status=_build_workflow_status(db),
+        recent_activity=_build_recent_activity(db),
     )
     return DashboardOverviewOut(preferences=preferences_out, widgets=widgets)

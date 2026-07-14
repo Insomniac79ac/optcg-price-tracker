@@ -88,6 +88,124 @@ class CollectorGroupUpdateIn(BaseModel):
         return cleaned
 
 
+# --- collector notes -----------------------------------------------------
+
+
+class CollectorNoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    note_type: str
+    card_id: int | None
+    collection_item_id: int | None
+    wishlist_item_id: int | None
+    grading_submission_id: int | None
+    market_signal_event_id: int | None
+    market_report_id: int | None
+    title: str | None
+    body: str
+    pinned: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class CollectorNoteListOut(BaseModel):
+    items: list[CollectorNoteOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class CollectorNoteCreateIn(BaseModel):
+    note_type: str = "general"
+    card_id: int | None = None
+    collection_item_id: int | None = None
+    wishlist_item_id: int | None = None
+    grading_submission_id: int | None = None
+    market_signal_event_id: int | None = None
+    market_report_id: int | None = None
+    title: str | None = None
+    body: str = Field(min_length=1)
+    pinned: bool = False
+
+    @field_validator("body")
+    @classmethod
+    def _body_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("body must not be blank")
+        return cleaned
+
+
+class CollectorNoteUpdateIn(BaseModel):
+    note_type: str | None = None
+    card_id: int | None = None
+    collection_item_id: int | None = None
+    wishlist_item_id: int | None = None
+    grading_submission_id: int | None = None
+    market_signal_event_id: int | None = None
+    market_report_id: int | None = None
+    title: str | None = None
+    body: str | None = None
+    pinned: bool | None = None
+
+    @field_validator("body")
+    @classmethod
+    def _body_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("body must not be blank")
+        return cleaned
+
+
+# --- collector activity timeline -----------------------------------------
+
+
+class CollectorActivityEventOut(BaseModel):
+    id: int
+    event_type: str
+    event_source: str
+    card_id: int | None
+    card_code: str | None = None
+    name_en: str | None = None
+    name_jp: str | None = None
+    collection_item_id: int | None
+    wishlist_item_id: int | None
+    grading_submission_id: int | None
+    market_signal_event_id: int | None
+    market_report_id: int | None
+    market_workflow_run_id: int | None
+    title: str
+    message: str | None
+    created_at: datetime
+    payload: dict[str, Any] | None = None
+
+
+class CollectorActivityListSummaryOut(BaseModel):
+    total_events: int
+    by_source: dict[str, int]
+    by_type: dict[str, int]
+
+
+class CollectorActivityListOut(BaseModel):
+    summary: CollectorActivityListSummaryOut
+    events: list[CollectorActivityEventOut]
+
+
+class CollectorActivitySummaryOut(BaseModel):
+    today_count: int
+    last_7d_count: int
+    last_30d_count: int
+    by_source: dict[str, int]
+    recent_events: list[CollectorActivityEventOut]
+
+
+class RecentActivityWidgetOut(BaseModel):
+    events: list[CollectorActivityEventOut]
+
+
 class CardOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -1336,6 +1454,7 @@ class DashboardWidgetsOut(BaseModel):
     data_freshness: DataFreshnessWidgetOut
     backup_status: BackupStatusWidgetOut
     workflow_status: WorkflowStatusWidgetOut
+    recent_activity: RecentActivityWidgetOut
 
 
 class DashboardOverviewOut(BaseModel):

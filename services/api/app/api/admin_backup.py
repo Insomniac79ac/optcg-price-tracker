@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth import require_admin_token
 from app.db import get_db
 from app.schemas import BackupRestoreResponseOut, BackupValidateResponseOut
+from app.services.activity_timeline import record_activity_event
 from app.services.backup import (
     RESTORE_MODES,
     RestoreConfirmationRequired,
@@ -86,6 +87,19 @@ async def restore_backup_endpoint(
         result = restore_backup(db, backup, dry_run=dry_run, mode=mode, confirm=confirm)
     except RestoreConfirmationRequired as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not dry_run:
+        counts = ", ".join(
+            f"{action}: {sum(by_table.values())}" for action, by_table in result.summary.items()
+        )
+        record_activity_event(
+            db,
+            event_type="backup_restored",
+            event_source="backup",
+            title=f"Backup restored (mode: {mode})",
+            message=counts or None,
+            payload={"mode": mode, "summary": result.summary},
+        )
 
     return BackupRestoreResponseOut(
         dry_run=result.dry_run,

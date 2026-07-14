@@ -21,6 +21,7 @@ from app.schemas import (
     WishlistMarkPurchasedIn,
     WishlistSummaryOut,
 )
+from app.services.activity_timeline import record_activity_event
 from app.services.collector import get_tags_for_cards
 from app.services.wishlist import (
     build_wishlist_item_out,
@@ -210,6 +211,17 @@ def create_wishlist_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    card = db.get(Card, item.card_id)
+    record_activity_event(
+        db,
+        event_type="wishlist_item_added",
+        event_source="wishlist",
+        title=f"Added {card.name_en or card.card_code} to wishlist",
+        card_id=item.card_id,
+        wishlist_item_id=item.id,
+    )
+
     return _to_single_out(db, item, user)
 
 
@@ -265,6 +277,17 @@ def delete_wishlist_item(
     item.status = "removed"
     db.commit()
     db.refresh(item)
+
+    card = db.get(Card, item.card_id)
+    record_activity_event(
+        db,
+        event_type="wishlist_item_removed",
+        event_source="wishlist",
+        title=f"Removed {card.name_en or card.card_code} from wishlist",
+        card_id=item.card_id,
+        wishlist_item_id=item.id,
+    )
+
     return _to_single_out(db, item, user)
 
 
@@ -284,6 +307,19 @@ def mark_wishlist_item_purchased(
 
     db.commit()
     db.refresh(item)
+
+    card = db.get(Card, item.card_id)
+    record_activity_event(
+        db,
+        event_type="wishlist_item_purchased",
+        event_source="wishlist",
+        title=f"Marked {card.name_en or card.card_code} as purchased",
+        message=f"Quantity: {item.acquired_quantity}",
+        card_id=item.card_id,
+        wishlist_item_id=item.id,
+        collection_item_id=item.acquired_collection_item_id,
+    )
+
     return _to_single_out(db, item, user)
 
 
@@ -319,6 +355,17 @@ def convert_wishlist_item_to_collection(
     db.commit()
     db.refresh(collection_item)
     db.refresh(item)
+
+    record_activity_event(
+        db,
+        event_type="wishlist_item_converted",
+        event_source="wishlist",
+        title=f"Converted {card.name_en or card.card_code} from wishlist to collection",
+        message=f"Quantity: {body.quantity}",
+        card_id=item.card_id,
+        wishlist_item_id=item.id,
+        collection_item_id=collection_item.id,
+    )
 
     return WishlistConvertToCollectionOut(
         wishlist_item=_to_single_out(db, item, user),
