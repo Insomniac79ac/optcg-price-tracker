@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone CommonJS Node scripts (run directly via `node`, outside
+    // Next.js's own module system) - not app source, so the React/TS
+    // ruleset (e.g. no-require-imports) doesn't apply. See scripts/check-env.js.
+    "scripts/**",
   ]),
 ]);
 

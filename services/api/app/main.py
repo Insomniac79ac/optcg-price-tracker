@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,6 +13,7 @@ from app.api.collector import router as collector_router
 from app.api.collector_activity import router as collector_activity_router
 from app.api.collector_notes import router as collector_notes_router
 from app.api.dashboard import router as dashboard_router
+from app.api.env_check import router as env_check_router
 from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
@@ -19,9 +22,13 @@ from app.api.refresh_runs import router as refresh_runs_router
 from app.api.search import router as search_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
 from app.api.source_mappings import router as source_mappings_router
+from app.api.system_check import router as system_check_router
 from app.api.wishlist import router as wishlist_router
 from app.config_check import validate_config
+from app.core.env_validation import validate_environment
 from app.settings import settings
+
+logger = logging.getLogger(__name__)
 
 # Fail fast and loud: a misconfigured production deployment (no ADMIN_TOKEN)
 # should never come up serving traffic. This only runs once, at process
@@ -32,6 +39,20 @@ _startup_check = validate_config()
 if not _startup_check.ok:
     raise RuntimeError(
         "Invalid API configuration - refusing to start: " + "; ".join(_startup_check.errors)
+    )
+
+# Broader environment/startup safety sweep (ADMIN_TOKEN strength, DATABASE_URL
+# default password, SCRAPING_MODE, market workflow schedule vars, Telegram
+# config, ...) - see app/core/env_validation.py. Warnings are logged in every
+# environment; only production treats a failed check as fatal (development
+# keeps running with local defaults per rule 2 there).
+_env_report = validate_environment()
+for _warning in _env_report.warnings:
+    logger.warning("env validation warning: %s", _warning)
+if not _env_report.ok:
+    raise RuntimeError(
+        "Invalid production environment configuration - refusing to start: "
+        + "; ".join(_env_report.errors)
     )
 
 app = FastAPI(title="optcg-price-tracker API")
@@ -67,3 +88,5 @@ app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(market_workflow_runs_router)
 app.include_router(search_router)
+app.include_router(system_check_router)
+app.include_router(env_check_router)

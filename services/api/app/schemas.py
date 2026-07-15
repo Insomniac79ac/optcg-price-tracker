@@ -1499,3 +1499,44 @@ class SearchSuggestionOut(BaseModel):
 
 class SearchSuggestionsResponseOut(BaseModel):
     suggestions: list[SearchSuggestionOut]
+
+
+# --- system check ----------------------------------------------------------
+
+
+class SystemCheckResultOut(BaseModel):
+    name: str
+    status: str
+    severity: str
+    message: str
+
+
+class SystemCheckSummaryOut(BaseModel):
+    checks_total: int
+    checks_passed: int
+    warnings: int
+    critical: int
+
+
+class SystemCheckResponseOut(BaseModel):
+    status: str
+    summary: SystemCheckSummaryOut
+    checks: list[SystemCheckResultOut]
+
+
+# --- env check ---------------------------------------------------------
+
+
+class EnvCheckResultOut(BaseModel):
+    name: str
+    status: str
+    severity: str
+    message: str
+
+
+class EnvCheckResponseOut(BaseModel):
+    status: str
+    app_env: str
+    checks: list[EnvCheckResultOut]
+    warnings: list[str]
+    errors: list[str]

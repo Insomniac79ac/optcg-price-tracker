@@ -39,6 +39,25 @@ ADMIN_TOKEN=<production ADMIN_TOKEN> \
 `API_URL` defaults to `http://localhost:8000`, `WEB_URL` to `http://localhost:3000`. `ADMIN_TOKEN`
 is always required - the script fails the admin check if it's missing rather than skipping it.
 
+## Check environment validation
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/env-check"
+```
+
+Reports every startup safety check (ADMIN_TOKEN strength/default, DATABASE_URL's default
+password, SCRAPING_MODE, market workflow schedule vars, Telegram config completeness, ...) - the
+same checks the api and worker/beat services run at process startup (see
+`services/api/app/core/env_validation.py`; production fails startup on any critical failure,
+development only warns). Useful to re-check a live deployment's config without restarting
+anything, e.g. right after rotating `ADMIN_TOKEN` (see `docs/deployment.md`'s "How to rotate
+ADMIN_TOKEN"). `status` is `"ok"`, `"warning"`, or `"critical"`; each entry in `checks` carries its
+own `status` (`pass`/`warning`/`fail`) and `severity` (`info`/`warning`/`critical`).
+
+The web app's own env check (`NEXT_PUBLIC_API_URL`/`API_INTERNAL_URL` presence, no secret-like
+`NEXT_PUBLIC_*` vars) runs at Docker build/start instead of via an API endpoint - see
+`apps/web/scripts/check-env.js` (`npm run check-env` to run it manually).
+
 ## Run Yuyu-Tei refresh manually
 
 ```

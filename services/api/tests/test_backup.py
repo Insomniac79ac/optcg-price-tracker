@@ -8,9 +8,17 @@ from app.models import (
     AlertRule,
     Card,
     CollectionItem,
+    CollectionItemGroup,
+    CollectionItemTag,
+    CollectorActivityEvent,
+    CollectorGroup,
+    CollectorNote,
+    CollectorTag,
+    GradingSubmission,
     MarketReportDigestSend,
     MarketWorkflowRun,
     PortfolioValuationSnapshot,
+    SearchHistory,
     Source,
     SourceCardMapping,
     WishlistItem,
@@ -246,6 +254,54 @@ def test_export_includes_all_required_tables_with_data(client, db_session):
     assert len(body["tables"]["market_workflow_runs"]) == 1
     assert len(body["tables"]["wishlist_items"]) == 1
     assert len(body["tables"]["dashboard_preferences"]) == 1
+
+
+def test_backup_export_includes_phase5_tables(client, db_session):
+    """Phase 5 added collector_tags/groups, grading_submissions,
+    wishlist_items, dashboard_preferences, collector_notes,
+    collector_activity_events, and search_history - all of them must be
+    covered by backup/restore, not just the tables that existed when
+    BACKUP_VERSION was first introduced."""
+    card = make_card(db_session)
+    item = make_item(db_session, card)
+
+    tag = CollectorTag(user_id=1, name="Chase", slug="chase")
+    group = CollectorGroup(user_id=1, name="Binder 1", slug="binder-1")
+    db_session.add_all([tag, group])
+    db_session.commit()
+    db_session.add(CollectionItemTag(collection_item_id=item.id, tag_id=tag.id))
+    db_session.add(CollectionItemGroup(collection_item_id=item.id, group_id=group.id))
+    db_session.add(
+        GradingSubmission(collection_item_id=item.id, grading_company="PSA")
+    )
+    db_session.add(
+        CollectorNote(note_type="card", card_id=card.id, body="Watching this one")
+    )
+    db_session.add(
+        CollectorActivityEvent(
+            event_type="collection_item_added",
+            event_source="collection",
+            card_id=card.id,
+            title="Added to collection",
+        )
+    )
+    db_session.add(SearchHistory(query="OP01-001", result_count=1))
+    db_session.commit()
+    client.get("/dashboard/preferences")  # JIT-creates the main_dashboard row
+
+    response = client.get("/admin/backup/export")
+    assert response.status_code == 200
+    tables = response.json()["tables"]
+
+    assert len(tables["collector_tags"]) == 1
+    assert len(tables["collector_groups"]) == 1
+    assert len(tables["collection_item_tags"]) == 1
+    assert len(tables["collection_item_groups"]) == 1
+    assert len(tables["grading_submissions"]) == 1
+    assert len(tables["dashboard_preferences"]) == 1
+    assert len(tables["collector_notes"]) == 1
+    assert len(tables["collector_activity_events"]) == 1
+    assert len(tables["search_history"]) == 1
 
 
 def test_backup_export_includes_wishlist_items(client, db_session):

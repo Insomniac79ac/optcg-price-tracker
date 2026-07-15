@@ -2,8 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
+
+const PRIMARY_LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/search", label: "Search", title: "Search (Ctrl/Cmd+K)" },
+  { href: "/collection", label: "Collection" },
+  { href: "/wishlist", label: "Wishlist" },
+  { href: "/grading", label: "Grading" },
+  { href: "/activity", label: "Activity" },
+  { href: "/market/report", label: "Market report" },
+  { href: "/market/opportunities", label: "Opportunities" },
+  { href: "/market/signals", label: "Signals" },
+  { href: "/market/signal-events", label: "Signal events" },
+];
+
+const ADMIN_LINKS = [
+  { href: "/admin/actions", label: "Actions" },
+  { href: "/admin/refresh-runs", label: "Refresh runs" },
+  { href: "/admin/market-workflow-runs", label: "Workflow runs" },
+  { href: "/admin/backup", label: "Backup" },
+  { href: "/admin/system-check", label: "System check" },
+  { href: "/admin/snkrdunk-candidates", label: "SNKRDUNK candidates" },
+  { href: "/admin/alerts", label: "Alerts" },
+  { href: "/admin/card-audit", label: "Card audit" },
+  { href: "/market/movers", label: "Market movers" },
+];
 
 export function AppHeader() {
   const router = useRouter();
@@ -28,75 +53,65 @@ export function AppHeader() {
         >
           OPTCG Price Tracker
         </Link>
-        <nav className="flex flex-1 items-center gap-4 text-sm text-neutral-400">
-          <Link href="/dashboard" className="hover:text-neutral-100">
-            Dashboard
-          </Link>
-          <Link
-            href="/search"
-            className="hover:text-neutral-100"
-            title="Search (Ctrl/Cmd+K)"
-          >
-            Search
-          </Link>
-          <Link href="/collection" className="hover:text-neutral-100">
-            Collection
-          </Link>
-          <Link href="/wishlist" className="hover:text-neutral-100">
-            Wishlist
-          </Link>
-          <Link href="/grading" className="hover:text-neutral-100">
-            Grading
-          </Link>
-          <Link href="/market/movers" className="hover:text-neutral-100">
-            Market movers
-          </Link>
-          <Link href="/market/signals" className="hover:text-neutral-100">
-            Market signals
-          </Link>
-          <Link href="/market/signal-events" className="hover:text-neutral-100">
-            Signal events
-          </Link>
-          <Link href="/market/opportunities" className="hover:text-neutral-100">
-            Opportunities
-          </Link>
-          <Link href="/market/report" className="hover:text-neutral-100">
-            Report
-          </Link>
-          <Link
-            href="/admin/refresh-runs"
-            className="hover:text-neutral-100"
-          >
-            Refresh runs
-          </Link>
-          <Link
-            href="/admin/market-workflow-runs"
-            className="hover:text-neutral-100"
-          >
-            Workflow runs
-          </Link>
-          <Link
-            href="/admin/snkrdunk-candidates"
-            className="hover:text-neutral-100"
-          >
-            SNKRDUNK candidates
-          </Link>
-          <Link href="/admin/alerts" className="hover:text-neutral-100">
-            Alerts
-          </Link>
-          <Link href="/admin/card-audit" className="hover:text-neutral-100">
-            Card audit
-          </Link>
-          <Link href="/admin/actions" className="hover:text-neutral-100">
-            Actions
-          </Link>
-          <Link href="/admin/backup" className="hover:text-neutral-100">
-            Backup
-          </Link>
+        <nav className="flex flex-1 items-center gap-4 overflow-x-auto text-sm text-neutral-400">
+          {PRIMARY_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              title={link.title}
+              className="shrink-0 hover:text-neutral-100"
+            >
+              {link.label}
+            </Link>
+          ))}
+          <AdminMenu />
         </nav>
         <AuthControl />
       </div>
     </header>
+  );
+}
+
+function AdminMenu() {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-1 ${open ? "text-neutral-100" : "hover:text-neutral-100"}`}
+      >
+        Admin
+        <span className="text-[10px]">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-2 w-48 rounded-lg border border-neutral-800 bg-neutral-900 py-1 shadow-lg">
+          {ADMIN_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -6,12 +6,29 @@ from celery import Celery
 from celery.schedules import crontab
 
 from worker.db import SessionLocal
+from worker.env_validation import validate_environment
 from worker.jobs.check_alerts import check_alerts
 from worker.jobs.refresh_prices import refresh_prices
 from worker.jobs.run_market_workflow import run_market_workflow
 from worker.settings import Settings, settings
 
 logger = logging.getLogger(__name__)
+
+# Fail fast and loud, same as the API (see app/main.py): a misconfigured
+# production deployment should never come up processing jobs or scheduling
+# them. Runs once, at process import - both `celery -A worker.celery_app
+# worker` and `celery -A worker.celery_app beat` import this module, so this
+# covers both entry points, including the MARKET_WORKFLOW_* schedule vars
+# beat reads below in _build_beat_schedule. Development only warns (see
+# worker/env_validation.py's rule 2) so local defaults keep working.
+_env_report = validate_environment()
+for _warning in _env_report.warnings:
+    logger.warning("env validation warning: %s", _warning)
+if not _env_report.ok:
+    raise RuntimeError(
+        "Invalid production environment configuration - refusing to start worker/beat: "
+        + "; ".join(_env_report.errors)
+    )
 
 # Scheduled runs cover more mappings per pass than the manual CLI's default
 # (--limit 10), since they run unattended every PRICE_REFRESH_INTERVAL_HOURS

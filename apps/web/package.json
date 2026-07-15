@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
+    "start": "node scripts/check-env.js start && next start -H 0.0.0.0 -p 3000",
+    "check-env": "node scripts/check-env.js",
     "lint": "eslint"
   },
   "dependencies": {

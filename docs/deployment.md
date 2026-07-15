@@ -17,16 +17,18 @@ cp .env.production.example .env.production
 
 | Variable | Required | Notes |
 |---|---|---|
-| `APP_ENV` | yes | Must be `production`. The API refuses to start in production without `ADMIN_TOKEN` set (see `services/api/app/config_check.py`). |
-| `DATABASE_URL` | yes | Full SQLAlchemy URL, e.g. `postgresql+psycopg://opcg:<password>@postgres:5432/opcg`. The user/password/db must match `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` below. |
+| `APP_ENV` | yes | Must be `production`. The API and worker/beat refuse to start in production if any critical env check fails (see [Production required env vars](#1a-production-required-env-vars--startup-validation) below). |
+| `DATABASE_URL` | yes | Full SQLAlchemy URL, e.g. `postgresql+psycopg://opcg:<password>@postgres:5432/opcg`. The user/password/db must match `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` below. Must not contain the default local dev password (`opcg:opcg`). |
 | `REDIS_URL` | yes | e.g. `redis://redis:6379/0`. Used as the Celery broker/backend. |
-| `ADMIN_TOKEN` | yes in production | Shared secret for `/admin/*` API routes - see [Admin token usage](#9-admin-token-usage). Generate with e.g. `openssl rand -hex 32`. |
+| `ADMIN_TOKEN` | yes in production | Shared secret for `/admin/*` API routes - see [Admin token usage](#9-admin-token-usage). Must be >= 32 characters and not the local-dev default. Generate with e.g. `openssl rand -hex 32`. |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes | Used to initialize the `postgres` container. Keep in sync with `DATABASE_URL`. |
 | `SCRAPING_MODE` | yes | `mock` or `live`. Set to `live` for a real deployment. |
-| `YUYUTEI_REQUEST_DELAY_MS` / `SNKRDUNK_REQUEST_DELAY_MS` | yes | Positive integers (milliseconds) - throttling between scrape requests. |
+| `YUYUTEI_REQUEST_DELAY_MS` / `SNKRDUNK_REQUEST_DELAY_MS` | yes | Positive integers (milliseconds) - throttling between scrape requests. Must be >= 1000 when `SCRAPING_MODE=live`. |
 | `PRICE_REFRESH_INTERVAL_HOURS` | yes | Positive integer - how often Celery Beat schedules the Yuyu-Tei refresh. |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | optional | Both or neither. If only one is set, the worker logs a warning and skips sending alerts. |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | optional | Both or neither - see [Telegram config](#1b-telegram-config). |
+| `MARKET_WORKFLOW_*` | optional | Disabled by default - see [Market workflow schedule config](#1c-market-workflow-schedule-config). |
 | `NEXT_PUBLIC_API_URL` | yes | Public URL the browser uses to reach the API. **Baked into the web image at build time** (Next.js inlines `NEXT_PUBLIC_*` vars at `next build`) - changing it requires rebuilding the `web` image, not just restarting the container. |
+| `API_INTERNAL_URL` | yes in production | Server-side-only URL the web app's Next.js API routes (`src/app/api/**`) use to reach `api` directly (e.g. `http://api:8000`), instead of `NEXT_PUBLIC_API_URL`. Never expose this as a `NEXT_PUBLIC_*` variable. |
 | `API_JWT_SECRET` | yes in production | Shared between `api` and `web` - verifies the per-user bearer token the web app mints on sign-in. See [Per-user auth](#10-per-user-auth-google-login). Generate with e.g. `openssl rand -hex 32`, distinct from `ADMIN_TOKEN`. |
 | `AUTH_SECRET` | yes in production | Auth.js's own session-encryption secret (web only). Generate with `openssl rand -base64 33`. |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | yes in production | From a Google Cloud OAuth 2.0 Client ID (web only). See [Per-user auth](#10-per-user-auth-google-login). |
@@ -34,6 +36,87 @@ cp .env.production.example .env.production
 
 Compose does **not** auto-load `.env.production` (it only auto-loads a file literally named
 `.env`). Always pass `--env-file .env.production` explicitly, as shown below.
+
+### 1a. Production required env vars & startup validation
+
+`APP_ENV=production`, `DATABASE_URL`, `REDIS_URL`, and `ADMIN_TOKEN` are required in every
+production deployment. Beyond just being *set*, they (and every optional var above) are checked
+for safety/shape at process startup:
+
+- `services/api/app/core/env_validation.py` (api) and its mirror `services/worker/worker/env_validation.py`
+  (worker and beat - both run `celery -A worker.celery_app`, which imports this at module level)
+  read the raw process environment and run the same set of checks in both services.
+- **In production** (`APP_ENV`/`ENVIRONMENT=production`), a failed check raises at import time and
+  the process refuses to start - `ADMIN_TOKEN` missing/the local-dev default/under 32 characters,
+  `DATABASE_URL` containing the default local password, an invalid `SCRAPING_MODE`,
+  `SCRAPING_MODE=live` without both request delays >= 1000ms, an invalid `MARKET_WORKFLOW_*`
+  schedule value, or incomplete Telegram config are all hard failures.
+- **In development**, the identical issue is logged as a warning instead - local defaults (the
+  repo-root `.env`'s `local-dev-admin-token`, etc.) keep working unattended.
+
+To check a running deployment's env validation status at any time (not just at startup):
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" http://api:8000/admin/env-check
+```
+
+Returns `{"status": "ok" | "warning" | "critical", "app_env": ..., "checks": [...], "warnings":
+[...], "errors": [...]}` - one entry per check, each with `status` (`pass`/`warning`/`fail`) and
+`severity` (`info`/`warning`/`critical`). Also visible in the web UI at `/admin/system-check`'s
+sibling env-check view. See the frontend equivalent in [section 1d](#1d-frontend-env-validation).
+
+### 1b. Telegram config
+
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are optional, but must be set together - if only one
+is present, the worker logs a warning and skips sending alerts in development, and **fails
+startup in production**. If `MARKET_WORKFLOW_SEND_TELEGRAM=true` (see below), both must be set
+regardless of environment for the scheduled digest to actually send.
+
+### 1c. Market workflow schedule config
+
+Disabled by default - Celery Beat never runs the scheduled market intelligence workflow unless
+`MARKET_WORKFLOW_ENABLED=true` (see `services/worker/worker/celery_app.py::_build_beat_schedule`).
+When enabling it in production:
+
+| Variable | Valid values | Default |
+|---|---|---|
+| `MARKET_WORKFLOW_ENABLED` | boolean-like (`true`/`false`/`1`/`0`/`yes`/`no`) | `false` |
+| `MARKET_WORKFLOW_SOURCE` | `all`, `yuyutei`, `snkrdunk` | `yuyutei` |
+| `MARKET_WORKFLOW_LIMIT` | positive integer, or blank for no limit | blank |
+| `MARKET_WORKFLOW_SEND_TELEGRAM` | boolean-like | `false` |
+| `MARKET_WORKFLOW_HOUR_UTC` | `0`-`23` | `0` |
+| `MARKET_WORKFLOW_MINUTE_UTC` | `0`-`59` | `0` |
+
+### 1d. Frontend env validation
+
+`apps/web/scripts/check-env.js` (`npm run check-env`) checks that `NEXT_PUBLIC_API_URL` is set,
+that `API_INTERNAL_URL` is set (skipped at Docker build time, since it's a runtime-only server
+var), and - most importantly - that **no `NEXT_PUBLIC_*` variable name looks like a secret**
+(contains `TOKEN`, `SECRET`, `PASSWORD`, or `KEY`). Next.js inlines every `NEXT_PUBLIC_*` var into
+the client-side JS bundle verbatim at build time, so `NEXT_PUBLIC_ADMIN_TOKEN` or similar would
+ship a real secret to every visitor's browser. `apps/web/Dockerfile` runs this at build time
+(`node scripts/check-env.js build`, before `next build`); `npm start` runs it again at container
+start (`node scripts/check-env.js start`, which also checks `API_INTERNAL_URL`). Fails the
+build/start in production; only warns in development.
+
+### 1e. How to rotate ADMIN_TOKEN
+
+1. Generate a new token: `openssl rand -hex 32`.
+2. Update `ADMIN_TOKEN` in `.env.production` (and wherever else it's stored - your hosting
+   provider's secrets manager, CI/CD env vars, etc. - see [Secret handling](#2-secret-handling)).
+3. Restart `api`, `worker`, and `beat` so they pick up the new value (all three validate it at
+   startup - see [section 1a](#1a-production-required-env-vars--startup-validation)):
+   ```
+   docker compose -f docker-compose.prod.yml --env-file .env.production up -d api worker beat
+   ```
+4. Update any external client/script that sends `X-Admin-Token` (the web UI just prompts for a
+   new one on its next admin request - see [Admin token usage](#9-admin-token-usage)).
+5. Confirm the rotation took: `curl -H "X-Admin-Token: $ADMIN_TOKEN" http://api:8000/admin/env-check`
+   should return `admin_token_present`/`admin_token_not_default`/`admin_token_length` all `pass`.
+
+Rotate immediately (not on a routine schedule) if the token was ever committed to git, logged, or
+otherwise exposed - see [Secret handling](#2-secret-handling) for why deleting/force-pushing
+afterward doesn't undo that exposure.
 
 ## 2. Secret handling
 

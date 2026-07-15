@@ -189,6 +189,7 @@ def test_overview_works_with_empty_data(client, db_session):
     assert widgets["backup_status"]["tracked"] is False
     assert widgets["backup_status"]["message"] == "No backup status tracked yet"
     assert widgets["workflow_status"]["run_id"] is None
+    assert widgets["recent_activity"]["events"] == []
 
 
 def test_overview_includes_preferences(client, db_session):

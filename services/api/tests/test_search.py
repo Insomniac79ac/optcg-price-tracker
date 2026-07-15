@@ -63,6 +63,31 @@ def test_short_q_rejected(client, db_session):
     assert response.status_code == 400
 
 
+def test_search_works_on_empty_db(client, db_session):
+    response = client.get("/search", params={"q": "anything"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["summary"]["total_results"] == 0
+    assert data["results"] == []
+    assert set(data["summary"]["by_type"]) == {
+        "cards",
+        "collection",
+        "wishlist",
+        "grading",
+        "notes",
+        "activity",
+        "signals",
+        "opportunities",
+        "reports",
+    }
+
+
+def test_suggestions_work_on_empty_db(client, db_session):
+    response = client.get("/search/suggestions")
+    assert response.status_code == 200
+    assert response.json()["suggestions"] == []
+
+
 def test_short_q_allowed_when_exact_card_code(client, db_session):
     make_card(db_session, card_code="P", name_en="Promo Card")
     response = client.get("/search", params={"q": "P"})

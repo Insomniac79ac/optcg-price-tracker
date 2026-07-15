@@ -505,6 +505,12 @@ export default function AdminActionsPage() {
                 Backup &amp; restore
               </Link>
               <Link
+                href="/admin/system-check"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                System check
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

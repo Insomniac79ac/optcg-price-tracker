@@ -1390,6 +1390,33 @@ export async function fetchCardAudit(): Promise<CardAuditReport> {
   return data;
 }
 
+export interface SystemCheckResult {
+  name: string;
+  status: "pass" | "warning" | "fail";
+  severity: "info" | "warning" | "critical";
+  message: string;
+}
+
+export interface SystemCheckSummary {
+  checks_total: number;
+  checks_passed: number;
+  warnings: number;
+  critical: number;
+}
+
+export interface SystemCheckResponse {
+  status: "ok" | "warning" | "critical";
+  summary: SystemCheckSummary;
+  checks: SystemCheckResult[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/system-check/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function fetchSystemCheck(): Promise<SystemCheckResponse> {
+  return fetchAdminJson<SystemCheckResponse>("/api/admin/system-check");
+}
+
 export interface MarketReportPortfolioSnapshot {
   total_cost_basis_jpy: number | null;
   retail_value_jpy: number | null;
@@ -2445,6 +2472,115 @@ export function updateDashboardPreferences(
  * src/app/api/dashboard/overview/route.ts). */
 export function fetchDashboardOverview(): Promise<DashboardOverview> {
   return fetchAdminJson<DashboardOverview>("/api/dashboard/overview");
+}
+
+// --- Collector notes / activity -----------------------------------------
+
+export const ACTIVITY_EVENT_SOURCES = [
+  "collection",
+  "wishlist",
+  "grading",
+  "market_signal",
+  "market_report",
+  "backup",
+  "workflow",
+  "note",
+] as const;
+
+export interface CollectorNote {
+  id: number;
+  note_type: string;
+  card_id: number | null;
+  collection_item_id: number | null;
+  wishlist_item_id: number | null;
+  grading_submission_id: number | null;
+  market_signal_event_id: number | null;
+  market_report_id: number | null;
+  title: string | null;
+  body: string;
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectorActivityEvent {
+  id: number;
+  event_type: string;
+  event_source: string;
+  card_id: number | null;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  collection_item_id: number | null;
+  wishlist_item_id: number | null;
+  grading_submission_id: number | null;
+  market_signal_event_id: number | null;
+  market_report_id: number | null;
+  market_workflow_run_id: number | null;
+  title: string;
+  message: string | null;
+  created_at: string;
+  payload: Record<string, unknown> | null;
+}
+
+export interface CollectorActivityListSummary {
+  total_events: number;
+  by_source: Record<string, number>;
+  by_type: Record<string, number>;
+}
+
+export interface CollectorActivityListResponse {
+  summary: CollectorActivityListSummary;
+  events: CollectorActivityEvent[];
+}
+
+export interface CollectorActivitySummary {
+  today_count: number;
+  last_7d_count: number;
+  last_30d_count: number;
+  by_source: Record<string, number>;
+  recent_events: CollectorActivityEvent[];
+}
+
+export function fetchCollectorActivity(params?: {
+  event_source?: string;
+  event_type?: string;
+  card_id?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<CollectorActivityListResponse> {
+  const query = new URLSearchParams();
+  if (params?.event_source) query.set("event_source", params.event_source);
+  if (params?.event_type) query.set("event_type", params.event_type);
+  if (params?.card_id !== undefined) query.set("card_id", String(params.card_id));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return authedGet<CollectorActivityListResponse>(`/collector/activity${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchCollectorActivitySummary(): Promise<CollectorActivitySummary> {
+  return authedGet<CollectorActivitySummary>("/collector/activity/summary");
+}
+
+export interface CollectorNoteList {
+  items: CollectorNote[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export function fetchCollectorNotes(params?: {
+  note_type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<CollectorNoteList> {
+  const query = new URLSearchParams();
+  if (params?.note_type) query.set("note_type", params.note_type);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return authedGet<CollectorNoteList>(`/collector/notes${qs ? `?${qs}` : ""}`);
 }
 
 // --- Search --------------------------------------------------------------
