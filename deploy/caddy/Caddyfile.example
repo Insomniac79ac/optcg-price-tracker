@@ -1,0 +1,66 @@
+# Example Caddyfile for a production OPTCG Price Tracker deployment - see
+# "Production deployment behind HTTPS reverse proxy" in docs/deployment.md
+# for the full setup walkthrough (DNS, firewall, smoke test). Caddy gets you
+# automatic HTTPS (issuance + renewal via Let's Encrypt/ZeroSSL) with far
+# less config than Nginx+Certbot - no separate ACME client, no cron/systemd
+# timer to remember.
+#
+# Copy this file to /etc/caddy/Caddyfile (or wherever your Caddy install
+# reads from) and replace "example.com" with your real domain. Caddy needs
+# a real, publicly resolvable domain in the site address below to issue a
+# certificate for it automatically - see the DNS checklist in
+# docs/deployment.md before pointing this at a live domain.
+#
+# Architecture this assumes (see docker-compose.prod.yml):
+#   Internet -> Caddy (this file, automatic TLS termination) -> web (localhost:3000)
+#                                                                 -> api (internal Docker network only)
+
+example.com {
+	# CSV import/export and backup restore uploads can be multiple MB -
+	# Caddy's default request body limit is much smaller.
+	request_body {
+		max_size 50MB
+	}
+
+	# Security headers - redundant with (not a replacement for) the app's
+	# own headers (services/api/app/core/security_headers.py and
+	# apps/web/next.config.ts), but cheap insurance if either app-level
+	# layer is ever bypassed or misconfigured.
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	reverse_proxy localhost:3000 {
+		# Host/X-Forwarded-For/X-Forwarded-Proto are already Caddy's default
+		# behavior (kept explicit here anyway, so this list matches the same
+		# proxy headers the Nginx example sets by hand) - `caddy validate`
+		# will note these two as "unnecessary", which is expected and
+		# harmless, not a config error. X-Real-IP is not one of Caddy's
+		# defaults, so it does need to stay.
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# --- OPTIONAL: only uncomment this if you specifically need the API
+	# reachable from outside the Docker network (e.g. NEXT_PUBLIC_API_URL
+	# pointing here instead of a public api port). Admin endpoints still
+	# require X-Admin-Token - this does not change or bypass that
+	# requirement, it only makes the (still-authenticated) endpoints
+	# network-reachable. Prefer leaving this commented out; api/postgres/
+	# redis are not published to the host by default specifically so this
+	# isn't necessary for the app to function as an admin.
+	#
+	# handle_path /api-backend/* {
+	# 	reverse_proxy localhost:8000 {
+	# 		header_up Host {host}
+	# 		header_up X-Real-IP {remote_host}
+	# 		header_up X-Forwarded-For {remote_host}
+	# 		header_up X-Forwarded-Proto {scheme}
+	# 	}
+	# }
+}

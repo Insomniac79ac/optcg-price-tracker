@@ -400,3 +400,66 @@ a container that won't start, an OOM kill, raw request/response traffic, or debu
 that never got instrumented), `docker compose logs` (see [Logs](#logs)) is still the source of
 truth. Treat `/admin/logs` as the fast path for the events it covers, not a replacement for
 container logs.
+
+## Reverse proxy troubleshooting
+
+See "Production deployment behind HTTPS reverse proxy" in `docs/deployment.md` for initial setup
+(Nginx/Caddy config, DNS, firewall). This section covers what to check once it's live but
+something's wrong.
+
+**Web loads but API data is missing** (pages render, but everything that needs the API shows
+empty/error states): almost always `API_INTERNAL_URL` on the `web` container is wrong or `api`
+isn't healthy. Check `GET https://yourdomain.com/api/backend-health` first - it calls
+`API_INTERNAL_URL/health` from `web`'s own server-side code and reports what it got back,
+including the specific connect/timeout error if `api` wasn't reachable at all. Then:
+```
+docker compose -f docker-compose.prod.yml --env-file .env.production exec web env | grep API_INTERNAL_URL
+docker compose -f docker-compose.prod.yml --env-file .env.production ps api
+```
+`API_INTERNAL_URL` should be `http://api:8000` in the default setup - anything else (a public URL,
+a typo'd service name) breaks server-side proxying even though `api` itself is perfectly healthy.
+
+**502 from the reverse proxy**: the proxy reached the host/port it's configured for, but got
+nothing usable back - almost always means the `web` container isn't up or isn't healthy yet, not a
+proxy misconfiguration. Check:
+```
+docker compose -f docker-compose.prod.yml --env-file .env.production ps web
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail 100 web
+curl -i http://127.0.0.1:3000/api/health
+```
+If the last command works from the host but the proxy still 502s, double check the proxy's
+upstream address matches (`127.0.0.1:3000` for the Nginx example, `localhost:3000` for the Caddy
+one) and that `docker-compose.prod.private.yml`'s port binding (if you're using it) is
+`127.0.0.1:${WEB_PORT}:3000`, not some other host/port the proxy isn't pointed at.
+
+**Upload fails** (CSV import, backup restore) with a proxy-level error rather than the app's own
+validation error: check `client_max_body_size` (Nginx) or `request_body.max_size` (Caddy) - both
+example configs set 50M, matching what backup/CSV uploads can reasonably need. Nginx's own default
+is 1M, which is well below a real collection export - a request over the limit gets rejected by
+the proxy itself (a plain `413`, no JSON body) before it ever reaches `web`/`api`, which can look
+like a generic "upload failed" in the browser rather than an obviously-a-size-limit error.
+
+**HTTPS certificate renewal**: Caddy renews automatically in the background - nothing to do.
+Certbot (Nginx) installs a systemd timer (`certbot.timer`) that runs twice daily and only actually
+renews within ~30 days of expiry - verify it's active with `systemctl list-timers | grep certbot`,
+and test the renewal path itself (without waiting for expiry) with `sudo certbot renew --dry-run`.
+If the timer isn't present, `sudo certbot install --nginx` or re-running the original `certbot
+--nginx` command from the setup steps re-registers it.
+
+**The admin token is still required** - a reverse proxy changes network topology, not
+authentication. Every `/admin/*` (and `/snkrdunk/*`) request still needs `X-Admin-Token`, whether
+it arrives via the proxy on the public domain or hits `api` directly; putting a proxy in front
+doesn't add, remove, or substitute for that check. If you uncommented the optional `/api-backend`
+proxy location, admin endpoints reached through it are exactly as protected as they were before -
+see the warning comment on that location block in both example configs.
+
+**Rate limit behavior behind a proxy**: `app.core.rate_limit` keys its per-IP counters off
+`X-Forwarded-For` (falling back to the direct connection's IP if that header is absent - see
+`app.core.rate_limit._client_ip`). Both example proxy configs already set this header correctly
+(`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` in Nginx, `header_up X-Forwarded-For
+{remote_host}` in Caddy). If every request behind your proxy is getting rate-limited together
+(one client's traffic exhausting the limit for everyone), that's a sign `X-Forwarded-For` either
+isn't being set or is being overwritten somewhere - all requests would appear to originate from
+the proxy's own loopback IP instead of the real clients'. Verify with `GET
+/admin/rate-limit/status` (see "Check rate limit status" above): `active_keys` staying at `1` under
+real multi-client traffic is the tell.

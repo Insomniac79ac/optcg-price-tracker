@@ -1,0 +1,56 @@
+# Optional override for docker-compose.prod.yml that pins the "only web is
+# publicly reachable" posture explicitly, for use behind a reverse proxy
+# (see deploy/nginx/opcg.conf.example, deploy/caddy/Caddyfile.example, and
+# "Production deployment behind HTTPS reverse proxy" in docs/deployment.md).
+#
+# docker-compose.prod.yml already keeps postgres/redis unpublished and api
+# on `expose:` only (container-network-only, no host port) by default - this
+# file exists to make that guarantee explicit and self-documenting (rather
+# than "true by omission"), and to rebind `web` to 127.0.0.1 only instead of
+# every interface, since a host-wide bind would let traffic reach `web`
+# directly on plain HTTP, bypassing your reverse proxy's TLS termination
+# entirely. Both example proxy configs assume this loopback-only binding
+# (they proxy to 127.0.0.1:3000/localhost:3000).
+#
+# Usage - add this file with a second -f to every prod compose command:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.private.yml \
+#     --env-file .env.production up -d
+#
+# (The Makefile's prod-* targets use docker-compose.prod.yml alone - export
+# PROD_COMPOSE_EXTRA_FILE=docker-compose.prod.private.yml and adjust your
+# own deploy scripts/CI to pass it through if you want this by default,
+# or just always pass the extra -f by hand as shown above.)
+
+services:
+  web:
+    # Host-loopback only - only reachable from the reverse proxy running on
+    # this same host, not directly from the internet. WEB_PORT still
+    # controls which host port (defaults to 3000, matching both example
+    # proxy configs' proxy_pass/reverse_proxy target).
+    #
+    # `!override` (not a plain list here) is required, not cosmetic: Compose
+    # concatenates list-valued keys like `ports:` across multiple -f files
+    # by default, so a plain `ports:` list here would ADD this loopback-only
+    # binding alongside docker-compose.prod.yml's unrestricted one instead
+    # of replacing it - leaving `web` reachable on every interface anyway
+    # and silently defeating the point of this file. Requires Docker Compose
+    # v2.24+ (this repo's CI and `docker compose version` should both be
+    # newer than that already).
+    ports: !override
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    environment:
+      # Explicit, not just inherited from .env.production - web's own
+      # server-side code (src/app/api/**, including /api/backend-health)
+      # must always reach api over the internal Docker network, never
+      # through NEXT_PUBLIC_API_URL (which may be a public URL, or unset
+      # entirely if you never uncommented the /api-backend proxy location
+      # in the reverse proxy config - see the architecture note there).
+      API_INTERNAL_URL: http://api:8000
+
+  # api/postgres/redis intentionally have no `ports:` override here - they
+  # already have none in docker-compose.prod.yml (api uses `expose:` only).
+  # If your own docker-compose.prod.yml has been customized to add a
+  # `ports:` mapping to any of these (e.g. for direct debugging access),
+  # remove it there rather than relying on this file to undo it - Compose
+  # merges list-valued keys like `ports:` across -f files rather than
+  # letting a later file clear an earlier one's entries.

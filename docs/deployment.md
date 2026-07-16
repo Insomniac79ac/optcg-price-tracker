@@ -451,3 +451,125 @@ extra infrastructure, not to be a distributed rate limiter.
 `RATE_LIMIT_ENABLED=false` disables all rate limiting (still safe to leave the security headers
 and CSP on) - see [section 1a](#1a-production-required-env-vars--startup-validation) for why this
 warns rather than fails startup in production.
+
+## 13. Production deployment behind HTTPS reverse proxy
+
+Everything in [section 6](#6-starting-production-services) gets a working deployment on plain HTTP
+at whatever host/port `web` is published on. This section covers putting a real reverse proxy in
+front of it for a real domain, HTTPS, and a smaller public attack surface - recommended for any
+deployment reachable from the public internet.
+
+**Recommended architecture**:
+
+```
+Internet -> Nginx or Caddy (TLS termination, port 443/80) -> web (127.0.0.1:3000)
+                                                                -> api (internal Docker network only)
+                                                                     -> postgres, redis (internal Docker network only)
+```
+
+Only `web` is reachable from outside the host at all, and only through the reverse proxy - not
+directly on its Docker-published port. Everything else talks over the Docker Compose network's
+internal DNS (`api`, `postgres`, `redis`), which nothing outside the host can reach regardless of
+firewall rules.
+
+**Why api/postgres/redis should stay unpublished**: `postgres` and `redis` have no
+authentication/TLS of their own in this setup (see the "never expose Postgres/Redis publicly"
+comments in `docker-compose.prod.yml`) - reachable-from-anywhere means anyone who finds the port
+has the whole database. `api` does have `ADMIN_TOKEN`-gated admin routes and per-user JWT auth, so
+it's less immediately catastrophic to expose, but every additional public listener is one more
+thing to patch, monitor, and rate-limit - and `web`'s own server-side code never needs `api` to be
+public in the first place (it talks to it over `API_INTERNAL_URL=http://api:8000`, the internal
+Docker network address). The one caveat: this app's browser-side code calls the API *directly* for
+the signed-in per-user pages (`/collection`, `/wishlist`, `/grading`, `/collector`) via
+`NEXT_PUBLIC_API_URL` - see the comment on that variable in `.env.production.example`. If you want
+those pages to work, `api` needs to be reachable from the browser somehow (either its own public
+port, or the optional `/api-backend` proxy location in the example configs below) - every other
+part of the app, including all `/admin/*` functionality, works with `api` fully private.
+
+**Using `docker-compose.prod.private.yml`**: this override pins `web` to `127.0.0.1` only (instead
+of every interface) and makes the "api/postgres/redis are never published" guarantee explicit
+rather than implicit. Add it with a second `-f` to every prod compose command:
+
+```
+docker compose -f docker-compose.prod.yml -f docker-compose.prod.private.yml \
+  --env-file .env.production up -d
+```
+
+(The `Makefile`'s `prod-*` targets use `docker-compose.prod.yml` alone - either pass the extra
+`-f` by hand as above, or edit `PROD_COMPOSE` in the `Makefile` to include it by default once
+you've set up a reverse proxy.)
+
+### Nginx setup
+
+1. Install Nginx and Certbot (`sudo apt install nginx certbot python3-certbot-nginx` on
+   Debian/Ubuntu, or your distro's equivalent).
+2. Copy `deploy/nginx/opcg.conf.example` to `/etc/nginx/sites-available/opcg.conf`, replace every
+   `example.com` with your real domain, and symlink it into `sites-enabled/`:
+   ```
+   sudo cp deploy/nginx/opcg.conf.example /etc/nginx/sites-available/opcg.conf
+   sudo ln -s /etc/nginx/sites-available/opcg.conf /etc/nginx/sites-enabled/
+   ```
+3. **Certbot note**: `certbot --nginx -d example.com -d www.example.com` will detect the server
+   block from step 2, request a certificate, and rewrite the config's `ssl_certificate`/
+   `ssl_certificate_key` lines to point at it automatically (matching the placeholder paths already
+   in the example file). It also installs a systemd timer (`certbot.timer`) that handles renewal -
+   no cron job to set up by hand. Verify the timer exists with `systemctl list-timers | grep
+   certbot`.
+4. `sudo nginx -t` to validate the config, then `sudo systemctl reload nginx`.
+5. Bring up the app stack itself with the private compose override (see above), so `web` is only
+   reachable via the Nginx you just configured.
+
+### Caddy setup
+
+1. Install Caddy (see https://caddyserver.com/docs/install for your distro).
+2. Copy `deploy/caddy/Caddyfile.example` to `/etc/caddy/Caddyfile` and replace `example.com` with
+   your real domain:
+   ```
+   sudo cp deploy/caddy/Caddyfile.example /etc/caddy/Caddyfile
+   ```
+3. `sudo systemctl reload caddy` (or `sudo systemctl restart caddy` if it wasn't running yet).
+   Caddy requests and renews its own certificate automatically the first time it sees a request for
+   the domain in the Caddyfile - no separate Certbot/ACME client step needed.
+4. Bring up the app stack with the private compose override, same as the Nginx path above.
+
+### DNS/domain checklist
+
+- An `A` (and `AAAA`, if you have an IPv6 address) record for your domain pointing at the server's
+  public IP, created *before* running Certbot/starting Caddy - both need the domain to already
+  resolve to this host to issue a certificate for it.
+- If using `www.example.com` too (the Nginx example config includes it), a second `A`/`CNAME`
+  record for that name as well.
+- DNS propagation can take minutes to hours depending on your registrar/provider and previous TTL -
+  verify with `dig +short example.com` before troubleshooting a cert-issuance failure as anything
+  else.
+
+### Firewall checklist
+
+- Allow `80` and `443` (inbound) - required for HTTP->HTTPS redirect, the ACME HTTP-01 challenge,
+  and the actual HTTPS traffic.
+- Restrict SSH (`22`, or whatever port you use) to known IPs/a VPN if at all possible, and disable
+  password auth in favor of keys - the reverse proxy setup here doesn't change your SSH exposure,
+  and it's a much more common actual break-in vector than anything in this app.
+- Do **not** expose `5432` (Postgres), `6379` (Redis), or `8000` (api) unless you have a specific,
+  deliberate reason to (e.g. temporary direct-API debugging - see the commented `/api-backend`
+  location in the example proxy configs, and prefer removing it again once you're done). None of
+  these need to be reachable from outside the host for the app to work; `docker-compose.prod.yml`
+  and `docker-compose.prod.private.yml` already keep them off the host's published ports by
+  default - a host firewall (`ufw`, `iptables`, your cloud provider's security group) is a second
+  layer in case that default is ever changed by mistake.
+
+### Smoke test through the reverse proxy
+
+Once DNS resolves and the certificate is issued, re-run the smoke test against the public domain
+instead of `127.0.0.1`:
+
+```
+WEB_BASE_URL=https://yourdomain.com ADMIN_TOKEN=<token> make prod-smoke
+```
+
+`API_URL` is optional and should only be set if you've deliberately exposed `api` (see the firewall
+checklist above) - `scripts/prod_smoke_test.sh` verifies the backend transitively either way, since
+`$WEB_BASE_URL/api/health` only reports `"ok"` if `web`'s server-side code can actually reach `api`
+over `API_INTERNAL_URL`. `BASE_URL` still works as a deprecated alias for `WEB_BASE_URL` if you have
+existing deploy scripts using it. See the env var comments at the top of `scripts/prod_smoke_test.sh`
+for the full list.

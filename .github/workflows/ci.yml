@@ -75,3 +75,22 @@ jobs:
           for target in prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify prod-backup; do
             grep -qE "^${target}:" Makefile || { echo "missing Makefile target: $target"; exit 1; }
           done
+      - name: Reverse proxy example configs and private compose override exist
+        run: |
+          test -f deploy/nginx/opcg.conf.example
+          test -f deploy/caddy/Caddyfile.example
+          test -f docker-compose.prod.private.yml
+          test -f apps/web/src/app/api/backend-health/route.ts
+      - name: prod_smoke_test.sh skips direct API checks when API_URL is unset
+        run: |
+          # No real web app running - just confirms the skip message/branch
+          # fires correctly with API_URL unset, independent of whether the
+          # (unreachable) WEB_BASE_URL checks themselves pass or fail.
+          output="$(ADMIN_TOKEN=x WEB_BASE_URL=http://127.0.0.1:1 scripts/prod_smoke_test.sh || true)"
+          echo "$output" | grep -qF "Skipping direct API checks because API_URL is not set." \
+            || { echo "expected skip message not found"; echo "$output"; exit 1; }
+      - name: prod_smoke_test.sh BASE_URL backward-compat alias still works
+        run: |
+          output="$(ADMIN_TOKEN=x BASE_URL=http://127.0.0.1:1 scripts/prod_smoke_test.sh || true)"
+          echo "$output" | grep -qF "WEB_BASE_URL=http://127.0.0.1:1" \
+            || { echo "BASE_URL was not picked up as WEB_BASE_URL"; echo "$output"; exit 1; }

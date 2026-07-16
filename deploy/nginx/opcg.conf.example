@@ -1,0 +1,124 @@
+# Example Nginx reverse proxy config for a production OPTCG Price Tracker
+# deployment - see "Production deployment behind HTTPS reverse proxy" in
+# docs/deployment.md for the full setup walkthrough (DNS, Certbot, firewall,
+# smoke test).
+#
+# Copy this file to somewhere Nginx reads from (e.g.
+# /etc/nginx/sites-available/opcg.conf, symlinked into sites-enabled/),
+# replace every "example.com" below with your real domain, and fill in the
+# TLS certificate paths (Certbot's default paths are used as placeholders).
+#
+# Architecture this config assumes (see docker-compose.prod.yml):
+#   Internet -> Nginx (this file, TLS termination) -> web (127.0.0.1:${WEB_PORT:-3000})
+#                                                       -> api (internal Docker network only)
+#
+# The `web` service is the only thing this config proxies to by default.
+# `api` is reached by `web`'s own server-side code via API_INTERNAL_URL
+# (http://api:8000, an internal Docker network address) - it does not need
+# a public route through this proxy for the app to work as an admin.
+# Per-user pages (/collection, /grading, /wishlist, /collector) call the API
+# directly from the browser instead, via NEXT_PUBLIC_API_URL - if you want
+# those to work, either publish api's port and set NEXT_PUBLIC_API_URL to
+# that host directly, or uncomment the /api-backend/ location block below
+# and set NEXT_PUBLIC_API_URL=https://example.com/api-backend instead.
+
+# --- HTTP: redirect everything to HTTPS, except the ACME challenge path
+# Certbot's HTTP-01 challenge (and its renewal checks) needs plain HTTP to
+# keep working - do not redirect /.well-known/acme-challenge/.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com www.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS: terminates TLS, proxies to the web service
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name example.com www.example.com;
+
+    # Certbot's default output paths (`certbot --nginx` or `certbot certonly`
+    # writes here) - see "Certbot note" in docs/deployment.md. Replace with
+    # your own cert paths if you're using a different ACME client or a
+    # certificate from elsewhere.
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers off;
+
+    # CSV import/export and backup restore uploads (see app_logging's
+    # include_logs backup and the collection/wishlist CSV importers) can be
+    # multiple MB - Nginx's default (1M) would reject them with 413 before
+    # they ever reach `web`.
+    client_max_body_size 50M;
+
+    # Nginx serves dotfiles by default otherwise (.env, .git, etc. would be
+    # fatal if ever present in a served directory) - belt-and-suspenders
+    # alongside .dockerignore/.gitignore already keeping them out of the
+    # image in the first place.
+    location ~ /\. {
+        deny all;
+    }
+
+    # Security headers at the proxy level - redundant with (not a
+    # replacement for) the app's own headers (see
+    # services/api/app/core/security_headers.py and
+    # apps/web/next.config.ts), but cheap insurance if either app-level
+    # layer is ever bypassed or misconfigured, and applies to any static
+    # asset Nginx might serve directly in the future.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+
+        # Required for Next.js's dev-mode HMR websocket and any other
+        # websocket use - harmless to leave in for a pure-HTTP prod build.
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # --- OPTIONAL: only uncomment this if you specifically need the API
+    # reachable from outside the Docker network (e.g. hitting /admin/* from
+    # a script that isn't running on the host, or NEXT_PUBLIC_API_URL
+    # pointing here instead of a public api port - see the architecture
+    # note at the top of this file). Admin endpoints still require
+    # X-Admin-Token - this location does not change or bypass that
+    # requirement, it only makes the (still-authenticated) endpoints
+    # network-reachable. Prefer leaving this commented out; api/postgres/
+    # redis are not published to the host by default specifically so this
+    # isn't necessary for the app to function as an admin.
+    #
+    # location /api-backend/ {
+    #     rewrite ^/api-backend/(.*)$ /$1 break;
+    #     proxy_pass http://127.0.0.1:8000;
+    #     proxy_http_version 1.1;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    #     client_max_body_size 50M;
+    # }
+}

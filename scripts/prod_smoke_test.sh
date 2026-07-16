@@ -8,20 +8,30 @@
 # Usage: scripts/prod_smoke_test.sh   (also wired up as `make prod-smoke`)
 #
 # Env vars:
-#   ADMIN_TOKEN  required - fails fast (before running any checks) if unset.
-#                Must match the target deployment's configured ADMIN_TOKEN.
-#   BASE_URL     default http://127.0.0.1:3000 - the web app. In
-#                docker-compose.prod.yml, `web` is published on
-#                ${WEB_PORT:-3000}, so this matches an unmodified deploy on
-#                the same host.
-#   API_URL      optional, unset by default. docker-compose.prod.yml does
-#                NOT publish the api service to the host by default (see
-#                "expose api only if needed" in docker-compose.prod.yml) -
-#                api/admin checks below are skipped unless you explicitly
-#                set this (e.g. API_URL=http://127.0.0.1:8000 if you've
-#                added a `ports:` mapping for api, or API_URL=http://api:8000
-#                if you're running this script from another container on
-#                the same compose network).
+#   ADMIN_TOKEN   required - fails fast (before running any checks) if
+#                 unset. Must match the target deployment's configured
+#                 ADMIN_TOKEN.
+#   WEB_BASE_URL  default http://127.0.0.1:3000 - the web app. In
+#                 docker-compose.prod.yml, `web` is published on
+#                 ${WEB_PORT:-3000}, so this matches an unmodified deploy on
+#                 the same host. Behind a reverse proxy (see "Production
+#                 deployment behind HTTPS reverse proxy" in
+#                 docs/deployment.md), set this to your public HTTPS domain
+#                 instead, e.g. WEB_BASE_URL=https://yourdomain.com.
+#   BASE_URL      deprecated alias for WEB_BASE_URL, kept for backward
+#                 compatibility - used only if WEB_BASE_URL is unset.
+#   API_URL       optional, unset by default. docker-compose.prod.yml does
+#                 NOT publish the api service to the host by default (see
+#                 "expose api only if needed" in docker-compose.prod.yml),
+#                 and docker-compose.prod.private.yml pins that explicitly -
+#                 api/admin checks below are skipped unless you explicitly
+#                 set this (e.g. API_URL=http://127.0.0.1:8000 if you've
+#                 added a `ports:` mapping for api, or API_URL=http://api:8000
+#                 if you're running this script from another container on
+#                 the same compose network). With API_URL unset, this script
+#                 still verifies the API transitively - $WEB_BASE_URL/api/health
+#                 only returns "ok" if web's own server-side code can reach
+#                 api over API_INTERNAL_URL.
 #
 # See docs/operations.md for post-deployment usage.
 
@@ -32,7 +42,7 @@ if [[ -z "${ADMIN_TOKEN:-}" ]]; then
   exit 1
 fi
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:3000}"
+WEB_BASE_URL="${WEB_BASE_URL:-${BASE_URL:-http://127.0.0.1:3000}}"
 API_URL="${API_URL:-}"
 
 CURL_OPTS=(-sS --connect-timeout 5 --max-time 15)
@@ -73,20 +83,20 @@ except Exception:
 }
 
 echo "== OPTCG production smoke test =="
-echo "BASE_URL=$BASE_URL"
+echo "WEB_BASE_URL=$WEB_BASE_URL"
 echo "API_URL=${API_URL:-<unset - skipping direct API checks>}"
 echo
 
-echo "-- 1. Web health (GET \$BASE_URL/api/health) --"
-http_get "$BASE_URL/api/health"
+echo "-- 1. Web health (GET \$WEB_BASE_URL/api/health) --"
+http_get "$WEB_BASE_URL/api/health"
 if [[ "$HTTP_STATUS" != "200" ]]; then
-  fail "GET $BASE_URL/api/health returned HTTP $HTTP_STATUS (expected 200)"
+  fail "GET $WEB_BASE_URL/api/health returned HTTP $HTTP_STATUS (expected 200)"
 else
   status_field="$(json_field status)"
   if [[ "$status_field" == "ok" ]]; then
-    pass "GET $BASE_URL/api/health status=ok"
+    pass "GET $WEB_BASE_URL/api/health status=ok"
   else
-    fail "GET $BASE_URL/api/health status='$status_field' (expected 'ok')"
+    fail "GET $WEB_BASE_URL/api/health status='$status_field' (expected 'ok')"
   fi
 fi
 echo
@@ -99,17 +109,18 @@ echo
 # /dashboard in the dev stack.
 echo "-- 2. Frontend pages --"
 for page in /dashboard /market/report /collection /search; do
-  http_get "$BASE_URL$page" -L
+  http_get "$WEB_BASE_URL$page" -L
   if [[ "$HTTP_STATUS" == "200" ]]; then
-    pass "GET $BASE_URL$page returned 200"
+    pass "GET $WEB_BASE_URL$page returned 200"
   else
-    fail "GET $BASE_URL$page returned HTTP $HTTP_STATUS (expected 200)"
+    fail "GET $WEB_BASE_URL$page returned HTTP $HTTP_STATUS (expected 200)"
   fi
 done
 echo
 
 if [[ -z "$API_URL" ]]; then
-  echo "-- 3. API checks skipped (API_URL not set) --"
+  echo "-- 3. Direct API checks --"
+  echo "Skipping direct API checks because API_URL is not set."
   echo
 else
   echo "-- 3. API health (GET \$API_URL/health) --"

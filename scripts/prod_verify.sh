@@ -55,6 +55,38 @@ else
 fi
 echo
 
+echo "== 2b. docker compose config (with docker-compose.prod.private.yml) =="
+# Confirms the private override merges cleanly, and that it actually
+# replaces (not adds to) web's ports - see the `!override` comment in that
+# file for why a plain `ports:` list there wouldn't be enough.
+if env "${VERIFY_ENV[@]}" docker compose \
+  -f docker-compose.prod.yml -f docker-compose.prod.private.yml config --format json 2>/dev/null \
+  | python3 -c "
+import json, sys
+cfg = json.load(sys.stdin)
+web_ports = cfg['services']['web'].get('ports') or []
+other_published = any(
+    svc.get('ports') for name, svc in cfg['services'].items() if name != 'web'
+)
+web_private = len(web_ports) == 1 and web_ports[0].get('host_ip') == '127.0.0.1'
+sys.exit(0 if (web_private and not other_published) else 1)
+"; then
+  pass "docker-compose.prod.private.yml keeps only web published, on 127.0.0.1"
+else
+  fail "docker-compose.prod.private.yml did not produce the expected private config"
+fi
+echo
+
+echo "== 2c. Reverse proxy example files =="
+for f in deploy/nginx/opcg.conf.example deploy/caddy/Caddyfile.example; do
+  if [[ -f "$f" ]]; then
+    pass "$f exists"
+  else
+    fail "$f is missing"
+  fi
+done
+echo
+
 echo "== 3. docker compose build =="
 if env "${VERIFY_ENV[@]}" docker compose -f docker-compose.prod.yml build; then
   pass "docker compose -f docker-compose.prod.yml build"
