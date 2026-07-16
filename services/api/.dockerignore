@@ -1,11 +1,15 @@
-node_modules
-.next
-.git
-npm-debug.log
-
 # Never bake secrets into the image - .env.production lives at the repo
 # root (outside this build context) anyway, but this is a defense-in-depth
 # guard against ever accidentally COPYing one in.
 .env
 .env.*
 !.env.example
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.git
+.gitignore

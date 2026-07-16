@@ -1540,3 +1540,17 @@ class EnvCheckResponseOut(BaseModel):
     checks: list[EnvCheckResultOut]
     warnings: list[str]
     errors: list[str]
+
+
+# --- db backups ---------------------------------------------------------
+
+
+class DbBackupFileOut(BaseModel):
+    filename: str
+    size_bytes: int
+    created_at: datetime
+
+
+class DbBackupListOut(BaseModel):
+    backup_dir: str
+    backups: list[DbBackupFileOut]

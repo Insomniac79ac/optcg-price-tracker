@@ -4,6 +4,52 @@ Deploying the OPTCG price tracker (api, web, worker, beat, postgres, redis) with
 `docker-compose.prod.yml`. This does not change any application behavior - it only wires up
 production-safe container config around the existing app.
 
+## Quick deploy flow
+
+The `Makefile`'s `prod-*` targets (all a thin wrapper around `docker compose -f
+docker-compose.prod.yml --env-file .env.production ...`) cover the common path end to end. Each
+step below links to the fuller reference section if you need more than the one-liner.
+
+1. Create `.env.production` from the template: `cp .env.production.example .env.production` (see
+   [section 1](#1-required-environment-variables)).
+2. Set a strong `ADMIN_TOKEN` (>= 32 chars, not the local-dev default - see
+   [How to rotate ADMIN_TOKEN](#1e-how-to-rotate-admin_token); `openssl rand -hex 32` works for a
+   first value too, not just rotations).
+3. Set `DATABASE_URL` (must not contain the default local password `opcg:opcg` - see
+   [section 1](#1-required-environment-variables)).
+4. Set `REDIS_URL`.
+5. Configure Telegram if you want alerts/digests sent (`TELEGRAM_BOT_TOKEN` +
+   `TELEGRAM_CHAT_ID` - both or neither, see [section 1b](#1b-telegram-config)).
+6. Build: `make prod-build`.
+7. Start: `make prod-up`.
+8. Run migrations: `make prod-migrate`.
+9. Smoke test: `ADMIN_TOKEN=<token> make prod-smoke` (runs `scripts/prod_smoke_test.sh` - see
+   [docs/operations.md](operations.md#health-checks)).
+10. View logs: `make prod-logs`.
+
+Before any of this, `make prod-verify` is safe to run with no `.env.production` and no real
+secrets at all - it checks `docker-compose.prod.yml` is well-formed, the images build, and (with
+`RUN_TESTS=true`) the test suites pass. Good as a pre-deploy CI gate or a first sanity check on a
+fresh checkout.
+
+## Rollback
+
+If a deploy goes bad:
+
+1. **Stop services**: `make prod-down` (or stop just the misbehaving one, e.g.
+   `docker compose -f docker-compose.prod.yml --env-file .env.production stop api`, if
+   `postgres`/`redis` are fine and you don't want to drop connections to them).
+2. **Restore the DB backup** taken before the deploy (see
+   [Backup Postgres](operations.md#backup-postgres) / [Restore Postgres](operations.md#restore-postgres)
+   in docs/operations.md - `make prod-backup` takes the "before" one; restore with `pg_restore`
+   against the `opcg-postgres-prod` container). Skip this step if the deploy didn't include a
+   migration or other data change.
+3. **Redeploy the previous image/commit**: `git checkout <previous-commit-or-tag>` (or point your
+   registry/deploy tooling at the previous image tag if you build/push images elsewhere), then
+   `make prod-build && make prod-up`.
+4. **Run the smoke test again**: `ADMIN_TOKEN=<token> make prod-smoke` - don't consider the
+   rollback done until this passes.
+
 ## 1. Required environment variables
 
 Copy the template and fill in real values:
@@ -33,6 +79,7 @@ cp .env.production.example .env.production
 | `AUTH_SECRET` | yes in production | Auth.js's own session-encryption secret (web only). Generate with `openssl rand -base64 33`. |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | yes in production | From a Google Cloud OAuth 2.0 Client ID (web only). See [Per-user auth](#10-per-user-auth-google-login). |
 | `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_ORIGIN_REGEX` | optional | Locks the API's CORS policy down to your deployed frontend's origin(s) instead of the dev default `*`. See `services/api/app/main.py`. |
+| `WEB_PORT` | optional | Host port `web` is published on - default `3000`. See [section 6](#6-starting-production-services). |
 
 Compose does **not** auto-load `.env.production` (it only auto-loads a file literally named
 `.env`). Always pass `--env-file .env.production` explicitly, as shown below.
@@ -152,12 +199,13 @@ into a file inside the repo.
 ## 3. Database migrations
 
 ```
-docker compose -f docker-compose.prod.yml --env-file .env.production run --rm api \
-  alembic upgrade head
+make prod-migrate   # docker compose -f docker-compose.prod.yml exec api alembic upgrade head
 ```
 
 Run this once per deployment, after `postgres` is up and before `api`/`worker`/`beat` start
-serving/processing (or immediately after, before relying on new tables/columns).
+serving/processing (or immediately after, before relying on new tables/columns). Uses `exec`, not
+`run --rm`, so it applies against the same running `api` container (and its already-validated env)
+rather than a fresh one-off container.
 
 ## 4. Seed reference data
 
@@ -182,16 +230,32 @@ Imports/updates the real card catalog and its Yuyu-Tei/SNKRDUNK source mappings 
 ## 6. Starting production services
 
 ```
-docker compose -f docker-compose.prod.yml --env-file .env.production build
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+make prod-build   # docker compose -f docker-compose.prod.yml build
+make prod-up      # docker compose -f docker-compose.prod.yml up -d
 ```
 
-`api` and `web` are only `expose`d on the Docker network (container-to-container), not published
-to the host - put a reverse proxy (nginx, Caddy, Traefik, a cloud load balancer, ...) in front of
-them for external traffic, terminating TLS there. `postgres` and `redis` are not published to the
-host at all; only reachable from other containers on the compose network.
+`web` is published to the host on `${WEB_PORT:-3000}` (set `WEB_PORT` in `.env.production` to
+change it) - that's the one production service meant to be reachable directly, and what
+`scripts/prod_smoke_test.sh`'s default `BASE_URL` targets. `api`, `postgres`, and `redis` are only
+`expose`d on the Docker network (container-to-container) or not exposed at all - never published
+to the host, and never should be. Put a reverse proxy (nginx, Caddy, Traefik, a cloud load
+balancer, ...) in front of `web` for a real domain/TLS; if you need to reach `api` directly (e.g.
+for `curl`-based admin checks without going through `web`), add your own `ports:` mapping for it
+rather than relying on this file to publish it.
+
+Every service starts only after its dependencies report healthy, not just started - `api`,
+`worker`, and `beat` wait on `postgres`/`redis` healthchecks (`pg_isready` / `redis-cli ping`), and
+`web` waits on `api`'s own `GET /health`. `docker compose ps` shows each container's health status;
+see [Health checks](operations.md#health-checks) in docs/operations.md for the full healthcheck
+reference and troubleshooting a container stuck `starting`/`unhealthy`.
 
 ## 7. Checking health
+
+`docker compose -f docker-compose.prod.yml --env-file .env.production ps` shows each container's
+Docker-level health status (`healthy`/`unhealthy`/`starting`) at a glance - see
+[Health checks](operations.md#health-checks) in docs/operations.md for what each service's
+healthcheck actually runs. For an end-to-end functional check (not just "is the process up"), run
+`ADMIN_TOKEN=<token> make prod-smoke` (`scripts/prod_smoke_test.sh`) after every deploy.
 
 From another container on the same network, or through your reverse proxy:
 
@@ -223,6 +287,12 @@ Both print config/connectivity status and exit non-zero if misconfigured - usefu
 health checks.
 
 ## 8. Checking logs
+
+```
+make prod-logs   # docker compose -f docker-compose.prod.yml logs -f (all services)
+```
+
+Or a single service:
 
 ```
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f api

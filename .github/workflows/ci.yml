@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# All jobs below are secret-free by design - they check structure/config/
+# build success, never a real .env.production or real ADMIN_TOKEN/DATABASE_URL/
+# etc. See scripts/prod_verify.sh (the local equivalent of the prod-compose
+# job) and docs/deployment.md.
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if git is tracking a real env file
+        run: bash scripts/check_secrets.sh
+
+  prod-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker-compose.prod.yml config + build (no real secrets, dummy placeholders only)
+        run: ./scripts/prod_verify.sh
+        env:
+          # Backend/worker test suites already run in their own jobs below -
+          # skip the (slower) duplicate run inside prod_verify.sh here.
+          RUN_TESTS: "false"
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r services/api/requirements.txt
+      - run: cd services/api && python -m pytest -q
+
+  worker-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r services/worker/requirements.txt
+      - run: cd services/worker && python -m pytest -q
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: cd apps/web && npm ci
+      - run: cd apps/web && npm run build
+      - name: check-env.js unit tests
+        run: cd apps/web && node --test scripts/*.test.js
+
+  deploy-scripts-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: prod_smoke_test.sh and prod_verify.sh exist and are executable
+        run: |
+          test -x scripts/prod_smoke_test.sh
+          test -x scripts/prod_verify.sh
+      - name: Makefile prod-* targets exist
+        run: |
+          for target in prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify prod-backup; do
+            grep -qE "^${target}:" Makefile || { echo "missing Makefile target: $target"; exit 1; }
+          done

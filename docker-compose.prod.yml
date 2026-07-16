@@ -11,7 +11,12 @@
 # (postgres, redis, ...) as the same project and recreate/replace each
 # other's containers.
 #
-# See docs/deployment.md for the full runbook.
+# Every service below is `restart: unless-stopped` and depends on its
+# upstreams' healthchecks (not just process start) via `condition:
+# service_healthy` - api/worker/beat all wait for postgres+redis to actually
+# accept connections, not just for their containers to exist, and web waits
+# for api's own /health to return 200. See docs/deployment.md for the full
+# runbook and docs/operations.md for day-to-day commands.
 
 name: optcg-prod
 
@@ -24,15 +29,31 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    # Not published to the host - only reachable from other containers on
+    # this compose network. Never expose Postgres publicly in production.
     volumes:
       - opcg_postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7
     container_name: opcg-redis-prod
     restart: unless-stopped
+    # Not published to the host - same reasoning as postgres above. Never
+    # expose Redis publicly in production (it has no auth configured here).
     volumes:
       - opcg_redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   api:
     build: ./services/api
@@ -40,13 +61,31 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    # Internal only by default - api sits behind web's server-side proxy
+    # routes (API_INTERNAL_URL) and, for direct/admin access, a reverse
+    # proxy you put in front of it (see docs/deployment.md). Add a `ports:`
+    # mapping here yourself only if you specifically need to reach the api
+    # container directly from the host (e.g. ADMIN_TOKEN'd smoke checks
+    # without a reverse proxy in place yet).
     expose:
       - "8000"
     volumes:
       - ./data:/app/data
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status == 200 else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   worker:
     build: ./services/worker
@@ -61,8 +100,10 @@ services:
     volumes:
       - ./data:/app/data:ro
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   beat:
     build: ./services/worker
@@ -77,8 +118,10 @@ services:
     volumes:
       - ./data:/app/data:ro
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   web:
     build:
@@ -89,10 +132,62 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
-    expose:
-      - "3000"
+    # Published directly to the host, unlike api/postgres/redis above - this
+    # is the one production service meant to be reached without going
+    # through the Docker network first. Put a reverse proxy (nginx, Caddy,
+    # Traefik, a cloud load balancer, ...) in front of this for a real
+    # domain/TLS; WEB_PORT still lets you verify the container directly
+    # (e.g. scripts/prod_smoke_test.sh's default BASE_URL) without one.
+    ports:
+      - "${WEB_PORT:-3000}:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # On-demand backup - gated behind the `backup` profile, so `docker compose
+  # up` never starts this (no restart policy either; it's meant to run once
+  # and exit). Run it explicitly with:
+  #   docker compose -f docker-compose.prod.yml --profile backup run --rm db-backup
+  # Uses the postgres image directly (pg_dump is already there, so nothing
+  # extra to build) and talks to `postgres` over this compose network.
+  # Unlike scripts/db_backup.sh (which shells out via `docker compose exec`
+  # from the host), this container has no Docker CLI/socket access, so the
+  # dump command is inlined here instead of reusing that script. `$$` below
+  # escapes each `$` from Compose's own variable interpolation so the
+  # container's shell sees it, not Compose - same trick as the healthcheck
+  # `test:` commands above.
+  db-backup:
+    image: postgres:16
+    container_name: opcg-db-backup-prod
+    profiles:
+      - backup
+    env_file:
+      - .env.production
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        mkdir -p /app/data/backups/db
+        ts="$$(date +%Y%m%d_%H%M%S)"
+        out="/app/data/backups/db/opcg_db_backup_$${ts}.sql.gz"
+        PGPASSWORD="$$POSTGRES_PASSWORD" pg_dump -h postgres -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" --clean --if-exists | gzip > "$$out"
+        echo "Backup written to $$out"
 
 volumes:
   opcg_postgres_data_prod:

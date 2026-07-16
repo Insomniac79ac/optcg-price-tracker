@@ -39,6 +39,45 @@ ADMIN_TOKEN=<production ADMIN_TOKEN> \
 `API_URL` defaults to `http://localhost:8000`, `WEB_URL` to `http://localhost:3000`. `ADMIN_TOKEN`
 is always required - the script fails the admin check if it's missing rather than skipping it.
 
+## Health checks
+
+`docker-compose.prod.yml` gives every service a Docker-level `healthcheck:` - `docker compose -f
+docker-compose.prod.yml --env-file .env.production ps` shows each one's status
+(`healthy`/`unhealthy`/`starting`) without hitting anything over HTTP yourself:
+
+| Service | Healthcheck |
+|---|---|
+| `postgres` | `pg_isready -U $POSTGRES_USER -d $POSTGRES_DB` |
+| `redis` | `redis-cli ping` |
+| `api` | `GET /health` returns HTTP 200 |
+| `web` | `GET /api/health` returns HTTP 200 |
+
+`api`, `worker`, and `beat` all wait for `postgres`+`redis` to report `healthy` (not just started)
+before starting themselves; `web` additionally waits for `api`. A container stuck `starting` past
+its `start_period` almost always means the thing it depends on isn't actually reachable yet (wrong
+`DATABASE_URL`/`REDIS_URL`, or postgres still initializing) - check that container's own logs
+first (see [Logs](#logs) below), not the dependent one's.
+
+For an end-to-end functional check beyond "the process is healthy" (pages actually render, admin
+auth actually works, ...), run `ADMIN_TOKEN=<token> make prod-smoke` - see
+[scripts/prod_smoke_test.sh](../scripts/prod_smoke_test.sh) and the [Smoke test](#smoke-test)
+section above for the dev-stack equivalent (`make smoke-test`).
+
+## Logs
+
+```
+make prod-logs   # all services, follow mode
+```
+
+Or a single service (swap in `worker`/`beat`/`web`/`postgres`/`redis`):
+
+```
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f api
+```
+
+Drop `-f` to print what's buffered and exit instead of following. Add `--since 1h` (or any Docker
+duration) to bound how far back it reads on a long-lived container.
+
 ## Check environment validation
 
 ```
@@ -143,6 +182,52 @@ docker compose exec worker python -m worker.jobs.check_alerts --dry-run
 docker compose exec worker python -m worker.jobs.check_alerts
 ```
 
+## Market workflow scheduling
+
+The scheduled market intelligence workflow (refresh prices → snapshot portfolio/market signals →
+generate report → optionally send a Telegram digest) is disabled by default. Celery Beat only adds
+it to its schedule if `MARKET_WORKFLOW_ENABLED=true` (see
+`services/worker/worker/celery_app.py::_build_beat_schedule`); see [Market workflow schedule
+config](deployment.md#1c-market-workflow-schedule-config) in docs/deployment.md for the full env
+var reference (`MARKET_WORKFLOW_SOURCE`/`_LIMIT`/`_SEND_TELEGRAM`/`_HOUR_UTC`/`_MINUTE_UTC`).
+Changing any of these requires restarting `beat` to pick up the new schedule:
+
+```
+docker compose -f docker-compose.prod.yml --env-file .env.production restart beat
+```
+
+To run the workflow on demand (without waiting for or changing the schedule), via the admin API:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"source": "yuyutei", "send_telegram": false, "dry_run": true}' \
+  "http://localhost:8000/admin/actions/run-market-workflow"
+```
+
+Or use the "Run market workflow" action on `/admin/actions` in the web UI. `dry_run: true` runs
+the full pipeline without writing new rows or sending a digest - use it to sanity-check a schedule
+change before letting Beat run it for real. Past runs (scheduled or on-demand) are visible at
+`/admin/market-workflow-runs` or `GET /admin/market-workflow-runs`.
+
+## Telegram digest testing
+
+Requires `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` both set (see [Telegram
+config](deployment.md#1b-telegram-config)). Send (or dry-run) the latest market intelligence
+report's digest independent of the scheduled workflow:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"dry_run": true}' \
+  "http://localhost:8000/admin/actions/send-market-report-digest"
+```
+
+`dry_run: true` formats the message and reports what would be sent without calling the Telegram
+API - use this first to confirm formatting/content. Drop it (or set `false`) to actually send. Digest
+sends are deduplicated per report by default; pass `"force": true` in the body to resend a report
+that's already been sent. Requires a market intelligence report to already exist (generate one via
+the market workflow above, or `POST /admin/actions/generate-market-report`) - returns
+`report_id: null` if none exists yet.
+
 ## Reset local dev database
 
 ```
@@ -160,8 +245,12 @@ docker exec opcg-postgres pg_dump -U opcg -d opcg -Fc -f /tmp/opcg-backup.dump
 docker cp opcg-postgres:/tmp/opcg-backup.dump ./opcg-backup-$(date +%Y%m%d-%H%M%S).dump
 ```
 
-`-Fc` (custom format) is compressed and lets `pg_restore` do selective/parallel restores. For
-production, use the `opcg-postgres-prod` container name instead.
+`-Fc` (custom format) is compressed and lets `pg_restore` do selective/parallel restores.
+
+**Production**: `make prod-backup` does the same two steps against `opcg-postgres-prod` via
+`docker compose -f docker-compose.prod.yml exec`/`cp`, writing
+`./opcg-backup-<timestamp>.dump`. Take one before every deploy that includes a migration - see
+[Rollback](deployment.md#rollback) in docs/deployment.md.
 
 ## Restore Postgres
 
@@ -171,5 +260,47 @@ docker exec opcg-postgres pg_restore -U opcg -d opcg --clean --if-exists /tmp/re
 ```
 
 `--clean --if-exists` drops existing objects before recreating them, so this is safe to run
-against a database that already has the schema applied. Run `alembic upgrade head` afterward if
-the backup predates a newer migration.
+against a database that already has the schema applied. Run `alembic upgrade head` (or `make
+prod-migrate` in production) afterward if the backup predates a newer migration.
+
+**Production**: swap the container name for `opcg-postgres-prod` (`docker cp` and `docker exec`
+both work directly against a named container regardless of which compose file started it, so no
+`-f docker-compose.prod.yml` is needed for these two specifically):
+
+```
+docker cp ./opcg-backup-<timestamp>.dump opcg-postgres-prod:/tmp/restore.dump
+docker exec opcg-postgres-prod pg_restore -U opcg -d opcg --clean --if-exists /tmp/restore.dump
+```
+
+## Database backup and restore drill
+
+The manual `pg_dump`/`pg_restore` commands above are fine for a one-off backup before a deploy.
+For routine production backups, use the automated scripts instead - they gzip a plain-SQL dump to
+`data/backups/db/` (bind-mounted from the host via the `./data:/app/data` volume in
+`docker-compose.prod.yml`), so backups survive container recreation:
+
+```
+make prod-db-backup              # scripts/db_backup.sh - gzipped pg_dump to data/backups/db/
+make prod-db-backup-prune        # scripts/db_backup_prune.sh - dry run, keeps newest 14
+make prod-db-backup-prune-apply  # scripts/db_backup_prune.sh --apply - actually deletes old backups
+make prod-db-restore BACKUP=data/backups/db/opcg_db_backup_<ts>.sql.gz CONFIRM=RESTORE
+```
+
+`prod-db-restore` requires both `BACKUP=<path>` and `CONFIRM=RESTORE` - it refuses to run
+otherwise, on top of `db_restore.sh`'s own `CONFIRM_RESTORE=RESTORE` check. It stops
+api/worker/beat/web before restoring (postgres and redis keep running), restores the dump,
+restarts whichever of those services were running, then runs `alembic upgrade head`. Run
+`ADMIN_TOKEN=<token> make prod-smoke` afterward to confirm the stack is healthy.
+
+There's also an on-demand `docker compose --profile backup run --rm db-backup` service in
+`docker-compose.prod.yml` that does the same dump from inside the compose network, for
+environments where you'd rather not shell out via `docker compose exec` from the host.
+
+`GET /admin/db-backups` (admin-token protected, like the rest of `/admin/*`) lists the backup
+files currently on disk (filename, size, created-at) by reading `DB_BACKUP_DIR`
+(`data/backups/db` by default) - useful for confirming a scheduled backup actually ran without
+shelling into the host:
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/db-backups"
+```

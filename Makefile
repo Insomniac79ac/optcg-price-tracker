@@ -1,9 +1,15 @@
 .PHONY: help dev-up dev-down test-api test-worker migrate seed import-watchlist \
 	refresh-yuyutei-dry refresh-yuyutei-live logs-api logs-worker logs-beat check-secrets \
-	smoke-test
+	smoke-test prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify \
+	prod-backup prod-db-backup prod-db-restore prod-db-backup-prune prod-db-backup-prune-apply
 
 # Override on the command line, e.g. `make import-watchlist WATCHLIST=path/to.csv`
 WATCHLIST ?= data/watchlists/opcg_watchlist.csv
+
+# All prod-* targets read the same production env file - see
+# docs/deployment.md. Compose does NOT auto-load a file not literally named
+# `.env`, so every prod-* target below passes --env-file explicitly.
+PROD_COMPOSE = docker compose -f docker-compose.prod.yml --env-file .env.production
 
 help:
 	@echo "make dev-up               - start the local dev stack (docker compose up -d)"
@@ -19,7 +25,21 @@ help:
 	@echo "make logs-worker          - tail worker logs"
 	@echo "make logs-beat            - tail beat logs"
 	@echo "make check-secrets        - fail if git is tracking any real .env file"
-	@echo "make smoke-test           - verify a running stack is healthy (ADMIN_TOKEN required)"
+	@echo "make smoke-test           - verify a running (dev) stack is healthy (ADMIN_TOKEN required)"
+	@echo ""
+	@echo "Production (docker-compose.prod.yml + .env.production) - see docs/deployment.md:"
+	@echo "make prod-build           - build the production images"
+	@echo "make prod-up              - start the production stack"
+	@echo "make prod-down            - stop the production stack"
+	@echo "make prod-logs            - tail all production service logs"
+	@echo "make prod-migrate         - apply database migrations against production"
+	@echo "make prod-smoke           - run scripts/prod_smoke_test.sh (ADMIN_TOKEN required)"
+	@echo "make prod-verify          - pre-deploy sanity check (config/secrets/build, no real secrets needed)"
+	@echo "make prod-backup          - pg_dump the production database to ./opcg-backup-<timestamp>.dump"
+	@echo "make prod-db-backup       - gzipped pg_dump to data/backups/db/ (scripts/db_backup.sh)"
+	@echo "make prod-db-restore      - restore a backup (BACKUP=<path> CONFIRM=RESTORE required)"
+	@echo "make prod-db-backup-prune - dry-run: show which old backups would be deleted (keeps newest 14)"
+	@echo "make prod-db-backup-prune-apply - actually delete old backups beyond the retention count"
 
 dev-up:
 	docker compose up -d
@@ -62,3 +82,54 @@ check-secrets:
 
 smoke-test:
 	./scripts/smoke_test.sh
+
+# --- Production (docker-compose.prod.yml) -----------------------------------
+
+prod-build:
+	$(PROD_COMPOSE) build
+
+prod-up:
+	$(PROD_COMPOSE) up -d
+
+prod-down:
+	$(PROD_COMPOSE) down
+
+prod-logs:
+	$(PROD_COMPOSE) logs -f
+
+prod-migrate:
+	$(PROD_COMPOSE) exec api alembic upgrade head
+
+prod-smoke:
+	./scripts/prod_smoke_test.sh
+
+prod-verify:
+	./scripts/prod_verify.sh
+
+# pg_dump's custom format (-Fc) is compressed and lets pg_restore do
+# selective/parallel restores - see "Restore Postgres" in docs/operations.md.
+prod-backup:
+	$(PROD_COMPOSE) exec postgres sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc -f /tmp/opcg-backup.dump'
+	$(PROD_COMPOSE) cp postgres:/tmp/opcg-backup.dump ./opcg-backup-$$(date +%Y%m%d-%H%M%S).dump
+
+# --- Automated DB backup/restore/retention (scripts/db_*.sh) ----------------
+# See "Database backup and restore drill" in docs/operations.md.
+
+prod-db-backup:
+	./scripts/db_backup.sh
+
+# Requires both BACKUP (the file to restore) and CONFIRM=RESTORE (a second,
+# make-level confirmation on top of the script's own CONFIRM_RESTORE check)
+# - prints usage and refuses to run without both.
+prod-db-restore:
+	@if [ -z "$(BACKUP)" ] || [ "$(CONFIRM)" != "RESTORE" ]; then \
+		echo "Usage: make prod-db-restore BACKUP=<path-to-backup.sql.gz> CONFIRM=RESTORE"; \
+		exit 1; \
+	fi
+	CONFIRM_RESTORE=RESTORE ./scripts/db_restore.sh $(BACKUP)
+
+prod-db-backup-prune:
+	./scripts/db_backup_prune.sh
+
+prod-db-backup-prune-apply:
+	./scripts/db_backup_prune.sh --apply

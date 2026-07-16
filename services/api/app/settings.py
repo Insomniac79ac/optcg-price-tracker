@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     # skipped rather than attempted (see app.services.telegram_client).
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None
+    # Where scripts/db_backup.sh writes gzipped pg_dump backups - relative to
+    # this process's cwd (== /app in the api container, matching the
+    # `./data:/app/data` volume mount in docker-compose.prod.yml, so this
+    # resolves to the same directory the script writes to on the host). See
+    # app.api.admin_db_backups (GET /admin/db-backups).
+    DB_BACKUP_DIR: str = "data/backups/db"
 
     @field_validator("DATABASE_URL")
     @classmethod

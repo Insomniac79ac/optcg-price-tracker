@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
+from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
@@ -86,6 +87,7 @@ app.include_router(wishlist_router)
 app.include_router(dashboard_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
+app.include_router(admin_db_backups_router)
 app.include_router(market_workflow_runs_router)
 app.include_router(search_router)
 app.include_router(system_check_router)
