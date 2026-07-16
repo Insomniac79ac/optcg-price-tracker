@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     # app.api.admin_db_backups (GET /admin/db-backups).
     DB_BACKUP_DIR: str = "data/backups/db"
 
+    # In-memory per-IP request rate limiting - see app.core.rate_limit and
+    # 'Rate limiting' in docs/deployment.md. Single-instance only (state
+    # lives in this process's memory); a distributed deployment should move
+    # this to a reverse proxy or Redis instead. Disabling is a warning, not a
+    # startup failure, in production - see app.core.env_validation.
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_PUBLIC_READ_PER_5M: int = 300
+    RATE_LIMIT_COLLECTION_WRITE_PER_5M: int = 60
+    RATE_LIMIT_ADMIN_PER_5M: int = 120
+    RATE_LIMIT_IMPORT_EXPORT_PER_10M: int = 20
+    RATE_LIMIT_SEARCH_PER_5M: int = 120
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

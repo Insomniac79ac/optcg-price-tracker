@@ -97,6 +97,37 @@ The web app's own env check (`NEXT_PUBLIC_API_URL`/`API_INTERNAL_URL` presence, 
 `NEXT_PUBLIC_*` vars) runs at Docker build/start instead of via an API endpoint - see
 `apps/web/scripts/check-env.js` (`npm run check-env` to run it manually).
 
+## Check rate limit status
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/rate-limit/status"
+```
+
+Returns whether rate limiting is enabled and, for each of the five route groups (`public_read`,
+`collection_write`, `admin`, `import_export`, `search`), its current limit, window, and
+`active_keys` (distinct client IPs with a live counter right now - a large number here across a
+short window is a sign of either real traffic growth or abuse worth investigating). See
+"Security headers, CSP, and rate limiting" in `docs/deployment.md` for what each group covers and
+why this is single-instance only.
+
+**Adjusting limits**: set the matching env var in `.env.production` and restart the `api`
+container - limits are read from `Settings` at request time, so no code change is needed:
+
+```
+RATE_LIMIT_PUBLIC_READ_PER_5M=300
+RATE_LIMIT_COLLECTION_WRITE_PER_5M=60
+RATE_LIMIT_ADMIN_PER_5M=120
+RATE_LIMIT_IMPORT_EXPORT_PER_10M=20
+RATE_LIMIT_SEARCH_PER_5M=120
+```
+
+**Temporarily disabling rate limits for troubleshooting** (e.g. a legitimate burst of traffic
+getting 429'd, or narrowing down whether rate limiting is the cause of an issue): set
+`RATE_LIMIT_ENABLED=false` in `.env.production` and restart `api`. This is safe to do temporarily
+but generates a warning on `GET /admin/env-check` (and at startup) while it's off in production -
+see [Check environment validation](#check-environment-validation) above. Re-enable it
+(`RATE_LIMIT_ENABLED=true`, or just remove the line - `true` is the default) once you're done.
+
 ## Run Yuyu-Tei refresh manually
 
 ```

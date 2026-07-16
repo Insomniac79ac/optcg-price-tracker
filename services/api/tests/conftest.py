@@ -73,6 +73,22 @@ def _app_logging_uses_test_db(monkeypatch):
     monkeypatch.setattr(app_logging_module, "SessionLocal", TestingSessionLocal)
 
 
+@pytest.fixture(autouse=True)
+def _rate_limit_disabled_by_default(monkeypatch):
+    """RateLimitMiddleware runs on every request (see app/main.py), and its
+    counters are process-global - without this, the hundreds of requests
+    the rest of this suite makes within a single test run would eventually
+    trip a group's limit and start failing unrelated tests with 429s. Off
+    by default here; tests/test_rate_limit.py explicitly re-enables it
+    (and sets small limits) to exercise the 429 behavior in isolation."""
+    from app.core.rate_limit import reset_rate_limits
+
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", False)
+    reset_rate_limits()
+    yield
+    reset_rate_limits()
+
+
 @pytest.fixture()
 def db_session():
     Base.metadata.create_all(bind=engine)

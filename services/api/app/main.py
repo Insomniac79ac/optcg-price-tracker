@@ -8,6 +8,7 @@ from app.api.admin_backup import router as admin_backup_router
 from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
+from app.api.admin_rate_limit import router as admin_rate_limit_router
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
@@ -29,6 +30,8 @@ from app.api.system_check import router as system_check_router
 from app.api.wishlist import router as wishlist_router
 from app.config_check import validate_config
 from app.core.env_validation import validate_environment
+from app.core.rate_limit import RateLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.services.app_logging import record_app_log
 from app.settings import settings
 
@@ -83,6 +86,18 @@ if not _env_report.ok:
 
 app = FastAPI(title="optcg-price-tracker API")
 
+# Middleware order: FastAPI's add_middleware prepends, so the LAST call here
+# ends up outermost (verify with `[m.cls.__name__ for m in app.user_middleware]`
+# if this ever needs re-checking - it is not the "first added = outermost"
+# rule older Starlette docs describe). RateLimitMiddleware is added first so
+# it's innermost, closest to the router; SecurityHeadersMiddleware wraps it
+# so a 429 still gets X-Frame-Options etc.; CORSMiddleware is added last so
+# it's outermost and decorates every response - including a 429 - with CORS
+# headers, which the browser needs to even let JS read that response's body/
+# status instead of failing the fetch() as an opaque network error.
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
 # CORS_ALLOWED_ORIGINS unset (dev default) keeps the wide-open "*" this app
 # has always used locally. Set it (e.g. to the Vercel frontend's origin) to
 # lock this down in production - see app/settings.py.
@@ -115,6 +130,7 @@ app.include_router(admin_backup_router)
 app.include_router(admin_db_backups_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)
+app.include_router(admin_rate_limit_router)
 app.include_router(market_workflow_runs_router)
 app.include_router(search_router)
 app.include_router(system_check_router)

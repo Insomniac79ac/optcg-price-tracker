@@ -80,6 +80,8 @@ cp .env.production.example .env.production
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | yes in production | From a Google Cloud OAuth 2.0 Client ID (web only). See [Per-user auth](#10-per-user-auth-google-login). |
 | `CORS_ALLOWED_ORIGINS` / `CORS_ALLOW_ORIGIN_REGEX` | optional | Locks the API's CORS policy down to your deployed frontend's origin(s) instead of the dev default `*`. See `services/api/app/main.py`. |
 | `WEB_PORT` | optional | Host port `web` is published on - default `3000`. See [section 6](#6-starting-production-services). |
+| `RATE_LIMIT_ENABLED` | optional | Default `true`. See [section 12](#12-security-headers-csp-and-rate-limiting) - leaving this on is strongly recommended unless a reverse proxy already enforces limits. |
+| `RATE_LIMIT_PUBLIC_READ_PER_5M` / `RATE_LIMIT_COLLECTION_WRITE_PER_5M` / `RATE_LIMIT_ADMIN_PER_5M` / `RATE_LIMIT_IMPORT_EXPORT_PER_10M` / `RATE_LIMIT_SEARCH_PER_5M` | optional | Per-route-group request limits - see [section 12](#12-security-headers-csp-and-rate-limiting) for defaults and what each group covers. |
 
 Compose does **not** auto-load `.env.production` (it only auto-loads a file literally named
 `.env`). Always pass `--env-file .env.production` explicitly, as shown below.
@@ -100,6 +102,10 @@ for safety/shape at process startup:
   schedule value, or incomplete Telegram config are all hard failures.
 - **In development**, the identical issue is logged as a warning instead - local defaults (the
   repo-root `.env`'s `local-dev-admin-token`, etc.) keep working unattended.
+- One check is a warning-only exception to the "fails in production" rule above:
+  `RATE_LIMIT_ENABLED=false` in production never blocks startup, only warns - disabling rate
+  limiting is a deliberate operator choice (e.g. a reverse proxy already enforces limits), not
+  necessarily a misconfiguration. See [section 12](#12-security-headers-csp-and-rate-limiting).
 
 To check a running deployment's env validation status at any time (not just at startup):
 
@@ -380,3 +386,68 @@ Render/Fly.io - the same shape applies).
   Railway's) as Production + Preview environment variables.
 - Set `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on the Railway `api` service to your Vercel
   domain (and `https://.*\.vercel\.app` for preview deployments).
+
+## 12. Security headers, CSP, and rate limiting
+
+This app has no user accounts and no external auth - the hardening here is aimed at basic
+production abuse (scraping the API itself, brute-forcing the admin token, clickjacking the web
+app), not a login/session security model.
+
+**Run behind a reverse proxy, and use HTTPS.** Neither `docker-compose.prod.yml`'s `api`/`web`
+services nor this app's own code terminate TLS - `api`/`postgres`/`redis` aren't published to the
+host at all (see [section 6](#6-starting-production-services)), and `web` is published in plain
+HTTP on `WEB_PORT`. Put a real reverse proxy (nginx, Caddy, Traefik, or your cloud provider's load
+balancer) in front of `web` for a real domain and TLS certificate before exposing this to the
+internet - Caddy in particular gets you automatic HTTPS (Let's Encrypt) with a few lines of
+Caddyfile. If you're doing the [split Vercel + Railway deployment](#11-split-deployment-vercel-web--railway-apiworkerbeatpostgresredis)
+instead, both platforms already terminate TLS for you.
+
+**Security response headers** (`app.core.security_headers.SecurityHeadersMiddleware`, applied to
+every API response) are fixed, not configurable - `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Permissions-Policy: camera=(),
+microphone=(), geolocation=()`, and `Content-Security-Policy: default-src 'none'; frame-ancestors
+'none'` (this is a pure JSON API - it never itself embeds or is meant to be embedded as HTML, so a
+maximally restrictive CSP is safe). `/admin/*` and `/snkrdunk/*` responses additionally get
+`Cache-Control: no-store`, since those are the endpoints gated by `ADMIN_TOKEN` and must never be
+cached by an intermediate proxy or the browser.
+
+The **web app's CSP** (`apps/web/next.config.ts`) is necessarily looser, since it actually renders
+HTML/JS: `script-src`/`style-src` allow `'unsafe-inline'` (Next.js injects an inline hydration
+bootstrap script on every page; there's no nonce-based CSP wired up here) and dev builds
+additionally allow `'unsafe-eval'` (required for fast refresh/HMR, dropped in production builds).
+`connect-src` is built from `NEXT_PUBLIC_API_URL` at build time, so it only allows the actual
+configured API origin (plus `localhost:8000`/`127.0.0.1:8000` as a dev-only convenience) - browser-
+side requests to any other origin are blocked. If you add a new third-party script, font, or image
+host, you'll need to widen the matching CSP directive in `next.config.ts` or it'll be silently
+blocked (check the browser console for a CSP violation, not a generic network error).
+
+**Rate limiting** (`app.core.rate_limit`) is in-memory, keyed by client IP + route group, no
+external dependency. Five groups, each independently configurable via env var (defaults shown):
+
+| Group | Applies to | Default limit | Window |
+|---|---|---|---|
+| `public_read` | Non-admin `GET` endpoints | `RATE_LIMIT_PUBLIC_READ_PER_5M=300` | 5 min |
+| `collection_write` | Collection/wishlist/grading/note writes | `RATE_LIMIT_COLLECTION_WRITE_PER_5M=60` | 5 min |
+| `admin` | All `/admin/*` and `/snkrdunk/*` (admin-token-gated) | `RATE_LIMIT_ADMIN_PER_5M=120` | 5 min |
+| `import_export` | CSV import/export, backup export/validate/restore, DB backup listing | `RATE_LIMIT_IMPORT_EXPORT_PER_10M=20` | 10 min |
+| `search` | `/search`, `/search/suggestions` | `RATE_LIMIT_SEARCH_PER_5M=120` | 5 min |
+
+A request over its group's limit gets `429` with `{"detail": "Rate limit exceeded",
+"retry_after_seconds": N}` and `Retry-After`/`X-RateLimit-Limit`/`X-RateLimit-Remaining`/
+`X-RateLimit-Reset` headers (the last three are also included on successful responses, so a
+well-behaved client can back off before actually hitting the limit). `GET /admin/rate-limit/status`
+reports current state - see [how to check it](operations.md#check-rate-limit-status) in
+docs/operations.md.
+
+**Important: this is single-instance only.** Counters live in the `api` process's own memory -
+running more than one `api` container/replica behind a load balancer means each instance enforces
+its own limit independently (N instances effectively multiplies every limit by N, and an attacker
+distributed across instances via round-robin evades limiting almost entirely). If you scale `api`
+horizontally, move rate limiting to your reverse proxy (nginx's `limit_req`, Caddy's `rate_limit`
+plugin, or similar) or a shared store (Redis, e.g. via `slowapi`) instead of relying on this
+in-memory implementation - it exists to give a single-server deployment basic protection with zero
+extra infrastructure, not to be a distributed rate limiter.
+
+`RATE_LIMIT_ENABLED=false` disables all rate limiting (still safe to leave the security headers
+and CSP on) - see [section 1a](#1a-production-required-env-vars--startup-validation) for why this
+warns rather than fails startup in production.

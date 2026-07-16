@@ -452,6 +452,37 @@ def _check_market_workflow_telegram_ready(env: Mapping[str, str], is_production:
     )
 
 
+def _check_rate_limit_enabled_in_production(
+    env: Mapping[str, str], is_production: bool
+) -> EnvCheckResult:
+    """Unlike every other check in this module, an unfavorable result here
+    is always a warning, never a failure - RATE_LIMIT_ENABLED=false is a
+    deliberate (if risky) operator choice, e.g. rate limiting already
+    handled by a reverse proxy, not a misconfiguration worth blocking
+    startup over. See app.core.rate_limit."""
+    if not is_production:
+        return EnvCheckResult(
+            "rate_limit_enabled_in_production",
+            PASS,
+            INFO,
+            "Not applicable outside production.",
+        )
+    raw = env.get("RATE_LIMIT_ENABLED")
+    enabled = _is_true_like(raw) if (raw is not None and raw.strip()) else True
+    if not enabled:
+        return EnvCheckResult(
+            "rate_limit_enabled_in_production",
+            WARNING,
+            WARNING_SEVERITY,
+            "RATE_LIMIT_ENABLED=false in production - the API has no request rate "
+            "limiting of its own. Fine if a reverse proxy already enforces limits; "
+            "otherwise this is a gap.",
+        )
+    return EnvCheckResult(
+        "rate_limit_enabled_in_production", PASS, INFO, "Rate limiting is enabled."
+    )
+
+
 def validate_environment(env: Mapping[str, str] | None = None) -> EnvValidationReport:
     """Runs every environment check against `env` (defaults to the real
     process environment, `os.environ`) and returns a report whose `.ok` is
@@ -490,6 +521,7 @@ def validate_environment(env: Mapping[str, str] | None = None) -> EnvValidationR
         ),
         _check_telegram_config_complete(env, is_production),
         _check_market_workflow_telegram_ready(env, is_production),
+        _check_rate_limit_enabled_in_production(env, is_production),
     ]
 
     return EnvValidationReport(app_env=app_env, checks=checks)

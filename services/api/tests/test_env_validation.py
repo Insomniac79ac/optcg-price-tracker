@@ -337,3 +337,33 @@ def test_validate_environment_defaults_to_os_environ(monkeypatch):
     report = validate_environment()
 
     assert report.app_env == "development"
+
+
+# --- rate limiting ---------------------------------------------------------
+
+
+def test_production_rate_limit_disabled_warns_but_does_not_fail():
+    report = validate_environment(prod_env(RATE_LIMIT_ENABLED="false"))
+
+    check = checks_by_name(report)["rate_limit_enabled_in_production"]
+    assert check.status == "warning"
+    assert report.ok is True
+    assert overall_status(report.checks) == "warning"
+
+
+def test_production_rate_limit_enabled_passes():
+    report = validate_environment(prod_env(RATE_LIMIT_ENABLED="true"))
+
+    assert checks_by_name(report)["rate_limit_enabled_in_production"].status == "pass"
+
+
+def test_production_rate_limit_unset_defaults_to_enabled():
+    report = validate_environment(prod_env())
+
+    assert checks_by_name(report)["rate_limit_enabled_in_production"].status == "pass"
+
+
+def test_development_rate_limit_disabled_does_not_warn():
+    report = validate_environment(dev_env(RATE_LIMIT_ENABLED="false"))
+
+    assert checks_by_name(report)["rate_limit_enabled_in_production"].status == "pass"

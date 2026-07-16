@@ -1617,3 +1617,18 @@ class ObservabilitySummaryOut(BaseModel):
     latest_price_refresh_run: dict[str, Any] | None
     latest_backup: dict[str, Any] | None
     latest_system_check_status: str | None
+
+
+# --- rate limiting --------------------------------------------------------
+
+
+class RateLimitWindowOut(BaseModel):
+    group: str
+    limit: int
+    window_seconds: int
+    active_keys: int
+
+
+class RateLimitStatusOut(BaseModel):
+    enabled: bool
+    windows: list[RateLimitWindowOut]
