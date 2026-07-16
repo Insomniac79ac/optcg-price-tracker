@@ -39,6 +39,7 @@ from app.services.collection_csv import (
     import_collection_csv,
 )
 from app.services.activity_timeline import record_activity_event
+from app.services.app_logging import record_app_log
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
 from app.services.grading import build_grading_submission_out, get_submissions_for_items
 from app.services.portfolio_valuation import get_portfolio_valuation
@@ -292,7 +293,23 @@ async def import_collection_items_csv(
     try:
         result = import_collection_csv(db, csv_text, dry_run=dry_run, mode=mode, user_id=user.id)
     except ValueError as exc:
+        record_app_log(
+            "error",
+            "api",
+            "import",
+            f"Collection CSV import failed: {exc}",
+            context={"dry_run": dry_run, "mode": mode},
+        )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not dry_run and result.error_rows > 0:
+        record_app_log(
+            "warning",
+            "api",
+            "import",
+            f"Collection CSV import completed with {result.error_rows} row error(s).",
+            context={"mode": mode, "total_rows": result.total_rows, "error_rows": result.error_rows},
+        )
 
     return CollectionImportResponseOut(
         dry_run=result.dry_run,

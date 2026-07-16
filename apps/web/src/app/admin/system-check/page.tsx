@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AdminAuthGate } from "@/components/AdminAuthGate";
@@ -81,7 +82,15 @@ export default function SystemCheckPage() {
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">System check</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">System check</h1>
+            <Link
+              href="/admin/logs"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              App logs
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <button
               type="button"

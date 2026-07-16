@@ -9,6 +9,7 @@ from worker.adapters.base import SourceAdapter
 from worker.adapters.mock_snkrdunk import MockSnkrdunkAdapter
 from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
 from worker.adapters.yuyutei import YuyuTeiAdapter
+from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
 from worker.market_report import generate_market_report
 from worker.market_signal_events import snapshot_market_signals
@@ -118,6 +119,17 @@ def refresh_prices(
     db.commit()
     run_id = run.id
 
+    record_app_log(
+        "info",
+        "worker",
+        "price_refresh",
+        f"Price refresh run {run_id} started (source={source or 'all'}, limit={limit}, "
+        f"dry_run={dry_run}).",
+        related_run_id=run_id,
+        related_entity_type="price_refresh_run",
+        related_entity_id=run_id,
+    )
+
     mappings_checked = 0
     mappings_processed = 0
     mappings_failed = 0
@@ -160,13 +172,24 @@ def refresh_prices(
 
                 try:
                     snapshot_data = adapter.fetch_card(mapping)
-                except Exception:
+                except Exception as fetch_exc:
                     logger.exception(
                         "Failed to fetch mapping %s from source '%s', skipping.",
                         mapping.id,
                         src.name,
                     )
                     mappings_failed += 1
+                    log_exception(
+                        "worker",
+                        "scraping",
+                        f"Failed to fetch mapping {mapping.id} from source '{src.name}'.",
+                        fetch_exc,
+                        level="warning",
+                        context={"mapping_id": mapping.id, "source": src.name},
+                        related_run_id=run_id,
+                        related_entity_type="price_refresh_run",
+                        related_entity_id=run_id,
+                    )
                     continue
 
                 raw_snapshot = RawSnapshot(
@@ -184,13 +207,24 @@ def refresh_prices(
 
                 try:
                     observations = adapter.parse_snapshot(snapshot_data)
-                except Exception:
+                except Exception as parse_exc:
                     logger.exception(
                         "Failed to parse mapping %s from source '%s', skipping.",
                         mapping.id,
                         src.name,
                     )
                     mappings_failed += 1
+                    log_exception(
+                        "worker",
+                        "scraping",
+                        f"Failed to parse mapping {mapping.id} from source '{src.name}'.",
+                        parse_exc,
+                        level="warning",
+                        context={"mapping_id": mapping.id, "source": src.name},
+                        related_run_id=run_id,
+                        related_entity_type="price_refresh_run",
+                        related_entity_id=run_id,
+                    )
                     continue
 
                 observations_parsed += len(observations)
@@ -246,11 +280,39 @@ def refresh_prices(
     run.error_message = error_message
     db.commit()
 
+    _log_kwargs = dict(
+        related_run_id=run_id, related_entity_type="price_refresh_run", related_entity_id=run_id
+    )
+    if status == "failed":
+        record_app_log(
+            "error",
+            "worker",
+            "price_refresh",
+            f"Price refresh run {run_id} failed: {error_message}",
+            **_log_kwargs,
+        )
+    elif status == "completed_with_warnings":
+        record_app_log(
+            "warning",
+            "worker",
+            "price_refresh",
+            f"Price refresh run {run_id} completed with {mappings_failed} failed mapping(s).",
+            **_log_kwargs,
+        )
+    else:
+        record_app_log(
+            "info",
+            "worker",
+            "price_refresh",
+            f"Price refresh run {run_id} completed successfully.",
+            **_log_kwargs,
+        )
+
     portfolio_snapshot_id: int | None = None
     if not dry_run and status != "failed":
         try:
             portfolio_snapshot_id = create_portfolio_valuation_snapshot(db).id
-        except Exception:
+        except Exception as snapshot_exc:
             # Snapshotting the portfolio is a nice-to-have on top of the
             # refresh itself - a failure here (e.g. a transient DB error)
             # must never mark an otherwise-successful refresh run as failed.
@@ -259,6 +321,13 @@ def refresh_prices(
                 "Failed to create portfolio valuation snapshot after refresh run %s.",
                 run_id,
                 exc_info=True,
+            )
+            log_exception(
+                "worker",
+                "price_refresh",
+                f"Failed to create portfolio valuation snapshot after refresh run {run_id}.",
+                snapshot_exc,
+                **_log_kwargs,
             )
 
     market_signal_events_created: int | None = None
@@ -270,7 +339,7 @@ def refresh_prices(
             market_signal_events_created = signal_result.created
             market_signal_events_updated = signal_result.updated
             market_signal_events_resolved = signal_result.resolved
-        except Exception:
+        except Exception as signal_exc:
             # Same rationale as the portfolio snapshot above - this must
             # never mark an otherwise-successful refresh run as failed.
             db.rollback()
@@ -279,12 +348,19 @@ def refresh_prices(
                 run_id,
                 exc_info=True,
             )
+            log_exception(
+                "worker",
+                "price_refresh",
+                f"Failed to snapshot market signal events after refresh run {run_id}.",
+                signal_exc,
+                **_log_kwargs,
+            )
 
     market_report_id: int | None = None
     if not dry_run and status != "failed":
         try:
             market_report_id = generate_market_report(db).id
-        except Exception:
+        except Exception as report_exc:
             # Same rationale as the portfolio snapshot and market signal
             # events above - report generation is a nice-to-have on top of
             # the refresh itself and must never mark an otherwise-successful
@@ -294,6 +370,13 @@ def refresh_prices(
                 "Failed to generate market intelligence report after refresh run %s.",
                 run_id,
                 exc_info=True,
+            )
+            log_exception(
+                "worker",
+                "price_refresh",
+                f"Failed to generate market intelligence report after refresh run {run_id}.",
+                report_exc,
+                **_log_kwargs,
             )
 
     return RefreshRunSummary(

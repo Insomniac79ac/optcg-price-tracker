@@ -9,6 +9,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from worker.adapters.snkrdunk_discovery import SnkrdunkCandidateData
+from worker.app_logging import record_app_log
 from worker.db import SessionLocal
 from worker.matching.candidate_store import apply_match, get_snkrdunk_source, upsert_candidate
 from worker.models import Card, SnkrdunkDiscoveryRun
@@ -93,6 +94,17 @@ def import_snkrdunk_candidates(
         db.add(run)
         db.flush()
         logger.info("Manual SNKRDUNK candidate import started: run=%s file=%s", run.id, csv_path)
+        record_app_log(
+            "info",
+            "worker",
+            "import",
+            f"Manual SNKRDUNK candidate import started (run={run.id}, file={csv_path}) - "
+            "likely due to live discovery being blocked.",
+            context={"file": str(csv_path)},
+            related_run_id=run.id,
+            related_entity_type="snkrdunk_discovery_run",
+            related_entity_id=run.id,
+        )
 
         with csv_path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)

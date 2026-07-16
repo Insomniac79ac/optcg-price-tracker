@@ -88,6 +88,7 @@ function ExportSection() {
   const [includePrices, setIncludePrices] = useState(false);
   const [includeRawSnapshots, setIncludeRawSnapshots] = useState(false);
   const [includeRefreshRuns, setIncludeRefreshRuns] = useState(false);
+  const [includeLogs, setIncludeLogs] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ function ExportSection() {
         includePrices,
         includeRawSnapshots,
         includeRefreshRuns,
+        includeLogs,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to export backup.");
@@ -136,6 +138,15 @@ function ExportSection() {
             className="rounded border-neutral-700 bg-neutral-950"
           />
           Include refresh runs
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+          <input
+            type="checkbox"
+            checked={includeLogs}
+            onChange={(e) => setIncludeLogs(e.target.checked)}
+            className="rounded border-neutral-700 bg-neutral-950"
+          />
+          Include logs
         </label>
       </div>
 

@@ -755,6 +755,7 @@ function WidgetRenderer({
 
     case "workflow_status": {
       const w = widgets.workflow_status;
+      const hasIssues = w.error_count_24h > 0 || w.warning_count_24h > 0;
       return (
         <WidgetCard id={id}>
           {w.run_id === null ? (
@@ -767,6 +768,16 @@ function WidgetRenderer({
               <Stat label="Telegram digest" value={w.telegram_digest_status ?? "not available"} />
               <Stat label="Finished" value={formatDateTime(w.finished_at)} />
             </div>
+          )}
+          {hasIssues && (
+            <Link
+              href="/admin/logs"
+              className="mt-3 flex items-center gap-2 rounded border border-rose-900/50 bg-rose-950/30 px-2 py-1.5 text-xs text-rose-300 hover:bg-rose-950/50"
+            >
+              {w.error_count_24h > 0 && <span>{w.error_count_24h} error(s)</span>}
+              {w.warning_count_24h > 0 && <span>{w.warning_count_24h} warning(s)</span>}
+              <span className="text-rose-400">in the last 24h - view logs</span>
+            </Link>
           )}
         </WidgetCard>
       );

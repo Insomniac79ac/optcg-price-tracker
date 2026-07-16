@@ -304,3 +304,68 @@ shelling into the host:
 ```
 curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/db-backups"
 ```
+
+## Observability and logs
+
+The container logs in [Logs](#logs) above show everything a service printed - useful, but noisy,
+unstructured, and gone once the container is recreated. `app_log_events` is a separate,
+queryable table that api/worker/beat write structured rows to for the events that actually matter
+for production debugging (startup failures, env/system-check failures, backup export/validate/
+restore outcomes, CSV import errors, price refresh runs, market workflow runs, Telegram digest
+sends, and Yuyu-Tei/SNKRDUNK scraping failures) - see `app.services.app_logging`
+(`services/api/app/services/app_logging.py`) and its worker mirror
+(`services/worker/worker/app_logging.py`).
+
+**Where to view logs.** The `/admin/logs` page (linked from the admin nav, `/admin/actions`,
+`/admin/system-check`, and `/admin/market-workflow-runs`) is the primary place - filter by level,
+service, event type, or a message search, and open a row for its full message, context JSON, and
+traceback. `/dashboard`'s "Workflow status" widget also surfaces a link to `/admin/logs` whenever
+there's been an error or warning in the last 24 hours, so you don't have to go looking. The same
+data is available via the API directly:
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?level=error&since_hours=24"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs/<id>"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/observability/summary"
+```
+
+`GET /admin/observability/summary` is the fastest "is anything on fire" check - last-24h counts by
+level plus the latest error, market workflow run, price refresh run, backup, and system-check
+status in one call.
+
+**What the levels mean.** `debug` < `info` < `warning` < `error` < `critical`, in ascending
+severity - `info` is a normal lifecycle event (a run started/finished successfully), `warning` is
+something recoverable that still finished the job (a failed CSV row, a blocked scrape that fell
+back to manual import), `error` is a request or step that failed outright (a bad backup restore, a
+crashed refresh run), and `critical` is reserved for the api/worker refusing to start at all
+(invalid config, failed production environment validation).
+
+**How to prune logs.** `app_log_events` has no automatic retention - use the "Prune logs" section
+on `/admin/logs` (or `POST /admin/logs/prune`) to delete rows older than N days. Dry run is the
+default (`dry_run: true`, returns `would_delete` without touching anything); set `dry_run: false`
+to actually delete. Pruning anything younger than 7 days additionally requires
+`confirm: "PRUNE"`, so a mistyped small number can't wipe out most of the table in one call:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"older_than_days": 30, "dry_run": false}' \
+  "http://localhost:8000/admin/logs/prune"
+```
+
+`app_log_events` rows are excluded from `GET /admin/backup/export` by default, same as prices/raw
+snapshots/refresh runs - pass `include_logs=true` (or check "Include logs" on `/admin/backup`) to
+include them in a backup.
+
+**Why secrets are redacted.** `context_json` is sanitized before it's ever written - any key
+containing `token`, `secret`, `password`, `key`, `authorization`, or `cookie` (case-insensitive,
+substring match) is replaced with `[REDACTED]`, and request bodies are never logged at all. This
+is enforced in `app_logging.sanitize_context`, not left to each call site to get right, so a
+careless `context={...}` at some future call site can't leak a credential into a table that's
+readable by anyone with the admin token and gets bundled into backups.
+
+**When to SSH into server logs anyway.** `app_log_events` only has what the code explicitly
+chose to log - for anything not covered above (a crash before the api process finishes importing,
+a container that won't start, an OOM kill, raw request/response traffic, or debugging something
+that never got instrumented), `docker compose logs` (see [Logs](#logs)) is still the source of
+truth. Treat `/admin/logs` as the fast path for the events it covers, not a replacement for
+container logs.

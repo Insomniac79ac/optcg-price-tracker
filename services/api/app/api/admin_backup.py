@@ -8,6 +8,7 @@ from app.auth import require_admin_token
 from app.db import get_db
 from app.schemas import BackupRestoreResponseOut, BackupValidateResponseOut
 from app.services.activity_timeline import record_activity_event
+from app.services.app_logging import log_exception, record_app_log
 from app.services.backup import (
     RESTORE_MODES,
     RestoreConfirmationRequired,
@@ -39,14 +40,29 @@ def export_backup_endpoint(
     include_prices: bool = Query(default=False),
     include_raw_snapshots: bool = Query(default=False),
     include_refresh_runs: bool = Query(default=False),
+    include_logs: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
-    backup = export_backup(
-        db,
-        include_prices=include_prices,
-        include_raw_snapshots=include_raw_snapshots,
-        include_refresh_runs=include_refresh_runs,
-    )
+    try:
+        backup = export_backup(
+            db,
+            include_prices=include_prices,
+            include_raw_snapshots=include_raw_snapshots,
+            include_refresh_runs=include_refresh_runs,
+            include_logs=include_logs,
+        )
+    except Exception as exc:
+        log_exception(
+            "api", "backup", "Backup export failed.", exc,
+            context={
+                "include_prices": include_prices,
+                "include_raw_snapshots": include_raw_snapshots,
+                "include_refresh_runs": include_refresh_runs,
+                "include_logs": include_logs,
+            },
+        )
+        raise
+
     filename = export_filename()
     return Response(
         content=json.dumps(backup, indent=2),
@@ -59,6 +75,16 @@ def export_backup_endpoint(
 async def validate_backup_endpoint(file: UploadFile = File(...)):
     backup = _load_json_upload(await file.read())
     result = validate_backup(backup)
+
+    if not result.valid:
+        record_app_log(
+            "warning",
+            "api",
+            "backup",
+            "Backup validation failed.",
+            context={"errors": result.errors, "warnings": result.warnings},
+        )
+
     return BackupValidateResponseOut(
         valid=result.valid,
         backup_version=result.backup_version,
@@ -92,14 +118,30 @@ async def restore_backup_endpoint(
         counts = ", ".join(
             f"{action}: {sum(by_table.values())}" for action, by_table in result.summary.items()
         )
-        record_activity_event(
-            db,
-            event_type="backup_restored",
-            event_source="backup",
-            title=f"Backup restored (mode: {mode})",
-            message=counts or None,
-            payload={"mode": mode, "summary": result.summary},
-        )
+        if result.valid and not result.errors:
+            record_activity_event(
+                db,
+                event_type="backup_restored",
+                event_source="backup",
+                title=f"Backup restored (mode: {mode})",
+                message=counts or None,
+                payload={"mode": mode, "summary": result.summary},
+            )
+            record_app_log(
+                "info",
+                "api",
+                "restore",
+                f"Backup restored (mode={mode}).",
+                context={"mode": mode, "summary": result.summary, "warnings": result.warnings},
+            )
+        else:
+            record_app_log(
+                "error",
+                "api",
+                "restore",
+                f"Backup restore failed (mode={mode}).",
+                context={"mode": mode, "errors": result.errors, "warnings": result.warnings},
+            )
 
     return BackupRestoreResponseOut(
         dry_run=result.dry_run,

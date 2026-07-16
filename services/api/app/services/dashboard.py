@@ -24,6 +24,7 @@ from app.models import (
     PriceRefreshRun,
 )
 from app.models.dashboard_preference import MAIN_DASHBOARD_KEY
+from app.services.app_logging import list_app_logs
 from app.schemas import (
     BackupStatusWidgetOut,
     CollectionQualityWidgetOut,
@@ -302,6 +303,14 @@ def _build_backup_status() -> BackupStatusWidgetOut:
 
 
 def _build_workflow_status(db: Session) -> WorkflowStatusWidgetOut:
+    # Piggybacks the last 24h's error/critical and warning app_log_events
+    # counts onto this widget instead of a separate observability widget -
+    # keeps the dashboard from growing a new tile for every subsystem while
+    # still surfacing "is anything on fire" without a trip to /admin/logs.
+    recent_logs = list_app_logs(db, since_hours=24, limit=1)
+    error_count_24h = recent_logs.error_count + recent_logs.critical_count
+    warning_count_24h = recent_logs.warning_count
+
     run = db.scalar(
         select(MarketWorkflowRun).order_by(
             MarketWorkflowRun.started_at.desc(), MarketWorkflowRun.id.desc()
@@ -309,7 +318,13 @@ def _build_workflow_status(db: Session) -> WorkflowStatusWidgetOut:
     )
     if run is None:
         return WorkflowStatusWidgetOut(
-            run_id=None, status=None, market_report_id=None, telegram_digest_status=None, finished_at=None
+            run_id=None,
+            status=None,
+            market_report_id=None,
+            telegram_digest_status=None,
+            finished_at=None,
+            error_count_24h=error_count_24h,
+            warning_count_24h=warning_count_24h,
         )
     return WorkflowStatusWidgetOut(
         run_id=run.id,
@@ -317,6 +332,8 @@ def _build_workflow_status(db: Session) -> WorkflowStatusWidgetOut:
         market_report_id=run.market_report_id,
         telegram_digest_status=run.telegram_digest_status,
         finished_at=run.finished_at,
+        error_count_24h=error_count_24h,
+        warning_count_24h=warning_count_24h,
     )
 
 

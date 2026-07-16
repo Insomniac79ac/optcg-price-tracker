@@ -12,6 +12,7 @@ from worker.adapters.snkrdunk_discovery import (
     SnkrdunkDiscoveryError,
     is_blocked_response,
 )
+from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
 from worker.matching.candidate_store import apply_match, get_snkrdunk_source, upsert_candidate
 from worker.models import Card, RawSnapshot, SnkrdunkDiscoveryRun
@@ -206,6 +207,15 @@ def discover_snkrdunk(
         run.status = "failed"
         run.error_message = str(exc)
         logger.exception("Discovery run %s failed.", run.id)
+        log_exception(
+            "worker",
+            "scraping",
+            f"SNKRDUNK discovery run {run.id} failed.",
+            exc,
+            related_run_id=run.id,
+            related_entity_type="snkrdunk_discovery_run",
+            related_entity_id=run.id,
+        )
     finally:
         run.finished_at = datetime.now(timezone.utc)
         run.pages_fetched = pages_fetched
@@ -225,6 +235,30 @@ def discover_snkrdunk(
         candidates_matched,
         candidates_needing_review,
     )
+
+    if run.status == "blocked":
+        record_app_log(
+            "warning",
+            "worker",
+            "scraping",
+            f"SNKRDUNK discovery run {run.id} was fully blocked "
+            f"({blocked_pages}/{pages_fetched} page(s)). Manual import may be needed.",
+            context={"pages_fetched": pages_fetched, "blocked_pages": blocked_pages},
+            related_run_id=run.id,
+            related_entity_type="snkrdunk_discovery_run",
+            related_entity_id=run.id,
+        )
+    elif run.status == "completed_with_warnings":
+        record_app_log(
+            "warning",
+            "worker",
+            "scraping",
+            f"SNKRDUNK discovery run {run.id} completed with {blocked_pages} blocked page(s).",
+            context={"pages_fetched": pages_fetched, "blocked_pages": blocked_pages},
+            related_run_id=run.id,
+            related_entity_type="snkrdunk_discovery_run",
+            related_entity_id=run.id,
+        )
 
     # Snapshot before commit/rollback: after a rollback (--dry-run), the ORM
     # object's row never existed, so touching its attributes afterward would

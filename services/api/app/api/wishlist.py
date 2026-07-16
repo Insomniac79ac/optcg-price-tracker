@@ -22,6 +22,7 @@ from app.schemas import (
     WishlistSummaryOut,
 )
 from app.services.activity_timeline import record_activity_event
+from app.services.app_logging import record_app_log
 from app.services.collector import get_tags_for_cards
 from app.services.wishlist import (
     build_wishlist_item_out,
@@ -156,7 +157,23 @@ async def import_wishlist_items_csv(
     try:
         result = import_wishlist_csv(db, csv_text, dry_run=dry_run, mode=mode, user_id=user.id)
     except ValueError as exc:
+        record_app_log(
+            "error",
+            "api",
+            "import",
+            f"Wishlist CSV import failed: {exc}",
+            context={"dry_run": dry_run, "mode": mode},
+        )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not dry_run and result.error_rows > 0:
+        record_app_log(
+            "warning",
+            "api",
+            "import",
+            f"Wishlist CSV import completed with {result.error_rows} row error(s).",
+            context={"mode": mode, "total_rows": result.total_rows, "error_rows": result.error_rows},
+        )
 
     return WishlistImportResponseOut(
         dry_run=result.dry_run,

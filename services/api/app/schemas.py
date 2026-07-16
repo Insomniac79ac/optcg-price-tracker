@@ -1440,6 +1440,8 @@ class WorkflowStatusWidgetOut(BaseModel):
     market_report_id: int | None
     telegram_digest_status: str | None
     finished_at: datetime | None
+    error_count_24h: int = 0
+    warning_count_24h: int = 0
 
 
 class DashboardWidgetsOut(BaseModel):
@@ -1554,3 +1556,64 @@ class DbBackupFileOut(BaseModel):
 class DbBackupListOut(BaseModel):
     backup_dir: str
     backups: list[DbBackupFileOut]
+
+
+# --- app logs / observability -------------------------------------------
+
+
+class AppLogEventOut(BaseModel):
+    id: int
+    created_at: datetime
+    level: str
+    service: str
+    event_type: str
+    message: str
+    context: dict[str, Any] | None
+    traceback: str | None
+    related_run_id: int | None
+    related_entity_type: str | None
+    related_entity_id: int | None
+
+
+class AppLogSummaryOut(BaseModel):
+    total_logs: int
+    error_count: int
+    warning_count: int
+    critical_count: int
+    by_service: dict[str, int]
+    by_event_type: dict[str, int]
+
+
+class AppLogListOut(BaseModel):
+    summary: AppLogSummaryOut
+    logs: list[AppLogEventOut]
+
+
+class AppLogPruneRequestIn(BaseModel):
+    older_than_days: int = 30
+    dry_run: bool = True
+    confirm: str | None = None
+
+
+class AppLogPruneResponseOut(BaseModel):
+    dry_run: bool
+    older_than_days: int
+    would_delete: int
+    deleted: int
+
+
+class ObservabilityLast24hOut(BaseModel):
+    critical: int
+    error: int
+    warning: int
+    info: int
+
+
+class ObservabilitySummaryOut(BaseModel):
+    status: str
+    last_24h: ObservabilityLast24hOut
+    latest_error: AppLogEventOut | None
+    latest_market_workflow_run: dict[str, Any] | None
+    latest_price_refresh_run: dict[str, Any] | None
+    latest_backup: dict[str, Any] | None
+    latest_system_check_status: str | None

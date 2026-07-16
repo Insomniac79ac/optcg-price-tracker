@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.auth import require_admin_token
 from app.db import get_db
 from app.schemas import SystemCheckResponseOut, SystemCheckResultOut, SystemCheckSummaryOut
+from app.services.app_logging import record_app_log
 from app.services.system_check import overall_status, run_system_check
 
 router = APIRouter(
@@ -18,9 +19,20 @@ def system_check_endpoint(db: Session = Depends(get_db)):
     checks_passed = sum(1 for c in checks if c.status == "pass")
     warnings = sum(1 for c in checks if c.status == "warning")
     critical = sum(1 for c in checks if c.status == "fail")
+    status = overall_status(checks)
+
+    if status == "critical":
+        failed = [c.name for c in checks if c.status == "fail"]
+        record_app_log(
+            "error",
+            "api",
+            "system_check",
+            f"system-check reported critical status ({len(failed)} failed check(s)).",
+            context={"failed_checks": failed},
+        )
 
     return SystemCheckResponseOut(
-        status=overall_status(checks),
+        status=status,
         summary=SystemCheckSummaryOut(
             checks_total=len(checks),
             checks_passed=checks_passed,

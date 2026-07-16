@@ -1787,11 +1787,13 @@ export async function downloadBackup(params: {
   includePrices: boolean;
   includeRawSnapshots: boolean;
   includeRefreshRuns: boolean;
+  includeLogs: boolean;
 }): Promise<void> {
   const query = new URLSearchParams({
     include_prices: String(params.includePrices),
     include_raw_snapshots: String(params.includeRawSnapshots),
     include_refresh_runs: String(params.includeRefreshRuns),
+    include_logs: String(params.includeLogs),
   });
 
   const res = await fetch(`/api/admin/backup/export?${query.toString()}`, {
@@ -2430,6 +2432,8 @@ export interface WorkflowStatusWidget {
   market_report_id: number | null;
   telegram_digest_status: string | null;
   finished_at: string | null;
+  error_count_24h: number;
+  warning_count_24h: number;
 }
 
 export interface DashboardWidgets {
@@ -2664,4 +2668,109 @@ export function fetchSearchSuggestions(params?: {
   return fetchAdminJson<SearchSuggestionsResponse>(
     `/api/search/suggestions${qs ? `?${qs}` : ""}`,
   );
+}
+
+// --- App logs / observability -------------------------------------------
+
+export const APP_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"] as const;
+export type AppLogLevel = (typeof APP_LOG_LEVELS)[number];
+
+export interface AppLogEvent {
+  id: number;
+  created_at: string;
+  level: AppLogLevel;
+  service: string;
+  event_type: string;
+  message: string;
+  context: Record<string, unknown> | null;
+  traceback: string | null;
+  related_run_id: number | null;
+  related_entity_type: string | null;
+  related_entity_id: number | null;
+}
+
+export interface AppLogSummary {
+  total_logs: number;
+  error_count: number;
+  warning_count: number;
+  critical_count: number;
+  by_service: Record<string, number>;
+  by_event_type: Record<string, number>;
+}
+
+export interface AppLogListResponse {
+  summary: AppLogSummary;
+  logs: AppLogEvent[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/logs/route.ts). */
+export function fetchAppLogs(params?: {
+  level?: string;
+  service?: string;
+  event_type?: string;
+  q?: string;
+  since_hours?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<AppLogListResponse> {
+  const query = new URLSearchParams();
+  if (params?.level) query.set("level", params.level);
+  if (params?.service) query.set("service", params.service);
+  if (params?.event_type) query.set("event_type", params.event_type);
+  if (params?.q) query.set("q", params.q);
+  if (params?.since_hours !== undefined) query.set("since_hours", String(params.since_hours));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<AppLogListResponse>(`/api/admin/logs${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/logs/[id]/route.ts). */
+export function fetchAppLog(logId: number): Promise<AppLogEvent> {
+  return fetchAdminJson<AppLogEvent>(`/api/admin/logs/${logId}`);
+}
+
+export interface AppLogPruneRequest {
+  older_than_days: number;
+  dry_run: boolean;
+  confirm?: string | null;
+}
+
+export interface AppLogPruneResponse {
+  dry_run: boolean;
+  older_than_days: number;
+  would_delete: number;
+  deleted: number;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/logs/prune/route.ts). */
+export function pruneAppLogs(body: AppLogPruneRequest): Promise<AppLogPruneResponse> {
+  return fetchAdminJson<AppLogPruneResponse>("/api/admin/logs/prune", {
+    method: "POST",
+    body,
+  });
+}
+
+export interface ObservabilitySummary {
+  status: string;
+  last_24h: {
+    critical: number;
+    error: number;
+    warning: number;
+    info: number;
+  };
+  latest_error: AppLogEvent | null;
+  latest_market_workflow_run: Record<string, unknown> | null;
+  latest_price_refresh_run: Record<string, unknown> | null;
+  latest_backup: Record<string, unknown> | null;
+  latest_system_check_status: string | null;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/observability/summary/route.ts). */
+export function fetchObservabilitySummary(): Promise<ObservabilitySummary> {
+  return fetchAdminJson<ObservabilitySummary>("/api/admin/observability/summary");
 }

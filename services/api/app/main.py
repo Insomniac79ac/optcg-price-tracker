@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
 from app.api.admin_db_backups import router as admin_db_backups_router
+from app.api.admin_logs import router as admin_logs_router
+from app.api.admin_observability import router as admin_observability_router
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
@@ -27,6 +29,7 @@ from app.api.system_check import router as system_check_router
 from app.api.wishlist import router as wishlist_router
 from app.config_check import validate_config
 from app.core.env_validation import validate_environment
+from app.services.app_logging import record_app_log
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,13 @@ logger = logging.getLogger(__name__)
 # of relying on re-triggering this import-time check.
 _startup_check = validate_config()
 if not _startup_check.ok:
+    record_app_log(
+        "critical",
+        "api",
+        "startup",
+        "API refused to start: invalid configuration.",
+        context={"errors": _startup_check.errors},
+    )
     raise RuntimeError(
         "Invalid API configuration - refusing to start: " + "; ".join(_startup_check.errors)
     )
@@ -50,7 +60,22 @@ if not _startup_check.ok:
 _env_report = validate_environment()
 for _warning in _env_report.warnings:
     logger.warning("env validation warning: %s", _warning)
+if _env_report.warnings:
+    record_app_log(
+        "warning",
+        "api",
+        "env_validation",
+        f"API startup: {len(_env_report.warnings)} environment validation warning(s).",
+        context={"app_env": _env_report.app_env, "warnings": _env_report.warnings},
+    )
 if not _env_report.ok:
+    record_app_log(
+        "critical",
+        "api",
+        "env_validation",
+        "API refused to start: invalid production environment configuration.",
+        context={"app_env": _env_report.app_env, "errors": _env_report.errors},
+    )
     raise RuntimeError(
         "Invalid production environment configuration - refusing to start: "
         + "; ".join(_env_report.errors)
@@ -88,6 +113,8 @@ app.include_router(dashboard_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(admin_db_backups_router)
+app.include_router(admin_logs_router)
+app.include_router(admin_observability_router)
 app.include_router(market_workflow_runs_router)
 app.include_router(search_router)
 app.include_router(system_check_router)

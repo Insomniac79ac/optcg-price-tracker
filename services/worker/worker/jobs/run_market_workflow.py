@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
 from worker.jobs.refresh_prices import SUPPORTED_SOURCES, refresh_prices
 from worker.market_report_digest import send_market_report_digest
@@ -86,6 +87,17 @@ def run_market_workflow(
     db.commit()
     db.refresh(run)
 
+    record_app_log(
+        "info",
+        "worker",
+        "market_workflow",
+        f"Market workflow run {run.id} started (source={source}, limit={effective_limit}, "
+        f"send_telegram={send_telegram}).",
+        related_run_id=run.id,
+        related_entity_type="market_workflow_run",
+        related_entity_id=run.id,
+    )
+
     try:
         refresh_summary = refresh_prices(
             limit=effective_limit, db=db, source=source, dry_run=dry_run
@@ -97,6 +109,15 @@ def run_market_workflow(
         run.finished_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(run)
+        log_exception(
+            "worker",
+            "market_workflow",
+            f"Market workflow run {run.id} failed: refresh_prices crashed.",
+            exc,
+            related_run_id=run.id,
+            related_entity_type="market_workflow_run",
+            related_entity_id=run.id,
+        )
         return MarketWorkflowResult(
             market_workflow_run_id=run.id,
             status="failed",
@@ -151,10 +172,50 @@ def run_market_workflow(
                         warnings.append(
                             f"Telegram digest failed: {digest_result.error_message}"
                         )
+                        record_app_log(
+                            "error",
+                            "worker",
+                            "telegram_digest",
+                            f"Telegram digest failed for market workflow run {run.id}: "
+                            f"{digest_result.error_message}",
+                            related_run_id=run.id,
+                            related_entity_type="market_workflow_run",
+                            related_entity_id=run.id,
+                        )
+                    elif digest_result is not None and digest_result.status == "skipped":
+                        record_app_log(
+                            "info",
+                            "worker",
+                            "telegram_digest",
+                            f"Telegram digest skipped for market workflow run {run.id}: "
+                            f"{digest_result.skipped_reason}",
+                            related_run_id=run.id,
+                            related_entity_type="market_workflow_run",
+                            related_entity_id=run.id,
+                        )
+                    elif digest_result is not None and digest_result.status == "sent":
+                        record_app_log(
+                            "info",
+                            "worker",
+                            "telegram_digest",
+                            f"Telegram digest sent for market workflow run {run.id}.",
+                            related_run_id=run.id,
+                            related_entity_type="market_workflow_run",
+                            related_entity_id=run.id,
+                        )
                 except Exception as exc:
                     logger.exception("run_market_workflow: telegram digest crashed.")
                     telegram_digest_status = "failed"
                     warnings.append(f"Telegram digest failed: {exc}")
+                    log_exception(
+                        "worker",
+                        "telegram_digest",
+                        f"Telegram digest crashed for market workflow run {run.id}.",
+                        exc,
+                        related_run_id=run.id,
+                        related_entity_type="market_workflow_run",
+                        related_entity_id=run.id,
+                    )
 
     final_status = "failed" if refresh_summary.status == "failed" else (
         "partial_success" if warnings else "success"
@@ -172,6 +233,36 @@ def run_market_workflow(
     run.warnings_json = warnings
     db.commit()
     db.refresh(run)
+
+    _final_log_kwargs = dict(
+        related_run_id=run.id, related_entity_type="market_workflow_run", related_entity_id=run.id
+    )
+    if final_status == "failed":
+        record_app_log(
+            "error",
+            "worker",
+            "market_workflow",
+            f"Market workflow run {run.id} failed: {refresh_summary.error_message}",
+            context={"warnings": warnings},
+            **_final_log_kwargs,
+        )
+    elif final_status == "partial_success":
+        record_app_log(
+            "warning",
+            "worker",
+            "market_workflow",
+            f"Market workflow run {run.id} completed with warnings.",
+            context={"warnings": warnings},
+            **_final_log_kwargs,
+        )
+    else:
+        record_app_log(
+            "info",
+            "worker",
+            "market_workflow",
+            f"Market workflow run {run.id} completed successfully.",
+            **_final_log_kwargs,
+        )
 
     result = MarketWorkflowResult(
         market_workflow_run_id=run.id,

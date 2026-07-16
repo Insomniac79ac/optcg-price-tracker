@@ -1,6 +1,7 @@
 from app.db import Base
 from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
+from app.models.app_log_event import AppLogEvent
 from app.models.card import Card
 from app.models.card_tag import CardTag
 from app.models.collection_item import CollectionItem
@@ -33,6 +34,7 @@ __all__ = [
     "WishlistItem",
     "DashboardPreference",
     "Base",
+    "AppLogEvent",
     "Card",
     "CollectionItem",
     "Source",

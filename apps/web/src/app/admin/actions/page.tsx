@@ -511,6 +511,12 @@ export default function AdminActionsPage() {
                 System check
               </Link>
               <Link
+                href="/admin/logs"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                App logs
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

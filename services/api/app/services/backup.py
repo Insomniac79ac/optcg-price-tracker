@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AlertRule,
+    AppLogEvent,
     Card,
     CardTag,
     CollectionItem,
@@ -77,6 +78,7 @@ MODEL_BY_TABLE: dict[str, type] = {
     "collector_activity_events": CollectorActivityEvent,
     "dashboard_preferences": DashboardPreference,
     "search_history": SearchHistory,
+    "app_log_events": AppLogEvent,
 }
 
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
@@ -107,6 +109,18 @@ REQUIRED_TABLES: tuple[str, ...] = (
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (
+    "price_observations",
+    "raw_snapshots",
+    "price_refresh_runs",
+    "app_log_events",
+)
+
+# Subset of OPTIONAL_TABLES that references cards/sources by FK, so
+# mode=replace's cascade-delete warning below only applies to these -
+# app_log_events has no FK to cards/sources (its related_* fields are plain
+# integers, not real FKs; see app.models.app_log_event), so leaving it out of
+# a replace restore carries no cascade risk worth warning about.
+CASCADE_RISK_OPTIONAL_TABLES: tuple[str, ...] = (
     "price_observations",
     "raw_snapshots",
     "price_refresh_runs",
@@ -157,11 +171,13 @@ def export_backup(
     include_prices: bool = False,
     include_raw_snapshots: bool = False,
     include_refresh_runs: bool = False,
+    include_logs: bool = False,
 ) -> dict[str, Any]:
     include_flags = {
         "price_observations": include_prices,
         "raw_snapshots": include_raw_snapshots,
         "price_refresh_runs": include_refresh_runs,
+        "app_log_events": include_logs,
     }
 
     tables: dict[str, list[dict[str, Any]]] = {}
@@ -180,6 +196,7 @@ def export_backup(
             "include_prices": include_prices,
             "include_raw_snapshots": include_raw_snapshots,
             "include_refresh_runs": include_refresh_runs,
+            "include_logs": include_logs,
         },
         "tables": tables,
     }
@@ -411,7 +428,7 @@ def restore_backup(
     warnings = list(validation.warnings)
 
     if mode == "replace":
-        excluded_optional = [t for t in OPTIONAL_TABLES if t not in included]
+        excluded_optional = [t for t in CASCADE_RISK_OPTIONAL_TABLES if t not in included]
         if excluded_optional:
             warnings.append(
                 "mode=replace deletes and recreates 'cards'/'sources' rows; any existing "

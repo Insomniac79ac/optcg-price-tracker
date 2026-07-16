@@ -60,6 +60,19 @@ def _api_jwt_secret(monkeypatch):
     monkeypatch.setattr(settings, "API_JWT_SECRET", TEST_API_JWT_SECRET)
 
 
+@pytest.fixture(autouse=True)
+def _app_logging_uses_test_db(monkeypatch):
+    """app.services.app_logging.record_app_log opens its own short-lived
+    session (by design - a log row must survive the caller's own transaction
+    rolling back), so it doesn't go through the get_db dependency override
+    above. Redirect it to the same in-memory sqlite engine as db_session/
+    client, or every test that exercises a code path calling record_app_log
+    would attempt a real connection to settings.DATABASE_URL instead."""
+    import app.services.app_logging as app_logging_module
+
+    monkeypatch.setattr(app_logging_module, "SessionLocal", TestingSessionLocal)
+
+
 @pytest.fixture()
 def db_session():
     Base.metadata.create_all(bind=engine)

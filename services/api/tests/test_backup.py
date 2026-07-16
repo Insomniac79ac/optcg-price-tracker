@@ -226,6 +226,31 @@ def test_export_includes_prices_when_requested(client, db_session):
     assert "raw_snapshots" not in body["tables"]
 
 
+def test_export_excludes_logs_by_default(client, db_session):
+    from app.services.app_logging import record_app_log
+
+    record_app_log("info", "api", "startup", "test log row")
+
+    response = client.get("/admin/backup/export")
+
+    body = response.json()
+    assert "app_log_events" not in body["tables"]
+    assert body["metadata"]["include_logs"] is False
+
+
+def test_export_includes_logs_when_requested(client, db_session):
+    from app.services.app_logging import record_app_log
+
+    record_app_log("info", "api", "startup", "test log row")
+
+    response = client.get("/admin/backup/export", params={"include_logs": "true"})
+
+    body = response.json()
+    assert body["metadata"]["include_logs"] is True
+    assert "app_log_events" in body["tables"]
+    assert len(body["tables"]["app_log_events"]) == 1
+
+
 def test_export_includes_all_required_tables_with_data(client, db_session):
     card = make_card(db_session)
     source = make_source(db_session)
