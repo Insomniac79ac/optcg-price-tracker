@@ -56,7 +56,16 @@ services:
       start_period: 5s
 
   api:
-    build: ./services/api
+    build:
+      context: ./services/api
+      # See the Makefile's prod-build target, which computes these from
+      # `git rev-parse --short HEAD`/a UTC timestamp/the repo-root VERSION
+      # file - GET /version, GET /health, and GET /admin/release-status all
+      # read them back out (see app/core/version.py).
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: opcg-api-prod
     restart: unless-stopped
     env_file:
@@ -88,7 +97,12 @@ services:
       start_period: 15s
 
   worker:
-    build: ./services/worker
+    build:
+      context: ./services/worker
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: opcg-worker-prod
     restart: unless-stopped
     command: celery -A worker.celery_app worker --loglevel=info
@@ -106,7 +120,12 @@ services:
         condition: service_healthy
 
   beat:
-    build: ./services/worker
+    build:
+      context: ./services/worker
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: opcg-beat-prod
     restart: unless-stopped
     command: celery -A worker.celery_app beat --loglevel=info
@@ -128,6 +147,9 @@ services:
       context: ./apps/web
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        APP_VERSION: ${APP_VERSION:-0.1.0}
     container_name: opcg-web-prod
     restart: unless-stopped
     env_file:

@@ -7,6 +7,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Release/build metadata, for correlating worker/beat logs with a specific
+# release - see services/api/Dockerfile's identical block and the Makefile's
+# prod-build target for how these get computed and passed in.
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+ARG APP_VERSION=0.1.0
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV BUILD_TIME=${BUILD_TIME}
+ENV APP_VERSION=${APP_VERSION}
+
 # Default to a long-running Celery worker process, not a one-off job - both
 # docker-compose.yml and docker-compose.prod.yml override this explicitly
 # per service anyway (`celery -A worker.celery_app worker --loglevel=info`

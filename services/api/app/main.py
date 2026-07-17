@@ -9,6 +9,7 @@ from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
 from app.api.admin_rate_limit import router as admin_rate_limit_router
+from app.api.admin_release_status import router as admin_release_status_router
 from app.api.alerts import router as alerts_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
@@ -27,6 +28,7 @@ from app.api.search import router as search_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
 from app.api.source_mappings import router as source_mappings_router
 from app.api.system_check import router as system_check_router
+from app.api.version import router as version_router
 from app.api.wishlist import router as wishlist_router
 from app.config_check import validate_config
 from app.core.env_validation import validate_environment
@@ -131,7 +133,9 @@ app.include_router(admin_db_backups_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)
 app.include_router(admin_rate_limit_router)
+app.include_router(admin_release_status_router)
 app.include_router(market_workflow_runs_router)
 app.include_router(search_router)
 app.include_router(system_check_router)
 app.include_router(env_check_router)
+app.include_router(version_router)

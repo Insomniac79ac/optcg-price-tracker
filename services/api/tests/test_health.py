@@ -10,8 +10,17 @@ def test_health_returns_expected_shape():
     response = client.get("/health")
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"status", "app_env", "database_connected", "redis_connected"}
+    assert set(body.keys()) == {
+        "status",
+        "app_env",
+        "database_connected",
+        "redis_connected",
+        "version",
+        "git_commit",
+    }
     assert body["status"] in ("ok", "degraded")
+    assert isinstance(body["version"], str)
+    assert isinstance(body["git_commit"], str)
 
 
 def test_health_reports_database_connected(monkeypatch):

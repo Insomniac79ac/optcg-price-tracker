@@ -10,6 +10,17 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Release/build metadata - read at runtime (not NEXT_PUBLIC_*, so never
+# baked into the client bundle) by src/app/api/version/route.ts. See
+# services/api/Dockerfile's identical block and the Makefile's prod-build
+# target for how these get computed and passed in.
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+ARG APP_VERSION=0.1.0
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV BUILD_TIME=${BUILD_TIME}
+ENV APP_VERSION=${APP_VERSION}
+
 # Production Next.js build/runtime - also what scripts/check-env.js reads to
 # decide whether a failed check is fatal (see package.json's "start" script
 # and the check-env.js docstring). Set once here so both this build stage

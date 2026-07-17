@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { VersionFooter } from "@/components/VersionFooter";
 import {
   ADMIN_ACTION_SOURCES,
   AdminAuthRequiredError,
@@ -511,6 +512,12 @@ export default function AdminActionsPage() {
                 System check
               </Link>
               <Link
+                href="/admin/release-status"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Release status
+              </Link>
+              <Link
                 href="/admin/logs"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
@@ -549,6 +556,7 @@ export default function AdminActionsPage() {
             </div>
           </>
         )}
+        <VersionFooter />
       </main>
     </div>
   );

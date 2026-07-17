@@ -1,10 +1,21 @@
 .PHONY: help dev-up dev-down test-api test-worker migrate seed import-watchlist \
 	refresh-yuyutei-dry refresh-yuyutei-live logs-api logs-worker logs-beat check-secrets \
 	smoke-test prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify \
-	prod-backup prod-db-backup prod-db-restore prod-db-backup-prune prod-db-backup-prune-apply
+	prod-backup prod-db-backup prod-db-restore prod-db-backup-prune prod-db-backup-prune-apply \
+	release-check
 
 # Override on the command line, e.g. `make import-watchlist WATCHLIST=path/to.csv`
 WATCHLIST ?= data/watchlists/opcg_watchlist.csv
+
+# Release/build metadata for prod-build - see docs/release_checklist.md and
+# app/core/version.py (GET /version, GET /health, GET /admin/release-status).
+# Recomputed fresh on every `make prod-build` invocation, not cached, so each
+# build's ${GIT_COMMIT}/${BUILD_TIME} reflect what was actually checked out
+# at build time. Override GIT_COMMIT/BUILD_TIME/APP_VERSION on the command
+# line if you need a specific value instead (e.g. reproducing an old build).
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+APP_VERSION ?= $(shell cat VERSION 2>/dev/null || echo 0.0.0-unknown)
 
 # All prod-* targets read the same production env file - see
 # docs/deployment.md. Compose does NOT auto-load a file not literally named
@@ -26,9 +37,10 @@ help:
 	@echo "make logs-beat            - tail beat logs"
 	@echo "make check-secrets        - fail if git is tracking any real .env file"
 	@echo "make smoke-test           - verify a running (dev) stack is healthy (ADMIN_TOKEN required)"
+	@echo "make release-check        - pre-release readiness check - see docs/release_checklist.md"
 	@echo ""
 	@echo "Production (docker-compose.prod.yml + .env.production) - see docs/deployment.md:"
-	@echo "make prod-build           - build the production images"
+	@echo "make prod-build           - build the production images (tags GIT_COMMIT/BUILD_TIME/APP_VERSION)"
 	@echo "make prod-up              - start the production stack"
 	@echo "make prod-down            - stop the production stack"
 	@echo "make prod-logs            - tail all production service logs"
@@ -83,10 +95,14 @@ check-secrets:
 smoke-test:
 	./scripts/smoke_test.sh
 
+release-check:
+	./scripts/release_check.sh
+
 # --- Production (docker-compose.prod.yml) -----------------------------------
 
 prod-build:
-	$(PROD_COMPOSE) build
+	GIT_COMMIT=$(GIT_COMMIT) BUILD_TIME=$(BUILD_TIME) APP_VERSION=$(APP_VERSION) $(PROD_COMPOSE) build
+	@echo "Built version $(APP_VERSION) (commit $(GIT_COMMIT), built $(BUILD_TIME))"
 
 prod-up:
 	$(PROD_COMPOSE) up -d

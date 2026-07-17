@@ -1632,3 +1632,32 @@ class RateLimitWindowOut(BaseModel):
 class RateLimitStatusOut(BaseModel):
     enabled: bool
     windows: list[RateLimitWindowOut]
+
+
+# --- version / release status -------------------------------------------
+
+
+class VersionOut(BaseModel):
+    app: str
+    version: str
+    git_commit: str
+    build_time: str
+    app_env: str
+
+
+class ReleaseReadinessOut(BaseModel):
+    system_check_status: str
+    critical_logs_last_24h: int
+    latest_backup_available: bool
+
+
+class ReleaseStatusOut(BaseModel):
+    version: str
+    git_commit: str
+    build_time: str
+    app_env: str
+    latest_market_workflow_run: dict[str, Any] | None
+    latest_system_check: SystemCheckResponseOut
+    latest_backup: dict[str, Any] | None
+    latest_error: AppLogEventOut | None
+    release_readiness: ReleaseReadinessOut

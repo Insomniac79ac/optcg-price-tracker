@@ -2774,3 +2774,53 @@ export interface ObservabilitySummary {
 export function fetchObservabilitySummary(): Promise<ObservabilitySummary> {
   return fetchAdminJson<ObservabilitySummary>("/api/admin/observability/summary");
 }
+
+export interface ReleaseReadiness {
+  system_check_status: "ok" | "warning" | "critical";
+  critical_logs_last_24h: number;
+  latest_backup_available: boolean;
+}
+
+export interface ReleaseStatus {
+  version: string;
+  git_commit: string;
+  build_time: string;
+  app_env: string;
+  latest_market_workflow_run: Record<string, unknown> | null;
+  latest_system_check: SystemCheckResponse;
+  latest_backup: Record<string, unknown> | null;
+  latest_error: AppLogEvent | null;
+  release_readiness: ReleaseReadiness;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/release-status/route.ts) - same reasoning as
+ * fetchObservabilitySummary. */
+export function fetchReleaseStatus(): Promise<ReleaseStatus> {
+  return fetchAdminJson<ReleaseStatus>("/api/admin/release-status");
+}
+
+export interface WebVersionInfo {
+  version: string;
+  git_commit: string;
+  build_time: string;
+}
+
+export interface ApiVersionInfo {
+  version: string;
+  git_commit: string;
+}
+
+export interface VersionInfo {
+  web: WebVersionInfo;
+  api: ApiVersionInfo | null;
+}
+
+/** Fetches src/app/api/version/route.ts directly (not through
+ * fetchAdminJson - this route needs no admin token, it's the same
+ * unauthenticated shape as the backend's own GET /version). */
+export async function fetchVersionInfo(): Promise<VersionInfo> {
+  const res = await fetch("/api/version", { cache: "no-store" });
+  if (!res.ok) throw new Error(`Request to /api/version failed with status ${res.status}`);
+  return res.json() as Promise<VersionInfo>;
+}

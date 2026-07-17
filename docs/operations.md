@@ -97,6 +97,38 @@ The web app's own env check (`NEXT_PUBLIC_API_URL`/`API_INTERNAL_URL` presence, 
 `NEXT_PUBLIC_*` vars) runs at Docker build/start instead of via an API endpoint - see
 `apps/web/scripts/check-env.js` (`npm run check-env` to run it manually).
 
+## Check current version
+
+```
+curl http://localhost:8000/version
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/release-status"
+```
+
+`GET /version` (unauthenticated, same trust level as `GET /health`) reports `app`, `version`
+(from the repo-root `VERSION` file), `git_commit` and `build_time` (both baked in at Docker build
+time by `make prod-build` - see [Version and build metadata](deployment.md#14-version-and-build-metadata)
+in docs/deployment.md), and `app_env`. `GET /health` includes `version`/`git_commit` too, for a
+quick check without a separate call.
+
+`GET /admin/release-status` (admin-token gated) is the fuller picture: the same version/build
+fields plus the latest system check, market workflow run, backup, and error, and a
+`release_readiness` summary (`system_check_status`, `critical_logs_last_24h`,
+`latest_backup_available`). The `/admin/release-status` page in the web UI (linked from the admin
+nav, `/admin/system-check`, and `/admin/actions`) shows the same thing - use it right after a
+deploy as step D ("Post-deploy validation") of [docs/release_checklist.md](../docs/release_checklist.md).
+The web app's own version (plus, best-effort, the backend's) is at `GET /api/version` on the
+`web` container - unauthenticated, no admin token needed.
+
+## Rollback
+
+See [Rollback](deployment.md#rollback) in docs/deployment.md for the quick version, and
+[docs/release_checklist.md](../docs/release_checklist.md) section E for the fuller checklist
+(identify the previous commit/version, stop services, restore the DB backup only if the deploy
+included a data-changing migration, redeploy the previous commit, re-run migrations only if the
+schema needs to move as well, smoke test, check logs). The version/build metadata from [Check
+current version](#check-current-version) above is what tells you what's actually running before
+you decide whether a rollback is even needed.
+
 ## Check rate limit status
 
 ```

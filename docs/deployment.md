@@ -32,6 +32,11 @@ secrets at all - it checks `docker-compose.prod.yml` is well-formed, the images 
 `RUN_TESTS=true`) the test suites pass. Good as a pre-deploy CI gate or a first sanity check on a
 fresh checkout.
 
+Cutting an actual release (not just a one-off deploy)? See
+[docs/release_checklist.md](release_checklist.md) for the full pre-release/build/deploy/rollback/
+emergency checklist, and `make release-check` (`scripts/release_check.sh`) to automate the
+mechanical parts of it - git status, secrets, and compose config in one command.
+
 ## Rollback
 
 If a deploy goes bad:
@@ -573,3 +578,48 @@ checklist above) - `scripts/prod_smoke_test.sh` verifies the backend transitivel
 over `API_INTERNAL_URL`. `BASE_URL` still works as a deprecated alias for `WEB_BASE_URL` if you have
 existing deploy scripts using it. See the env var comments at the top of `scripts/prod_smoke_test.sh`
 for the full list.
+
+## 14. Version and build metadata
+
+Every image built by `make prod-build` is tagged with three values, baked in as Docker build args
+(`GIT_COMMIT`/`BUILD_TIME`/`APP_VERSION` - see `services/api/Dockerfile`, `services/worker/Dockerfile`,
+and `apps/web/Dockerfile`) and therefore fixed for the life of that image, regardless of what
+`.env.production` says at runtime:
+
+| Value | Source | Where it's read back |
+|---|---|---|
+| `APP_VERSION` | The repo-root `VERSION` file (e.g. `0.1.0`) | `GET /version`, `GET /health`, `GET /admin/release-status`, `GET /api/version` |
+| `GIT_COMMIT` | `git rev-parse --short HEAD` at build time | same as above |
+| `BUILD_TIME` | A UTC timestamp at build time | same as above |
+
+`make prod-build` computes and passes all three automatically - no manual steps for a normal
+release. To check a running deployment's version:
+
+```
+curl http://localhost:8000/version
+curl -H "X-Admin-Token: $ADMIN_TOKEN" http://localhost:8000/admin/release-status
+```
+
+`GET /version` is unauthenticated (same trust level as `GET /health`) and returns `{"app": ...,
+"version": ..., "git_commit": ..., "build_time": ..., "app_env": ...}`. `GET
+/admin/release-status` (admin-token gated, and its `/admin/release-status` web page - linked from
+the admin nav, `/admin/system-check`, and `/admin/actions`) additionally rolls up the latest
+system check, market workflow run, backup, and error into one `release_readiness` summary - see
+[docs/release_checklist.md](release_checklist.md) section D ("Post-deploy validation"). The web
+app's own `GET /api/version` reports its own build metadata plus (best-effort) the backend's, for
+a single call that covers both services.
+
+If you build images outside of `make prod-build` (a separate CI/CD pipeline, a registry push
+step), pass the same three build args yourself:
+
+```
+docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) \
+  --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --build-arg APP_VERSION=$(cat VERSION) \
+  -t opcg-api ./services/api
+```
+
+Omitting them falls back to each Dockerfile's default (`unknown` for `GIT_COMMIT`/`BUILD_TIME`,
+the `VERSION` file's contents or `0.1.0` for `APP_VERSION`) rather than failing the build - useful
+for a quick local test build, but always pass real values for anything you intend to deploy, so a
+rollback (see [Rollback](#rollback) above) can actually identify what's running.

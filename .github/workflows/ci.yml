@@ -28,6 +28,17 @@ jobs:
           # skip the (slower) duplicate run inside prod_verify.sh here.
           RUN_TESTS: "false"
 
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: scripts/release_check.sh (no real secrets, dummy placeholders only)
+        run: ./scripts/release_check.sh
+        env:
+          # Backend/worker test suites already run in their own jobs below -
+          # skip the (slower) duplicate run inside release_check.sh here.
+          RUN_TESTS: "false"
+
   backend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -66,13 +77,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: prod_smoke_test.sh and prod_verify.sh exist and are executable
+      - name: prod_smoke_test.sh, prod_verify.sh, and release_check.sh exist and are executable
         run: |
           test -x scripts/prod_smoke_test.sh
           test -x scripts/prod_verify.sh
-      - name: Makefile prod-* targets exist
+          test -x scripts/release_check.sh
+      - name: Makefile prod-*/release-check targets exist
         run: |
-          for target in prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify prod-backup; do
+          for target in prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify prod-backup release-check; do
             grep -qE "^${target}:" Makefile || { echo "missing Makefile target: $target"; exit 1; }
           done
       - name: Reverse proxy example configs and private compose override exist

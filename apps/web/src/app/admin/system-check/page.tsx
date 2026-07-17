@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { VersionFooter } from "@/components/VersionFooter";
 import {
   AdminAuthRequiredError,
   AdminNetworkError,
@@ -89,6 +90,12 @@ export default function SystemCheckPage() {
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >
               App logs
+            </Link>
+            <Link
+              href="/admin/release-status"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Release status
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -215,6 +222,7 @@ export default function SystemCheckPage() {
             </div>
           </>
         )}
+        <VersionFooter />
       </main>
     </div>
   );
