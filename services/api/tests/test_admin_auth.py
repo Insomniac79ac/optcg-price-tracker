@@ -22,6 +22,7 @@ ADMIN_PATHS = [
     "/admin/backup/export",
     "/admin/db-index-audit",
     "/admin/performance/summary",
+    "/admin/data-retention/policy",
 ]
 
 

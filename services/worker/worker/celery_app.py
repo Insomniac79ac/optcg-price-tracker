@@ -5,6 +5,8 @@ from datetime import timedelta
 from celery import Celery
 from celery.schedules import crontab
 
+from worker.app_logging import record_app_log
+from worker.data_retention import CONFIRM_PHRASE, prune_tables
 from worker.db import SessionLocal
 from worker.env_validation import validate_environment
 from worker.jobs.check_alerts import check_alerts
@@ -60,6 +62,15 @@ def _build_beat_schedule(current_settings: Settings) -> dict:
                 "send_telegram": current_settings.MARKET_WORKFLOW_SEND_TELEGRAM,
                 "dry_run": False,
             },
+        }
+
+    if current_settings.DATA_RETENTION_ENABLED:
+        schedule["prune-data-retention"] = {
+            "task": "worker.celery_app.prune_data_retention_task",
+            "schedule": crontab(
+                hour=current_settings.DATA_RETENTION_HOUR_UTC,
+                minute=current_settings.DATA_RETENTION_MINUTE_UTC,
+            ),
         }
 
     return schedule
@@ -155,3 +166,45 @@ def run_price_refresh(source: str = "all", limit: int = 10, dry_run: bool = Fals
         logger.info(line)
 
     return asdict(summary)
+
+
+@app.task(name="worker.celery_app.prune_data_retention_task")
+def prune_data_retention_task() -> dict:
+    """Scheduled data retention prune - runs daily by Celery Beat when
+    DATA_RETENTION_ENABLED is true (see _build_beat_schedule above and "Data
+    retention and pruning" in docs/operations.md). Always runs with
+    dry_run=False, confirmed internally - this task exists specifically to
+    apply the policy unattended; use the admin UI/CLI (POST
+    /admin/data-retention/prune, python -m app.prune_data_retention) for a
+    preview first. Never raises - a failure here must not take down beat or
+    any other scheduled job, it's recorded as an app_log_events row instead
+    (see worker.data_retention.prune_tables for the per-table policy, same
+    logic as app.services.data_retention on the api service)."""
+    db = None
+    try:
+        db = SessionLocal()
+        result = prune_tables(db, dry_run=False, confirm=CONFIRM_PHRASE)
+    except Exception as exc:  # noqa: BLE001 - must never fail beat/worker itself
+        logger.exception("Scheduled data retention prune failed.")
+        record_app_log(
+            "error",
+            "worker",
+            "data_retention_prune_failed",
+            f"Scheduled data retention prune failed: {exc}",
+        )
+        return {"status": "failed", "error": str(exc)}
+    finally:
+        if db is not None:
+            db.close()
+
+    summary = result.summary
+    results = [asdict(r) for r in result.results]
+    record_app_log(
+        "warning" if summary["warnings"] else "info",
+        "worker",
+        "data_retention_prune",
+        f"Scheduled data retention prune: {summary['total_rows_deleted']} row(s) deleted "
+        f"across {summary['tables_checked']} table(s), {summary['warnings']} warning(s).",
+        context={"summary": summary, "results": results},
+    )
+    return {"summary": summary, "results": results}

@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     MARKET_WORKFLOW_SEND_TELEGRAM: bool = False
     MARKET_WORKFLOW_HOUR_UTC: int = 0
     MARKET_WORKFLOW_MINUTE_UTC: int = 0
+    # Scheduled data retention pruning (worker.data_retention) - disabled by
+    # default, same reasoning as MARKET_WORKFLOW_ENABLED: Celery Beat should
+    # never delete rows unless explicitly opted into. See "Data retention
+    # and pruning" in docs/operations.md.
+    DATA_RETENTION_ENABLED: bool = False
+    DATA_RETENTION_HOUR_UTC: int = 1
+    DATA_RETENTION_MINUTE_UTC: int = 0
 
     @field_validator("DATABASE_URL")
     @classmethod
@@ -106,6 +113,20 @@ class Settings(BaseSettings):
     def _validate_market_workflow_minute_utc(cls, value: int) -> int:
         if not (0 <= value <= 59):
             raise ValueError(f"Invalid MARKET_WORKFLOW_MINUTE_UTC={value}. Must be 0-59.")
+        return value
+
+    @field_validator("DATA_RETENTION_HOUR_UTC")
+    @classmethod
+    def _validate_data_retention_hour_utc(cls, value: int) -> int:
+        if not (0 <= value <= 23):
+            raise ValueError(f"Invalid DATA_RETENTION_HOUR_UTC={value}. Must be 0-23.")
+        return value
+
+    @field_validator("DATA_RETENTION_MINUTE_UTC")
+    @classmethod
+    def _validate_data_retention_minute_utc(cls, value: int) -> int:
+        if not (0 <= value <= 59):
+            raise ValueError(f"Invalid DATA_RETENTION_MINUTE_UTC={value}. Must be 0-59.")
         return value
 
     @model_validator(mode="after")

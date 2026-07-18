@@ -493,6 +493,43 @@ class MarketWorkflowRun(Base):
     )
 
 
+class CollectorActivityEvent(Base):
+    """Mirrors app.models.collector_activity_event.CollectorActivityEvent on
+    the api service - same table, same shape. Only read here by
+    worker.data_retention (see that module and worker.celery_app's
+    prune-data-retention beat task); nothing in the worker ever writes this
+    table."""
+
+    __tablename__ = "collector_activity_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    event_source: Mapped[str] = mapped_column(String(32), index=True)
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    collection_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("collection_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    wishlist_item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    grading_submission_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    market_signal_event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("market_signal_events.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    market_report_id: Mapped[int | None] = mapped_column(
+        ForeignKey("market_intelligence_reports.id", ondelete="SET NULL"), nullable=True
+    )
+    market_workflow_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("market_workflow_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    title: Mapped[str] = mapped_column(String(255))
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payload_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 class AppLogEvent(Base):
     """Mirrors app.models.app_log_event.AppLogEvent on the api service -
     same table, same shape. Written by worker.app_logging (best-effort

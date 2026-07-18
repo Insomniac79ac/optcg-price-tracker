@@ -1473,6 +1473,62 @@ export function fetchPerformanceSummary(): Promise<PerformanceSummary> {
   return fetchAdminJson<PerformanceSummary>("/api/admin/performance/summary");
 }
 
+export interface DataRetentionPolicy {
+  table: string;
+  retention_days: number;
+  mode: string;
+  protected_records: string;
+  enabled: boolean;
+}
+
+export interface DataRetentionPolicyResponse {
+  policies: DataRetentionPolicy[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/data-retention/policy/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function fetchDataRetentionPolicy(): Promise<DataRetentionPolicyResponse> {
+  return fetchAdminJson<DataRetentionPolicyResponse>("/api/admin/data-retention/policy");
+}
+
+export interface DataRetentionPruneRequest {
+  dry_run: boolean;
+  tables?: string[] | null;
+  confirm?: string | null;
+}
+
+export interface DataRetentionPruneResult {
+  table: string;
+  retention_days: number | null;
+  rows_would_delete: number;
+  rows_deleted: number;
+  status: "ok" | "skipped" | "error";
+  warning: string | null;
+}
+
+export interface DataRetentionPruneResponse {
+  dry_run: boolean;
+  summary: {
+    tables_checked: number;
+    total_rows_would_delete: number;
+    total_rows_deleted: number;
+    warnings: number;
+  };
+  results: DataRetentionPruneResult[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/data-retention/prune/route.ts). */
+export function pruneDataRetention(
+  body: DataRetentionPruneRequest,
+): Promise<DataRetentionPruneResponse> {
+  return fetchAdminJson<DataRetentionPruneResponse>("/api/admin/data-retention/prune", {
+    method: "POST",
+    body,
+  });
+}
+
 export interface MarketReportPortfolioSnapshot {
   total_cost_basis_jpy: number | null;
   retail_value_jpy: number | null;

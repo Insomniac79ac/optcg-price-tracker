@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from celery.schedules import crontab
 
@@ -6,15 +6,18 @@ import worker.celery_app as celery_app_module
 from worker.celery_app import (
     _build_beat_schedule,
     app,
+    prune_data_retention_task,
     refresh_yuyutei_prices,
     run_market_workflow_task,
     run_price_refresh,
 )
 from worker.models import (
+    AppLogEvent,
     Card,
     MarketWorkflowRun,
     PriceObservation,
     PriceRefreshRun,
+    RawSnapshot,
     Source,
     SourceCardMapping,
 )
@@ -198,3 +201,98 @@ def test_module_level_beat_schedule_disabled_by_default():
     # import time must not include the workflow entry.
     assert settings.MARKET_WORKFLOW_ENABLED is False
     assert "run-market-workflow" not in app.conf.beat_schedule
+
+
+# --- prune_data_retention_task / beat schedule ------------------------------
+
+
+def test_prune_data_retention_task_can_be_imported():
+    assert prune_data_retention_task.name == "worker.celery_app.prune_data_retention_task"
+    assert "worker.celery_app.prune_data_retention_task" in app.tasks
+
+
+def test_beat_schedule_excludes_data_retention_when_disabled():
+    disabled = Settings(_env_file=None, DATA_RETENTION_ENABLED=False)
+
+    schedule = _build_beat_schedule(disabled)
+
+    assert "prune-data-retention" not in schedule
+    assert "refresh-yuyutei-prices" in schedule
+
+
+def test_beat_schedule_includes_data_retention_when_enabled():
+    enabled = Settings(
+        _env_file=None,
+        DATA_RETENTION_ENABLED=True,
+        DATA_RETENTION_HOUR_UTC=3,
+        DATA_RETENTION_MINUTE_UTC=45,
+    )
+
+    schedule = _build_beat_schedule(enabled)
+
+    entry = schedule["prune-data-retention"]
+    assert entry["task"] == "worker.celery_app.prune_data_retention_task"
+    assert entry["schedule"] == crontab(hour=3, minute=45)
+
+
+def test_module_level_beat_schedule_excludes_data_retention_by_default():
+    assert settings.DATA_RETENTION_ENABLED is False
+    assert "prune-data-retention" not in app.conf.beat_schedule
+
+
+def test_prune_data_retention_task_deletes_old_rows(db_session, monkeypatch):
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+
+    source = Source(name="yuyutei", base_url="https://yuyu-tei.jp")
+    db_session.add(source)
+    db_session.commit()
+    db_session.add(
+        RawSnapshot(
+            source_id=source.id,
+            source_url="https://yuyu-tei.jp/old",
+            fetched_at=datetime.now(timezone.utc) - timedelta(days=100),
+            http_status=200,
+            content_hash="old",
+            raw_content="<html></html>",
+        )
+    )
+    db_session.commit()
+
+    result = prune_data_retention_task()
+
+    assert result["summary"]["total_rows_deleted"] == 1
+    assert db_session.query(RawSnapshot).count() == 0
+
+
+def test_prune_data_retention_task_records_app_log(db_session, monkeypatch):
+    monkeypatch.setattr(celery_app_module, "SessionLocal", lambda: db_session)
+    monkeypatch.setattr("worker.celery_app.SessionLocal", lambda: db_session)
+    # worker.app_logging.record_app_log opens its own session by design -
+    # redirect it to the same in-memory db this test uses (mirrors how
+    # tests/conftest.py's autouse fixture does this for the api service).
+    import worker.app_logging as app_logging_module
+
+    monkeypatch.setattr(app_logging_module, "SessionLocal", lambda: db_session)
+
+    prune_data_retention_task()
+
+    logs = db_session.query(AppLogEvent).filter_by(event_type="data_retention_prune").all()
+    assert len(logs) == 1
+    assert logs[0].service == "worker"
+
+
+def test_prune_data_retention_task_never_raises_on_failure(db_session, monkeypatch):
+    def _broken_session():
+        raise RuntimeError("db is down")
+
+    monkeypatch.setattr(celery_app_module, "SessionLocal", _broken_session)
+
+    import worker.app_logging as app_logging_module
+
+    monkeypatch.setattr(app_logging_module, "SessionLocal", lambda: db_session)
+
+    result = prune_data_retention_task()
+
+    assert result["status"] == "failed"
+    logs = db_session.query(AppLogEvent).filter_by(event_type="data_retention_prune_failed").all()
+    assert len(logs) == 1

@@ -1710,3 +1710,46 @@ class PerformanceSummaryOut(BaseModel):
     database: PerformanceDatabaseCountsOut
     latest_slow_requests: list[SlowRequestOut]
     index_audit: PerformanceIndexAuditSummaryOut
+
+
+# --- data retention / pruning -------------------------------------------
+
+
+class DataRetentionPolicyOut(BaseModel):
+    table: str
+    retention_days: int
+    mode: str
+    protected_records: str
+    enabled: bool
+
+
+class DataRetentionPolicyResponseOut(BaseModel):
+    policies: list[DataRetentionPolicyOut]
+
+
+class DataRetentionPruneRequestIn(BaseModel):
+    dry_run: bool = True
+    tables: list[str] | None = None
+    confirm: str | None = None
+
+
+class DataRetentionPruneResultOut(BaseModel):
+    table: str
+    retention_days: int | None
+    rows_would_delete: int
+    rows_deleted: int
+    status: str
+    warning: str | None
+
+
+class DataRetentionPruneSummaryOut(BaseModel):
+    tables_checked: int
+    total_rows_would_delete: int
+    total_rows_deleted: int
+    warnings: int
+
+
+class DataRetentionPruneResponseOut(BaseModel):
+    dry_run: bool
+    summary: DataRetentionPruneSummaryOut
+    results: list[DataRetentionPruneResultOut]

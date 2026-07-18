@@ -106,6 +106,12 @@ export default function AdminLogsPage() {
             >
               Admin actions
             </Link>
+            <Link
+              href="/admin/data-retention"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Data retention
+            </Link>
           </div>
           <AdminLogoutButton />
         </div>

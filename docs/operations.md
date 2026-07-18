@@ -437,6 +437,10 @@ curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json
 snapshots/refresh runs - pass `include_logs=true` (or check "Include logs" on `/admin/backup`) to
 include them in a backup.
 
+This manual per-table prune is separate from the broader, scheduled retention policy covering
+`app_log_events` and nine other high-volume tables - see [Data retention and
+pruning](#data-retention-and-pruning).
+
 **Why secrets are redacted.** `context_json` is sanitized before it's ever written - any key
 containing `token`, `secret`, `password`, `key`, `authorization`, or `cookie` (case-insensitive,
 substring match) is replaced with `[REDACTED]`, and request bodies are never logged at all. This
@@ -450,6 +454,97 @@ a container that won't start, an OOM kill, raw request/response traffic, or debu
 that never got instrumented), `docker compose logs` (see [Logs](#logs)) is still the source of
 truth. Treat `/admin/logs` as the fast path for the events it covers, not a replacement for
 container logs.
+
+## Data retention and pruning
+
+The tables that grow fastest (`raw_snapshots`, `price_observations`, `app_log_events`,
+`collector_activity_events`, `market_signal_events`, and a handful of run/report/digest history
+tables) have a retention policy enforced by `app.services.data_retention` - see `GET
+/admin/data-retention/policy` for the full, current list, or the `/admin/data-retention` page
+(linked from the admin nav, `/admin/performance`, `/admin/logs`, and `/admin/actions`).
+
+**What is pruned, and what is never pruned.** Ten tables are ever touched:
+
+| Table | Default retention | Notes |
+|---|---|---|
+| `raw_snapshots` | 30 days | |
+| `app_log_events` | 60 days | error/critical rows kept 180 days |
+| `collector_activity_events` | 365 days | |
+| `price_refresh_runs` | 180 days | |
+| `market_workflow_runs` | 180 days | |
+| `market_report_digest_sends` | 180 days | |
+| `market_intelligence_reports` | 365 days | |
+| `portfolio_valuation_snapshots` | 365 days | thinned to 1/week beyond 90 days |
+| `price_observations` | 365 days | thinned to 1/day beyond 90 days; latest observation per card/source/price type is never deleted regardless of age |
+| `market_signal_events` | 365 days | only `dismissed`/`resolved` events age out - `open`/`watching` events are kept forever |
+
+Everything else - `cards`, `sources`, `source_card_mappings`, `collection_items`,
+`wishlist_items`, `grading_submissions`, `collector_tags`, `collector_groups`, `collector_notes`,
+`alert_rules`, `dashboard_preferences`, and users - is a collector record, not high-volume
+telemetry, and is never touched by any of this. There is no code path that can prune one of these
+tables; they simply aren't in the prunable-tables list `POST /admin/data-retention/prune` and
+`python -m app.prune_data_retention` both check against.
+
+**Always dry-run first.** Every prune path defaults to `dry_run: true` (counts what *would* be
+deleted, deletes nothing) and requires an explicit `confirm: "PRUNE"` to actually delete anything.
+Run a dry run, sanity-check the counts, then apply:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"dry_run": true}' \
+  "http://localhost:8000/admin/data-retention/prune"
+
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"dry_run": false, "confirm": "PRUNE"}' \
+  "http://localhost:8000/admin/data-retention/prune"
+```
+
+Pass `"tables": ["raw_snapshots", "app_log_events"]` to limit either call to specific tables;
+omitting `tables` (or passing an empty list) evaluates every prunable table. Each table prunes in
+its own transaction, so one table erroring doesn't stop the rest - a failed table shows up as a
+`warning` in the response instead.
+
+**Back up the database before a real prune.** A prune is a real `DELETE`, same as any other
+destructive operation - take a backup first (see [Database backup and restore
+drill](#database-backup-and-restore-drill)):
+
+```
+make prod-db-backup
+```
+
+**Running from the UI.** `/admin/data-retention` shows the current policy table, lets you
+multi-select which tables to evaluate, defaults to dry-run (checkbox, on by default), and only
+shows the `PRUNE` confirmation input once you uncheck dry-run - the same guardrail as the backup
+page's replace-restore confirmation.
+
+**Running from the CLI.** `python -m app.prune_data_retention` (run inside the `api` container,
+or anywhere with `DATABASE_URL` pointed at the same database) is the same logic as the API
+endpoint, for a cron job or one-off maintenance without going through the API:
+
+```
+docker compose exec api python -m app.prune_data_retention                       # dry run, all tables
+docker compose exec api python -m app.prune_data_retention --tables raw_snapshots,app_log_events
+docker compose exec api python -m app.prune_data_retention --apply --confirm PRUNE
+```
+
+`--apply` without `--confirm PRUNE` exits non-zero without touching anything; a per-table error
+during an actual prune is printed as that table's warning, not a nonzero exit.
+
+**Scheduled pruning.** Celery Beat can run this automatically once a day - disabled by default,
+same opt-in pattern as the market workflow schedule:
+
+```
+DATA_RETENTION_ENABLED=true      # default false - beat does not schedule pruning otherwise
+DATA_RETENTION_HOUR_UTC=1        # default 1
+DATA_RETENTION_MINUTE_UTC=0      # default 0
+```
+
+When enabled, the scheduled run always applies (`dry_run=false`, confirmed internally - there's no
+unattended dry-run mode, since a dry run that nobody reads accomplishes nothing) and records a
+summary `app_log_events` row (`service=worker`, `event_type=data_retention_prune`) with the
+per-table results, visible on `/admin/logs`. A failure never takes down beat or worker startup -
+it's caught, logged as `event_type=data_retention_prune_failed`, and beat continues scheduling
+everything else normally.
 
 ## Reverse proxy troubleshooting
 

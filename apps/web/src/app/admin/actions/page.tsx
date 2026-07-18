@@ -524,6 +524,12 @@ export default function AdminActionsPage() {
                 App logs
               </Link>
               <Link
+                href="/admin/data-retention"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Data retention
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
