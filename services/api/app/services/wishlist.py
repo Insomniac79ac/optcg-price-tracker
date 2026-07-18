@@ -5,15 +5,14 @@ SNKRDUNK floor) - no new price collection, this only reads what
 refresh_prices has already recorded.
 """
 
-from collections import defaultdict
-
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, PriceObservation, Source, WishlistItem
+from app.models import Card, CollectionItem, PriceObservation, WishlistItem
 from app.models.wishlist_item import WISHLIST_STATUSES
 from app.schemas import WishlistItemListOut, WishlistItemOut, WishlistLatestPricesOut, WishlistSummaryOut
 from app.services.collector import get_tags_for_cards
+from app.services.latest_prices import get_latest_price_map
 
 # Same (source name, price_type) pairs backing each valuation perspective
 # used across portfolio_valuation.py/market_signals.py.
@@ -106,24 +105,10 @@ def find_conflicting_wishlist_item(
 def get_latest_prices_by_card(
     db: Session, card_ids: set[int]
 ) -> dict[int, dict[tuple[str, str], PriceObservation]]:
-    if not card_ids:
-        return {}
-    sources_by_id = {s.id: s.name for s in db.scalars(select(Source)).all()}
-    observations = db.scalars(
-        select(PriceObservation)
-        .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
-    ).all()
-    latest_by_card: dict[int, dict[tuple[str, str], PriceObservation]] = defaultdict(dict)
-    for obs in observations:
-        source_name = sources_by_id.get(obs.source_id)
-        if source_name is None:
-            continue
-        key = (source_name, obs.price_type)
-        current = latest_by_card[obs.card_id].get(key)
-        if current is None or obs.observed_at > current.observed_at:
-            latest_by_card[obs.card_id][key] = obs
-    return latest_by_card
+    """Thin wrapper over app.services.latest_prices.get_latest_price_map,
+    kept as its own name here since api/wishlist.py and this module's own
+    get_wishlist_items already call it by this name."""
+    return get_latest_price_map(db, card_ids)
 
 
 def get_owned_quantities_by_card(db: Session, user_id: int, card_ids: set[int]) -> dict[int, int]:

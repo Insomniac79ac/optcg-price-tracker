@@ -20,6 +20,8 @@ ADMIN_PATHS = [
     "/admin/rate-limit/status",
     "/admin/market-workflow-runs",
     "/admin/backup/export",
+    "/admin/db-index-audit",
+    "/admin/performance/summary",
 ]
 
 

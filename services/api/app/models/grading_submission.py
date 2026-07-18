@@ -30,7 +30,7 @@ class GradingSubmission(Base):
     collection_item_id: Mapped[int] = mapped_column(
         ForeignKey("collection_items.id", ondelete="CASCADE"), index=True
     )
-    grading_company: Mapped[str] = mapped_column(String(32))
+    grading_company: Mapped[str] = mapped_column(String(32), index=True)
     submission_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     submission_status: Mapped[str] = mapped_column(
         String(32), default="planned", server_default="planned", index=True

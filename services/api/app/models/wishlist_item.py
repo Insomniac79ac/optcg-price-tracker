@@ -35,7 +35,7 @@ class WishlistItem(Base):
     status: Mapped[str] = mapped_column(
         String(16), default="watching", server_default="watching", index=True
     )
-    target_buy_price_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    target_buy_price_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     max_buy_price_jpy: Mapped[int | None] = mapped_column(Integer, nullable=True)
     preferred_condition: Mapped[str | None] = mapped_column(String(64), nullable=True)
     preferred_source: Mapped[str | None] = mapped_column(String(64), nullable=True)

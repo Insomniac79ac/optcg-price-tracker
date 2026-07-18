@@ -1661,3 +1661,52 @@ class ReleaseStatusOut(BaseModel):
     latest_backup: dict[str, Any] | None
     latest_error: AppLogEventOut | None
     release_readiness: ReleaseReadinessOut
+
+
+# --- db index audit / performance -------------------------------------
+
+
+class DbIndexCheckOut(BaseModel):
+    table: str
+    index: str
+    status: str
+    severity: str
+    message: str
+
+
+class DbIndexAuditSummaryOut(BaseModel):
+    total_checks: int
+    passed: int
+    warnings: int
+    critical: int
+
+
+class DbIndexAuditResponseOut(BaseModel):
+    summary: DbIndexAuditSummaryOut
+    checks: list[DbIndexCheckOut]
+
+
+class SlowRequestOut(BaseModel):
+    created_at: datetime
+    message: str
+    context: dict[str, Any] | None
+
+
+class PerformanceDatabaseCountsOut(BaseModel):
+    price_observations_count: int
+    raw_snapshots_count: int
+    market_signal_events_count: int
+    collector_activity_events_count: int
+    app_log_events_count: int
+
+
+class PerformanceIndexAuditSummaryOut(BaseModel):
+    warnings: int
+    critical: int
+
+
+class PerformanceSummaryOut(BaseModel):
+    status: str
+    database: PerformanceDatabaseCountsOut
+    latest_slow_requests: list[SlowRequestOut]
+    index_audit: PerformanceIndexAuditSummaryOut

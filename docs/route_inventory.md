@@ -48,6 +48,7 @@ All gated client-side by `AdminAuthGate`/`getAdminToken()` (an `X-Admin-Token` s
 | `/admin/market-workflow-runs` | Market workflow run history | Admin token | 200 | Yes (admin dropdown; linked from release-status, market/report) |
 | `/admin/backup` | JSON backup export/validate/restore | Admin token | 200 | Yes (admin dropdown; linked from release-status) |
 | `/admin/system-check` | Read-only DB/backup/cross-reference consistency sweep | Admin token | 200 | Yes (admin dropdown; linked from release-status) |
+| `/admin/performance` | Table-growth counts, db index audit, latest slow requests; links to logs, system check, release status | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/env-check` | *(no frontend page - API-only, see below)* | Admin token | 200 | No - gap, see findings |
 | `/admin/logs` | Structured app log search/prune | Admin token | 200 | Yes (admin dropdown; linked from release-status, system-check) |
 | `/admin/release-status` | Version/build metadata + release-readiness rollup (system check, workflow run, backup, latest error) | Admin token | 200 | Yes (admin dropdown; linked from system-check) |
@@ -80,7 +81,7 @@ per-endpoint sweep.
 | `/grading/*` | `GET/POST /grading/submissions`, `GET /grading/summary`, `GET/PATCH/DELETE /grading/submissions/{id}` | user | 200 (401 without a valid bearer token) |
 | `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
 | `/market/*` | `GET /market/movers`, `/market/signals`, `/market/signal-events(/{id})` + dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | none | 200 |
-| `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
+| `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
 
 Full per-route detail (exact path, method, response model) is in each router module under
 `services/api/app/api/` - this table is intentionally a grouped summary, not a duplicate of the

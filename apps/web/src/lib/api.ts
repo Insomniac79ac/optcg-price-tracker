@@ -1417,6 +1417,62 @@ export function fetchSystemCheck(): Promise<SystemCheckResponse> {
   return fetchAdminJson<SystemCheckResponse>("/api/admin/system-check");
 }
 
+export interface DbIndexCheck {
+  table: string;
+  index: string;
+  status: "pass" | "warning" | "critical";
+  severity: "warning" | "critical";
+  message: string;
+}
+
+export interface DbIndexAuditSummary {
+  total_checks: number;
+  passed: number;
+  warnings: number;
+  critical: number;
+}
+
+export interface DbIndexAuditResponse {
+  summary: DbIndexAuditSummary;
+  checks: DbIndexCheck[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/db-index-audit/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function fetchDbIndexAudit(): Promise<DbIndexAuditResponse> {
+  return fetchAdminJson<DbIndexAuditResponse>("/api/admin/db-index-audit");
+}
+
+export interface SlowRequest {
+  created_at: string;
+  message: string;
+  context: Record<string, unknown> | null;
+}
+
+export interface PerformanceSummary {
+  status: "ok" | "warning" | "critical";
+  database: {
+    price_observations_count: number;
+    raw_snapshots_count: number;
+    market_signal_events_count: number;
+    collector_activity_events_count: number;
+    app_log_events_count: number;
+  };
+  latest_slow_requests: SlowRequest[];
+  index_audit: {
+    warnings: number;
+    critical: number;
+  };
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/performance/summary/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function fetchPerformanceSummary(): Promise<PerformanceSummary> {
+  return fetchAdminJson<PerformanceSummary>("/api/admin/performance/summary");
+}
+
 export interface MarketReportPortfolioSnapshot {
   total_cost_basis_jpy: number | null;
   retail_value_jpy: number | null;

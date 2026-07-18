@@ -20,9 +20,9 @@ class Card(Base):
     name_en: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name_jp: Mapped[str | None] = mapped_column(String(255), nullable=True)
     set_code: Mapped[str] = mapped_column(String(32), index=True)
-    rarity: Mapped[str] = mapped_column(String(32))
+    rarity: Mapped[str] = mapped_column(String(32), index=True)
     variant: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    language: Mapped[str] = mapped_column(String(8))
+    language: Mapped[str] = mapped_column(String(8), index=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

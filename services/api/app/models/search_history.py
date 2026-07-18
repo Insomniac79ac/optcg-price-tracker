@@ -14,7 +14,7 @@ class SearchHistory(Base):
     __tablename__ = "search_history"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    query: Mapped[str] = mapped_column(String(255))
+    query: Mapped[str] = mapped_column(String(255), index=True)
     result_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True

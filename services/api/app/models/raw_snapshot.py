@@ -13,7 +13,7 @@ class RawSnapshot(Base):
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
     )
-    source_url: Mapped[str] = mapped_column(String(1024))
+    source_url: Mapped[str] = mapped_column(String(1024), index=True)
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

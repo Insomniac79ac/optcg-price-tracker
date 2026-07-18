@@ -38,7 +38,7 @@ class SourceCardMapping(Base):
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
     )
     source_card_id: Mapped[str] = mapped_column(String(255))
-    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True, index=True)
     match_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)

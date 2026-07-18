@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     RATE_LIMIT_IMPORT_EXPORT_PER_10M: int = 20
     RATE_LIMIT_SEARCH_PER_5M: int = 120
 
+    # Per-request timing (app.core.request_timing) - every response gets an
+    # X-Process-Time-Ms header regardless; a request slower than
+    # SLOW_REQUEST_MS additionally gets a warning app_log_events row (see
+    # GET /admin/performance/summary). Disabling only stops the log write,
+    # the header is always added.
+    SLOW_REQUEST_LOGGING_ENABLED: bool = True
+    SLOW_REQUEST_MS: int = 1000
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

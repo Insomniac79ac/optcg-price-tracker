@@ -24,6 +24,7 @@ const ADMIN_LINKS = [
   { href: "/admin/market-workflow-runs", label: "Workflow runs" },
   { href: "/admin/backup", label: "Backup" },
   { href: "/admin/system-check", label: "System check" },
+  { href: "/admin/performance", label: "Performance" },
   { href: "/admin/release-status", label: "Release status" },
   { href: "/admin/logs", label: "App logs" },
   { href: "/admin/snkrdunk-candidates", label: "SNKRDUNK candidates" },

@@ -6,12 +6,10 @@ price_observations per card/source/price_type:
 - market floor value: latest SNKRDUNK floor price (cheapest peer listing)
 """
 
-from collections import defaultdict
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, GradingSubmission, PriceObservation, Source
+from app.models import Card, CollectionItem, GradingSubmission
 from app.schemas import (
     BestWorstPerformerOut,
     GradedAdjustedValuationOut,
@@ -36,6 +34,7 @@ from app.services.grading import (
     latest_updated_submission,
     received_grading_cost_jpy,
 )
+from app.services.latest_prices import get_latest_price_map
 
 # (source name, price_type) pairs backing each valuation perspective.
 YUYUTEI_SELL = ("yuyutei", "sell")
@@ -280,28 +279,13 @@ def get_portfolio_valuation(
     cards_by_id = {
         card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
     }
-    sources_by_id = {s.id: s.name for s in db.scalars(select(Source)).all()}
 
     item_ids = {item.id for item in items}
     tags_by_item = get_tags_for_collection_items(db, item_ids)
     groups_by_item = get_groups_for_collection_items(db, item_ids)
     submissions_by_item = get_submissions_for_items(db, item_ids)
 
-    observations = db.scalars(
-        select(PriceObservation)
-        .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
-    ).all()
-
-    latest_by_card: dict[int, dict[tuple[str, str], PriceObservation]] = defaultdict(dict)
-    for obs in observations:
-        source_name = sources_by_id.get(obs.source_id)
-        if source_name is None:
-            continue
-        key = (source_name, obs.price_type)
-        current = latest_by_card[obs.card_id].get(key)
-        if current is None or obs.observed_at > current.observed_at:
-            latest_by_card[obs.card_id][key] = obs
+    latest_by_card = get_latest_price_map(db, card_ids)
 
     result_items: list[PortfolioValuationItemOut] = []
 
