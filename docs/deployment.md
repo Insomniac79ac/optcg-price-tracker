@@ -35,7 +35,15 @@ fresh checkout.
 Cutting an actual release (not just a one-off deploy)? See
 [docs/release_checklist.md](release_checklist.md) for the full pre-release/build/deploy/rollback/
 emergency checklist, and `make release-check` (`scripts/release_check.sh`) to automate the
-mechanical parts of it - git status, secrets, and compose config in one command.
+mechanical parts of it - git status, secrets, and compose config in one command. See
+[docs/route_inventory.md](route_inventory.md) for the full list of routes (public, admin, API) this
+app exposes, with auth requirements and nav-reachability for each.
+
+Before treating a deploy as production-ready, run the final gate: `bash scripts/final_audit.sh` (or
+`make final-audit`) - it fails fast through secrets, release-check, both compose configs, and the
+api/worker test suites, then confirms every file this doc and the release checklist depend on
+actually exists. `SKIP_TESTS=true` skips the pytest steps (e.g. dev stack not up);
+`ALLOW_DIRTY=true` forwards through to `release_check.sh` for a dirty working tree.
 
 ## Rollback
 

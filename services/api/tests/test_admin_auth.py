@@ -11,6 +11,15 @@ ADMIN_PATHS = [
     "/admin/card-audit",
     "/admin/source-mappings",
     "/snkrdunk/candidates",
+    "/admin/env-check",
+    "/admin/system-check",
+    "/admin/release-status",
+    "/admin/db-backups",
+    "/admin/logs",
+    "/admin/observability/summary",
+    "/admin/rate-limit/status",
+    "/admin/market-workflow-runs",
+    "/admin/backup/export",
 ]
 
 

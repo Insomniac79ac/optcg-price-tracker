@@ -365,6 +365,26 @@ def test_export_requires_admin_token():
     assert response.status_code == 401
 
 
+def test_validate_requires_admin_token():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    unauth_client = TestClient(app)
+    response = upload_validate(unauth_client, empty_backup())
+    assert response.status_code == 401
+
+
+def test_restore_requires_admin_token():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    unauth_client = TestClient(app)
+    response = upload_restore(unauth_client, empty_backup(), dry_run=True, mode="merge")
+    assert response.status_code == 401
+
+
 # --- validate -------------------------------------------------------------
 
 

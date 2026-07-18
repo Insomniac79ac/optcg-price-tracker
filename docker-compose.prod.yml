@@ -118,6 +118,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # `celery inspect ping` broadcasts over the same Redis broker the worker
+    # consumes tasks from, so it only succeeds if the worker process is alive
+    # *and* actually connected - not just that the container hasn't exited.
+    healthcheck:
+      test: ["CMD", "celery", "-A", "worker.celery_app", "inspect", "ping", "--timeout", "5"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   beat:
     build:
@@ -141,6 +150,19 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # beat has no broker-facing command to ping (it only schedules, never
+    # consumes), so this is a plain liveness check: is a process with "beat"
+    # in its command line still running in this container's own /proc? Uses
+    # only the stdlib (no extra package like procps/ps needed in the slim
+    # image).
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "python -c \"import glob,sys; sys.exit(0 if any(b'beat' in open(p,'rb').read() for p in glob.glob('/proc/[0-9]*/cmdline')) else 1)\""
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   web:
     build:

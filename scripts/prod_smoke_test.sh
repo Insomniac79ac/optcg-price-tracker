@@ -8,9 +8,13 @@
 # Usage: scripts/prod_smoke_test.sh   (also wired up as `make prod-smoke`)
 #
 # Env vars:
-#   ADMIN_TOKEN   required - fails fast (before running any checks) if
-#                 unset. Must match the target deployment's configured
-#                 ADMIN_TOKEN.
+#   ADMIN_TOKEN   optional - unset by default. Must match the target
+#                 deployment's configured ADMIN_TOKEN. Only gates the two
+#                 admin checks below (env-check, system-check), and only
+#                 takes effect when API_URL is also set - every other check
+#                 (web health, frontend pages) runs regardless, so this
+#                 script is still useful for a quick web-only smoke test
+#                 without an admin token in hand.
 #   WEB_BASE_URL  default http://127.0.0.1:3000 - the web app. In
 #                 docker-compose.prod.yml, `web` is published on
 #                 ${WEB_PORT:-3000}, so this matches an unmodified deploy on
@@ -37,13 +41,9 @@
 
 set -uo pipefail
 
-if [[ -z "${ADMIN_TOKEN:-}" ]]; then
-  echo "FAIL: ADMIN_TOKEN is required (fail-fast: refusing to run any checks without it)." >&2
-  exit 1
-fi
-
 WEB_BASE_URL="${WEB_BASE_URL:-${BASE_URL:-http://127.0.0.1:3000}}"
 API_URL="${API_URL:-}"
+ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 CURL_OPTS=(-sS --connect-timeout 5 --max-time 15)
 
@@ -137,33 +137,39 @@ else
   fi
   echo
 
-  echo "-- 4. Admin env check (GET \$API_URL/admin/env-check) --"
-  http_get "$API_URL/admin/env-check" -H "X-Admin-Token: $ADMIN_TOKEN"
-  if [[ "$HTTP_STATUS" != "200" ]]; then
-    fail "GET $API_URL/admin/env-check returned HTTP $HTTP_STATUS (expected 200)"
+  if [[ -z "$ADMIN_TOKEN" ]]; then
+    echo "-- 4/5. Admin env-check / system-check --"
+    echo "Skipping (ADMIN_TOKEN not set)."
+    echo
   else
-    status_field="$(json_field status)"
-    if [[ "$status_field" == "critical" ]]; then
-      fail "GET $API_URL/admin/env-check status=critical - production environment is misconfigured"
+    echo "-- 4. Admin env check (GET \$API_URL/admin/env-check) --"
+    http_get "$API_URL/admin/env-check" -H "X-Admin-Token: $ADMIN_TOKEN"
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+      fail "GET $API_URL/admin/env-check returned HTTP $HTTP_STATUS (expected 200)"
     else
-      pass "GET $API_URL/admin/env-check status=$status_field"
+      status_field="$(json_field status)"
+      if [[ "$status_field" == "critical" ]]; then
+        fail "GET $API_URL/admin/env-check status=critical - production environment is misconfigured"
+      else
+        pass "GET $API_URL/admin/env-check status=$status_field"
+      fi
     fi
-  fi
-  echo
+    echo
 
-  echo "-- 5. Admin system check (GET \$API_URL/admin/system-check) --"
-  http_get "$API_URL/admin/system-check" -H "X-Admin-Token: $ADMIN_TOKEN"
-  if [[ "$HTTP_STATUS" != "200" ]]; then
-    fail "GET $API_URL/admin/system-check returned HTTP $HTTP_STATUS (expected 200)"
-  else
-    status_field="$(json_field status)"
-    if [[ "$status_field" == "critical" ]]; then
-      fail "GET $API_URL/admin/system-check status=critical - see /admin/system-check in the web UI for details"
+    echo "-- 5. Admin system check (GET \$API_URL/admin/system-check) --"
+    http_get "$API_URL/admin/system-check" -H "X-Admin-Token: $ADMIN_TOKEN"
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+      fail "GET $API_URL/admin/system-check returned HTTP $HTTP_STATUS (expected 200)"
     else
-      pass "GET $API_URL/admin/system-check status=$status_field"
+      status_field="$(json_field status)"
+      if [[ "$status_field" == "critical" ]]; then
+        fail "GET $API_URL/admin/system-check status=critical - see /admin/system-check in the web UI for details"
+      else
+        pass "GET $API_URL/admin/system-check status=$status_field"
+      fi
     fi
+    echo
   fi
-  echo
 fi
 
 echo "== Summary =="

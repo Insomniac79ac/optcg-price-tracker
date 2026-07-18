@@ -61,6 +61,14 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Local data backups - Postgres dumps (scripts/db_backup.sh) and JSON backup
+# exports (services/api/app/export_backup.py, the /admin/backup page) can
+# both contain real production data and must never be committed - see
+# scripts/check_secrets.sh, which also fails the build if one slips through.
+data/backups/
+*.sql.gz
+opcg_backup_*.json
+
 # Flask stuff:
 instance/
 .webassets-cache

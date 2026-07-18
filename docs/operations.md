@@ -8,6 +8,24 @@ like `opcg-postgres`); for production swap in `docker compose -f docker-compose.
 Local/dev shortcuts for the commands below also exist as `make` targets - run `make help` or see
 the `Makefile` in the repo root.
 
+## Before every production change
+
+Run through this checklist for any change touching the production stack (deploy, migration,
+config change) - each step links to the fuller reference section below:
+
+1. **Backup DB** - `make prod-db-backup` (see [Database backup and restore
+   drill](#database-backup-and-restore-drill)).
+2. **Run release check** - `make release-check` (see `docs/release_checklist.md`), or the full
+   fail-fast gate: `make final-audit`.
+3. **Deploy** - `make prod-build && make prod-up` (see `docs/deployment.md`).
+4. **Migrate** - `make prod-migrate`.
+5. **Smoke test** - `ADMIN_TOKEN=<token> make prod-smoke` (see [Smoke test](#smoke-test)).
+6. **Check logs** - `make prod-logs`, and `/admin/logs` for structured app errors (see
+   [Observability and logs](#observability-and-logs)).
+7. **Verify system check** - `GET /admin/system-check` via `/admin/system-check` in the app, or
+   `curl -H "X-Admin-Token: $ADMIN_TOKEN" .../admin/system-check` (see [Check environment
+   validation](#check-environment-validation)).
+
 ## Smoke test
 
 `scripts/smoke_test.sh` (`make smoke-test`) checks that a running stack is actually healthy: API

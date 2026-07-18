@@ -2,7 +2,7 @@
 	refresh-yuyutei-dry refresh-yuyutei-live logs-api logs-worker logs-beat check-secrets \
 	smoke-test prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify \
 	prod-backup prod-db-backup prod-db-restore prod-db-backup-prune prod-db-backup-prune-apply \
-	release-check
+	release-check final-audit
 
 # Override on the command line, e.g. `make import-watchlist WATCHLIST=path/to.csv`
 WATCHLIST ?= data/watchlists/opcg_watchlist.csv
@@ -38,6 +38,7 @@ help:
 	@echo "make check-secrets        - fail if git is tracking any real .env file"
 	@echo "make smoke-test           - verify a running (dev) stack is healthy (ADMIN_TOKEN required)"
 	@echo "make release-check        - pre-release readiness check - see docs/release_checklist.md"
+	@echo "make final-audit          - final production readiness audit - fails fast (SKIP_TESTS=true to skip pytest)"
 	@echo ""
 	@echo "Production (docker-compose.prod.yml + .env.production) - see docs/deployment.md:"
 	@echo "make prod-build           - build the production images (tags GIT_COMMIT/BUILD_TIME/APP_VERSION)"
@@ -45,7 +46,7 @@ help:
 	@echo "make prod-down            - stop the production stack"
 	@echo "make prod-logs            - tail all production service logs"
 	@echo "make prod-migrate         - apply database migrations against production"
-	@echo "make prod-smoke           - run scripts/prod_smoke_test.sh (ADMIN_TOKEN required)"
+	@echo "make prod-smoke           - run scripts/prod_smoke_test.sh (ADMIN_TOKEN optional - gates admin checks)"
 	@echo "make prod-verify          - pre-deploy sanity check (config/secrets/build, no real secrets needed)"
 	@echo "make prod-backup          - pg_dump the production database to ./opcg-backup-<timestamp>.dump"
 	@echo "make prod-db-backup       - gzipped pg_dump to data/backups/db/ (scripts/db_backup.sh)"
@@ -97,6 +98,9 @@ smoke-test:
 
 release-check:
 	./scripts/release_check.sh
+
+final-audit:
+	./scripts/final_audit.sh
 
 # --- Production (docker-compose.prod.yml) -----------------------------------
 

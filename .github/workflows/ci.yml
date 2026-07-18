@@ -77,11 +77,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: prod_smoke_test.sh, prod_verify.sh, and release_check.sh exist and are executable
+      - name: prod_smoke_test.sh, prod_verify.sh, release_check.sh, and final_audit.sh exist and are executable
         run: |
           test -x scripts/prod_smoke_test.sh
           test -x scripts/prod_verify.sh
           test -x scripts/release_check.sh
+          test -x scripts/final_audit.sh
+      - name: docs/route_inventory.md exists
+        run: test -f docs/route_inventory.md
       - name: Makefile prod-*/release-check targets exist
         run: |
           for target in prod-build prod-up prod-down prod-logs prod-migrate prod-smoke prod-verify prod-backup release-check; do
@@ -106,3 +109,8 @@ jobs:
           output="$(ADMIN_TOKEN=x BASE_URL=http://127.0.0.1:1 scripts/prod_smoke_test.sh || true)"
           echo "$output" | grep -qF "WEB_BASE_URL=http://127.0.0.1:1" \
             || { echo "BASE_URL was not picked up as WEB_BASE_URL"; echo "$output"; exit 1; }
+      - name: prod_smoke_test.sh skips admin checks when ADMIN_TOKEN is unset but API_URL is set
+        run: |
+          output="$(API_URL=http://127.0.0.1:1 WEB_BASE_URL=http://127.0.0.1:1 scripts/prod_smoke_test.sh || true)"
+          echo "$output" | grep -qF "Skipping (ADMIN_TOKEN not set)." \
+            || { echo "expected admin-check skip message not found"; echo "$output"; exit 1; }
