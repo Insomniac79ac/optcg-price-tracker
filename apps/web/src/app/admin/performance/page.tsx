@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
 import { VersionFooter } from "@/components/VersionFooter";
 import {
   AdminAuthRequiredError,
@@ -136,30 +137,26 @@ export default function PerformancePage() {
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading performance summary…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading performance summary…</LoadingState>}
 
         {status === "not_found" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             The performance endpoint was not found (404). Is the backend up to date?
-          </div>
+          </ErrorState>
         )}
 
         {status === "timeout" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Timed out waiting for the performance summary (15s). Is the backend running and
             reachable?
-          </div>
+          </ErrorState>
         )}
 
         {status === "network_error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Could not reach the API proxy. Check that the web and api containers are both
             running.
-          </div>
+          </ErrorState>
         )}
 
         {status === "proxy_error" && proxyError && (
@@ -177,9 +174,7 @@ export default function PerformancePage() {
         )}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load the performance summary. Is the backend running?
-          </div>
+          <ErrorState>Failed to load the performance summary. Is the backend running?</ErrorState>
         )}
 
         {status === "ready" && summary && (

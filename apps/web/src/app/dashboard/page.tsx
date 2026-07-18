@@ -1,22 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import { AppHeader } from "@/components/AppHeader";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStatusBadge";
 import { MarketWorkflowRunStatusBadge } from "@/components/MarketWorkflowRunStatusBadge";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   DASHBOARD_TIMEFRAMES,
@@ -36,6 +29,16 @@ import {
   formatSignedJpy,
   formatSignedPct,
 } from "@/lib/format";
+
+// Dynamically imported (recharts is a sizeable chunk) so the rest of the
+// dashboard's widgets don't pay for it just because this one widget exists.
+// ssr: false sidesteps recharts' well-known SSR/hydration mismatch (it
+// measures its container via ResizeObserver, which needs a real browser).
+const DashboardPortfolioChart = dynamic(
+  () =>
+    import("@/components/DashboardPortfolioChart").then((mod) => mod.DashboardPortfolioChart),
+  { ssr: false, loading: () => <LoadingState>Loading chart…</LoadingState> },
+);
 
 const WIDGET_LABELS: Record<DashboardWidgetId, string> = {
   portfolio_summary: "Portfolio summary",
@@ -216,24 +219,18 @@ export default function DashboardPage() {
           </span>
         </Link>
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading dashboard…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading dashboard…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load the dashboard from the API.
-          </div>
+          <ErrorState>Failed to load the dashboard from the API.</ErrorState>
         )}
 
         {status === "ready" && overview && (
           <>
             {visibleWidgets.length === 0 && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
+              <EmptyState>
                 All widgets are hidden. Use &quot;Customize dashboard&quot; to show some.
-              </div>
+              </EmptyState>
             )}
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -443,10 +440,6 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-neutral-500">{children}</p>;
-}
-
 function WidgetRenderer({
   id,
   overview,
@@ -504,64 +497,11 @@ function WidgetRenderer({
       const w = widgets.portfolio_chart;
       return (
         <WidgetCard id={id}>
-          <div className="mb-2 text-xs text-neutral-500">Timeframe: {w.timeframe}</div>
-          {w.points.length === 0 ? (
-            <EmptyState>No valuation history yet</EmptyState>
-          ) : (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={w.points} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis
-                    dataKey="created_at"
-                    tickFormatter={(value: string) => formatDate(value)}
-                    stroke="#737373"
-                    fontSize={11}
-                    tickMargin={8}
-                    minTickGap={24}
-                  />
-                  <YAxis
-                    tickFormatter={(value: number) => formatJpy(value)}
-                    stroke="#737373"
-                    fontSize={11}
-                    width={70}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#171717",
-                      border: "1px solid #262626",
-                      borderRadius: 6,
-                      fontSize: 12,
-                    }}
-                    labelFormatter={(value) => formatDateTime(String(value))}
-                    formatter={(value, name) => [formatJpy(Number(value)), String(name)]}
-                  />
-                  {preferences.show_raw_market_value && (
-                    <Line
-                      type="monotone"
-                      dataKey="market_floor_value_jpy"
-                      name="Market floor"
-                      stroke="#34d399"
-                      strokeWidth={2}
-                      dot={w.points.length === 1}
-                      connectNulls
-                    />
-                  )}
-                  {preferences.show_graded_adjusted_value && (
-                    <Line
-                      type="monotone"
-                      dataKey="graded_adjusted_value_jpy"
-                      name="Graded-adjusted"
-                      stroke="#fb7185"
-                      strokeWidth={2}
-                      dot={w.points.length === 1}
-                      connectNulls
-                    />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          <DashboardPortfolioChart
+            widget={w}
+            showRawMarketValue={preferences.show_raw_market_value}
+            showGradedAdjustedValue={preferences.show_graded_adjusted_value}
+          />
         </WidgetCard>
       );
     }
@@ -580,7 +520,7 @@ function WidgetRenderer({
             )}
           </div>
           {w.items.length === 0 ? (
-            <EmptyState>No wishlist targets hit yet</EmptyState>
+            <EmptyState variant="inline">No wishlist targets hit yet</EmptyState>
           ) : (
             <ul className="space-y-1.5">
               {w.items.slice(0, 5).map((item) => (
@@ -610,7 +550,7 @@ function WidgetRenderer({
       return (
         <WidgetCard id={id}>
           {w.opportunities.length === 0 ? (
-            <EmptyState>No ranked opportunities yet</EmptyState>
+            <EmptyState variant="inline">No ranked opportunities yet</EmptyState>
           ) : (
             <ul className="space-y-1.5">
               {w.opportunities.map((opp) => (
@@ -658,7 +598,7 @@ function WidgetRenderer({
       return (
         <WidgetCard id={id}>
           {w.report_id === null ? (
-            <EmptyState>No market report yet</EmptyState>
+            <EmptyState variant="inline">No market report yet</EmptyState>
           ) : (
             <>
               <div className="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -697,7 +637,7 @@ function WidgetRenderer({
       return (
         <WidgetCard id={id}>
           {w.events.length === 0 ? (
-            <EmptyState>No open or watched signal events</EmptyState>
+            <EmptyState variant="inline">No open or watched signal events</EmptyState>
           ) : (
             <ul className="space-y-1.5">
               {w.events.map((event) => (
@@ -747,7 +687,7 @@ function WidgetRenderer({
           {w.tracked ? (
             <Stat label="Last backup" value={formatDateTime(w.last_backup_at)} />
           ) : (
-            <EmptyState>{w.message ?? "not available"}</EmptyState>
+            <EmptyState variant="inline">{w.message ?? "not available"}</EmptyState>
           )}
         </WidgetCard>
       );
@@ -759,7 +699,7 @@ function WidgetRenderer({
       return (
         <WidgetCard id={id}>
           {w.run_id === null ? (
-            <EmptyState>No workflow runs yet</EmptyState>
+            <EmptyState variant="inline">No workflow runs yet</EmptyState>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Stat label="Run" value={`#${w.run_id}`} />

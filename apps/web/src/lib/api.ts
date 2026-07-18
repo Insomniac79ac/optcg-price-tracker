@@ -521,46 +521,145 @@ export async function fetchAdminJson<T>(
   return res.json() as Promise<T>;
 }
 
+/** Standardized error shape for apiGet/apiPost/apiPatch/apiDelete below -
+ * `message` (inherited from Error), plus `status` (the HTTP status, or 0 for
+ * a network/timeout failure that never got a response) and `details` (the
+ * parsed response body, if any - e.g. a FastAPI 422's full validation error
+ * list, not just its top-level `detail` string). */
+export class ApiError extends Error {
+  status: number;
+  details: unknown;
+
+  constructor(message: string, status: number, details: unknown = null) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export class ApiTimeoutError extends ApiError {
+  constructor(path: string, timeoutMs: number) {
+    super(`Request to ${path} timed out after ${timeoutMs}ms`, 0, null);
+    this.name = "ApiTimeoutError";
+  }
+}
+
 /** Parses a FastAPI-style {detail: "..."} error body when present, so
  * validation/conflict errors (missing name, duplicate name, bad color, ...)
  * surface their actual message instead of a generic status-code string. */
-async function _errorFromResponse(res: Response, path: string): Promise<Error> {
+async function _errorFromResponse(res: Response, path: string): Promise<ApiError> {
   const details = await res
     .json()
     .catch(() => null as { detail?: string } | null);
-  return new Error(details?.detail || `Request to ${path} failed with status ${res.status}`);
+  return new ApiError(
+    details?.detail || `Request to ${path} failed with status ${res.status}`,
+    res.status,
+    details,
+  );
 }
 
-async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    cache: "no-store",
-    headers: adminHeaders(),
-  });
-  if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+/** Reads a response body defensively: empty body (e.g. a 204/DELETE) -
+ * returns undefined rather than letting `res.json()` throw on empty input;
+ * a non-empty-but-unparseable body - throws an ApiError instead of letting
+ * a raw SyntaxError escape. */
+async function _readJsonBody<T>(res: Response, path: string): Promise<T> {
+  const text = await res.text();
+  if (text.length === 0) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(`Invalid JSON response from ${path}`, res.status, text.slice(0, 500));
+  }
 }
 
-async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    headers: { ...adminHeaders(), ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (res.status === 401) throw new AdminAuthRequiredError();
-  if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+function buildQueryString(
+  params?: Record<string, string | number | boolean | null | undefined>,
+): string {
+  if (!params) return "";
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined) continue;
+    query.set(key, String(value));
+  }
+  const qs = query.toString();
+  return qs ? `?${qs}` : "";
 }
 
-async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "PATCH",
-    headers: { ...adminHeaders(), "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+export interface ApiRequestOptions {
+  /** Query params - null/undefined values are omitted, everything else is
+   * stringified (so booleans/numbers don't need manual String() calls). */
+  params?: Record<string, string | number | boolean | null | undefined>;
+  /** Defaults to ADMIN_FETCH_TIMEOUT_MS (15s). */
+  timeoutMs?: number;
+}
+
+async function _apiRequest<T>(
+  method: string,
+  path: string,
+  options?: ApiRequestOptions & { body?: unknown },
+): Promise<T> {
+  const qs = buildQueryString(options?.params);
+  const timeoutMs = options?.timeoutMs ?? ADMIN_FETCH_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}${qs}`, {
+      method,
+      cache: "no-store",
+      headers: {
+        ...adminHeaders(),
+        ...(options?.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiTimeoutError(path, timeoutMs);
+    }
+    throw new ApiError(err instanceof Error ? err.message : "Network error", 0, null);
+  } finally {
+    clearTimeout(timeout);
+  }
+
   if (res.status === 401) throw new AdminAuthRequiredError();
   if (!res.ok) throw await _errorFromResponse(res, path);
-  return res.json() as Promise<T>;
+  return _readJsonBody<T>(res, path);
+}
+
+/** Generic GET against the API (adds the stored admin token if one is set -
+ * see adminHeaders() - but still works unauthenticated for public routes).
+ * Supports query params and a per-call timeout override; throws
+ * AdminAuthRequiredError on 401 and ApiError (message/status/details) for
+ * every other failure, including a timeout (as ApiTimeoutError). */
+export function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return _apiRequest<T>("GET", path, options);
+}
+
+export function apiPost<T>(
+  path: string,
+  body?: unknown,
+  options?: ApiRequestOptions,
+): Promise<T> {
+  return _apiRequest<T>("POST", path, { ...options, body });
+}
+
+export function apiPatch<T>(
+  path: string,
+  body: unknown,
+  options?: ApiRequestOptions,
+): Promise<T> {
+  return _apiRequest<T>("PATCH", path, { ...options, body });
+}
+
+/** T defaults to void since most DELETE endpoints return 204 No Content -
+ * pass an explicit T for the handful that return the updated parent
+ * resource instead (mirrors authedDeleteReturning below). */
+export function apiDelete<T = void>(path: string, options?: ApiRequestOptions): Promise<T> {
+  return _apiRequest<T>("DELETE", path, options);
 }
 
 

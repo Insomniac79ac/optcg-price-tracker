@@ -7,6 +7,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
+import { PaginationControls } from "@/components/PaginationControls";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   GRADING_COMPANY_OPTIONS,
   GRADING_SUBMISSION_STATUSES,
@@ -24,6 +26,7 @@ import {
 import { cardDisplayName, formatDate, formatJpy } from "@/lib/format";
 
 const ALL_OPTION = { value: "", label: "All" };
+const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
 const STATUS_FILTER_OPTIONS = [
   ALL_OPTION,
   ...GRADING_SUBMISSION_STATUSES.map((s) => ({ value: s, label: s.replace(/_/g, " ") })),
@@ -110,6 +113,8 @@ function GradingPageInner() {
   const [submissions, setSubmissions] = useState<GradingSubmission[]>([]);
   const [total, setTotal] = useState(0);
   const [listStatus, setListStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
 
   const [summary, setSummary] = useState<GradingSummary | null>(null);
 
@@ -154,7 +159,8 @@ function GradingPageInner() {
       status: statusFilter || undefined,
       grading_company: companyFilter || undefined,
       card_code: cardCodeFilter || undefined,
-      limit: 500,
+      limit,
+      offset,
     })
       .then((data) => {
         setSubmissions(data.items);
@@ -164,10 +170,18 @@ function GradingPageInner() {
       .catch(() => setListStatus("error"));
   }
 
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, companyFilter, cardCodeFilter, limit]);
+
   useEffect(() => {
     refreshList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, companyFilter, cardCodeFilter]);
+  }, [statusFilter, companyFilter, cardCodeFilter, limit, offset]);
 
   useEffect(() => {
     refreshSummary();
@@ -611,22 +625,14 @@ function GradingPageInner() {
           </div>
         )}
 
-        {listStatus === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading grading submissions…
-          </div>
-        )}
+        {listStatus === "loading" && <LoadingState>Loading grading submissions…</LoadingState>}
 
         {listStatus === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load grading submissions from the API.
-          </div>
+          <ErrorState>Failed to load grading submissions from the API.</ErrorState>
         )}
 
         {listStatus === "ready" && submissions.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No grading submissions yet
-          </div>
+          <EmptyState>No grading submissions yet</EmptyState>
         )}
 
         {listStatus === "ready" && submissions.length > 0 && (
@@ -729,6 +735,19 @@ function GradingPageInner() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {listStatus === "ready" && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={offset}
+              limit={limit}
+              total={total}
+              onOffsetChange={setOffset}
+              limitOptions={LIMIT_OPTIONS}
+              onLimitChange={setLimit}
+            />
           </div>
         )}
 

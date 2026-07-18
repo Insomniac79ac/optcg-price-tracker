@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
+import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { EmptyState, ErrorState, LoadingState, MissingValue } from "@/components/StateBlocks";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
 import {
@@ -32,6 +34,7 @@ import {
 import { cardDisplayName, formatJpy, formatSignedJpy, formatSignedPct } from "@/lib/format";
 
 const ALL_OPTION = { value: "", label: "All" };
+const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
 const STATUS_FILTERS = [ALL_OPTION, ...WISHLIST_STATUSES.map((s) => ({ value: s, label: s.replace("_", " ") }))];
 const PRIORITY_FILTERS = [ALL_OPTION, ...WISHLIST_PRIORITIES.map((p) => ({ value: p, label: p }))];
 const TARGET_HIT_OPTIONS = [
@@ -84,6 +87,8 @@ export default function WishlistPage() {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [total, setTotal] = useState(0);
   const [listStatus, setListStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
 
   const [summary, setSummary] = useState<WishlistSummary | null>(null);
 
@@ -148,7 +153,8 @@ export default function WishlistPage() {
       set_code: setCodeFilter || undefined,
       rarity: rarityFilter || undefined,
       card_code: cardCodeFilter || undefined,
-      limit: 500,
+      limit,
+      offset,
     })
       .then((data) => {
         setItems(data.items);
@@ -158,10 +164,18 @@ export default function WishlistPage() {
       .catch(() => setListStatus("error"));
   }
 
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, priorityFilter, targetHitFilter, ownedFilter, setCodeFilter, rarityFilter, cardCodeFilter, limit]);
+
   useEffect(() => {
     refreshList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, priorityFilter, targetHitFilter, ownedFilter, setCodeFilter, rarityFilter, cardCodeFilter]);
+  }, [statusFilter, priorityFilter, targetHitFilter, ownedFilter, setCodeFilter, rarityFilter, cardCodeFilter, limit, offset]);
 
   useEffect(() => {
     refreshSummary();
@@ -701,22 +715,14 @@ export default function WishlistPage() {
           </div>
         )}
 
-        {listStatus === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading wishlist…
-          </div>
-        )}
+        {listStatus === "loading" && <LoadingState>Loading wishlist…</LoadingState>}
 
         {listStatus === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load wishlist from the API.
-          </div>
+          <ErrorState>Failed to load wishlist from the API.</ErrorState>
         )}
 
         {listStatus === "ready" && items.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No wishlist items yet
-          </div>
+          <EmptyState>No wishlist items yet</EmptyState>
         )}
 
         {listStatus === "ready" && items.length > 0 && (
@@ -769,7 +775,7 @@ export default function WishlistPage() {
                     <td className="px-2 py-1.5 text-neutral-200">{formatJpy(item.max_buy_price_jpy)}</td>
                     <td className="px-2 py-1.5 text-neutral-200">
                       {item.preferred_current_price_jpy === null ? (
-                        <span className="italic text-neutral-600">no price data</span>
+                        <MissingValue label="no price data" italic />
                       ) : (
                         formatJpy(item.preferred_current_price_jpy)
                       )}
@@ -783,7 +789,7 @@ export default function WishlistPage() {
                     </td>
                     <td className="px-2 py-1.5">
                       {item.gap_to_target_jpy === null ? (
-                        <span className="text-neutral-600">—</span>
+                        <MissingValue />
                       ) : (
                         <span className={item.gap_to_target_jpy <= 0 ? "text-emerald-400" : "text-neutral-300"}>
                           {formatSignedJpy(item.gap_to_target_jpy)}{" "}
@@ -797,7 +803,7 @@ export default function WishlistPage() {
                           hit
                         </span>
                       ) : (
-                        <span className="text-neutral-600">—</span>
+                        <MissingValue />
                       )}
                     </td>
                     <td className="px-2 py-1.5 text-neutral-400">{item.preferred_condition ?? "—"}</td>
@@ -851,6 +857,19 @@ export default function WishlistPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {listStatus === "ready" && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={offset}
+              limit={limit}
+              total={total}
+              onOffsetChange={setOffset}
+              limitOptions={LIMIT_OPTIONS}
+              onLimitChange={setLimit}
+            />
           </div>
         )}
       </main>

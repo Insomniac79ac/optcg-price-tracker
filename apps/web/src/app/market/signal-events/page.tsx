@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStatusBadge";
+import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   MARKET_SIGNAL_EVENT_STATUSES,
   MARKET_SIGNAL_TYPES,
@@ -92,6 +94,7 @@ export default function MarketSignalEventsPage() {
   const [cardCodeFilter, setCardCodeFilter] = useState("");
   const [ownedFilter, setOwnedFilter] = useState("");
   const [limit, setLimit] = useState<number>(100);
+  const [offset, setOffset] = useState(0);
 
   const [actionMessage, setActionMessage] = useState<
     { type: "success" | "error"; text: string } | null
@@ -114,6 +117,7 @@ export default function MarketSignalEventsPage() {
       card_code: cardCodeFilter || undefined,
       owned: ownedFilter === "" ? undefined : ownedFilter === "true",
       limit,
+      offset,
     })
       .then((data) => {
         setEvents(data.events);
@@ -123,10 +127,18 @@ export default function MarketSignalEventsPage() {
       .catch(() => setStatus("error"));
   }
 
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, signalTypeFilter, suggestedActionFilter, cardCodeFilter, ownedFilter, limit]);
+
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, signalTypeFilter, suggestedActionFilter, cardCodeFilter, ownedFilter, limit]);
+  }, [statusFilter, signalTypeFilter, suggestedActionFilter, cardCodeFilter, ownedFilter, limit, offset]);
 
   async function handleWatch(event: MarketSignalEvent) {
     setActionMessage(null);
@@ -300,22 +312,14 @@ export default function MarketSignalEventsPage() {
           </div>
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading signal events…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading signal events…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load signal events from the API.
-          </div>
+          <ErrorState>Failed to load signal events from the API.</ErrorState>
         )}
 
         {status === "ready" && events.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No signal events found
-          </div>
+          <EmptyState>No signal events found</EmptyState>
         )}
 
         {status === "ready" && events.length > 0 && (
@@ -482,6 +486,17 @@ export default function MarketSignalEventsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {status === "ready" && summary && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={offset}
+              limit={limit}
+              total={summary.total_events}
+              onOffsetChange={setOffset}
+            />
           </div>
         )}
       </main>

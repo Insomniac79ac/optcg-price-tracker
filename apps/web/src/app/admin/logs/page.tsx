@@ -7,6 +7,8 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { LogLevelBadge } from "@/components/LogLevelBadge";
+import { PaginationControls } from "@/components/PaginationControls";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   AdminAuthRequiredError,
   APP_LOG_LEVELS,
@@ -47,6 +49,7 @@ export default function AdminLogsPage() {
   const [q, setQ] = useState("");
   const [sinceHours, setSinceHours] = useState<string>("24");
   const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
 
   const loadLogs = useCallback(async () => {
     setStatus("loading");
@@ -59,6 +62,7 @@ export default function AdminLogsPage() {
         q: q || undefined,
         since_hours: sinceHours ? Number(sinceHours) : undefined,
         limit,
+        offset,
       });
       setData(result);
       setStatus("ready");
@@ -70,6 +74,14 @@ export default function AdminLogsPage() {
         setStatus("error");
       }
     }
+  }, [level, service, eventType, q, sinceHours, limit, offset]);
+
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level, service, eventType, q, sinceHours, limit]);
 
   const loadSummary = useCallback(async () => {
@@ -150,20 +162,24 @@ export default function AdminLogsPage() {
               onRefresh={loadLogs}
             />
 
-            {status === "loading" && !data && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                Loading logs…
-              </div>
-            )}
+            {status === "loading" && !data && <LoadingState>Loading logs…</LoadingState>}
 
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+              <ErrorState>
                 {error || "Failed to load logs from the API. Is the backend running?"}
-              </div>
+              </ErrorState>
             )}
 
             {data && (
-              <LogsTable data={data} onSelect={setSelectedLog} />
+              <>
+                <LogsTable data={data} onSelect={setSelectedLog} />
+                <PaginationControls
+                  offset={offset}
+                  limit={limit}
+                  total={data.summary.total_logs}
+                  onOffsetChange={setOffset}
+                />
+              </>
             )}
 
             <PruneSection onPruned={() => { loadLogs(); loadSummary(); }} />
@@ -359,11 +375,7 @@ function LogsTable({
   onSelect: (log: AppLogEvent) => void;
 }) {
   if (data.logs.length === 0) {
-    return (
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-        No log events match these filters.
-      </div>
-    );
+    return <EmptyState>No log events match these filters.</EmptyState>;
   }
 
   return (

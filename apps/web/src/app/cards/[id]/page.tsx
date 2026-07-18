@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,10 +10,10 @@ import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
-import { PriceChart } from "@/components/PriceChart";
 import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SourceBadge } from "@/components/SourceBadge";
+import { LoadingState } from "@/components/StateBlocks";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
@@ -37,6 +38,15 @@ import {
   unassignCardTag,
 } from "@/lib/api";
 import { cardDisplayName, formatDateTime, formatJpy, formatSignedJpy } from "@/lib/format";
+
+// Dynamically imported (recharts is a sizeable chunk) so pages that never
+// render a price chart - most of this app - don't pay for it. ssr: false
+// sidesteps recharts' well-known SSR/hydration mismatch (it measures its
+// container via ResizeObserver, which needs a real browser).
+const PriceChart = dynamic(
+  () => import("@/components/PriceChart").then((mod) => mod.PriceChart),
+  { ssr: false, loading: () => <LoadingState>Loading chart…</LoadingState> },
+);
 
 type Status = "loading" | "error" | "ready";
 

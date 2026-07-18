@@ -9,7 +9,9 @@ import { CollectorTagBadge } from "@/components/CollectorTagBadge";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStatusBadge";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
+import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   OPPORTUNITY_CATEGORIES,
@@ -54,6 +56,7 @@ export default function MarketOpportunitiesPage() {
   const [minScoreInput, setMinScoreInput] = useState("");
   const [minScoreFilter, setMinScoreFilter] = useState<number | undefined>(undefined);
   const [limit, setLimit] = useState<number>(100);
+  const [offset, setOffset] = useState(0);
   const [tagFilter, setTagFilter] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
 
@@ -89,6 +92,7 @@ export default function MarketOpportunitiesPage() {
       rarity: rarityFilter || undefined,
       min_score: minScoreFilter,
       limit,
+      offset,
     })
       .then((data) => {
         setOpportunities(data.opportunities);
@@ -98,10 +102,18 @@ export default function MarketOpportunitiesPage() {
       .catch(() => setStatus("error"));
   }
 
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, ownedFilter, setCodeFilter, rarityFilter, minScoreFilter, limit]);
+
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter, ownedFilter, setCodeFilter, rarityFilter, minScoreFilter, limit]);
+  }, [categoryFilter, ownedFilter, setCodeFilter, rarityFilter, minScoreFilter, limit, offset]);
 
   // The backend doesn't support filtering opportunities by tag/group, so
   // these two filters apply client-side to whatever page of rows is already
@@ -311,28 +323,18 @@ export default function MarketOpportunitiesPage() {
           </div>
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading opportunities…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading opportunities…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load opportunities from the API.
-          </div>
+          <ErrorState>Failed to load opportunities from the API.</ErrorState>
         )}
 
         {status === "ready" && opportunities.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No ranked opportunities found
-          </div>
+          <EmptyState>No ranked opportunities found</EmptyState>
         )}
 
         {status === "ready" && opportunities.length > 0 && filteredOpportunities.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No opportunities match the selected filters.
-          </div>
+          <EmptyState>No opportunities match the selected filters.</EmptyState>
         )}
 
         {status === "ready" && filteredOpportunities.length > 0 && (
@@ -538,6 +540,17 @@ export default function MarketOpportunitiesPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {status === "ready" && summary && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={offset}
+              limit={limit}
+              total={summary.total_opportunities}
+              onOffsetChange={setOffset}
+            />
           </div>
         )}
       </main>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   AdminNotFoundError,
   type MarketIntelligenceReport,
@@ -14,38 +15,22 @@ import {
   fetchMarketReport,
   fetchMarketReports,
 } from "@/lib/api";
-import { formatDateTime, formatDate } from "@/lib/format";
+import {
+  formatDateTime,
+  formatDate,
+  formatJPY as reportJpy,
+  formatSignedJpy,
+  formatPercent as reportPct,
+  formatNumber as reportNumber,
+} from "@/lib/format";
 
 type Status = "loading" | "error" | "empty" | "ready";
 
 const NA = "not available";
 
-function reportJpy(value: number | null | undefined): string {
-  if (value === null || value === undefined) return NA;
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function reportSignedJpy(value: number | null | undefined): string {
-  if (value === null || value === undefined) return NA;
-  const formatted = reportJpy(Math.abs(value));
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted}`;
-  return formatted;
-}
-
-function reportPct(value: number | null | undefined): string {
-  if (value === null || value === undefined) return NA;
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function reportNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined) return NA;
-  return String(value);
+  const formatted = formatSignedJpy(value);
+  return formatted === "—" ? NA : formatted;
 }
 
 function reportText(value: string | null | undefined): string {
@@ -176,26 +161,20 @@ export default function MarketReportPage() {
           </div>
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading market report…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading market report…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load the market report from the API.
-          </div>
+          <ErrorState>Failed to load the market report from the API.</ErrorState>
         )}
 
         {status === "empty" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
+          <EmptyState>
             <p>No market report generated yet</p>
             <p className="mt-2 text-xs text-neutral-600">
               Generate a report after your next successful price refresh or run
               python -m app.generate_market_report
             </p>
-          </div>
+          </EmptyState>
         )}
 
         {status === "ready" && report && <ReportView report={report} />}

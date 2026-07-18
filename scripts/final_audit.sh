@@ -22,6 +22,14 @@
 #   ALLOW_DIRTY   default false - forwarded to scripts/release_check.sh,
 #                 which reads it directly; set ALLOW_DIRTY=true to allow an
 #                 unclean git working tree through that check.
+#   SKIP_WEB_SMOKE  default false - set SKIP_WEB_SMOKE=true to skip
+#                 scripts/web_route_smoke.sh entirely. Even when not set,
+#                 the web route smoke step only runs if WEB_BASE_URL (default
+#                 http://127.0.0.1:3000) actually answers - it's skipped
+#                 (not failed) rather than requiring every environment this
+#                 script runs in to also have the web container up.
+#   WEB_BASE_URL  default http://127.0.0.1:3000 - forwarded to
+#                 scripts/web_route_smoke.sh.
 
 set -euo pipefail
 
@@ -30,6 +38,8 @@ cd "$repo_root"
 
 SKIP_TESTS="${SKIP_TESTS:-false}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-false}"
+SKIP_WEB_SMOKE="${SKIP_WEB_SMOKE:-false}"
+WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
 export ALLOW_DIRTY
 
 fail() {
@@ -72,7 +82,18 @@ else
 fi
 echo
 
-echo "== 6. Required files present =="
+echo "== 6. Web route smoke (SKIP_WEB_SMOKE=$SKIP_WEB_SMOKE) =="
+if [[ "$SKIP_WEB_SMOKE" == "true" ]]; then
+  echo "skipped (SKIP_WEB_SMOKE=true)"
+elif ! curl -sS --connect-timeout 3 --max-time 5 -o /dev/null "$WEB_BASE_URL" 2>/dev/null; then
+  echo "skipped (WEB_BASE_URL=$WEB_BASE_URL is not reachable - is the web container up?)"
+else
+  WEB_BASE_URL="$WEB_BASE_URL" bash scripts/web_route_smoke.sh \
+    || fail "scripts/web_route_smoke.sh"
+fi
+echo
+
+echo "== 7. Required files present =="
 REQUIRED_FILES=(
   VERSION
   CHANGELOG.md
@@ -83,6 +104,7 @@ REQUIRED_FILES=(
   scripts/db_backup.sh
   scripts/db_restore.sh
   scripts/db_backup_prune.sh
+  scripts/web_route_smoke.sh
 )
 for f in "${REQUIRED_FILES[@]}"; do
   if [[ -f "$f" ]]; then

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { SearchTypeBadge } from "@/components/SearchTypeBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   SEARCH_TYPES,
   type SearchResult,
@@ -175,16 +176,10 @@ export default function SearchPage() {
           </div>
         )}
 
-        {showResults && status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Searching…
-          </div>
-        )}
+        {showResults && status === "loading" && <LoadingState>Searching…</LoadingState>}
 
         {showResults && status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to search. Try again.
-          </div>
+          <ErrorState>Failed to search. Try again.</ErrorState>
         )}
 
         {showResults && status === "ready" && summary && (
@@ -194,11 +189,7 @@ export default function SearchPage() {
               <span className="text-neutral-300">&ldquo;{submittedQuery}&rdquo;</span>
             </div>
 
-            {results.length === 0 && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                No results found
-              </div>
-            )}
+            {results.length === 0 && <EmptyState>No results found</EmptyState>}
 
             <div className="space-y-6">
               {SEARCH_TYPES.filter((t) => grouped[t] && grouped[t]!.length > 0).map((t) => (

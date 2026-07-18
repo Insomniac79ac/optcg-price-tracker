@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { PaginationControls } from "@/components/PaginationControls";
 import { SearchTypeBadge } from "@/components/SearchTypeBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
   ACTIVITY_EVENT_SOURCES,
   type CollectorActivityEvent,
@@ -26,17 +28,25 @@ export default function ActivityPage() {
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [sourceFilter, setSourceFilter] = useState("");
   const [limit, setLimit] = useState<number>(100);
+  const [offset, setOffset] = useState(0);
+
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filter's result set is otherwise almost certainly out of range for
+  // the new one.
+  useEffect(() => {
+    setOffset(0);
+  }, [sourceFilter, limit]);
 
   useEffect(() => {
     setStatus("loading");
-    fetchCollectorActivity({ event_source: sourceFilter || undefined, limit })
+    fetchCollectorActivity({ event_source: sourceFilter || undefined, limit, offset })
       .then((data) => {
         setEvents(data.events);
         setSummary(data.summary);
         setStatus("ready");
       })
       .catch(() => setStatus("error"));
-  }, [sourceFilter, limit]);
+  }, [sourceFilter, limit, offset]);
 
   return (
     <div className="min-h-screen">
@@ -82,27 +92,19 @@ export default function ActivityPage() {
           />
         </div>
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading activity…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading activity…</LoadingState>}
 
-        {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load activity from the API.
-          </div>
-        )}
+        {status === "error" && <ErrorState>Failed to load activity from the API.</ErrorState>}
 
         {status === "ready" && events.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
+          <EmptyState>
             No activity recorded yet. Actions across your collection, wishlist, grading, and
             market intelligence will show up here.
-          </div>
+          </EmptyState>
         )}
 
         {status === "ready" && events.length > 0 && (
-          <div className="divide-y divide-neutral-900 rounded-lg border border-neutral-800">
+          <div className="mb-3 divide-y divide-neutral-900 rounded-lg border border-neutral-800">
             {events.map((event) => (
               <div key={event.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
                 <div className="min-w-0 flex-1">
@@ -133,6 +135,15 @@ export default function ActivityPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {status === "ready" && summary && (
+          <PaginationControls
+            offset={offset}
+            limit={limit}
+            total={summary.total_events}
+            onOffsetChange={setOffset}
+          />
         )}
       </main>
     </div>
