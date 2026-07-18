@@ -35,6 +35,7 @@ from app.models import (
     User,
     WishlistItem,
 )
+from app.services.job_locks import with_job_lock
 
 # Bumped 1 -> 2 when collector tags/groups tables were added, 2 -> 3 when
 # grading_submissions was added, 3 -> 4 when users was added (and
@@ -397,6 +398,24 @@ class RestoreConfirmationRequired(ValueError):
 
 
 def restore_backup(
+    db: Session,
+    backup: Any,
+    *,
+    dry_run: bool = True,
+    mode: str = "merge",
+    confirm: str | None = None,
+    skip_lock: bool = False,
+) -> RestoreResult:
+    """Acquires the 'backup_restore' concurrency lock for the call (including
+    dry_run, so a preview can't race a real restore) - shared by
+    app/restore_backup.py's CLI and POST /admin/backup/restore. skip_lock is
+    test/dev-CLI only. See 'Worker job concurrency locking' in
+    docs/operations.md."""
+    with with_job_lock("backup_restore", skip_lock=skip_lock):
+        return _restore_backup_locked(db, backup, dry_run=dry_run, mode=mode, confirm=confirm)
+
+
+def _restore_backup_locked(
     db: Session,
     backup: Any,
     *,

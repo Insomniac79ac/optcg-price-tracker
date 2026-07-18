@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, CollectionItem, MarketSignalEvent
 from app.schemas import MarketSignalEventOut
+from app.services.job_locks import with_job_lock
 from app.services.market_signals import get_market_signals
 
 
@@ -113,7 +114,18 @@ def resolve_missing_signals(
     return resolved
 
 
-def snapshot_market_signals(db: Session) -> SnapshotResult:
+def snapshot_market_signals(db: Session, *, skip_lock: bool = False) -> SnapshotResult:
+    """Acquires the 'market_signal_snapshot' concurrency lock for the call -
+    shared by app/snapshot_market_signals.py's CLI, POST
+    /admin/actions/snapshot-market-signals, and the corresponding step
+    inside POST /admin/actions/full-market-refresh. skip_lock is
+    test/dev-CLI only. See 'Worker job concurrency locking' in
+    docs/operations.md."""
+    with with_job_lock("market_signal_snapshot", skip_lock=skip_lock):
+        return _snapshot_market_signals_locked(db)
+
+
+def _snapshot_market_signals_locked(db: Session) -> SnapshotResult:
     now = datetime.now(timezone.utc)
 
     response = get_market_signals(db, limit=SNAPSHOT_SIGNAL_LIMIT, offset=0)

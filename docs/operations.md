@@ -627,6 +627,111 @@ per-table results, visible on `/admin/logs`. A failure never takes down beat or 
 it's caught, logged as `event_type=data_retention_prune_failed`, and beat continues scheduling
 everything else normally.
 
+## Worker job concurrency locking
+
+Two triggers for the same job can overlap - an admin clicks "run market workflow" while the
+scheduled Celery Beat run is still going, or a scheduled data retention prune fires while someone's
+running the CLI version by hand. Without something preventing that, two concurrent runs can create
+duplicate snapshots/report rows or step on each other's writes. `job_locks` (one row per lock name,
+`services/api/app/models/job_lock.py`) is a simple mutual-exclusion lock every one of these jobs
+acquires before doing any real work, backed by `app.services.job_locks`
+(`services/api/app/services/job_locks.py`) on the api side and its mirror `worker.job_locks`
+(`services/worker/worker/job_locks.py`) on the worker side - both talk to the same table.
+
+**Lock names and TTLs.** A lock's TTL is a generous multiple of how long that job normally takes -
+long enough that a merely-slow run is never mistaken for a crashed one, short enough that a
+genuinely crashed job doesn't block its lock forever.
+
+| Lock name                   | TTL     | Guards                                                  |
+| ---------------------------- | ------- | -------------------------------------------------------- |
+| `price_refresh`              | 30 min  | `worker.jobs.refresh_prices` (manual CLI, scheduled Yuyu-Tei refresh, on-demand via admin) |
+| `market_workflow`            | 60 min  | `worker.jobs.run_market_workflow` (scheduled/manual), and `POST /admin/actions/full-market-refresh` |
+| `portfolio_snapshot`         | 10 min  | `app.snapshot_portfolio_valuation` (CLI + admin action)   |
+| `market_signal_snapshot`     | 10 min  | `app.services.market_signal_events.snapshot_market_signals` (CLI + admin action) |
+| `market_report_generation`   | 10 min  | `app.services.market_report.generate_market_report` (CLI + admin action) |
+| `telegram_market_digest`     | 5 min   | `app.services.telegram_market_digest.send_market_report_digest` (CLI + admin action) |
+| `data_retention_prune`       | 30 min  | `app.services.data_retention.prune_tables` (CLI + admin action) and the worker's scheduled prune task |
+| `backup_restore`             | 60 min  | `app.services.backup.restore_backup` (CLI + `POST /admin/backup/restore`) |
+
+Acquisition is non-blocking: if a lock is already held and not expired, the caller fails
+immediately rather than waiting for it to free up. A job that needs more than one lock (e.g.
+`run_market_workflow` holding `market_workflow` while it calls `refresh_prices`, which acquires its
+own `price_refresh` lock) always acquires a *different*-named lock, never the same one twice - so
+there's no circular-wait condition and no deadlock is possible, regardless of nesting order.
+
+**What happens on conflict.**
+
+- Admin endpoints (`POST /admin/actions/refresh-prices`, `/full-market-refresh`,
+  `/run-market-workflow`, `/snapshot-portfolio`, `/snapshot-market-signals`,
+  `/generate-market-report`, `/send-market-report-digest`, `POST /admin/data-retention/prune`,
+  `POST /admin/backup/restore`) return `409` with:
+
+  ```json
+  {
+    "detail": "Job already running",
+    "lock_name": "market_workflow",
+    "expires_at": "2026-07-18T17:19:20.454454+00:00"
+  }
+  ```
+
+- Every CLI script (`python -m worker.jobs.refresh_prices`, `python -m
+  worker.jobs.run_market_workflow`, `python -m app.snapshot_portfolio_valuation`, `python -m
+  app.snapshot_market_signals`, `python -m app.generate_market_report`, `python -m
+  app.send_market_report_digest`, `python -m app.prune_data_retention`, `python -m
+  app.restore_backup`) prints `Job already running: <lock_name>` and exits with status `2`.
+
+- Each of these functions/scripts takes a `--skip-lock` CLI flag (or `skip_lock=True` kwarg)
+  that bypasses locking entirely. **Test/dev only - never pass this in production**, and it is
+  never exposed through the admin API/UI. Dry runs still acquire the lock by default (a dry-run
+  preview racing a real run is exactly the kind of overlap this is meant to prevent).
+
+**Inspecting and managing locks.** `GET /admin/job-locks` (admin token required) lists every
+currently-active lock:
+
+```json
+{
+  "locks": [
+    {
+      "lock_name": "market_workflow",
+      "owner_id": "market_workflow:3f1e2a7c-...",
+      "acquired_at": "2026-07-18T16:19:20.454454+00:00",
+      "expires_at": "2026-07-18T17:19:20.454454+00:00",
+      "status": "active",
+      "metadata": {"source": "yuyutei", "limit": 10, "dry_run": false}
+    }
+  ]
+}
+```
+
+`POST /admin/job-locks/cleanup-expired` marks any active-but-past-`expires_at` lock as `expired`
+and returns `{"cleaned_up_count": N}` - a lock this happens to catches usually means a job crashed
+without releasing it. `POST /admin/job-locks/{lock_name}/force-release` with body `{"confirm":
+"RELEASE"}` releases an active lock outright, regardless of who holds it - **only use this if
+you're sure the job actually crashed**; it does not check whether the job is still running, and
+force-releasing a lock out from under a still-running job re-opens exactly the overlap this system
+exists to prevent. A force release always records a `warning`-level `app_log_events` row
+(`event_type=lock_force_released`) - this is meant to be rare and worth a human noticing. The
+`/admin/job-locks` page mirrors all three of these, with the force-release confirmation requiring
+you to type `RELEASE`.
+
+**Where to see lock activity.** Every acquire/release/failed-acquire is an `app_log_events` row:
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?event_type=lock_acquired"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?event_type=lock_released"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?event_type=lock_acquire_failed"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?event_type=lock_force_released"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?event_type=lock_expired_cleanup"
+```
+
+Repeated `lock_acquire_failed` attempts against the same still-active holder (e.g. a beat schedule
+firing every few minutes while a slow job is still running) only log once, so a long-running job
+doesn't flood `app_log_events` with one row per retry - a conflict against a *different* holder (the
+lock changed hands) always logs again. `GET /admin/performance/summary` also surfaces
+`active_job_locks`/`expired_job_locks` counts, and `GET /admin/system-check` includes three checks:
+an informational active-lock count, a warning if any active lock is past its `expires_at`, and a
+warning specifically if the `market_workflow` lock (the longest-running one) is stuck past its TTL.
+
 ## Reverse proxy troubleshooting
 
 See "Production deployment behind HTTPS reverse proxy" in `docs/deployment.md` for initial setup

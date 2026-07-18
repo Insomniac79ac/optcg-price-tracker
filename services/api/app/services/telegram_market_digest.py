@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import MarketIntelligenceReport, MarketReportDigestSend
+from app.services.job_locks import with_job_lock
 from app.services.telegram_client import TelegramSendError, is_telegram_configured, send_telegram_message
 
 DEFAULT_DESTINATION = "telegram"
@@ -149,6 +150,8 @@ def send_market_report_digest(
     dry_run: bool = False,
     force: bool = False,
     destination: str = DEFAULT_DESTINATION,
+    *,
+    skip_lock: bool = False,
 ) -> DigestSendResult | None:
     """Sends (or records skipping/failing to send) a Telegram digest for the
     latest market intelligence report. Returns None if no report has ever
@@ -160,7 +163,23 @@ def send_market_report_digest(
     "sent" digest row for this destination is skipped rather than resent -
     the unique (report_id, destination) constraint means there is exactly
     one row to check.
+
+    Acquires the 'telegram_market_digest' concurrency lock for the call
+    (including dry_run, so a preview can't race a real send) - shared by
+    app/send_market_report_digest.py's CLI, POST
+    /admin/actions/send-market-report-digest, and the digest step inside
+    POST /admin/actions/full-market-refresh. skip_lock is test/dev-CLI only.
     """
+    with with_job_lock("telegram_market_digest", skip_lock=skip_lock):
+        return _send_market_report_digest_locked(db, dry_run, force, destination)
+
+
+def _send_market_report_digest_locked(
+    db: Session,
+    dry_run: bool = False,
+    force: bool = False,
+    destination: str = DEFAULT_DESTINATION,
+) -> DigestSendResult | None:
     report = _latest_report(db)
     if report is None:
         return None

@@ -1666,6 +1666,55 @@ export function pruneDataRetention(
   });
 }
 
+export interface JobLock {
+  lock_name: string;
+  owner_id: string;
+  acquired_at: string;
+  expires_at: string;
+  status: "active" | "released" | "expired";
+  metadata: Record<string, unknown> | null;
+}
+
+export interface JobLockListResponse {
+  locks: JobLock[];
+}
+
+export interface JobLockCleanupResponse {
+  cleaned_up_count: number;
+}
+
+export interface JobLockForceReleaseResponse {
+  released: boolean;
+  lock_name: string;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/job-locks/route.ts) - same reasoning as fetchCardAudit. */
+export function fetchJobLocks(): Promise<JobLockListResponse> {
+  return fetchAdminJson<JobLockListResponse>("/api/admin/job-locks");
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/job-locks/cleanup-expired/route.ts). */
+export function cleanupExpiredJobLocks(): Promise<JobLockCleanupResponse> {
+  return fetchAdminJson<JobLockCleanupResponse>("/api/admin/job-locks/cleanup-expired", {
+    method: "POST",
+  });
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/job-locks/[lockName]/force-release/route.ts). confirm
+ * must be exactly "RELEASE" or the backend rejects it with a 400. */
+export function forceReleaseJobLock(
+  lockName: string,
+  confirm: string,
+): Promise<JobLockForceReleaseResponse> {
+  return fetchAdminJson<JobLockForceReleaseResponse>(
+    `/api/admin/job-locks/${encodeURIComponent(lockName)}/force-release`,
+    { method: "POST", body: { confirm } },
+  );
+}
+
 export interface MarketReportPortfolioSnapshot {
   total_cost_basis_jpy: number | null;
   retail_value_jpy: number | null;

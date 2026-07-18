@@ -1,10 +1,12 @@
+import sys
 from datetime import datetime, timezone
 
 import pytest
 
 from worker.adapters.base import PriceObservationData, RawSnapshotData
+from worker.job_locks import LockHeldError, acquire_lock
 from worker.jobs import refresh_prices as refresh_prices_module
-from worker.jobs.refresh_prices import build_arg_parser, log_run_config, refresh_prices
+from worker.jobs.refresh_prices import build_arg_parser, log_run_config, main, refresh_prices
 from worker.models import (
     Card,
     CollectionItem,
@@ -452,3 +454,43 @@ def test_log_run_config_dry_run_false_logs_lowercase_false(monkeypatch, caplog):
         log_run_config(source="all", limit=10, dry_run=False)
 
     assert "dry_run=false" in caplog.text
+
+
+# --- locking -----------------------------------------------------------------
+
+
+def test_refresh_prices_raises_lock_held_error_when_locked(db_session):
+    acquire_lock(db_session, "price_refresh", "price_refresh:other", 1800)
+
+    with pytest.raises(LockHeldError):
+        refresh_prices(limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")})
+
+    # No PriceRefreshRun row should have been created - the lock is checked
+    # before any run bookkeeping starts.
+    assert db_session.query(PriceRefreshRun).count() == 0
+
+
+def test_refresh_prices_skip_lock_bypasses_lock(db_session):
+    acquire_lock(db_session, "price_refresh", "price_refresh:other", 1800)
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")}, skip_lock=True
+    )
+
+    assert summary.id is not None
+
+
+def test_cli_exits_2_when_lock_held(db_session, monkeypatch, capsys):
+    acquire_lock(db_session, "price_refresh", "price_refresh:other", 1800)
+    monkeypatch.setattr(refresh_prices_module, "SessionLocal", lambda: db_session)
+    monkeypatch.setattr(sys, "argv", ["refresh_prices"])
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 2
+    out = capsys.readouterr().out
+    assert "Job already running: price_refresh" in out

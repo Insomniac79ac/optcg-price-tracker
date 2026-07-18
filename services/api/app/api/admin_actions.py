@@ -18,6 +18,7 @@ from app.schemas import (
     AdminSnapshotPortfolioResponse,
 )
 from app.services.activity_timeline import record_activity_event
+from app.services.job_locks import LockHeldError, with_job_lock
 from app.services.market_report import generate_market_report
 from app.services.market_signal_events import snapshot_market_signals
 from app.services.market_workflow_trigger import trigger_market_workflow
@@ -67,6 +68,8 @@ def refresh_prices_action(body: AdminRefreshPricesRequest):
         job_id, result = trigger_price_refresh(
             source=body.source, limit=limit, dry_run=body.dry_run
         )
+    except LockHeldError:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f"Failed to trigger price refresh: {exc}"
@@ -128,13 +131,33 @@ def generate_market_report_action(db: Session = Depends(get_db)):
 def full_market_refresh_action(
     body: AdminFullMarketRefreshRequest, db: Session = Depends(get_db)
 ):
+    """Acquires the 'market_workflow' lock for the whole request - this
+    endpoint does the same overall work as POST /admin/actions/run-market-
+    workflow (refresh + snapshot + signals + report + optional digest), just
+    synchronously in-process instead of via a Celery-dispatched worker job,
+    so the two must not be allowed to run concurrently. Each step below
+    (price refresh via Celery, then the in-process snapshot/signal/report/
+    digest calls) also acquires its own distinct-named lock independently -
+    see app.services.job_locks's module docstring for why that nesting is
+    always deadlock-free."""
     _validate_source(body.source)
     limit = body.limit if body.limit is not None else DEFAULT_REFRESH_LIMIT
 
+    with with_job_lock(
+        "market_workflow", metadata={"source": body.source, "limit": limit, "dry_run": body.dry_run}
+    ):
+        return _full_market_refresh_locked(body, limit, db)
+
+
+def _full_market_refresh_locked(
+    body: AdminFullMarketRefreshRequest, limit: int, db: Session
+) -> AdminFullMarketRefreshResponse:
     try:
         job_id, result = trigger_price_refresh(
             source=body.source, limit=limit, dry_run=body.dry_run
         )
+    except LockHeldError:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f"Failed to trigger price refresh: {exc}"
@@ -255,6 +278,8 @@ def run_market_workflow_action(body: AdminRunMarketWorkflowRequest, db: Session 
             send_telegram=body.send_telegram,
             dry_run=body.dry_run,
         )
+    except LockHeldError:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f"Failed to trigger market workflow: {exc}"

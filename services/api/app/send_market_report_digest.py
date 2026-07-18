@@ -1,6 +1,8 @@
 import argparse
+import sys
 
 from app.db import SessionLocal
+from app.services.job_locks import LockHeldError
 from app.services.telegram_market_digest import send_market_report_digest
 
 
@@ -16,6 +18,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--force", action="store_true",
         help="Resend even if a digest was already sent for the latest report.",
     )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the telegram_market_digest concurrency lock. Test/dev only.",
+    )
     return parser
 
 
@@ -24,7 +30,13 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        result = send_market_report_digest(db, dry_run=args.dry_run, force=args.force)
+        try:
+            result = send_market_report_digest(
+                db, dry_run=args.dry_run, force=args.force, skip_lock=args.skip_lock
+            )
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

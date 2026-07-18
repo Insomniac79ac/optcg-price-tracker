@@ -74,6 +74,18 @@ def _app_logging_uses_test_db(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _job_locks_uses_test_db(monkeypatch):
+    """app.services.job_locks (acquire_lock/release_lock/...) opens its own
+    short-lived session per call, same rationale and same fix as
+    _app_logging_uses_test_db above - see that module's docstring for why
+    sharing the caller's session would be actively harmful, not just
+    unnecessary."""
+    import app.services.job_locks as job_locks_module
+
+    monkeypatch.setattr(job_locks_module, "SessionLocal", TestingSessionLocal)
+
+
+@pytest.fixture(autouse=True)
 def _rate_limit_disabled_by_default(monkeypatch):
     """RateLimitMiddleware runs on every request (see app/main.py), and its
     counters are process-global - without this, the hundreds of requests

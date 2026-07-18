@@ -37,4 +37,6 @@ def performance_summary_endpoint(db: Session = Depends(get_db)):
             )
             for r in summary.largest_recent_responses
         ],
+        active_job_locks=summary.active_job_locks,
+        expired_job_locks=summary.expired_job_locks,
     )

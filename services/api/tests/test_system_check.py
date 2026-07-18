@@ -1,14 +1,18 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import update
 
 from app.models import (
     Card,
     CollectionItem,
     GradingSubmission,
+    JobLock,
     MarketSignalEvent,
     Source,
     SourceCardMapping,
     WishlistItem,
 )
+from app.services.job_locks import acquire_lock
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -188,3 +192,68 @@ def test_system_check_ignores_null_market_signal_event_card_id(client, db_sessio
     response = client.get("/admin/system-check")
     data = response.json()
     assert checks_by_name(data)["market_signal_events_valid_card_id"]["status"] == "pass"
+
+
+# --- job lock checks ---------------------------------------------------------
+
+
+def test_system_check_active_job_locks_passes_with_no_locks(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    checks = checks_by_name(data)
+    assert checks["active_job_locks"]["status"] == "pass"
+    assert "0 active" in checks["active_job_locks"]["message"]
+    assert checks["expired_job_locks"]["status"] == "pass"
+    assert checks["market_workflow_lock_ttl"]["status"] == "pass"
+
+
+def test_system_check_active_job_locks_counts_active_lock(client, db_session):
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:a", 600)
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    assert "1 active" in checks_by_name(data)["active_job_locks"]["message"]
+
+
+def test_system_check_warns_on_expired_active_lock(client, db_session):
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:a", ttl_seconds=1)
+    db_session.execute(
+        update(JobLock)
+        .where(JobLock.lock_name == "portfolio_snapshot")
+        .values(expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+        .execution_options(synchronize_session=False)
+    )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["expired_job_locks"]
+    assert check["status"] == "warning"
+    assert "portfolio_snapshot" in check["message"]
+
+
+def test_system_check_warns_when_market_workflow_lock_past_ttl(client, db_session):
+    acquire_lock("market_workflow", "market_workflow:a", ttl_seconds=1)
+    db_session.execute(
+        update(JobLock)
+        .where(JobLock.lock_name == "market_workflow")
+        .values(expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+        .execution_options(synchronize_session=False)
+    )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["market_workflow_lock_ttl"]
+    assert check["status"] == "warning"
+    assert "stuck" in check["message"]
+
+
+def test_system_check_market_workflow_lock_ttl_passes_when_within_ttl(client, db_session):
+    acquire_lock("market_workflow", "market_workflow:a", ttl_seconds=3600)
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["market_workflow_lock_ttl"]
+    assert check["status"] == "pass"
+    assert "within its TTL" in check["message"]

@@ -9,12 +9,30 @@ from worker.app_logging import record_app_log
 from worker.data_retention import CONFIRM_PHRASE, prune_tables
 from worker.db import SessionLocal
 from worker.env_validation import validate_environment
+from worker.job_locks import LockHeldError, with_job_lock
 from worker.jobs.check_alerts import check_alerts
 from worker.jobs.refresh_prices import refresh_prices
 from worker.jobs.run_market_workflow import run_market_workflow
 from worker.settings import Settings, settings
 
 logger = logging.getLogger(__name__)
+
+
+def _lock_held_result(exc: LockHeldError) -> dict:
+    """Plain-dict sentinel (JSON-serializable, no custom exception class) for
+    a Celery task result when its job's own lock acquisition fails - letting
+    a custom exception cross the Celery result-backend boundary is fragile
+    (the API service can't import worker.job_locks.LockHeldError to
+    reconstruct it), so the lock conflict is reported as data instead. See
+    app.services.refresh_trigger/market_workflow_trigger, which turn this
+    back into an app.services.job_locks.LockHeldError (a *different* class,
+    local to the api service) for admin_actions.py to turn into a 409."""
+    return {
+        "lock_held": True,
+        "lock_name": exc.lock_name,
+        "owner_id": exc.owner_id,
+        "expires_at": exc.expires_at.isoformat(),
+    }
 
 # Fail fast and loud, same as the API (see app/main.py): a misconfigured
 # production deployment should never come up processing jobs or scheduling
@@ -97,7 +115,11 @@ def refresh_yuyutei_prices(limit: int = SCHEDULED_YUYUTEI_REFRESH_LIMIT) -> dict
 
     db = SessionLocal()
     try:
-        summary = refresh_prices(limit=limit, db=db, source="yuyutei")
+        try:
+            summary = refresh_prices(limit=limit, db=db, source="yuyutei")
+        except LockHeldError as exc:
+            logger.warning("Scheduled Yuyu-Tei refresh skipped: %s", exc)
+            return _lock_held_result(exc)
         try:
             check_alerts(db)
         except Exception:
@@ -128,9 +150,13 @@ def run_market_workflow_task(
     POST /admin/actions/run-market-workflow via Celery send_task."""
     db = SessionLocal()
     try:
-        result = run_market_workflow(
-            db, source=source, limit=limit, send_telegram=send_telegram, dry_run=dry_run
-        )
+        try:
+            result = run_market_workflow(
+                db, source=source, limit=limit, send_telegram=send_telegram, dry_run=dry_run
+            )
+        except LockHeldError as exc:
+            logger.warning("Market workflow run skipped: %s", exc)
+            return _lock_held_result(exc)
     finally:
         db.close()
 
@@ -152,7 +178,11 @@ def run_price_refresh(source: str = "all", limit: int = 10, dry_run: bool = Fals
 
     db = SessionLocal()
     try:
-        summary = refresh_prices(limit=limit, db=db, source=source, dry_run=dry_run)
+        try:
+            summary = refresh_prices(limit=limit, db=db, source=source, dry_run=dry_run)
+        except LockHeldError as exc:
+            logger.warning("On-demand price refresh skipped: %s", exc)
+            return _lock_held_result(exc)
         if not dry_run:
             try:
                 check_alerts(db)
@@ -183,7 +213,13 @@ def prune_data_retention_task() -> dict:
     db = None
     try:
         db = SessionLocal()
-        result = prune_tables(db, dry_run=False, confirm=CONFIRM_PHRASE)
+        with with_job_lock(db, "data_retention_prune"):
+            result = prune_tables(db, dry_run=False, confirm=CONFIRM_PHRASE)
+    except LockHeldError as exc:
+        # Another prune (scheduled or manual, on either service) is already
+        # running - not a failure, just skip this tick.
+        logger.warning("Scheduled data retention prune skipped: %s", exc)
+        return {"status": "skipped", "reason": "lock_held", **_lock_held_result(exc)}
     except Exception as exc:  # noqa: BLE001 - must never fail beat/worker itself
         logger.exception("Scheduled data retention prune failed.")
         record_app_log(

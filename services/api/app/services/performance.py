@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AppLogEvent, CollectorActivityEvent, MarketSignalEvent, PriceObservation, RawSnapshot
 from app.services.db_index_audit import audit_summary, run_db_index_audit
+from app.services.job_locks import get_lock_counts
 
 SLOW_REQUEST_EVENT_TYPE = "slow_request"
 RESPONSE_SIZE_WARNING_EVENT_TYPE = "response_size_warning"
@@ -42,6 +43,8 @@ class PerformanceSummary:
     response_size_warnings_last_24h: int = 0
     slow_requests_last_24h: int = 0
     largest_recent_responses: list[LargestResponse] = field(default_factory=list)
+    active_job_locks: int = 0
+    expired_job_locks: int = 0
 
 
 def _table_count(db: Session, model) -> int:
@@ -107,6 +110,7 @@ def build_performance_summary(db: Session) -> PerformanceSummary:
     status = "critical" if index_audit["critical"] > 0 else "warning" if index_audit["warnings"] > 0 else "ok"
 
     since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+    lock_counts = get_lock_counts()
 
     return PerformanceSummary(
         status=status,
@@ -116,4 +120,6 @@ def build_performance_summary(db: Session) -> PerformanceSummary:
         response_size_warnings_last_24h=_count_since(db, RESPONSE_SIZE_WARNING_EVENT_TYPE, since_24h),
         slow_requests_last_24h=_count_since(db, SLOW_REQUEST_EVENT_TYPE, since_24h),
         largest_recent_responses=_largest_recent_responses(db),
+        active_job_locks=lock_counts.active,
+        expired_job_locks=lock_counts.expired_active,
     )

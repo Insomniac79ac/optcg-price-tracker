@@ -22,6 +22,7 @@ import sys
 
 from app.db import SessionLocal
 from app.services.data_retention import CONFIRM_PHRASE, PRUNABLE_TABLES, prune_tables
+from app.services.job_locks import LockHeldError
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -54,6 +55,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         help=f"Must be exactly {CONFIRM_PHRASE!r} when --apply is set.",
     )
+    parser.add_argument(
+        "--skip-lock",
+        action="store_true",
+        help="Skip the data_retention_prune concurrency lock. Test/dev only.",
+    )
     return parser.parse_args(argv)
 
 
@@ -69,7 +75,13 @@ def main(argv: list[str] | None = None) -> int:
 
     db = SessionLocal()
     try:
-        result = prune_tables(db, dry_run=dry_run, tables=tables, confirm=args.confirm)
+        try:
+            result = prune_tables(
+                db, dry_run=dry_run, tables=tables, confirm=args.confirm, skip_lock=args.skip_lock
+            )
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            return 2
     finally:
         db.close()
 

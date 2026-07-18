@@ -71,6 +71,34 @@ def test_performance_summary_works_with_empty_data(client, db_session):
     assert data["latest_slow_requests"] == []
     assert data["index_audit"]["warnings"] >= 0
     assert data["index_audit"]["critical"] >= 0
+    assert data["active_job_locks"] == 0
+    assert data["expired_job_locks"] == 0
+
+
+def test_performance_summary_reports_job_lock_counts(client, db_session):
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import update
+
+    from app.models import JobLock
+    from app.services.job_locks import acquire_lock
+
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:a", ttl_seconds=3600)
+    acquire_lock("market_signal_snapshot", "market_signal_snapshot:a", ttl_seconds=1)
+    db_session.execute(
+        update(JobLock)
+        .where(JobLock.lock_name == "market_signal_snapshot")
+        .values(expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+        .execution_options(synchronize_session=False)
+    )
+    db_session.commit()
+
+    response = client.get("/admin/performance/summary")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["active_job_locks"] == 2
+    assert data["expired_job_locks"] == 1
 
 
 def test_performance_summary_reports_table_counts(client, db_session):

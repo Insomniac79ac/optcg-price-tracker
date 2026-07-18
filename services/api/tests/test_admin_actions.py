@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 import app.api.admin_actions as admin_actions_module
 from app.main import app
 from app.models import MarketIntelligenceReport, PortfolioValuationSnapshot
+from app.services.job_locks import LockHeldError, acquire_lock
 from app.settings import settings
 
 ACTION_PATHS = [
@@ -139,6 +140,25 @@ def test_refresh_prices_surfaces_trigger_failure_as_502(client, monkeypatch):
     assert "broker unreachable" in response.json()["detail"]
 
 
+def test_refresh_prices_returns_409_when_lock_held(client, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+
+    def fake_trigger(source, limit, dry_run):
+        raise LockHeldError("price_refresh", "price_refresh:other", expires_at)
+
+    monkeypatch.setattr(admin_actions_module, "trigger_price_refresh", fake_trigger)
+
+    response = client.post("/admin/actions/refresh-prices", json={})
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Job already running"
+    assert body["lock_name"] == "price_refresh"
+    assert body["expires_at"] == expires_at.isoformat()
+
+
 # --- POST /admin/actions/snapshot-portfolio ---------------------------------
 
 
@@ -262,7 +282,7 @@ def test_full_market_refresh_reports_partial_failure_as_warning(client, monkeypa
     assert body["market_report_id"] is not None
 
 
-def test_full_market_refresh_surfaces_trigger_failure_as_502(client, monkeypatch):
+def test_full_market_refresh_surfaces_trigger_failure_as_502(client, monkeypatch, db_session):
     def fake_trigger(source, limit, dry_run):
         raise RuntimeError("broker unreachable")
 
@@ -389,6 +409,22 @@ def test_full_market_refresh_rejects_invalid_source(client):
     assert response.status_code == 400
 
 
+def test_full_market_refresh_returns_409_when_market_workflow_lock_held(client, db_session):
+    # full_market_refresh_action acquires the real 'market_workflow' lock
+    # itself (unlike refresh-prices/run-market-workflow, which learn about a
+    # conflict via the worker's Celery result) - pre-acquire it directly
+    # rather than mocking trigger_price_refresh, so this exercises the
+    # endpoint's own with_job_lock(...) wrapper.
+    acquire_lock("market_workflow", "market_workflow:other", 3600)
+
+    response = client.post("/admin/actions/full-market-refresh", json={})
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Job already running"
+    assert body["lock_name"] == "market_workflow"
+
+
 # --- POST /admin/actions/run-market-workflow ---------------------------------
 
 
@@ -468,6 +504,25 @@ def test_run_market_workflow_surfaces_trigger_failure_as_502(client, monkeypatch
 
     assert response.status_code == 502
     assert "broker unreachable" in response.json()["detail"]
+
+
+def test_run_market_workflow_returns_409_when_lock_held(client, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    def fake_trigger(source, limit, send_telegram, dry_run):
+        raise LockHeldError("market_workflow", "market_workflow:other", expires_at)
+
+    monkeypatch.setattr(admin_actions_module, "trigger_market_workflow", fake_trigger)
+
+    response = client.post("/admin/actions/run-market-workflow", json={})
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Job already running"
+    assert body["lock_name"] == "market_workflow"
+    assert body["expires_at"] == expires_at.isoformat()
 
 
 def test_run_market_workflow_surfaces_partial_success_and_warnings(client, monkeypatch):

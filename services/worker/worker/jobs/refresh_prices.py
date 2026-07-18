@@ -1,5 +1,6 @@
 import argparse
 import logging
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -11,6 +12,7 @@ from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
 from worker.adapters.yuyutei import YuyuTeiAdapter
 from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
+from worker.job_locks import LockHeldError, with_job_lock
 from worker.market_report import generate_market_report
 from worker.market_signal_events import snapshot_market_signals
 from worker.models import PriceObservation, PriceRefreshRun, RawSnapshot, Source, SourceCardMapping
@@ -96,6 +98,31 @@ def _build_adapters(source: str | None = None) -> dict[str, SourceAdapter]:
 
 
 def refresh_prices(
+    limit: int,
+    db: Session,
+    adapters: dict[str, SourceAdapter] | None = None,
+    source: str | None = None,
+    dry_run: bool = False,
+    skip_lock: bool = False,
+) -> RefreshRunSummary:
+    """Acquires the 'price_refresh' lock for the whole run (including
+    dry_run - see 'Worker job concurrency locking' in docs/operations.md)
+    before doing anything else, so a lock conflict never leaves an orphan
+    'running' PriceRefreshRun row behind. skip_lock is test/dev-CLI only -
+    never reachable from the Celery task or beat schedule. Raises
+    LockHeldError if another price_refresh (or, transitively, a
+    market_workflow run that's currently inside its own refresh_prices call)
+    is already in progress."""
+    with with_job_lock(
+        db,
+        "price_refresh",
+        metadata={"source": source, "limit": limit, "dry_run": dry_run},
+        skip_lock=skip_lock,
+    ):
+        return _refresh_prices_locked(limit, db, adapters=adapters, source=source, dry_run=dry_run)
+
+
+def _refresh_prices_locked(
     limit: int,
     db: Session,
     adapters: dict[str, SourceAdapter] | None = None,
@@ -416,6 +443,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--verbose", action="store_true",
         help="Enable debug-level logging.",
     )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the price_refresh concurrency lock. Test/dev only - never use in production.",
+    )
     return parser
 
 
@@ -437,7 +468,13 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        summary = refresh_prices(args.limit, db, source=args.source, dry_run=args.dry_run)
+        try:
+            summary = refresh_prices(
+                args.limit, db, source=args.source, dry_run=args.dry_run, skip_lock=args.skip_lock
+            )
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

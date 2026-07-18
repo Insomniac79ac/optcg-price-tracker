@@ -2,6 +2,7 @@ import sys
 
 import pytest
 
+from worker.job_locks import LockHeldError, acquire_lock
 from worker.jobs.run_market_workflow import build_arg_parser, main, run_market_workflow
 from worker.models import (
     Card,
@@ -211,3 +212,40 @@ def test_arg_parser_rejects_invalid_source():
     parser = build_arg_parser()
     with pytest.raises(SystemExit):
         parser.parse_args(["--source", "ebay"])
+
+
+# --- locking -------------------------------------------------------------
+
+
+def test_run_market_workflow_raises_lock_held_error_when_locked(db_session):
+    acquire_lock(db_session, "market_workflow", "market_workflow:other", 3600)
+
+    with pytest.raises(LockHeldError):
+        run_market_workflow(db_session, source="yuyutei")
+
+    assert db_session.query(MarketWorkflowRun).count() == 0
+
+
+def test_run_market_workflow_skip_lock_bypasses_lock(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "SCRAPING_MODE", "mock")
+    seed_yuyutei_mapping(db_session)
+    acquire_lock(db_session, "market_workflow", "market_workflow:other", 3600)
+
+    result = run_market_workflow(db_session, source="yuyutei", skip_lock=True)
+
+    assert result.market_workflow_run_id is not None
+
+
+def test_cli_exits_2_when_lock_held(db_session, monkeypatch, capsys):
+    acquire_lock(db_session, "market_workflow", "market_workflow:other", 3600)
+    monkeypatch.setattr(
+        "worker.jobs.run_market_workflow.SessionLocal", lambda: db_session
+    )
+    monkeypatch.setattr(sys, "argv", ["run_market_workflow"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 2
+    out = capsys.readouterr().out
+    assert "Job already running: market_workflow" in out

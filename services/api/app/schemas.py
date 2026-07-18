@@ -1753,6 +1753,37 @@ class PerformanceSummaryOut(BaseModel):
     response_size_warnings_last_24h: int = 0
     slow_requests_last_24h: int = 0
     largest_recent_responses: list[LargestResponseOut] = []
+    active_job_locks: int = 0
+    expired_job_locks: int = 0
+
+
+# --- job locks -------------------------------------------------------------
+
+
+class JobLockOut(BaseModel):
+    lock_name: str
+    owner_id: str
+    acquired_at: datetime
+    expires_at: datetime
+    status: str
+    metadata: dict[str, Any] | None
+
+
+class JobLockListOut(BaseModel):
+    locks: list[JobLockOut]
+
+
+class JobLockCleanupResponseOut(BaseModel):
+    cleaned_up_count: int
+
+
+class JobLockForceReleaseRequestIn(BaseModel):
+    confirm: str | None = None
+
+
+class JobLockForceReleaseResponseOut(BaseModel):
+    released: bool
+    lock_name: str
 
 
 # --- data retention / pruning -------------------------------------------

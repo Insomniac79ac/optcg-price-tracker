@@ -13,6 +13,7 @@ from app.models.collector_note import CollectorNote
 from app.models.collector_tag import CollectorTag
 from app.models.dashboard_preference import DashboardPreference
 from app.models.grading_submission import GradingSubmission
+from app.models.job_lock import JobLock
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
 from app.models.market_signal_event import MarketSignalEvent
@@ -60,4 +61,5 @@ __all__ = [
     "CollectorNote",
     "CollectorActivityEvent",
     "SearchHistory",
+    "JobLock",
 ]

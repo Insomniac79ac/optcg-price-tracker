@@ -8,6 +8,7 @@ consistent" answer, not a replacement for the more detailed admin pages
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,6 +28,7 @@ from app.models import (
     WishlistItem,
 )
 from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
+from app.services.job_locks import get_active_locks
 
 STATUSES = ("pass", "warning", "fail")
 SEVERITIES = ("info", "warning", "critical")
@@ -167,6 +169,71 @@ def _check_orphan_fk(
     return CheckResult(name, "pass", "critical", f"No {label} rows reference a missing id.")
 
 
+def _naive(dt: datetime) -> datetime:
+    """Strips tzinfo if present, so a loaded JobLock.expires_at (naive under
+    SQLite, aware under Postgres - see app.services.job_locks._naive) can be
+    safely compared against datetime.now(timezone.utc) under either dialect."""
+    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+
+
+def _check_active_job_locks(db: Session) -> CheckResult:
+    """Just a count, informational - one or two active locks (a refresh or
+    workflow genuinely in progress) is normal, not itself a problem. See
+    _check_expired_job_locks and _check_market_workflow_lock_ttl below for
+    the checks that actually flag something as wrong."""
+    count = len(get_active_locks())
+    return CheckResult("active_job_locks", "pass", "info", f"{count} active job lock(s).")
+
+
+def _check_expired_job_locks(db: Session) -> CheckResult:
+    """A lock whose expires_at has passed but is still marked 'active' means
+    either the job crashed without releasing it, or nothing has called GET
+    /admin/job-locks/cleanup-expired since it lapsed - either way, it's
+    worth a human glancing at GET /admin/job-locks (see 'Worker job
+    concurrency locking' in docs/operations.md)."""
+    now = _naive(datetime.now(timezone.utc))
+    expired = [lock for lock in get_active_locks() if _naive(lock.expires_at) <= now]
+    if expired:
+        names = ", ".join(sorted({lock.lock_name for lock in expired}))
+        return CheckResult(
+            "expired_job_locks",
+            "warning",
+            "warning",
+            f"{len(expired)} active lock(s) are past their expires_at and likely stale: {names}.",
+        )
+    return CheckResult("expired_job_locks", "pass", "info", "No expired-but-active job locks.")
+
+
+def _check_market_workflow_lock_ttl(db: Session) -> CheckResult:
+    """market_workflow is the longest-running, highest-TTL lock (60 minutes)
+    and the one most likely to indicate a genuinely stuck job if it
+    overruns - called out as its own check (on top of the general
+    expired_job_locks check above) since a stuck market_workflow run blocks
+    every scheduled/manual workflow trigger behind it."""
+    now = _naive(datetime.now(timezone.utc))
+    lock = next(
+        (row for row in get_active_locks() if row.lock_name == "market_workflow"), None
+    )
+    if lock is None:
+        return CheckResult(
+            "market_workflow_lock_ttl", "pass", "info", "No active market_workflow lock."
+        )
+    if _naive(lock.expires_at) <= now:
+        return CheckResult(
+            "market_workflow_lock_ttl",
+            "warning",
+            "warning",
+            f"market_workflow lock has been active since {lock.acquired_at.isoformat()} and is "
+            "past its expected TTL - the run may be stuck. See GET /admin/job-locks.",
+        )
+    return CheckResult(
+        "market_workflow_lock_ttl",
+        "pass",
+        "info",
+        f"market_workflow lock active since {lock.acquired_at.isoformat()}, within its TTL.",
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -228,6 +295,9 @@ def run_system_check(db: Session) -> list[CheckResult]:
             "market_signal_events_valid_card_id",
             "market_signal_events",
         ),
+        _check_active_job_locks(db),
+        _check_expired_job_locks(db),
+        _check_market_workflow_lock_ttl(db),
     ]
     return checks
 

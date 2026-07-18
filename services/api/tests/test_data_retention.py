@@ -15,6 +15,7 @@ from app.models import (
     Source,
 )
 from app.services.data_retention import PRUNABLE_TABLES, prune_tables
+from app.services.job_locks import acquire_lock
 
 NOW = datetime.now(timezone.utc)
 
@@ -118,6 +119,20 @@ def test_prune_dry_run_does_not_delete(client, db_session):
     assert result["rows_deleted"] == 0
 
     assert db_session.query(RawSnapshot).count() == 1
+
+
+def test_prune_returns_409_when_lock_held(client, db_session):
+    acquire_lock("data_retention_prune", "data_retention_prune:other", 1800)
+
+    response = client.post(
+        "/admin/data-retention/prune",
+        json={"dry_run": True, "tables": ["raw_snapshots"]},
+    )
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Job already running"
+    assert body["lock_name"] == "data_retention_prune"
 
 
 def test_prune_apply_requires_confirm(client, db_session):
@@ -278,9 +293,15 @@ def test_app_log_events_keeps_critical_logs_for_180_days(db_session):
         db_session, dry_run=False, tables=["app_log_events"], confirm="PRUNE", now=NOW
     )
     assert apply_result.results[0].rows_deleted == 1
-    remaining = db_session.query(AppLogEvent).all()
-    assert len(remaining) == 1
-    assert remaining[0].message == "critical but recent-ish"
+    # Not an exact count: prune_tables acquires/releases the
+    # data_retention_prune job lock around each call above, and those
+    # acquire/release events are themselves logged to app_log_events (see
+    # app.services.job_locks) - freshly created, so they're never pruned by
+    # this 180-day-old cutoff and legitimately show up alongside the row
+    # this test actually cares about.
+    remaining_messages = {log.message for log in db_session.query(AppLogEvent).all()}
+    assert "critical but recent-ish" in remaining_messages
+    assert "error, truly old" not in remaining_messages
 
 
 # --- price_observations: latest-per-series protection -----------------------
@@ -348,7 +369,12 @@ def test_price_observations_thinning_keeps_one_per_day_when_old(db_session):
     card = make_card(db_session)
     source = make_source(db_session)
 
-    base_day = NOW - timedelta(days=200)
+    # Anchored to midnight UTC (not NOW's own time-of-day) so the +8h offset
+    # below can never roll past midnight into the next calendar day - this
+    # test's "three same-day rows" premise would otherwise be time-of-day
+    # dependent (flaky depending on what time of day the suite happens to
+    # run).
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
     # Three observations on the same day, all older than the 90-day fresh
     # window and younger than the 365-day hard cutoff - thinning should keep
     # only one of these three. Plus one recent, definitely-latest row.

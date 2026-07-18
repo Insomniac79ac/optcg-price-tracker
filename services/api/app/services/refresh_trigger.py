@@ -9,8 +9,11 @@ wraps the exact same refresh_prices() job used by the manual CLI
 this module only enqueues that task and waits for its result.
 """
 
+from datetime import datetime
+
 from celery import Celery
 
+from app.services.job_locks import LockHeldError
 from app.settings import settings
 
 TASK_NAME = "worker.celery_app.run_price_refresh"
@@ -35,6 +38,13 @@ def trigger_price_refresh(source: str, limit: int, dry_run: bool) -> tuple[str, 
 
     Returns (celery_task_id, result_dict) where result_dict is the
     dataclasses.asdict() of the worker's RefreshRunSummary.
+
+    Raises app.services.job_locks.LockHeldError (a class local to this
+    service, not the worker's) if the worker's own 'price_refresh' lock was
+    already held - the worker task returns a plain lock_held dict rather
+    than raising its own LockHeldError across the Celery result boundary
+    (see worker.celery_app._lock_held_result), and this is where that dict
+    gets turned back into a proper exception for admin_actions.py to catch.
     """
     client = _celery_client()
     async_result = client.send_task(
@@ -42,4 +52,8 @@ def trigger_price_refresh(source: str, limit: int, dry_run: bool) -> tuple[str, 
         kwargs={"source": source, "limit": limit, "dry_run": dry_run},
     )
     result = async_result.get(timeout=TRIGGER_TIMEOUT_SECONDS)
+    if isinstance(result, dict) and result.get("lock_held"):
+        raise LockHeldError(
+            result["lock_name"], result["owner_id"], datetime.fromisoformat(result["expires_at"])
+        )
     return async_result.id, result

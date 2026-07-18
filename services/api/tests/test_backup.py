@@ -24,6 +24,7 @@ from app.models import (
     WishlistItem,
 )
 from app.services.backup import BACKUP_VERSION, OPTIONAL_TABLES, REQUIRED_TABLES, export_backup
+from app.services.job_locks import acquire_lock
 from app.services.market_report import generate_market_report
 
 # --- factories --------------------------------------------------------------
@@ -458,6 +459,18 @@ def test_validate_source_card_mapping_fk_mismatch_fails(client):
 
 
 # --- restore: dry run -------------------------------------------------------
+
+
+def test_restore_returns_409_when_lock_held(client, db_session):
+    acquire_lock("backup_restore", "backup_restore:other", 3600)
+    backup = empty_backup()
+
+    response = upload_restore(client, backup, dry_run="true", mode="merge")
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["detail"] == "Job already running"
+    assert body["lock_name"] == "backup_restore"
 
 
 def test_restore_dry_run_writes_nothing(client, db_session):

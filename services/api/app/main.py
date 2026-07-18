@@ -1,13 +1,15 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
 from app.api.admin_data_retention import router as admin_data_retention_router
 from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_db_index_audit import router as admin_db_index_audit_router
+from app.api.admin_job_locks import router as admin_job_locks_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
 from app.api.admin_performance import router as admin_performance_router
@@ -40,6 +42,7 @@ from app.core.request_timing import RequestTimingMiddleware
 from app.core.response_size import ResponseSizeMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.services.app_logging import record_app_log
+from app.services.job_locks import LockHeldError
 from app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -92,6 +95,26 @@ if not _env_report.ok:
     )
 
 app = FastAPI(title="optcg-price-tracker API")
+
+
+@app.exception_handler(LockHeldError)
+async def _lock_held_error_handler(request: Request, exc: LockHeldError) -> JSONResponse:
+    """Every job-lock-protected endpoint (see app.services.job_locks and
+    'Worker job concurrency locking' in docs/operations.md) just lets
+    LockHeldError propagate up from its underlying service/CLI-shared
+    function - this single handler is what turns that into the documented
+    409 response shape, so no individual endpoint needs its own try/except
+    for the common case (a Celery-triggered job still needs to translate the
+    worker's lock_held result dict into this same exception first - see
+    app.services.refresh_trigger/market_workflow_trigger)."""
+    return JSONResponse(
+        status_code=409,
+        content={
+            "detail": "Job already running",
+            "lock_name": exc.lock_name,
+            "expires_at": exc.expires_at.isoformat(),
+        },
+    )
 
 # Middleware order: FastAPI's add_middleware prepends, so the LAST call here
 # ends up outermost (verify with `[m.cls.__name__ for m in app.user_middleware]`
@@ -147,6 +170,7 @@ app.include_router(admin_backup_router)
 app.include_router(admin_data_retention_router)
 app.include_router(admin_db_backups_router)
 app.include_router(admin_db_index_audit_router)
+app.include_router(admin_job_locks_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)
 app.include_router(admin_performance_router)

@@ -4,6 +4,7 @@ import sys
 
 from app.db import SessionLocal
 from app.services.backup import RESTORE_MODES, RestoreConfirmationRequired, restore_backup
+from app.services.job_locks import LockHeldError
 
 
 def print_report(result) -> None:
@@ -49,6 +50,10 @@ def main() -> None:
         default=None,
         help="Must be 'RESTORE' when using --mode replace without --dry-run",
     )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the backup_restore concurrency lock. Test/dev only - never use in production.",
+    )
     args = parser.parse_args()
 
     with open(args.json_path, encoding="utf-8-sig") as f:
@@ -58,11 +63,19 @@ def main() -> None:
     try:
         try:
             result = restore_backup(
-                db, backup, dry_run=args.dry_run, mode=args.mode, confirm=args.confirm
+                db,
+                backup,
+                dry_run=args.dry_run,
+                mode=args.mode,
+                confirm=args.confirm,
+                skip_lock=args.skip_lock,
             )
         except RestoreConfirmationRequired as exc:
             print(f"error: {exc}")
             sys.exit(1)
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

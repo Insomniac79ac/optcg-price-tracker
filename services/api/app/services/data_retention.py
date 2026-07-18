@@ -49,6 +49,7 @@ from app.models import (
     PriceRefreshRun,
     RawSnapshot,
 )
+from app.services.job_locks import with_job_lock
 
 CONFIRM_PHRASE = "PRUNE"
 
@@ -395,12 +396,33 @@ def prune_tables(
     tables: list[str] | None = None,
     confirm: str | None = None,
     now: datetime | None = None,
+    skip_lock: bool = False,
 ) -> PruneRunResult:
     """Evaluates (and, if dry_run=False, applies) the retention policy for
     each requested table - or every prunable table, if `tables` is omitted/
     empty. Each table runs in its own transaction: a failure on one table is
     recorded as that table's warning and does not stop the others (see
-    module docstring)."""
+    module docstring).
+
+    Acquires the 'data_retention_prune' concurrency lock for the call
+    (including dry_run - see 'Worker job concurrency locking' in
+    docs/operations.md) - shared by app/prune_data_retention.py's CLI, POST
+    /admin/data-retention/prune, and the same-named lock the worker's
+    scheduled prune task (worker.celery_app.prune_data_retention_task)
+    acquires independently against the same table, so a scheduled and a
+    manual prune can never overlap. skip_lock is test/dev-CLI only."""
+    with with_job_lock("data_retention_prune", skip_lock=skip_lock):
+        return _prune_tables_locked(db, dry_run=dry_run, tables=tables, confirm=confirm, now=now)
+
+
+def _prune_tables_locked(
+    db: Session,
+    *,
+    dry_run: bool = True,
+    tables: list[str] | None = None,
+    confirm: str | None = None,
+    now: datetime | None = None,
+) -> PruneRunResult:
     if not dry_run and confirm != CONFIRM_PHRASE:
         raise PruneConfirmationRequired(
             f"dry_run=false requires confirm={CONFIRM_PHRASE!r}."

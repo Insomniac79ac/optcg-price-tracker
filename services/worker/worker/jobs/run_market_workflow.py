@@ -13,6 +13,7 @@ tracks the whole sequence's outcome (for /admin/market-workflow-runs).
 
 import argparse
 import logging
+import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
@@ -20,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from worker.app_logging import log_exception, record_app_log
 from worker.db import SessionLocal
+from worker.job_locks import LockHeldError, with_job_lock
 from worker.jobs.refresh_prices import SUPPORTED_SOURCES, refresh_prices
 from worker.market_report_digest import send_market_report_digest
 from worker.models import MarketWorkflowRun
@@ -67,6 +69,32 @@ class MarketWorkflowResult:
 
 
 def run_market_workflow(
+    db: Session,
+    source: str = "yuyutei",
+    limit: int | None = None,
+    send_telegram: bool = False,
+    dry_run: bool = False,
+    skip_lock: bool = False,
+) -> MarketWorkflowResult:
+    """Acquires the 'market_workflow' lock for the whole run before doing
+    anything else (see 'Worker job concurrency locking' in
+    docs/operations.md). refresh_prices() below acquires its own
+    'price_refresh' lock independently - a different lock name, so no
+    special-casing is needed to avoid a conflict with the market_workflow
+    lock held here (see worker.job_locks's module docstring for why nested
+    distinct-named locks can't deadlock). skip_lock is test/dev-CLI only."""
+    with with_job_lock(
+        db,
+        "market_workflow",
+        metadata={"source": source, "limit": limit, "send_telegram": send_telegram, "dry_run": dry_run},
+        skip_lock=skip_lock,
+    ):
+        return _run_market_workflow_locked(
+            db, source=source, limit=limit, send_telegram=send_telegram, dry_run=dry_run
+        )
+
+
+def _run_market_workflow_locked(
     db: Session,
     source: str = "yuyutei",
     limit: int | None = None,
@@ -311,6 +339,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--verbose", action="store_true",
         help="Enable debug-level logging.",
     )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the market_workflow concurrency lock. Test/dev only - never use in production.",
+    )
     return parser
 
 
@@ -320,13 +352,18 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        result = run_market_workflow(
-            db,
-            source=args.source,
-            limit=args.limit,
-            send_telegram=args.send_telegram,
-            dry_run=args.dry_run,
-        )
+        try:
+            result = run_market_workflow(
+                db,
+                source=args.source,
+                limit=args.limit,
+                send_telegram=args.send_telegram,
+                dry_run=args.dry_run,
+                skip_lock=args.skip_lock,
+            )
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

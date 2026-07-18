@@ -1,4 +1,7 @@
+import sys
 from datetime import datetime, timezone
+
+import pytest
 
 from app.models import (
     Card,
@@ -8,7 +11,8 @@ from app.models import (
     PriceObservation,
     Source,
 )
-from app.snapshot_portfolio_valuation import snapshot_portfolio_valuation
+from app.services.job_locks import LockHeldError, acquire_lock
+from app.snapshot_portfolio_valuation import main, snapshot_portfolio_valuation
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -147,3 +151,36 @@ def test_snapshot_stores_graded_adjusted_fields(db_session):
 
     stored = db_session.query(PortfolioValuationSnapshot).filter_by(id=snapshot.id).one()
     assert stored.graded_adjusted_value_jpy == 15000
+
+
+# --- locking -------------------------------------------------------------
+
+
+def test_snapshot_raises_lock_held_error_when_locked(db_session):
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:other", 600)
+
+    with pytest.raises(LockHeldError):
+        snapshot_portfolio_valuation(db_session)
+
+    assert db_session.query(PortfolioValuationSnapshot).count() == 0
+
+
+def test_snapshot_skip_lock_bypasses_lock(db_session):
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:other", 600)
+
+    snapshot = snapshot_portfolio_valuation(db_session, skip_lock=True)
+
+    assert snapshot.id is not None
+
+
+def test_cli_exits_2_when_lock_held(db_session, monkeypatch, capsys):
+    acquire_lock("portfolio_snapshot", "portfolio_snapshot:other", 600)
+    monkeypatch.setattr("app.snapshot_portfolio_valuation.SessionLocal", lambda: db_session)
+    monkeypatch.setattr(sys, "argv", ["snapshot_portfolio_valuation"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 2
+    out = capsys.readouterr().out
+    assert "Job already running: portfolio_snapshot" in out

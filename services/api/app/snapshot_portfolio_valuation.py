@@ -1,21 +1,34 @@
 import argparse
+import sys
 
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import PortfolioValuationSnapshot
+from app.services.job_locks import LockHeldError, with_job_lock
 from app.services.portfolio_valuation import get_portfolio_valuation
 
 
-def snapshot_portfolio_valuation(db: Session) -> PortfolioValuationSnapshot:
+def snapshot_portfolio_valuation(db: Session, *, skip_lock: bool = False) -> PortfolioValuationSnapshot:
     """Snapshots the current portfolio valuation summary (not the per-item
     breakdown) so its history can be tracked over time. Works for an empty
     collection too - get_portfolio_valuation returns a zero-value summary in
     that case, which is stored as-is rather than skipped.
 
+    Acquires the 'portfolio_snapshot' concurrency lock for the call (see
+    'Worker job concurrency locking' in docs/operations.md) - shared by this
+    CLI's main(), POST /admin/actions/snapshot-portfolio, and the
+    snapshot-portfolio step inside POST /admin/actions/full-market-refresh.
+    skip_lock is test/dev-CLI only, never exposed to the admin UI/API.
+
     Always computed in graded_adjusted mode - that mode still includes every
     raw-market figure unchanged, plus the graded-adjusted ones, so one call
     is enough to populate both halves of the snapshot row."""
+    with with_job_lock("portfolio_snapshot", skip_lock=skip_lock):
+        return _snapshot_portfolio_valuation_locked(db)
+
+
+def _snapshot_portfolio_valuation_locked(db: Session) -> PortfolioValuationSnapshot:
     summary = get_portfolio_valuation(db, valuation_mode="graded_adjusted").summary
 
     snapshot = PortfolioValuationSnapshot(
@@ -74,13 +87,22 @@ def print_report(snapshot: PortfolioValuationSnapshot) -> None:
 
 
 def main() -> None:
-    argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Take a snapshot of the current portfolio valuation summary and store it."
-    ).parse_args()
+    )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the portfolio_snapshot concurrency lock. Test/dev only - never use in production.",
+    )
+    args = parser.parse_args()
 
     db = SessionLocal()
     try:
-        snapshot = snapshot_portfolio_valuation(db)
+        try:
+            snapshot = snapshot_portfolio_valuation(db, skip_lock=args.skip_lock)
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

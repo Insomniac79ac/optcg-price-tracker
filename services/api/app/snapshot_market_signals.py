@@ -1,8 +1,10 @@
 import argparse
+import sys
 
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
+from app.services.job_locks import LockHeldError
 from app.services.market_signal_events import SnapshotResult, snapshot_market_signals
 
 
@@ -14,14 +16,23 @@ def print_report(result: SnapshotResult) -> None:
 
 
 def main() -> None:
-    argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Snapshot the current GET /market/signals equivalent into "
         "market_signal_events (create/update/resolve)."
-    ).parse_args()
+    )
+    parser.add_argument(
+        "--skip-lock", action="store_true",
+        help="Skip the market_signal_snapshot concurrency lock. Test/dev only.",
+    )
+    args = parser.parse_args()
 
     db: Session = SessionLocal()
     try:
-        result = snapshot_market_signals(db)
+        try:
+            result = snapshot_market_signals(db, skip_lock=args.skip_lock)
+        except LockHeldError as exc:
+            print(f"Job already running: {exc.lock_name}")
+            sys.exit(2)
     finally:
         db.close()
 

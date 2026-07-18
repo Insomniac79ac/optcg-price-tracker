@@ -21,6 +21,7 @@ from app.schemas import (
     MarketReportTopOpportunitiesOut,
     OpportunityOut,
 )
+from app.services.job_locks import with_job_lock
 from app.services.opportunity_scoring import get_opportunities
 from app.services.portfolio_valuation import get_portfolio_valuation
 
@@ -200,6 +201,18 @@ def _opportunity_json(opportunity: OpportunityOut | None) -> dict | None:
 
 
 def generate_market_report(
+    db: Session, report_date: date | None = None, *, skip_lock: bool = False
+) -> MarketIntelligenceReport:
+    """Acquires the 'market_report_generation' concurrency lock for the call
+    - shared by app/generate_market_report.py's CLI, POST
+    /admin/actions/generate-market-report, and the corresponding step inside
+    POST /admin/actions/full-market-refresh. skip_lock is test/dev-CLI only.
+    See 'Worker job concurrency locking' in docs/operations.md."""
+    with with_job_lock("market_report_generation", skip_lock=skip_lock):
+        return _generate_market_report_locked(db, report_date)
+
+
+def _generate_market_report_locked(
     db: Session, report_date: date | None = None
 ) -> MarketIntelligenceReport:
     payload = build_report_payload(db)

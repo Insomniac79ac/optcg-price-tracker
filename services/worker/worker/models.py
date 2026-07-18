@@ -530,6 +530,33 @@ class CollectorActivityEvent(Base):
     )
 
 
+class JobLock(Base):
+    """Mirrors app.models.job_lock.JobLock on the api service - same table,
+    same shape. See worker.job_locks for acquire/release semantics used by
+    worker.jobs.refresh_prices and worker.jobs.run_market_workflow (both the
+    manual CLI and Celery-task/beat-scheduled entry points)."""
+
+    __tablename__ = "job_locks"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'released', 'expired')", name="ck_job_locks_status"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    lock_name: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    owner_id: Mapped[str] = mapped_column(String(255), index=True)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="active", server_default="active", index=True
+    )
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class AppLogEvent(Base):
     """Mirrors app.models.app_log_event.AppLogEvent on the api service -
     same table, same shape. Written by worker.app_logging (best-effort

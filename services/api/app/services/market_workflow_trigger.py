@@ -9,8 +9,11 @@ wraps the exact same run_market_workflow() job used by the manual CLI
 workflow - this module only enqueues that task and waits for its result.
 """
 
+from datetime import datetime
+
 from celery import Celery
 
+from app.services.job_locks import LockHeldError
 from app.settings import settings
 
 TASK_NAME = "worker.celery_app.run_market_workflow_task"
@@ -36,6 +39,12 @@ def trigger_market_workflow(
 
     Returns (celery_task_id, result_dict) where result_dict is the
     dataclasses.asdict() of the worker's MarketWorkflowResult.
+
+    Raises app.services.job_locks.LockHeldError if the worker's own
+    'market_workflow' lock was already held - see
+    app.services.refresh_trigger.trigger_price_refresh's docstring for why
+    this is translated from a plain dict rather than a raised exception
+    crossing the Celery result boundary.
     """
     client = _celery_client()
     async_result = client.send_task(
@@ -48,4 +57,8 @@ def trigger_market_workflow(
         },
     )
     result = async_result.get(timeout=TRIGGER_TIMEOUT_SECONDS)
+    if isinstance(result, dict) and result.get("lock_held"):
+        raise LockHeldError(
+            result["lock_name"], result["owner_id"], datetime.fromisoformat(result["expires_at"])
+        )
     return async_result.id, result
