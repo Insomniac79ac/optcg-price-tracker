@@ -8,6 +8,7 @@ refresh_prices has already recorded.
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.pagination import pagination_response
 from app.models import Card, CollectionItem, PriceObservation, WishlistItem
 from app.models.wishlist_item import WISHLIST_STATUSES
 from app.schemas import WishlistItemListOut, WishlistItemOut, WishlistLatestPricesOut, WishlistSummaryOut
@@ -208,7 +209,10 @@ def get_wishlist_items(
 
     items = db.scalars(query.order_by(WishlistItem.id)).all()
     if not items:
-        return WishlistItemListOut(items=[], total=0, limit=limit, offset=offset)
+        return WishlistItemListOut(
+            items=[], total=0, limit=limit, offset=offset,
+            pagination=pagination_response([], 0, limit, offset),
+        )
 
     card_ids = {i.card_id for i in items}
     cards_by_id = {c.id: c for c in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()}
@@ -234,7 +238,13 @@ def get_wishlist_items(
 
     total = len(built)
     page = built[offset : offset + limit]
-    return WishlistItemListOut(items=page, total=total, limit=limit, offset=offset)
+    return WishlistItemListOut(
+        items=page,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(page, total, limit, offset),
+    )
 
 
 def get_wishlist_summary(db: Session, user_id: int) -> WishlistSummaryOut:

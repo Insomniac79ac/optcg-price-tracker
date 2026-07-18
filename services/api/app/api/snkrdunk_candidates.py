@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import MATCH_STATUSES, SnkrdunkCandidate
@@ -87,7 +88,13 @@ def list_candidates(
         }
 
     items = [_to_out(c, cards_by_id.get(c.matched_card_id)) for c in candidates]
-    return SnkrdunkCandidateListOut(items=items, total=total, limit=limit, offset=offset)
+    return SnkrdunkCandidateListOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
+    )
 
 
 @router.get("/candidates/{candidate_id}", response_model=SnkrdunkCandidateOut)

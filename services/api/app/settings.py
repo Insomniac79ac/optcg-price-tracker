@@ -52,6 +52,15 @@ class Settings(BaseSettings):
     SLOW_REQUEST_LOGGING_ENABLED: bool = True
     SLOW_REQUEST_MS: int = 1000
 
+    # Per-response size visibility (app.core.response_size) - every response
+    # gets an X-Response-Size-Bytes header regardless; a response larger than
+    # RESPONSE_SIZE_WARNING_BYTES additionally gets a warning app_log_events
+    # row (event_type=response_size_warning, see GET /admin/performance/summary
+    # and GET /admin/logs?event_type=response_size_warning). Never blocks the
+    # response - visibility only, same as SLOW_REQUEST_* above.
+    RESPONSE_SIZE_WARNING_ENABLED: bool = True
+    RESPONSE_SIZE_WARNING_BYTES: int = 1_000_000
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

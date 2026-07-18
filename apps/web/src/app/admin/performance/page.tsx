@@ -216,6 +216,16 @@ export default function PerformancePage() {
                 value={summary.index_audit.critical}
                 tone="critical"
               />
+              <StatCard
+                label="Response size warnings (24h)"
+                value={summary.response_size_warnings_last_24h}
+                tone="warning"
+              />
+              <StatCard
+                label="Slow requests (24h)"
+                value={summary.slow_requests_last_24h}
+                tone="warning"
+              />
             </div>
 
             <h2 className="mb-2 text-sm font-semibold text-neutral-200">Index audit</h2>
@@ -269,7 +279,7 @@ export default function PerformancePage() {
             <h2 className="mb-2 text-sm font-semibold text-neutral-200">
               Latest slow requests
             </h2>
-            <div className="overflow-x-auto rounded-lg border border-neutral-800">
+            <div className="mb-6 overflow-x-auto rounded-lg border border-neutral-800">
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
@@ -294,6 +304,59 @@ export default function PerformancePage() {
                           {new Date(req.created_at).toLocaleString()}
                         </td>
                         <td className="px-3 py-2 text-neutral-300">{req.message}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="text-sm font-semibold text-neutral-200">
+                Largest recent responses
+              </h2>
+              <Link
+                href="/admin/logs?event_type=response_size_warning"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                View in logs
+              </Link>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-neutral-800">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+                    <th className="px-3 py-2 font-medium">Recorded at</th>
+                    <th className="px-3 py-2 font-medium">Method</th>
+                    <th className="px-3 py-2 font-medium">Path</th>
+                    <th className="px-3 py-2 font-medium">Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.largest_recent_responses.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-6 text-center text-neutral-500">
+                        No response size warnings recorded.
+                      </td>
+                    </tr>
+                  ) : (
+                    summary.largest_recent_responses.map((res, i) => (
+                      <tr
+                        key={`${res.created_at}-${i}`}
+                        className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
+                      >
+                        <td className="whitespace-nowrap px-3 py-2 text-neutral-400">
+                          {new Date(res.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-neutral-300">{res.method ?? "-"}</td>
+                        <td className="px-3 py-2 font-mono text-neutral-300">
+                          {res.path ?? "-"}
+                        </td>
+                        <td className="px-3 py-2 text-neutral-300">
+                          {res.size_bytes !== null
+                            ? `${(res.size_bytes / 1_000_000).toFixed(2)} MB`
+                            : "-"}
+                        </td>
                       </tr>
                     ))
                   )}

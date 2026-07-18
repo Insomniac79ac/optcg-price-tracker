@@ -45,7 +45,21 @@ def make_mapping(db_session, card: Card, source: Source, **overrides) -> SourceC
 def test_list_source_mappings_empty(client, db_session):
     response = client.get("/admin/source-mappings")
     assert response.status_code == 200
-    assert response.json() == {"items": [], "total": 0, "limit": 100, "offset": 0}
+    assert response.json() == {
+        "items": [],
+        "total": 0,
+        "limit": 100,
+        "offset": 0,
+        "pagination": {
+            "total": 0,
+            "limit": 100,
+            "offset": 0,
+            "has_next": False,
+            "has_previous": False,
+            "next_offset": None,
+            "previous_offset": None,
+        },
+    }
 
 
 def test_list_source_mappings_returns_mappings(client, db_session):

@@ -37,6 +37,7 @@ from app.config_check import validate_config
 from app.core.env_validation import validate_environment
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.request_timing import RequestTimingMiddleware
+from app.core.response_size import ResponseSizeMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.services.app_logging import record_app_log
 from app.settings import settings
@@ -105,6 +106,10 @@ app = FastAPI(title="optcg-price-tracker API")
 # layer, timing the full request (including the other three middlewares'
 # own overhead), and never fails to record - even a 429/CORS-preflight
 # response gets an X-Process-Time-Ms header and, if slow, a log row.
+# ResponseSizeMiddleware is added last of all (outermost of everything),
+# reading Content-Length off the fully-built response - order relative to
+# the others doesn't affect what it measures, it just needs to run after a
+# response exists.
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -120,6 +125,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(RequestTimingMiddleware)
+app.add_middleware(ResponseSizeMiddleware)
 
 app.include_router(health_router)
 app.include_router(cards_router)

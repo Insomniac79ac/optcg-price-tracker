@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import User
 from app.models.collector_activity_event import EVENT_SOURCES
@@ -48,6 +49,9 @@ def list_activity(
             by_type=result.by_type,
         ),
         events=result.events,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(result.events, result.total_events, limit, offset),
     )
 
 

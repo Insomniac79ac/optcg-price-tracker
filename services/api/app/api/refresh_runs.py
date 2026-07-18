@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models.price_refresh_run import RUN_STATUSES, PriceRefreshRun
 from app.schemas import PriceRefreshRunListOut, PriceRefreshRunOut
@@ -44,11 +45,13 @@ def list_refresh_runs(
         .offset(offset)
     ).all()
 
+    items = [PriceRefreshRunOut.model_validate(run) for run in runs]
     return PriceRefreshRunListOut(
-        items=[PriceRefreshRunOut.model_validate(run) for run in runs],
+        items=items,
         total=total,
         limit=limit,
         offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
     )
 
 

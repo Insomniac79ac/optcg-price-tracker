@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.pagination import pagination_response
 from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, MarketSignalEvent, WishlistItem
 from app.schemas import OpportunitiesResponseOut, OpportunitiesSummaryOut, OpportunityOut
 from app.services.collector import get_groups_for_cards, get_tags_for_cards
@@ -282,7 +283,7 @@ def _best_wishlist_item_by_card(wishlist_items: list[WishlistItem]) -> dict[int,
     return best
 
 
-def _empty_response() -> OpportunitiesResponseOut:
+def _empty_response(limit: int, offset: int) -> OpportunitiesResponseOut:
     return OpportunitiesResponseOut(
         summary=OpportunitiesSummaryOut(
             total_opportunities=0,
@@ -291,6 +292,9 @@ def _empty_response() -> OpportunitiesResponseOut:
             by_category={c: 0 for c in CATEGORIES},
         ),
         opportunities=[],
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response([], 0, limit, offset),
     )
 
 
@@ -321,7 +325,7 @@ def get_opportunities(
 
     events = db.scalars(query).all()
     if not events:
-        return _empty_response()
+        return _empty_response(limit, offset)
 
     card_ids = {e.card_id for e in events if e.card_id is not None}
     cards_by_id: dict[int, Card] = {}
@@ -398,9 +402,11 @@ def get_opportunities(
     )
 
     page = scored[offset : offset + limit]
+    page_out = [_to_out(s, tags_by_card, groups_by_card, grading_by_card) for s in page]
     return OpportunitiesResponseOut(
         summary=summary,
-        opportunities=[
-            _to_out(s, tags_by_card, groups_by_card, grading_by_card) for s in page
-        ],
+        opportunities=page_out,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(page_out, total_opportunities, limit, offset),
     )

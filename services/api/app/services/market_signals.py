@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.pagination import pagination_response
 from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping, WishlistItem
 from app.schemas import (
     MarketSignalLatestPricesOut,
@@ -529,7 +530,7 @@ def _wishlist_signals(
     return []
 
 
-def _empty_response() -> MarketSignalsResponseOut:
+def _empty_response(limit: int, offset: int) -> MarketSignalsResponseOut:
     return MarketSignalsResponseOut(
         summary=MarketSignalsSummaryOut(
             total_signals=0,
@@ -539,6 +540,9 @@ def _empty_response() -> MarketSignalsResponseOut:
             data_quality_signal_count=0,
         ),
         signals=[],
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response([], 0, limit, offset),
     )
 
 
@@ -560,7 +564,7 @@ def get_market_signals(
 
     cards = db.scalars(select(Card).where(*card_filters).order_by(Card.id)).all()
     if not cards:
-        return _empty_response()
+        return _empty_response(limit, offset)
 
     card_ids = [c.id for c in cards]
     sources_by_id = {s.id: s.name for s in db.scalars(select(Source)).all()}
@@ -664,4 +668,11 @@ def get_market_signals(
     )
 
     page = filtered[offset : offset + limit]
-    return MarketSignalsResponseOut(summary=summary, signals=[s.to_out() for s in page])
+    page_out = [s.to_out() for s in page]
+    return MarketSignalsResponseOut(
+        summary=summary,
+        signals=page_out,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(page_out, len(filtered), limit, offset),
+    )

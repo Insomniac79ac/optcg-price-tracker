@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, CollectionItem, MarketIntelligenceReport, MarketSignalEvent
 from app.models.market_signal_event import STATUSES as EVENT_STATUSES
@@ -193,9 +194,13 @@ def list_market_signal_events(
     )
 
     page = enriched[offset : offset + limit]
+    page_out = [event_to_out(event, card, qty) for event, card, qty in page]
     return MarketSignalEventListOut(
         summary=summary,
-        events=[event_to_out(event, card, qty) for event, card, qty in page],
+        events=page_out,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(page_out, len(enriched), limit, offset),
     )
 
 
@@ -362,11 +367,13 @@ def list_market_reports(
         .limit(limit)
         .offset(offset)
     ).all()
+    reports_out = [_report_to_summary_out(r) for r in reports]
     return MarketIntelligenceReportListOut(
-        reports=[_report_to_summary_out(r) for r in reports],
+        reports=reports_out,
         total=total,
         limit=limit,
         offset=offset,
+        pagination=pagination_response(reports_out, total, limit, offset),
     )
 
 

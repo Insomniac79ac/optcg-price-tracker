@@ -57,7 +57,21 @@ def make_rule(db_session, **overrides) -> AlertRule:
 def test_list_alert_events_empty(client, db_session):
     response = client.get("/admin/alert-events")
     assert response.status_code == 200
-    assert response.json() == {"items": [], "total": 0, "limit": 100, "offset": 0}
+    assert response.json() == {
+        "items": [],
+        "total": 0,
+        "limit": 100,
+        "offset": 0,
+        "pagination": {
+            "total": 0,
+            "limit": 100,
+            "offset": 0,
+            "has_next": False,
+            "has_previous": False,
+            "next_offset": None,
+            "previous_offset": None,
+        },
+    }
 
 
 def test_list_alert_events_returns_card_and_source_details(client, db_session):

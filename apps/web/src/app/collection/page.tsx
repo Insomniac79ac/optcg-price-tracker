@@ -13,6 +13,7 @@ import { CollectionValuationSummary } from "@/components/CollectionValuationSumm
 import { CollectorTagsGroupsManager } from "@/components/CollectorTagsGroupsManager";
 import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
+import { PaginationControls } from "@/components/PaginationControls";
 import type { HistoryTimeframe } from "@/components/PortfolioValuationHistoryChart";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
@@ -73,6 +74,7 @@ const STATUS_FILTERS = [
 ];
 
 const ALL_OPTION = { value: "", label: "All" };
+const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
 
 interface FormState {
   card_id: string;
@@ -153,6 +155,13 @@ export default function CollectionPage() {
   const [missingPricesOnly, setMissingPricesOnly] = useState(false);
   const [missingCostBasisOnly, setMissingCostBasisOnly] = useState(false);
   const [aboveTargetOnly, setAboveTargetOnly] = useState(false);
+
+  // filteredItems is derived client-side from a single (up to 500-item)
+  // server fetch - see refreshList() below - so pagination here paginates
+  // that already-filtered client-side array rather than re-fetching pages
+  // from the backend.
+  const [pageLimit, setPageLimit] = useState(100);
+  const [pageOffset, setPageOffset] = useState(0);
 
   const [allTags, setAllTags] = useState<CollectorTag[]>([]);
   const [allGroups, setAllGroups] = useState<CollectorGroup[]>([]);
@@ -331,6 +340,18 @@ export default function CollectionPage() {
     aboveTargetOnly,
     valuationByItemId,
   ]);
+
+  // Any filter/page-size change re-pages to the start - an offset from the
+  // old filtered set is otherwise almost certainly out of range for the new
+  // one.
+  useEffect(() => {
+    setPageOffset(0);
+  }, [filteredItems, pageLimit]);
+
+  const pagedItems = useMemo(
+    () => filteredItems.slice(pageOffset, pageOffset + pageLimit),
+    [filteredItems, pageOffset, pageLimit],
+  );
 
   const cardsMissingPrices = useMemo(() => {
     if (!valuation) return 0;
@@ -893,7 +914,7 @@ export default function CollectionPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item) => {
+                {pagedItems.map((item) => {
                   const v = valuationByItemId.get(item.id);
                   return (
                     <tr
@@ -1038,6 +1059,19 @@ export default function CollectionPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {listStatus === "ready" && filteredItems.length > 0 && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={pageOffset}
+              limit={pageLimit}
+              total={filteredItems.length}
+              onOffsetChange={setPageOffset}
+              limitOptions={LIMIT_OPTIONS}
+              onLimitChange={setPageLimit}
+            />
           </div>
         )}
       </main>

@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import (
     Card,
@@ -178,7 +179,13 @@ def list_collection_items(
         )
         for item in items
     ]
-    return CollectionItemListOut(items=out_items, total=total, limit=limit, offset=offset)
+    return CollectionItemListOut(
+        items=out_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(out_items, total, limit, offset),
+    )
 
 
 @router.get("/summary", response_model=CollectionSummaryOut)

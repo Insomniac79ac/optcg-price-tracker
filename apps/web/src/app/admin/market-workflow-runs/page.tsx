@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { MarketWorkflowRunStatusBadge } from "@/components/MarketWorkflowRunStatusBadge";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   AdminAuthRequiredError,
   MARKET_WORKFLOW_RUN_STATUSES,
@@ -23,6 +24,8 @@ const STATUS_FILTERS = [
   ...MARKET_WORKFLOW_RUN_STATUSES.map((s) => ({ value: s, label: s.replace("_", " ") })),
 ];
 
+const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
+
 function naText(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return NA;
   return String(value);
@@ -32,15 +35,23 @@ export default function MarketWorkflowRunsPage() {
   const [runs, setRuns] = useState<MarketWorkflowRun[]>([]);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
+  const [limit, setLimit] = useState(50);
+  const [offset, setOffset] = useState(0);
   const [status, setStatus] = useState<"loading" | "error" | "unauthorized" | "ready">(
     "loading",
   );
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // A filter change re-pages to the start - an offset from the old filter's
+  // result set is otherwise almost certainly out of range for the new one.
+  useEffect(() => {
+    setOffset(0);
+  }, [statusFilter, limit]);
+
   useEffect(() => {
     let cancelled = false;
 
-    fetchMarketWorkflowRuns({ status: statusFilter || undefined, limit: 50 })
+    fetchMarketWorkflowRuns({ status: statusFilter || undefined, limit, offset })
       .then((data) => {
         if (cancelled) return;
         setRuns(data.items);
@@ -55,9 +66,13 @@ export default function MarketWorkflowRunsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter]);
+  }, [statusFilter, limit, offset]);
 
-  const latest = runs.length > 0 ? runs[0] : null;
+  // Only meaningful on the first page (runs are newest-first) - on later
+  // pages runs[0] is just the newest item of that page, not the true latest
+  // run, so the summary cards fall back to "not available" rather than
+  // showing something misleading.
+  const latest = offset === 0 && runs.length > 0 ? runs[0] : null;
 
   return (
     <div className="min-h-screen">
@@ -296,6 +311,17 @@ export default function MarketWorkflowRunsPage() {
                 </table>
               </div>
             )}
+
+            <div className="mt-3">
+              <PaginationControls
+                offset={offset}
+                limit={limit}
+                total={total}
+                onOffsetChange={setOffset}
+                limitOptions={LIMIT_OPTIONS}
+                onLimitChange={setLimit}
+              />
+            </div>
           </>
         )}
       </main>

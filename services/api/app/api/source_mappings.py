@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, Source, SourceCardMapping
 from app.models.source_card_mapping import REVIEW_STATUSES
@@ -123,7 +124,13 @@ def list_source_mappings(
     items = [
         _to_out(m, cards_by_id.get(m.card_id), sources_by_id.get(m.source_id)) for m in mappings
     ]
-    return SourceCardMappingListOut(items=items, total=total, limit=limit, offset=offset)
+    return SourceCardMappingListOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
+    )
 
 
 @router.get("/{mapping_id}", response_model=SourceCardMappingOut)

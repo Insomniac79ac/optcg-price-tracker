@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.pagination import PaginationMeta
+
 
 class CollectorTagOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -114,6 +116,7 @@ class CollectorNoteListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class CollectorNoteCreateIn(BaseModel):
@@ -192,6 +195,9 @@ class CollectorActivityListSummaryOut(BaseModel):
 class CollectorActivityListOut(BaseModel):
     summary: CollectorActivityListSummaryOut
     events: list[CollectorActivityEventOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class CollectorActivitySummaryOut(BaseModel):
@@ -268,6 +274,7 @@ class SnkrdunkCandidateListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class SnkrdunkCandidateMatchIn(BaseModel):
@@ -331,6 +338,7 @@ class PriceRefreshRunListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class AlertEventOut(BaseModel):
@@ -356,6 +364,7 @@ class AlertEventListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class AlertRuleOut(BaseModel):
@@ -401,6 +410,7 @@ class SourceCardMappingListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class SourceCardMappingUpdateIn(BaseModel):
@@ -508,6 +518,7 @@ class GradingSubmissionListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class GradingSummaryOut(BaseModel):
@@ -564,6 +575,7 @@ class CollectionItemListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class CollectionItemCreateIn(BaseModel):
@@ -871,6 +883,9 @@ class MarketSignalsSummaryOut(BaseModel):
 class MarketSignalsResponseOut(BaseModel):
     summary: MarketSignalsSummaryOut
     signals: list[MarketSignalOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class MarketSignalEventOut(BaseModel):
@@ -914,6 +929,9 @@ class MarketSignalEventsSummaryOut(BaseModel):
 class MarketSignalEventListOut(BaseModel):
     summary: MarketSignalEventsSummaryOut
     events: list[MarketSignalEventOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class MarketSignalEventUpdateIn(BaseModel):
@@ -964,6 +982,9 @@ class OpportunityOut(BaseModel):
 class OpportunitiesResponseOut(BaseModel):
     summary: OpportunitiesSummaryOut
     opportunities: list[OpportunityOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class MarketReportPortfolioSnapshotOut(BaseModel):
@@ -1066,6 +1087,7 @@ class MarketIntelligenceReportListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class BackupValidateResponseOut(BaseModel):
@@ -1176,6 +1198,7 @@ class MarketWorkflowRunListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class AdminRunMarketWorkflowRequest(BaseModel):
@@ -1245,6 +1268,7 @@ class WishlistItemListOut(BaseModel):
     total: int
     limit: int
     offset: int
+    pagination: PaginationMeta
 
 
 class WishlistItemCreateIn(BaseModel):
@@ -1491,6 +1515,9 @@ class SearchResponseOut(BaseModel):
     query: str
     summary: SearchSummaryOut
     results: list[SearchResultOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class SearchSuggestionOut(BaseModel):
@@ -1556,6 +1583,9 @@ class DbBackupFileOut(BaseModel):
 class DbBackupListOut(BaseModel):
     backup_dir: str
     backups: list[DbBackupFileOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 # --- app logs / observability -------------------------------------------
@@ -1587,6 +1617,9 @@ class AppLogSummaryOut(BaseModel):
 class AppLogListOut(BaseModel):
     summary: AppLogSummaryOut
     logs: list[AppLogEventOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
 
 
 class AppLogPruneRequestIn(BaseModel):
@@ -1705,11 +1738,21 @@ class PerformanceIndexAuditSummaryOut(BaseModel):
     critical: int
 
 
+class LargestResponseOut(BaseModel):
+    created_at: datetime
+    method: str | None
+    path: str | None
+    size_bytes: int | None
+
+
 class PerformanceSummaryOut(BaseModel):
     status: str
     database: PerformanceDatabaseCountsOut
     latest_slow_requests: list[SlowRequestOut]
     index_audit: PerformanceIndexAuditSummaryOut
+    response_size_warnings_last_24h: int = 0
+    slow_requests_last_24h: int = 0
+    largest_recent_responses: list[LargestResponseOut] = []
 
 
 # --- data retention / pruning -------------------------------------------

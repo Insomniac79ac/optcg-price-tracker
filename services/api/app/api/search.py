@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import User
 from app.schemas import (
@@ -63,6 +64,9 @@ def search_endpoint(
         query=outcome.query,
         summary=SearchSummaryOut(total_results=outcome.total_results, by_type=outcome.by_type),
         results=outcome.results,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(outcome.results, outcome.total_results, limit, offset),
     )
 
 

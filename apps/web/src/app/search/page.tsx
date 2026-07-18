@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
+import { PaginationControls } from "@/components/PaginationControls";
 import { SearchTypeBadge } from "@/components/SearchTypeBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import {
@@ -30,6 +31,7 @@ const TYPE_LABELS: Record<SearchType, string> = {
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 350;
+const LIMIT_OPTIONS = [50, 100, 200] as const;
 
 function formatMetadataValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "not available";
@@ -54,6 +56,8 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [summary, setSummary] = useState<SearchSummary | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "ready">("idle");
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
 
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
 
@@ -93,13 +97,21 @@ export default function SearchPage() {
     };
   }, [input, showSuggestions]);
 
+  // A new query or type filter re-pages to the start - an offset from the
+  // old result set is otherwise almost certainly out of range for the new
+  // one.
+  useEffect(() => {
+    setOffset(0);
+  }, [submittedQuery, activeType, limit]);
+
   useEffect(() => {
     if (!showResults) return;
     setStatus("loading");
     fetchSearch({
       q: submittedQuery,
       types: activeType ? [activeType] : undefined,
-      limit: 200,
+      limit,
+      offset,
     })
       .then((data) => {
         setResults(data.results);
@@ -107,7 +119,7 @@ export default function SearchPage() {
         setStatus("ready");
       })
       .catch(() => setStatus("error"));
-  }, [submittedQuery, activeType, showResults]);
+  }, [submittedQuery, activeType, showResults, limit, offset]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -205,6 +217,17 @@ export default function SearchPage() {
                   </div>
                 </section>
               ))}
+            </div>
+
+            <div className="mt-4">
+              <PaginationControls
+                offset={offset}
+                limit={limit}
+                total={summary.total_results}
+                onOffsetChange={setOffset}
+                limitOptions={LIMIT_OPTIONS}
+                onLimitChange={setLimit}
+              />
             </div>
           </>
         )}

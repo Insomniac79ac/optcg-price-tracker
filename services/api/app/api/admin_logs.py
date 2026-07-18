@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import AppLogEvent
 from app.schemas import (
@@ -46,7 +47,7 @@ def list_logs_endpoint(
     event_type: str | None = Query(default=None),
     q: str | None = Query(default=None),
     since_hours: int | None = Query(default=None, ge=1),
-    limit: int = Query(default=100, ge=1, le=1000),
+    limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
@@ -64,6 +65,7 @@ def list_logs_endpoint(
         offset=offset,
     )
 
+    logs_out = [app_log_to_out(log) for log in result.logs]
     return AppLogListOut(
         summary=AppLogSummaryOut(
             total_logs=result.total_logs,
@@ -73,7 +75,10 @@ def list_logs_endpoint(
             by_service=result.by_service,
             by_event_type=result.by_event_type,
         ),
-        logs=[app_log_to_out(log) for log in result.logs],
+        logs=logs_out,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(logs_out, result.total_logs, limit, offset),
     )
 
 

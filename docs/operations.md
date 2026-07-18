@@ -455,6 +455,87 @@ that never got instrumented), `docker compose logs` (see [Logs](#logs)) is still
 truth. Treat `/admin/logs` as the fast path for the events it covers, not a replacement for
 container logs.
 
+## API pagination and response size limits
+
+As `price_observations`, `raw_snapshots`, `collector_activity_events`, `market_signal_events`,
+and `app_log_events` grow, an unpaginated list endpoint would eventually return a response large
+enough to slow the API down or make the browser struggle to render it. Every list endpoint that
+reads from one of those tables (or anything else that can grow without bound - collection,
+wishlist, grading submissions, market signals/opportunities/reports, search results, admin
+logs/refresh-runs/workflow-runs/source-mappings/SNKRDUNK-candidates/alert-events/db-backups) is
+paginated and carries a standard `pagination` metadata block. CSV/backup exports are the one
+deliberate exception - see below.
+
+**Limits.** Default page size is 100, capped at 500 (a handful of endpoints - `/collector/notes`,
+`/search`, `/search/suggestions` - use a tighter documented max instead, matching how those
+endpoints were already scoped before pagination metadata was added). An invalid `limit`/`offset`
+is rejected with `422` rather than silently clamped - `limit <= 0`, `limit` over the endpoint's
+max, or a negative `offset` all fail the request instead of reinterpreting it. This is enforced
+either by FastAPI's `Query(..., ge=1, le=<max>)` on the route itself, or - for the couple of
+surfaces that don't get that for free (e.g. `GET /admin/db-backups`) - by the shared
+`parse_pagination()` helper in `app.core.pagination` (`services/api/app/core/pagination.py`).
+
+**Response shape.** Every paginated response keeps its existing top-level shape (`items`,
+`events`, `opportunities`, `signals`, `results`, `logs`, `reports`, ... - whatever it already
+was) and adds a `pagination` object alongside it:
+
+```json
+{
+  "pagination": {
+    "total": 1000,
+    "limit": 100,
+    "offset": 0,
+    "has_next": true,
+    "has_previous": false,
+    "next_offset": 100,
+    "previous_offset": null
+  }
+}
+```
+
+`has_next`/`has_previous` are derived from the actual number of rows returned (not blindly from
+`limit`), so a short final page is still correctly reported as the last one. `next_offset`/
+`previous_offset` are `null` when there's no next/previous page - fetch the next page with
+`?limit=<limit>&offset=<next_offset>`. This is built by `pagination_response()` in the same
+`app.core.pagination` module, so every paginated endpoint's metadata is computed the same way
+regardless of what its items array is called.
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/admin/logs?limit=50&offset=50"
+curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://localhost:8000/market/opportunities?limit=20"
+```
+
+**Exports are not paginated.** `GET /collection/export.csv`, `GET /wishlist/export.csv`, and the
+backup endpoints (`GET /admin/backup/export`, `POST /admin/backup/restore`) are intentionally
+full exports - a CSV/backup that silently only contained one page of rows would be actively
+wrong, not just slow. These endpoints do not accept `limit`/`offset` and carry no `pagination`
+key.
+
+**Response size warnings.** Independent of pagination, every response gets an
+`X-Response-Size-Bytes` header (read off the `Content-Length` FastAPI already computes, so this
+never buffers a second copy of the body just to measure it - see
+`app.core.response_size.ResponseSizeMiddleware`,
+`services/api/app/core/response_size.py`). A response larger than
+`RESPONSE_SIZE_WARNING_BYTES` (env var, default `1000000` = ~1 MB) additionally records a
+`warning`-level `app_log_events` row with `event_type=response_size_warning`, containing the
+method, path, and size. This is visibility only - oversized responses are never blocked, same
+philosophy as the slow-request logging above. Set `RESPONSE_SIZE_WARNING_ENABLED=false` to turn
+off the warning writes entirely (the header itself is always added).
+
+**Where to find large-response logs.**
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" \
+  "http://localhost:8000/admin/logs?event_type=response_size_warning"
+```
+
+Or filter `/admin/logs` in the UI by event type `response_size_warning`. `GET
+/admin/performance/summary` also surfaces `response_size_warnings_last_24h`,
+`slow_requests_last_24h`, and a `largest_recent_responses` list (the biggest few among the most
+recent warnings) - the `/admin/performance` page shows these alongside table row counts and index
+audit results, with a link straight into `/admin/logs` pre-filtered to
+`event_type=response_size_warning`.
+
 ## Data retention and pruning
 
 The tables that grow fastest (`raw_snapshots`, `price_observations`, `app_log_events`,

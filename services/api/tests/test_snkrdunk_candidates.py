@@ -35,7 +35,21 @@ def test_list_candidates_empty(client, seeded_db):
     response = client.get("/snkrdunk/candidates")
     assert response.status_code == 200
     body = response.json()
-    assert body == {"items": [], "total": 0, "limit": 100, "offset": 0}
+    assert body == {
+        "items": [],
+        "total": 0,
+        "limit": 100,
+        "offset": 0,
+        "pagination": {
+            "total": 0,
+            "limit": 100,
+            "offset": 0,
+            "has_next": False,
+            "has_previous": False,
+            "next_offset": None,
+            "previous_offset": None,
+        },
+    }
 
 
 def test_list_candidates_returns_seeded_candidate(client, candidate):

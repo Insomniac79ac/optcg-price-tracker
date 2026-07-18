@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { PaginationControls } from "@/components/PaginationControls";
 import { RunStatusBadge } from "@/components/RunStatusBadge";
 import {
   AdminAuthRequiredError,
@@ -22,18 +23,28 @@ const STATUS_FILTERS = [
   { value: "failed", label: "Failed" },
 ];
 
+const LIMIT_OPTIONS = [25, 50, 100, 200] as const;
+
 export default function RefreshRunsPage() {
   const [runs, setRuns] = useState<PriceRefreshRun[]>([]);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
   const [status, setStatus] = useState<
     "loading" | "error" | "unauthorized" | "ready"
   >("loading");
 
+  // A filter change re-pages to the start - an offset from the old filter's
+  // result set is otherwise almost certainly out of range for the new one.
+  useEffect(() => {
+    setOffset(0);
+  }, [statusFilter, limit]);
+
   useEffect(() => {
     let cancelled = false;
 
-    fetchRefreshRuns({ status: statusFilter || undefined, limit: 100 })
+    fetchRefreshRuns({ status: statusFilter || undefined, limit, offset })
       .then((data) => {
         if (cancelled) return;
         setRuns(data.items);
@@ -48,7 +59,7 @@ export default function RefreshRunsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter]);
+  }, [statusFilter, limit, offset]);
 
   return (
     <div className="min-h-screen">
@@ -199,6 +210,19 @@ export default function RefreshRunsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {status === "ready" && (
+          <div className="mt-3">
+            <PaginationControls
+              offset={offset}
+              limit={limit}
+              total={total}
+              onOffsetChange={setOffset}
+              limitOptions={LIMIT_OPTIONS}
+              onLimitChange={setLimit}
+            />
           </div>
         )}
       </main>

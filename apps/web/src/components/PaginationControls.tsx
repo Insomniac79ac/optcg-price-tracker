@@ -26,6 +26,10 @@ export function PaginationControls({
   const currentPage = Math.min(totalPages, Math.floor(offset / Math.max(1, limit)) + 1);
   const hasPrev = offset > 0;
   const hasNext = offset + limit < total;
+  // Nothing to page through - the whole list already fits on one page, so
+  // Previous/Next/page-count would always be a no-op. The result-count text
+  // stays (still useful, e.g. "12 results"), only the actual controls hide.
+  const showControls = total > limit;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
@@ -52,27 +56,29 @@ export function PaginationControls({
           </label>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onOffsetChange(Math.max(0, offset - limit))}
-          disabled={!hasPrev}
-          className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
-        >
-          Previous
-        </button>
-        <span>
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          type="button"
-          onClick={() => hasNext && onOffsetChange(offset + limit)}
-          disabled={!hasNext}
-          className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
-        >
-          Next
-        </button>
-      </div>
+      {showControls && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onOffsetChange(Math.max(0, offset - limit))}
+            disabled={!hasPrev}
+            className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => hasNext && onOffsetChange(offset + limit)}
+            disabled={!hasNext}
+            className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import AlertEvent, AlertRule, Card, Source
 from app.models.alert_event import EVENT_STATUSES, EVENT_TYPES
@@ -96,7 +97,13 @@ def list_alert_events(
         _to_event_out(event, cards_by_id.get(event.card_id), sources_by_id.get(event.source_id))
         for event in events
     ]
-    return AlertEventListOut(items=items, total=total, limit=limit, offset=offset)
+    return AlertEventListOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
+    )
 
 
 @router.get("/alert-events/{event_id}", response_model=AlertEventOut)

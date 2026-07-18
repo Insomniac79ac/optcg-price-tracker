@@ -6,6 +6,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { MatchStatusBadge } from "@/components/MatchStatusBadge";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   AdminAuthRequiredError,
   type Card,
@@ -25,11 +26,15 @@ const STATUS_FILTERS = [
   { value: "rejected", label: "Rejected" },
 ];
 
+const LIMIT_OPTIONS = [50, 100, 200, 500] as const;
+
 export default function SnkrdunkCandidatesPage() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [candidates, setCandidates] = useState<SnkrdunkCandidate[]>([]);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
+  const [limit, setLimit] = useState(200);
+  const [offset, setOffset] = useState(0);
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
     "loading",
   );
@@ -40,10 +45,16 @@ export default function SnkrdunkCandidatesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<number | null>(null);
 
+  // A filter change re-pages to the start - an offset from the old filter's
+  // result set is otherwise almost certainly out of range for the new one.
+  useEffect(() => {
+    setOffset(0);
+  }, [statusFilter, limit]);
+
   useEffect(() => {
     let cancelled = false;
 
-    fetchSnkrdunkCandidates({ status: statusFilter || undefined, limit: 200 })
+    fetchSnkrdunkCandidates({ status: statusFilter || undefined, limit, offset })
       .then((data) => {
         if (cancelled) return;
         setCandidates(data.items);
@@ -59,7 +70,7 @@ export default function SnkrdunkCandidatesPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter]);
+  }, [statusFilter, limit, offset]);
 
   useEffect(() => {
     fetchCards()
@@ -329,6 +340,19 @@ export default function SnkrdunkCandidatesPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {status === "ready" && (
+              <div className="mt-3">
+                <PaginationControls
+                  offset={offset}
+                  limit={limit}
+                  total={total}
+                  onOffsetChange={setOffset}
+                  limitOptions={LIMIT_OPTIONS}
+                  onLimitChange={setLimit}
+                />
               </div>
             )}
           </>

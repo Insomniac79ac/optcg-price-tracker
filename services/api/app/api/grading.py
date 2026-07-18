@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, CollectionItem, GradingSubmission, User
 from app.models.grading_submission import GRADING_SUBMISSION_STATUSES
@@ -120,7 +121,13 @@ def list_grading_submissions(
         )
         for s in submissions
     ]
-    return GradingSubmissionListOut(items=out_items, total=total, limit=limit, offset=offset)
+    return GradingSubmissionListOut(
+        items=out_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(out_items, total, limit, offset),
+    )
 
 
 @router.get("/summary", response_model=GradingSummaryOut)

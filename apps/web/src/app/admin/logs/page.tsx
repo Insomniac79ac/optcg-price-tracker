@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
@@ -35,6 +36,19 @@ function naText(value: string | number | null | undefined): string {
 }
 
 export default function AdminLogsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLogsPageInner />
+    </Suspense>
+  );
+}
+
+function AdminLogsPageInner() {
+  // Lets other pages (e.g. /admin/performance's "largest recent responses"
+  // section) deep-link here pre-filtered, e.g. ?event_type=response_size_warning.
+  const searchParams = useSearchParams();
+  const initialEventType = searchParams.get("event_type") ?? ALL_OPTION;
+
   const [unauthorized, setUnauthorized] = useState(false);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +59,7 @@ export default function AdminLogsPage() {
 
   const [level, setLevel] = useState(ALL_OPTION);
   const [service, setService] = useState(ALL_OPTION);
-  const [eventType, setEventType] = useState(ALL_OPTION);
+  const [eventType, setEventType] = useState(initialEventType);
   const [q, setQ] = useState("");
   const [sinceHours, setSinceHours] = useState<string>("24");
   const [limit, setLimit] = useState(100);

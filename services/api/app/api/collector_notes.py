@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
+from app.core.pagination import pagination_response
 from app.models import CollectorNote, User
 from app.models.collector_note import NOTE_TYPES
 from app.db import get_db
@@ -70,7 +71,13 @@ def list_notes(
         .offset(offset)
     ).all()
 
-    return CollectorNoteListOut(items=items, total=total, limit=limit, offset=offset)
+    return CollectorNoteListOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
+    )
 
 
 @router.post("", response_model=CollectorNoteOut, status_code=201)

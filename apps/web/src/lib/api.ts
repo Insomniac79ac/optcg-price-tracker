@@ -3,6 +3,20 @@ import { getSession } from "next-auth/react";
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Standard pagination metadata block - see services/api/app/core/pagination.py.
+ * Attached (as `pagination`) to every paginated list response; pages use it
+ * to render "Showing X-Y of Z" + Previous/Next without re-deriving has_next/
+ * has_previous from total/limit/offset themselves. */
+export interface PaginationMeta {
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
+  has_previous: boolean;
+  next_offset: number | null;
+  previous_offset: number | null;
+}
+
 export interface CollectorTag {
   id: number;
   name: string;
@@ -122,6 +136,7 @@ export interface SnkrdunkCandidateList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface PriceRefreshRun {
@@ -147,6 +162,7 @@ export interface PriceRefreshRunList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface AlertEvent {
@@ -172,6 +188,7 @@ export interface AlertEventList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface CardAuditIssue {
@@ -288,6 +305,7 @@ export interface GradingSubmissionList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface GradingSummary {
@@ -341,6 +359,7 @@ export interface CollectionItemList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface CollectionSummary {
@@ -1253,6 +1272,9 @@ export interface MarketSignalsSummary {
 export interface MarketSignalsResponse {
   summary: MarketSignalsSummary;
   signals: MarketSignal[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1341,6 +1363,9 @@ export interface MarketSignalEventsSummary {
 export interface MarketSignalEventListResponse {
   summary: MarketSignalEventsSummary;
   events: MarketSignalEvent[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1449,6 +1474,9 @@ export interface MarketOpportunitiesSummary {
 export interface MarketOpportunitiesResponse {
   summary: MarketOpportunitiesSummary;
   opportunities: MarketOpportunity[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1549,6 +1577,13 @@ export interface SlowRequest {
   context: Record<string, unknown> | null;
 }
 
+export interface LargestResponse {
+  created_at: string;
+  method: string | null;
+  path: string | null;
+  size_bytes: number | null;
+}
+
 export interface PerformanceSummary {
   status: "ok" | "warning" | "critical";
   database: {
@@ -1563,6 +1598,9 @@ export interface PerformanceSummary {
     warnings: number;
     critical: number;
   };
+  response_size_warnings_last_24h: number;
+  slow_requests_last_24h: number;
+  largest_recent_responses: LargestResponse[];
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1718,6 +1756,7 @@ export interface MarketIntelligenceReportListResponse {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1936,6 +1975,7 @@ export interface MarketWorkflowRunListResponse {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -2266,6 +2306,7 @@ export interface WishlistItemList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface WishlistItemInput {
@@ -2747,6 +2788,9 @@ export interface CollectorActivityListSummary {
 export interface CollectorActivityListResponse {
   summary: CollectorActivityListSummary;
   events: CollectorActivityEvent[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface CollectorActivitySummary {
@@ -2783,6 +2827,7 @@ export interface CollectorNoteList {
   total: number;
   limit: number;
   offset: number;
+  pagination: PaginationMeta;
 }
 
 export function fetchCollectorNotes(params?: {
@@ -2837,6 +2882,9 @@ export interface SearchResponse {
   query: string;
   summary: SearchSummary;
   results: SearchResult[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 export interface SearchSuggestion {
@@ -2912,6 +2960,9 @@ export interface AppLogSummary {
 export interface AppLogListResponse {
   summary: AppLogSummary;
   logs: AppLogEvent[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
 }
 
 /** Routed through the Next.js server proxy (see

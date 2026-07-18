@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import MarketWorkflowRun
 from app.schemas import MarketWorkflowRunListOut, MarketWorkflowRunOut
@@ -68,11 +69,13 @@ def list_market_workflow_runs(
         .offset(offset)
     ).all()
 
+    items = [_to_out(run) for run in runs]
     return MarketWorkflowRunListOut(
-        items=[_to_out(run) for run in runs],
+        items=items,
         total=total,
         limit=limit,
         offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
     )
 
 

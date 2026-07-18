@@ -29,7 +29,21 @@ def make_run(db_session, **overrides) -> PriceRefreshRun:
 def test_list_refresh_runs_empty(client, db_session):
     response = client.get("/admin/refresh-runs")
     assert response.status_code == 200
-    assert response.json() == {"items": [], "total": 0, "limit": 50, "offset": 0}
+    assert response.json() == {
+        "items": [],
+        "total": 0,
+        "limit": 50,
+        "offset": 0,
+        "pagination": {
+            "total": 0,
+            "limit": 50,
+            "offset": 0,
+            "has_next": False,
+            "has_previous": False,
+            "next_offset": None,
+            "previous_offset": None,
+        },
+    }
 
 
 def test_list_refresh_runs_returns_runs(client, db_session):
