@@ -45,6 +45,12 @@ api/worker test suites, then confirms every file this doc and the release checkl
 actually exists. `SKIP_TESTS=true` skips the pytest steps (e.g. dev stack not up);
 `ALLOW_DIRTY=true` forwards through to `release_check.sh` for a dirty working tree.
 
+**Deploying against a database with a large/production-scale amount of data?** Also run the Phase
+7 performance audit first - `RUN_PHASE7_AUDIT=true bash scripts/final_audit.sh`, or directly `bash
+scripts/phase7_audit.sh` (optionally with `RUN_LOAD_TESTS=true`) - to confirm pagination, caching,
+data retention/pruning, worker job locks, and background file jobs all still hold up at that
+volume before you cut over. See [docs/performance_testing.md](performance_testing.md).
+
 ## Rollback
 
 If a deploy goes bad:

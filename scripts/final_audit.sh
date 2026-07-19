@@ -30,6 +30,12 @@
 #                 script runs in to also have the web container up.
 #   WEB_BASE_URL  default http://127.0.0.1:3000 - forwarded to
 #                 scripts/web_route_smoke.sh.
+#   RUN_PHASE7_AUDIT  default false - set RUN_PHASE7_AUDIT=true to also run
+#                 scripts/phase7_audit.sh (Phase 7 performance/scale audit -
+#                 see docs/performance_testing.md). Off by default so this
+#                 script stays fast; RUN_LOAD_TESTS is forwarded to it
+#                 unchanged (also default false there), so even with
+#                 RUN_PHASE7_AUDIT=true the load tests themselves stay opt-in.
 
 set -euo pipefail
 
@@ -40,6 +46,7 @@ SKIP_TESTS="${SKIP_TESTS:-false}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-false}"
 SKIP_WEB_SMOKE="${SKIP_WEB_SMOKE:-false}"
 WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
+RUN_PHASE7_AUDIT="${RUN_PHASE7_AUDIT:-false}"
 export ALLOW_DIRTY
 
 fail() {
@@ -105,6 +112,10 @@ REQUIRED_FILES=(
   scripts/db_restore.sh
   scripts/db_backup_prune.sh
   scripts/web_route_smoke.sh
+  scripts/phase7_audit.sh
+  scripts/load_test_api.sh
+  scripts/load_test_web.sh
+  docs/performance_testing.md
 )
 for f in "${REQUIRED_FILES[@]}"; do
   if [[ -f "$f" ]]; then
@@ -113,6 +124,15 @@ for f in "${REQUIRED_FILES[@]}"; do
     fail "$f is missing"
   fi
 done
+echo
+
+echo "== 8. Phase 7 audit (RUN_PHASE7_AUDIT=$RUN_PHASE7_AUDIT) =="
+if [[ "$RUN_PHASE7_AUDIT" == "true" ]]; then
+  SKIP_TESTS="$SKIP_TESTS" WEB_BASE_URL="$WEB_BASE_URL" bash scripts/phase7_audit.sh \
+    || fail "scripts/phase7_audit.sh"
+else
+  echo "skipped (RUN_PHASE7_AUDIT=true to enable)"
+fi
 echo
 
 echo "Final production readiness audit passed"

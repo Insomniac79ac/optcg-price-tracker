@@ -1005,3 +1005,31 @@ isn't being set or is being overwritten somewhere - all requests would appear to
 the proxy's own loopback IP instead of the real clients'. Verify with `GET
 /admin/rate-limit/status` (see "Check rate limit status" above): `active_keys` staying at `1` under
 real multi-client traffic is the tell.
+
+## Performance and scale operations
+
+Phase 7 added a set of admin pages/endpoints and scripts for checking and exercising this app's
+performance and scale characteristics as data volume grows. See
+[docs/performance_testing.md](performance_testing.md) for the full local workflow (seeding
+synthetic data, running the load tests, cleaning up); this section is the operational reference
+for what each piece shows.
+
+| What | Where |
+|---|---|
+| Database index audit | `GET /admin/db-index-audit`, linked from `/admin/performance` |
+| Performance summary (table row counts, slow requests, response size warnings, cache/job-lock/file-job status) | `GET /admin/performance/summary`, `/admin/performance` page |
+| Data retention policy and pruning | `GET /admin/data-retention/policy`, `POST /admin/data-retention/prune`, `/admin/data-retention` page - see [Data retention and pruning](#data-retention-and-pruning) |
+| Cache status and manual clear | `GET /admin/cache/status`, `POST /admin/cache/clear`, `/admin/cache` page - see [Cache operations](#cache-operations) |
+| Worker job concurrency locks | `GET /admin/job-locks`, `POST /admin/job-locks/cleanup-expired`, `/admin/job-locks` page - see [Worker job concurrency locking](#worker-job-concurrency-locking) |
+| Background file jobs (large import/export) | `GET /file-jobs`, `/admin/file-jobs` page - see [Large import/export jobs](#large-import-export-jobs) |
+| Response size warnings | `X-Response-Size-Bytes` header on every response; a response over `RESPONSE_SIZE_WARNING_BYTES` also logs `event_type=response_size_warning` (see [Observability and logs](#observability-and-logs)) |
+| Slow request logs | `X-Process-Time-Ms` header on every response; a request over `SLOW_REQUEST_MS` also logs `event_type=slow_request` |
+| Load test scripts | `scripts/load_test_api.sh`, `scripts/load_test_web.sh` - curl-only, no external load testing tool required |
+
+The five admin pages above (`/admin/performance`, `/admin/cache`, `/admin/job-locks`,
+`/admin/data-retention`, `/admin/file-jobs`) all link to each other, plus `/admin/actions` and
+`/admin/logs`, from the admin nav and from a "related pages" row on each page.
+
+`scripts/phase7_audit.sh` runs the automated version of this checklist end-to-end (tests, all six
+admin endpoints above, web route smoke test, and optionally the load tests) - see
+[docs/performance_testing.md](performance_testing.md#automated-phase-7-audit).

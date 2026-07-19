@@ -117,6 +117,18 @@ export default function PerformancePage() {
               Cache
             </Link>
             <Link
+              href="/admin/job-locks"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Job locks
+            </Link>
+            <Link
+              href="/admin/file-jobs"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              File jobs
+            </Link>
+            <Link
               href="/admin/release-status"
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >

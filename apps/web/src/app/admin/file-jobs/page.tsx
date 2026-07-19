@@ -284,6 +284,24 @@ export default function FileJobsPage() {
                 Performance
               </Link>
               <Link
+                href="/admin/cache"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Cache
+              </Link>
+              <Link
+                href="/admin/job-locks"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Job locks
+              </Link>
+              <Link
+                href="/admin/data-retention"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Data retention
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

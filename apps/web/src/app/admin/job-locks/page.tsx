@@ -315,6 +315,30 @@ export default function JobLocksPage() {
 
             <div className="mt-4 flex flex-wrap gap-3 text-xs">
               <Link
+                href="/admin/performance"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Performance
+              </Link>
+              <Link
+                href="/admin/cache"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Cache
+              </Link>
+              <Link
+                href="/admin/data-retention"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Data retention
+              </Link>
+              <Link
+                href="/admin/file-jobs"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                File jobs
+              </Link>
+              <Link
                 href="/admin/actions"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

@@ -84,6 +84,24 @@ export default function DataRetentionPage() {
                 Performance
               </Link>
               <Link
+                href="/admin/cache"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Cache
+              </Link>
+              <Link
+                href="/admin/job-locks"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Job locks
+              </Link>
+              <Link
+                href="/admin/file-jobs"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                File jobs
+              </Link>
+              <Link
                 href="/admin/logs"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
