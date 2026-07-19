@@ -86,6 +86,24 @@ def _job_locks_uses_test_db(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _cache_disabled_by_default(monkeypatch):
+    """app.services.cache defaults to CACHE_BACKEND=redis, which would make
+    every cached endpoint (dashboard overview, market opportunities, ...)
+    attempt a real connection to REDIS_URL on its first request in every
+    test that touches one - slow, noisy (throttled warning logs), and an
+    unnecessary dependency on a running Redis for tests that aren't about
+    caching at all. Off by default here, same pattern as
+    _rate_limit_disabled_by_default above; tests/test_cache.py explicitly
+    re-enables it (CACHE_BACKEND=memory) to exercise real cache behavior."""
+    from app.services import cache as cache_module
+
+    monkeypatch.setattr(settings, "CACHE_ENABLED", False)
+    cache_module.reset_state_for_tests()
+    yield
+    cache_module.reset_state_for_tests()
+
+
+@pytest.fixture(autouse=True)
 def _rate_limit_disabled_by_default(monkeypatch):
     """RateLimitMiddleware runs on every request (see app/main.py), and its
     counters are process-global - without this, the hundreds of requests

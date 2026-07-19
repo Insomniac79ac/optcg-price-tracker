@@ -14,6 +14,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.env import is_development_environment
 from app.models import (
     Card,
     CollectionItem,
@@ -28,7 +29,9 @@ from app.models import (
     WishlistItem,
 )
 from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
+from app.services.cache import redis_ping
 from app.services.job_locks import get_active_locks
+from app.settings import settings
 
 STATUSES = ("pass", "warning", "fail")
 SEVERITIES = ("info", "warning", "critical")
@@ -234,6 +237,42 @@ def _check_market_workflow_lock_ttl(db: Session) -> CheckResult:
     )
 
 
+def _check_cache_backend(_db: Session) -> CheckResult:
+    """Read-only reachability check for app.services.cache - see 'Cache
+    operations' in docs/operations.md. Only CACHE_BACKEND=redis actually
+    checks anything live; memory/none are reported based on environment
+    alone, matching how app.services.cache itself only ever falls back to
+    memory in development (see cache._handle_backend_failure)."""
+    if not settings.CACHE_ENABLED:
+        return CheckResult("cache_backend", "pass", "info", "Caching disabled (CACHE_ENABLED=false).")
+
+    backend = (settings.CACHE_BACKEND or "redis").strip().lower()
+    if backend == "none":
+        return CheckResult("cache_backend", "pass", "info", "Caching disabled (CACHE_BACKEND=none).")
+    if backend == "memory":
+        if is_development_environment():
+            return CheckResult(
+                "cache_backend", "pass", "info", "Using in-memory cache backend (development)."
+            )
+        return CheckResult(
+            "cache_backend",
+            "warning",
+            "warning",
+            "CACHE_BACKEND=memory in a non-development environment - the cache is "
+            "per-process and not shared across instances/workers.",
+        )
+
+    if redis_ping():
+        return CheckResult("cache_backend", "pass", "info", "Redis cache backend reachable.")
+    return CheckResult(
+        "cache_backend",
+        "warning",
+        "warning",
+        "CACHE_ENABLED with CACHE_BACKEND=redis but Redis is unreachable - reads are "
+        "falling back to uncached (or, in development only, an in-memory cache).",
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -298,6 +337,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_active_job_locks(db),
         _check_expired_job_locks(db),
         _check_market_workflow_lock_ttl(db),
+        _check_cache_backend(db),
     ]
     return checks
 

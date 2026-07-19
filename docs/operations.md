@@ -536,6 +536,105 @@ recent warnings) - the `/admin/performance` page shows these alongside table row
 audit results, with a link straight into `/admin/logs` pre-filtered to
 `event_type=response_size_warning`.
 
+## Cache operations
+
+Several expensive read endpoints (dashboard, portfolio valuation, market opportunities/signals/
+reports, wishlist/grading summaries, search suggestions) are cached for a short TTL via
+`app.services.cache` (`services/api/app/services/cache.py`) - Redis-backed by default, with an
+in-memory fallback for local development only. This trades a small amount of staleness for
+materially faster responses on pages that would otherwise recompute the same aggregate query on
+every load.
+
+**What is cached** (see the route handlers for exact cache keys):
+
+| Endpoint | TTL setting |
+| --- | --- |
+| `GET /dashboard/overview` | `CACHE_DASHBOARD_TTL_SECONDS` |
+| `GET /collection/valuation` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /collection/valuation/history` (key includes `days`/`limit`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /market/opportunities` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
+| `GET /market/signals` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
+| `GET /market/signal-events` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
+| `GET /market/report/latest` | `CACHE_MARKET_TTL_SECONDS` |
+| `GET /market/reports` (key includes `limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
+| `GET /wishlist/summary` | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /grading/summary` | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /search/suggestions` (key includes `q`/`limit`) | fixed 60s |
+
+Every cached response carries `X-Cache: HIT` or `MISS`, and `X-Cache-TTL` (the TTL in seconds
+used for that entry); `X-Cache-Key` is added too, but only in a development environment - it's
+not something a production client should depend on.
+
+**Why `GET /search` is not cached by default.** Unlike `/search/suggestions`, the full search
+endpoint records `search_history` as a side effect of every call (see `app.services.search`).
+Caching it would mean a repeated identical query silently stops being recorded, which would make
+`/search/suggestions`' own "recently searched" suggestions quietly go stale - the side effect
+matters more here than the read-speed win, so this endpoint is left out of the cached set on
+purpose.
+
+**Default TTLs and env vars** (`services/api/app/settings.py`):
+
+- `CACHE_ENABLED` (default `true`) - the master switch; `false` disables caching outright, and
+  every cached endpoint just computes its response fresh every time.
+- `CACHE_BACKEND` (default `redis`) - one of `redis`, `memory`, `none`. `none` behaves like
+  `CACHE_ENABLED=false`. `memory` uses a per-process, non-shared dict - fine for local
+  development, but see the warning below about using it anywhere else.
+- `CACHE_DEFAULT_TTL_SECONDS` (default `60`) - not directly read by any endpoint above (each has
+  its own more specific setting), kept as a fallback default for future cached endpoints.
+- `CACHE_DASHBOARD_TTL_SECONDS` (default `60`)
+- `CACHE_MARKET_TTL_SECONDS` (default `120`)
+- `CACHE_COLLECTION_TTL_SECONDS` (default `60`)
+
+**Redis vs. memory backend.** `CACHE_BACKEND=redis` (the default) points at the same `REDIS_URL`
+Celery already uses as its broker/result backend - every cache key is namespaced under
+`occache:` so a cache clear (see below) can never delete Celery's own keys. If Redis is
+unreachable, individual cache reads/writes fail closed (logged, then treated as an uncached
+request) rather than crashing the request - **except** in a development environment
+(`ENVIRONMENT`/`APP_ENV=development`), where the process instead falls back to the in-memory
+backend for the rest of its lifetime, logging a `redis_unavailable_fallback` warning once. This
+asymmetry is deliberate: an in-memory cache is per-process and not shared across
+instances/workers, which is an acceptable trade in a single local dev process but a correctness
+footgun in any real deployment (one instance's write would never invalidate another instance's
+stale entry) - `GET /admin/system-check` warns if `CACHE_BACKEND=memory` outside of development.
+
+**How to check cache status.**
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" http://localhost:8000/admin/cache/status
+```
+
+Or the `/admin/cache` page (linked from the admin nav, `/admin/performance`, and
+`/admin/actions`), which shows enabled/backend/hit-and-miss counts/key count and each TTL.
+`GET /admin/performance/summary` also carries a `cache_enabled`/`cache_backend`/`cache_keys`
+summary alongside its other counters.
+
+**When and how to clear the cache.** Every write endpoint that changes cached data (collection,
+wishlist, grading, market signal snapshot/report generation, price refresh, portfolio snapshot)
+already invalidates the relevant cache prefixes itself - see the invalidation lists in each
+service module's comments if you need the exact mapping. A manual clear is normally only needed
+if you suspect a bug in that invalidation logic, or want to force every cached endpoint to
+recompute immediately after a manual data fix:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"prefix": "dashboard", "confirm": "CLEAR"}' \
+  http://localhost:8000/admin/cache/clear
+
+# omit "prefix" (or set it to null) to clear every cache key this app has written
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"confirm": "CLEAR"}' \
+  http://localhost:8000/admin/cache/clear
+```
+
+`confirm` must be exactly `"CLEAR"` - same confirmation-phrase pattern as
+`/admin/data-retention/prune` and `/admin/job-locks/{name}/force-release`. Useful prefixes:
+`dashboard`, `collection_valuation`, `collection_history`, `market_signals`,
+`market_signal_events`, `market_opportunities`, `market_report` (and `market_reports`),
+`wishlist`, `wishlist_summary`, `grading_summary`. Every cache clear (and every Redis
+backend-failure/fallback event) is recorded to `app_log_events` - see `GET /admin/logs` - but
+individual cache hits/misses are never logged, only the hit/miss counters shown on
+`/admin/cache`.
+
 ## Data retention and pruning
 
 The tables that grow fastest (`raw_snapshots`, `price_observations`, `app_log_events`,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
@@ -10,6 +10,8 @@ from app.schemas import (
     SearchSuggestionsResponseOut,
     SearchSummaryOut,
 )
+from app.services.cache import get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.search import (
     MIN_QUERY_LENGTH,
     SEARCH_TYPES,
@@ -18,6 +20,13 @@ from app.services.search import (
     record_search_history,
     search,
 )
+
+# GET /search itself is intentionally never cached - it records search
+# history as a side effect (see record_search_history below), so a cached
+# response would silently skip recording a real user's search. Only
+# /search/suggestions (no side effects) is cached - see 'Cache operations'
+# in docs/operations.md.
+SEARCH_SUGGESTIONS_TTL_SECONDS = 60
 
 router = APIRouter(tags=["search"])
 
@@ -72,11 +81,22 @@ def search_endpoint(
 
 @router.get("/search/suggestions", response_model=SearchSuggestionsResponseOut)
 def search_suggestions_endpoint(
+    response: Response,
     q: str | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
     db: Session = Depends(get_db),
     _user: User = Depends(require_current_user),
 ):
     q_clean = q.strip() if q else None
-    suggestions = get_suggestions(db, q_clean or None, limit)
-    return SearchSuggestionsResponseOut(suggestions=suggestions)
+
+    cache_key = f"search_suggestions:{q_clean}:{limit}"
+    ttl = SEARCH_SUGGESTIONS_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: SearchSuggestionsResponseOut(
+            suggestions=get_suggestions(db, q_clean or None, limit)
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value

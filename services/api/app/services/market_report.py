@@ -21,9 +21,15 @@ from app.schemas import (
     MarketReportTopOpportunitiesOut,
     OpportunityOut,
 )
+from app.services.cache import delete_cache_prefix
 from app.services.job_locks import with_job_lock
 from app.services.opportunity_scoring import get_opportunities
 from app.services.portfolio_valuation import get_portfolio_valuation
+
+# See 'Cache invalidation' in docs/operations.md - a newly generated report
+# changes both GET /market/report/latest and GET /market/reports, and its
+# portfolio snapshot / top-opportunity picks feed the dashboard overview too.
+_MARKET_REPORT_CACHE_INVALIDATES = ("dashboard", "market_report", "market_reports")
 
 # Large enough to cover every currently active signal event in one page - the
 # report needs the complete ranked set to pick top-5/top-per-category from,
@@ -244,4 +250,6 @@ def _generate_market_report_locked(
     db.add(report)
     db.commit()
     db.refresh(report)
+    for prefix in _MARKET_REPORT_CACHE_INVALIDATES:
+        delete_cache_prefix(prefix)
     return report

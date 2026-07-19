@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import PortfolioValuationSnapshot
+from app.services.cache import delete_cache_prefix
 from app.services.job_locks import LockHeldError, with_job_lock
 from app.services.portfolio_valuation import get_portfolio_valuation
 
@@ -55,6 +56,10 @@ def _snapshot_portfolio_valuation_locked(db: Session) -> PortfolioValuationSnaps
     db.add(snapshot)
     db.commit()
     db.refresh(snapshot)
+    # See 'Cache invalidation' in docs/operations.md - a new snapshot changes
+    # the dashboard's latest-snapshot widget and GET /collection/valuation/history.
+    delete_cache_prefix("dashboard")
+    delete_cache_prefix("collection_history")
     return snapshot
 
 

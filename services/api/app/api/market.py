@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -20,10 +20,13 @@ from app.schemas import (
     MarketSignalsResponseOut,
     OpportunitiesResponseOut,
 )
+from app.services.cache import delete_cache_prefix, get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.market import get_market_movers
 from app.services.market_signal_events import event_to_out, owned_quantity_for_card
 from app.services.market_signals import SIGNAL_TYPES, get_market_signals
 from app.services.opportunity_scoring import CATEGORIES, get_opportunities
+from app.settings import settings
 
 router = APIRouter(prefix="/market", tags=["market"])
 
@@ -64,6 +67,7 @@ def market_movers(
 
 @router.get("/signals", response_model=MarketSignalsResponseOut)
 def market_signals(
+    response: Response,
     signal_type: str | None = Query(default=None),
     set_code: str | None = Query(default=None),
     rarity: str | None = Query(default=None),
@@ -83,16 +87,34 @@ def market_signals(
             status_code=400, detail=f"Invalid source. Must be one of {list(VALID_SOURCES)}"
         )
 
-    return get_market_signals(
-        db,
-        signal_type=signal_type,
-        set_code=set_code,
-        rarity=rarity,
-        source=source,
-        owned=owned,
-        limit=limit,
-        offset=offset,
+    cache_key = f"market_signals:{signal_type}:{set_code}:{rarity}:{source}:{owned}:{limit}:{offset}"
+    ttl = settings.CACHE_MARKET_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: get_market_signals(
+            db,
+            signal_type=signal_type,
+            set_code=set_code,
+            rarity=rarity,
+            source=source,
+            owned=owned,
+            limit=limit,
+            offset=offset,
+        ).model_dump(mode="json"),
     )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+def _invalidate_signal_event_caches() -> None:
+    """A direct status/notes edit on one event (dismiss/watch/resolve/patch)
+    changes what GET /market/signal-events (and the dashboard's recent-
+    signal-events widget) returns - narrower than the full 'market signal
+    snapshot' invalidation list in docs/operations.md, since these routes
+    don't touch market_signals/market_opportunities/market_report data."""
+    for prefix in ("dashboard", "market_signal_events"):
+        delete_cache_prefix(prefix)
 
 
 def _get_event_or_404(db: Session, event_id: int) -> MarketSignalEvent:
@@ -110,6 +132,7 @@ def _build_event_out(db: Session, event: MarketSignalEvent) -> MarketSignalEvent
 
 @router.get("/signal-events", response_model=MarketSignalEventListOut)
 def list_market_signal_events(
+    response: Response,
     status: str | None = Query(default=None),
     signal_type: str | None = Query(default=None),
     suggested_action: str | None = Query(default=None),
@@ -125,6 +148,32 @@ def list_market_signal_events(
             detail=f"Invalid status. Must be one of {list(EVENT_STATUSES)}",
         )
 
+    cache_key = (
+        f"market_signal_events:{status}:{signal_type}:{suggested_action}:"
+        f"{card_code}:{owned}:{limit}:{offset}"
+    )
+    ttl = settings.CACHE_MARKET_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: _load_market_signal_events(
+            status, signal_type, suggested_action, card_code, owned, limit, offset, db
+        ),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+def _load_market_signal_events(
+    status: str | None,
+    signal_type: str | None,
+    suggested_action: str | None,
+    card_code: str | None,
+    owned: bool | None,
+    limit: int,
+    offset: int,
+    db: Session,
+) -> dict:
     filters = []
     if status is not None:
         filters.append(MarketSignalEvent.status == status)
@@ -201,7 +250,7 @@ def list_market_signal_events(
         limit=limit,
         offset=offset,
         pagination=pagination_response(page_out, len(enriched), limit, offset),
-    )
+    ).model_dump(mode="json")
 
 
 @router.get("/signal-events/{event_id}", response_model=MarketSignalEventOut)
@@ -239,6 +288,7 @@ def update_market_signal_event(
 
     db.commit()
     db.refresh(event)
+    _invalidate_signal_event_caches()
     return _build_event_out(db, event)
 
 
@@ -250,6 +300,7 @@ def dismiss_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event.resolved_at = None
     db.commit()
     db.refresh(event)
+    _invalidate_signal_event_caches()
     return _build_event_out(db, event)
 
 
@@ -261,6 +312,7 @@ def watch_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event.resolved_at = None
     db.commit()
     db.refresh(event)
+    _invalidate_signal_event_caches()
     return _build_event_out(db, event)
 
 
@@ -272,11 +324,13 @@ def resolve_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event.dismissed_at = None
     db.commit()
     db.refresh(event)
+    _invalidate_signal_event_caches()
     return _build_event_out(db, event)
 
 
 @router.get("/opportunities", response_model=OpportunitiesResponseOut)
 def market_opportunities(
+    response: Response,
     category: str | None = Query(default=None),
     owned: bool | None = Query(default=None),
     set_code: str | None = Query(default=None),
@@ -292,16 +346,27 @@ def market_opportunities(
             detail=f"Invalid category. Must be one of {list(CATEGORIES)}",
         )
 
-    return get_opportunities(
-        db,
-        category=category,
-        owned=owned,
-        set_code=set_code,
-        rarity=rarity,
-        min_score=min_score,
-        limit=limit,
-        offset=offset,
+    cache_key = (
+        f"market_opportunities:{category}:{owned}:{set_code}:{rarity}:"
+        f"{min_score}:{limit}:{offset}"
     )
+    ttl = settings.CACHE_MARKET_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: get_opportunities(
+            db,
+            category=category,
+            owned=owned,
+            set_code=set_code,
+            rarity=rarity,
+            min_score=min_score,
+            limit=limit,
+            offset=offset,
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 def _report_to_out(report: MarketIntelligenceReport) -> MarketIntelligenceReportOut:
@@ -343,38 +408,53 @@ def _report_to_summary_out(report: MarketIntelligenceReport) -> MarketIntelligen
 
 
 @router.get("/report/latest", response_model=MarketIntelligenceReportOut)
-def get_latest_market_report(db: Session = Depends(get_db)):
-    report = db.scalar(
-        select(MarketIntelligenceReport).order_by(
-            MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc()
+def get_latest_market_report(response: Response, db: Session = Depends(get_db)):
+    def _load() -> dict:
+        report = db.scalar(
+            select(MarketIntelligenceReport).order_by(
+                MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc()
+            )
         )
-    )
-    if report is None:
-        raise HTTPException(status_code=404, detail="No market intelligence reports found")
-    return _report_to_out(report)
+        if report is None:
+            raise HTTPException(status_code=404, detail="No market intelligence reports found")
+        return _report_to_out(report).model_dump(mode="json")
+
+    cache_key = "market_report:latest"
+    ttl = settings.CACHE_MARKET_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.get("/reports", response_model=MarketIntelligenceReportListOut)
 def list_market_reports(
+    response: Response,
     limit: int = Query(default=30, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
-    total = db.scalar(select(func.count()).select_from(MarketIntelligenceReport)) or 0
-    reports = db.scalars(
-        select(MarketIntelligenceReport)
-        .order_by(MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc())
-        .limit(limit)
-        .offset(offset)
-    ).all()
-    reports_out = [_report_to_summary_out(r) for r in reports]
-    return MarketIntelligenceReportListOut(
-        reports=reports_out,
-        total=total,
-        limit=limit,
-        offset=offset,
-        pagination=pagination_response(reports_out, total, limit, offset),
-    )
+    def _load() -> dict:
+        total = db.scalar(select(func.count()).select_from(MarketIntelligenceReport)) or 0
+        reports = db.scalars(
+            select(MarketIntelligenceReport)
+            .order_by(MarketIntelligenceReport.created_at.desc(), MarketIntelligenceReport.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).all()
+        reports_out = [_report_to_summary_out(r) for r in reports]
+        return MarketIntelligenceReportListOut(
+            reports=reports_out,
+            total=total,
+            limit=limit,
+            offset=offset,
+            pagination=pagination_response(reports_out, total, limit, offset),
+        ).model_dump(mode="json")
+
+    cache_key = f"market_reports:{limit}:{offset}"
+    ttl = settings.CACHE_MARKET_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.get("/reports/{report_id}", response_model=MarketIntelligenceReportOut)

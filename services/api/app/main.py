@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
+from app.api.admin_cache import router as admin_cache_router
 from app.api.admin_data_retention import router as admin_data_retention_router
 from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_db_index_audit import router as admin_db_index_audit_router
@@ -167,6 +168,7 @@ app.include_router(wishlist_router)
 app.include_router(dashboard_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
+app.include_router(admin_cache_router)
 app.include_router(admin_data_retention_router)
 app.include_router(admin_db_backups_router)
 app.include_router(admin_db_index_audit_router)

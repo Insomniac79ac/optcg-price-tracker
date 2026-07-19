@@ -13,6 +13,7 @@ from datetime import datetime
 
 from celery import Celery
 
+from app.services.cache import delete_cache_prefix
 from app.services.job_locks import LockHeldError
 from app.settings import settings
 
@@ -23,6 +24,23 @@ TASK_NAME = "worker.celery_app.run_price_refresh"
 # enough that a stuck/absent worker surfaces as a clear error rather than a
 # hung request.
 TRIGGER_TIMEOUT_SECONDS = 25
+
+# See 'Cache invalidation' in docs/operations.md - new price observations
+# change nearly every cached read surface in the app. The worker process
+# that actually writes price_observations has no access to this cache (it's
+# a separate deployable, see the module docstring below), so invalidation
+# happens here instead, once the triggering request gets its result back.
+_PRICE_REFRESH_CACHE_INVALIDATES = (
+    "dashboard",
+    "collection_valuation",
+    "collection_history",
+    "market_signals",
+    "market_signal_events",
+    "market_opportunities",
+    "market_report",
+    "wishlist",
+    "wishlist_summary",
+)
 
 
 def _celery_client() -> Celery:
@@ -56,4 +74,7 @@ def trigger_price_refresh(source: str, limit: int, dry_run: bool) -> tuple[str, 
         raise LockHeldError(
             result["lock_name"], result["owner_id"], datetime.fromisoformat(result["expires_at"])
         )
+    if not dry_run and isinstance(result, dict) and result.get("status") != "failed":
+        for prefix in _PRICE_REFRESH_CACHE_INVALIDATES:
+            delete_cache_prefix(prefix)
     return async_result.id, result

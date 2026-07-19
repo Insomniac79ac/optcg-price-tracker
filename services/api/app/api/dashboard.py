@@ -1,16 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
 from app.db import get_db
 from app.models import DashboardPreference, User
 from app.schemas import DashboardOverviewOut, DashboardPreferencesOut, DashboardPreferencesUpdateIn
+from app.services.cache import get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.dashboard import (
     DashboardValidationError,
     build_overview,
     get_or_create_preferences,
     update_preferences,
 )
+from app.settings import settings
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -41,5 +44,15 @@ def patch_dashboard_preferences(
 
 
 @router.get("/overview", response_model=DashboardOverviewOut)
-def get_dashboard_overview(db: Session = Depends(get_db), user: User = Depends(require_current_user)):
-    return build_overview(db, user.id)
+def get_dashboard_overview(
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    cache_key = f"dashboard:overview:{user.id}"
+    ttl = settings.CACHE_DASHBOARD_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key, ttl, lambda: build_overview(db, user.id).model_dump(mode="json")
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value

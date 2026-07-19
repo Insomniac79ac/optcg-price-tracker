@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from dataclasses import asdict
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -15,13 +17,31 @@ from app.schemas import (
     GradingSummaryOut,
 )
 from app.services.activity_timeline import record_activity_event
+from app.services.cache import delete_cache_prefix, get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.grading import (
     build_grading_submission_out,
     build_grading_summary,
     compute_total_cost_jpy,
 )
+from app.settings import settings
 
 router = APIRouter(prefix="/grading", tags=["grading"])
+
+# Cache-prefix invalidation for every route in this router that writes to
+# grading_submissions - see 'Cache invalidation' in docs/operations.md.
+_GRADING_WRITE_INVALIDATES = (
+    "dashboard",
+    "grading_summary",
+    "collection_valuation",
+    "collection_history",
+    "market_opportunities",
+)
+
+
+def _invalidate_grading_write_caches() -> None:
+    for prefix in _GRADING_WRITE_INVALIDATES:
+        delete_cache_prefix(prefix)
 
 
 def _get_item_or_404(db: Session, item_id: int, user: User) -> CollectionItem:
@@ -132,19 +152,19 @@ def list_grading_submissions(
 
 @router.get("/summary", response_model=GradingSummaryOut)
 def get_grading_summary(
-    db: Session = Depends(get_db), user: User = Depends(require_current_user)
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
 ):
-    summary = build_grading_summary(db, user_id=user.id)
-    return GradingSummaryOut(
-        total_submissions=summary.total_submissions,
-        by_status=summary.by_status,
-        total_declared_value_jpy=summary.total_declared_value_jpy,
-        total_grading_cost_jpy=summary.total_grading_cost_jpy,
-        total_graded_value_jpy=summary.total_graded_value_jpy,
-        total_unrealized_gain_after_grading_jpy=summary.total_unrealized_gain_after_grading_jpy,
-        average_grade=summary.average_grade,
-        items_waiting_return=summary.items_waiting_return,
-    )
+    def _load() -> dict:
+        summary = build_grading_summary(db, user_id=user.id)
+        return GradingSummaryOut(**asdict(summary)).model_dump(mode="json")
+
+    cache_key = f"grading_summary:{user.id}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.post("/submissions", response_model=GradingSubmissionOut, status_code=201)
@@ -160,6 +180,7 @@ def create_grading_submission(
     db.add(submission)
     db.commit()
     db.refresh(submission)
+    _invalidate_grading_write_caches()
 
     card = db.get(Card, item.card_id)
     record_activity_event(
@@ -207,6 +228,7 @@ def update_grading_submission(
 
     db.commit()
     db.refresh(submission)
+    _invalidate_grading_write_caches()
 
     item = db.get(CollectionItem, submission.collection_item_id)
     card = db.get(Card, item.card_id)
@@ -233,4 +255,5 @@ def delete_grading_submission(
     submission = _get_submission_or_404(db, submission_id, user)
     db.delete(submission)
     db.commit()
+    _invalidate_grading_write_caches()
     return None

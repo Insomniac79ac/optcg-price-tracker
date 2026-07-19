@@ -111,6 +111,12 @@ export default function PerformancePage() {
               Data retention
             </Link>
             <Link
+              href="/admin/cache"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Cache
+            </Link>
+            <Link
               href="/admin/release-status"
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >
@@ -226,6 +232,13 @@ export default function PerformancePage() {
                 value={summary.slow_requests_last_24h}
                 tone="warning"
               />
+              <StatCard
+                label="Cache backend"
+                value={summary.cache_enabled ? summary.cache_backend : "disabled"}
+              />
+              {summary.cache_keys !== null && (
+                <StatCard label="Cache keys" value={summary.cache_keys} />
+              )}
             </div>
 
             <h2 className="mb-2 text-sm font-semibold text-neutral-200">Index audit</h2>
@@ -377,13 +390,14 @@ function StatCard({
   tone,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   tone?: "pass" | "warning" | "critical";
 }) {
+  const numeric = typeof value === "number" ? value : 0;
   const toneClass =
-    tone === "critical" && value > 0
+    tone === "critical" && numeric > 0
       ? "text-rose-400"
-      : tone === "warning" && value > 0
+      : tone === "warning" && numeric > 0
         ? "text-amber-400"
         : tone === "pass"
           ? "text-emerald-400"

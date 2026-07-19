@@ -11,8 +11,18 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, CollectionItem, MarketSignalEvent
 from app.schemas import MarketSignalEventOut
+from app.services.cache import delete_cache_prefix
 from app.services.job_locks import with_job_lock
 from app.services.market_signals import get_market_signals
+
+# See 'Cache invalidation' in docs/operations.md.
+_MARKET_SIGNAL_SNAPSHOT_CACHE_INVALIDATES = (
+    "dashboard",
+    "market_signals",
+    "market_signal_events",
+    "market_opportunities",
+    "market_report",
+)
 
 
 def owned_quantity_for_card(db: Session, card_id: int | None) -> int:
@@ -184,6 +194,8 @@ def _snapshot_market_signals_locked(db: Session) -> SnapshotResult:
     db.flush()
     resolved = resolve_missing_signals(db, seen_dedupe_keys, now)
     db.commit()
+    for prefix in _MARKET_SIGNAL_SNAPSHOT_CACHE_INVALIDATES:
+        delete_cache_prefix(prefix)
 
     total_active = (
         db.query(MarketSignalEvent)

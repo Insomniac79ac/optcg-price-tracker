@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.collection import _to_out as _collection_item_to_out
@@ -23,6 +22,8 @@ from app.schemas import (
 )
 from app.services.activity_timeline import record_activity_event
 from app.services.app_logging import record_app_log
+from app.services.cache import delete_cache_prefix, get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.collector import get_tags_for_cards
 from app.services.wishlist import (
     build_wishlist_item_out,
@@ -38,8 +39,24 @@ from app.services.wishlist_csv import (
     export_filename,
     import_wishlist_csv,
 )
+from app.settings import settings
 
 router = APIRouter(prefix="/wishlist", tags=["wishlist"])
+
+# Cache-prefix invalidation for every route in this router that writes to
+# wishlist_items - see 'Cache invalidation' in docs/operations.md.
+_WISHLIST_WRITE_INVALIDATES = (
+    "dashboard",
+    "wishlist",
+    "wishlist_summary",
+    "market_opportunities",
+    "market_signals",
+)
+
+
+def _invalidate_wishlist_write_caches() -> None:
+    for prefix in _WISHLIST_WRITE_INVALIDATES:
+        delete_cache_prefix(prefix)
 
 
 def _get_card_or_404(db: Session, card_id: int) -> Card:
@@ -117,9 +134,17 @@ def list_wishlist_items(
 
 @router.get("/summary", response_model=WishlistSummaryOut)
 def get_wishlist_summary_endpoint(
-    db: Session = Depends(get_db), user: User = Depends(require_current_user)
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
 ):
-    return get_wishlist_summary(db, user.id)
+    cache_key = f"wishlist_summary:{user.id}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key, ttl, lambda: get_wishlist_summary(db, user.id).model_dump(mode="json")
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.get("/export.csv")
@@ -166,14 +191,20 @@ async def import_wishlist_items_csv(
         )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    if not dry_run and result.error_rows > 0:
-        record_app_log(
-            "warning",
-            "api",
-            "import",
-            f"Wishlist CSV import completed with {result.error_rows} row error(s).",
-            context={"mode": mode, "total_rows": result.total_rows, "error_rows": result.error_rows},
-        )
+    if not dry_run:
+        _invalidate_wishlist_write_caches()
+        if result.error_rows > 0:
+            record_app_log(
+                "warning",
+                "api",
+                "import",
+                f"Wishlist CSV import completed with {result.error_rows} row error(s).",
+                context={
+                    "mode": mode,
+                    "total_rows": result.total_rows,
+                    "error_rows": result.error_rows,
+                },
+            )
 
     return WishlistImportResponseOut(
         dry_run=result.dry_run,
@@ -228,6 +259,7 @@ def create_wishlist_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+    _invalidate_wishlist_write_caches()
 
     card = db.get(Card, item.card_id)
     record_activity_event(
@@ -281,6 +313,7 @@ def update_wishlist_item(
 
     db.commit()
     db.refresh(item)
+    _invalidate_wishlist_write_caches()
     return _to_single_out(db, item, user)
 
 
@@ -294,6 +327,7 @@ def delete_wishlist_item(
     item.status = "removed"
     db.commit()
     db.refresh(item)
+    _invalidate_wishlist_write_caches()
 
     card = db.get(Card, item.card_id)
     record_activity_event(
@@ -324,6 +358,7 @@ def mark_wishlist_item_purchased(
 
     db.commit()
     db.refresh(item)
+    _invalidate_wishlist_write_caches()
 
     card = db.get(Card, item.card_id)
     record_activity_event(
@@ -372,6 +407,9 @@ def convert_wishlist_item_to_collection(
     db.commit()
     db.refresh(collection_item)
     db.refresh(item)
+    _invalidate_wishlist_write_caches()
+    for prefix in ("collection_valuation", "collection_history"):
+        delete_cache_prefix(prefix)
 
     record_activity_event(
         db,

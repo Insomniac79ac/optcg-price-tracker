@@ -530,6 +530,12 @@ export default function AdminActionsPage() {
                 Data retention
               </Link>
               <Link
+                href="/admin/cache"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Cache
+              </Link>
+              <Link
                 href="/collection"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

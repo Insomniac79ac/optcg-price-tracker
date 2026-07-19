@@ -1601,6 +1601,9 @@ export interface PerformanceSummary {
   response_size_warnings_last_24h: number;
   slow_requests_last_24h: number;
   largest_recent_responses: LargestResponse[];
+  cache_enabled: boolean;
+  cache_backend: string;
+  cache_keys: number | null;
 }
 
 /** Routed through the Next.js server proxy (see
@@ -1661,6 +1664,47 @@ export function pruneDataRetention(
   body: DataRetentionPruneRequest,
 ): Promise<DataRetentionPruneResponse> {
   return fetchAdminJson<DataRetentionPruneResponse>("/api/admin/data-retention/prune", {
+    method: "POST",
+    body,
+  });
+}
+
+export interface CacheStatus {
+  enabled: boolean;
+  backend: string;
+  stats: {
+    keys: number;
+    hits: number;
+    misses: number;
+  };
+  ttl: {
+    dashboard: number;
+    market: number;
+    collection: number;
+  };
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/cache/status/route.ts). */
+export function fetchCacheStatus(): Promise<CacheStatus> {
+  return fetchAdminJson<CacheStatus>("/api/admin/cache/status");
+}
+
+export interface CacheClearRequest {
+  prefix?: string | null;
+  confirm: string;
+}
+
+export interface CacheClearResponse {
+  success: boolean;
+  prefix: string | null;
+  deleted_count: number | null;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/cache/clear/route.ts). */
+export function clearCache(body: CacheClearRequest): Promise<CacheClearResponse> {
+  return fetchAdminJson<CacheClearResponse>("/api/admin/cache/clear", {
     method: "POST",
     body,
   });

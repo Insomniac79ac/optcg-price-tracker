@@ -11,11 +11,23 @@ from app.schemas import (
     DataRetentionPruneResultOut,
     DataRetentionPruneSummaryOut,
 )
+from app.services.cache import delete_cache_prefix
 from app.services.data_retention import PruneConfirmationRequired, list_policies, prune_tables
 
 router = APIRouter(
     prefix="/admin/data-retention", tags=["admin"], dependencies=[Depends(require_admin_token)]
 )
+
+# Prunable tables that back a cached endpoint's data - see 'Cache
+# invalidation' in docs/operations.md. Pruning any of these (a real, non-dry
+# run that actually deleted rows) can change what the corresponding cached
+# response would return, so those prefixes are invalidated after the fact.
+_PRUNE_CACHE_PREFIXES_BY_TABLE = {
+    "market_intelligence_reports": ("dashboard", "market_report", "market_reports"),
+    "portfolio_valuation_snapshots": ("dashboard", "collection_history"),
+    "price_observations": ("dashboard", "collection_valuation", "market_signals", "market_opportunities"),
+    "market_signal_events": ("dashboard", "market_signals", "market_signal_events"),
+}
 
 
 @router.get("/policy", response_model=DataRetentionPolicyResponseOut)
@@ -42,6 +54,14 @@ def data_retention_prune_endpoint(body: DataRetentionPruneRequestIn, db: Session
         )
     except PruneConfirmationRequired as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not result.dry_run:
+        invalidated: set[str] = set()
+        for r in result.results:
+            if r.rows_deleted > 0:
+                invalidated.update(_PRUNE_CACHE_PREFIXES_BY_TABLE.get(r.table, ()))
+        for prefix in invalidated:
+            delete_cache_prefix(prefix)
 
     return DataRetentionPruneResponseOut(
         dry_run=result.dry_run,

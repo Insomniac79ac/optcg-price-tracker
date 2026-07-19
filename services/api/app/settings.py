@@ -61,6 +61,19 @@ class Settings(BaseSettings):
     RESPONSE_SIZE_WARNING_ENABLED: bool = True
     RESPONSE_SIZE_WARNING_BYTES: int = 1_000_000
 
+    # Read-endpoint caching (app.services.cache) - see 'Cache operations' in
+    # docs/operations.md and GET /admin/cache/status. CACHE_BACKEND=redis
+    # (the default) falls back to an in-memory cache only in development if
+    # Redis is unreachable; in every other environment a Redis failure just
+    # makes individual reads uncached rather than switching backend. Setting
+    # CACHE_BACKEND=none (or CACHE_ENABLED=false) disables caching outright.
+    CACHE_ENABLED: bool = True
+    CACHE_BACKEND: str = "redis"
+    CACHE_DEFAULT_TTL_SECONDS: int = 60
+    CACHE_DASHBOARD_TTL_SECONDS: int = 60
+    CACHE_MARKET_TTL_SECONDS: int = 120
+    CACHE_COLLECTION_TTL_SECONDS: int = 60
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

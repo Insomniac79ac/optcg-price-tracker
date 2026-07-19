@@ -13,10 +13,28 @@ from datetime import datetime
 
 from celery import Celery
 
+from app.services.cache import delete_cache_prefix
 from app.services.job_locks import LockHeldError
 from app.settings import settings
 
 TASK_NAME = "worker.celery_app.run_market_workflow_task"
+
+# The full workflow does everything a price refresh + portfolio snapshot +
+# market signal snapshot + report generation would - see 'Cache
+# invalidation' in docs/operations.md - so this invalidates the union of
+# all of those prefixes rather than duplicating each step's own list.
+_MARKET_WORKFLOW_CACHE_INVALIDATES = (
+    "dashboard",
+    "collection_valuation",
+    "collection_history",
+    "market_signals",
+    "market_signal_events",
+    "market_opportunities",
+    "market_report",
+    "market_reports",
+    "wishlist",
+    "wishlist_summary",
+)
 
 # The workflow does more work than a bare price refresh (snapshot + report +
 # optional Telegram send on top of it), so this allows more headroom than
@@ -61,4 +79,7 @@ def trigger_market_workflow(
         raise LockHeldError(
             result["lock_name"], result["owner_id"], datetime.fromisoformat(result["expires_at"])
         )
+    if not dry_run and isinstance(result, dict) and result.get("status") != "failed":
+        for prefix in _MARKET_WORKFLOW_CACHE_INVALIDATES:
+            delete_cache_prefix(prefix)
     return async_result.id, result

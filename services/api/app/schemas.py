@@ -1755,6 +1755,9 @@ class PerformanceSummaryOut(BaseModel):
     largest_recent_responses: list[LargestResponseOut] = []
     active_job_locks: int = 0
     expired_job_locks: int = 0
+    cache_enabled: bool = True
+    cache_backend: str = "none"
+    cache_keys: int | None = None
 
 
 # --- job locks -------------------------------------------------------------
@@ -1827,3 +1830,36 @@ class DataRetentionPruneResponseOut(BaseModel):
     dry_run: bool
     summary: DataRetentionPruneSummaryOut
     results: list[DataRetentionPruneResultOut]
+
+
+# --- cache ---------------------------------------------------------------
+
+
+class CacheStatsOut(BaseModel):
+    keys: int
+    hits: int
+    misses: int
+
+
+class CacheTtlOut(BaseModel):
+    dashboard: int
+    market: int
+    collection: int
+
+
+class CacheStatusOut(BaseModel):
+    enabled: bool
+    backend: str
+    stats: CacheStatsOut
+    ttl: CacheTtlOut
+
+
+class CacheClearRequestIn(BaseModel):
+    prefix: str | None = None
+    confirm: str | None = None
+
+
+class CacheClearResponseOut(BaseModel):
+    success: bool
+    prefix: str | None
+    deleted_count: int | None

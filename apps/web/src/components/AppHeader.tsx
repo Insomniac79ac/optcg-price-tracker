@@ -25,6 +25,7 @@ const ADMIN_LINKS = [
   { href: "/admin/backup", label: "Backup" },
   { href: "/admin/system-check", label: "System check" },
   { href: "/admin/performance", label: "Performance" },
+  { href: "/admin/cache", label: "Cache" },
   { href: "/admin/job-locks", label: "Job locks" },
   { href: "/admin/data-retention", label: "Data retention" },
   { href: "/admin/release-status", label: "Release status" },

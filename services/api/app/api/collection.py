@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -33,6 +32,8 @@ from app.schemas import (
     PortfolioValuationSnapshotOut,
     ValuationMode,
 )
+from app.services.cache import delete_cache_prefix, get_or_set_cache
+from app.services.cache_headers import set_cache_headers
 from app.services.collection_csv import (
     IMPORT_MODES,
     export_collection_csv,
@@ -44,8 +45,28 @@ from app.services.app_logging import record_app_log
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
 from app.services.grading import build_grading_submission_out, get_submissions_for_items
 from app.services.portfolio_valuation import get_portfolio_valuation
+from app.settings import settings
 
 router = APIRouter(prefix="/collection", tags=["collection"])
+
+# Cache-prefix invalidation for every route in this router that writes to
+# collection_items - see 'Cache invalidation' in docs/operations.md. Kept as
+# one shared list/helper rather than repeating it at each write site so the
+# set stays obviously in sync across create/update/delete/tag/group routes.
+_COLLECTION_WRITE_INVALIDATES = (
+    "dashboard",
+    "collection_valuation",
+    "collection_history",
+    "market_opportunities",
+    "market_signals",
+    "wishlist_summary",
+    "grading_summary",
+)
+
+
+def _invalidate_collection_write_caches() -> None:
+    for prefix in _COLLECTION_WRITE_INVALIDATES:
+        delete_cache_prefix(prefix)
 
 
 def _to_out(
@@ -220,15 +241,27 @@ def get_collection_summary(
 
 @router.get("/valuation", response_model=PortfolioValuationOut)
 def get_collection_valuation(
+    response: Response,
     valuation_mode: ValuationMode = Query(default="raw_market"),
     db: Session = Depends(get_db),
     user: User = Depends(require_current_user),
 ):
-    return get_portfolio_valuation(db, user_id=user.id, valuation_mode=valuation_mode)
+    cache_key = f"collection_valuation:{user.id}:{valuation_mode}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: get_portfolio_valuation(
+            db, user_id=user.id, valuation_mode=valuation_mode
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.get("/valuation/history", response_model=list[PortfolioValuationSnapshotOut])
 def get_collection_valuation_history(
+    response: Response,
     days: str = Query(default="30"),
     limit: int = Query(default=500, ge=1, le=2000),
     db: Session = Depends(get_db),
@@ -237,10 +270,10 @@ def get_collection_valuation_history(
     # timeline produced by the admin-triggered snapshot job (see
     # snapshot_portfolio_valuation.py), not a per-user table. Every signed-in
     # user currently sees the same aggregate history; see the "explicit scope
-    # boundary" note in the auth/deployment plan for why this stays global.
+    # boundary" note in the auth/deployment plan for why this stays global,
+    # and (for the same reason) why its cache key below has no user scoping.
     _user: User = Depends(require_current_user),
 ):
-    filters = []
     if days != "all":
         try:
             days_int = int(days)
@@ -252,17 +285,28 @@ def get_collection_valuation_history(
             raise HTTPException(
                 status_code=400, detail="days must be a positive integer or 'all'"
             )
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days_int)
-        filters.append(PortfolioValuationSnapshot.created_at >= cutoff)
 
-    snapshots = db.scalars(
-        select(PortfolioValuationSnapshot)
-        .where(*filters)
-        .order_by(PortfolioValuationSnapshot.created_at.asc())
-        .limit(limit)
-    ).all()
+    def _load() -> list[dict]:
+        filters = []
+        if days != "all":
+            cutoff = datetime.now(timezone.utc) - timedelta(days=int(days))
+            filters.append(PortfolioValuationSnapshot.created_at >= cutoff)
+        snapshots = db.scalars(
+            select(PortfolioValuationSnapshot)
+            .where(*filters)
+            .order_by(PortfolioValuationSnapshot.created_at.asc())
+            .limit(limit)
+        ).all()
+        return [
+            PortfolioValuationSnapshotOut.model_validate(s).model_dump(mode="json")
+            for s in snapshots
+        ]
 
-    return [PortfolioValuationSnapshotOut.model_validate(s) for s in snapshots]
+    cache_key = f"collection_history:{days}:{limit}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
 
 
 @router.get("/export.csv")
@@ -309,14 +353,20 @@ async def import_collection_items_csv(
         )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    if not dry_run and result.error_rows > 0:
-        record_app_log(
-            "warning",
-            "api",
-            "import",
-            f"Collection CSV import completed with {result.error_rows} row error(s).",
-            context={"mode": mode, "total_rows": result.total_rows, "error_rows": result.error_rows},
-        )
+    if not dry_run:
+        _invalidate_collection_write_caches()
+        if result.error_rows > 0:
+            record_app_log(
+                "warning",
+                "api",
+                "import",
+                f"Collection CSV import completed with {result.error_rows} row error(s).",
+                context={
+                    "mode": mode,
+                    "total_rows": result.total_rows,
+                    "error_rows": result.error_rows,
+                },
+            )
 
     return CollectionImportResponseOut(
         dry_run=result.dry_run,
@@ -365,6 +415,7 @@ def create_collection_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+    _invalidate_collection_write_caches()
 
     record_activity_event(
         db,
@@ -407,6 +458,7 @@ def update_collection_item(
 
     db.commit()
     db.refresh(item)
+    _invalidate_collection_write_caches()
     card = db.get(Card, item.card_id)
 
     if "status" in updates and updates["status"] != previous_status:
@@ -434,6 +486,7 @@ def delete_collection_item(
 
     db.delete(item)
     db.commit()
+    _invalidate_collection_write_caches()
 
     record_activity_event(
         db,

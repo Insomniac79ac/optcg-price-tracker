@@ -39,4 +39,7 @@ def performance_summary_endpoint(db: Session = Depends(get_db)):
         ],
         active_job_locks=summary.active_job_locks,
         expired_job_locks=summary.expired_job_locks,
+        cache_enabled=summary.cache_enabled,
+        cache_backend=summary.cache_backend,
+        cache_keys=summary.cache_keys,
     )

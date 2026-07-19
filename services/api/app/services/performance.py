@@ -16,8 +16,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import AppLogEvent, CollectorActivityEvent, MarketSignalEvent, PriceObservation, RawSnapshot
+from app.services.cache import cache_stats, current_backend_name
 from app.services.db_index_audit import audit_summary, run_db_index_audit
 from app.services.job_locks import get_lock_counts
+from app.settings import settings
 
 SLOW_REQUEST_EVENT_TYPE = "slow_request"
 RESPONSE_SIZE_WARNING_EVENT_TYPE = "response_size_warning"
@@ -45,6 +47,9 @@ class PerformanceSummary:
     largest_recent_responses: list[LargestResponse] = field(default_factory=list)
     active_job_locks: int = 0
     expired_job_locks: int = 0
+    cache_enabled: bool = True
+    cache_backend: str = "none"
+    cache_keys: int | None = None
 
 
 def _table_count(db: Session, model) -> int:
@@ -122,4 +127,7 @@ def build_performance_summary(db: Session) -> PerformanceSummary:
         largest_recent_responses=_largest_recent_responses(db),
         active_job_locks=lock_counts.active,
         expired_job_locks=lock_counts.expired_active,
+        cache_enabled=settings.CACHE_ENABLED,
+        cache_backend=current_backend_name(),
+        cache_keys=cache_stats()["keys"],
     )
