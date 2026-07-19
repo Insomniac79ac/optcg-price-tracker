@@ -337,7 +337,15 @@ function GradingPageInner() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-6 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Grading</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">Grading</h1>
+            <Link
+              href="/analytics/collection"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Analytics →
+            </Link>
+          </div>
           {listStatus === "ready" && (
             <span className="text-sm text-neutral-500">
               {total} submission{total === 1 ? "" : "s"}

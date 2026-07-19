@@ -32,6 +32,7 @@ ROUTES=(
   /dashboard
   /search
   /collection
+  /analytics/collection
   /wishlist
   /grading
   /activity

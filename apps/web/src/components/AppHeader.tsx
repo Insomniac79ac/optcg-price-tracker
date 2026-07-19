@@ -9,6 +9,7 @@ const PRIMARY_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/search", label: "Search", title: "Search (Ctrl/Cmd+K)" },
   { href: "/collection", label: "Collection" },
+  { href: "/analytics/collection", label: "Analytics" },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/grading", label: "Grading" },
   { href: "/activity", label: "Activity" },

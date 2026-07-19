@@ -862,6 +862,8 @@ class CollectionAnalyticsTopCardOut(BaseModel):
     card_code: str
     name_en: str | None
     name_jp: str | None
+    set_code: str
+    rarity: str
     quantity: int
     value_jpy: int
     portfolio_weight_pct: float
@@ -881,7 +883,10 @@ class CollectionAnalyticsHighestCostBasisItemOut(BaseModel):
     card_code: str
     name_en: str | None
     name_jp: str | None
+    purchase_price_jpy: int | None
+    quantity: int
     cost_basis_jpy: int
+    status: str
 
 
 class CollectionAnalyticsCostBasisOut(BaseModel):

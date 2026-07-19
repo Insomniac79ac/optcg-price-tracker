@@ -211,12 +211,20 @@ export default function DashboardPage() {
 
         <Link
           href="/search"
-          className="mb-6 flex items-center justify-between rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+          className="mb-3 flex items-center justify-between rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
         >
           <span>Search cards, collection, wishlist, notes, signals…</span>
           <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-600">
             Ctrl/Cmd+K
           </span>
+        </Link>
+
+        <Link
+          href="/analytics/collection"
+          className="mb-6 flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+        >
+          <span>Collection Analytics — composition, valuation exposure, and concentration risk</span>
+          <span className="text-neutral-600">→</span>
         </Link>
 
         {status === "loading" && <LoadingState>Loading dashboard…</LoadingState>}

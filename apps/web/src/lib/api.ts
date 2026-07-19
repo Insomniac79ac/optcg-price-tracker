@@ -1085,6 +1085,123 @@ export function fetchCollectionValuationHistory(
   );
 }
 
+// --- Collection analytics (see GET /analytics/collection) -----------------
+
+export interface CollectionAnalyticsSummary {
+  total_items: number;
+  total_quantity: number;
+  total_cost_basis_jpy: number;
+  raw_market_floor_value_jpy: number;
+  graded_adjusted_value_jpy: number;
+  unrealized_pnl_jpy: number;
+  unrealized_pnl_pct: number;
+  items_missing_cost_basis: number;
+  items_missing_market_price: number;
+  owned_unique_cards: number;
+  wishlist_unique_cards: number;
+  grading_active_count: number;
+}
+
+export interface CollectionAnalyticsBreakdownItem {
+  key: string;
+  label: string;
+  item_count: number;
+  quantity: number;
+  cost_basis_jpy: number;
+  value_jpy: number;
+  pnl_jpy: number;
+  pnl_pct: number | null;
+  portfolio_weight_pct: number;
+}
+
+export interface CollectionAnalyticsBreakdowns {
+  by_set: CollectionAnalyticsBreakdownItem[];
+  by_rarity: CollectionAnalyticsBreakdownItem[];
+  by_variant: CollectionAnalyticsBreakdownItem[];
+  by_language: CollectionAnalyticsBreakdownItem[];
+  by_status: CollectionAnalyticsBreakdownItem[];
+  by_tag: CollectionAnalyticsBreakdownItem[];
+  by_group: CollectionAnalyticsBreakdownItem[];
+  by_grading_status: CollectionAnalyticsBreakdownItem[];
+}
+
+export interface CollectionAnalyticsTopCard {
+  collection_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  quantity: number;
+  value_jpy: number;
+  portfolio_weight_pct: number;
+}
+
+export interface CollectionAnalyticsConcentration {
+  top_5_cards_by_value: CollectionAnalyticsTopCard[];
+  top_10_cards_value_pct: number;
+  largest_single_card_value_pct: number;
+  largest_set_exposure: CollectionAnalyticsBreakdownItem | null;
+  largest_rarity_exposure: CollectionAnalyticsBreakdownItem | null;
+}
+
+export interface CollectionAnalyticsHighestCostBasisItem {
+  collection_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  purchase_price_jpy: number | null;
+  quantity: number;
+  cost_basis_jpy: number;
+  status: string;
+}
+
+export interface CollectionAnalyticsCostBasis {
+  items_with_cost_basis: number;
+  items_without_cost_basis: number;
+  average_cost_basis_jpy: number;
+  median_cost_basis_jpy: number;
+  highest_cost_basis_items: CollectionAnalyticsHighestCostBasisItem[];
+}
+
+export interface CollectionAnalyticsValuationQuality {
+  items_with_yuyutei_sell: number;
+  items_with_yuyutei_buy: number;
+  items_with_snkrdunk_floor: number;
+  items_using_graded_value: number;
+  items_using_raw_fallback: number;
+  coverage_pct: number;
+}
+
+export interface CollectionAnalytics {
+  summary: CollectionAnalyticsSummary;
+  breakdowns: CollectionAnalyticsBreakdowns;
+  concentration: CollectionAnalyticsConcentration;
+  cost_basis: CollectionAnalyticsCostBasis;
+  valuation_quality: CollectionAnalyticsValuationQuality;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/collection/route.ts) rather than NEXT_PUBLIC_API_URL,
+ * same rationale as fetchDashboardOverview/fetchMarketOpportunities -
+ * browser-side fetches to the backend's host port are unreliable in
+ * Codespaces/forwarded-port environments, and this endpoint also needs the
+ * signed-in user's session forwarded server-side. */
+export function fetchCollectionAnalytics(params?: {
+  valuation_mode?: ValuationMode;
+  include_sold?: boolean;
+}): Promise<CollectionAnalytics> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  if (params?.include_sold !== undefined) {
+    query.set("include_sold", String(params.include_sold));
+  }
+  const qs = query.toString();
+  return fetchAdminJson<CollectionAnalytics>(`/api/analytics/collection${qs ? `?${qs}` : ""}`);
+}
+
 export function createCollectionItem(
   body: CollectionItemInput,
 ): Promise<CollectionItem> {

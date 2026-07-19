@@ -251,6 +251,8 @@ def get_collection_analytics(
             card_code=item.card_code,
             name_en=item.name_en,
             name_jp=item.name_jp,
+            set_code=item.set_code,
+            rarity=item.rarity,
             quantity=item.quantity,
             value_jpy=selected_values[item.collection_item_id] or 0,
             portfolio_weight_pct=_weight_pct(
@@ -296,7 +298,10 @@ def get_collection_analytics(
             card_code=item.card_code,
             name_en=item.name_en,
             name_jp=item.name_jp,
+            purchase_price_jpy=item.purchase_price_jpy,
+            quantity=item.quantity,
             cost_basis_jpy=item.cost_basis_jpy,
+            status=status_by_item_id.get(item.collection_item_id, "unknown"),
         )
         for item in highest_cost_basis_sorted
     ]
