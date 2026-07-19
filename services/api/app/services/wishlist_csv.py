@@ -1,5 +1,6 @@
 import csv
 import io
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, WishlistItem
 from app.models.wishlist_item import WISHLIST_PRIORITIES, WISHLIST_STATUSES
+from app.services.cache import delete_cache_prefix
 from app.services.wishlist import find_conflicting_wishlist_item
 
 EXPORT_COLUMNS = (
@@ -30,6 +32,24 @@ IMPORT_MODES = ("upsert", "append")
 DEFAULT_PRIORITY = "medium"
 DEFAULT_STATUS = "watching"
 
+# Cache prefixes invalidated by any wishlist write - see 'Cache
+# invalidation' in docs/operations.md. Shared (not duplicated) between
+# app.api.wishlist's direct create/update/delete/import routes and
+# app.services.file_jobs' background wishlist_import processing, so both
+# paths stay in sync.
+WISHLIST_WRITE_CACHE_PREFIXES = (
+    "dashboard",
+    "wishlist",
+    "wishlist_summary",
+    "market_opportunities",
+    "market_signals",
+)
+
+
+def invalidate_wishlist_write_caches() -> None:
+    for prefix in WISHLIST_WRITE_CACHE_PREFIXES:
+        delete_cache_prefix(prefix)
+
 
 def _blank(value) -> str:
     return "" if value is None else str(value)
@@ -40,10 +60,27 @@ def _clean(value: str | None) -> str | None:
     return value or None
 
 
-def export_wishlist_csv(db: Session, *, user_id: int) -> str:
-    """Renders the current user's wishlist_items (joined with their card) as
-    CSV text, one row per wishlist item. Missing/null values are exported as
-    blank cells rather than the literal string "None"."""
+class _RowSink:
+    """Minimal file-like object for csv.writer - see collection_csv.py's
+    _RowSink (same trick, kept as a separate copy here rather than a shared
+    import, since this module otherwise has no dependency on
+    collection_csv.py and one tiny class isn't worth introducing one)."""
+
+    def __init__(self) -> None:
+        self.value = ""
+
+    def write(self, s: str) -> int:
+        self.value = s
+        return len(s)
+
+
+def iter_wishlist_csv_rows(db: Session, *, user_id: int) -> Iterator[str]:
+    """Yields the current user's wishlist_items (joined with their card) as
+    CSV text chunks - a header chunk, then one chunk per row. Missing/null
+    values are exported as blank cells rather than the literal string
+    "None". export_wishlist_csv() below is just this joined into one
+    string, kept for callers (the export CLI, tests) that want the whole
+    result at once."""
     items = db.scalars(
         select(WishlistItem)
         .join(Card, WishlistItem.card_id == Card.id)
@@ -58,9 +95,10 @@ def export_wishlist_csv(db: Session, *, user_id: int) -> str:
             card.id: card for card in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()
         }
 
-    buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=EXPORT_COLUMNS)
+    sink = _RowSink()
+    writer = csv.DictWriter(sink, fieldnames=EXPORT_COLUMNS)
     writer.writeheader()
+    yield sink.value
 
     for item in items:
         card = cards_by_id[item.card_id]
@@ -78,8 +116,14 @@ def export_wishlist_csv(db: Session, *, user_id: int) -> str:
                 "notes": _blank(item.notes),
             }
         )
+        yield sink.value
 
-    return buffer.getvalue()
+
+def export_wishlist_csv(db: Session, *, user_id: int) -> str:
+    """Whole-string convenience wrapper around iter_wishlist_csv_rows - used
+    by tests; the direct HTTP export endpoint and background export jobs
+    use the generator directly instead."""
+    return "".join(iter_wishlist_csv_rows(db, user_id=user_id))
 
 
 def export_filename(today: date | None = None) -> str:

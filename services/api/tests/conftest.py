@@ -74,6 +74,21 @@ def _app_logging_uses_test_db(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _file_jobs_uses_test_db(monkeypatch):
+    """app.services.file_jobs.process_file_job opens its own short-lived
+    session (same reasoning as app.services.job_locks/app_logging - it may
+    run well after the request that created the job has closed its own
+    session, especially when dispatched via FastAPI BackgroundTasks), so it
+    doesn't go through the get_db dependency override above. Redirect it to
+    the same in-memory sqlite engine as db_session/client, or every
+    background-processed file job would attempt a real connection to
+    settings.DATABASE_URL instead."""
+    import app.services.file_jobs as file_jobs_module
+
+    monkeypatch.setattr(file_jobs_module, "SessionLocal", TestingSessionLocal)
+
+
+@pytest.fixture(autouse=True)
 def _job_locks_uses_test_db(monkeypatch):
     """app.services.job_locks (acquire_lock/release_lock/...) opens its own
     short-lived session per call, same rationale and same fix as
@@ -101,6 +116,14 @@ def _cache_disabled_by_default(monkeypatch):
     cache_module.reset_state_for_tests()
     yield
     cache_module.reset_state_for_tests()
+
+
+@pytest.fixture(autouse=True)
+def _file_job_storage_uses_tmp_dir(tmp_path, monkeypatch):
+    """app.services.file_job_storage defaults to data/file_jobs (relative to
+    cwd) - redirected to a per-test tmp_path here so tests never write into
+    the real local dev directory or leave files behind."""
+    monkeypatch.setattr(settings, "FILE_JOB_STORAGE_DIR", str(tmp_path / "file_jobs"))
 
 
 @pytest.fixture(autouse=True)

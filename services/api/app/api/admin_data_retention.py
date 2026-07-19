@@ -30,6 +30,24 @@ _PRUNE_CACHE_PREFIXES_BY_TABLE = {
 }
 
 
+def _file_jobs_policy() -> DataRetentionPolicyOut:
+    """file_jobs isn't wired into the generic prune_tables() engine above -
+    unlike every other prunable table, cleaning it up must also delete the
+    job's input/output files on disk (see
+    app.services.file_jobs.cleanup_old_file_jobs), not just the DB row, and
+    prune_tables()'s generic apply step only ever does a bare `DELETE ...
+    WHERE id IN (...)`. This entry is informational only (see 'Large
+    import/export jobs' in docs/operations.md); the actual mechanism is
+    POST /admin/file-jobs/cleanup, not POST /admin/data-retention/prune."""
+    return DataRetentionPolicyOut(
+        table="file_jobs",
+        retention_days=7,
+        mode="see POST /admin/file-jobs/cleanup (deletes rows and their input/output files together)",
+        protected_records="queued/running jobs are never pruned",
+        enabled=True,
+    )
+
+
 @router.get("/policy", response_model=DataRetentionPolicyResponseOut)
 def data_retention_policy_endpoint():
     return DataRetentionPolicyResponseOut(
@@ -43,6 +61,7 @@ def data_retention_policy_endpoint():
             )
             for p in list_policies()
         ]
+        + [_file_jobs_policy()]
     )
 
 

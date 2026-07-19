@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
@@ -84,3 +86,40 @@ def require_current_user_optional(
         return require_current_user(authorization=authorization, db=db)
     except HTTPException:
         return None
+
+
+@dataclass
+class FileJobAccess:
+    """Result of file_job_access() below - exactly one of user/is_admin
+    reflects how the caller was authenticated."""
+
+    user: User | None
+    is_admin: bool
+
+
+def file_job_access(
+    x_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> FileJobAccess:
+    """Guards GET/POST /file-jobs* with EITHER a valid X-Admin-Token (full
+    visibility across every job/owner, including admin-only job types like
+    backup_export - used by the /admin/file-jobs page) OR a valid per-user
+    bearer token (visibility limited to that user's own jobs - used by the
+    collection/wishlist background import/export UI). Tries the admin path
+    first via require_admin_token itself, so it stays the single source of
+    truth for what counts as a valid admin request (including its dev-mode-
+    with-no-ADMIN_TOKEN-configured behavior); any failure there (wrong/
+    missing token, or ADMIN_TOKEN unconfigured outside development) falls
+    through to ordinary bearer-token auth instead of failing the request
+    outright. See app.services.file_jobs.list_file_jobs's `admin` flag and
+    app.api.file_jobs's per-job ownership check for how each side is
+    subsequently scoped."""
+    try:
+        require_admin_token(x_admin_token=x_admin_token)
+        return FileJobAccess(user=None, is_admin=True)
+    except HTTPException:
+        pass
+
+    user = require_current_user(authorization=authorization, db=db)
+    return FileJobAccess(user=user, is_admin=False)

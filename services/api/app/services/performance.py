@@ -15,10 +15,19 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import AppLogEvent, CollectorActivityEvent, MarketSignalEvent, PriceObservation, RawSnapshot
+from app.models import (
+    AppLogEvent,
+    CollectorActivityEvent,
+    FileJob,
+    MarketSignalEvent,
+    PriceObservation,
+    RawSnapshot,
+)
+from app.models.file_job import FILE_JOB_STATUSES
 from app.services.cache import cache_stats, current_backend_name
 from app.services.db_index_audit import audit_summary, run_db_index_audit
 from app.services.job_locks import get_lock_counts
+from app.services.system_check import STALE_RUNNING_FILE_JOB_HOURS
 from app.settings import settings
 
 SLOW_REQUEST_EVENT_TYPE = "slow_request"
@@ -50,6 +59,8 @@ class PerformanceSummary:
     cache_enabled: bool = True
     cache_backend: str = "none"
     cache_keys: int | None = None
+    file_jobs_by_status: dict[str, int] = field(default_factory=dict)
+    stale_running_file_jobs: int = 0
 
 
 def _table_count(db: Session, model) -> int:
@@ -117,6 +128,20 @@ def build_performance_summary(db: Session) -> PerformanceSummary:
     since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
     lock_counts = get_lock_counts()
 
+    file_jobs_by_status = {
+        s: (db.scalar(select(func.count()).select_from(FileJob).where(FileJob.status == s)) or 0)
+        for s in FILE_JOB_STATUSES
+    }
+    stale_running_cutoff = datetime.now(timezone.utc) - timedelta(hours=STALE_RUNNING_FILE_JOB_HOURS)
+    stale_running_file_jobs = (
+        db.scalar(
+            select(func.count())
+            .select_from(FileJob)
+            .where(FileJob.status == "running", FileJob.started_at < stale_running_cutoff)
+        )
+        or 0
+    )
+
     return PerformanceSummary(
         status=status,
         database=database_counts,
@@ -130,4 +155,6 @@ def build_performance_summary(db: Session) -> PerformanceSummary:
         cache_enabled=settings.CACHE_ENABLED,
         cache_backend=current_backend_name(),
         cache_keys=cache_stats()["keys"],
+        file_jobs_by_status=file_jobs_by_status,
+        stale_running_file_jobs=stale_running_file_jobs,
     )

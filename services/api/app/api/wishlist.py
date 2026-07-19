@@ -1,4 +1,14 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.collection import _to_out as _collection_item_to_out
@@ -7,8 +17,10 @@ from app.db import get_db
 from app.models import Card, CollectionItem, User, WishlistItem
 from app.models.wishlist_item import WISHLIST_PRIORITIES, WISHLIST_STATUSES
 from app.schemas import (
+    FileJobCreatedOut,
     WishlistConvertToCollectionIn,
     WishlistConvertToCollectionOut,
+    WishlistExportJobRequestIn,
     WishlistImportPreviewRowOut,
     WishlistImportResponseOut,
     WishlistImportRowErrorOut,
@@ -25,6 +37,8 @@ from app.services.app_logging import record_app_log
 from app.services.cache import delete_cache_prefix, get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.collector import get_tags_for_cards
+from app.services.file_job_storage import UnsupportedFileExtension, UploadTooLarge, save_upload
+from app.services.file_jobs import create_file_job, dispatch_file_job
 from app.services.wishlist import (
     build_wishlist_item_out,
     find_conflicting_wishlist_item,
@@ -35,28 +49,20 @@ from app.services.wishlist import (
 )
 from app.services.wishlist_csv import (
     IMPORT_MODES,
-    export_wishlist_csv,
     export_filename,
     import_wishlist_csv,
+    invalidate_wishlist_write_caches,
+    iter_wishlist_csv_rows,
 )
 from app.settings import settings
 
 router = APIRouter(prefix="/wishlist", tags=["wishlist"])
 
-# Cache-prefix invalidation for every route in this router that writes to
-# wishlist_items - see 'Cache invalidation' in docs/operations.md.
-_WISHLIST_WRITE_INVALIDATES = (
-    "dashboard",
-    "wishlist",
-    "wishlist_summary",
-    "market_opportunities",
-    "market_signals",
-)
-
-
-def _invalidate_wishlist_write_caches() -> None:
-    for prefix in _WISHLIST_WRITE_INVALIDATES:
-        delete_cache_prefix(prefix)
+# Cache invalidation for every route in this router that writes to
+# wishlist_items - see app.services.wishlist_csv.
+# invalidate_wishlist_write_caches (shared with the background
+# wishlist_import job) and 'Cache invalidation' in docs/operations.md.
+_invalidate_wishlist_write_caches = invalidate_wishlist_write_caches
 
 
 def _get_card_or_404(db: Session, card_id: int) -> Card:
@@ -151,20 +157,45 @@ def get_wishlist_summary_endpoint(
 def export_wishlist_items_csv(
     db: Session = Depends(get_db), user: User = Depends(require_current_user)
 ):
-    csv_text = export_wishlist_csv(db, user_id=user.id)
+    """Streams the CSV row-by-row (see iter_wishlist_csv_rows) rather than
+    building the whole file in memory first - see 'Large import/export
+    jobs' in docs/operations.md. For a very large wishlist, prefer POST
+    /wishlist/export.csv/job instead, which generates the file in the
+    background and returns a file_job_id to poll/download."""
     filename = export_filename()
-    return Response(
-        content=csv_text,
+    return StreamingResponse(
+        iter_wishlist_csv_rows(db, user_id=user.id),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
-@router.post("/import.csv", response_model=WishlistImportResponseOut)
+@router.post("/export.csv/job", response_model=FileJobCreatedOut, status_code=202)
+def export_wishlist_items_csv_job(
+    body: WishlistExportJobRequestIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    """Generates the CSV in the background - poll GET /file-jobs/{id} and
+    download via GET /file-jobs/{id}/download once status=success. `filters`
+    is accepted for forward compatibility but not yet applied - the
+    underlying export always covers the full wishlist, same as the direct
+    endpoint above."""
+    del body  # reserved, see docstring
+    job = create_file_job(db, job_type="wishlist_export", user_id=user.id, dry_run=False)
+    dispatch_file_job(job.id, background_tasks)
+    return FileJobCreatedOut(file_job_id=job.id, status=job.status)
+
+
+@router.post("/import.csv")
 async def import_wishlist_items_csv(
+    response: Response,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     dry_run: bool = Query(default=True),
     mode: str = Query(default="upsert"),
+    background: bool = Query(default=False),
     db: Session = Depends(get_db),
     user: User = Depends(require_current_user),
 ):
@@ -174,6 +205,26 @@ async def import_wishlist_items_csv(
         )
 
     raw = await file.read()
+
+    if background:
+        try:
+            input_path = save_upload(raw, extension=".csv")
+        except (UnsupportedFileExtension, UploadTooLarge) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job = create_file_job(
+            db,
+            job_type="wishlist_import",
+            user_id=user.id,
+            original_filename=file.filename,
+            input_file_path=input_path,
+            dry_run=dry_run,
+            mode=mode,
+        )
+        dispatch_file_job(job.id, background_tasks)
+        response.status_code = 202
+        return FileJobCreatedOut(file_job_id=job.id, status=job.status)
+
     try:
         csv_text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as exc:

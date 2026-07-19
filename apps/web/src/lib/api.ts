@@ -1215,6 +1215,190 @@ export async function importCollectionCsv(
   return details as CollectionImportResponse;
 }
 
+/** Same as importCollectionCsv above, but background=true - the backend
+ * returns 202 immediately with a file_job_id instead of the full import
+ * result; poll fetchFileJob(file_job_id) for progress/status/errors. */
+export async function importCollectionCsvBackground(
+  file: File,
+  params: { dryRun: boolean; mode: CollectionImportMode },
+): Promise<FileJobCreated> {
+  const query = new URLSearchParams({
+    dry_run: String(params.dryRun),
+    mode: params.mode,
+    background: "true",
+  });
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/collection/import?${query.toString()}`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: formData,
+  });
+
+  const details = await res
+    .json()
+    .catch(() => null as (Partial<FileJobCreated> & { error?: string; detail?: string }) | null);
+
+  if (!res.ok || !details) {
+    throw new Error(
+      details?.error || details?.detail || `Import failed with status ${res.status}`,
+    );
+  }
+
+  return details as FileJobCreated;
+}
+
+/** Creates a background collection export job - poll fetchFileJob(id) and
+ * downloadFileJob(id) once status=success. Routed through the Next.js
+ * server proxy (see src/app/api/collection/export/job/route.ts). */
+export async function createCollectionExportJob(): Promise<FileJobCreated> {
+  return fetchAdminJson<FileJobCreated>("/api/collection/export/job", {
+    method: "POST",
+    body: {},
+  });
+}
+
+// --- File jobs (background import/export - see 'Large import/export jobs'
+// in docs/operations.md) ----------------------------------------------
+
+export const FILE_JOB_TYPES = [
+  "collection_import",
+  "wishlist_import",
+  "collection_export",
+  "wishlist_export",
+  "backup_export",
+  "backup_validate",
+  "backup_restore",
+] as const;
+export type FileJobType = (typeof FILE_JOB_TYPES)[number];
+
+export const FILE_JOB_STATUSES = ["queued", "running", "success", "failed", "cancelled"] as const;
+export type FileJobStatus = (typeof FILE_JOB_STATUSES)[number];
+
+export interface FileJobCreated {
+  file_job_id: number;
+  status: string;
+}
+
+export interface FileJob {
+  id: number;
+  job_type: FileJobType;
+  status: FileJobStatus;
+  original_filename: string | null;
+  output_filename: string | null;
+  content_type: string | null;
+  dry_run: boolean;
+  mode: string | null;
+  progress_current: number;
+  progress_total: number | null;
+  download_ready: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  summary: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errors: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  warnings: any;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FileJobListResponse {
+  jobs: FileJob[];
+  total: number;
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/file-jobs/route.ts) - accepts either a signed-in user's
+ * session or an X-Admin-Token, see app.auth.file_job_access. */
+export function fetchFileJobs(params?: {
+  job_type?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<FileJobListResponse> {
+  const query = new URLSearchParams();
+  if (params?.job_type) query.set("job_type", params.job_type);
+  if (params?.status) query.set("status", params.status);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<FileJobListResponse>(`/api/file-jobs${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/file-jobs/[id]/route.ts). */
+export function fetchFileJob(fileJobId: number): Promise<FileJob> {
+  return fetchAdminJson<FileJob>(`/api/file-jobs/${fileJobId}`);
+}
+
+/** Downloads a completed file job's output through the Next.js proxy (see
+ * src/app/api/file-jobs/[id]/download/route.ts) and triggers a browser file
+ * download, using the filename the backend set via Content-Disposition. */
+export async function downloadFileJob(fileJobId: number): Promise<void> {
+  const res = await fetch(`/api/file-jobs/${fileJobId}/download`, {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Download failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) ||
+    `file_job_${fileJobId}`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/file-jobs/[id]/cancel/route.ts). */
+export function cancelFileJob(fileJobId: number): Promise<{ id: number; status: string }> {
+  return fetchAdminJson<{ id: number; status: string }>(`/api/file-jobs/${fileJobId}/cancel`, {
+    method: "POST",
+  });
+}
+
+export interface FileJobCleanupResult {
+  dry_run: boolean;
+  older_than_days: number;
+  would_delete: number;
+  deleted: number;
+}
+
+/** Admin-only - routed through the Next.js server proxy (see
+ * src/app/api/admin/file-jobs/cleanup/route.ts). */
+export function cleanupFileJobs(body: {
+  older_than_days: number;
+  dry_run: boolean;
+  confirm?: string | null;
+}): Promise<FileJobCleanupResult> {
+  return fetchAdminJson<FileJobCleanupResult>("/api/admin/file-jobs/cleanup", {
+    method: "POST",
+    body,
+  });
+}
+
 export const MARKET_SIGNAL_TYPES = [
   "price_up_7d",
   "price_down_7d",
@@ -2170,6 +2354,26 @@ export async function downloadBackup(params: {
   URL.revokeObjectURL(url);
 }
 
+/** Creates a background backup export job - poll fetchFileJob(id) and
+ * downloadFileJob(id) once status=success. Admin-only - routed through the
+ * Next.js server proxy (see src/app/api/admin/backup/export/job/route.ts). */
+export function createBackupExportJob(params: {
+  includePrices: boolean;
+  includeRawSnapshots: boolean;
+  includeRefreshRuns: boolean;
+  includeLogs: boolean;
+}): Promise<FileJobCreated> {
+  return fetchAdminJson<FileJobCreated>("/api/admin/backup/export/job", {
+    method: "POST",
+    body: {
+      include_prices: params.includePrices,
+      include_raw_snapshots: params.includeRawSnapshots,
+      include_refresh_runs: params.includeRefreshRuns,
+      include_logs: params.includeLogs,
+    },
+  });
+}
+
 async function postBackupFile<T>(
   path: string,
   file: File,
@@ -2634,6 +2838,50 @@ export async function importWishlistCsv(
   }
 
   return details as WishlistImportResponse;
+}
+
+/** Same as importWishlistCsv above, but background=true - the backend
+ * returns 202 immediately with a file_job_id instead of the full import
+ * result; poll fetchFileJob(file_job_id) for progress/status/errors. */
+export async function importWishlistCsvBackground(
+  file: File,
+  params: { dryRun: boolean; mode: CollectionImportMode },
+): Promise<FileJobCreated> {
+  const query = new URLSearchParams({
+    dry_run: String(params.dryRun),
+    mode: params.mode,
+    background: "true",
+  });
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/wishlist/import?${query.toString()}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const details = await res
+    .json()
+    .catch(() => null as (Partial<FileJobCreated> & { error?: string; detail?: string }) | null);
+
+  if (!res.ok || !details) {
+    throw new Error(
+      details?.error || details?.detail || `Import failed with status ${res.status}`,
+    );
+  }
+
+  return details as FileJobCreated;
+}
+
+/** Creates a background wishlist export job - poll fetchFileJob(id) and
+ * downloadFileJob(id) once status=success. Routed through the Next.js
+ * server proxy (see src/app/api/wishlist/export/job/route.ts). */
+export async function createWishlistExportJob(): Promise<FileJobCreated> {
+  return fetchAdminJson<FileJobCreated>("/api/wishlist/export/job", {
+    method: "POST",
+    body: {},
+  });
 }
 
 // --- Dashboard personalization --------------------------------------------

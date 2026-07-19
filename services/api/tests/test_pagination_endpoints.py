@@ -140,10 +140,16 @@ def test_cards_response_has_size_header(client, db_session):
     assert int(response.headers["x-response-size-bytes"]) >= 0
 
 
-def test_export_csv_response_has_size_header(client, db_session):
+def test_streamed_export_csv_response_has_no_size_header(client, db_session):
+    """/collection/export.csv is a genuine StreamingResponse (see 'Large
+    import/export jobs' in docs/operations.md) - it has no Content-Length,
+    so ResponseSizeMiddleware silently skips the header/warning rather than
+    buffering the whole body just to measure it (see its own docstring).
+    This documents that trade-off rather than assuming every response gets
+    the header."""
     response = client.get("/collection/export.csv")
     assert response.status_code == 200
-    assert "x-response-size-bytes" in response.headers
+    assert "x-response-size-bytes" not in response.headers
 
 
 # --- response size warning logging -------------------------------------------

@@ -6,22 +6,20 @@ import { useState } from "react";
 import { FileJobTracker } from "@/components/FileJobTracker";
 import { FormField } from "@/components/FormField";
 import {
-  COLLECTION_IMPORT_MODES,
-  type CollectionImportMode,
-  type CollectionImportResponse,
-  createCollectionExportJob,
-  downloadCollectionCsv,
-  importCollectionCsv,
-  importCollectionCsvBackground,
+  type WishlistImportResponse,
+  createWishlistExportJob,
+  downloadWishlistCsv,
+  importWishlistCsv,
+  importWishlistCsvBackground,
 } from "@/lib/api";
 
-/** Collection page's CSV export/import section - split out of
- * app/collection/page.tsx purely to shrink an otherwise very large single
- * component. Fully self-contained (owns its own file/mode/dry-run/result/
- * background-job state) except for `onImported`, which the parent uses to
- * refresh the item list/summary/valuation after a real (non-dry-run)
- * import (direct or background). */
-export function CollectionImportExport({ onImported }: { onImported: () => void }) {
+/** Wishlist page's CSV export/import section - split out of
+ * app/wishlist/page.tsx (mirrors CollectionImportExport.tsx) purely to keep
+ * that already-large page manageable. Fully self-contained (owns its own
+ * file/mode/dry-run/result/background-job state) except for `onImported`,
+ * which the parent uses to refresh the item list/summary after a real
+ * (non-dry-run) import (direct or background). */
+export function WishlistImportExport({ onImported }: { onImported: () => void }) {
   const [exportPending, setExportPending] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportJobId, setExportJobId] = useState<number | null>(null);
@@ -29,21 +27,21 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
   const [exportJobError, setExportJobError] = useState<string | null>(null);
 
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importMode, setImportMode] = useState<CollectionImportMode>("upsert");
+  const [importMode, setImportMode] = useState<"upsert" | "append">("upsert");
   const [importDryRun, setImportDryRun] = useState(true);
   const [importBackground, setImportBackground] = useState(false);
   const [importPending, setImportPending] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<CollectionImportResponse | null>(null);
+  const [importResult, setImportResult] = useState<WishlistImportResponse | null>(null);
   const [importJobId, setImportJobId] = useState<number | null>(null);
 
   async function handleExportCsv() {
     setExportError(null);
     setExportPending(true);
     try {
-      await downloadCollectionCsv();
+      await downloadWishlistCsv();
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : "Failed to export collection CSV.");
+      setExportError(err instanceof Error ? err.message : "Failed to export wishlist CSV.");
     } finally {
       setExportPending(false);
     }
@@ -53,7 +51,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
     setExportJobError(null);
     setExportJobPending(true);
     try {
-      const { file_job_id } = await createCollectionExportJob();
+      const { file_job_id } = await createWishlistExportJob();
       setExportJobId(file_job_id);
     } catch (err) {
       setExportJobError(err instanceof Error ? err.message : "Failed to prepare export.");
@@ -78,18 +76,18 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
     setImportPending(true);
     try {
       if (importBackground) {
-        const { file_job_id } = await importCollectionCsvBackground(importFile, {
+        const { file_job_id } = await importWishlistCsvBackground(importFile, {
           dryRun,
           mode: importMode,
         });
         setImportJobId(file_job_id);
       } else {
-        const result = await importCollectionCsv(importFile, { dryRun, mode: importMode });
+        const result = await importWishlistCsv(importFile, { dryRun, mode: importMode });
         setImportResult(result);
         if (!dryRun) onImported();
       }
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : "Failed to import collection CSV.");
+      setImportError(err instanceof Error ? err.message : "Failed to import wishlist CSV.");
     } finally {
       setImportPending(false);
     }
@@ -97,7 +95,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
 
   return (
     <section className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">Collection import/export</h2>
+      <h2 className="mb-3 text-sm font-semibold text-neutral-200">Wishlist import/export</h2>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-800 pb-3">
         <button
@@ -106,9 +104,9 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
           disabled={exportPending}
           className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
         >
-          {exportPending ? "Exporting…" : "Export collection CSV"}
+          {exportPending ? "Exporting…" : "Export wishlist CSV"}
         </button>
-        <span className="text-xs text-neutral-600">Downloads /collection/export.csv</span>
+        <span className="text-xs text-neutral-600">Downloads /wishlist/export.csv</span>
 
         <button
           type="button"
@@ -116,9 +114,9 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
           disabled={exportJobPending}
           className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
         >
-          {exportJobPending ? "Preparing…" : "Prepare collection export"}
+          {exportJobPending ? "Preparing…" : "Prepare wishlist export"}
         </button>
-        <span className="text-xs text-neutral-600">Generates in the background - useful for a large collection</span>
+        <span className="text-xs text-neutral-600">Generates in the background - useful for a large wishlist</span>
         <Link
           href="/admin/file-jobs"
           className="ml-auto text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -152,14 +150,11 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
         <FormField label="Mode">
           <select
             value={importMode}
-            onChange={(e) => setImportMode(e.target.value as CollectionImportMode)}
+            onChange={(e) => setImportMode(e.target.value as "upsert" | "append")}
             className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
           >
-            {COLLECTION_IMPORT_MODES.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+            <option value="upsert">upsert</option>
+            <option value="append">append</option>
           </select>
         </FormField>
 
@@ -206,7 +201,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
 
       {!importDryRun && (
         <div className="mt-3 rounded border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
-          This will write changes to your collection.
+          This will write changes to your wishlist.
         </div>
       )}
 
@@ -250,9 +245,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
                   {importResult.errors.map((e, idx) => (
                     <tr key={`${e.row_number}-${idx}`} className="border-b border-neutral-900 last:border-0">
                       <td className="px-2 py-1.5 text-neutral-400">{e.row_number}</td>
-                      <td className="px-2 py-1.5 font-mono text-neutral-400">
-                        {e.card_code ?? "—"}
-                      </td>
+                      <td className="px-2 py-1.5 font-mono text-neutral-400">{e.card_code ?? "—"}</td>
                       <td className="px-2 py-1.5 text-rose-300">{e.error}</td>
                     </tr>
                   ))}
@@ -269,7 +262,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
                     <th className="px-2 py-1.5 font-medium">Row</th>
                     <th className="px-2 py-1.5 font-medium">Card code</th>
                     <th className="px-2 py-1.5 font-medium">Action</th>
-                    <th className="px-2 py-1.5 font-medium">Qty</th>
+                    <th className="px-2 py-1.5 font-medium">Priority</th>
                     <th className="px-2 py-1.5 font-medium">Status</th>
                   </tr>
                 </thead>
@@ -279,7 +272,7 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
                       <td className="px-2 py-1.5 text-neutral-400">{p.row_number}</td>
                       <td className="px-2 py-1.5 font-mono text-neutral-300">{p.card_code}</td>
                       <td className="px-2 py-1.5 text-neutral-200">{p.action}</td>
-                      <td className="px-2 py-1.5 text-neutral-300">{p.quantity}</td>
+                      <td className="px-2 py-1.5 text-neutral-300">{p.priority}</td>
                       <td className="px-2 py-1.5 text-neutral-300">{p.status}</td>
                     </tr>
                   ))}

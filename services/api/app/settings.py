@@ -74,6 +74,18 @@ class Settings(BaseSettings):
     CACHE_MARKET_TTL_SECONDS: int = 120
     CACHE_COLLECTION_TTL_SECONDS: int = 60
 
+    # Background file jobs (app.services.file_jobs / app.services.
+    # file_job_storage) - see 'Large import/export jobs' in
+    # docs/operations.md and GET/POST /file-jobs*. FILE_JOB_STORAGE_DIR is
+    # relative to this process's cwd, same convention as DB_BACKUP_DIR above.
+    # FILE_JOBS_SYNC_FALLBACK left unset (None) picks its default from the
+    # environment (true in development, false otherwise) - see
+    # app.env.file_jobs_sync_fallback_effective(); set it explicitly to
+    # override that in either direction.
+    FILE_JOB_STORAGE_DIR: str = "data/file_jobs"
+    FILE_JOB_MAX_UPLOAD_MB: int = 50
+    FILE_JOBS_SYNC_FALLBACK: bool | None = None
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

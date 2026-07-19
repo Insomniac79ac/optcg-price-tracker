@@ -42,4 +42,6 @@ def performance_summary_endpoint(db: Session = Depends(get_db)):
         cache_enabled=summary.cache_enabled,
         cache_backend=summary.cache_backend,
         cache_keys=summary.cache_keys,
+        file_jobs_by_status=summary.file_jobs_by_status,
+        stale_running_file_jobs=summary.stale_running_file_jobs,
     )

@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { FileJobTracker } from "@/components/FileJobTracker";
 import {
   AdminAuthRequiredError,
   type BackupRestoreMode,
   type BackupRestoreResponse,
   type BackupValidateResponse,
   BACKUP_RESTORE_MODES,
+  createBackupExportJob,
   downloadBackup,
   getAdminToken,
   restoreBackup,
@@ -61,6 +63,12 @@ export default function AdminBackupPage() {
               >
                 Collection
               </Link>
+              <Link
+                href="/admin/file-jobs"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                File jobs
+              </Link>
             </div>
           </div>
         )}
@@ -92,6 +100,10 @@ function ExportSection() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [jobPending, setJobPending] = useState(false);
+  const [jobError, setJobError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<number | null>(null);
+
   async function handleDownload() {
     setError(null);
     setPending(true);
@@ -106,6 +118,28 @@ function ExportSection() {
       setError(err instanceof Error ? err.message : "Failed to export backup.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handlePrepareJob() {
+    setJobError(null);
+    setJobPending(true);
+    try {
+      const { file_job_id } = await createBackupExportJob({
+        includePrices,
+        includeRawSnapshots,
+        includeRefreshRuns,
+        includeLogs,
+      });
+      setJobId(file_job_id);
+    } catch (err) {
+      if (err instanceof AdminAuthRequiredError) {
+        setJobError("Admin token required.");
+      } else {
+        setJobError(err instanceof Error ? err.message : "Failed to prepare backup export.");
+      }
+    } finally {
+      setJobPending(false);
     }
   }
 
@@ -150,20 +184,40 @@ function ExportSection() {
         </label>
       </div>
 
-      <button
-        type="button"
-        onClick={handleDownload}
-        disabled={pending}
-        className="mt-3 rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-      >
-        {pending ? "Exporting…" : "Download backup JSON"}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={pending}
+          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+        >
+          {pending ? "Exporting…" : "Download backup JSON"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePrepareJob}
+          disabled={jobPending}
+          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
+        >
+          {jobPending ? "Preparing…" : "Prepare backup in background"}
+        </button>
+        <span className="text-xs text-neutral-600">
+          Generates in the background - useful for a large backup
+        </span>
+      </div>
 
       {error && (
         <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
           {error}
         </div>
       )}
+      {jobError && (
+        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          {jobError}
+        </div>
+      )}
+      {jobId !== null && <FileJobTracker fileJobId={jobId} />}
     </Section>
   );
 }

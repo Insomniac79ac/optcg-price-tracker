@@ -57,7 +57,11 @@ def test_policy_returns_policies(client, db_session):
     assert response.status_code == 200
     data = response.json()
     tables = {p["table"] for p in data["policies"]}
-    assert tables == set(PRUNABLE_TABLES)
+    # file_jobs is an informational-only entry (see 'Large import/export
+    # jobs' in docs/operations.md) - its actual cleanup mechanism is POST
+    # /admin/file-jobs/cleanup, not the generic prune_tables() engine, so it
+    # isn't in PRUNABLE_TABLES.
+    assert tables == set(PRUNABLE_TABLES) | {"file_jobs"}
 
     never_pruned = {
         "cards",

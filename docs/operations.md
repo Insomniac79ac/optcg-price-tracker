@@ -635,6 +635,118 @@ backend-failure/fallback event) is recorded to `app_log_events` - see `GET /admi
 individual cache hits/misses are never logged, only the hit/miss counters shown on
 `/admin/cache`.
 
+## Large import/export jobs
+
+Collection/wishlist CSV import, CSV export, and JSON backup export can all run as a tracked
+background `file_jobs` row instead of inline in the request - see `app.models.file_job`,
+`app.services.file_jobs`, `app.services.file_job_storage`, and `GET`/`POST /file-jobs*`
+(`services/api/app/api/file_jobs.py`). This exists for the same reason as caching and
+pagination: a large collection/wishlist/backup shouldn't have to block the request/response
+cycle or risk a timeout.
+
+**How processing actually runs.** Unlike price refresh/market workflow (which dispatch to a
+Celery task in the separate `services/worker` deployable), file-job processing runs inside
+*this* API process via FastAPI `BackgroundTasks` - `app.services.file_jobs.process_file_job()`,
+called either synchronously (blocking the creating request) or deferred via `BackgroundTasks`
+(202 returns immediately, the job finishes moments later), controlled by
+`FILE_JOBS_SYNC_FALLBACK` (`app.env.file_jobs_sync_fallback_effective()`: unset defaults to
+`true` in development, `false` otherwise). This was a deliberate choice, not an oversight: CSV
+import/export and backup export/restore depend on this service's full model set (tags, groups,
+grading submissions, per-user ownership) and its ~20-table backup registry
+(`app.services.backup.MODEL_BY_TABLE`) - `services/worker` has a much smaller, separate model
+set with no per-user auth concept, built for source-adapter/scraping-adjacent jobs against the
+same database. Duplicating this service's CRUD/CSV/backup logic into that separate deployable
+would mean maintaining two divergent copies of the same behavior for a feature with nothing to
+do with scraping, so it wasn't done.
+
+**When to use background mode.**
+
+- `POST /collection/import.csv?background=true` / `POST /wishlist/import.csv?background=true` -
+  same `dry_run`/`mode` semantics as the direct (`background=false`, the default) call; the
+  response is `202 {"file_job_id": ..., "status": "queued"}` instead of the full import result.
+  Poll `GET /file-jobs/{id}` for progress/summary/row errors.
+- `POST /collection/export.csv/job`, `POST /wishlist/export.csv/job`,
+  `POST /admin/backup/export/job` (admin-only) - generate the file in the background instead of
+  in the response body; poll `GET /file-jobs/{id}` and download via
+  `GET /file-jobs/{id}/download` once `status=success`.
+- The direct, synchronous endpoints (`GET /collection/export.csv`, `GET /wishlist/export.csv`,
+  `GET /admin/backup/export`) remain available and are what the frontend's plain "Export ...
+  CSV"/"Download backup JSON" buttons still use - background mode is there for a collection/
+  wishlist/backup large enough that generating or importing it inline risks a slow response or
+  a request timeout. The direct CSV endpoints stream their body (`StreamingResponse` over
+  `app.services.collection_csv.iter_collection_csv_rows` /
+  `app.services.wishlist_csv.iter_wishlist_csv_rows`) rather than building the whole file in
+  memory first, which is why they lose the `X-Response-Size-Bytes` header (see
+  `app.core.response_size`'s own docstring) - a streamed response has no `Content-Length` to
+  read that header's value off.
+
+**Access control.** `GET/POST /file-jobs*` accepts *either* a signed-in user's bearer token
+(scoped to that user's own `collection_import`/`wishlist_import`/`collection_export`/
+`wishlist_export` jobs) *or* `X-Admin-Token` (full visibility across every job and owner,
+including admin-only `backup_export` jobs) - see `app.auth.file_job_access`. A job owned by
+another user 404s rather than 403s, same pattern as `/collection/{id}` for a different user's
+item.
+
+**Where files are stored.** `FILE_JOB_STORAGE_DIR` (default `data/file_jobs`, same convention as
+`DB_BACKUP_DIR`) with `input/` and `output/` subdirectories - see
+`app.services.file_job_storage`. Every on-disk filename is a freshly generated uuid (optionally
+job-id-prefixed for output files); a caller's original filename is only ever kept for display
+(`FileJob.original_filename`) and is never used to build a path.  `FILE_JOB_MAX_UPLOAD_MB`
+(default `50`) caps upload size; allowed upload extensions are `.csv` and `.json` only. This
+directory must never be committed - see `.gitignore`'s `data/file_jobs/*` rule and
+`scripts/check_secrets.sh`'s check for it, mirroring `data/backups/`.
+
+**Cleanup policy.** `file_jobs` rows in a terminal status (`success`, `failed`, `cancelled`)
+older than `older_than_days` (default 7) are cleanup candidates - a queued or running job is
+never touched, no matter its age. Unlike every other prunable table (`app.services.
+data_retention`), this doesn't go through the generic `POST /admin/data-retention/prune` engine,
+which only issues a bare `DELETE ... WHERE id IN (...)` - a file job's cleanup must *also*
+delete its input/output files on disk, so it has its own dedicated endpoint instead:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"older_than_days": 7, "dry_run": false, "confirm": "CLEANUP"}' \
+  http://localhost:8000/admin/file-jobs/cleanup
+```
+
+`dry_run` defaults to `true` (count only); `dry_run=false` requires `confirm="CLEANUP"`, same
+confirmation-phrase pattern as `/admin/data-retention/prune` and `/admin/cache/clear`. `GET
+/admin/data-retention/policy` still lists a `file_jobs` row for visibility, but it's
+informational only - it points back at this endpoint rather than being prunable through
+`/admin/data-retention/prune`. The `/admin/file-jobs` page (linked from the admin nav,
+`/admin/backup`, and the collection/wishlist import/export sections) has this cleanup form
+built in.
+
+**Why old job files are pruned.** Every generated export/backup output and every uploaded
+import file sits on local disk indefinitely otherwise - for a personal-scale app this is a slow
+but real disk-growth leak, and (per "do not commit generated files") these must never end up in
+git either, so periodic cleanup is the only thing bounding that directory's size.
+
+**How to troubleshoot a failed file job.**
+
+1. `GET /file-jobs/{id}` (or the `/admin/file-jobs` page) - `status=failed` jobs carry an
+   `errors` field: a structural failure (e.g. a CSV missing a required column) shows a single
+   `{"error": "..."}` entry; a completed-but-imperfect CSV import instead shows per-row errors
+   (still `status=success`, since the import itself completed - see `errors_json` vs. job
+   status in `app.services.file_jobs.complete_file_job`/`fail_file_job`).
+2. `GET /admin/logs?event_type=file_job_failed` (or `file_job_created`/`file_job_started`/
+   `file_job_success`/`file_job_cancelled`/`file_job_cleanup_completed`) - every lifecycle
+   transition is recorded to `app_log_events`, same as job locks; individual progress updates
+   are not.
+3. `GET /admin/system-check` - warns if `FILE_JOB_STORAGE_DIR` isn't writable
+   (`file_job_storage_writable`) or if any job has been `running` for over 2 hours
+   (`stale_running_file_jobs`, likely a crashed/interrupted `BackgroundTasks` run rather than a
+   job still genuinely working). `GET /admin/performance/summary` also carries
+   `file_jobs_by_status` and `stale_running_file_jobs` counts.
+4. A job stuck `running` past its expected duration can't be force-completed - cancel it
+   (`POST /file-jobs/{id}/cancel`, or from the `/admin/file-jobs` page) and retry. Cancelling a
+   `queued` job takes effect immediately; cancelling a `running` job only takes effect at that
+   job's next cancellation checkpoint (collection/wishlist export jobs check between output
+   chunks; CSV import and backup export are each one atomic, well-tested call into existing
+   service code and are only checked once, before work begins - see the "if practical" note in
+   `app.services.file_jobs`'s module docstring for why finer-grained cancellation wasn't added
+   there).
+
 ## Data retention and pruning
 
 The tables that grow fastest (`raw_snapshots`, `price_observations`, `app_log_events`,

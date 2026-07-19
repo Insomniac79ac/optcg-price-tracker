@@ -1,6 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -19,6 +29,7 @@ from app.models import (
 )
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
 from app.schemas import (
+    CollectionExportJobRequestIn,
     CollectionImportPreviewRowOut,
     CollectionImportResponseOut,
     CollectionImportRowErrorOut,
@@ -28,45 +39,36 @@ from app.schemas import (
     CollectionItemOut,
     CollectionItemUpdateIn,
     CollectionSummaryOut,
+    FileJobCreatedOut,
     PortfolioValuationOut,
     PortfolioValuationSnapshotOut,
     ValuationMode,
 )
-from app.services.cache import delete_cache_prefix, get_or_set_cache
+from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.collection_csv import (
     IMPORT_MODES,
-    export_collection_csv,
     export_filename,
     import_collection_csv,
+    invalidate_collection_write_caches,
+    iter_collection_csv_rows,
 )
 from app.services.activity_timeline import record_activity_event
 from app.services.app_logging import record_app_log
 from app.services.collector import get_groups_for_collection_items, get_tags_for_collection_items
+from app.services.file_job_storage import UnsupportedFileExtension, UploadTooLarge, save_upload
+from app.services.file_jobs import create_file_job, dispatch_file_job
 from app.services.grading import build_grading_submission_out, get_submissions_for_items
 from app.services.portfolio_valuation import get_portfolio_valuation
 from app.settings import settings
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
-# Cache-prefix invalidation for every route in this router that writes to
-# collection_items - see 'Cache invalidation' in docs/operations.md. Kept as
-# one shared list/helper rather than repeating it at each write site so the
-# set stays obviously in sync across create/update/delete/tag/group routes.
-_COLLECTION_WRITE_INVALIDATES = (
-    "dashboard",
-    "collection_valuation",
-    "collection_history",
-    "market_opportunities",
-    "market_signals",
-    "wishlist_summary",
-    "grading_summary",
-)
-
-
-def _invalidate_collection_write_caches() -> None:
-    for prefix in _COLLECTION_WRITE_INVALIDATES:
-        delete_cache_prefix(prefix)
+# Cache invalidation for every route in this router that writes to
+# collection_items - see app.services.collection_csv.
+# invalidate_collection_write_caches (shared with the background
+# collection_import job) and 'Cache invalidation' in docs/operations.md.
+_invalidate_collection_write_caches = invalidate_collection_write_caches
 
 
 def _to_out(
@@ -313,20 +315,47 @@ def get_collection_valuation_history(
 def export_collection_items_csv(
     db: Session = Depends(get_db), user: User = Depends(require_current_user)
 ):
-    csv_text = export_collection_csv(db, user_id=user.id)
+    """Streams the CSV row-by-row (see iter_collection_csv_rows) rather than
+    building the whole file in memory first - see 'Large import/export
+    jobs' in docs/operations.md. For a very large collection, prefer POST
+    /collection/export.csv/job instead, which generates the file in the
+    background and returns a file_job_id to poll/download."""
     filename = export_filename()
-    return Response(
-        content=csv_text,
+    return StreamingResponse(
+        iter_collection_csv_rows(db, user_id=user.id),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
-@router.post("/import.csv", response_model=CollectionImportResponseOut)
+@router.post("/export.csv/job", response_model=FileJobCreatedOut, status_code=202)
+def export_collection_items_csv_job(
+    body: CollectionExportJobRequestIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    """Generates the CSV in the background - poll GET /file-jobs/{id} and
+    download via GET /file-jobs/{id}/download once status=success. `filters`
+    is accepted for forward compatibility but not yet applied - the
+    underlying export always covers the full collection, same as the
+    direct endpoint above."""
+    del body  # reserved, see docstring
+    job = create_file_job(
+        db, job_type="collection_export", user_id=user.id, dry_run=False
+    )
+    dispatch_file_job(job.id, background_tasks)
+    return FileJobCreatedOut(file_job_id=job.id, status=job.status)
+
+
+@router.post("/import.csv")
 async def import_collection_items_csv(
+    response: Response,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     dry_run: bool = Query(default=True),
     mode: str = Query(default="upsert"),
+    background: bool = Query(default=False),
     db: Session = Depends(get_db),
     user: User = Depends(require_current_user),
 ):
@@ -336,6 +365,26 @@ async def import_collection_items_csv(
         )
 
     raw = await file.read()
+
+    if background:
+        try:
+            input_path = save_upload(raw, extension=".csv")
+        except (UnsupportedFileExtension, UploadTooLarge) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        job = create_file_job(
+            db,
+            job_type="collection_import",
+            user_id=user.id,
+            original_filename=file.filename,
+            input_file_path=input_path,
+            dry_run=dry_run,
+            mode=mode,
+        )
+        dispatch_file_job(job.id, background_tasks)
+        response.status_code = 202
+        return FileJobCreatedOut(file_job_id=job.id, status=job.status)
+
     try:
         csv_text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as exc:

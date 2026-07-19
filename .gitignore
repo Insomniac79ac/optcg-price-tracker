@@ -69,6 +69,13 @@ data/backups/
 *.sql.gz
 opcg_backup_*.json
 
+# Background file-job storage (services/api/app/services/file_job_storage.py,
+# 'Large import/export jobs' in docs/operations.md) - uploaded CSV/JSON input
+# and generated CSV/JSON/backup output, all of which can contain real
+# collection/wishlist/backup data and must never be committed.
+data/file_jobs/*
+!data/file_jobs/.gitkeep
+
 # Flask stuff:
 instance/
 .webassets-cache

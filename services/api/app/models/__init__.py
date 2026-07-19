@@ -12,6 +12,7 @@ from app.models.collector_group import CollectorGroup
 from app.models.collector_note import CollectorNote
 from app.models.collector_tag import CollectorTag
 from app.models.dashboard_preference import DashboardPreference
+from app.models.file_job import FileJob
 from app.models.grading_submission import GradingSubmission
 from app.models.job_lock import JobLock
 from app.models.market_intelligence_report import MarketIntelligenceReport
@@ -62,4 +63,5 @@ __all__ = [
     "CollectorActivityEvent",
     "SearchHistory",
     "JobLock",
+    "FileJob",
 ]

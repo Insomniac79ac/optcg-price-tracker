@@ -1,12 +1,17 @@
 import json
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
 from app.db import get_db
-from app.schemas import BackupRestoreResponseOut, BackupValidateResponseOut
+from app.schemas import (
+    BackupExportJobRequestIn,
+    BackupRestoreResponseOut,
+    BackupValidateResponseOut,
+    FileJobCreatedOut,
+)
 from app.services.activity_timeline import record_activity_event
 from app.services.app_logging import log_exception, record_app_log
 from app.services.backup import (
@@ -17,6 +22,7 @@ from app.services.backup import (
     restore_backup,
     validate_backup,
 )
+from app.services.file_jobs import create_file_job, dispatch_file_job
 
 router = APIRouter(
     prefix="/admin/backup", tags=["admin", "backup"], dependencies=[Depends(require_admin_token)]
@@ -69,6 +75,28 @@ def export_backup_endpoint(
         media_type="application/json",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@router.post("/export/job", response_model=FileJobCreatedOut, status_code=202)
+def export_backup_job_endpoint(
+    body: BackupExportJobRequestIn, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+):
+    """Generates the backup JSON in the background - poll GET
+    /file-jobs/{id} and download via GET /file-jobs/{id}/download once
+    status=success. Admin-only (no user_id) - see app.auth.file_job_access."""
+    job = create_file_job(
+        db,
+        job_type="backup_export",
+        dry_run=False,
+        params={
+            "include_prices": body.include_prices,
+            "include_raw_snapshots": body.include_raw_snapshots,
+            "include_refresh_runs": body.include_refresh_runs,
+            "include_logs": body.include_logs,
+        },
+    )
+    dispatch_file_job(job.id, background_tasks)
+    return FileJobCreatedOut(file_job_id=job.id, status=job.status)
 
 
 @router.post("/validate", response_model=BackupValidateResponseOut)

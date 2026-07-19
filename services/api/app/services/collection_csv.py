@@ -1,5 +1,6 @@
 import csv
 import io
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, CollectionItem, CollectorGroup, CollectorTag
 from app.models.collection_item import COLLECTION_ITEM_STATUSES
+from app.services.cache import delete_cache_prefix
 from app.services.collector import (
     ensure_collection_item_group,
     ensure_collection_item_tag,
@@ -53,15 +55,60 @@ IMPORT_MODES = ("upsert", "append")
 
 DEFAULT_STATUS = "hold"
 
+# Cache prefixes invalidated by any collection write - see 'Cache
+# invalidation' in docs/operations.md. Shared (not duplicated) between
+# app.api.collection's direct create/update/delete/import routes and
+# app.services.file_jobs' background collection_import processing, so both
+# paths stay in sync.
+COLLECTION_WRITE_CACHE_PREFIXES = (
+    "dashboard",
+    "collection_valuation",
+    "collection_history",
+    "market_opportunities",
+    "market_signals",
+    "wishlist_summary",
+    "grading_summary",
+)
+
+
+def invalidate_collection_write_caches() -> None:
+    for prefix in COLLECTION_WRITE_CACHE_PREFIXES:
+        delete_cache_prefix(prefix)
+
 
 def _blank(value: str) -> str:
     return "" if value is None else str(value)
 
 
-def export_collection_csv(db: Session, *, user_id: int) -> str:
-    """Renders the current user's collection_items (joined with their card)
-    as CSV text, one row per collection item. Missing/null values are
-    exported as blank cells rather than the literal string "None"."""
+class _RowSink:
+    """Minimal file-like object for csv.writer: write() just stashes the
+    latest chunk instead of appending to a growing in-memory buffer - the
+    standard trick for turning csv.writer's row-at-a-time writes into a
+    generator (see iter_collection_csv_rows below), so a StreamingResponse
+    or a background export job can emit/persist each row as it's produced
+    rather than holding the whole rendered CSV text in memory at once."""
+
+    def __init__(self) -> None:
+        self.value = ""
+
+    def write(self, s: str) -> int:
+        self.value = s
+        return len(s)
+
+
+def iter_collection_csv_rows(db: Session, *, user_id: int) -> Iterator[str]:
+    """Yields the current user's collection_items (joined with their card)
+    as CSV text chunks - a header chunk, then one chunk per row. Missing/
+    null values are exported as blank cells rather than the literal string
+    "None". export_collection_csv() below is just this joined into one
+    string, kept for callers (the export CLI, tests) that want the whole
+    result at once.
+
+    Note: this still runs the underlying item/tag/group/grading queries
+    eagerly (same as before) rather than a server-side cursor - what's
+    streamed incrementally is CSV *rendering*, not the database read. For
+    this app's per-user collection sizes that's the practical trade-off -
+    see "Large import/export jobs" in docs/operations.md."""
     items = db.scalars(
         select(CollectionItem)
         .join(Card, CollectionItem.card_id == Card.id)
@@ -81,9 +128,10 @@ def export_collection_csv(db: Session, *, user_id: int) -> str:
     groups_by_item = get_groups_for_collection_items(db, item_ids)
     submissions_by_item = get_submissions_for_items(db, item_ids)
 
-    buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=EXPORT_COLUMNS)
+    sink = _RowSink()
+    writer = csv.DictWriter(sink, fieldnames=EXPORT_COLUMNS)
     writer.writeheader()
+    yield sink.value
 
     for item in items:
         card = cards_by_id[item.card_id]
@@ -118,8 +166,14 @@ def export_collection_csv(db: Session, *, user_id: int) -> str:
                 "updated_at": item.updated_at.isoformat() if item.updated_at else "",
             }
         )
+        yield sink.value
 
-    return buffer.getvalue()
+
+def export_collection_csv(db: Session, *, user_id: int) -> str:
+    """Whole-string convenience wrapper around iter_collection_csv_rows -
+    used by the export CLI and tests; the direct HTTP export endpoint and
+    background export jobs use the generator directly instead."""
+    return "".join(iter_collection_csv_rows(db, user_id=user_id))
 
 
 def export_filename(today: date | None = None) -> str:

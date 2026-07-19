@@ -63,6 +63,25 @@ else
 fi
 echo
 
+# --- 2b. No tracked file-job storage output ---------------------------------
+# Background import/export/backup job files (app.services.file_job_storage)
+# always land under data/file_jobs/ locally and must never be committed -
+# same reasoning as data/backups/ above.
+
+echo "== 2b. Tracked file-job storage files =="
+offending_file_jobs=$(git ls-files \
+  | grep -E '(^|/)data/file_jobs/(input|output)/' \
+  || true)
+
+if [[ -n "$offending_file_jobs" ]]; then
+  fail "git is tracking file-job storage file(s) that must never be committed:"
+  echo "$offending_file_jobs" | sed 's/^/  - /' >&2
+  echo "  Fix: git rm --cached <file>   (keeps your local copy, only untracks it)" >&2
+else
+  pass "no tracked data/file_jobs/{input,output}/ files"
+fi
+echo
+
 # --- 3. Placeholder-only values in the two allowed example env files -------
 # .env.example / .env.production.example are allowed to be tracked, but must
 # never contain anything other than an obvious placeholder for a secret-

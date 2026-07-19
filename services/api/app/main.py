@@ -10,6 +10,7 @@ from app.api.admin_cache import router as admin_cache_router
 from app.api.admin_data_retention import router as admin_data_retention_router
 from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_db_index_audit import router as admin_db_index_audit_router
+from app.api.admin_file_jobs import router as admin_file_jobs_router
 from app.api.admin_job_locks import router as admin_job_locks_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
@@ -25,6 +26,7 @@ from app.api.collector_activity import router as collector_activity_router
 from app.api.collector_notes import router as collector_notes_router
 from app.api.dashboard import router as dashboard_router
 from app.api.env_check import router as env_check_router
+from app.api.file_jobs import router as file_jobs_router
 from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
@@ -164,6 +166,7 @@ app.include_router(collector_router)
 app.include_router(collector_notes_router)
 app.include_router(collector_activity_router)
 app.include_router(grading_router)
+app.include_router(file_jobs_router)
 app.include_router(wishlist_router)
 app.include_router(dashboard_router)
 app.include_router(admin_actions_router)
@@ -172,6 +175,7 @@ app.include_router(admin_cache_router)
 app.include_router(admin_data_retention_router)
 app.include_router(admin_db_backups_router)
 app.include_router(admin_db_index_audit_router)
+app.include_router(admin_file_jobs_router)
 app.include_router(admin_job_locks_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)

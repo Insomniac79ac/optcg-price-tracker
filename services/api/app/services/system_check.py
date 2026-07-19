@@ -8,7 +8,7 @@ consistent" answer, not a replacement for the more detailed admin pages
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,6 +18,7 @@ from app.env import is_development_environment
 from app.models import (
     Card,
     CollectionItem,
+    FileJob,
     GradingSubmission,
     MarketIntelligenceReport,
     MarketSignalEvent,
@@ -30,8 +31,14 @@ from app.models import (
 )
 from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
 from app.services.cache import redis_ping
+from app.services.file_job_storage import is_storage_writable
 from app.services.job_locks import get_active_locks
 from app.settings import settings
+
+# A file_job stuck in 'running' this long is likely wedged (crashed
+# BackgroundTasks, worker restart mid-job, ...) rather than genuinely still
+# working - see 'Large import/export jobs' in docs/operations.md.
+STALE_RUNNING_FILE_JOB_HOURS = 2
 
 STATUSES = ("pass", "warning", "fail")
 SEVERITIES = ("info", "warning", "critical")
@@ -273,6 +280,43 @@ def _check_cache_backend(_db: Session) -> CheckResult:
     )
 
 
+def _check_file_job_storage(_db: Session) -> CheckResult:
+    if is_storage_writable():
+        return CheckResult(
+            "file_job_storage_writable", "pass", "info", "File job storage directory is writable."
+        )
+    return CheckResult(
+        "file_job_storage_writable",
+        "warning",
+        "warning",
+        "File job storage directory (settings.FILE_JOB_STORAGE_DIR) is not writable - "
+        "background import/export jobs will fail.",
+    )
+
+
+def _check_stale_running_file_jobs(db: Session) -> CheckResult:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=STALE_RUNNING_FILE_JOB_HOURS)
+    stale_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(FileJob)
+            .where(FileJob.status == "running", FileJob.started_at < cutoff)
+        )
+        or 0
+    )
+    if stale_count > 0:
+        return CheckResult(
+            "stale_running_file_jobs",
+            "warning",
+            "warning",
+            f"{stale_count} file job(s) have been 'running' for over "
+            f"{STALE_RUNNING_FILE_JOB_HOURS}h and are likely stuck. See GET /file-jobs?status=running.",
+        )
+    return CheckResult(
+        "stale_running_file_jobs", "pass", "info", "No long-running file jobs detected."
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -338,6 +382,8 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_expired_job_locks(db),
         _check_market_workflow_lock_ttl(db),
         _check_cache_backend(db),
+        _check_file_job_storage(db),
+        _check_stale_running_file_jobs(db),
     ]
     return checks
 

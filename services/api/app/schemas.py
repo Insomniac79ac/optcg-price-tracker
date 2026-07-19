@@ -1758,6 +1758,8 @@ class PerformanceSummaryOut(BaseModel):
     cache_enabled: bool = True
     cache_backend: str = "none"
     cache_keys: int | None = None
+    file_jobs_by_status: dict[str, int] = {}
+    stale_running_file_jobs: int = 0
 
 
 # --- job locks -------------------------------------------------------------
@@ -1863,3 +1865,73 @@ class CacheClearResponseOut(BaseModel):
     success: bool
     prefix: str | None
     deleted_count: int | None
+
+
+# --- file jobs -------------------------------------------------------------
+
+
+class FileJobOut(BaseModel):
+    id: int
+    job_type: str
+    status: str
+    original_filename: str | None
+    output_filename: str | None
+    content_type: str | None
+    dry_run: bool
+    mode: str | None
+    progress_current: int
+    progress_total: int | None
+    download_ready: bool
+    summary: dict[str, Any] | None
+    errors: Any | None
+    warnings: Any | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class FileJobListOut(BaseModel):
+    jobs: list[FileJobOut]
+    total: int
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
+class FileJobCreatedOut(BaseModel):
+    file_job_id: int
+    status: str
+
+
+class FileJobCancelResponseOut(BaseModel):
+    id: int
+    status: str
+
+
+class BackupExportJobRequestIn(BaseModel):
+    include_prices: bool = False
+    include_raw_snapshots: bool = False
+    include_refresh_runs: bool = False
+    include_logs: bool = False
+
+
+class CollectionExportJobRequestIn(BaseModel):
+    filters: dict[str, Any] | None = None
+
+
+class WishlistExportJobRequestIn(BaseModel):
+    filters: dict[str, Any] | None = None
+
+
+class FileJobCleanupRequestIn(BaseModel):
+    older_than_days: int = 7
+    dry_run: bool = True
+    confirm: str | None = None
+
+
+class FileJobCleanupResponseOut(BaseModel):
+    dry_run: bool
+    older_than_days: int
+    would_delete: int
+    deleted: int

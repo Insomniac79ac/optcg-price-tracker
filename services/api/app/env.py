@@ -24,3 +24,14 @@ def get_app_env() -> str:
 
 def is_production_environment() -> bool:
     return get_app_env() == PRODUCTION_ENVIRONMENT_VALUE
+
+
+def file_jobs_sync_fallback_effective() -> bool:
+    """settings.FILE_JOBS_SYNC_FALLBACK, or - if unset - true in development
+    and false everywhere else, per 'FILE_JOBS_SYNC_FALLBACK default true in
+    development, default false in production' (docs/operations.md 'Large
+    import/export jobs'). An explicit env var always wins over this
+    environment-based default."""
+    if settings.FILE_JOBS_SYNC_FALLBACK is not None:
+        return settings.FILE_JOBS_SYNC_FALLBACK
+    return is_development_environment()
