@@ -18,6 +18,7 @@ from app.api.admin_performance import router as admin_performance_router
 from app.api.admin_rate_limit import router as admin_rate_limit_router
 from app.api.admin_release_status import router as admin_release_status_router
 from app.api.alerts import router as alerts_router
+from app.api.analytics import router as analytics_router
 from app.api.card_audit import router as card_audit_router
 from app.api.cards import router as cards_router
 from app.api.collection import router as collection_router
@@ -169,6 +170,7 @@ app.include_router(grading_router)
 app.include_router(file_jobs_router)
 app.include_router(wishlist_router)
 app.include_router(dashboard_router)
+app.include_router(analytics_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(admin_cache_router)

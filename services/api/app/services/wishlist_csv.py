@@ -41,6 +41,7 @@ WISHLIST_WRITE_CACHE_PREFIXES = (
     "dashboard",
     "wishlist",
     "wishlist_summary",
+    "collection_analytics",
     "market_opportunities",
     "market_signals",
 )

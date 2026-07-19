@@ -34,6 +34,7 @@ _PRICE_REFRESH_CACHE_INVALIDATES = (
     "dashboard",
     "collection_valuation",
     "collection_history",
+    "collection_analytics",
     "market_signals",
     "market_signal_events",
     "market_opportunities",

@@ -35,6 +35,7 @@ _GRADING_WRITE_INVALIDATES = (
     "grading_summary",
     "collection_valuation",
     "collection_history",
+    "collection_analytics",
     "market_opportunities",
 )
 

@@ -818,6 +818,97 @@ class PortfolioValuationSnapshotOut(BaseModel):
     items_missing_graded_adjusted_value: int | None
 
 
+class CollectionAnalyticsSummaryOut(BaseModel):
+    total_items: int
+    total_quantity: int
+    total_cost_basis_jpy: int
+    raw_market_floor_value_jpy: int
+    graded_adjusted_value_jpy: int
+    unrealized_pnl_jpy: int
+    unrealized_pnl_pct: float
+    items_missing_cost_basis: int
+    items_missing_market_price: int
+    owned_unique_cards: int
+    wishlist_unique_cards: int
+    grading_active_count: int
+
+
+class CollectionAnalyticsBreakdownItemOut(BaseModel):
+    key: str
+    label: str
+    item_count: int
+    quantity: int
+    cost_basis_jpy: int
+    value_jpy: int
+    pnl_jpy: int
+    pnl_pct: float | None
+    portfolio_weight_pct: float
+
+
+class CollectionAnalyticsBreakdownsOut(BaseModel):
+    by_set: list[CollectionAnalyticsBreakdownItemOut]
+    by_rarity: list[CollectionAnalyticsBreakdownItemOut]
+    by_variant: list[CollectionAnalyticsBreakdownItemOut]
+    by_language: list[CollectionAnalyticsBreakdownItemOut]
+    by_status: list[CollectionAnalyticsBreakdownItemOut]
+    by_tag: list[CollectionAnalyticsBreakdownItemOut]
+    by_group: list[CollectionAnalyticsBreakdownItemOut]
+    by_grading_status: list[CollectionAnalyticsBreakdownItemOut]
+
+
+class CollectionAnalyticsTopCardOut(BaseModel):
+    collection_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    quantity: int
+    value_jpy: int
+    portfolio_weight_pct: float
+
+
+class CollectionAnalyticsConcentrationOut(BaseModel):
+    top_5_cards_by_value: list[CollectionAnalyticsTopCardOut]
+    top_10_cards_value_pct: float
+    largest_single_card_value_pct: float
+    largest_set_exposure: CollectionAnalyticsBreakdownItemOut | None
+    largest_rarity_exposure: CollectionAnalyticsBreakdownItemOut | None
+
+
+class CollectionAnalyticsHighestCostBasisItemOut(BaseModel):
+    collection_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    cost_basis_jpy: int
+
+
+class CollectionAnalyticsCostBasisOut(BaseModel):
+    items_with_cost_basis: int
+    items_without_cost_basis: int
+    average_cost_basis_jpy: int
+    median_cost_basis_jpy: int
+    highest_cost_basis_items: list[CollectionAnalyticsHighestCostBasisItemOut]
+
+
+class CollectionAnalyticsValuationQualityOut(BaseModel):
+    items_with_yuyutei_sell: int
+    items_with_yuyutei_buy: int
+    items_with_snkrdunk_floor: int
+    items_using_graded_value: int
+    items_using_raw_fallback: int
+    coverage_pct: float
+
+
+class CollectionAnalyticsOut(BaseModel):
+    summary: CollectionAnalyticsSummaryOut
+    breakdowns: CollectionAnalyticsBreakdownsOut
+    concentration: CollectionAnalyticsConcentrationOut
+    cost_basis: CollectionAnalyticsCostBasisOut
+    valuation_quality: CollectionAnalyticsValuationQualityOut
+
+
 class CardAuditIssueOut(BaseModel):
     issue_type: str
     severity: str

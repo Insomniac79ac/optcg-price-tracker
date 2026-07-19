@@ -552,6 +552,7 @@ every load.
 | `GET /dashboard/overview` | `CACHE_DASHBOARD_TTL_SECONDS` |
 | `GET /collection/valuation` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /collection/valuation/history` (key includes `days`/`limit`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /analytics/collection` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /market/opportunities` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signals` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signal-events` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
@@ -628,7 +629,7 @@ curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json
 
 `confirm` must be exactly `"CLEAR"` - same confirmation-phrase pattern as
 `/admin/data-retention/prune` and `/admin/job-locks/{name}/force-release`. Useful prefixes:
-`dashboard`, `collection_valuation`, `collection_history`, `market_signals`,
+`dashboard`, `collection_valuation`, `collection_history`, `collection_analytics`, `market_signals`,
 `market_signal_events`, `market_opportunities`, `market_report` (and `market_reports`),
 `wishlist`, `wishlist_summary`, `grading_summary`. Every cache clear (and every Redis
 backend-failure/fallback event) is recorded to `app_log_events` - see `GET /admin/logs` - but
