@@ -1,6 +1,7 @@
 from app.db import Base
 from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
+from app.models.analytics_digest_report import AnalyticsDigestReport
 from app.models.app_log_event import AppLogEvent
 from app.models.card import Card
 from app.models.card_tag import CardTag
@@ -64,4 +65,5 @@ __all__ = [
     "SearchHistory",
     "JobLock",
     "FileJob",
+    "AnalyticsDigestReport",
 ]

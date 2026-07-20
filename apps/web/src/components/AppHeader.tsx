@@ -11,6 +11,7 @@ const PRIMARY_LINKS = [
   { href: "/collection", label: "Collection" },
   { href: "/analytics/collection", label: "Collection analytics" },
   { href: "/analytics/portfolio-risk", label: "Portfolio risk" },
+  { href: "/analytics/digest", label: "Digest" },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/analytics/wishlist", label: "Wishlist analytics" },
   { href: "/analytics/buy-decisions", label: "Buy decisions" },

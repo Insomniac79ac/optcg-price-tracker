@@ -3453,6 +3453,218 @@ export function fetchPortfolioRisk(params?: {
   return fetchAdminJson<PortfolioRisk>(`/api/analytics/portfolio-risk${qs ? `?${qs}` : ""}`);
 }
 
+// --- Analytics digest (see GET /analytics/digest) ---------------------------
+
+export interface AnalyticsDigestSummary {
+  valuation_mode: ValuationMode;
+  generated_at: string;
+  collection_value_jpy: number;
+  graded_adjusted_value_jpy: number;
+  portfolio_risk_score: number;
+  portfolio_risk_level: PortfolioRiskLevel;
+  wishlist_target_hits: number;
+  buy_review_count: number;
+  sell_review_count: number;
+  grading_roi_jpy: number;
+  grading_active_count: number;
+  missing_cost_basis_count: number;
+  missing_price_count: number;
+}
+
+export interface AnalyticsDigestCollectionSection {
+  total_items: number;
+  total_quantity: number;
+  total_cost_basis_jpy: number;
+  raw_market_value_jpy: number;
+  graded_adjusted_value_jpy: number;
+  largest_set_exposure: CollectionAnalyticsBreakdownItem | null;
+  largest_rarity_exposure: CollectionAnalyticsBreakdownItem | null;
+}
+
+export interface AnalyticsDigestWishlistSection {
+  total_items: number;
+  grail_count: number;
+  high_priority_count: number;
+  target_hit_count: number;
+  total_target_budget_jpy: number;
+  price_coverage_pct: number;
+}
+
+export interface AnalyticsDigestBuyDecisionsSection {
+  review_buy_count: number;
+  wait_count: number;
+  missing_data_count: number;
+  top_review_buy: BuyDecisionCandidate[];
+}
+
+export interface AnalyticsDigestSellDecisionsSection {
+  review_sell_count: number;
+  grade_first_count: number;
+  missing_data_count: number;
+  top_review_sell: SellDecisionCandidate[];
+}
+
+export interface AnalyticsDigestGradingSection {
+  active_submissions: number;
+  received_submissions: number;
+  total_grading_cost_jpy: number;
+  total_graded_value_jpy: number;
+  total_roi_jpy: number;
+  overdue_count: number;
+  best_roi: GradingAnalyticsSubmission[];
+  worst_roi: GradingAnalyticsSubmission[];
+}
+
+export interface AnalyticsDigestPortfolioRiskSection {
+  risk_score: number;
+  risk_level: PortfolioRiskLevel;
+  concentration_score: number;
+  data_quality_score: number;
+  liquidity_proxy_score: number;
+  grading_exposure_score: number;
+  wishlist_overlap_score: number;
+  top_recommendation_flags: PortfolioRiskFlag[];
+}
+
+export interface AnalyticsDigestSections {
+  collection: AnalyticsDigestCollectionSection;
+  wishlist: AnalyticsDigestWishlistSection;
+  buy_decisions: AnalyticsDigestBuyDecisionsSection;
+  sell_decisions: AnalyticsDigestSellDecisionsSection;
+  grading: AnalyticsDigestGradingSection;
+  portfolio_risk: AnalyticsDigestPortfolioRiskSection;
+}
+
+export interface AnalyticsDigestPriorityItem {
+  card_id: number | null;
+  card_code: string | null;
+  name_en: string | null;
+  score: number | null;
+  risk_level: string | null;
+  severity: string | null;
+  message: string;
+  link: string;
+}
+
+export interface AnalyticsDigestPriorityItems {
+  top_buy_decisions: AnalyticsDigestPriorityItem[];
+  top_sell_decisions: AnalyticsDigestPriorityItem[];
+  top_risk_flags: AnalyticsDigestPriorityItem[];
+  wishlist_target_hits: AnalyticsDigestPriorityItem[];
+  grading_overdue: AnalyticsDigestPriorityItem[];
+  missing_data: AnalyticsDigestPriorityItem[];
+}
+
+export interface AnalyticsDigest {
+  summary: AnalyticsDigestSummary;
+  sections: AnalyticsDigestSections;
+  priority_items: AnalyticsDigestPriorityItems;
+  deterministic_summary_lines: string[];
+}
+
+export interface AnalyticsDigestReport {
+  id: number;
+  created_at: string;
+  valuation_mode: ValuationMode;
+  summary: AnalyticsDigestSummary;
+  sections: AnalyticsDigestSections;
+  priority_items: AnalyticsDigestPriorityItems;
+  deterministic_summary_lines: string[];
+  payload: Record<string, unknown>;
+}
+
+export interface AnalyticsDigestReportSummary {
+  id: number;
+  created_at: string;
+  valuation_mode: ValuationMode;
+  collection_value_jpy: number | null;
+  graded_adjusted_value_jpy: number | null;
+  portfolio_risk_score: number | null;
+  portfolio_risk_level: string | null;
+  wishlist_target_hits: number;
+  buy_review_count: number;
+  sell_review_count: number;
+  grading_roi_jpy: number | null;
+}
+
+export interface AnalyticsDigestReportListResponse {
+  reports: AnalyticsDigestReportSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/digest/route.ts) - same rationale as
+ * fetchPortfolioRisk/fetchGradingAnalytics. */
+export function fetchAnalyticsDigest(params?: {
+  valuation_mode?: ValuationMode;
+}): Promise<AnalyticsDigest> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  const qs = query.toString();
+  return fetchAdminJson<AnalyticsDigest>(`/api/analytics/digest${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/digest/latest/route.ts). Throws AdminNotFoundError
+ * when no digest has been generated yet. */
+export function fetchLatestAnalyticsDigest(params?: {
+  valuation_mode?: ValuationMode;
+}): Promise<AnalyticsDigestReport> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  const qs = query.toString();
+  return fetchAdminJson<AnalyticsDigestReport>(`/api/analytics/digest/latest${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/digest/reports/route.ts). */
+export function fetchAnalyticsDigestReports(params?: {
+  valuation_mode?: ValuationMode;
+  limit?: number;
+  offset?: number;
+}): Promise<AnalyticsDigestReportListResponse> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<AnalyticsDigestReportListResponse>(
+    `/api/analytics/digest/reports${qs ? `?${qs}` : ""}`,
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/digest/reports/[id]/route.ts). */
+export function fetchAnalyticsDigestReport(reportId: number): Promise<AnalyticsDigestReport> {
+  return fetchAdminJson<AnalyticsDigestReport>(`/api/analytics/digest/reports/${reportId}`);
+}
+
+export interface GenerateAnalyticsDigestRequest {
+  valuation_mode?: ValuationMode;
+}
+
+export interface GenerateAnalyticsDigestResponse {
+  report_id: number;
+  valuation_mode: ValuationMode;
+  portfolio_risk_score: number;
+  buy_review_count: number;
+  sell_review_count: number;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/actions/generate-analytics-digest/route.ts). */
+export function triggerGenerateAnalyticsDigest(
+  body: GenerateAnalyticsDigestRequest,
+): Promise<GenerateAnalyticsDigestResponse> {
+  return fetchAdminJson<GenerateAnalyticsDigestResponse>(
+    "/api/admin/actions/generate-analytics-digest",
+    { method: "POST", body },
+  );
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }

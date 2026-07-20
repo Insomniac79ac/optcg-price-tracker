@@ -12,6 +12,7 @@ import {
   AdminAuthRequiredError,
   getAdminToken,
   triggerFullMarketRefresh,
+  triggerGenerateAnalyticsDigest,
   triggerGenerateMarketReport,
   triggerRefreshPrices,
   triggerRunMarketWorkflow,
@@ -25,6 +26,7 @@ type ActionKey =
   | "snapshot-portfolio"
   | "snapshot-market-signals"
   | "generate-market-report"
+  | "generate-analytics-digest"
   | "full-market-refresh"
   | "send-market-report-digest"
   | "run-market-workflow";
@@ -34,6 +36,7 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   "snapshot-portfolio": "Portfolio snapshot",
   "snapshot-market-signals": "Market signal snapshot",
   "generate-market-report": "Generate market report",
+  "generate-analytics-digest": "Generate analytics digest",
   "full-market-refresh": "Full market refresh",
   "send-market-report-digest": "Send market report digest",
   "run-market-workflow": "Run scheduled market workflow manually",
@@ -67,6 +70,17 @@ function summarizeResult(action: ActionKey, data: unknown): { label: string; val
       ];
     case "generate-market-report":
       return [{ label: "Report ID", value: String(d.report_id) }];
+    case "generate-analytics-digest":
+      return [
+        { label: "Report ID", value: d.report_id != null ? String(d.report_id) : "not available" },
+        { label: "Valuation mode", value: d.valuation_mode ? String(d.valuation_mode) : "not available" },
+        {
+          label: "Portfolio risk score",
+          value: d.portfolio_risk_score != null ? String(d.portfolio_risk_score) : "not available",
+        },
+        { label: "Buy review count", value: String(d.buy_review_count ?? 0) },
+        { label: "Sell review count", value: String(d.sell_review_count ?? 0) },
+      ];
     case "full-market-refresh": {
       const signals = (d.market_signal_snapshot ?? {}) as Record<string, unknown>;
       return [
@@ -159,6 +173,10 @@ export default function AdminActionsPage() {
 
   const [digestDryRun, setDigestDryRun] = useState(false);
   const [digestForce, setDigestForce] = useState(false);
+
+  const [analyticsDigestValuationMode, setAnalyticsDigestValuationMode] = useState<
+    "raw_market" | "graded_adjusted"
+  >("raw_market");
 
   const [workflowSource, setWorkflowSource] = useState<string>("yuyutei");
   const [workflowLimit, setWorkflowLimit] = useState("");
@@ -312,6 +330,43 @@ export default function AdminActionsPage() {
                   }
                 >
                   Generate report
+                </ActionButton>
+              </ActionCard>
+
+              <ActionCard title="Generate analytics digest">
+                <div className="flex flex-col gap-2">
+                  <FieldRow label="Valuation mode">
+                    <select
+                      value={analyticsDigestValuationMode}
+                      onChange={(e) =>
+                        setAnalyticsDigestValuationMode(
+                          e.target.value as "raw_market" | "graded_adjusted",
+                        )
+                      }
+                      disabled={isBusy}
+                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                    >
+                      <option value="raw_market">Raw market</option>
+                      <option value="graded_adjusted">Graded adjusted</option>
+                    </select>
+                  </FieldRow>
+                  <p className="text-xs text-neutral-500">
+                    Generate and store one combined analytics digest (collection, wishlist,
+                    buy/sell decisions, grading ROI, and portfolio risk).
+                  </p>
+                </div>
+                <ActionButton
+                  disabled={isBusy}
+                  pending={pendingAction === "generate-analytics-digest"}
+                  onClick={() =>
+                    runAction("generate-analytics-digest", () =>
+                      triggerGenerateAnalyticsDigest({
+                        valuation_mode: analyticsDigestValuationMode,
+                      }),
+                    )
+                  }
+                >
+                  Generate digest
                 </ActionButton>
               </ActionCard>
 
@@ -498,6 +553,12 @@ export default function AdminActionsPage() {
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
                 Market workflow runs
+              </Link>
+              <Link
+                href="/analytics/digest"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Analytics digest
               </Link>
               <Link
                 href="/admin/backup"

@@ -39,6 +39,7 @@ _MARKET_WORKFLOW_CACHE_INVALIDATES = (
     "sell_decisions",
     "buy_decisions",
     "portfolio_risk",
+    "analytics_digest",
     "grading_analytics",
 )
 

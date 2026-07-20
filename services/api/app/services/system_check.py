@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.env import is_development_environment
 from app.models import (
+    AnalyticsDigestReport,
     Card,
     CollectionItem,
     FileJob,
@@ -347,6 +348,13 @@ def run_system_check(db: Session) -> list[CheckResult]:
             MarketIntelligenceReport.created_at,
             "latest_market_report",
             "market intelligence report",
+        ),
+        _check_latest_timestamp(
+            db,
+            AnalyticsDigestReport,
+            AnalyticsDigestReport.created_at,
+            "latest_analytics_digest",
+            "analytics digest",
         ),
         _check_latest_workflow_run(db),
         _check_backup_tables_included(db),

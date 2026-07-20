@@ -40,6 +40,7 @@ _GRADING_WRITE_INVALIDATES = (
     "sell_decisions",
     "grading_analytics",
     "portfolio_risk",
+    "analytics_digest",
 )
 
 

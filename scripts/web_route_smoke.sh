@@ -39,6 +39,8 @@ ROUTES=(
   /analytics/sell-decisions
   /grading
   /analytics/grading
+  /analytics/portfolio-risk
+  /analytics/digest
   /activity
   /market/report
   /market/opportunities

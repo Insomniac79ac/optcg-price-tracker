@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import MarketIntelligenceReport, MarketReportDigestSend
+from app.models import AnalyticsDigestReport, MarketIntelligenceReport, MarketReportDigestSend
 from app.services.job_locks import with_job_lock
 from app.services.telegram_client import TelegramSendError, is_telegram_configured, send_telegram_message
 
@@ -56,7 +56,35 @@ def _latest_report(db: Session) -> MarketIntelligenceReport | None:
     )
 
 
-def format_digest_message(report: MarketIntelligenceReport) -> str:
+def _latest_analytics_digest(db: Session) -> AnalyticsDigestReport | None:
+    return db.scalar(
+        select(AnalyticsDigestReport).order_by(
+            AnalyticsDigestReport.created_at.desc(), AnalyticsDigestReport.id.desc()
+        )
+    )
+
+
+def _analytics_digest_section(digest: AnalyticsDigestReport | None) -> list[str]:
+    """Optional, compact addition to the Telegram message when an analytics
+    digest (see app.services.analytics_digest) has been generated at least
+    once - a handful of already-computed headline numbers, not the full
+    digest. Omitted entirely (not even a header) when no digest exists yet,
+    so this stays a no-op for anyone who never runs
+    python -m app.generate_analytics_digest / the admin action."""
+    if digest is None:
+        return []
+    return [
+        "",
+        "Analytics digest:",
+        f"Portfolio risk: {digest.portfolio_risk_score} ({digest.portfolio_risk_level})",
+        f"Buy review: {digest.buy_review_count} | Sell review: {digest.sell_review_count}",
+        f"Wishlist target hits: {digest.wishlist_target_hits}",
+    ]
+
+
+def format_digest_message(
+    report: MarketIntelligenceReport, digest: AnalyticsDigestReport | None = None
+) -> str:
     payload = report.report_payload_json or {}
     top_opportunities = payload.get("top_opportunities") or {}
     top_5 = top_opportunities.get("top_5") or []
@@ -82,6 +110,8 @@ def format_digest_message(report: MarketIntelligenceReport) -> str:
         summary_section.append("Summary:")
         summary_section.extend(f"- {line}" for line in summary_lines)
 
+    digest_section = _analytics_digest_section(digest)
+
     opportunities_section = [
         "",
         "Top opportunities:",
@@ -91,13 +121,16 @@ def format_digest_message(report: MarketIntelligenceReport) -> str:
         _opportunity_line("Top owned", report.top_owned_json),
     ]
 
-    full_message = "\n".join(header_lines + summary_section + opportunities_section)
+    full_message = "\n".join(header_lines + summary_section + digest_section + opportunities_section)
     if len(full_message) <= TELEGRAM_SAFE_MESSAGE_LENGTH:
         return full_message
 
     # Top opportunities are the most verbose, least essential section for a
-    # quick digest - drop them first rather than cutting the stats/summary.
-    truncated_message = "\n".join(header_lines + summary_section + ["", TRUNCATION_NOTE])
+    # quick digest - drop them first rather than cutting the stats/summary/
+    # analytics digest sections.
+    truncated_message = "\n".join(
+        header_lines + summary_section + digest_section + ["", TRUNCATION_NOTE]
+    )
     return truncated_message
 
 
@@ -184,7 +217,7 @@ def _send_market_report_digest_locked(
     if report is None:
         return None
 
-    message = format_digest_message(report)
+    message = format_digest_message(report, _latest_analytics_digest(db))
 
     if dry_run:
         return DigestSendResult(

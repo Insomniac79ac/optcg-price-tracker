@@ -69,6 +69,12 @@ export default function WishlistAnalyticsPage() {
           >
             Buy Decision Support →
           </Link>
+          <Link
+            href="/analytics/digest"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Digest →
+          </Link>
         </div>
         <p className="mb-4 text-sm text-neutral-500">
           Budget planning, target hits, and acquisition priorities.

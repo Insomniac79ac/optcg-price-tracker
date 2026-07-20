@@ -48,6 +48,7 @@ WISHLIST_WRITE_CACHE_PREFIXES = (
     "sell_decisions",
     "buy_decisions",
     "portfolio_risk",
+    "analytics_digest",
 )
 
 

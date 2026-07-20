@@ -25,6 +25,7 @@ _MARKET_SIGNAL_SNAPSHOT_CACHE_INVALIDATES = (
     "sell_decisions",
     "buy_decisions",
     "portfolio_risk",
+    "analytics_digest",
 )
 
 

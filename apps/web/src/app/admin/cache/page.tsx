@@ -27,6 +27,13 @@ const HELPFUL_PREFIXES = [
   "market_report",
   "wishlist",
   "grading",
+  "analytics_digest",
+  "collection_analytics",
+  "wishlist_analytics",
+  "buy_decisions",
+  "sell_decisions",
+  "grading_analytics",
+  "portfolio_risk",
 ];
 
 export default function CachePage() {

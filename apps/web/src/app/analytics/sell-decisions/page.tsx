@@ -101,6 +101,12 @@ export default function SellDecisionsPage() {
           >
             Market Opportunities →
           </Link>
+          <Link
+            href="/analytics/digest"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Digest →
+          </Link>
         </div>
         <p className="mb-1 text-sm text-neutral-500">
           Review owned cards that may be worth selling, holding, grading first, or monitoring.

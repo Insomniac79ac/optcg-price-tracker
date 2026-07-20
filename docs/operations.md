@@ -309,6 +309,64 @@ that's already been sent. Requires a market intelligence report to already exist
 the market workflow above, or `POST /admin/actions/generate-market-report`) - returns
 `report_id: null` if none exists yet.
 
+## Analytics digest
+
+**What it summarizes.** One combined, deterministic snapshot of everything the analytics pages
+already compute - collection analytics, wishlist analytics, buy decision support, sell decision
+support, grading ROI, and portfolio risk - in a single response/report, plus a handful of
+plain-template `deterministic_summary_lines` (e.g. "3 wishlist targets are at or below target
+price."). See `services/api/app/services/analytics_digest.py` - it only reads and re-shapes what
+those six services already computed for the interactive `/analytics/*` pages; it never recomputes
+a valuation, a score, or a risk figure, and there is no AI/LLM involvement anywhere in it.
+
+`GET /analytics/digest` (signed-in, user-scoped, `?valuation_mode=raw_market|graded_adjusted`) is
+the live, always-fresh version - same request/response shape as every other `/analytics/*`
+endpoint, cached under the `analytics_digest` prefix. `POST /admin/actions/generate-analytics-
+digest` (and the CLI/worker paths below) additionally *persist* a row to `analytics_digest_reports`
+so a digest's numbers can be compared over time - browsable at `/analytics/digest` (history table)
+or via `GET /analytics/digest/reports` / `GET /analytics/digest/reports/{id}` / `GET
+/analytics/digest/latest`. The persisted path is not user-scoped (it resolves the single collector
+account, lowest user id - this app is not yet multi-tenant in practice, same simplification
+`app.services.portfolio_valuation`'s own admin-only aggregate callers already make).
+
+**How to generate from the CLI:**
+
+```
+docker compose exec api python -m app.generate_analytics_digest --valuation-mode raw_market
+```
+
+Prints `report_id`, `valuation_mode`, `risk_score`, `buy_review_count`, `sell_review_count`.
+Acquires the `analytics_digest_generation` concurrency lock (see 'Worker job concurrency locking'
+below); `--skip-lock` is test/dev only.
+
+**How to generate from the admin UI.** The "Generate analytics digest" card on `/admin/actions`
+(pick a valuation mode, click the button), or directly:
+
+```
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"valuation_mode": "raw_market"}' \
+  "http://localhost:8000/admin/actions/generate-analytics-digest"
+```
+
+A digest is also generated automatically, best-effort, after a successful non-dry-run run of
+`POST /admin/actions/run-market-workflow` or `POST /admin/actions/full-market-refresh` (never for
+a `dry_run` request) - a digest generation failure there is logged as a warning and never fails or
+rolls back the workflow that already succeeded. This runs in the API process, not inside the
+worker's own scheduled Celery Beat `run_market_workflow` job - that job has no access to the six
+API-only analytics services the digest composes (see `worker/models.py`'s "no shared code with the
+api service" convention), so a digest is not currently generated for a workflow run that Beat
+triggers directly without going through the admin API. Run the CLI on a schedule of your own (e.g.
+a host cron hitting the container) if you want a fully automatic, always-current digest history
+independent of admin-triggered runs.
+
+**How it differs from the market intelligence report.** The market report (`GET
+/market/report/latest`, `services/api/app/services/market_report.py`) is about *market
+opportunities* - ranked buy/sell/momentum/drop signals derived from price observations, plus a
+portfolio value snapshot. The analytics digest is about *your collection's decision-support and
+risk posture* - wishlist targets, buy/sell recommendations, grading ROI, and portfolio
+concentration/data-quality/liquidity/grading-exposure risk. They read overlapping underlying data
+but answer different questions and are generated/stored independently of each other.
+
 ## Reset local dev database
 
 ```
@@ -554,6 +612,8 @@ every load.
 | `GET /collection/valuation/history` (key includes `days`/`limit`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /analytics/collection` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /analytics/portfolio-risk` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /analytics/digest` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /analytics/digest/latest` / `/reports` (key includes `valuation_mode`/`limit`/`offset`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /market/opportunities` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signals` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signal-events` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
@@ -862,6 +922,7 @@ genuinely crashed job doesn't block its lock forever.
 | `portfolio_snapshot`         | 10 min  | `app.snapshot_portfolio_valuation` (CLI + admin action)   |
 | `market_signal_snapshot`     | 10 min  | `app.services.market_signal_events.snapshot_market_signals` (CLI + admin action) |
 | `market_report_generation`   | 10 min  | `app.services.market_report.generate_market_report` (CLI + admin action) |
+| `analytics_digest_generation` | 10 min | `app.services.analytics_digest.generate_analytics_digest` (CLI + admin action + best-effort after a market workflow run) |
 | `telegram_market_digest`     | 5 min   | `app.services.telegram_market_digest.send_market_report_digest` (CLI + admin action) |
 | `data_retention_prune`       | 30 min  | `app.services.data_retention.prune_tables` (CLI + admin action) and the worker's scheduled prune task |
 | `backup_restore`             | 60 min  | `app.services.backup.restore_backup` (CLI + `POST /admin/backup/restore`) |

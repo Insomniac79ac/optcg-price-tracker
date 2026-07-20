@@ -1961,6 +1961,158 @@ class PortfolioRiskOut(BaseModel):
     recommendation_flags: list[PortfolioRiskFlagOut]
 
 
+class AnalyticsDigestSummaryOut(BaseModel):
+    valuation_mode: ValuationMode
+    generated_at: datetime
+    collection_value_jpy: int
+    graded_adjusted_value_jpy: int
+    portfolio_risk_score: int
+    portfolio_risk_level: PortfolioRiskLevel
+    wishlist_target_hits: int
+    buy_review_count: int
+    sell_review_count: int
+    grading_roi_jpy: int
+    grading_active_count: int
+    missing_cost_basis_count: int
+    missing_price_count: int
+
+
+class AnalyticsDigestCollectionSectionOut(BaseModel):
+    total_items: int
+    total_quantity: int
+    total_cost_basis_jpy: int
+    raw_market_value_jpy: int
+    graded_adjusted_value_jpy: int
+    largest_set_exposure: CollectionAnalyticsBreakdownItemOut | None
+    largest_rarity_exposure: CollectionAnalyticsBreakdownItemOut | None
+
+
+class AnalyticsDigestWishlistSectionOut(BaseModel):
+    total_items: int
+    grail_count: int
+    high_priority_count: int
+    target_hit_count: int
+    total_target_budget_jpy: int
+    price_coverage_pct: float
+
+
+class AnalyticsDigestBuyDecisionsSectionOut(BaseModel):
+    review_buy_count: int
+    wait_count: int
+    missing_data_count: int
+    top_review_buy: list[BuyDecisionCandidateOut]
+
+
+class AnalyticsDigestSellDecisionsSectionOut(BaseModel):
+    review_sell_count: int
+    grade_first_count: int
+    missing_data_count: int
+    top_review_sell: list[SellDecisionCandidateOut]
+
+
+class AnalyticsDigestGradingSectionOut(BaseModel):
+    active_submissions: int
+    received_submissions: int
+    total_grading_cost_jpy: int
+    total_graded_value_jpy: int
+    total_roi_jpy: int
+    overdue_count: int
+    best_roi: list[GradingAnalyticsSubmissionOut]
+    worst_roi: list[GradingAnalyticsSubmissionOut]
+
+
+class AnalyticsDigestPortfolioRiskSectionOut(BaseModel):
+    risk_score: int
+    risk_level: PortfolioRiskLevel
+    concentration_score: int
+    data_quality_score: int
+    liquidity_proxy_score: int
+    grading_exposure_score: int
+    wishlist_overlap_score: int
+    top_recommendation_flags: list[PortfolioRiskFlagOut]
+
+
+class AnalyticsDigestSectionsOut(BaseModel):
+    collection: AnalyticsDigestCollectionSectionOut
+    wishlist: AnalyticsDigestWishlistSectionOut
+    buy_decisions: AnalyticsDigestBuyDecisionsSectionOut
+    sell_decisions: AnalyticsDigestSellDecisionsSectionOut
+    grading: AnalyticsDigestGradingSectionOut
+    portfolio_risk: AnalyticsDigestPortfolioRiskSectionOut
+
+
+class AnalyticsDigestPriorityItemOut(BaseModel):
+    card_id: int | None
+    card_code: str | None
+    name_en: str | None
+    score: int | None
+    risk_level: str | None
+    severity: str | None
+    message: str
+    link: str
+
+
+class AnalyticsDigestPriorityItemsOut(BaseModel):
+    top_buy_decisions: list[AnalyticsDigestPriorityItemOut]
+    top_sell_decisions: list[AnalyticsDigestPriorityItemOut]
+    top_risk_flags: list[AnalyticsDigestPriorityItemOut]
+    wishlist_target_hits: list[AnalyticsDigestPriorityItemOut]
+    grading_overdue: list[AnalyticsDigestPriorityItemOut]
+    missing_data: list[AnalyticsDigestPriorityItemOut]
+
+
+class AnalyticsDigestOut(BaseModel):
+    summary: AnalyticsDigestSummaryOut
+    sections: AnalyticsDigestSectionsOut
+    priority_items: AnalyticsDigestPriorityItemsOut
+    deterministic_summary_lines: list[str]
+
+
+class AnalyticsDigestReportOut(BaseModel):
+    id: int
+    created_at: datetime
+    valuation_mode: ValuationMode
+    summary: AnalyticsDigestSummaryOut
+    sections: AnalyticsDigestSectionsOut
+    priority_items: AnalyticsDigestPriorityItemsOut
+    deterministic_summary_lines: list[str]
+    payload: dict[str, Any]
+
+
+class AnalyticsDigestReportSummaryOut(BaseModel):
+    id: int
+    created_at: datetime
+    valuation_mode: ValuationMode
+    collection_value_jpy: int | None
+    graded_adjusted_value_jpy: int | None
+    portfolio_risk_score: int | None
+    portfolio_risk_level: str | None
+    wishlist_target_hits: int
+    buy_review_count: int
+    sell_review_count: int
+    grading_roi_jpy: int | None
+
+
+class AnalyticsDigestReportListOut(BaseModel):
+    reports: list[AnalyticsDigestReportSummaryOut]
+    total: int
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
+class AdminGenerateAnalyticsDigestRequest(BaseModel):
+    valuation_mode: ValuationMode = "raw_market"
+
+
+class AdminGenerateAnalyticsDigestResponse(BaseModel):
+    report_id: int
+    valuation_mode: ValuationMode
+    portfolio_risk_score: int
+    buy_review_count: int
+    sell_review_count: int
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,6 +8,8 @@ from app.db import get_db
 from app.schemas import (
     AdminFullMarketRefreshRequest,
     AdminFullMarketRefreshResponse,
+    AdminGenerateAnalyticsDigestRequest,
+    AdminGenerateAnalyticsDigestResponse,
     AdminGenerateMarketReportResponse,
     AdminMarketSignalSnapshotCounts,
     AdminRefreshPricesRequest,
@@ -18,6 +22,7 @@ from app.schemas import (
     AdminSnapshotPortfolioResponse,
 )
 from app.services.activity_timeline import record_activity_event
+from app.services.analytics_digest import NoUsersError, generate_analytics_digest
 from app.services.job_locks import LockHeldError, with_job_lock
 from app.services.market_report import generate_market_report
 from app.services.market_signal_events import snapshot_market_signals
@@ -25,6 +30,8 @@ from app.services.market_workflow_trigger import trigger_market_workflow
 from app.services.refresh_trigger import trigger_price_refresh
 from app.services.telegram_market_digest import send_market_report_digest
 from app.snapshot_portfolio_valuation import snapshot_portfolio_valuation
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/admin/actions", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -57,6 +64,29 @@ def _validate_source(source: str) -> None:
             status_code=400,
             detail=f"Invalid source. Must be one of {list(SOURCE_VALUES)}",
         )
+
+
+def _try_generate_analytics_digest(db: Session) -> int | None:
+    """Best-effort digest generation after a successful non-dry-run market
+    workflow - a failure here (including "no user account yet") must never
+    fail or roll back, or change the response of, the workflow that already
+    succeeded. Per spec this only logs a warning on failure - it does not
+    feed into the endpoint's own `warnings` list, which is reserved for
+    issues with the price refresh/snapshot/report steps themselves. Returns
+    the new report id, or None if generation was skipped/failed."""
+    try:
+        report = generate_analytics_digest(db)
+    except LockHeldError as exc:
+        logger.warning(
+            "Analytics digest generation skipped after market workflow: %s lock already held.",
+            exc.lock_name,
+        )
+        return None
+    except Exception:
+        logger.exception("Analytics digest generation failed after market workflow.")
+        db.rollback()
+        return None
+    return report.id
 
 
 @router.post("/refresh-prices", response_model=AdminRefreshPricesResponse)
@@ -125,6 +155,40 @@ def generate_market_report_action(db: Session = Depends(get_db)):
     )
 
     return AdminGenerateMarketReportResponse(report_id=report.id)
+
+
+@router.post("/generate-analytics-digest", response_model=AdminGenerateAnalyticsDigestResponse)
+def generate_analytics_digest_action(
+    body: AdminGenerateAnalyticsDigestRequest, db: Session = Depends(get_db)
+):
+    try:
+        report = generate_analytics_digest(db, valuation_mode=body.valuation_mode)
+    except LockHeldError:
+        raise
+    except NoUsersError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    record_activity_event(
+        db,
+        event_type="analytics_digest_generated",
+        event_source="analytics_digest",
+        title="Analytics digest generated",
+        payload={
+            "report_id": report.id,
+            "valuation_mode": report.valuation_mode,
+            "portfolio_risk_score": report.portfolio_risk_score,
+            "buy_review_count": report.buy_review_count,
+            "sell_review_count": report.sell_review_count,
+        },
+    )
+
+    return AdminGenerateAnalyticsDigestResponse(
+        report_id=report.id,
+        valuation_mode=report.valuation_mode,
+        portfolio_risk_score=report.portfolio_risk_score or 0,
+        buy_review_count=report.buy_review_count,
+        sell_review_count=report.sell_review_count,
+    )
 
 
 @router.post("/full-market-refresh", response_model=AdminFullMarketRefreshResponse)
@@ -213,6 +277,13 @@ def _full_market_refresh_locked(
                 db.rollback()
                 warnings.append(f"Market report digest failed: {exc}")
 
+        # Best-effort, independent of whether the market report step above
+        # succeeded - the digest composes from collection/wishlist/buy/sell/
+        # grading/portfolio-risk analytics directly, not from the market
+        # report row. A failure here is only logged (see
+        # _try_generate_analytics_digest), never added to `warnings`.
+        _try_generate_analytics_digest(db)
+
     if not body.dry_run:
         record_activity_event(
             db,
@@ -285,8 +356,20 @@ def run_market_workflow_action(body: AdminRunMarketWorkflowRequest, db: Session 
             status_code=502, detail=f"Failed to trigger market workflow: {exc}"
         ) from exc
 
+    warnings = result.get("warnings") or []
+
     if not body.dry_run:
-        warnings = result.get("warnings") or []
+        # Best-effort, only after a non-dry-run workflow that didn't
+        # outright fail - see app.services.analytics_digest and 'Worker
+        # integration' in docs/operations.md's Analytics digest section for
+        # why this runs here (in the API process, after the Celery-
+        # dispatched worker job returns) rather than inside the worker job
+        # itself: the digest composes six API-only analytics services the
+        # worker package has no access to. A failure here is only logged
+        # (see _try_generate_analytics_digest), never added to `warnings`.
+        if result.get("status") != "failed":
+            _try_generate_analytics_digest(db)
+
         record_activity_event(
             db,
             event_type="market_workflow_run",
@@ -316,5 +399,5 @@ def run_market_workflow_action(body: AdminRunMarketWorkflowRequest, db: Session 
         ),
         market_report_id=result.get("market_report_id"),
         telegram_digest_status=result.get("telegram_digest_status"),
-        warnings=result.get("warnings") or [],
+        warnings=warnings,
     )

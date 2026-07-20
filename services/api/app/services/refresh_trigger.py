@@ -46,6 +46,7 @@ _PRICE_REFRESH_CACHE_INVALIDATES = (
     "buy_decisions",
     "grading_analytics",
     "portfolio_risk",
+    "analytics_digest",
 )
 
 

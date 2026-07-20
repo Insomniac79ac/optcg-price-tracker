@@ -1,11 +1,16 @@
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user
-from app.core.pagination import DEFAULT_LIMIT, MAX_LIMIT
+from app.core.pagination import DEFAULT_LIMIT, MAX_LIMIT, pagination_response
 from app.db import get_db
-from app.models import User
+from app.models import AnalyticsDigestReport, User
 from app.schemas import (
+    AnalyticsDigestOut,
+    AnalyticsDigestReportListOut,
+    AnalyticsDigestReportOut,
+    AnalyticsDigestReportSummaryOut,
     BuyDecisionAction,
     BuyDecisionPriorityFilter,
     BuyDecisionSupportOut,
@@ -18,6 +23,7 @@ from app.schemas import (
     ValuationMode,
     WishlistAnalyticsOut,
 )
+from app.services.analytics_digest import build_analytics_digest
 from app.services.buy_decision_support import get_buy_decision_support
 from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
@@ -163,6 +169,124 @@ def get_portfolio_risk_endpoint(
     )
     set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
     return value
+
+
+@router.get("/digest", response_model=AnalyticsDigestOut)
+def get_analytics_digest_endpoint(
+    response: Response,
+    valuation_mode: ValuationMode = Query(default="raw_market"),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    cache_key = f"analytics_digest:{user.id}:{valuation_mode}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: build_analytics_digest(
+            db, user_id=user.id, valuation_mode=valuation_mode
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+def _digest_report_to_out(report: AnalyticsDigestReport) -> AnalyticsDigestReportOut:
+    payload = report.digest_payload_json
+    return AnalyticsDigestReportOut(
+        id=report.id,
+        created_at=report.created_at,
+        valuation_mode=report.valuation_mode,
+        summary=payload["summary"],
+        sections=payload["sections"],
+        priority_items=payload["priority_items"],
+        deterministic_summary_lines=payload["deterministic_summary_lines"],
+        payload=payload,
+    )
+
+
+def _digest_report_to_summary_out(report: AnalyticsDigestReport) -> AnalyticsDigestReportSummaryOut:
+    return AnalyticsDigestReportSummaryOut(
+        id=report.id,
+        created_at=report.created_at,
+        valuation_mode=report.valuation_mode,
+        collection_value_jpy=report.collection_value_jpy,
+        graded_adjusted_value_jpy=report.graded_adjusted_value_jpy,
+        portfolio_risk_score=report.portfolio_risk_score,
+        portfolio_risk_level=report.portfolio_risk_level,
+        wishlist_target_hits=report.wishlist_target_hits,
+        buy_review_count=report.buy_review_count,
+        sell_review_count=report.sell_review_count,
+        grading_roi_jpy=report.grading_roi_jpy,
+    )
+
+
+@router.get("/digest/latest", response_model=AnalyticsDigestReportOut)
+def get_latest_analytics_digest_endpoint(
+    response: Response,
+    valuation_mode: ValuationMode | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    def _load() -> dict:
+        query = select(AnalyticsDigestReport)
+        if valuation_mode is not None:
+            query = query.where(AnalyticsDigestReport.valuation_mode == valuation_mode)
+        report = db.scalar(
+            query.order_by(AnalyticsDigestReport.created_at.desc(), AnalyticsDigestReport.id.desc())
+        )
+        if report is None:
+            raise HTTPException(status_code=404, detail="No analytics digest reports found")
+        return _digest_report_to_out(report).model_dump(mode="json")
+
+    cache_key = f"analytics_digest:latest:{valuation_mode}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+@router.get("/digest/reports", response_model=AnalyticsDigestReportListOut)
+def list_analytics_digest_reports_endpoint(
+    response: Response,
+    valuation_mode: ValuationMode | None = Query(default=None),
+    limit: int = Query(default=30, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    def _load() -> dict:
+        query = select(AnalyticsDigestReport)
+        count_query = select(func.count()).select_from(AnalyticsDigestReport)
+        if valuation_mode is not None:
+            query = query.where(AnalyticsDigestReport.valuation_mode == valuation_mode)
+            count_query = count_query.where(AnalyticsDigestReport.valuation_mode == valuation_mode)
+        total = db.scalar(count_query) or 0
+        reports = db.scalars(
+            query.order_by(AnalyticsDigestReport.created_at.desc(), AnalyticsDigestReport.id.desc())
+            .limit(limit)
+            .offset(offset)
+        ).all()
+        reports_out = [_digest_report_to_summary_out(r) for r in reports]
+        return AnalyticsDigestReportListOut(
+            reports=reports_out,
+            total=total,
+            limit=limit,
+            offset=offset,
+            pagination=pagination_response(reports_out, total, limit, offset),
+        ).model_dump(mode="json")
+
+    cache_key = f"analytics_digest:reports:{valuation_mode}:{limit}:{offset}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(cache_key, ttl, _load)
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+@router.get("/digest/reports/{report_id}", response_model=AnalyticsDigestReportOut)
+def get_analytics_digest_report_endpoint(report_id: int, db: Session = Depends(get_db)):
+    report = db.get(AnalyticsDigestReport, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Analytics digest report not found")
+    return _digest_report_to_out(report)
 
 
 @router.get("/sell-decisions", response_model=SellDecisionSupportOut)
