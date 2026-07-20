@@ -70,6 +70,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "market_signals",
     "wishlist_summary",
     "grading_summary",
+    "sell_decisions",
 )
 
 

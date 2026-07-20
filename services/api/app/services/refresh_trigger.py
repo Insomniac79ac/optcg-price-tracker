@@ -42,6 +42,7 @@ _PRICE_REFRESH_CACHE_INVALIDATES = (
     "market_report",
     "wishlist",
     "wishlist_summary",
+    "sell_decisions",
 )
 
 

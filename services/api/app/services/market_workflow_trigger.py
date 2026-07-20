@@ -36,6 +36,7 @@ _MARKET_WORKFLOW_CACHE_INVALIDATES = (
     "market_reports",
     "wishlist",
     "wishlist_summary",
+    "sell_decisions",
 )
 
 # The workflow does more work than a bare price refresh (snapshot + report +

@@ -1508,6 +1508,87 @@ class WishlistAnalyticsOut(BaseModel):
     price_coverage: WishlistAnalyticsPriceCoverageOut
 
 
+SellDecisionAction = Literal["review_sell", "hold", "grade_first", "missing_data", "monitor"]
+
+
+class SellDecisionSummaryOut(BaseModel):
+    total_candidates: int
+    review_sell_count: int
+    hold_count: int
+    grade_first_count: int
+    missing_data_count: int
+    monitor_count: int
+    total_potential_sale_value_jpy: int
+    total_unrealized_pnl_jpy: int
+    average_score: float
+
+
+class SellDecisionLatestPricesOut(BaseModel):
+    yuyutei_sell: int | None
+    yuyutei_buy: int | None
+    snkrdunk_floor: int | None
+
+
+class SellDecisionMarketContextOut(BaseModel):
+    yuyutei_spread_pct: float | None
+    snkrdunk_vs_yuyutei_sell_gap_pct: float | None
+    related_opportunity_score: int | None
+    related_signal_types: list[str]
+
+
+class SellDecisionGradingOut(BaseModel):
+    has_active_grading: bool
+    latest_status: str | None
+    final_grade: str | None
+    graded_value_jpy: int | None
+
+
+class SellDecisionWishlistOverlapOut(BaseModel):
+    is_on_wishlist: bool
+    priority: str | None
+    status: str | None
+
+
+class SellDecisionCandidateOut(BaseModel):
+    collection_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    quantity: int
+    status: str
+    condition_label: str | None
+    score: int
+    recommended_action: SellDecisionAction
+    current_value_jpy: int | None
+    current_value_basis: str | None
+    cost_basis_jpy: int | None
+    unrealized_pnl_jpy: int | None
+    unrealized_pnl_pct: float | None
+    target_sell_price_jpy: int | None
+    above_target_sell: bool
+    latest_prices: SellDecisionLatestPricesOut
+    market_context: SellDecisionMarketContextOut
+    grading: SellDecisionGradingOut
+    wishlist_overlap: SellDecisionWishlistOverlapOut
+    tags: list[str]
+    groups: list[str]
+    score_reasons: list[str]
+    warnings: list[str]
+
+
+class SellDecisionSupportOut(BaseModel):
+    summary: SellDecisionSummaryOut
+    candidates: list[SellDecisionCandidateOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

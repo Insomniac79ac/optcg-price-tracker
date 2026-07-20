@@ -2915,6 +2915,113 @@ export function fetchWishlistAnalytics(params?: {
   return fetchAdminJson<WishlistAnalytics>(`/api/analytics/wishlist${qs ? `?${qs}` : ""}`);
 }
 
+// --- Sell decision support (see GET /analytics/sell-decisions) -------------
+
+export type SellDecisionAction = "review_sell" | "hold" | "grade_first" | "missing_data" | "monitor";
+
+export interface SellDecisionSummary {
+  total_candidates: number;
+  review_sell_count: number;
+  hold_count: number;
+  grade_first_count: number;
+  missing_data_count: number;
+  monitor_count: number;
+  total_potential_sale_value_jpy: number;
+  total_unrealized_pnl_jpy: number;
+  average_score: number;
+}
+
+export interface SellDecisionLatestPrices {
+  yuyutei_sell: number | null;
+  yuyutei_buy: number | null;
+  snkrdunk_floor: number | null;
+}
+
+export interface SellDecisionMarketContext {
+  yuyutei_spread_pct: number | null;
+  snkrdunk_vs_yuyutei_sell_gap_pct: number | null;
+  related_opportunity_score: number | null;
+  related_signal_types: string[];
+}
+
+export interface SellDecisionGrading {
+  has_active_grading: boolean;
+  latest_status: string | null;
+  final_grade: string | null;
+  graded_value_jpy: number | null;
+}
+
+export interface SellDecisionWishlistOverlap {
+  is_on_wishlist: boolean;
+  priority: string | null;
+  status: string | null;
+}
+
+export interface SellDecisionCandidate {
+  collection_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  quantity: number;
+  status: string;
+  condition_label: string | null;
+  score: number;
+  recommended_action: SellDecisionAction;
+  current_value_jpy: number | null;
+  current_value_basis: string | null;
+  cost_basis_jpy: number | null;
+  unrealized_pnl_jpy: number | null;
+  unrealized_pnl_pct: number | null;
+  target_sell_price_jpy: number | null;
+  above_target_sell: boolean;
+  latest_prices: SellDecisionLatestPrices;
+  market_context: SellDecisionMarketContext;
+  grading: SellDecisionGrading;
+  wishlist_overlap: SellDecisionWishlistOverlap;
+  tags: string[];
+  groups: string[];
+  score_reasons: string[];
+  warnings: string[];
+}
+
+export interface SellDecisionSupport {
+  summary: SellDecisionSummary;
+  candidates: SellDecisionCandidate[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/sell-decisions/route.ts), same rationale as
+ * fetchWishlistAnalytics/fetchCollectionAnalytics - browser-side fetches to
+ * the backend's host port are unreliable in Codespaces/forwarded-port
+ * environments, and this endpoint needs the signed-in user's session
+ * forwarded server-side. */
+export function fetchSellDecisions(params?: {
+  valuation_mode?: "raw_market" | "graded_adjusted";
+  include_sold?: boolean;
+  min_score?: number;
+  action?: SellDecisionAction;
+  limit?: number;
+  offset?: number;
+}): Promise<SellDecisionSupport> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  if (params?.include_sold !== undefined) query.set("include_sold", String(params.include_sold));
+  if (params?.min_score !== undefined) query.set("min_score", String(params.min_score));
+  if (params?.action) query.set("action", params.action);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<SellDecisionSupport>(`/api/analytics/sell-decisions${qs ? `?${qs}` : ""}`);
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }
@@ -3404,6 +3511,17 @@ export function fetchCollectorNotes(params?: {
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
   return authedGet<CollectorNoteList>(`/collector/notes${qs ? `?${qs}` : ""}`);
+}
+
+export function createCollectorNote(body: {
+  note_type: string;
+  body: string;
+  card_id?: number;
+  collection_item_id?: number;
+  title?: string;
+  pinned?: boolean;
+}): Promise<CollectorNote> {
+  return authedPost<CollectorNote>("/collector/notes", body);
 }
 
 // --- Search --------------------------------------------------------------

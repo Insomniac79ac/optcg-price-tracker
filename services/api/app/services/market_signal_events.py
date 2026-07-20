@@ -22,6 +22,7 @@ _MARKET_SIGNAL_SNAPSHOT_CACHE_INVALIDATES = (
     "market_signal_events",
     "market_opportunities",
     "market_report",
+    "sell_decisions",
 )
 
 

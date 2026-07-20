@@ -548,6 +548,12 @@ export default function CollectionPage() {
               Analytics →
             </Link>
             <Link
+              href="/analytics/sell-decisions"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Sell decisions →
+            </Link>
+            <Link
               href="/grading"
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >
