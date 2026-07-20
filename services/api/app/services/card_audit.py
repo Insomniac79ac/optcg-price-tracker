@@ -14,8 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
+from app.models.card_alias import CardAlias
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
+from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
 from app.services.source_mapping_confidence import (
     MappingQualityFilters,
     evaluate_source_mappings,
@@ -623,6 +625,117 @@ def _check_candidate_variant_mismatch(candidates: list[SnkrdunkCandidate]) -> li
     return issues
 
 
+def _check_duplicate_card_identity(db: Session) -> list[AuditIssue]:
+    """One AuditIssue per active-card pair that
+    app.services.card_identity_merge scores at or above MIN_MERGE_SCORE
+    (the same bar execute_card_merge itself requires without an explicit
+    approve_low_confidence override) - see GET /admin/cards/duplicates for
+    the full reviewable list this summarizes."""
+    issues: list[AuditIssue] = []
+    for pair in duplicate_pairs_at_or_above(db, MIN_MERGE_SCORE):
+        issues.append(
+            AuditIssue(
+                issue_type="duplicate_card_identity",
+                severity=WARNING,
+                card_ids=sorted([pair.source_card.id, pair.target_card.id]),
+                card_code=pair.source_card.card_code,
+                message=(
+                    f"Cards {pair.source_card.id} and {pair.target_card.id} look like duplicates "
+                    f"(score={pair.score}, {pair.confidence_label}) - review at "
+                    "GET /admin/cards/duplicates"
+                ),
+                suggested_action="review_card_merge",
+                details={
+                    "score": pair.score,
+                    "confidence_label": pair.confidence_label,
+                    "recommended_target_card_id": pair.recommended_target_card_id,
+                },
+            )
+        )
+    return issues
+
+
+def _check_inactive_card_without_merge_target(cards: list[Card]) -> list[AuditIssue]:
+    missing = [c for c in cards if not c.is_active and c.merged_into_card_id is None]
+    if not missing:
+        return []
+    return [
+        AuditIssue(
+            issue_type="inactive_card_without_merge_target",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in missing),
+            card_code=None,
+            message=f"{len(missing)} card(s) are inactive but have no merged_into_card_id set",
+            suggested_action="set_merge_target_or_reactivate",
+        )
+    ]
+
+
+def _check_active_card_merged_into_another_card(cards: list[Card]) -> list[AuditIssue]:
+    inconsistent = [c for c in cards if c.is_active and c.merged_into_card_id is not None]
+    if not inconsistent:
+        return []
+    return [
+        AuditIssue(
+            issue_type="active_card_merged_into_another_card",
+            severity=CRITICAL,
+            card_ids=sorted(c.id for c in inconsistent),
+            card_code=None,
+            message=(
+                f"{len(inconsistent)} card(s) are marked active but also have a "
+                "merged_into_card_id set"
+            ),
+            suggested_action="fix_merge_state",
+        )
+    ]
+
+
+def _check_merged_card_still_has_active_source_mapping(
+    mappings: list[SourceCardMapping], cards_by_id: dict[int, Card]
+) -> list[AuditIssue]:
+    issues: list[AuditIssue] = []
+    for mapping in mappings:
+        if not mapping.is_active:
+            continue
+        card = cards_by_id.get(mapping.card_id)
+        if card is None or card.is_active or card.merged_into_card_id is None:
+            continue
+        issues.append(
+            AuditIssue(
+                issue_type="merged_card_still_has_active_source_mapping",
+                severity=CRITICAL,
+                card_ids=[card.id],
+                card_code=card.card_code,
+                message=(
+                    f"Mapping {mapping.id} is still active and points at merged (inactive) "
+                    f"card {card.id}, which was merged into card {card.merged_into_card_id} - it "
+                    "should have been reassigned by the merge"
+                ),
+                suggested_action="reassign_or_deactivate_source_mapping",
+                details={"mapping_id": mapping.id, "merged_into_card_id": card.merged_into_card_id},
+            )
+        )
+    return issues
+
+
+def _check_card_alias_without_card(db: Session, card_ids: set[int]) -> list[AuditIssue]:
+    aliases = list(db.scalars(select(CardAlias)).all())
+    orphaned = [a for a in aliases if a.card_id not in card_ids]
+    if not orphaned:
+        return []
+    return [
+        AuditIssue(
+            issue_type="card_alias_without_card",
+            severity=WARNING,
+            card_ids=sorted({a.card_id for a in orphaned}),
+            card_code=None,
+            message=f"{len(orphaned)} card_aliases row(s) reference a card_id that no longer exists",
+            suggested_action="remove_orphaned_alias",
+            details={"alias_ids": sorted(a.id for a in orphaned)},
+        )
+    ]
+
+
 def _check_critical_mapping_quality(db: Session) -> list[AuditIssue]:
     """One AuditIssue per source_card_mappings row that
     app.services.source_mapping_confidence.evaluate_source_mapping rates
@@ -682,6 +795,11 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_low_confidence_mappings(mappings, cards_by_id),
         *_check_candidate_variant_mismatch(candidates),
         *_check_critical_mapping_quality(db),
+        *_check_duplicate_card_identity(db),
+        *_check_inactive_card_without_merge_target(cards),
+        *_check_active_card_merged_into_another_card(cards),
+        *_check_merged_card_still_has_active_source_mapping(mappings, cards_by_id),
+        *_check_card_alias_without_card(db, set(cards_by_id.keys())),
     ]
 
     return CardAuditReport(

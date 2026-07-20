@@ -359,3 +359,30 @@ def test_system_check_mapping_quality_summary_passes_when_healthy(client, db_ses
     data = response.json()
     check = checks_by_name(data)["mapping_quality_summary"]
     assert check["status"] == "pass"
+
+
+def test_system_check_warns_on_duplicate_cards(client, db_session):
+    make_card(db_session, card_code="OP01-050", rarity="L")
+    make_card(db_session, card_code="OP01-050", rarity="SR")
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["duplicate_cards"]
+    assert check["status"] == "warning"
+    assert "duplicate" in check["message"].lower()
+
+
+def test_system_check_no_duplicate_cards_passes(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["duplicate_cards"]
+    assert check["status"] == "pass"
+
+
+def test_system_check_warns_on_inactive_card_missing_merge_target(client, db_session):
+    make_card(db_session, card_code="OP01-051", rarity="L", is_active=False)
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["inactive_cards_missing_merge_target"]
+    assert check["status"] == "warning"

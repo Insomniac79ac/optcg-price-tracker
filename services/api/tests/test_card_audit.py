@@ -292,3 +292,63 @@ def test_card_audit_endpoint_returns_report(client, db_session, yuyutei):
         for issue in body["issues"]
         if issue["issue_type"] == "cards_without_source_mappings"
     )
+
+
+def test_card_audit_detects_duplicate_card_identity(db_session):
+    card_a = make_card(db_session, card_code="OP01-010", rarity="L")
+    card_b = make_card(db_session, card_code="OP01-010", rarity="SR")
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "duplicate_card_identity"]
+    assert len(issues) == 1
+    assert set(issues[0].card_ids) == {card_a.id, card_b.id}
+
+
+def test_card_audit_detects_inactive_card_without_merge_target(db_session):
+    card = make_card(db_session, card_code="OP01-011", rarity="L", is_active=False)
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "inactive_card_without_merge_target"]
+    assert len(issues) == 1
+    assert card.id in issues[0].card_ids
+
+
+def test_card_audit_detects_active_card_merged_into_another(db_session):
+    card = make_card(db_session, card_code="OP01-012", rarity="L", merged_into_card_id=999)
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "active_card_merged_into_another_card"]
+    assert len(issues) == 1
+    assert card.id in issues[0].card_ids
+
+
+def test_card_audit_detects_merged_card_with_active_mapping(db_session, yuyutei):
+    from app.services.card_identity_merge import MergeOptions, execute_card_merge
+
+    card_a = make_card(db_session, card_code="OP01-013", rarity="L")
+    card_b = make_card(db_session, card_code="OP01-013", rarity="SR")
+    execute_card_merge(db_session, card_b.id, card_a.id, MergeOptions(dry_run=False))
+
+    # Simulate a mapping that was left active/pointing at the merged card,
+    # bypassing the normal merge reassignment path.
+    db_session.add(
+        SourceCardMapping(
+            card_id=card_b.id,
+            source_id=yuyutei.id,
+            source_card_id=card_b.card_code,
+            source_url="https://yuyu-tei.jp/stale",
+            is_active=True,
+        )
+    )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    issues = [
+        i for i in report.issues if i.issue_type == "merged_card_still_has_active_source_mapping"
+    ]
+    assert len(issues) == 1
+    assert issues[0].card_ids == [card_b.id]

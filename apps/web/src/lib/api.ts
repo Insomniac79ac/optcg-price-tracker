@@ -1086,6 +1086,150 @@ export function fetchSuggestedCardsForMapping(
   );
 }
 
+/* Card identity merge / duplicate review - goes through the Next.js server
+ * proxy (see src/app/api/admin/cards/duplicates|merge/route.ts and
+ * .../[id]/merge-preview/route.ts), same reasoning as the source mapping
+ * quality fetchers above. */
+
+export interface DuplicateCardSummary {
+  id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  is_active: boolean;
+  merged_into_card_id: number | null;
+}
+
+export interface DuplicatePair {
+  source_card: DuplicateCardSummary;
+  target_card: DuplicateCardSummary;
+  score: number;
+  confidence_label: string;
+  explanation: MatchExplanation;
+  recommended_target_card_id: number;
+  warnings: string[];
+}
+
+export interface DuplicateSummary {
+  total_pairs: number;
+  exact_duplicate_count: number;
+  likely_duplicate_count: number;
+  possible_duplicate_count: number;
+  weak_match_count: number;
+  inactive_merged_cards: number;
+}
+
+export interface DuplicateList {
+  summary: DuplicateSummary;
+  pairs: DuplicatePair[];
+  pagination: PaginationMeta;
+}
+
+export interface FieldMergePreviewEntry {
+  source: unknown;
+  target: unknown;
+  result: unknown;
+  action: string;
+}
+
+export interface CardMergePreview {
+  source_card: DuplicateCardSummary;
+  target_card: DuplicateCardSummary;
+  duplicate_score: number;
+  confidence_label: string;
+  explanation: MatchExplanation;
+  field_merge_preview: Record<string, FieldMergePreviewEntry>;
+  affected_records: Record<string, number>;
+  warnings: string[];
+}
+
+export interface CardMergeResult {
+  dry_run: boolean;
+  merged: boolean;
+  source_card_id: number;
+  target_card_id: number;
+  affected_records: Record<string, number>;
+  field_changes: Record<string, unknown>;
+  warnings: string[];
+  duplicate_score: number;
+  confidence_label: string;
+}
+
+export type CardMergeFieldStrategy =
+  | "keep_target"
+  | "fill_missing_target_fields"
+  | "overwrite_target_empty_or_shorter_text";
+
+export function fetchCardDuplicates(params?: {
+  q?: string;
+  set_code?: string;
+  rarity?: string;
+  variant?: string;
+  language?: string;
+  confidence_label?: string;
+  min_score?: number;
+  include_inactive?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<DuplicateList> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.language) query.set("language", params.language);
+  if (params?.confidence_label) query.set("confidence_label", params.confidence_label);
+  if (params?.min_score !== undefined) query.set("min_score", String(params.min_score));
+  if (params?.include_inactive !== undefined)
+    query.set("include_inactive", String(params.include_inactive));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<DuplicateList>(`/api/admin/cards/duplicates${qs ? `?${qs}` : ""}`);
+}
+
+export function bulkPreviewCardDuplicates(params: {
+  min_score?: number;
+  confidence_label?: string | null;
+  limit?: number;
+}): Promise<{ previews: CardMergePreview[] }> {
+  return fetchAdminJson<{ previews: CardMergePreview[] }>(
+    "/api/admin/cards/duplicates/bulk-preview",
+    { method: "POST", body: params },
+  );
+}
+
+export function fetchCardMergePreview(
+  sourceCardId: number,
+  targetCardId: number,
+  fieldStrategy?: CardMergeFieldStrategy,
+): Promise<CardMergePreview> {
+  const query = new URLSearchParams();
+  query.set("target_card_id", String(targetCardId));
+  if (fieldStrategy) query.set("field_strategy", fieldStrategy);
+  return fetchAdminJson<CardMergePreview>(
+    `/api/admin/cards/${sourceCardId}/merge-preview?${query.toString()}`,
+  );
+}
+
+export function mergeCards(params: {
+  source_card_id: number;
+  target_card_id: number;
+  dry_run: boolean;
+  merge_notes?: string;
+  field_strategy?: CardMergeFieldStrategy;
+  approve_low_confidence?: boolean;
+}): Promise<CardMergeResult> {
+  return fetchAdminJson<CardMergeResult>("/api/admin/cards/merge", {
+    method: "POST",
+    body: params,
+  });
+}
+
 export function fetchRefreshRuns(params?: {
   status?: string;
   source_filter?: string;

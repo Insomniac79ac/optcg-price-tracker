@@ -43,6 +43,7 @@ const ADMIN_LINKS = [
   { href: "/admin/card-audit", label: "Card audit" },
   { href: "/admin/source-mapping-quality", label: "Mapping quality" },
   { href: "/admin/cards", label: "Card catalog" },
+  { href: "/admin/card-duplicates", label: "Card duplicates" },
   { href: "/market/movers", label: "Market movers" },
 ];
 

@@ -1169,6 +1169,104 @@ class AdminCardListResponseOut(BaseModel):
     pagination: PaginationMeta
 
 
+# --- card identity merge / duplicate review -----------------------------
+
+
+class DuplicateCardSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    is_active: bool
+    merged_into_card_id: int | None
+
+
+class DuplicateExplanationOut(BaseModel):
+    positive: list[str]
+    negative: list[str]
+    caps_applied: list[str]
+
+
+class DuplicatePairOut(BaseModel):
+    source_card: DuplicateCardSummaryOut
+    target_card: DuplicateCardSummaryOut
+    score: int
+    confidence_label: str
+    explanation: DuplicateExplanationOut
+    recommended_target_card_id: int
+    warnings: list[str]
+
+
+class DuplicateSummaryOut(BaseModel):
+    total_pairs: int
+    exact_duplicate_count: int
+    likely_duplicate_count: int
+    possible_duplicate_count: int
+    weak_match_count: int
+    inactive_merged_cards: int
+
+
+class DuplicateListOut(BaseModel):
+    summary: DuplicateSummaryOut
+    pairs: list[DuplicatePairOut]
+    pagination: PaginationMeta
+
+
+class BulkDuplicatePreviewIn(BaseModel):
+    min_score: int = 90
+    confidence_label: str | None = "exact_duplicate"
+    limit: int = 50
+
+
+class FieldMergePreviewEntryOut(BaseModel):
+    source: Any = None
+    target: Any = None
+    result: Any = None
+    action: str
+
+
+class CardMergePreviewOut(BaseModel):
+    source_card: DuplicateCardSummaryOut
+    target_card: DuplicateCardSummaryOut
+    duplicate_score: int
+    confidence_label: str
+    explanation: DuplicateExplanationOut
+    field_merge_preview: dict[str, FieldMergePreviewEntryOut]
+    affected_records: dict[str, int]
+    warnings: list[str]
+
+
+class BulkDuplicatePreviewOut(BaseModel):
+    previews: list[CardMergePreviewOut]
+
+
+class CardMergeIn(BaseModel):
+    source_card_id: int
+    target_card_id: int
+    dry_run: bool = True
+    merge_notes: str | None = None
+    field_strategy: str = "keep_target"
+    approve_low_confidence: bool = False
+
+
+class CardMergeResultOut(BaseModel):
+    dry_run: bool
+    merged: bool
+    source_card_id: int
+    target_card_id: int
+    affected_records: dict[str, int]
+    field_changes: dict[str, Any]
+    warnings: list[str]
+    duplicate_score: int
+    confidence_label: str
+
+
 class MarketSignalLatestPricesOut(BaseModel):
     yuyutei_sell: int | None
     yuyutei_buy: int | None

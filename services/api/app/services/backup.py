@@ -12,6 +12,7 @@ from app.models import (
     AnalyticsDigestReport,
     AppLogEvent,
     Card,
+    CardAlias,
     CardTag,
     CollectionItem,
     CollectionItemGroup,
@@ -43,12 +44,15 @@ from app.services.job_locks import with_job_lock
 # collector_tags/collector_groups/collection_items became user-scoped), 4 -> 5
 # when wishlist_items was added, 5 -> 6 when dashboard_preferences was added,
 # 6 -> 7 when collector_notes/collector_activity_events (missed when those
-# tables were first added) and search_history were added, and 7 -> 8 when
-# analytics_digest_reports was added - these all became required tables, so a
-# backup from before any of these changes predates them entirely. Rejecting
-# with an explicit version mismatch is clearer than a generic "missing
-# required table" error.
-BACKUP_VERSION = 8
+# tables were first added) and search_history were added, 7 -> 8 when
+# analytics_digest_reports was added, and 8 -> 9 when card_aliases was added
+# (alongside cards.is_active/merged_into_card_id/merged_at/merge_notes -
+# plain new columns on an existing required table, so no version bump was
+# needed for those) - these all became required tables, so a backup from
+# before any of these changes predates them entirely. Rejecting with an
+# explicit version mismatch is clearer than a generic "missing required
+# table" error.
+BACKUP_VERSION = 9
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -58,6 +62,7 @@ APP_NAME = "opcg-price-tracker"
 MODEL_BY_TABLE: dict[str, type] = {
     "users": User,
     "cards": Card,
+    "card_aliases": CardAlias,
     "sources": Source,
     "collector_tags": CollectorTag,
     "collector_groups": CollectorGroup,
@@ -111,6 +116,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "collector_notes",
     "collector_activity_events",
     "search_history",
+    "card_aliases",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (
@@ -305,6 +311,19 @@ def validate_backup(backup: Any) -> ValidationResult:
                     f"market_signal_events[{i}] references missing card_id {card_id!r}"
                 )
 
+        for i, row in enumerate(tables.get("card_aliases", [])):
+            if row.get("card_id") not in card_ids:
+                errors.append(
+                    f"card_aliases[{i}] references missing card_id {row.get('card_id')!r}"
+                )
+
+        for i, row in enumerate(tables.get("cards", [])):
+            merged_into_card_id = row.get("merged_into_card_id")
+            if merged_into_card_id is not None and merged_into_card_id not in card_ids:
+                errors.append(
+                    f"cards[{i}] references missing merged_into_card_id {merged_into_card_id!r}"
+                )
+
     return ValidationResult(
         valid=len(errors) == 0,
         backup_version=backup_version,
@@ -330,11 +349,42 @@ def _existing_ids(db: Session, table: str, ids: set[int]) -> set[int]:
     return set(db.scalars(select(model.id).where(model.id.in_(ids))).all())
 
 
+# cards.merged_into_card_id is self-referential (see app.models.card) - a
+# card referencing another card by a HIGHER id (inserted later in the same
+# id-ascending batch) would violate the FK at insert time if written
+# straight through. _defer_self_referential_fk/_apply_deferred_self_refs
+# below null it out on insert/update and patch it in afterward, once every
+# row in the table exists - the only table-specific special case in this
+# otherwise fully generic restore path.
+_SELF_REFERENTIAL_FK_COLUMN: dict[str, str] = {"cards": "merged_into_card_id"}
+
+
+def _defer_self_referential_fk(
+    table: str, kwargs: dict[str, Any], deferred: list[tuple[int, Any]]
+) -> None:
+    column = _SELF_REFERENTIAL_FK_COLUMN.get(table)
+    if column and kwargs.get(column) is not None:
+        deferred.append((kwargs["id"], kwargs[column]))
+        kwargs[column] = None
+
+
+def _apply_deferred_self_refs(db: Session, table: str, deferred: list[tuple[int, Any]]) -> None:
+    if not deferred:
+        return
+    model = MODEL_BY_TABLE[table]
+    column = _SELF_REFERENTIAL_FK_COLUMN[table]
+    for row_id, value in deferred:
+        setattr(db.get(model, row_id), column, value)
+    db.flush()
+
+
 def _upsert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> tuple[int, int]:
     model = MODEL_BY_TABLE[table]
     created = updated = 0
+    deferred: list[tuple[int, Any]] = []
     for row in rows:
         kwargs = _deserialize_row(model, row)
+        _defer_self_referential_fk(table, kwargs, deferred)
         row_id = kwargs.get("id")
         existing = db.get(model, row_id)
         if existing is not None:
@@ -347,14 +397,19 @@ def _upsert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> tuple[i
             db.add(model(**kwargs))
             created += 1
     db.flush()
+    _apply_deferred_self_refs(db, table, deferred)
     return created, updated
 
 
 def _insert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> int:
     model = MODEL_BY_TABLE[table]
+    deferred: list[tuple[int, Any]] = []
     for row in rows:
-        db.add(model(**_deserialize_row(model, row)))
+        kwargs = _deserialize_row(model, row)
+        _defer_self_referential_fk(table, kwargs, deferred)
+        db.add(model(**kwargs))
     db.flush()
+    _apply_deferred_self_refs(db, table, deferred)
     return len(rows)
 
 

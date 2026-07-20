@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from app.api.admin_actions import router as admin_actions_router
 from app.api.admin_backup import router as admin_backup_router
 from app.api.admin_cache import router as admin_cache_router
+from app.api.admin_card_merge import router as admin_card_merge_router
 from app.api.admin_cards import router as admin_cards_router
 from app.api.admin_snkrdunk_matching import router as admin_snkrdunk_matching_router
 from app.api.admin_source_mapping_quality import router as admin_source_mapping_quality_router
@@ -185,6 +186,7 @@ app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(admin_cache_router)
 app.include_router(admin_cards_router)
+app.include_router(admin_card_merge_router)
 app.include_router(admin_snkrdunk_matching_router)
 app.include_router(admin_data_retention_router)
 app.include_router(admin_db_backups_router)

@@ -330,6 +330,26 @@ def test_backup_export_includes_phase5_tables(client, db_session):
     assert len(tables["search_history"]) == 1
 
 
+def test_backup_export_includes_card_merge_fields_and_aliases(client, db_session):
+    from app.services.card_identity_merge import MergeOptions, execute_card_merge
+
+    card_a = make_card(db_session, card_code="OP01-001", rarity="L")
+    card_b = make_card(db_session, card_code="OP01-001", rarity="SR", name_en="dup")
+    execute_card_merge(db_session, card_b.id, card_a.id, MergeOptions(dry_run=False))
+
+    response = client.get("/admin/backup/export")
+    assert response.status_code == 200
+    tables = response.json()["tables"]
+
+    merged_row = next(r for r in tables["cards"] if r["id"] == card_b.id)
+    assert merged_row["is_active"] is False
+    assert merged_row["merged_into_card_id"] == card_a.id
+    assert merged_row["merged_at"] is not None
+
+    assert len(tables["card_aliases"]) >= 1
+    assert tables["card_aliases"][0]["card_id"] == card_a.id
+
+
 def test_backup_export_includes_wishlist_items(client, db_session):
     card = make_card(db_session)
     db_session.add(WishlistItem(user_id=1, card_id=card.id, priority="grail"))
@@ -595,6 +615,54 @@ def test_restore_merge_does_not_delete_rows_missing_from_backup(client, db_sessi
     assert response.status_code == 200
     db_session.expire_all()
     assert db_session.query(CollectionItem).count() == 2
+
+
+def test_restore_merge_handles_self_referential_merged_into_card_id(client, db_session):
+    """cards.merged_into_card_id is self-referential - the row referencing
+    the higher id is deliberately listed FIRST here, the scenario that would
+    violate the FK at insert time without backup.py's deferred-self-ref
+    handling (see _defer_self_referential_fk)."""
+    backup = empty_backup(
+        cards=[
+            {
+                "id": 501,
+                "card_code": "OP01-001",
+                "name_en": "Duplicate",
+                "name_jp": None,
+                "set_code": "OP01",
+                "rarity": "SR",
+                "variant": "leader",
+                "language": "en",
+                "image_url": None,
+                "is_active": False,
+                "merged_into_card_id": 502,
+                "merged_at": datetime.now(timezone.utc).isoformat(),
+                "merge_notes": "test",
+            },
+            {
+                "id": 502,
+                "card_code": "OP01-001",
+                "name_en": "Canonical",
+                "name_jp": None,
+                "set_code": "OP01",
+                "rarity": "L",
+                "variant": "leader",
+                "language": "en",
+                "image_url": None,
+            },
+        ]
+    )
+
+    response = upload_restore(client, backup, dry_run="false", mode="merge")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["valid"] is True
+
+    db_session.expire_all()
+    merged = db_session.get(Card, 501)
+    assert merged.merged_into_card_id == 502
+    assert merged.is_active is False
 
 
 # --- restore: replace --------------------------------------------------------

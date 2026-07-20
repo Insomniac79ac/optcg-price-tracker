@@ -425,6 +425,55 @@ def _check_mapping_quality_summary(db: Session) -> CheckResult:
     )
 
 
+def _check_duplicate_cards(db: Session) -> CheckResult:
+    """Rolls up app.services.card_identity_merge.summarize_duplicate_quality
+    into one system-check warning - any exact or likely duplicate pair is
+    worth a human glancing at GET /admin/cards/duplicates."""
+    from app.services.card_identity_merge import summarize_duplicate_quality
+
+    summary = summarize_duplicate_quality(db)
+    reasons = []
+    if summary["exact_duplicate_count"] > 0:
+        reasons.append(f"{summary['exact_duplicate_count']} exact duplicate pair(s)")
+    if summary["likely_duplicate_count"] > 0:
+        reasons.append(f"{summary['likely_duplicate_count']} likely duplicate pair(s)")
+
+    if reasons:
+        return CheckResult(
+            "duplicate_cards",
+            "warning",
+            "warning",
+            f"Potential duplicate cards found: {', '.join(reasons)}. See GET /admin/cards/duplicates.",
+        )
+    return CheckResult(
+        "duplicate_cards", "pass", "info", "No exact/likely duplicate cards detected."
+    )
+
+
+def _check_inactive_cards_missing_merge_target(db: Session) -> CheckResult:
+    count = (
+        db.scalar(
+            select(func.count())
+            .select_from(Card)
+            .where(Card.is_active.is_(False), Card.merged_into_card_id.is_(None))
+        )
+        or 0
+    )
+    if count > 0:
+        return CheckResult(
+            "inactive_cards_missing_merge_target",
+            "warning",
+            "warning",
+            f"{count} inactive card(s) have no merged_into_card_id set. See GET /admin/card-audit.",
+        )
+    return CheckResult(
+        "inactive_cards_missing_merge_target",
+        "pass",
+        "info",
+        "All inactive cards have a merge target set.",
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -502,6 +551,8 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_candidate_match_backlog(db),
         _check_low_confidence_source_mappings(db),
         _check_mapping_quality_summary(db),
+        _check_duplicate_cards(db),
+        _check_inactive_cards_missing_merge_target(db),
     ]
     return checks
 
