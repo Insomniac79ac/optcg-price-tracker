@@ -345,6 +345,12 @@ function GradingPageInner() {
             >
               Analytics →
             </Link>
+            <Link
+              href="/analytics/grading"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              ROI analytics →
+            </Link>
           </div>
           {listStatus === "ready" && (
             <span className="text-sm text-neutral-500">

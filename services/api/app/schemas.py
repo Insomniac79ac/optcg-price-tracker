@@ -1665,6 +1665,117 @@ class BuyDecisionSupportOut(BaseModel):
     pagination: PaginationMeta
 
 
+class GradingAnalyticsSummaryOut(BaseModel):
+    total_submissions: int
+    active_submissions: int
+    received_submissions: int
+    cancelled_submissions: int
+    total_declared_value_jpy: int
+    total_grading_cost_jpy: int
+    total_graded_value_jpy: int
+    total_raw_cost_basis_jpy: int
+    total_roi_jpy: int
+    total_roi_pct: float | None
+    average_grade: float | None
+    median_grade: float | None
+    profitable_count: int
+    unprofitable_count: int
+    missing_graded_value_count: int
+    missing_cost_basis_count: int
+    items_waiting_return: int
+
+
+class GradingAnalyticsBreakdownItemOut(BaseModel):
+    key: str
+    label: str
+    submission_count: int
+    received_count: int
+    active_count: int
+    total_cost_jpy: int
+    graded_value_jpy: int
+    roi_jpy: int
+    roi_pct: float | None
+
+
+class GradingAnalyticsBreakdownsOut(BaseModel):
+    by_status: list[GradingAnalyticsBreakdownItemOut]
+    by_company: list[GradingAnalyticsBreakdownItemOut]
+    by_grade: list[GradingAnalyticsBreakdownItemOut]
+    by_set: list[GradingAnalyticsBreakdownItemOut]
+    by_rarity: list[GradingAnalyticsBreakdownItemOut]
+
+
+class GradingAnalyticsFlagsOut(BaseModel):
+    profitable: bool
+    missing_cost_basis: bool
+    missing_graded_value: bool
+    overdue: bool
+    active: bool
+
+
+class GradingAnalyticsSubmissionOut(BaseModel):
+    grading_submission_id: int
+    collection_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    quantity: int
+    grading_company: str
+    submission_name: str | None
+    submission_status: str
+    declared_value_jpy: int | None
+    grading_fee_jpy: int | None
+    shipping_fee_jpy: int | None
+    insurance_fee_jpy: int | None
+    other_fee_jpy: int | None
+    total_cost_jpy: int
+    purchase_price_jpy: int | None
+    raw_cost_basis_jpy: int | None
+    graded_value_jpy: int | None
+    roi_jpy: int | None
+    roi_pct: float | None
+    submitted_at: date | None
+    expected_return_date: date | None
+    received_at: date | None
+    days_in_grading: int | None
+    final_grade: str | None
+    cert_number: str | None
+    tracking_number: str | None
+    notes: str | None
+    tags: list[str]
+    groups: list[str]
+    flags: GradingAnalyticsFlagsOut
+
+
+class GradingAnalyticsRoiOut(BaseModel):
+    best_roi_submissions: list[GradingAnalyticsSubmissionOut]
+    worst_roi_submissions: list[GradingAnalyticsSubmissionOut]
+    highest_graded_value: list[GradingAnalyticsSubmissionOut]
+    highest_grading_cost: list[GradingAnalyticsSubmissionOut]
+    missing_value_or_cost: list[GradingAnalyticsSubmissionOut]
+
+
+class GradingAnalyticsPendingOut(BaseModel):
+    waiting_return: list[GradingAnalyticsSubmissionOut]
+    overdue: list[GradingAnalyticsSubmissionOut]
+    expected_next_30d: list[GradingAnalyticsSubmissionOut]
+
+
+class GradingAnalyticsOut(BaseModel):
+    summary: GradingAnalyticsSummaryOut
+    breakdowns: GradingAnalyticsBreakdownsOut
+    roi: GradingAnalyticsRoiOut
+    pending: GradingAnalyticsPendingOut
+    submissions: list[GradingAnalyticsSubmissionOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

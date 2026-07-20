@@ -15,6 +15,7 @@ const PRIMARY_LINKS = [
   { href: "/analytics/buy-decisions", label: "Buy decisions" },
   { href: "/analytics/sell-decisions", label: "Sell decisions" },
   { href: "/grading", label: "Grading" },
+  { href: "/analytics/grading", label: "Grading analytics" },
   { href: "/activity", label: "Activity" },
   { href: "/market/report", label: "Market report" },
   { href: "/market/opportunities", label: "Opportunities" },

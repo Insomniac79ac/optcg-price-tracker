@@ -44,6 +44,7 @@ _PRICE_REFRESH_CACHE_INVALIDATES = (
     "wishlist_summary",
     "sell_decisions",
     "buy_decisions",
+    "grading_analytics",
 )
 
 

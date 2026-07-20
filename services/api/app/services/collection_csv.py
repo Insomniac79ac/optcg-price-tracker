@@ -72,6 +72,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "grading_summary",
     "sell_decisions",
     "buy_decisions",
+    "grading_analytics",
 )
 
 

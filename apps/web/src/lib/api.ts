@@ -3130,6 +3130,144 @@ export function fetchBuyDecisions(params?: {
   return fetchAdminJson<BuyDecisionSupport>(`/api/analytics/buy-decisions${qs ? `?${qs}` : ""}`);
 }
 
+// --- Grading ROI analytics (see GET /analytics/grading) --------------------
+
+export interface GradingAnalyticsSummary {
+  total_submissions: number;
+  active_submissions: number;
+  received_submissions: number;
+  cancelled_submissions: number;
+  total_declared_value_jpy: number;
+  total_grading_cost_jpy: number;
+  total_graded_value_jpy: number;
+  total_raw_cost_basis_jpy: number;
+  total_roi_jpy: number;
+  total_roi_pct: number | null;
+  average_grade: number | null;
+  median_grade: number | null;
+  profitable_count: number;
+  unprofitable_count: number;
+  missing_graded_value_count: number;
+  missing_cost_basis_count: number;
+  items_waiting_return: number;
+}
+
+export interface GradingAnalyticsBreakdownItem {
+  key: string;
+  label: string;
+  submission_count: number;
+  received_count: number;
+  active_count: number;
+  total_cost_jpy: number;
+  graded_value_jpy: number;
+  roi_jpy: number;
+  roi_pct: number | null;
+}
+
+export interface GradingAnalyticsBreakdowns {
+  by_status: GradingAnalyticsBreakdownItem[];
+  by_company: GradingAnalyticsBreakdownItem[];
+  by_grade: GradingAnalyticsBreakdownItem[];
+  by_set: GradingAnalyticsBreakdownItem[];
+  by_rarity: GradingAnalyticsBreakdownItem[];
+}
+
+export interface GradingAnalyticsFlags {
+  profitable: boolean;
+  missing_cost_basis: boolean;
+  missing_graded_value: boolean;
+  overdue: boolean;
+  active: boolean;
+}
+
+export interface GradingAnalyticsSubmission {
+  grading_submission_id: number;
+  collection_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  quantity: number;
+  grading_company: string;
+  submission_name: string | null;
+  submission_status: string;
+  declared_value_jpy: number | null;
+  grading_fee_jpy: number | null;
+  shipping_fee_jpy: number | null;
+  insurance_fee_jpy: number | null;
+  other_fee_jpy: number | null;
+  total_cost_jpy: number;
+  purchase_price_jpy: number | null;
+  raw_cost_basis_jpy: number | null;
+  graded_value_jpy: number | null;
+  roi_jpy: number | null;
+  roi_pct: number | null;
+  submitted_at: string | null;
+  expected_return_date: string | null;
+  received_at: string | null;
+  days_in_grading: number | null;
+  final_grade: string | null;
+  cert_number: string | null;
+  tracking_number: string | null;
+  notes: string | null;
+  tags: string[];
+  groups: string[];
+  flags: GradingAnalyticsFlags;
+}
+
+export interface GradingAnalyticsRoi {
+  best_roi_submissions: GradingAnalyticsSubmission[];
+  worst_roi_submissions: GradingAnalyticsSubmission[];
+  highest_graded_value: GradingAnalyticsSubmission[];
+  highest_grading_cost: GradingAnalyticsSubmission[];
+  missing_value_or_cost: GradingAnalyticsSubmission[];
+}
+
+export interface GradingAnalyticsPending {
+  waiting_return: GradingAnalyticsSubmission[];
+  overdue: GradingAnalyticsSubmission[];
+  expected_next_30d: GradingAnalyticsSubmission[];
+}
+
+export interface GradingAnalytics {
+  summary: GradingAnalyticsSummary;
+  breakdowns: GradingAnalyticsBreakdowns;
+  roi: GradingAnalyticsRoi;
+  pending: GradingAnalyticsPending;
+  submissions: GradingAnalyticsSubmission[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/grading/route.ts), same rationale as
+ * fetchBuyDecisions/fetchSellDecisions - browser-side fetches to the
+ * backend's host port are unreliable in Codespaces/forwarded-port
+ * environments, and this endpoint needs the signed-in user's session
+ * forwarded server-side. */
+export function fetchGradingAnalytics(params?: {
+  include_cancelled?: boolean;
+  grading_company?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<GradingAnalytics> {
+  const query = new URLSearchParams();
+  if (params?.include_cancelled !== undefined) {
+    query.set("include_cancelled", String(params.include_cancelled));
+  }
+  if (params?.grading_company) query.set("grading_company", params.grading_company);
+  if (params?.status) query.set("status", params.status);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<GradingAnalytics>(`/api/analytics/grading${qs ? `?${qs}` : ""}`);
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }

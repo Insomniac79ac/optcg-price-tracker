@@ -23,6 +23,7 @@ enforced by `apps/web/middleware.ts` (redirects an anonymous visitor to `/market
 | `/analytics/collection` | Collection analytics: composition, valuation exposure, cost basis, concentration risk, grading exposure | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/grading`) |
 | `/analytics/wishlist` | Wishlist analytics: budget planning, target hits, priority exposure, acquisition planning | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/collection`) |
 | `/analytics/buy-decisions` | Buy decision support: deterministic review-buy/wait/skip/monitor scoring for wishlist cards | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/wishlist`, `/market/opportunities`) |
+| `/analytics/grading` | Grading ROI analytics: submission costs, outcomes, pending returns, and post-grade value | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/grading`, `/analytics/collection`, `/collection`) |
 | `/analytics/sell-decisions` | Sell decision support: deterministic sell/hold/grade-first/monitor scoring for owned cards | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/analytics/collection`, `/market/opportunities`) |
 | `/wishlist` | Wishlist tracker: target prices, CSV import/export, convert-to-collection | Google sign-in | 200 | Yes (primary nav) |
 | `/grading` | Grading submission tracker (PSA/BGS/CGC/ARS/other) | Google sign-in | 200 | Yes (primary nav) |
@@ -83,7 +84,7 @@ per-endpoint sweep.
 | `/collection/*` | `GET/POST /collection`, `GET /collection/summary`, `GET /collection/valuation(/history)`, `GET/PATCH/DELETE /collection/{id}`, tag/group assignment, `GET /collection/export.csv`, `POST /collection/import.csv` | user | 200 (401 without a valid bearer token) |
 | `/wishlist/*` | `GET/POST /wishlist`, `GET /wishlist/summary`, `GET/PATCH/DELETE /wishlist/{id}`, `POST /wishlist/{id}/mark-purchased`, `POST /wishlist/{id}/convert-to-collection`, CSV import/export | user | 200 (401 without a valid bearer token) |
 | `/grading/*` | `GET/POST /grading/submissions`, `GET /grading/summary`, `GET/PATCH/DELETE /grading/submissions/{id}` | user | 200 (401 without a valid bearer token) |
-| `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist`, `GET /analytics/sell-decisions`, `GET /analytics/buy-decisions` | user | 200 (401 without a valid bearer token) |
+| `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist`, `GET /analytics/sell-decisions`, `GET /analytics/buy-decisions`, `GET /analytics/grading` | user | 200 (401 without a valid bearer token) |
 | `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
 | `/market/*` | `GET /market/movers`, `/market/signals`, `/market/signal-events(/{id})` + dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | none | 200 |
 | `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
@@ -115,7 +116,8 @@ links back to `/wishlist` and `/analytics/collection`. `/dashboard`, `/collectio
 links back to `/collection`, `/analytics/collection`, and `/market/opportunities`. `/dashboard`,
 `/wishlist`, `/analytics/wishlist`, and `/market/opportunities` all link to
 `/analytics/buy-decisions`, which links back to `/wishlist`, `/analytics/wishlist`, and
-`/market/opportunities`.
+`/market/opportunities`. `/dashboard`, `/grading`, `/analytics/collection`, and `/collection` all
+link to `/analytics/grading`, which links back to `/grading` and `/analytics/collection`.
 
 **Admin auth audit** - every `/admin/*` and `/snkrdunk/*` FastAPI router applies
 `Depends(require_admin_token)` at the router level (not per-endpoint), so there is no way to add a

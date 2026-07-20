@@ -81,6 +81,12 @@ export default function CollectionAnalyticsPage() {
           >
             Sell Decision Support →
           </Link>
+          <Link
+            href="/analytics/grading"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Grading ROI Analytics →
+          </Link>
         </div>
         <p className="mb-4 text-sm text-neutral-500">
           Composition, valuation exposure, and concentration risk.
