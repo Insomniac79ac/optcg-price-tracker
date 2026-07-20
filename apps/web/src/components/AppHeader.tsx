@@ -41,6 +41,7 @@ const ADMIN_LINKS = [
   { href: "/admin/snkrdunk-candidates", label: "SNKRDUNK candidates" },
   { href: "/admin/alerts", label: "Alerts" },
   { href: "/admin/card-audit", label: "Card audit" },
+  { href: "/admin/source-mapping-quality", label: "Mapping quality" },
   { href: "/admin/cards", label: "Card catalog" },
   { href: "/market/movers", label: "Market movers" },
 ];

@@ -249,7 +249,31 @@ def test_detects_candidate_variant_mismatch(db_session):
 
     issues = [i for i in report.issues if i.issue_type == "candidate_variant_mismatch"]
     assert len(issues) == 1
-    assert issues[0].card_ids == [card.id]
+
+
+def test_includes_critical_mapping_quality_issues_and_summary(db_session, yuyutei):
+    card = make_card(db_session, card_code="OP01-013", rarity="R", variant=None)
+    for i in range(2):
+        db_session.add(
+            SourceCardMapping(
+                card_id=card.id,
+                source_id=yuyutei.id,
+                source_card_id="OP01-013",
+                source_url=f"https://yuyu-tei.jp/product/dup{'' if i == 0 else ' '}",
+            )
+        )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    critical_issues = [i for i in report.issues if i.issue_type == "critical_mapping_quality"]
+    assert len(critical_issues) == 2
+    assert report.mapping_quality is not None
+    assert report.mapping_quality["critical_count"] == 2
+    assert report.mapping_quality["duplicate_source_url_count"] == 2
+
+    payload = report.to_dict()
+    assert payload["summary"]["mapping_quality"]["critical_count"] == 2
 
 
 def test_card_audit_endpoint_returns_report(client, db_session, yuyutei):

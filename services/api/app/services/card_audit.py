@@ -16,6 +16,11 @@ from sqlalchemy.orm import Session
 from app.models import Card, PriceObservation, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
+from app.services.source_mapping_confidence import (
+    MappingQualityFilters,
+    evaluate_source_mappings,
+    summarize_mapping_quality,
+)
 
 # app.services.card_matching.UNMATCHED_SCORE_THRESHOLD - duplicated here
 # (rather than imported) so this module never has to reconcile the two
@@ -101,17 +106,26 @@ class AuditIssue:
 class CardAuditReport:
     total_cards: int
     issues: list[AuditIssue]
+    # Populated by run_card_audit from
+    # app.services.source_mapping_confidence.summarize_mapping_quality - see
+    # that module's docstring for what each count means. None only for
+    # CardAuditReport instances built outside run_card_audit (e.g. in tests
+    # that construct one directly without a db session).
+    mapping_quality: dict[str, int] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         critical_issues = sum(1 for issue in self.issues if issue.severity == CRITICAL)
         warning_issues = sum(1 for issue in self.issues if issue.severity == WARNING)
+        summary: dict[str, Any] = {
+            "total_cards": self.total_cards,
+            "total_issues": len(self.issues),
+            "critical_issues": critical_issues,
+            "warning_issues": warning_issues,
+        }
+        if self.mapping_quality is not None:
+            summary["mapping_quality"] = self.mapping_quality
         return {
-            "summary": {
-                "total_cards": self.total_cards,
-                "total_issues": len(self.issues),
-                "critical_issues": critical_issues,
-                "warning_issues": warning_issues,
-            },
+            "summary": summary,
             "issues": [issue.to_dict() for issue in self.issues],
         }
 
@@ -609,6 +623,35 @@ def _check_candidate_variant_mismatch(candidates: list[SnkrdunkCandidate]) -> li
     return issues
 
 
+def _check_critical_mapping_quality(db: Session) -> list[AuditIssue]:
+    """One AuditIssue per source_card_mappings row that
+    app.services.source_mapping_confidence.evaluate_source_mapping rates
+    risk_level="critical" (missing card reference, a card_code that
+    conflicts with the mapped card, very-low confidence, or a near-duplicate
+    source URL) - see GET /admin/source-mappings/quality for the full
+    per-mapping breakdown this summarizes."""
+    critical_items, _total, _summary = evaluate_source_mappings(
+        db, MappingQualityFilters(risk_level="critical"), limit=500, offset=0
+    )
+    issues: list[AuditIssue] = []
+    for item in critical_items:
+        issues.append(
+            AuditIssue(
+                issue_type="critical_mapping_quality",
+                severity=CRITICAL,
+                card_ids=[item.card_id],
+                card_code=item.card_code,
+                message=(
+                    f"Mapping {item.mapping_id} (source={item.source_name}) is critical risk: "
+                    f"{', '.join(item.issue_types)}"
+                ),
+                suggested_action="review_source_mapping_quality",
+                details={"mapping_id": item.mapping_id, "issue_types": item.issue_types},
+            )
+        )
+    return issues
+
+
 def run_card_audit(db: Session) -> CardAuditReport:
     cards = list(db.scalars(select(Card)).all())
     mappings = list(db.scalars(select(SourceCardMapping)).all())
@@ -638,6 +681,9 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_invalid_numeric_fields(cards),
         *_check_low_confidence_mappings(mappings, cards_by_id),
         *_check_candidate_variant_mismatch(candidates),
+        *_check_critical_mapping_quality(db),
     ]
 
-    return CardAuditReport(total_cards=len(cards), issues=issues)
+    return CardAuditReport(
+        total_cards=len(cards), issues=issues, mapping_quality=summarize_mapping_quality(db)
+    )

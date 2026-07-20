@@ -917,6 +917,175 @@ export function rejectCandidateMatch(
   );
 }
 
+export interface MappingQualityItem {
+  mapping_id: number;
+  source_name: string | null;
+  source_url: string | null;
+  source_card_id: string;
+  card_id: number;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string | null;
+  rarity: string | null;
+  variant: string | null;
+  is_active: boolean;
+  manual_verified: boolean;
+  review_status: string;
+  match_confidence: number | null;
+  match_confidence_label: string;
+  risk_level: string;
+  issue_types: string[];
+  explanation: MatchExplanation;
+  latest_price_observed_at: string | null;
+  last_match_checked_at: string | null;
+}
+
+export interface MappingQualitySummary {
+  total_mappings: number;
+  ok_count: number;
+  review_count: number;
+  warning_count: number;
+  critical_count: number;
+  low_confidence_count: number;
+  duplicate_source_url_count: number;
+  stale_mapping_count: number;
+  unverified_count: number;
+  inactive_with_recent_price_count: number;
+  active_without_recent_price_count: number;
+}
+
+export interface MappingQualityList {
+  summary: MappingQualitySummary;
+  items: MappingQualityItem[];
+  pagination: PaginationMeta;
+}
+
+export interface RecheckQualitySummary {
+  selected: number;
+  would_update: number;
+  updated: number;
+  ok: number;
+  review: number;
+  warning: number;
+  critical: number;
+}
+
+export interface RecheckQualityResult {
+  dry_run: boolean;
+  summary: RecheckQualitySummary;
+  preview: MappingQualityItem[];
+}
+
+export type BulkMappingAction =
+  | "approve"
+  | "reject"
+  | "deactivate"
+  | "activate"
+  | "mark_verified"
+  | "mark_pending";
+
+export interface BulkMappingUpdateResult {
+  mapping_id: number;
+  ok: boolean;
+  error: string | null;
+}
+
+export interface BulkMappingUpdateResponse {
+  action: string;
+  results: BulkMappingUpdateResult[];
+}
+
+export interface SuggestedCardsForMapping {
+  mapping_id: number;
+  matches: CandidateMatch[];
+}
+
+/* Source mapping quality review goes through the Next.js server proxy (see
+ * src/app/api/admin/source-mappings/quality|recheck-quality|bulk-update/
+ * route.ts and .../[id]/replace-card|suggested-cards/route.ts), same
+ * reasoning as the SNKRDUNK matching fetchers above. */
+export function fetchMappingQuality(params?: {
+  source?: string;
+  review_status?: string;
+  is_active?: boolean;
+  manual_verified?: boolean;
+  confidence_label?: string;
+  risk_level?: string;
+  issue_type?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<MappingQualityList> {
+  const query = new URLSearchParams();
+  if (params?.source) query.set("source", params.source);
+  if (params?.review_status) query.set("review_status", params.review_status);
+  if (params?.is_active !== undefined) query.set("is_active", String(params.is_active));
+  if (params?.manual_verified !== undefined)
+    query.set("manual_verified", String(params.manual_verified));
+  if (params?.confidence_label) query.set("confidence_label", params.confidence_label);
+  if (params?.risk_level) query.set("risk_level", params.risk_level);
+  if (params?.issue_type) query.set("issue_type", params.issue_type);
+  if (params?.q) query.set("q", params.q);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<MappingQualityList>(
+    `/api/admin/source-mappings/quality${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export function recheckMappingQuality(params: {
+  source?: string;
+  review_status?: string;
+  is_active?: boolean;
+  manual_verified?: boolean;
+  limit?: number;
+  dry_run: boolean;
+}): Promise<RecheckQualityResult> {
+  return fetchAdminJson<RecheckQualityResult>(
+    "/api/admin/source-mappings/recheck-quality",
+    { method: "POST", body: params },
+  );
+}
+
+export function bulkUpdateMappings(
+  mappingIds: number[],
+  action: BulkMappingAction,
+  reviewNotes?: string,
+): Promise<BulkMappingUpdateResponse> {
+  return fetchAdminJson<BulkMappingUpdateResponse>(
+    "/api/admin/source-mappings/bulk-update",
+    {
+      method: "POST",
+      body: { mapping_ids: mappingIds, action, review_notes: reviewNotes ?? null },
+    },
+  );
+}
+
+export function replaceMappingCard(
+  mappingId: number,
+  cardId: number,
+  reviewNotes?: string,
+  approve?: boolean,
+): Promise<MappingQualityItem> {
+  return fetchAdminJson<MappingQualityItem>(
+    `/api/admin/source-mappings/${mappingId}/replace-card`,
+    {
+      method: "POST",
+      body: { card_id: cardId, review_notes: reviewNotes ?? null, approve: approve ?? false },
+    },
+  );
+}
+
+export function fetchSuggestedCardsForMapping(
+  mappingId: number,
+): Promise<SuggestedCardsForMapping> {
+  return fetchAdminJson<SuggestedCardsForMapping>(
+    `/api/admin/source-mappings/${mappingId}/suggested-cards`,
+  );
+}
+
 export function fetchRefreshRuns(params?: {
   status?: string;
   source_filter?: string;

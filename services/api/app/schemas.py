@@ -450,6 +450,8 @@ class SourceCardMappingOut(BaseModel):
     source_card_id: str
     manual_verified: bool
     match_confidence: float | None
+    match_confidence_label: str | None = None
+    last_match_checked_at: datetime | None = None
     is_active: bool
     review_status: str
     review_notes: str | None
@@ -473,6 +475,108 @@ class SourceCardMappingUpdateIn(BaseModel):
     is_active: bool | None = None
     review_status: str | None = None
     review_notes: str | None = None
+
+
+class MappingQualityItemOut(BaseModel):
+    mapping_id: int
+    source_name: str | None
+    source_url: str | None
+    source_card_id: str
+    card_id: int
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    set_code: str | None
+    rarity: str | None
+    variant: str | None
+    is_active: bool
+    manual_verified: bool
+    review_status: str
+    match_confidence: int | None
+    match_confidence_label: str
+    risk_level: str
+    issue_types: list[str]
+    explanation: MatchExplanationOut
+    latest_price_observed_at: datetime | None
+    last_match_checked_at: datetime | None
+
+
+class MappingQualitySummaryOut(BaseModel):
+    total_mappings: int
+    ok_count: int
+    review_count: int
+    warning_count: int
+    critical_count: int
+    low_confidence_count: int
+    duplicate_source_url_count: int
+    stale_mapping_count: int
+    unverified_count: int
+    inactive_with_recent_price_count: int
+    active_without_recent_price_count: int
+
+
+class MappingQualityListOut(BaseModel):
+    summary: MappingQualitySummaryOut
+    items: list[MappingQualityItemOut]
+    pagination: PaginationMeta
+
+
+class RecheckQualityIn(BaseModel):
+    source: str | None = None
+    review_status: str | None = None
+    is_active: bool | None = None
+    manual_verified: bool | None = None
+    limit: int = 100
+    dry_run: bool = True
+
+
+class RecheckQualitySummaryOut(BaseModel):
+    selected: int
+    would_update: int
+    updated: int
+    ok: int
+    review: int
+    warning: int
+    critical: int
+
+
+class RecheckQualityOut(BaseModel):
+    dry_run: bool
+    summary: RecheckQualitySummaryOut
+    preview: list[MappingQualityItemOut]
+
+
+BulkMappingAction = Literal[
+    "approve", "reject", "deactivate", "activate", "mark_verified", "mark_pending"
+]
+
+
+class BulkMappingUpdateIn(BaseModel):
+    mapping_ids: list[int]
+    action: BulkMappingAction
+    review_notes: str | None = None
+
+
+class BulkMappingUpdateResultOut(BaseModel):
+    mapping_id: int
+    ok: bool
+    error: str | None = None
+
+
+class BulkMappingUpdateOut(BaseModel):
+    action: str
+    results: list[BulkMappingUpdateResultOut]
+
+
+class ReplaceMappingCardIn(BaseModel):
+    card_id: int
+    review_notes: str | None = None
+    approve: bool = False
+
+
+class SuggestedCardsOut(BaseModel):
+    mapping_id: int
+    matches: list[CandidateMatchOut]
 
 
 GradingSubmissionStatus = Literal[

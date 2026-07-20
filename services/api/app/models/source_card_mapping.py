@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -47,6 +48,22 @@ class SourceCardMapping(Base):
     )
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Populated by app.services.source_mapping_confidence (see GET/POST
+    # /admin/source-mappings/quality|recheck-quality) - the latest automated
+    # 0-100 card_matching score for this mapping's (source_card_id/source_url)
+    # against its currently-mapped card. match_confidence above stays the
+    # legacy field (0.0-1.0 on the pre-existing manual-approval paths, but
+    # already also holding raw 0-100 values written by
+    # app.api.admin_snkrdunk_matching's approve-match - see that module's
+    # docstring); match_confidence_label is always derived from this same
+    # 0-100 scale, never from the legacy field, so it's never ambiguous.
+    match_confidence_label: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    match_explanation_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_match_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

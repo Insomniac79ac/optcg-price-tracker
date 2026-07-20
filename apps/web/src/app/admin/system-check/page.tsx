@@ -97,6 +97,12 @@ export default function SystemCheckPage() {
             >
               Release status
             </Link>
+            <Link
+              href="/admin/source-mapping-quality"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Source mapping quality
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             <button

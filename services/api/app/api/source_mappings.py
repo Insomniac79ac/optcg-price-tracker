@@ -36,6 +36,8 @@ def _to_out(
         source_card_id=mapping.source_card_id,
         manual_verified=mapping.manual_verified,
         match_confidence=mapping.match_confidence,
+        match_confidence_label=mapping.match_confidence_label,
+        last_match_checked_at=mapping.last_match_checked_at,
         is_active=mapping.is_active,
         review_status=mapping.review_status,
         review_notes=mapping.review_notes,

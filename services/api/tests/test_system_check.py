@@ -330,3 +330,32 @@ def test_system_check_no_low_confidence_source_mappings_passes(client, db_sessio
     data = response.json()
     check = checks_by_name(data)["low_confidence_source_mappings"]
     assert check["status"] == "pass"
+
+
+def test_system_check_warns_on_critical_mapping_quality(client, db_session):
+    make_sources(db_session)
+    card = make_card(db_session)
+    source = db_session.query(Source).filter_by(name="yuyutei").one()
+    for i in range(2):
+        db_session.add(
+            SourceCardMapping(
+                card_id=card.id,
+                source_id=source.id,
+                source_card_id=card.card_code,
+                source_url=f"https://yuyu-tei.example.com/dup{'' if i == 0 else ' '}",
+            )
+        )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["mapping_quality_summary"]
+    assert check["status"] == "warning"
+    assert "critical-risk mapping" in check["message"]
+
+
+def test_system_check_mapping_quality_summary_passes_when_healthy(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["mapping_quality_summary"]
+    assert check["status"] == "pass"

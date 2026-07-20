@@ -388,6 +388,43 @@ def _check_low_confidence_source_mappings(db: Session) -> CheckResult:
     )
 
 
+# Number of mapping-quality "low_confidence" issues (see
+# app.services.source_mapping_confidence) that's worth a system-check
+# warning on its own, separate from _check_low_confidence_source_mappings'
+# older/narrower match_confidence-only check above.
+MAPPING_QUALITY_LOW_CONFIDENCE_COUNT_THRESHOLD = 5
+
+
+def _check_mapping_quality_summary(db: Session) -> CheckResult:
+    """Rolls up app.services.source_mapping_confidence.summarize_mapping_quality
+    into one system-check warning: any critical-risk mapping, more than
+    MAPPING_QUALITY_LOW_CONFIDENCE_COUNT_THRESHOLD low-confidence mappings,
+    or any near-duplicate source URL is worth a human glancing at GET
+    /admin/source-mappings/quality."""
+    from app.services.source_mapping_confidence import summarize_mapping_quality
+
+    summary = summarize_mapping_quality(db)
+    reasons = []
+    if summary["critical_count"] > 0:
+        reasons.append(f"{summary['critical_count']} critical-risk mapping(s)")
+    if summary["low_confidence_count"] > MAPPING_QUALITY_LOW_CONFIDENCE_COUNT_THRESHOLD:
+        reasons.append(f"{summary['low_confidence_count']} low-confidence mapping(s)")
+    if summary["duplicate_source_url_count"] > 0:
+        reasons.append(f"{summary['duplicate_source_url_count']} duplicate source URL(s)")
+
+    if reasons:
+        return CheckResult(
+            "mapping_quality_summary",
+            "warning",
+            "warning",
+            f"Source mapping quality needs review: {', '.join(reasons)}. "
+            "See GET /admin/source-mappings/quality.",
+        )
+    return CheckResult(
+        "mapping_quality_summary", "pass", "info", "Source mapping quality looks healthy."
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -464,6 +501,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_stale_running_file_jobs(db),
         _check_candidate_match_backlog(db),
         _check_low_confidence_source_mappings(db),
+        _check_mapping_quality_summary(db),
     ]
     return checks
 
