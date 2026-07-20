@@ -107,7 +107,7 @@ def test_import_auto_matches_exact_card_code(db_session, tmp_path):
     assert summary.candidates_needing_review == 0
 
     candidate = db_session.query(SnkrdunkCandidate).one()
-    assert candidate.match_status == "auto_matched"
+    assert candidate.match_status == "matched"
     assert candidate.detected_card_code == "OP01-001"
 
     card = db_session.query(Card).filter_by(card_code="OP01-001").one()
@@ -118,7 +118,7 @@ def test_import_auto_matches_exact_card_code(db_session, tmp_path):
     assert mapping.is_active is True
 
 
-def test_import_marks_unclear_candidate_as_needs_review(db_session, tmp_path):
+def test_import_marks_unclear_candidate_as_unmatched(db_session, tmp_path):
     seed_source_and_cards(db_session)
     csv_path = write_csv(tmp_path, [
         base_row(
@@ -130,10 +130,10 @@ def test_import_marks_unclear_candidate_as_needs_review(db_session, tmp_path):
     summary = import_snkrdunk_candidates(csv_path, db=db_session)
 
     assert summary.candidates_auto_matched == 0
-    assert summary.candidates_needing_review == 1
+    assert summary.candidates_needing_review == 0
 
     candidate = db_session.query(SnkrdunkCandidate).one()
-    assert candidate.match_status == "needs_review"
+    assert candidate.match_status == "unmatched"
     assert db_session.query(SourceCardMapping).count() == 0
 
 

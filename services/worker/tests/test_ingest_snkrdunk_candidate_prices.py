@@ -22,7 +22,7 @@ def make_candidate(db_session, card, **overrides) -> SnkrdunkCandidate:
         listing_count=3,
         condition_label="near_mint",
         detected_card_code="OP01-001",
-        match_status="auto_matched",
+        match_status="matched",
         matched_card_id=card.id,
         match_confidence=1.0,
     )
@@ -62,7 +62,7 @@ def test_unmatched_candidate_is_skipped(db_session):
     make_candidate(
         db_session, card,
         source_url="https://snkrdunk.com/trading-cards/unmatched",
-        match_status="needs_review",
+        match_status="unmatched",
         matched_card_id=None,
         match_confidence=None,
     )

@@ -17,8 +17,8 @@ from worker.models import PriceObservation, SnkrdunkCandidate
 logger = logging.getLogger(__name__)
 
 PRICE_TYPE = "floor"
-ELIGIBLE_STATUSES_ONLY_MATCHED = ("auto_matched",)
-ELIGIBLE_STATUSES_ALL = ("auto_matched", "needs_review")
+ELIGIBLE_STATUSES_ONLY_MATCHED = ("matched",)
+ELIGIBLE_STATUSES_ALL = ("matched", "suggested")
 
 
 @dataclass
@@ -158,8 +158,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--only-matched", action=argparse.BooleanOptionalAction, default=True,
-        help="Restrict to match_status=auto_matched (default). Pass --no-only-matched to "
-        "also consider needs_review candidates that already carry an advisory matched_card_id.",
+        help="Restrict to match_status=matched (default). Pass --no-only-matched to "
+        "also consider suggested candidates that already carry an advisory matched_card_id.",
     )
     parser.add_argument(
         "--since-run-id", type=int, default=None,

@@ -223,9 +223,45 @@ Creates `price_observations` from SNKRDUNK candidates that are already matched t
 import + review above). Pure DB-to-DB - does not scrape. Useful flags:
 
 - `--dry-run` - report what would happen without writing rows.
-- `--no-only-matched` - also consider `needs_review` candidates that already carry an advisory
-  match, not just `auto_matched` ones.
+- `--no-only-matched` - also consider `suggested` candidates that already carry an advisory
+  match, not just `matched` ones.
 - `--since-run-id <id>` - only candidates from a given `discovery_run_id` onward.
+
+## Review SNKRDUNK candidate matches
+
+`snkrdunk_candidates.match_status` uses five values: `unmatched`, `suggested`, `ambiguous`,
+`matched`, `rejected`. The worker's import/discovery jobs above only ever set the first four via
+their own simpler tiered matcher (`worker.matching.snkrdunk_matcher`); `matched`/`rejected` beyond
+that always come from an explicit human decision. The richer, deterministic 0-100 scorer in
+`app.services.card_matching` (metadata-aware: card_code, set_code, rarity, name_en/name_jp,
+character, variant, card_type, color) only runs when an admin asks for it, via:
+
+```
+curl -H "X-Admin-Token: $ADMIN_TOKEN" \
+  "http://localhost:8000/admin/snkrdunk-candidates/<candidate_id>/matches"
+
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" \
+  "http://localhost:8000/admin/snkrdunk-candidates/<candidate_id>/rematch"
+
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"status": "all", "limit": 200, "dry_run": true}' \
+  "http://localhost:8000/admin/snkrdunk-candidates/rematch-all"
+
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"card_id": 123, "review_notes": "confirmed"}' \
+  "http://localhost:8000/admin/snkrdunk-candidates/<candidate_id>/approve-match"
+
+curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"review_notes": "wrong card"}' \
+  "http://localhost:8000/admin/snkrdunk-candidates/<candidate_id>/reject-match"
+```
+
+Or use the `/admin/snkrdunk-candidates` page in the web UI (status/confidence/score/card-code
+filters, a match-detail modal per candidate, and a dry-run-first "rematch all" bulk action).
+`approve-match` is the only place this workflow ever creates/updates a `source_card_mappings` row
+(`manual_verified=true`, `review_status=approved`); `reject-match` never creates one and never
+deletes an existing mapping. Ambiguous candidates (top two scores within 5 points) are never
+auto-suggested - they always need a human pick.
 
 ## Check refresh runs
 

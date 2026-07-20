@@ -12,7 +12,9 @@ from app.models import (
     SourceCardMapping,
     WishlistItem,
 )
+from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.job_locks import acquire_lock
+from app.services.system_check import MIN_CANDIDATES_FOR_BACKLOG_CHECK
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -257,3 +259,74 @@ def test_system_check_market_workflow_lock_ttl_passes_when_within_ttl(client, db
     check = checks_by_name(data)["market_workflow_lock_ttl"]
     assert check["status"] == "pass"
     assert "within its TTL" in check["message"]
+
+
+def _make_candidates(db_session, count: int, match_status: str) -> None:
+    for i in range(count):
+        db_session.add(
+            SnkrdunkCandidate(
+                source_url=f"https://snkrdunk.com/trading-cards/{match_status}-{i}",
+                title=f"listing {i}",
+                match_status=match_status,
+            )
+        )
+    db_session.commit()
+
+
+def test_system_check_candidate_backlog_passes_below_sample_size(client, db_session):
+    _make_candidates(db_session, MIN_CANDIDATES_FOR_BACKLOG_CHECK - 1, "unmatched")
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["candidate_match_backlog"]
+    assert check["status"] == "pass"
+    assert "too few" in check["message"]
+
+
+def test_system_check_candidate_backlog_warns_when_mostly_unresolved(client, db_session):
+    _make_candidates(db_session, MIN_CANDIDATES_FOR_BACKLOG_CHECK, "unmatched")
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["candidate_match_backlog"]
+    assert check["status"] == "warning"
+
+
+def test_system_check_candidate_backlog_passes_when_mostly_matched(client, db_session):
+    matched_count = MIN_CANDIDATES_FOR_BACKLOG_CHECK
+    _make_candidates(db_session, matched_count, "matched")
+    _make_candidates(db_session, 1, "unmatched")
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["candidate_match_backlog"]
+    assert check["status"] == "pass"
+
+
+def test_system_check_low_confidence_source_mappings(client, db_session):
+    make_sources(db_session)
+    card = make_card(db_session)
+    source = db_session.query(Source).filter_by(name="yuyutei").one()
+    db_session.add(
+        SourceCardMapping(
+            card_id=card.id,
+            source_id=source.id,
+            source_card_id=card.card_code,
+            source_url="https://yuyu-tei.example.com/low-conf",
+            match_confidence=0.3,
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["low_confidence_source_mappings"]
+    assert check["status"] == "warning"
+    assert "1 source_card_mappings" in check["message"]
+
+
+def test_system_check_no_low_confidence_source_mappings_passes(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["low_confidence_source_mappings"]
+    assert check["status"] == "pass"

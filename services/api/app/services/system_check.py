@@ -30,6 +30,7 @@ from app.models import (
     SourceCardMapping,
     WishlistItem,
 )
+from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
 from app.services.cache import redis_ping
 from app.services.file_job_storage import is_storage_writable
@@ -45,6 +46,14 @@ STATUSES = ("pass", "warning", "fail")
 SEVERITIES = ("info", "warning", "critical")
 
 REQUIRED_SOURCE_NAMES = ("yuyutei", "snkrdunk")
+
+# If at least this share of candidates need a human decision (ambiguous or
+# unmatched), matching quality is degrading enough to flag - see
+# _check_candidate_match_backlog. Only evaluated once there's a meaningful
+# sample (MIN_CANDIDATES_FOR_BACKLOG_CHECK), so a handful of fresh imports
+# doesn't trip this on a near-empty table.
+CANDIDATE_BACKLOG_WARNING_RATIO = 0.5
+MIN_CANDIDATES_FOR_BACKLOG_CHECK = 10
 
 
 @dataclass
@@ -318,6 +327,67 @@ def _check_stale_running_file_jobs(db: Session) -> CheckResult:
     )
 
 
+def _check_candidate_match_backlog(db: Session) -> CheckResult:
+    total = db.scalar(select(func.count()).select_from(SnkrdunkCandidate)) or 0
+    if total < MIN_CANDIDATES_FOR_BACKLOG_CHECK:
+        return CheckResult(
+            "candidate_match_backlog",
+            "pass",
+            "info",
+            f"Only {total} SNKRDUNK candidate(s) - too few to evaluate match backlog.",
+        )
+
+    needs_review = (
+        db.scalar(
+            select(func.count())
+            .select_from(SnkrdunkCandidate)
+            .where(SnkrdunkCandidate.match_status.in_(("ambiguous", "unmatched")))
+        )
+        or 0
+    )
+    ratio = needs_review / total
+    if ratio >= CANDIDATE_BACKLOG_WARNING_RATIO:
+        return CheckResult(
+            "candidate_match_backlog",
+            "warning",
+            "warning",
+            f"{needs_review}/{total} SNKRDUNK candidates ({ratio:.0%}) are ambiguous or "
+            "unmatched. See GET /admin/snkrdunk-candidates/rematch-all or review manually.",
+        )
+    return CheckResult(
+        "candidate_match_backlog",
+        "pass",
+        "info",
+        f"{needs_review}/{total} SNKRDUNK candidates ({ratio:.0%}) are ambiguous or unmatched.",
+    )
+
+
+def _check_low_confidence_source_mappings(db: Session) -> CheckResult:
+    # Kept in sync with app.services.card_audit's identically-named
+    # threshold and scale-normalization logic (imported, not duplicated) -
+    # see that module's docstring on _match_confidence_as_score for why
+    # match_confidence isn't a single consistent scale.
+    from app.services.card_audit import LOW_MATCH_CONFIDENCE_THRESHOLD, _match_confidence_as_score
+
+    mappings = db.scalars(
+        select(SourceCardMapping).where(SourceCardMapping.match_confidence.isnot(None))
+    ).all()
+    low_confidence_count = sum(
+        1 for m in mappings if _match_confidence_as_score(m.match_confidence) < LOW_MATCH_CONFIDENCE_THRESHOLD
+    )
+    if low_confidence_count > 0:
+        return CheckResult(
+            "low_confidence_source_mappings",
+            "warning",
+            "warning",
+            f"{low_confidence_count} source_card_mappings row(s) have a match confidence below "
+            f"{LOW_MATCH_CONFIDENCE_THRESHOLD}/100. See GET /admin/card-audit.",
+        )
+    return CheckResult(
+        "low_confidence_source_mappings", "pass", "info", "No low-confidence source mappings."
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -392,6 +462,8 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_cache_backend(db),
         _check_file_job_storage(db),
         _check_stale_running_file_jobs(db),
+        _check_candidate_match_backlog(db),
+        _check_low_confidence_source_mappings(db),
     ]
     return checks
 

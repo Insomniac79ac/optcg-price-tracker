@@ -33,7 +33,7 @@ def upsert_candidate(
 ) -> tuple[SnkrdunkCandidate, bool]:
     """Insert or update a candidate row, deduplicated by source_url. Returns
     (candidate, is_new). Descriptive fields are always refreshed, but a prior
-    match decision (match_status != 'pending') is left untouched here - the
+    match decision (match_status != 'unmatched') is left untouched here - the
     caller decides whether to re-run matching."""
     basis_text = parsed.title or parsed.raw_text
     normalized = normalize_title(basis_text)
@@ -85,7 +85,7 @@ def apply_match(
     candidate.match_confidence = result.match_confidence
     candidate.match_status = result.match_status
 
-    if result.match_status == "auto_matched":
+    if result.match_status == "matched":
         existing_mapping = (
             db.query(SourceCardMapping)
             .filter_by(card_id=result.matched_card_id, source_id=source.id)

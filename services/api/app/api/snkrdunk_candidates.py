@@ -29,6 +29,7 @@ def _to_out(candidate: SnkrdunkCandidate, card: Card | None) -> SnkrdunkCandidat
         image_url=candidate.image_url,
         listing_count=candidate.listing_count,
         condition_label=candidate.condition_label,
+        raw_text=candidate.raw_text,
         normalized_title=candidate.normalized_title,
         detected_card_code=candidate.detected_card_code,
         detected_set_code=candidate.detected_set_code,
@@ -37,6 +38,9 @@ def _to_out(candidate: SnkrdunkCandidate, card: Card | None) -> SnkrdunkCandidat
         match_status=candidate.match_status,
         matched_card_id=candidate.matched_card_id,
         match_confidence=candidate.match_confidence,
+        best_match_card_id=candidate.best_match_card_id,
+        best_match_score=candidate.best_match_score,
+        best_match_confidence_label=candidate.best_match_confidence_label,
         created_at=candidate.created_at,
         updated_at=candidate.updated_at,
         matched_card=CardOut.model_validate(card) if card is not None else None,
@@ -118,7 +122,7 @@ def match_candidate(
     if source is None:
         raise HTTPException(status_code=500, detail="snkrdunk source is not configured")
 
-    candidate.match_status = "auto_matched"
+    candidate.match_status = "matched"
     candidate.matched_card_id = card.id
     candidate.match_confidence = 1.0
 

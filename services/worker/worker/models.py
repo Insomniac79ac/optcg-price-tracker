@@ -188,10 +188,18 @@ class PriceRefreshRun(Base):
 
 
 class SnkrdunkCandidate(Base):
+    """Mirrors app.models.snkrdunk_candidate.SnkrdunkCandidate table-for-
+    table (see this file's own module docstring on why - the api and worker
+    services share no code). Deliberately does not declare the api-only
+    best_match_*/match_explanation_json/ambiguous_matches_json columns (see
+    app.services.card_matching) - the worker never reads or writes them, and
+    SQLAlchemy only ever selects the columns a model actually maps, so their
+    presence in the real database is harmless here."""
+
     __tablename__ = "snkrdunk_candidates"
     __table_args__ = (
         CheckConstraint(
-            "match_status IN ('pending', 'auto_matched', 'needs_review', 'rejected')",
+            "match_status IN ('unmatched', 'suggested', 'ambiguous', 'matched', 'rejected')",
             name="ck_snkrdunk_candidates_match_status",
         ),
     )
@@ -213,7 +221,7 @@ class SnkrdunkCandidate(Base):
     detected_rarity: Mapped[str | None] = mapped_column(String(32), nullable=True)
     detected_variant: Mapped[str | None] = mapped_column(String(64), nullable=True)
     match_status: Mapped[str] = mapped_column(
-        String(32), default="pending", server_default="pending", index=True
+        String(32), default="unmatched", server_default="unmatched", index=True
     )
     matched_card_id: Mapped[int | None] = mapped_column(
         ForeignKey("cards.id", ondelete="SET NULL"), nullable=True

@@ -82,7 +82,7 @@ def match_candidate(
         if len(matches) == 1:
             return _finalize(matches[0], TIER1_CARD_CODE_CONFIDENCE, 1, graded, auto_match_threshold, "exact card_code match")
         if len(matches) > 1:
-            return MatchResult(None, None, "needs_review", "ambiguous card_code match")
+            return MatchResult(None, None, "ambiguous", "ambiguous card_code match")
 
     # Tier 2: Japanese name + set_code.
     if candidate.detected_set_code and title:
@@ -122,7 +122,7 @@ def match_candidate(
     if best_card is not None and best_ratio >= TIER4_FUZZY_MIN_RATIO:
         return _finalize(best_card, round(best_ratio, 2), 4, graded, auto_match_threshold, "fuzzy title match (advisory)")
 
-    return MatchResult(None, None, "needs_review", "no candidate match found")
+    return MatchResult(None, None, "unmatched", "no candidate match found")
 
 
 def _finalize(
@@ -139,8 +139,8 @@ def _finalize(
         and not graded
     )
     if auto_eligible:
-        return MatchResult(card.id, confidence, "auto_matched", reason)
+        return MatchResult(card.id, confidence, "matched", reason)
 
     if graded:
         reason = f"{reason} (graded condition, never auto-matched)"
-    return MatchResult(card.id, confidence, "needs_review", reason)
+    return MatchResult(card.id, confidence, "suggested", reason)

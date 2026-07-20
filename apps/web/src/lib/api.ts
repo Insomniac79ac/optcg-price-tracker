@@ -118,6 +118,7 @@ export interface SnkrdunkCandidate {
   image_url: string | null;
   listing_count: number | null;
   condition_label: string | null;
+  raw_text: string | null;
   normalized_title: string | null;
   detected_card_code: string | null;
   detected_set_code: string | null;
@@ -126,6 +127,9 @@ export interface SnkrdunkCandidate {
   match_status: string;
   matched_card_id: number | null;
   match_confidence: number | null;
+  best_match_card_id: number | null;
+  best_match_score: number | null;
+  best_match_confidence_label: string | null;
   created_at: string;
   updated_at: string;
   matched_card: Card | null;
@@ -822,6 +826,94 @@ export function rejectSnkrdunkCandidate(
 ): Promise<SnkrdunkCandidate> {
   return apiPost<SnkrdunkCandidate>(
     `/snkrdunk/candidates/${candidateId}/reject`,
+  );
+}
+
+export interface MatchExplanation {
+  positive: string[];
+  negative: string[];
+  caps_applied: string[];
+}
+
+export interface CandidateMatch {
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  score: number;
+  confidence_label: string;
+  ambiguous: boolean;
+  explanation: MatchExplanation;
+}
+
+export interface CandidateMatches {
+  candidate: SnkrdunkCandidate;
+  matches: CandidateMatch[];
+}
+
+export interface RematchAllResult {
+  would_update: number;
+  updated: number;
+  suggested: number;
+  ambiguous: number;
+  unmatched: number;
+  dry_run: boolean;
+}
+
+/* The matching-review workflow below goes through the Next.js server proxy
+ * (see src/app/api/admin/snkrdunk-candidates/[id]/matches|rematch|
+ * approve-match|reject-match/route.ts and .../rematch-all/route.ts) rather
+ * than NEXT_PUBLIC_API_URL, same reasoning as fetchCardAudit above - it's
+ * the newer admin-endpoint convention in this codebase. */
+export function fetchCandidateMatches(
+  candidateId: number,
+): Promise<CandidateMatches> {
+  return fetchAdminJson<CandidateMatches>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/matches`,
+  );
+}
+
+export function rematchCandidate(
+  candidateId: number,
+): Promise<CandidateMatches> {
+  return fetchAdminJson<CandidateMatches>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/rematch`,
+    { method: "POST" },
+  );
+}
+
+export function rematchAllCandidates(params: {
+  status?: string;
+  limit?: number;
+  dry_run: boolean;
+}): Promise<RematchAllResult> {
+  return fetchAdminJson<RematchAllResult>(
+    "/api/admin/snkrdunk-candidates/rematch-all",
+    { method: "POST", body: params },
+  );
+}
+
+export function approveCandidateMatch(
+  candidateId: number,
+  cardId: number,
+  reviewNotes?: string,
+): Promise<SnkrdunkCandidate> {
+  return fetchAdminJson<SnkrdunkCandidate>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/approve-match`,
+    { method: "POST", body: { card_id: cardId, review_notes: reviewNotes ?? null } },
+  );
+}
+
+export function rejectCandidateMatch(
+  candidateId: number,
+  reviewNotes?: string,
+): Promise<SnkrdunkCandidate> {
+  return fetchAdminJson<SnkrdunkCandidate>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/reject-match`,
+    { method: "POST", body: { review_notes: reviewNotes ?? null } },
   );
 }
 

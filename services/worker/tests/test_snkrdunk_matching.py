@@ -87,12 +87,12 @@ def test_tier1_exact_card_code_auto_matches():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "auto_matched"
+    assert result.match_status == "matched"
     assert result.matched_card_id == 1
     assert result.match_confidence >= 0.92
 
 
-def test_tier1_ambiguous_card_code_needs_review():
+def test_tier1_ambiguous_card_code_is_ambiguous():
     cards = [
         make_card(id=1, card_code="OP01-001", variant=None),
         make_card(id=2, card_code="OP01-001", variant="parallel"),
@@ -101,7 +101,7 @@ def test_tier1_ambiguous_card_code_needs_review():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "ambiguous"
     assert result.matched_card_id is None
 
 
@@ -118,7 +118,7 @@ def test_tier2_name_and_set_code_auto_matches_without_card_code():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "auto_matched"
+    assert result.match_status == "matched"
     assert result.matched_card_id == 2
     assert result.match_confidence == 0.93
 
@@ -140,7 +140,7 @@ def test_tier3_name_rarity_variant_is_advisory_only():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "suggested"
     assert result.matched_card_id == 2
 
 
@@ -150,21 +150,21 @@ def test_tier4_fuzzy_match_is_always_advisory():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "suggested"
     assert result.matched_card_id == 1
 
 
-def test_no_match_found_returns_needs_review_with_no_card():
+def test_no_match_found_returns_unmatched_with_no_card():
     cards = [make_card(id=1, name_jp="モンキー・D・ルフィ", name_en="Monkey D. Luffy")]
     candidate = make_candidate(normalized_title="completely unrelated listing text")
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "unmatched"
     assert result.matched_card_id is None
 
 
-def test_graded_condition_forces_needs_review_even_on_exact_code_match():
+def test_graded_condition_forces_suggested_even_on_exact_code_match():
     cards = [make_card(id=1, card_code="OP01-001")]
     candidate = make_candidate(
         normalized_title="OP01-001 モンキー・D・ルフィ L",
@@ -174,7 +174,7 @@ def test_graded_condition_forces_needs_review_even_on_exact_code_match():
 
     result = match_candidate(candidate, cards)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "suggested"
     assert result.matched_card_id == 1
 
 
@@ -188,5 +188,5 @@ def test_auto_match_threshold_can_reject_tier2_confidence():
 
     result = match_candidate(candidate, cards, auto_match_threshold=0.95)
 
-    assert result.match_status == "needs_review"
+    assert result.match_status == "suggested"
     assert result.matched_card_id == 1

@@ -23,7 +23,7 @@ def candidate(seeded_db):
         listing_count=3,
         condition_label="near_mint",
         detected_card_code="OP01-001",
-        match_status="needs_review",
+        match_status="suggested",
     )
     seeded_db.add(row)
     seeded_db.commit()
@@ -61,18 +61,18 @@ def test_list_candidates_returns_seeded_candidate(client, candidate):
     item = body["items"][0]
     assert item["id"] == candidate.id
     assert item["source_url"] == candidate.source_url
-    assert item["match_status"] == "needs_review"
+    assert item["match_status"] == "suggested"
     assert item["matched_card"] is None
 
 
 def test_list_candidates_filters_by_status(client, candidate):
-    response = client.get("/snkrdunk/candidates", params={"status": "pending"})
+    response = client.get("/snkrdunk/candidates", params={"status": "unmatched"})
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 0
     assert body["items"] == []
 
-    response = client.get("/snkrdunk/candidates", params={"status": "needs_review"})
+    response = client.get("/snkrdunk/candidates", params={"status": "suggested"})
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 1
@@ -124,14 +124,14 @@ def test_match_candidate_creates_mapping(client, candidate, seeded_db):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["match_status"] == "auto_matched"
+    assert body["match_status"] == "matched"
     assert body["matched_card_id"] == luffy.id
     assert body["match_confidence"] == 1.0
     assert body["matched_card"]["id"] == luffy.id
 
     seeded_db.expire_all()
     updated = seeded_db.get(SnkrdunkCandidate, candidate.id)
-    assert updated.match_status == "auto_matched"
+    assert updated.match_status == "matched"
     assert updated.matched_card_id == luffy.id
     assert updated.match_confidence == 1.0
 

@@ -256,6 +256,7 @@ class SnkrdunkCandidateOut(BaseModel):
     image_url: str | None
     listing_count: int | None
     condition_label: str | None
+    raw_text: str | None
     normalized_title: str | None
     detected_card_code: str | None
     detected_set_code: str | None
@@ -264,6 +265,9 @@ class SnkrdunkCandidateOut(BaseModel):
     match_status: str
     matched_card_id: int | None
     match_confidence: float | None
+    best_match_card_id: int | None = None
+    best_match_score: int | None = None
+    best_match_confidence_label: str | None = None
     created_at: datetime
     updated_at: datetime
     matched_card: CardOut | None = None
@@ -280,6 +284,55 @@ class SnkrdunkCandidateListOut(BaseModel):
 class SnkrdunkCandidateMatchIn(BaseModel):
     card_id: int
     manual_verified: bool = True
+
+
+class MatchExplanationOut(BaseModel):
+    positive: list[str]
+    negative: list[str]
+    caps_applied: list[str]
+
+
+class CandidateMatchOut(BaseModel):
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    score: int
+    confidence_label: str
+    ambiguous: bool
+    explanation: MatchExplanationOut
+
+
+class CandidateMatchesOut(BaseModel):
+    candidate: SnkrdunkCandidateOut
+    matches: list[CandidateMatchOut]
+
+
+class RematchAllIn(BaseModel):
+    status: str | None = None
+    limit: int = 100
+    dry_run: bool = True
+
+
+class RematchAllOut(BaseModel):
+    would_update: int
+    updated: int
+    suggested: int
+    ambiguous: int
+    unmatched: int
+    dry_run: bool
+
+
+class ApproveMatchIn(BaseModel):
+    card_id: int
+    review_notes: str | None = None
+
+
+class RejectMatchIn(BaseModel):
+    review_notes: str | None = None
 
 
 class MarketPriceOut(BaseModel):

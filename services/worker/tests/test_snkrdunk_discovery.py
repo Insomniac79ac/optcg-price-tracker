@@ -194,7 +194,7 @@ def test_discover_snkrdunk_stores_snapshots_candidates_and_matches(db_session, t
         .filter(SnkrdunkCandidate.source_url.like("%luffy-l"))
         .one()
     )
-    assert luffy.match_status == "auto_matched"
+    assert luffy.match_status == "matched"
     assert luffy.detected_card_code == "OP01-001"
 
     robin = (
@@ -202,14 +202,14 @@ def test_discover_snkrdunk_stores_snapshots_candidates_and_matches(db_session, t
         .filter(SnkrdunkCandidate.source_url.like("%robin-r"))
         .one()
     )
-    assert robin.match_status == "auto_matched"
+    assert robin.match_status == "matched"
 
     graded = (
         db_session.query(SnkrdunkCandidate)
         .filter(SnkrdunkCandidate.source_url.like("%luffy-graded"))
         .one()
     )
-    assert graded.match_status == "needs_review"
+    assert graded.match_status == "suggested"
     assert graded.condition_label == "PSA10"
 
     assert summary.candidates_matched == 2

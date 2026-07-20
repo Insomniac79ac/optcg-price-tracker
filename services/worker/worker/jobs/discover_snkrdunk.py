@@ -162,11 +162,11 @@ def discover_snkrdunk(
 
                     candidates_found += 1
 
-                    if candidate.match_status != "pending":
+                    if candidate.match_status != "unmatched":
                         continue
 
                     status = apply_match(db, source, candidate, cards, threshold)
-                    if status == "auto_matched":
+                    if status == "matched":
                         candidates_matched += 1
                         logger.info(
                             "Candidate matched: %s -> card_id=%s (confidence=%.2f).",
@@ -174,7 +174,7 @@ def discover_snkrdunk(
                             candidate.matched_card_id,
                             candidate.match_confidence,
                         )
-                    elif status == "needs_review":
+                    elif status in ("suggested", "ambiguous"):
                         candidates_needing_review += 1
                         logger.info(
                             "Candidate needs review: %s (matched_card_id=%s, confidence=%s).",

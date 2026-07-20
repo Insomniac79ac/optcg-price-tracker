@@ -1,6 +1,7 @@
 import pytest
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
+from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_audit import run_card_audit
 
 
@@ -163,6 +164,91 @@ def test_detects_cards_with_prices_but_no_active_mapping(db_session, yuyutei):
     ]
     assert len(issues) == 1
     assert issues[0].severity == "critical"
+    assert issues[0].card_ids == [card.id]
+
+
+def test_detects_low_confidence_mapping_legacy_fraction_scale(db_session, yuyutei):
+    card = make_card(db_session, card_code="OP01-010", rarity="R", variant=None)
+    db_session.add(
+        SourceCardMapping(
+            card_id=card.id,
+            source_id=yuyutei.id,
+            source_card_id=card.card_code,
+            source_url="https://yuyu-tei.jp/product/low-conf",
+            match_confidence=0.4,
+        )
+    )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "low_match_confidence_mapping"]
+    assert len(issues) == 1
+    assert issues[0].severity == "warning"
+    assert issues[0].card_ids == [card.id]
+    assert issues[0].details["match_confidence_score"] == 40.0
+
+
+def test_detects_low_confidence_mapping_raw_score_scale(db_session, yuyutei):
+    card = make_card(db_session, card_code="OP01-011", rarity="R", variant=None)
+    db_session.add(
+        SourceCardMapping(
+            card_id=card.id,
+            source_id=yuyutei.id,
+            source_card_id=card.card_code,
+            source_url="https://yuyu-tei.jp/product/low-conf-raw",
+            match_confidence=45,
+        )
+    )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "low_match_confidence_mapping"]
+    assert len(issues) == 1
+    assert issues[0].details["match_confidence_score"] == 45.0
+
+
+def test_high_confidence_mapping_is_not_flagged(db_session, yuyutei):
+    card = make_card(db_session, card_code="OP01-012", rarity="R", variant=None)
+    db_session.add(
+        SourceCardMapping(
+            card_id=card.id,
+            source_id=yuyutei.id,
+            source_card_id=card.card_code,
+            source_url="https://yuyu-tei.jp/product/high-conf",
+            match_confidence=0.95,
+        )
+    )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "low_match_confidence_mapping"]
+    assert issues == []
+
+
+def test_detects_candidate_variant_mismatch(db_session):
+    card = make_card(db_session, card_code="OP05-119", rarity="SEC", variant="alt_art")
+    db_session.add(
+        SnkrdunkCandidate(
+            source_url="https://snkrdunk.com/trading-cards/variant-mismatch",
+            title="OP05-119 Kaido",
+            match_status="matched",
+            matched_card_id=card.id,
+            match_explanation_json={
+                "positive": ["exact card_code match"],
+                "negative": ["variant mismatch"],
+                "caps_applied": ["variant_mismatch_cap_75"],
+            },
+        )
+    )
+    db_session.commit()
+
+    report = run_card_audit(db_session)
+
+    issues = [i for i in report.issues if i.issue_type == "candidate_variant_mismatch"]
+    assert len(issues) == 1
     assert issues[0].card_ids == [card.id]
 
 

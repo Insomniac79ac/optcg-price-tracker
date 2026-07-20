@@ -14,7 +14,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
+from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
+
+# app.services.card_matching.UNMATCHED_SCORE_THRESHOLD - duplicated here
+# (rather than imported) so this module never has to reconcile the two
+# different scales SourceCardMapping.match_confidence is written on: the
+# legacy manual-match endpoints always write a 0.0-1.0 fraction, while
+# approve-match (app.api.admin_snkrdunk_matching) writes the raw 0-100
+# card_matching score - see _check_low_confidence_mappings below.
+LOW_MATCH_CONFIDENCE_THRESHOLD = 55
 
 CRITICAL = "critical"
 WARNING = "warning"
@@ -523,9 +532,87 @@ def _check_invalid_numeric_fields(cards: list[Card]) -> list[AuditIssue]:
     ]
 
 
+def _match_confidence_as_score(match_confidence: float) -> float:
+    """Normalizes SourceCardMapping.match_confidence to a 0-100 scale
+    regardless of which write-path produced it: legacy manual-match
+    endpoints always write a 0.0-1.0 fraction, while approve-match writes
+    the raw 0-100 app.services.card_matching score directly (see that
+    endpoint's docstring). Anything at or below 1.0 is treated as the
+    legacy fractional scale."""
+    return match_confidence * 100 if match_confidence <= 1.0 else match_confidence
+
+
+def _check_low_confidence_mappings(
+    mappings: list[SourceCardMapping], cards_by_id: dict[int, Card]
+) -> list[AuditIssue]:
+    low_confidence = [
+        m
+        for m in mappings
+        if m.match_confidence is not None
+        and _match_confidence_as_score(m.match_confidence) < LOW_MATCH_CONFIDENCE_THRESHOLD
+    ]
+    if not low_confidence:
+        return []
+
+    issues: list[AuditIssue] = []
+    for mapping in low_confidence:
+        card = cards_by_id.get(mapping.card_id)
+        score = round(_match_confidence_as_score(mapping.match_confidence), 1)
+        issues.append(
+            AuditIssue(
+                issue_type="low_match_confidence_mapping",
+                severity=WARNING,
+                card_ids=[mapping.card_id],
+                card_code=card.card_code if card is not None else None,
+                message=(
+                    f"Mapping {mapping.id} (source_id={mapping.source_id}) has a low match "
+                    f"confidence of {score}/100"
+                ),
+                suggested_action="review_source_mapping",
+                details={"mapping_id": mapping.id, "match_confidence_score": score},
+            )
+        )
+    return issues
+
+
+def _check_candidate_variant_mismatch(candidates: list[SnkrdunkCandidate]) -> list[AuditIssue]:
+    """Flags a matched candidate whose stored match_explanation_json (set by
+    rank_candidate_matches/approve-match, see app.services.card_matching)
+    recorded a variant mismatch against the card it was matched to - a
+    human overriding the suggestion is allowed, but it's worth surfacing."""
+    flagged = [
+        c
+        for c in candidates
+        if c.match_status == "matched"
+        and c.match_explanation_json
+        and "variant mismatch" in (c.match_explanation_json.get("negative") or [])
+    ]
+    if not flagged:
+        return []
+
+    issues: list[AuditIssue] = []
+    for candidate in flagged:
+        issues.append(
+            AuditIssue(
+                issue_type="candidate_variant_mismatch",
+                severity=WARNING,
+                card_ids=[candidate.matched_card_id] if candidate.matched_card_id else [],
+                card_code=candidate.detected_card_code,
+                message=(
+                    f"Candidate {candidate.id} was matched to card_id={candidate.matched_card_id} "
+                    "despite a recorded variant mismatch"
+                ),
+                suggested_action="review_candidate_match",
+                details={"candidate_id": candidate.id},
+            )
+        )
+    return issues
+
+
 def run_card_audit(db: Session) -> CardAuditReport:
     cards = list(db.scalars(select(Card)).all())
     mappings = list(db.scalars(select(SourceCardMapping)).all())
+    candidates = list(db.scalars(select(SnkrdunkCandidate)).all())
     sources_by_id = {s.id: s for s in db.scalars(select(Source)).all()}
     cards_by_id = {c.id: c for c in cards}
 
@@ -549,6 +636,8 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_invalid_variant(cards),
         *_check_suspicious_empty_metadata(cards),
         *_check_invalid_numeric_fields(cards),
+        *_check_low_confidence_mappings(mappings, cards_by_id),
+        *_check_candidate_variant_mismatch(candidates),
     ]
 
     return CardAuditReport(total_cards=len(cards), issues=issues)
