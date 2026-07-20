@@ -936,6 +936,82 @@ class CardAuditReportOut(BaseModel):
     issues: list[CardAuditIssueOut]
 
 
+class CardCatalogImportRowErrorOut(BaseModel):
+    row_number: int
+    card_code: str | None
+    error: str
+
+
+class CardCatalogFieldChangeOut(BaseModel):
+    old: Any | None
+    new: Any | None
+
+
+class CardCatalogImportPreviewItemOut(BaseModel):
+    row_number: int
+    card_code: str
+    action: str
+    changes: dict[str, CardCatalogFieldChangeOut]
+
+
+class CardCatalogImportSummaryOut(BaseModel):
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    created: int
+    updated: int
+    skipped: int
+
+
+class CardCatalogImportResponseOut(BaseModel):
+    dry_run: bool
+    overwrite: bool
+    summary: CardCatalogImportSummaryOut
+    errors: list[CardCatalogImportRowErrorOut]
+    preview: list[CardCatalogImportPreviewItemOut]
+
+
+class AdminCardOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    image_url: str | None
+    release_date: date | None
+    artist: str | None
+    character: str | None
+    color: str | None
+    card_type: str | None
+    cost: int | None
+    power: int | None
+    counter: int | None
+    attribute: str | None
+    effect_text: str | None
+    trigger_text: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminCardListSummaryOut(BaseModel):
+    total_cards: int
+    missing_metadata_count: int
+    by_set: dict[str, int]
+    by_rarity: dict[str, int]
+
+
+class AdminCardListResponseOut(BaseModel):
+    summary: AdminCardListSummaryOut
+    cards: list[AdminCardOut]
+    pagination: PaginationMeta
+
+
 class MarketSignalLatestPricesOut(BaseModel):
     yuyutei_sell: int | None
     yuyutei_buy: int | None

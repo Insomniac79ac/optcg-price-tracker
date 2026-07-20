@@ -1818,6 +1818,174 @@ export async function fetchCardAudit(): Promise<CardAuditReport> {
   return data;
 }
 
+// --- Admin card catalog (see GET/POST /admin/cards*) ------------------------
+
+export interface AdminCard {
+  id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  image_url: string | null;
+  release_date: string | null;
+  artist: string | null;
+  character: string | null;
+  color: string | null;
+  card_type: string | null;
+  cost: number | null;
+  power: number | null;
+  counter: number | null;
+  attribute: string | null;
+  effect_text: string | null;
+  trigger_text: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminCardListSummary {
+  total_cards: number;
+  missing_metadata_count: number;
+  by_set: Record<string, number>;
+  by_rarity: Record<string, number>;
+}
+
+export interface AdminCardListResponse {
+  summary: AdminCardListSummary;
+  cards: AdminCard[];
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/cards/route.ts). */
+export function fetchAdminCards(params?: {
+  q?: string;
+  set_code?: string;
+  rarity?: string;
+  variant?: string;
+  language?: string;
+  missing_metadata?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<AdminCardListResponse> {
+  const query = new URLSearchParams();
+  if (params?.q) query.set("q", params.q);
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.language) query.set("language", params.language);
+  if (params?.missing_metadata !== undefined) {
+    query.set("missing_metadata", String(params.missing_metadata));
+  }
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<AdminCardListResponse>(`/api/admin/cards${qs ? `?${qs}` : ""}`);
+}
+
+export interface CardCatalogImportRowError {
+  row_number: number;
+  card_code: string | null;
+  error: string;
+}
+
+export interface CardCatalogFieldChange {
+  old: unknown;
+  new: unknown;
+}
+
+export interface CardCatalogImportPreviewItem {
+  row_number: number;
+  card_code: string;
+  action: string;
+  changes: Record<string, CardCatalogFieldChange>;
+}
+
+export interface CardCatalogImportSummary {
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
+export interface CardCatalogImportResponse {
+  dry_run: boolean;
+  overwrite: boolean;
+  summary: CardCatalogImportSummary;
+  errors: CardCatalogImportRowError[];
+  preview: CardCatalogImportPreviewItem[];
+}
+
+/** Uploads a card catalog CSV through the Next.js proxy (see
+ * src/app/api/admin/cards/import/route.ts). */
+export async function importCardsCsv(
+  file: File,
+  params: { dryRun: boolean; overwrite: boolean },
+): Promise<CardCatalogImportResponse> {
+  const query = new URLSearchParams({
+    dry_run: String(params.dryRun),
+    overwrite: String(params.overwrite),
+  });
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`/api/admin/cards/import?${query.toString()}`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: formData,
+  });
+
+  const details = await res
+    .json()
+    .catch(
+      () => null as (Partial<CardCatalogImportResponse> & { error?: string; detail?: string }) | null,
+    );
+
+  if (!res.ok || !details) {
+    throw new Error(details?.error || details?.detail || `Import failed with status ${res.status}`);
+  }
+
+  return details as CardCatalogImportResponse;
+}
+
+/** Downloads /admin/cards/export.csv through the Next.js proxy (see
+ * src/app/api/admin/cards/export/route.ts) and triggers a browser file
+ * download, using the filename the backend set via Content-Disposition. */
+export async function downloadCardsCsv(): Promise<void> {
+  const res = await fetch("/api/admin/cards/export", {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Export failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) || "cards_export.csv";
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export interface SystemCheckResult {
   name: string;
   status: "pass" | "warning" | "fail";

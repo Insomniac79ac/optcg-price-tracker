@@ -69,7 +69,8 @@ services:
     container_name: opcg-api-prod
     restart: unless-stopped
     env_file:
-      - .env.production
+      - path: .env.production
+        required: false
     # Internal only by default - api sits behind web's server-side proxy
     # routes (API_INTERNAL_URL) and, for direct/admin access, a reverse
     # proxy you put in front of it (see docs/deployment.md). Add a `ports:`
@@ -107,7 +108,8 @@ services:
     restart: unless-stopped
     command: celery -A worker.celery_app worker --loglevel=info
     env_file:
-      - .env.production
+      - path: .env.production
+        required: false
     environment:
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
@@ -139,7 +141,8 @@ services:
     restart: unless-stopped
     command: celery -A worker.celery_app beat --loglevel=info
     env_file:
-      - .env.production
+      - path: .env.production
+        required: false
     environment:
       PROJECT_ROOT: /app
       SNKRDUNK_SEED_FILE: /app/data/source_seeds/snkrdunk_one_piece_urls.txt
@@ -175,7 +178,8 @@ services:
     container_name: opcg-web-prod
     restart: unless-stopped
     env_file:
-      - .env.production
+      - path: .env.production
+        required: false
     # Published directly to the host, unlike api/postgres/redis above - this
     # is the one production service meant to be reached without going
     # through the Docker network first. Put a reverse proxy (nginx, Caddy,
@@ -216,7 +220,8 @@ services:
     profiles:
       - backup
     env_file:
-      - .env.production
+      - path: .env.production
+        required: false
     volumes:
       - ./data:/app/data
     depends_on:

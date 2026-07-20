@@ -164,6 +164,7 @@ const HISTORY_WITH_ROWS: AnalyticsDigestReportListResponse = {
       wishlist_target_hits: 1,
       buy_review_count: 2,
       sell_review_count: 0,
+      grading_roi_jpy: 0,
     },
     {
       id: 1,
@@ -176,6 +177,7 @@ const HISTORY_WITH_ROWS: AnalyticsDigestReportListResponse = {
       wishlist_target_hits: 0,
       buy_review_count: 0,
       sell_review_count: 0,
+      grading_roi_jpy: null,
     },
   ],
   total: 2,

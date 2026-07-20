@@ -14,9 +14,33 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
+from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
 
 CRITICAL = "critical"
 WARNING = "warning"
+
+# Shared ground truth with app.services.card_catalog_import, imported rather
+# than duplicated - these two modules must never silently disagree on what
+# counts as a valid language/variant value, since the importer normalizes to
+# exactly these values and the audit below flags anything outside them.
+CANONICAL_LANGUAGE_VALUES = set(LANGUAGE_SYNONYMS.values())
+CANONICAL_VARIANT_VALUES = set(VARIANT_SYNONYMS.values())
+
+# Catalog-enrichment columns considered by _check_suspicious_empty_metadata -
+# the metadata a card_catalog_import CSV import is meant to fill in, not the
+# original identity columns which are never blank on a valid row.
+_ENRICHMENT_METADATA_FIELDS = (
+    "artist",
+    "character",
+    "color",
+    "card_type",
+    "cost",
+    "power",
+    "counter",
+    "attribute",
+    "effect_text",
+    "trigger_text",
+)
 
 # Maps a lowercased/stripped raw language value to its canonical form. Raw
 # values already equal to the canonical form are left alone; everything else
@@ -312,6 +336,193 @@ def _check_cards_with_prices_but_no_active_mapping(
     ]
 
 
+def _check_missing_set_code(cards: list[Card]) -> list[AuditIssue]:
+    missing = [c for c in cards if _norm(c.set_code) is None]
+    if not missing:
+        return []
+    return [
+        AuditIssue(
+            issue_type="missing_set_code",
+            severity=CRITICAL,
+            card_ids=sorted(c.id for c in missing),
+            card_code=None,
+            message=f"{len(missing)} card(s) have no set_code",
+            suggested_action="add_set_code",
+        )
+    ]
+
+
+def _check_set_code_mismatch_card_code(cards: list[Card]) -> list[AuditIssue]:
+    issues: list[AuditIssue] = []
+    for card in cards:
+        code = _norm(card.card_code)
+        set_code = _norm(card.set_code)
+        if code is None or set_code is None or "-" not in code:
+            continue
+        inferred = code.split("-", 1)[0]
+        if inferred != set_code:
+            issues.append(
+                AuditIssue(
+                    issue_type="set_code_mismatch_card_code",
+                    severity=CRITICAL,
+                    card_ids=[card.id],
+                    card_code=card.card_code,
+                    message=(
+                        f"card_code '{card.card_code}' implies set_code '{inferred}' but the "
+                        f"stored set_code is '{card.set_code}'"
+                    ),
+                    suggested_action="fix_set_code",
+                    details={"inferred_set_code": inferred, "stored_set_code": card.set_code},
+                )
+            )
+    return issues
+
+
+def _check_missing_name_en(cards: list[Card]) -> list[AuditIssue]:
+    missing = [c for c in cards if _norm(c.name_en) is None]
+    if not missing:
+        return []
+    return [
+        AuditIssue(
+            issue_type="missing_name_en",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in missing),
+            card_code=None,
+            message=f"{len(missing)} card(s) have no name_en",
+            suggested_action="add_name_en",
+        )
+    ]
+
+
+def _check_duplicate_card_code_same_language_variant(cards: list[Card]) -> list[AuditIssue]:
+    """Groups by (card_code, language, variant) - a narrower key than the
+    DB's own (card_code, set_code, rarity, variant, language) uniqueness
+    constraint, so a group here always represents *different* set_code/
+    rarity rows the DB itself allowed. That's sometimes legitimate (a
+    reprint, or several rarities of the same card in one set) and sometimes
+    a data-entry mistake (the same print entered twice under a slightly
+    different set_code/rarity) - flagged as a warning either way, for a
+    human to confirm rather than a hard rule."""
+    groups: dict[tuple[str, str, str | None], list[Card]] = defaultdict(list)
+    for card in cards:
+        groups[(card.card_code, card.language, _norm(card.variant))].append(card)
+
+    issues: list[AuditIssue] = []
+    for (card_code, language, variant), group in groups.items():
+        if len(group) < 2:
+            continue
+        issues.append(
+            AuditIssue(
+                issue_type="duplicate_card_code_same_language_variant",
+                severity=WARNING,
+                card_ids=sorted(c.id for c in group),
+                card_code=card_code,
+                message=(
+                    f"card_code '{card_code}' (language={language}, variant={variant}) appears "
+                    f"{len(group)} times across different set_code/rarity values - confirm these "
+                    "are genuinely distinct prints, not duplicate data entry"
+                ),
+                suggested_action="review_duplicate_card_variant",
+            )
+        )
+    return issues
+
+
+def _check_invalid_language(cards: list[Card]) -> list[AuditIssue]:
+    invalid = [c for c in cards if c.language not in CANONICAL_LANGUAGE_VALUES]
+    if not invalid:
+        return []
+    return [
+        AuditIssue(
+            issue_type="invalid_language",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in invalid),
+            card_code=None,
+            message=(
+                f"{len(invalid)} card(s) have a language value outside "
+                f"{sorted(CANONICAL_LANGUAGE_VALUES)}"
+            ),
+            suggested_action="normalize_language_value",
+        )
+    ]
+
+
+def _check_invalid_variant(cards: list[Card]) -> list[AuditIssue]:
+    invalid = [
+        c for c in cards if c.variant is not None and c.variant not in CANONICAL_VARIANT_VALUES
+    ]
+    if not invalid:
+        return []
+    return [
+        AuditIssue(
+            issue_type="invalid_variant",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in invalid),
+            card_code=None,
+            message=(
+                f"{len(invalid)} card(s) have a variant value outside "
+                f"{sorted(CANONICAL_VARIANT_VALUES)}"
+            ),
+            suggested_action="normalize_variant_value",
+        )
+    ]
+
+
+def _check_suspicious_empty_metadata(cards: list[Card]) -> list[AuditIssue]:
+    """Only fires once catalog enrichment has actually started (at least one
+    card in the catalog has some metadata) - otherwise every legacy card
+    (created before this feature existed) would trip this unconditionally,
+    which isn't an actionable per-card issue so much as "nobody has bulk-
+    imported catalog metadata yet", a statement about the whole catalog, not
+    this card."""
+    has_any_metadata = any(
+        any(getattr(c, f) is not None for f in _ENRICHMENT_METADATA_FIELDS) for c in cards
+    )
+    if not has_any_metadata:
+        return []
+
+    empty = [
+        c for c in cards if all(getattr(c, f) is None for f in _ENRICHMENT_METADATA_FIELDS)
+    ]
+    if not empty:
+        return []
+    return [
+        AuditIssue(
+            issue_type="suspicious_empty_metadata",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in empty),
+            card_code=None,
+            message=(
+                f"{len(empty)} card(s) have no catalog metadata at all "
+                f"({', '.join(_ENRICHMENT_METADATA_FIELDS)} are all empty)"
+            ),
+            suggested_action="enrich_card_metadata",
+        )
+    ]
+
+
+def _check_invalid_numeric_fields(cards: list[Card]) -> list[AuditIssue]:
+    invalid = [
+        c
+        for c in cards
+        if any(
+            getattr(c, f) is not None and getattr(c, f) < 0 for f in ("cost", "power", "counter")
+        )
+    ]
+    if not invalid:
+        return []
+    return [
+        AuditIssue(
+            issue_type="invalid_numeric_fields",
+            severity=WARNING,
+            card_ids=sorted(c.id for c in invalid),
+            card_code=None,
+            message=f"{len(invalid)} card(s) have a negative cost/power/counter value",
+            suggested_action="fix_numeric_fields",
+        )
+    ]
+
+
 def run_card_audit(db: Session) -> CardAuditReport:
     cards = list(db.scalars(select(Card)).all())
     mappings = list(db.scalars(select(SourceCardMapping)).all())
@@ -330,6 +541,14 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_source_card_code_mismatch(mappings, cards_by_id),
         *_check_cards_without_source_mappings(cards, mapped_card_ids),
         *_check_cards_with_prices_but_no_active_mapping(priced_card_ids, active_mapped_card_ids),
+        *_check_missing_set_code(cards),
+        *_check_set_code_mismatch_card_code(cards),
+        *_check_missing_name_en(cards),
+        *_check_duplicate_card_code_same_language_variant(cards),
+        *_check_invalid_language(cards),
+        *_check_invalid_variant(cards),
+        *_check_suspicious_empty_metadata(cards),
+        *_check_invalid_numeric_fields(cards),
     ]
 
     return CardAuditReport(total_cards=len(cards), issues=issues)
