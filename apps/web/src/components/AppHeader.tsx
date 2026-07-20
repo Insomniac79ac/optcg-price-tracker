@@ -10,6 +10,7 @@ const PRIMARY_LINKS = [
   { href: "/search", label: "Search", title: "Search (Ctrl/Cmd+K)" },
   { href: "/collection", label: "Collection" },
   { href: "/analytics/collection", label: "Collection analytics" },
+  { href: "/analytics/portfolio-risk", label: "Portfolio risk" },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/analytics/wishlist", label: "Wishlist analytics" },
   { href: "/analytics/buy-decisions", label: "Buy decisions" },

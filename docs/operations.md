@@ -553,6 +553,7 @@ every load.
 | `GET /collection/valuation` (key includes `valuation_mode`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /collection/valuation/history` (key includes `days`/`limit`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /analytics/collection` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
+| `GET /analytics/portfolio-risk` (key includes `valuation_mode`/`include_sold`) | `CACHE_COLLECTION_TTL_SECONDS` |
 | `GET /market/opportunities` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signals` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |
 | `GET /market/signal-events` (key includes filters/`limit`/`offset`) | `CACHE_MARKET_TTL_SECONDS` |

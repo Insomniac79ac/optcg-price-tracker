@@ -73,6 +73,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "sell_decisions",
     "buy_decisions",
     "grading_analytics",
+    "portfolio_risk",
 )
 
 

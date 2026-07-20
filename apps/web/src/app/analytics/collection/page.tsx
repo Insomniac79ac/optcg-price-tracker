@@ -87,6 +87,12 @@ export default function CollectionAnalyticsPage() {
           >
             Grading ROI Analytics →
           </Link>
+          <Link
+            href="/analytics/portfolio-risk"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Portfolio Risk →
+          </Link>
         </div>
         <p className="mb-4 text-sm text-neutral-500">
           Composition, valuation exposure, and concentration risk.

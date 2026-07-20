@@ -1776,6 +1776,191 @@ class GradingAnalyticsOut(BaseModel):
     pagination: PaginationMeta
 
 
+PortfolioRiskLevel = Literal["low", "medium", "high", "critical"]
+
+
+class PortfolioRiskSummaryOut(BaseModel):
+    risk_score: int
+    risk_level: PortfolioRiskLevel
+    total_value_jpy: int
+    total_cost_basis_jpy: int
+    largest_single_card_weight_pct: float
+    top_5_weight_pct: float
+    top_10_weight_pct: float
+    largest_set_weight_pct: float
+    largest_rarity_weight_pct: float
+    missing_price_count: int
+    missing_cost_basis_count: int
+    stale_price_count: int
+    wide_spread_count: int
+    active_grading_count: int
+    wishlist_overlap_count: int
+
+
+class PortfolioRiskCardOut(BaseModel):
+    """The spec's generic "related card item shape" - used for concentration's
+    top_cards and every data_quality detail list."""
+
+    card_id: int
+    collection_item_id: int
+    card_code: str
+    name_en: str | None
+    set_code: str
+    rarity: str
+    quantity: int
+    value_jpy: int | None
+    portfolio_weight_pct: float | None
+    cost_basis_jpy: int | None
+    warnings: list[str] = []
+
+
+class PortfolioRiskDataQualityCardOut(PortfolioRiskCardOut):
+    issue: str
+    latest_observed_at: datetime | None
+    suggested_action: str
+
+
+class PortfolioRiskLiquidityCardOut(PortfolioRiskCardOut):
+    yuyutei_sell_jpy: int | None
+    yuyutei_buy_jpy: int | None
+    spread_pct: float | None
+    snkrdunk_floor_jpy: int | None
+    listing_count: int | None
+
+
+class PortfolioRiskGradingCardOut(PortfolioRiskCardOut):
+    grading_company: str | None
+    submission_status: str | None
+    grading_cost_jpy: int | None
+    expected_return_date: date | None
+    overdue: bool
+
+
+class PortfolioRiskWishlistCardOut(BaseModel):
+    wishlist_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    set_code: str
+    rarity: str
+    wishlist_priority: str
+    wishlist_status: str
+    owned_quantity: int
+    desired_quantity: int
+    suggested_action: str
+
+
+class PortfolioRiskExposureItemOut(BaseModel):
+    key: str
+    label: str
+    quantity: int
+    value_jpy: int
+    cost_basis_jpy: int
+    portfolio_weight_pct: float
+    pnl_jpy: int
+    pnl_pct: float | None
+    risk_flags: list[str] = []
+
+
+class PortfolioRiskConcentrationOut(BaseModel):
+    score: int
+    level: PortfolioRiskLevel
+    warnings: list[str]
+    top_cards: list[PortfolioRiskCardOut]
+    top_sets: list[PortfolioRiskExposureItemOut]
+    top_rarities: list[PortfolioRiskExposureItemOut]
+
+
+class PortfolioRiskDataQualityOut(BaseModel):
+    score: int
+    level: PortfolioRiskLevel
+    warnings: list[str]
+    missing_prices: list[PortfolioRiskDataQualityCardOut]
+    missing_cost_basis: list[PortfolioRiskDataQualityCardOut]
+    stale_prices: list[PortfolioRiskDataQualityCardOut]
+
+
+class PortfolioRiskLiquidityProxyOut(BaseModel):
+    score: int
+    level: PortfolioRiskLevel
+    warnings: list[str]
+    wide_spread_cards: list[PortfolioRiskLiquidityCardOut]
+    low_listing_cards: list[PortfolioRiskLiquidityCardOut]
+
+
+class PortfolioRiskGradingExposureOut(BaseModel):
+    score: int
+    level: PortfolioRiskLevel
+    warnings: list[str]
+    active_grading_items: list[PortfolioRiskGradingCardOut]
+    high_cost_pending_items: list[PortfolioRiskGradingCardOut]
+
+
+class PortfolioRiskWishlistOverlapOut(BaseModel):
+    score: int
+    level: PortfolioRiskLevel
+    warnings: list[str]
+    owned_wishlist_items: list[PortfolioRiskWishlistCardOut]
+
+
+class PortfolioRiskBreakdownOut(BaseModel):
+    concentration: PortfolioRiskConcentrationOut
+    data_quality: PortfolioRiskDataQualityOut
+    liquidity_proxy: PortfolioRiskLiquidityProxyOut
+    grading_exposure: PortfolioRiskGradingExposureOut
+    wishlist_overlap: PortfolioRiskWishlistOverlapOut
+
+
+class PortfolioRiskExposuresOut(BaseModel):
+    by_set: list[PortfolioRiskExposureItemOut]
+    by_rarity: list[PortfolioRiskExposureItemOut]
+    by_variant: list[PortfolioRiskExposureItemOut]
+    by_language: list[PortfolioRiskExposureItemOut]
+    by_tag: list[PortfolioRiskExposureItemOut]
+    by_group: list[PortfolioRiskExposureItemOut]
+
+
+PortfolioRiskFlagType = Literal[
+    "high_concentration",
+    "high_set_concentration",
+    "high_rarity_concentration",
+    "missing_prices",
+    "missing_cost_basis",
+    "stale_prices",
+    "wide_spread",
+    "low_liquidity",
+    "grading_exposure",
+    "overdue_grading",
+    "wishlist_overlap",
+]
+PortfolioRiskFlagSeverity = Literal["info", "warning", "critical"]
+PortfolioRiskSuggestedAction = Literal[
+    "review_concentration",
+    "fix_missing_prices",
+    "fix_cost_basis",
+    "review_stale_prices",
+    "review_wide_spreads",
+    "review_grading_exposure",
+    "update_wishlist_status",
+    "none",
+]
+
+
+class PortfolioRiskFlagOut(BaseModel):
+    flag_type: PortfolioRiskFlagType
+    severity: PortfolioRiskFlagSeverity
+    message: str
+    related_cards: list[str] = []
+    suggested_action: PortfolioRiskSuggestedAction
+
+
+class PortfolioRiskOut(BaseModel):
+    summary: PortfolioRiskSummaryOut
+    risk_breakdown: PortfolioRiskBreakdownOut
+    exposures: PortfolioRiskExposuresOut
+    recommendation_flags: list[PortfolioRiskFlagOut]
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

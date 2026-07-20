@@ -3268,6 +3268,191 @@ export function fetchGradingAnalytics(params?: {
   return fetchAdminJson<GradingAnalytics>(`/api/analytics/grading${qs ? `?${qs}` : ""}`);
 }
 
+// --- Portfolio risk analytics (see GET /analytics/portfolio-risk) ----------
+
+export type PortfolioRiskLevel = "low" | "medium" | "high" | "critical";
+
+export interface PortfolioRiskSummary {
+  risk_score: number;
+  risk_level: PortfolioRiskLevel;
+  total_value_jpy: number;
+  total_cost_basis_jpy: number;
+  largest_single_card_weight_pct: number;
+  top_5_weight_pct: number;
+  top_10_weight_pct: number;
+  largest_set_weight_pct: number;
+  largest_rarity_weight_pct: number;
+  missing_price_count: number;
+  missing_cost_basis_count: number;
+  stale_price_count: number;
+  wide_spread_count: number;
+  active_grading_count: number;
+  wishlist_overlap_count: number;
+}
+
+export interface PortfolioRiskCard {
+  card_id: number;
+  collection_item_id: number;
+  card_code: string;
+  name_en: string | null;
+  set_code: string;
+  rarity: string;
+  quantity: number;
+  value_jpy: number | null;
+  portfolio_weight_pct: number | null;
+  cost_basis_jpy: number | null;
+  warnings: string[];
+}
+
+export interface PortfolioRiskDataQualityCard extends PortfolioRiskCard {
+  issue: string;
+  latest_observed_at: string | null;
+  suggested_action: string;
+}
+
+export interface PortfolioRiskLiquidityCard extends PortfolioRiskCard {
+  yuyutei_sell_jpy: number | null;
+  yuyutei_buy_jpy: number | null;
+  spread_pct: number | null;
+  snkrdunk_floor_jpy: number | null;
+  listing_count: number | null;
+}
+
+export interface PortfolioRiskGradingCard extends PortfolioRiskCard {
+  grading_company: string | null;
+  submission_status: string | null;
+  grading_cost_jpy: number | null;
+  expected_return_date: string | null;
+  overdue: boolean;
+}
+
+export interface PortfolioRiskWishlistCard {
+  wishlist_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  set_code: string;
+  rarity: string;
+  wishlist_priority: string;
+  wishlist_status: string;
+  owned_quantity: number;
+  desired_quantity: number;
+  suggested_action: string;
+}
+
+export interface PortfolioRiskExposureItem {
+  key: string;
+  label: string;
+  quantity: number;
+  value_jpy: number;
+  cost_basis_jpy: number;
+  portfolio_weight_pct: number;
+  pnl_jpy: number;
+  pnl_pct: number | null;
+  risk_flags: string[];
+}
+
+export interface PortfolioRiskConcentration {
+  score: number;
+  level: PortfolioRiskLevel;
+  warnings: string[];
+  top_cards: PortfolioRiskCard[];
+  top_sets: PortfolioRiskExposureItem[];
+  top_rarities: PortfolioRiskExposureItem[];
+}
+
+export interface PortfolioRiskDataQuality {
+  score: number;
+  level: PortfolioRiskLevel;
+  warnings: string[];
+  missing_prices: PortfolioRiskDataQualityCard[];
+  missing_cost_basis: PortfolioRiskDataQualityCard[];
+  stale_prices: PortfolioRiskDataQualityCard[];
+}
+
+export interface PortfolioRiskLiquidityProxy {
+  score: number;
+  level: PortfolioRiskLevel;
+  warnings: string[];
+  wide_spread_cards: PortfolioRiskLiquidityCard[];
+  low_listing_cards: PortfolioRiskLiquidityCard[];
+}
+
+export interface PortfolioRiskGradingExposure {
+  score: number;
+  level: PortfolioRiskLevel;
+  warnings: string[];
+  active_grading_items: PortfolioRiskGradingCard[];
+  high_cost_pending_items: PortfolioRiskGradingCard[];
+}
+
+export interface PortfolioRiskWishlistOverlap {
+  score: number;
+  level: PortfolioRiskLevel;
+  warnings: string[];
+  owned_wishlist_items: PortfolioRiskWishlistCard[];
+}
+
+export interface PortfolioRiskBreakdown {
+  concentration: PortfolioRiskConcentration;
+  data_quality: PortfolioRiskDataQuality;
+  liquidity_proxy: PortfolioRiskLiquidityProxy;
+  grading_exposure: PortfolioRiskGradingExposure;
+  wishlist_overlap: PortfolioRiskWishlistOverlap;
+}
+
+export interface PortfolioRiskExposures {
+  by_set: PortfolioRiskExposureItem[];
+  by_rarity: PortfolioRiskExposureItem[];
+  by_variant: PortfolioRiskExposureItem[];
+  by_language: PortfolioRiskExposureItem[];
+  by_tag: PortfolioRiskExposureItem[];
+  by_group: PortfolioRiskExposureItem[];
+}
+
+export type PortfolioRiskFlagSeverity = "info" | "warning" | "critical";
+export type PortfolioRiskSuggestedAction =
+  | "review_concentration"
+  | "fix_missing_prices"
+  | "fix_cost_basis"
+  | "review_stale_prices"
+  | "review_wide_spreads"
+  | "review_grading_exposure"
+  | "update_wishlist_status"
+  | "none";
+
+export interface PortfolioRiskFlag {
+  flag_type: string;
+  severity: PortfolioRiskFlagSeverity;
+  message: string;
+  related_cards: string[];
+  suggested_action: PortfolioRiskSuggestedAction;
+}
+
+export interface PortfolioRisk {
+  summary: PortfolioRiskSummary;
+  risk_breakdown: PortfolioRiskBreakdown;
+  exposures: PortfolioRiskExposures;
+  recommendation_flags: PortfolioRiskFlag[];
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/portfolio-risk/route.ts), same rationale as
+ * fetchGradingAnalytics/fetchSellDecisions - browser-side fetches to the
+ * backend's host port are unreliable in Codespaces/forwarded-port
+ * environments, and this endpoint needs the signed-in user's session
+ * forwarded server-side. */
+export function fetchPortfolioRisk(params?: {
+  valuation_mode?: "raw_market" | "graded_adjusted";
+  include_sold?: boolean;
+}): Promise<PortfolioRisk> {
+  const query = new URLSearchParams();
+  if (params?.valuation_mode) query.set("valuation_mode", params.valuation_mode);
+  if (params?.include_sold !== undefined) query.set("include_sold", String(params.include_sold));
+  const qs = query.toString();
+  return fetchAdminJson<PortfolioRisk>(`/api/analytics/portfolio-risk${qs ? `?${qs}` : ""}`);
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }

@@ -38,6 +38,7 @@ _MARKET_WORKFLOW_CACHE_INVALIDATES = (
     "wishlist_summary",
     "sell_decisions",
     "buy_decisions",
+    "portfolio_risk",
     "grading_analytics",
 )
 

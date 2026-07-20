@@ -255,6 +255,13 @@ export default function DashboardPage() {
             <span>Grading ROI Analytics — costs, outcomes, and pending submissions</span>
             <span className="text-neutral-600">→</span>
           </Link>
+          <Link
+            href="/analytics/portfolio-risk"
+            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+          >
+            <span>Portfolio Risk — concentration, data quality, liquidity, and grading exposure</span>
+            <span className="text-neutral-600">→</span>
+          </Link>
         </div>
 
         {status === "loading" && <LoadingState>Loading dashboard…</LoadingState>}

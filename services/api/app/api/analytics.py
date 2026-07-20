@@ -12,6 +12,7 @@ from app.schemas import (
     BuySourcePreference,
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
+    PortfolioRiskOut,
     SellDecisionAction,
     SellDecisionSupportOut,
     ValuationMode,
@@ -22,6 +23,7 @@ from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.collection_analytics import get_collection_analytics
 from app.services.grading_analytics import get_grading_analytics
+from app.services.portfolio_risk import get_portfolio_risk
 from app.services.sell_decision_support import get_sell_decision_support
 from app.services.wishlist_analytics import get_wishlist_analytics
 from app.settings import settings
@@ -136,6 +138,27 @@ def get_grading_analytics_endpoint(
             status=status,
             limit=limit,
             offset=offset,
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+@router.get("/portfolio-risk", response_model=PortfolioRiskOut)
+def get_portfolio_risk_endpoint(
+    response: Response,
+    valuation_mode: ValuationMode = Query(default="raw_market"),
+    include_sold: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    cache_key = f"portfolio_risk:{user.id}:{valuation_mode}:{include_sold}"
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: get_portfolio_risk(
+            db, user_id=user.id, valuation_mode=valuation_mode, include_sold=include_sold
         ).model_dump(mode="json"),
     )
     set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
