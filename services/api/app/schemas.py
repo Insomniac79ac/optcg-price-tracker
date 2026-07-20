@@ -1425,6 +1425,89 @@ class WishlistSummaryOut(BaseModel):
     items_with_target_hit: int
 
 
+class WishlistAnalyticsSummaryOut(BaseModel):
+    total_items: int
+    watching_count: int
+    target_hit_count: int
+    purchased_count: int
+    passed_count: int
+    grail_count: int
+    high_priority_count: int
+    owned_already_count: int
+    total_target_budget_jpy: int
+    total_max_budget_jpy: int
+    total_current_price_jpy: int
+    budget_gap_to_target_jpy: int
+    budget_gap_to_max_jpy: int
+    average_target_price_jpy: int
+    median_target_price_jpy: int
+
+
+class WishlistAnalyticsBreakdownItemOut(BaseModel):
+    key: str
+    label: str
+    item_count: int
+    desired_quantity: int
+    target_budget_jpy: int
+    max_budget_jpy: int
+    current_price_jpy: int
+    target_hit_count: int
+    owned_count: int
+    budget_weight_pct: float
+
+
+class WishlistAnalyticsBreakdownsOut(BaseModel):
+    by_priority: list[WishlistAnalyticsBreakdownItemOut]
+    by_status: list[WishlistAnalyticsBreakdownItemOut]
+    by_set: list[WishlistAnalyticsBreakdownItemOut]
+    by_rarity: list[WishlistAnalyticsBreakdownItemOut]
+    by_preferred_source: list[WishlistAnalyticsBreakdownItemOut]
+    by_preferred_condition: list[WishlistAnalyticsBreakdownItemOut]
+
+
+class WishlistAnalyticsTargetItemOut(BaseModel):
+    wishlist_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    priority: str
+    status: str
+    desired_quantity: int
+    owned_quantity: int
+    target_buy_price_jpy: int | None
+    max_buy_price_jpy: int | None
+    preferred_current_price_jpy: int | None
+    preferred_current_price_source: str | None
+    target_hit: bool
+    gap_to_target_jpy: int | None
+    gap_to_target_pct: float | None
+
+
+class WishlistAnalyticsBudgetPlanOut(BaseModel):
+    grail_targets: list[WishlistAnalyticsTargetItemOut]
+    high_priority_targets: list[WishlistAnalyticsTargetItemOut]
+    best_gap_to_target: list[WishlistAnalyticsTargetItemOut]
+    largest_budget_items: list[WishlistAnalyticsTargetItemOut]
+    already_owned: list[WishlistAnalyticsTargetItemOut]
+
+
+class WishlistAnalyticsPriceCoverageOut(BaseModel):
+    items_with_current_price: int
+    items_missing_current_price: int
+    coverage_pct: float
+
+
+class WishlistAnalyticsOut(BaseModel):
+    summary: WishlistAnalyticsSummaryOut
+    breakdowns: WishlistAnalyticsBreakdownsOut
+    target_hits: list[WishlistAnalyticsTargetItemOut]
+    budget_plan: WishlistAnalyticsBudgetPlanOut
+    price_coverage: WishlistAnalyticsPriceCoverageOut
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

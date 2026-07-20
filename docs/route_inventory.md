@@ -21,6 +21,7 @@ enforced by `apps/web/middleware.ts` (redirects an anonymous visitor to `/market
 | `/search` | Card search (Ctrl/Cmd+K opens it) | No | 200 | Yes (primary nav) |
 | `/collection` | Collection tracker: items, valuation, CSV import/export, links to wishlist/grading | Google sign-in | 200 | Yes (primary nav) |
 | `/analytics/collection` | Collection analytics: composition, valuation exposure, cost basis, concentration risk, grading exposure | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/grading`) |
+| `/analytics/wishlist` | Wishlist analytics: budget planning, target hits, priority exposure, acquisition planning | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/collection`) |
 | `/wishlist` | Wishlist tracker: target prices, CSV import/export, convert-to-collection | Google sign-in | 200 | Yes (primary nav) |
 | `/grading` | Grading submission tracker (PSA/BGS/CGC/ARS/other) | Google sign-in | 200 | Yes (primary nav) |
 | `/activity` | Collector activity timeline | No | 200 | Yes (primary nav) |
@@ -80,7 +81,7 @@ per-endpoint sweep.
 | `/collection/*` | `GET/POST /collection`, `GET /collection/summary`, `GET /collection/valuation(/history)`, `GET/PATCH/DELETE /collection/{id}`, tag/group assignment, `GET /collection/export.csv`, `POST /collection/import.csv` | user | 200 (401 without a valid bearer token) |
 | `/wishlist/*` | `GET/POST /wishlist`, `GET /wishlist/summary`, `GET/PATCH/DELETE /wishlist/{id}`, `POST /wishlist/{id}/mark-purchased`, `POST /wishlist/{id}/convert-to-collection`, CSV import/export | user | 200 (401 without a valid bearer token) |
 | `/grading/*` | `GET/POST /grading/submissions`, `GET /grading/summary`, `GET/PATCH/DELETE /grading/submissions/{id}` | user | 200 (401 without a valid bearer token) |
-| `/analytics/*` | `GET /analytics/collection` | user | 200 (401 without a valid bearer token) |
+| `/analytics/*` | `GET /analytics/collection`, `GET /analytics/wishlist` | user | 200 (401 without a valid bearer token) |
 | `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
 | `/market/*` | `GET /market/movers`, `/market/signals`, `/market/signal-events(/{id})` + dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | none | 200 |
 | `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
@@ -105,7 +106,9 @@ Already satisfied, verified during this audit rather than newly built:
 `/admin/release-status` links to `/admin/system-check`, `/admin/logs`, and `/admin/backup`;
 `/market/report` links to `/market/opportunities`, `/market/signal-events`, `/admin/actions`, and
 `/admin/market-workflow-runs`; `/collection` links to `/wishlist` and `/grading`; `/collection`,
-`/grading`, and `/dashboard` all link to `/analytics/collection`, which links back to `/collection`.
+`/grading`, and `/dashboard` all link to `/analytics/collection`, which links back to `/collection` and
+links to `/analytics/wishlist`; `/wishlist` and `/dashboard` also link to `/analytics/wishlist`, which
+links back to `/wishlist` and `/analytics/collection`.
 
 **Admin auth audit** - every `/admin/*` and `/snkrdunk/*` FastAPI router applies
 `Depends(require_admin_token)` at the router level (not per-endpoint), so there is no way to add a

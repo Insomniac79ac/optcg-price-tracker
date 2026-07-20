@@ -34,6 +34,7 @@ ROUTES=(
   /collection
   /analytics/collection
   /wishlist
+  /analytics/wishlist
   /grading
   /activity
   /market/report

@@ -65,6 +65,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "collection_valuation",
     "collection_history",
     "collection_analytics",
+    "wishlist_analytics",
     "market_opportunities",
     "market_signals",
     "wishlist_summary",

@@ -28,6 +28,7 @@ _MARKET_WORKFLOW_CACHE_INVALIDATES = (
     "collection_valuation",
     "collection_history",
     "collection_analytics",
+    "wishlist_analytics",
     "market_signals",
     "market_signal_events",
     "market_opportunities",

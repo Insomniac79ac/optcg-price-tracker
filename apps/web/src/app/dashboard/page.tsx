@@ -219,13 +219,22 @@ export default function DashboardPage() {
           </span>
         </Link>
 
-        <Link
-          href="/analytics/collection"
-          className="mb-6 flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
-        >
-          <span>Collection Analytics — composition, valuation exposure, and concentration risk</span>
-          <span className="text-neutral-600">→</span>
-        </Link>
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Link
+            href="/analytics/collection"
+            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+          >
+            <span>Collection Analytics — composition, valuation exposure, and concentration risk</span>
+            <span className="text-neutral-600">→</span>
+          </Link>
+          <Link
+            href="/analytics/wishlist"
+            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+          >
+            <span>Wishlist Analytics — budget planning, target hits, and acquisition priorities</span>
+            <span className="text-neutral-600">→</span>
+          </Link>
+        </div>
 
         {status === "loading" && <LoadingState>Loading dashboard…</LoadingState>}
 

@@ -2810,6 +2810,111 @@ export function fetchWishlistSummary(): Promise<WishlistSummary> {
   return authedGet<WishlistSummary>("/wishlist/summary");
 }
 
+// --- Wishlist analytics (see GET /analytics/wishlist) ----------------------
+
+export interface WishlistAnalyticsSummary {
+  total_items: number;
+  watching_count: number;
+  target_hit_count: number;
+  purchased_count: number;
+  passed_count: number;
+  grail_count: number;
+  high_priority_count: number;
+  owned_already_count: number;
+  total_target_budget_jpy: number;
+  total_max_budget_jpy: number;
+  total_current_price_jpy: number;
+  budget_gap_to_target_jpy: number;
+  budget_gap_to_max_jpy: number;
+  average_target_price_jpy: number;
+  median_target_price_jpy: number;
+}
+
+export interface WishlistAnalyticsBreakdownItem {
+  key: string;
+  label: string;
+  item_count: number;
+  desired_quantity: number;
+  target_budget_jpy: number;
+  max_budget_jpy: number;
+  current_price_jpy: number;
+  target_hit_count: number;
+  owned_count: number;
+  budget_weight_pct: number;
+}
+
+export interface WishlistAnalyticsBreakdowns {
+  by_priority: WishlistAnalyticsBreakdownItem[];
+  by_status: WishlistAnalyticsBreakdownItem[];
+  by_set: WishlistAnalyticsBreakdownItem[];
+  by_rarity: WishlistAnalyticsBreakdownItem[];
+  by_preferred_source: WishlistAnalyticsBreakdownItem[];
+  by_preferred_condition: WishlistAnalyticsBreakdownItem[];
+}
+
+export interface WishlistAnalyticsTargetItem {
+  wishlist_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  priority: string;
+  status: string;
+  desired_quantity: number;
+  owned_quantity: number;
+  target_buy_price_jpy: number | null;
+  max_buy_price_jpy: number | null;
+  preferred_current_price_jpy: number | null;
+  preferred_current_price_source: string | null;
+  target_hit: boolean;
+  gap_to_target_jpy: number | null;
+  gap_to_target_pct: number | null;
+}
+
+export interface WishlistAnalyticsBudgetPlan {
+  grail_targets: WishlistAnalyticsTargetItem[];
+  high_priority_targets: WishlistAnalyticsTargetItem[];
+  best_gap_to_target: WishlistAnalyticsTargetItem[];
+  largest_budget_items: WishlistAnalyticsTargetItem[];
+  already_owned: WishlistAnalyticsTargetItem[];
+}
+
+export interface WishlistAnalyticsPriceCoverage {
+  items_with_current_price: number;
+  items_missing_current_price: number;
+  coverage_pct: number;
+}
+
+export interface WishlistAnalytics {
+  summary: WishlistAnalyticsSummary;
+  breakdowns: WishlistAnalyticsBreakdowns;
+  target_hits: WishlistAnalyticsTargetItem[];
+  budget_plan: WishlistAnalyticsBudgetPlan;
+  price_coverage: WishlistAnalyticsPriceCoverage;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/wishlist/route.ts), same rationale as
+ * fetchCollectionAnalytics - browser-side fetches to the backend's host
+ * port are unreliable in Codespaces/forwarded-port environments, and this
+ * endpoint needs the signed-in user's session forwarded server-side. */
+export function fetchWishlistAnalytics(params?: {
+  include_removed?: boolean;
+  include_purchased?: boolean;
+}): Promise<WishlistAnalytics> {
+  const query = new URLSearchParams();
+  if (params?.include_removed !== undefined) {
+    query.set("include_removed", String(params.include_removed));
+  }
+  if (params?.include_purchased !== undefined) {
+    query.set("include_purchased", String(params.include_purchased));
+  }
+  const qs = query.toString();
+  return fetchAdminJson<WishlistAnalytics>(`/api/analytics/wishlist${qs ? `?${qs}` : ""}`);
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }
