@@ -330,6 +330,9 @@ export default function WishlistPage() {
             <Link href="/analytics/wishlist" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
               Analytics →
             </Link>
+            <Link href="/analytics/buy-decisions" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+              Buy decisions →
+            </Link>
             <Link href="/market/opportunities" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
               Opportunities →
             </Link>

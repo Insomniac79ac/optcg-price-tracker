@@ -3022,6 +3022,114 @@ export function fetchSellDecisions(params?: {
   return fetchAdminJson<SellDecisionSupport>(`/api/analytics/sell-decisions${qs ? `?${qs}` : ""}`);
 }
 
+// --- Buy decision support (see GET /analytics/buy-decisions) ---------------
+
+export type BuyDecisionAction = "review_buy" | "wait" | "skip" | "missing_data" | "monitor";
+export type BuySourcePreference = "auto" | "snkrdunk" | "yuyutei";
+export type BuyDecisionPriorityFilter = "low" | "medium" | "high" | "grail";
+
+export interface BuyDecisionSummary {
+  total_candidates: number;
+  review_buy_count: number;
+  wait_count: number;
+  skip_count: number;
+  missing_data_count: number;
+  monitor_count: number;
+  target_hit_count: number;
+  total_target_budget_jpy: number;
+  total_current_cost_jpy: number;
+  budget_gap_jpy: number;
+  average_score: number;
+}
+
+export interface BuyDecisionLatestPrices {
+  yuyutei_sell: number | null;
+  yuyutei_buy: number | null;
+  snkrdunk_floor: number | null;
+}
+
+export interface BuyDecisionMarketContext {
+  snkrdunk_vs_yuyutei_sell_gap_pct: number | null;
+  yuyutei_spread_pct: number | null;
+  related_opportunity_score: number | null;
+  related_signal_types: string[];
+}
+
+export interface BuyDecisionCandidate {
+  wishlist_item_id: number;
+  card_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string;
+  rarity: string;
+  variant: string | null;
+  language: string;
+  score: number;
+  recommended_action: BuyDecisionAction;
+  priority: string;
+  status: string;
+  desired_quantity: number;
+  owned_quantity: number;
+  remaining_quantity: number;
+  target_buy_price_jpy: number | null;
+  max_buy_price_jpy: number | null;
+  preferred_condition: string | null;
+  preferred_source: string | null;
+  current_price_jpy: number | null;
+  current_price_source: string | null;
+  target_hit: boolean;
+  gap_to_target_jpy: number | null;
+  gap_to_target_pct: number | null;
+  gap_to_max_jpy: number | null;
+  gap_to_max_pct: number | null;
+  latest_prices: BuyDecisionLatestPrices;
+  market_context: BuyDecisionMarketContext;
+  tags: string[];
+  groups: string[];
+  score_reasons: string[];
+  warnings: string[];
+}
+
+export interface BuyDecisionSupport {
+  summary: BuyDecisionSummary;
+  candidates: BuyDecisionCandidate[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/analytics/buy-decisions/route.ts), same rationale as
+ * fetchSellDecisions/fetchWishlistAnalytics - browser-side fetches to the
+ * backend's host port are unreliable in Codespaces/forwarded-port
+ * environments, and this endpoint needs the signed-in user's session
+ * forwarded server-side. */
+export function fetchBuyDecisions(params?: {
+  source_preference?: BuySourcePreference;
+  include_owned?: boolean;
+  include_purchased?: boolean;
+  min_score?: number;
+  action?: BuyDecisionAction;
+  priority?: BuyDecisionPriorityFilter;
+  limit?: number;
+  offset?: number;
+}): Promise<BuyDecisionSupport> {
+  const query = new URLSearchParams();
+  if (params?.source_preference) query.set("source_preference", params.source_preference);
+  if (params?.include_owned !== undefined) query.set("include_owned", String(params.include_owned));
+  if (params?.include_purchased !== undefined) {
+    query.set("include_purchased", String(params.include_purchased));
+  }
+  if (params?.min_score !== undefined) query.set("min_score", String(params.min_score));
+  if (params?.action) query.set("action", params.action);
+  if (params?.priority) query.set("priority", params.priority);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<BuyDecisionSupport>(`/api/analytics/buy-decisions${qs ? `?${qs}` : ""}`);
+}
+
 export function fetchWishlistItem(wishlistItemId: number): Promise<WishlistItem> {
   return authedGet<WishlistItem>(`/wishlist/${wishlistItemId}`);
 }

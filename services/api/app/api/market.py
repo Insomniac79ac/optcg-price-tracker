@@ -113,10 +113,10 @@ def _invalidate_signal_event_caches() -> None:
     signal-events widget) returns - narrower than the full 'market signal
     snapshot' invalidation list in docs/operations.md, since these routes
     don't touch market_signals/market_opportunities/market_report data.
-    sell_decisions is included because its review_sell_opportunity/related-
-    opportunity-score scoring reads open/watching signal events directly, so
-    a dismiss/watch/resolve changes its output too."""
-    for prefix in ("dashboard", "market_signal_events", "sell_decisions"):
+    sell_decisions/buy_decisions are included because their opportunity-
+    score/signal-type scoring reads open/watching signal events directly, so
+    a dismiss/watch/resolve changes their output too."""
+    for prefix in ("dashboard", "market_signal_events", "sell_decisions", "buy_decisions"):
         delete_cache_prefix(prefix)
 
 

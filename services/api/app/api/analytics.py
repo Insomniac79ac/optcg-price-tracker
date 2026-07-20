@@ -6,12 +6,17 @@ from app.core.pagination import DEFAULT_LIMIT, MAX_LIMIT
 from app.db import get_db
 from app.models import User
 from app.schemas import (
+    BuyDecisionAction,
+    BuyDecisionPriorityFilter,
+    BuyDecisionSupportOut,
+    BuySourcePreference,
     CollectionAnalyticsOut,
     SellDecisionAction,
     SellDecisionSupportOut,
     ValuationMode,
     WishlistAnalyticsOut,
 )
+from app.services.buy_decision_support import get_buy_decision_support
 from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.collection_analytics import get_collection_analytics
@@ -58,6 +63,45 @@ def get_wishlist_analytics_endpoint(
         ttl,
         lambda: get_wishlist_analytics(
             db, user_id=user.id, include_removed=include_removed, include_purchased=include_purchased
+        ).model_dump(mode="json"),
+    )
+    set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
+    return value
+
+
+@router.get("/buy-decisions", response_model=BuyDecisionSupportOut)
+def get_buy_decisions_endpoint(
+    response: Response,
+    source_preference: BuySourcePreference = Query(default="auto"),
+    include_owned: bool = Query(default=False),
+    include_purchased: bool = Query(default=False),
+    min_score: int | None = Query(default=None, ge=0, le=100),
+    action: BuyDecisionAction | None = Query(default=None),
+    priority: BuyDecisionPriorityFilter | None = Query(default=None),
+    limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_current_user),
+):
+    cache_key = (
+        f"buy_decisions:{user.id}:{source_preference}:{include_owned}:{include_purchased}:"
+        f"{min_score}:{action}:{priority}:{limit}:{offset}"
+    )
+    ttl = settings.CACHE_COLLECTION_TTL_SECONDS
+    value, hit = get_or_set_cache(
+        cache_key,
+        ttl,
+        lambda: get_buy_decision_support(
+            db,
+            user_id=user.id,
+            source_preference=source_preference,
+            include_owned=include_owned,
+            include_purchased=include_purchased,
+            min_score=min_score,
+            action=action,
+            priority=priority,
+            limit=limit,
+            offset=offset,
         ).model_dump(mode="json"),
     )
     set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)

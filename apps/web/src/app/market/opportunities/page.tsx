@@ -223,6 +223,12 @@ export default function MarketOpportunitiesPage() {
               Market report
             </Link>
             <Link
+              href="/analytics/buy-decisions"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Buy decision support
+            </Link>
+            <Link
               href="/analytics/sell-decisions"
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >

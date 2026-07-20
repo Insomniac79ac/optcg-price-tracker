@@ -43,6 +43,7 @@ _PRICE_REFRESH_CACHE_INVALIDATES = (
     "wishlist",
     "wishlist_summary",
     "sell_decisions",
+    "buy_decisions",
 )
 
 

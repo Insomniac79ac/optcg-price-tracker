@@ -1589,6 +1589,82 @@ class SellDecisionSupportOut(BaseModel):
     pagination: PaginationMeta
 
 
+BuyDecisionAction = Literal["review_buy", "wait", "skip", "missing_data", "monitor"]
+BuySourcePreference = Literal["auto", "snkrdunk", "yuyutei"]
+BuyDecisionPriorityFilter = Literal["low", "medium", "high", "grail"]
+
+
+class BuyDecisionSummaryOut(BaseModel):
+    total_candidates: int
+    review_buy_count: int
+    wait_count: int
+    skip_count: int
+    missing_data_count: int
+    monitor_count: int
+    target_hit_count: int
+    total_target_budget_jpy: int
+    total_current_cost_jpy: int
+    budget_gap_jpy: int
+    average_score: float
+
+
+class BuyDecisionLatestPricesOut(BaseModel):
+    yuyutei_sell: int | None
+    yuyutei_buy: int | None
+    snkrdunk_floor: int | None
+
+
+class BuyDecisionMarketContextOut(BaseModel):
+    snkrdunk_vs_yuyutei_sell_gap_pct: float | None
+    yuyutei_spread_pct: float | None
+    related_opportunity_score: int | None
+    related_signal_types: list[str]
+
+
+class BuyDecisionCandidateOut(BaseModel):
+    wishlist_item_id: int
+    card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    set_code: str
+    rarity: str
+    variant: str | None
+    language: str
+    score: int
+    recommended_action: BuyDecisionAction
+    priority: str
+    status: str
+    desired_quantity: int
+    owned_quantity: int
+    remaining_quantity: int
+    target_buy_price_jpy: int | None
+    max_buy_price_jpy: int | None
+    preferred_condition: str | None
+    preferred_source: str | None
+    current_price_jpy: int | None
+    current_price_source: str | None
+    target_hit: bool
+    gap_to_target_jpy: int | None
+    gap_to_target_pct: float | None
+    gap_to_max_jpy: int | None
+    gap_to_max_pct: float | None
+    latest_prices: BuyDecisionLatestPricesOut
+    market_context: BuyDecisionMarketContextOut
+    tags: list[str]
+    groups: list[str]
+    score_reasons: list[str]
+    warnings: list[str]
+
+
+class BuyDecisionSupportOut(BaseModel):
+    summary: BuyDecisionSummaryOut
+    candidates: list[BuyDecisionCandidateOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
 class WishlistImportRowErrorOut(BaseModel):
     row_number: int
     card_code: str | None

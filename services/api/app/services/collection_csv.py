@@ -71,6 +71,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "wishlist_summary",
     "grading_summary",
     "sell_decisions",
+    "buy_decisions",
 )
 
 

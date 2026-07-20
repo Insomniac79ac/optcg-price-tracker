@@ -235,6 +235,13 @@ export default function DashboardPage() {
             <span className="text-neutral-600">→</span>
           </Link>
           <Link
+            href="/analytics/buy-decisions"
+            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+          >
+            <span>Buy Decision Support — review buy, wait, skip, and monitor recommendations</span>
+            <span className="text-neutral-600">→</span>
+          </Link>
+          <Link
             href="/analytics/sell-decisions"
             className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
           >
