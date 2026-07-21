@@ -482,6 +482,57 @@ def _check_inactive_cards_missing_merge_target(db: Session) -> CheckResult:
     )
 
 
+# Below these thresholds, catalog coverage is degraded enough to be worth a
+# system-check warning - see _check_catalog_coverage_summary and 'Catalog
+# coverage workflow' in docs/operations.md.
+CATALOG_COVERAGE_MAPPING_WARNING_PCT = 50.0
+CATALOG_COVERAGE_RECENT_PRICE_WARNING_PCT = 50.0
+CATALOG_COVERAGE_METADATA_WARNING_PCT = 70.0
+
+
+def _check_catalog_coverage_summary(db: Session) -> CheckResult:
+    """Rolls up app.services.catalog_coverage.summarize_catalog_coverage into
+    one system-check warning - low mapping/recent-price/metadata coverage,
+    or any duplicate/mapping-quality risk, is worth a human glancing at GET
+    /admin/catalog-coverage."""
+    from app.services.catalog_coverage import summarize_catalog_coverage
+
+    summary = summarize_catalog_coverage(db)
+    reasons = []
+    if summary["mapping_coverage_pct"] < CATALOG_COVERAGE_MAPPING_WARNING_PCT:
+        reasons.append(
+            f"mapping coverage {summary['mapping_coverage_pct']}% "
+            f"({summary['cards_without_any_mapping']} unmapped card(s))"
+        )
+    if summary["recent_price_coverage_pct"] < CATALOG_COVERAGE_RECENT_PRICE_WARNING_PCT:
+        reasons.append(
+            f"recent price coverage {summary['recent_price_coverage_pct']}% "
+            f"({summary['cards_without_recent_price']} card(s) without a recent price)"
+        )
+    if summary["metadata_completion_pct"] < CATALOG_COVERAGE_METADATA_WARNING_PCT:
+        reasons.append(f"metadata completion {summary['metadata_completion_pct']}%")
+    if summary["cards_with_duplicate_risk"] > 0:
+        reasons.append(f"{summary['cards_with_duplicate_risk']} card(s) with duplicate risk")
+    if summary["cards_with_mapping_quality_risk"] > 0:
+        reasons.append(f"{summary['cards_with_mapping_quality_risk']} card(s) with mapping quality risk")
+
+    if reasons:
+        return CheckResult(
+            "catalog_coverage_summary",
+            "warning",
+            "warning",
+            f"Catalog coverage needs review: {'; '.join(reasons)}. See GET /admin/catalog-coverage.",
+        )
+    return CheckResult(
+        "catalog_coverage_summary",
+        "pass",
+        "info",
+        f"Catalog coverage looks healthy: mapping {summary['mapping_coverage_pct']}%, "
+        f"recent price {summary['recent_price_coverage_pct']}%, "
+        f"metadata {summary['metadata_completion_pct']}%.",
+    )
+
+
 def _check_latest_import_validation_report(db: Session) -> CheckResult:
     latest = db.scalar(
         select(ImportValidationReport).order_by(ImportValidationReport.created_at.desc()).limit(1)
@@ -612,6 +663,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_mapping_quality_summary(db),
         _check_duplicate_cards(db),
         _check_inactive_cards_missing_merge_target(db),
+        _check_catalog_coverage_summary(db),
         _check_latest_import_validation_report(db),
         _check_recent_failed_import_validation_reports(db),
     ]

@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     CACHE_DASHBOARD_TTL_SECONDS: int = 60
     CACHE_MARKET_TTL_SECONDS: int = 120
     CACHE_COLLECTION_TTL_SECONDS: int = 60
+    CACHE_CATALOG_COVERAGE_TTL_SECONDS: int = 120
 
     # Background file jobs (app.services.file_jobs / app.services.
     # file_job_storage) - see 'Large import/export jobs' in

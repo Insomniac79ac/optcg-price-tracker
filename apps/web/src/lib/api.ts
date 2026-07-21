@@ -1230,6 +1230,130 @@ export function mergeCards(params: {
   });
 }
 
+// --- Catalog coverage (see GET /admin/catalog-coverage*) --------------------
+
+export interface CatalogCoverageSummary {
+  total_cards: number;
+  active_cards: number;
+  inactive_merged_cards: number;
+  sets_count: number;
+  cards_with_yuyutei_mapping: number;
+  cards_with_snkrdunk_mapping: number;
+  cards_without_any_mapping: number;
+  cards_with_recent_yuyutei_price: number;
+  cards_with_recent_snkrdunk_price: number;
+  cards_without_recent_price: number;
+  cards_in_collection: number;
+  cards_on_wishlist: number;
+  cards_with_missing_metadata: number;
+  cards_with_duplicate_risk: number;
+  cards_with_mapping_quality_risk: number;
+  metadata_completion_pct: number;
+  mapping_coverage_pct: number;
+  recent_price_coverage_pct: number;
+}
+
+export interface CatalogCoverageBreakdownItem {
+  key: string;
+  label: string;
+  total_cards: number;
+  active_cards: number;
+  mapped_cards: number;
+  unmapped_cards: number;
+  recent_price_cards: number;
+  collection_cards: number;
+  wishlist_cards: number;
+  missing_metadata_cards: number;
+  duplicate_risk_cards: number;
+  mapping_quality_risk_cards: number;
+  mapping_coverage_pct: number;
+  recent_price_coverage_pct: number;
+  metadata_completion_pct: number;
+}
+
+export interface CatalogCoverageGapItem {
+  card_id: number;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  set_code: string | null;
+  rarity: string | null;
+  variant: string | null;
+  language: string | null;
+  issue_types: string[];
+  severity: string;
+  suggested_action: string;
+}
+
+export interface CatalogCoverageReport {
+  summary: CatalogCoverageSummary;
+  coverage_by_set: CatalogCoverageBreakdownItem[];
+  coverage_by_rarity: CatalogCoverageBreakdownItem[];
+  coverage_by_variant: CatalogCoverageBreakdownItem[];
+  coverage_by_language: CatalogCoverageBreakdownItem[];
+  metadata_gaps: CatalogCoverageGapItem[];
+  mapping_gaps: CatalogCoverageGapItem[];
+  price_gaps: CatalogCoverageGapItem[];
+  duplicate_risks: CatalogCoverageGapItem[];
+  mapping_quality_risks: CatalogCoverageGapItem[];
+}
+
+export type CatalogCoverageGapType = "metadata" | "mapping" | "price" | "duplicate" | "mapping_quality";
+
+export interface CatalogCoverageGapsResponse {
+  gap_type: CatalogCoverageGapType;
+  items: CatalogCoverageGapItem[];
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/catalog-coverage/route.ts) - same reasoning as
+ * fetchCardAudit. */
+export function fetchCatalogCoverage(params?: {
+  set_code?: string;
+  language?: string;
+  variant?: string;
+  rarity?: string;
+  include_inactive?: boolean;
+}): Promise<CatalogCoverageReport> {
+  const query = new URLSearchParams();
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.language) query.set("language", params.language);
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.include_inactive !== undefined) {
+    query.set("include_inactive", String(params.include_inactive));
+  }
+  const qs = query.toString();
+  return fetchAdminJson<CatalogCoverageReport>(`/api/admin/catalog-coverage${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/catalog-coverage/gaps/route.ts). */
+export function fetchCatalogCoverageGaps(params: {
+  gap_type: CatalogCoverageGapType;
+  set_code?: string;
+  rarity?: string;
+  variant?: string;
+  language?: string;
+  severity?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<CatalogCoverageGapsResponse> {
+  const query = new URLSearchParams();
+  query.set("gap_type", params.gap_type);
+  if (params.set_code) query.set("set_code", params.set_code);
+  if (params.rarity) query.set("rarity", params.rarity);
+  if (params.variant) query.set("variant", params.variant);
+  if (params.language) query.set("language", params.language);
+  if (params.severity) query.set("severity", params.severity);
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  return fetchAdminJson<CatalogCoverageGapsResponse>(
+    `/api/admin/catalog-coverage/gaps?${query.toString()}`,
+  );
+}
+
 export function fetchRefreshRuns(params?: {
   status?: string;
   source_filter?: string;

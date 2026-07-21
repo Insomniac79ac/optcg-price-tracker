@@ -98,6 +98,12 @@ export default function SystemCheckPage() {
               Release status
             </Link>
             <Link
+              href="/admin/catalog-coverage"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Catalog coverage
+            </Link>
+            <Link
               href="/admin/source-mapping-quality"
               className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
             >

@@ -330,6 +330,12 @@ export default function SourceMappingQualityPage() {
             >
               Import validation →
             </Link>
+            <Link
+              href="/admin/catalog-coverage"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Catalog coverage →
+            </Link>
           </div>
           <AdminLogoutButton />
         </div>

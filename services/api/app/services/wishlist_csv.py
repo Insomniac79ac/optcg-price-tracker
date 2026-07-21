@@ -49,6 +49,7 @@ WISHLIST_WRITE_CACHE_PREFIXES = (
     "buy_decisions",
     "portfolio_risk",
     "analytics_digest",
+    "admin/catalog_coverage",
 )
 
 

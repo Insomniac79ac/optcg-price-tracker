@@ -573,6 +573,12 @@ export default function AdminActionsPage() {
                 System check
               </Link>
               <Link
+                href="/admin/catalog-coverage"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Catalog coverage
+              </Link>
+              <Link
                 href="/admin/release-status"
                 className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >

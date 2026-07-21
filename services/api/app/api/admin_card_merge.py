@@ -68,6 +68,7 @@ _CARD_MERGE_CACHE_INVALIDATES = (
     "portfolio_risk",
     "analytics_digest",
     "source_mappings",
+    "admin/catalog_coverage",
 )
 
 

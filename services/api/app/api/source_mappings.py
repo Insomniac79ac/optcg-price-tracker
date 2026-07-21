@@ -14,6 +14,7 @@ from app.schemas import (
     SourceCardMappingOut,
     SourceCardMappingUpdateIn,
 )
+from app.services.cache import delete_cache_prefix
 
 router = APIRouter(
     prefix="/admin/source-mappings", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -159,6 +160,7 @@ def update_source_mapping(
 
     db.commit()
     db.refresh(mapping)
+    delete_cache_prefix("admin/catalog_coverage")
     return _to_out_with_lookups(db, mapping)
 
 
@@ -169,6 +171,7 @@ def reject_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     mapping.review_status = "rejected"
     db.commit()
     db.refresh(mapping)
+    delete_cache_prefix("admin/catalog_coverage")
     return _to_out_with_lookups(db, mapping)
 
 
@@ -180,4 +183,5 @@ def approve_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     mapping.last_verified_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(mapping)
+    delete_cache_prefix("admin/catalog_coverage")
     return _to_out_with_lookups(db, mapping)

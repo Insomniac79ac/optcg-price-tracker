@@ -329,6 +329,61 @@ Flags: `--type` (required, one of the five types above), `--strict`, `--max-prev
 (collection/wishlist only), `--no-save-report` (skip persisting a report row). Exits `0` if the
 file is valid, `1` otherwise - suitable for a pre-import CI/scripted check.
 
+## Catalog coverage workflow
+
+`GET /admin/catalog-coverage` (backed by `app.services.catalog_coverage`) answers "how complete
+is the canonical card catalog" across sets/rarities/variants/languages - source mappings, recent
+prices, collection/wishlist coverage, metadata completeness, and the duplicate/mapping-quality
+risk already tracked by `app.services.card_identity_merge`/`app.services.source_mapping_confidence`.
+Read-only: it never writes to the database, scrapes anything, or uses an LLM.
+
+Recommended flow when growing or auditing the catalog:
+
+1. **Import/validate catalog data** - see "CSV import validation workflow" above; import the
+   canonical `card_catalog` rows (and their `source_mappings`) before checking coverage.
+2. **Check catalog coverage.** `GET /admin/catalog-coverage` (optional `set_code`/`language`/
+   `variant`/`rarity` filters, `include_inactive=true` to include merged/inactive cards in the
+   totals) returns a top-line `summary`, per-dimension breakdowns (`coverage_by_set/rarity/
+   variant/language`), and five gap lists (`metadata_gaps`, `mapping_gaps`, `price_gaps`,
+   `duplicate_risks`, `mapping_quality_risks`). A Yuyu-Tei price counts as "recent" within 24
+   hours of `observed_at`; a SNKRDUNK price within 7 days (Yuyu-Tei is scraped far more often -
+   see "Run Yuyu-Tei refresh manually" above). For a large catalog, drill into one gap type at a
+   time with `GET /admin/catalog-coverage/gaps?gap_type=<metadata|mapping|price|duplicate|
+   mapping_quality>` (also takes `set_code`/`rarity`/`variant`/`language`/`severity`/`limit`/
+   `offset`) rather than paging through the full report. The `/admin/catalog-coverage` page in
+   the web UI covers both, and is linked from the admin nav, `/admin/cards`, `/admin/card-audit`,
+   `/admin/source-mapping-quality`, `/admin/card-duplicates`, and `/admin/system-check`.
+3. **Fix metadata gaps** - a card missing `card_code`/`name_en` is `critical`; missing
+   `set_code`/`rarity`/`variant`/`language` is `warning`; missing `image_url`/`artist`/
+   `character`/`color`/`card_type` is `review`. Fix via a `card_catalog` re-import (see the CSV
+   import validation workflow) or `PATCH /admin/cards/{id}`.
+4. **Fix source mapping gaps** - a card with zero active mappings to a supported source
+   (`yuyutei`, `snkrdunk`) is `critical`; missing just one is `warning`. Add mappings via a
+   `source_mappings` import or `POST /admin/source-mappings`.
+5. **Review duplicate risks** - reuses `app.services.card_identity_merge`'s scoring
+   (`MIN_MERGE_SCORE`) rather than a separate O(n²) scan; see `GET /admin/cards/duplicates` and
+   "Card duplicate review" in the admin UI to actually merge.
+6. **Review mapping quality risks** - reuses `app.services.source_mapping_confidence`'s
+   `risk_level`; see `GET /admin/source-mappings/quality` to review/recheck/replace the flagged
+   mapping.
+7. **Rerun `GET /admin/card-audit` and `GET /admin/system-check`** afterward - both surface a
+   catalog-coverage summary (mapping/recent-price/metadata coverage percentages, unmapped/
+   duplicate/mapping-quality-risk counts) without repeating every gap the coverage page already
+   lists individually; `system-check` warns when mapping or recent-price coverage drops below
+   50%, metadata completion drops below 70%, or any duplicate/mapping-quality risk exists.
+
+CLI equivalent (prints a summary; add `--json` for the full report, `--output PATH` to also
+write it to a file):
+
+```
+docker compose exec api python -m app.catalog_coverage_report --set-code OP01
+```
+
+The report is cached under the `admin/catalog_coverage` prefix (see "Cache operations" below,
+`CACHE_CATALOG_COVERAGE_TTL_SECONDS`, default 120s) and is invalidated by any write that changes
+cards, source mappings, collection items, or wishlist items - see that write path's own
+`CACHE_INVALIDATES`/`WRITE_CACHE_PREFIXES` list.
+
 ## Check refresh runs
 
 Via the admin API (requires `X-Admin-Token`; see `docs/deployment.md`):

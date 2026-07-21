@@ -18,6 +18,7 @@ from app.models.card_alias import CardAlias
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
 from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
+from app.services.catalog_coverage import summarize_catalog_coverage
 from app.services.source_mapping_confidence import (
     MappingQualityFilters,
     evaluate_source_mappings,
@@ -115,6 +116,14 @@ class CardAuditReport:
     # that construct one directly without a db session).
     mapping_quality: dict[str, int] | None = None
 
+    # Populated by run_card_audit from
+    # app.services.catalog_coverage.summarize_catalog_coverage - a top-line
+    # summary only (see GET /admin/catalog-coverage for the full breakdown
+    # and per-card gap lists), so this audit doesn't duplicate every
+    # metadata/mapping/price/duplicate/mapping-quality gap the coverage page
+    # already lists individually.
+    catalog_coverage: dict[str, Any] | None = None
+
     def to_dict(self) -> dict[str, Any]:
         critical_issues = sum(1 for issue in self.issues if issue.severity == CRITICAL)
         warning_issues = sum(1 for issue in self.issues if issue.severity == WARNING)
@@ -129,6 +138,7 @@ class CardAuditReport:
         return {
             "summary": summary,
             "issues": [issue.to_dict() for issue in self.issues],
+            "catalog_coverage": self.catalog_coverage,
         }
 
 
@@ -803,5 +813,8 @@ def run_card_audit(db: Session) -> CardAuditReport:
     ]
 
     return CardAuditReport(
-        total_cards=len(cards), issues=issues, mapping_quality=summarize_mapping_quality(db)
+        total_cards=len(cards),
+        issues=issues,
+        mapping_quality=summarize_mapping_quality(db),
+        catalog_coverage=summarize_catalog_coverage(db),
     )

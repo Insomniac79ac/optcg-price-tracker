@@ -249,6 +249,9 @@ export default function CardDuplicatesPage() {
           <Link href="/admin/card-audit" className="text-sky-400 hover:underline">
             Card audit
           </Link>
+          <Link href="/admin/catalog-coverage" className="text-sky-400 hover:underline">
+            Catalog coverage
+          </Link>
           <Link href="/admin/system-check" className="text-sky-400 hover:underline">
             System check
           </Link>

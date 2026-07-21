@@ -63,6 +63,7 @@ All gated client-side by `AdminAuthGate`/`getAdminToken()` (an `X-Admin-Token` s
 | `/admin/alerts` | Alert events + alert rule config | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/card-audit` | Card data-quality audit report | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/import-validation` | CSV import templates + dry-run validation (card catalog, source mappings, SNKRDUNK candidates, collection, wishlist) + report history | Admin token | 200 | Yes (admin dropdown; linked from `/admin/cards`, `/admin/card-audit`, `/admin/source-mapping-quality`, `/admin/backup`) |
+| `/admin/catalog-coverage` | Canonical card catalog coverage: mapping/recent-price/metadata completion, by set/rarity/variant/language, plus metadata/mapping/price/duplicate/mapping-quality gap drill-downs | Admin token | 200 | Yes (admin dropdown; linked from `/admin/cards`, `/admin/card-audit`, `/admin/source-mapping-quality`, `/admin/card-duplicates`, `/admin/system-check`, `/admin/actions`) |
 | `/admin/data-health` | *(does not exist)* | - | - | - |
 
 ## API routes (backend, `services/api`, mounted directly; also reachable via Next.js server-side

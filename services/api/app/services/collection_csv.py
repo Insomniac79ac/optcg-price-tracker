@@ -75,6 +75,7 @@ COLLECTION_WRITE_CACHE_PREFIXES = (
     "grading_analytics",
     "portfolio_risk",
     "analytics_digest",
+    "admin/catalog_coverage",
 )
 
 

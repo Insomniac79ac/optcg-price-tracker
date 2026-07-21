@@ -1088,9 +1088,89 @@ class CardAuditSummaryOut(BaseModel):
     warning_issues: int
 
 
+# --- catalog coverage --------------------------------------------------
+# Defined before CardAuditReportOut (below) since that model embeds
+# CatalogCoverageSummaryOut directly - pydantic resolves annotations against
+# the module's globals at class-definition time, so the referenced class
+# must already exist rather than relying on a forward-reference string.
+
+
+class CatalogCoverageSummaryOut(BaseModel):
+    total_cards: int
+    active_cards: int
+    inactive_merged_cards: int
+    sets_count: int
+    cards_with_yuyutei_mapping: int
+    cards_with_snkrdunk_mapping: int
+    cards_without_any_mapping: int
+    cards_with_recent_yuyutei_price: int
+    cards_with_recent_snkrdunk_price: int
+    cards_without_recent_price: int
+    cards_in_collection: int
+    cards_on_wishlist: int
+    cards_with_missing_metadata: int
+    cards_with_duplicate_risk: int
+    cards_with_mapping_quality_risk: int
+    metadata_completion_pct: float
+    mapping_coverage_pct: float
+    recent_price_coverage_pct: float
+
+
 class CardAuditReportOut(BaseModel):
     summary: CardAuditSummaryOut
     issues: list[CardAuditIssueOut]
+    catalog_coverage: CatalogCoverageSummaryOut | None = None
+
+
+class CatalogCoverageBreakdownItemOut(BaseModel):
+    key: str
+    label: str
+    total_cards: int
+    active_cards: int
+    mapped_cards: int
+    unmapped_cards: int
+    recent_price_cards: int
+    collection_cards: int
+    wishlist_cards: int
+    missing_metadata_cards: int
+    duplicate_risk_cards: int
+    mapping_quality_risk_cards: int
+    mapping_coverage_pct: float
+    recent_price_coverage_pct: float
+    metadata_completion_pct: float
+
+
+class CatalogCoverageGapItemOut(BaseModel):
+    card_id: int
+    card_code: str | None
+    name_en: str | None
+    name_jp: str | None
+    set_code: str | None
+    rarity: str | None
+    variant: str | None
+    language: str | None
+    issue_types: list[str]
+    severity: str
+    suggested_action: str
+
+
+class CatalogCoverageReportOut(BaseModel):
+    summary: CatalogCoverageSummaryOut
+    coverage_by_set: list[CatalogCoverageBreakdownItemOut]
+    coverage_by_rarity: list[CatalogCoverageBreakdownItemOut]
+    coverage_by_variant: list[CatalogCoverageBreakdownItemOut]
+    coverage_by_language: list[CatalogCoverageBreakdownItemOut]
+    metadata_gaps: list[CatalogCoverageGapItemOut]
+    mapping_gaps: list[CatalogCoverageGapItemOut]
+    price_gaps: list[CatalogCoverageGapItemOut]
+    duplicate_risks: list[CatalogCoverageGapItemOut]
+    mapping_quality_risks: list[CatalogCoverageGapItemOut]
+
+
+class CatalogCoverageGapsOut(BaseModel):
+    gap_type: str
+    items: list[CatalogCoverageGapItemOut]
+    pagination: PaginationMeta
 
 
 class CardCatalogImportRowErrorOut(BaseModel):
