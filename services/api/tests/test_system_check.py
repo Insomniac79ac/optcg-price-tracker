@@ -439,3 +439,82 @@ def test_system_check_warns_on_many_recent_failed_import_validation_reports(clie
     data = response.json()
     check = checks_by_name(data)["recent_failed_import_validation_reports"]
     assert check["status"] == "warning"
+
+
+# --- catalog_operations summary ---------------------------------------------
+
+
+def test_system_check_catalog_operations_on_empty_db(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    ops = data["catalog_operations"]
+
+    assert ops["card_audit_status"] in ("ok", "warning", "critical")
+    assert ops["duplicate_risk_count"] == 0
+    assert ops["mapping_quality_critical_count"] == 0
+    assert ops["latest_import_validation_status"] == "none"
+    assert isinstance(ops["warnings"], list)
+    assert isinstance(ops["metadata_completion_pct"], (int, float))
+    assert isinstance(ops["mapping_coverage_pct"], (int, float))
+    assert isinstance(ops["recent_price_coverage_pct"], (int, float))
+    assert ops["price_source_health_status"] in ("healthy", "degraded")
+
+
+def test_system_check_catalog_operations_reports_duplicate_and_mapping_quality_risk(
+    client, db_session
+):
+    make_sources(db_session)
+    make_card(db_session, card_code="OP01-060", rarity="L")
+    make_card(db_session, card_code="OP01-060", rarity="SR")
+    card = make_card(db_session, card_code="OP01-061", rarity="L")
+    source = db_session.query(Source).filter_by(name="yuyutei").one()
+    for i in range(2):
+        db_session.add(
+            SourceCardMapping(
+                card_id=card.id,
+                source_id=source.id,
+                source_card_id=card.card_code,
+                source_url=f"https://yuyu-tei.example.com/dup{'' if i == 0 else ' '}",
+            )
+        )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    ops = data["catalog_operations"]
+
+    assert ops["duplicate_risk_count"] >= 1
+    assert ops["mapping_quality_critical_count"] >= 1
+    assert ops["card_audit_status"] == "critical"
+    assert ops["warnings"]
+
+
+def test_system_check_catalog_operations_reflects_invalid_import_validation_report(
+    client, db_session
+):
+    from app.models import ImportValidationReport
+
+    db_session.add(
+        ImportValidationReport(
+            import_type="card_catalog",
+            filename="bad.csv",
+            valid=False,
+            error_rows=3,
+            total_rows=3,
+            report_payload_json={"import_type": "card_catalog"},
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    ops = data["catalog_operations"]
+    assert ops["latest_import_validation_status"] == "invalid"
+    assert any("import validation" in w for w in ops["warnings"])
+
+
+def test_release_status_includes_catalog_operations(client, db_session):
+    response = client.get("/admin/release-status")
+    data = response.json()
+    ops = data["latest_system_check"]["catalog_operations"]
+    assert ops["latest_import_validation_status"] == "none"

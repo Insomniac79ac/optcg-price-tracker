@@ -17,6 +17,7 @@ import {
   type SystemCheckResponse,
   fetchSystemCheck,
 } from "@/lib/api";
+import { formatPercent } from "@/lib/format";
 
 type PageStatus =
   | "loading"
@@ -121,6 +122,12 @@ export default function SystemCheckPage() {
             >
               Card duplicates
             </Link>
+            <Link
+              href="/admin/catalog-ops"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Catalog operations
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -208,6 +215,8 @@ export default function SystemCheckPage() {
               <StatCard label="Critical" value={report.summary.critical} tone="critical" />
             </div>
 
+            <CatalogOperationsSection catalogOperations={report.catalog_operations} />
+
             <div className="overflow-x-auto rounded-lg border border-neutral-800">
               <table className="w-full border-collapse text-xs">
                 <thead>
@@ -273,6 +282,99 @@ function StatCard({
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
+const OPS_STATUS_TONE: Record<string, string> = {
+  ok: "text-emerald-400",
+  healthy: "text-emerald-400",
+  valid: "text-emerald-400",
+  warning: "text-amber-400",
+  degraded: "text-amber-400",
+  critical: "text-rose-400",
+  invalid: "text-rose-400",
+  none: "text-neutral-400",
+};
+
+function OpsStatusValue({ status }: { status: string }) {
+  return (
+    <div className={`mt-1 text-lg font-semibold uppercase ${OPS_STATUS_TONE[status] ?? "text-neutral-100"}`}>
+      {status}
+    </div>
+  );
+}
+
+function CatalogOperationsSection({
+  catalogOperations,
+}: {
+  catalogOperations: SystemCheckResponse["catalog_operations"];
+}) {
+  const ops = catalogOperations;
+  return (
+    <div className="mb-6">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 className="text-sm font-medium text-neutral-300">Catalog operations</h2>
+        <Link
+          href="/admin/catalog-ops"
+          className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+        >
+          Catalog operations dashboard →
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Card audit</div>
+          <OpsStatusValue status={ops.card_audit_status} />
+        </div>
+        <StatCard label="Duplicate risk" value={ops.duplicate_risk_count} tone={ops.duplicate_risk_count > 0 ? "warning" : "pass"} />
+        <StatCard
+          label="Mapping quality critical"
+          value={ops.mapping_quality_critical_count}
+          tone={ops.mapping_quality_critical_count > 0 ? "critical" : "pass"}
+        />
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Metadata completion</div>
+          <div className="mt-1 text-lg font-semibold text-neutral-100">
+            {formatPercent(ops.metadata_completion_pct)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Mapping coverage</div>
+          <div className="mt-1 text-lg font-semibold text-neutral-100">
+            {formatPercent(ops.mapping_coverage_pct)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Recent price coverage</div>
+          <div className="mt-1 text-lg font-semibold text-neutral-100">
+            {formatPercent(ops.recent_price_coverage_pct)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">Price source health</div>
+          <OpsStatusValue status={ops.price_source_health_status} />
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+        <div className="flex items-baseline justify-between">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">
+            Latest import validation report
+          </div>
+          <span className={`text-xs font-medium uppercase ${OPS_STATUS_TONE[ops.latest_import_validation_status] ?? "text-neutral-100"}`}>
+            {ops.latest_import_validation_status}
+          </span>
+        </div>
+        {ops.warnings.length > 0 ? (
+          <ul className="mt-2 list-inside list-disc text-xs text-amber-300">
+            {ops.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-xs text-neutral-500">No catalog-operations warnings.</p>
+        )}
+      </div>
     </div>
   );
 }

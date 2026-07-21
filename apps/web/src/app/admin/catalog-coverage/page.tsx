@@ -257,6 +257,9 @@ export default function CatalogCoveragePage() {
           <Link href="/admin/system-check" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
             System check →
           </Link>
+          <Link href="/admin/catalog-ops" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+            Catalog operations →
+          </Link>
           <span className="ml-auto">
             <AdminLogoutButton />
           </span>

@@ -36,6 +36,11 @@
 #                 script stays fast; RUN_LOAD_TESTS is forwarded to it
 #                 unchanged (also default false there), so even with
 #                 RUN_PHASE7_AUDIT=true the load tests themselves stay opt-in.
+#   RUN_PHASE9_AUDIT  default false - set RUN_PHASE9_AUDIT=true to also run
+#                 scripts/phase9_audit.sh (Phase 9 catalog-operations audit -
+#                 see 'Catalog operations workflow' in docs/operations.md).
+#                 Off by default, same reasoning as RUN_PHASE7_AUDIT above;
+#                 ADMIN_TOKEN/BASE_API_URL are forwarded to it unchanged.
 
 set -euo pipefail
 
@@ -47,6 +52,7 @@ ALLOW_DIRTY="${ALLOW_DIRTY:-false}"
 SKIP_WEB_SMOKE="${SKIP_WEB_SMOKE:-false}"
 WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
 RUN_PHASE7_AUDIT="${RUN_PHASE7_AUDIT:-false}"
+RUN_PHASE9_AUDIT="${RUN_PHASE9_AUDIT:-false}"
 export ALLOW_DIRTY
 
 fail() {
@@ -116,6 +122,7 @@ REQUIRED_FILES=(
   scripts/load_test_api.sh
   scripts/load_test_web.sh
   docs/performance_testing.md
+  scripts/phase9_audit.sh
 )
 for f in "${REQUIRED_FILES[@]}"; do
   if [[ -f "$f" ]]; then
@@ -132,6 +139,23 @@ if [[ "$RUN_PHASE7_AUDIT" == "true" ]]; then
     || fail "scripts/phase7_audit.sh"
 else
   echo "skipped (RUN_PHASE7_AUDIT=true to enable)"
+fi
+echo
+
+echo "== 9. scripts/phase9_audit.sh is executable =="
+if [[ -x scripts/phase9_audit.sh ]]; then
+  echo "PASS: scripts/phase9_audit.sh is executable"
+else
+  fail "scripts/phase9_audit.sh is not executable (chmod +x scripts/phase9_audit.sh)"
+fi
+echo
+
+echo "== 10. Phase 9 audit (RUN_PHASE9_AUDIT=$RUN_PHASE9_AUDIT) =="
+if [[ "$RUN_PHASE9_AUDIT" == "true" ]]; then
+  SKIP_TESTS="$SKIP_TESTS" WEB_BASE_URL="$WEB_BASE_URL" bash scripts/phase9_audit.sh \
+    || fail "scripts/phase9_audit.sh"
+else
+  echo "skipped (RUN_PHASE9_AUDIT=true to enable)"
 fi
 echo
 

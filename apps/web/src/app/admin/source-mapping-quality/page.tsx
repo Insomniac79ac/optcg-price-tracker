@@ -342,6 +342,12 @@ export default function SourceMappingQualityPage() {
             >
               Price source health →
             </Link>
+            <Link
+              href="/admin/catalog-ops"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Catalog operations →
+            </Link>
           </div>
           <AdminLogoutButton />
         </div>

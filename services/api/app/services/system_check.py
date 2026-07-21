@@ -636,6 +636,86 @@ def _check_recent_failed_import_validation_reports(db: Session) -> CheckResult:
     )
 
 
+def build_catalog_operations_summary(db: Session) -> dict:
+    """Compact 'catalog operations' snapshot for GET /admin/system-check - one
+    dict built from the same summarized services the individual checks above
+    already call (summarize_mapping_quality, summarize_duplicate_quality,
+    summarize_catalog_coverage, summarize_price_source_health) plus the
+    latest import_validation_reports row. Deliberately does not rerun the
+    full card audit (app.services.card_audit.run_card_audit loads every
+    card/mapping/candidate) - card_audit_status below is derived from the
+    same duplicate/mapping-quality signals card audit itself surfaces, so
+    this stays cheap even on a large catalog. See 'Catalog operations
+    workflow' in docs/operations.md."""
+    from app.services.card_identity_merge import summarize_duplicate_quality
+    from app.services.catalog_coverage import summarize_catalog_coverage
+    from app.services.price_source_health import summarize_price_source_health
+    from app.services.source_mapping_confidence import summarize_mapping_quality
+
+    duplicate_summary = summarize_duplicate_quality(db)
+    mapping_quality_summary = summarize_mapping_quality(db)
+    coverage_summary = summarize_catalog_coverage(db)
+    price_health_summary = summarize_price_source_health(db)
+
+    latest_report = db.scalar(
+        select(ImportValidationReport).order_by(ImportValidationReport.created_at.desc()).limit(1)
+    )
+    if latest_report is None:
+        latest_import_validation_status = "none"
+    elif latest_report.valid:
+        latest_import_validation_status = "valid"
+    else:
+        latest_import_validation_status = "invalid"
+
+    duplicate_risk_count = (
+        duplicate_summary["exact_duplicate_count"] + duplicate_summary["likely_duplicate_count"]
+    )
+    mapping_quality_critical_count = mapping_quality_summary["critical_count"]
+
+    price_source_health_degraded = (
+        price_health_summary["blocked_source_count"] > 0
+        or price_health_summary["error_source_count"] > 0
+        or price_health_summary["recent_refresh_success_rate_pct"]
+        < PRICE_SOURCE_HEALTH_SUCCESS_RATE_WARNING_PCT
+    )
+    price_source_health_status = "degraded" if price_source_health_degraded else "healthy"
+
+    warnings: list[str] = []
+    if mapping_quality_critical_count > 0:
+        warnings.append(f"{mapping_quality_critical_count} critical-risk source mapping(s)")
+    if duplicate_risk_count > 0:
+        warnings.append(f"{duplicate_risk_count} duplicate card pair(s)")
+    if coverage_summary["mapping_coverage_pct"] < CATALOG_COVERAGE_MAPPING_WARNING_PCT:
+        warnings.append(f"mapping coverage {coverage_summary['mapping_coverage_pct']}%")
+    if coverage_summary["recent_price_coverage_pct"] < CATALOG_COVERAGE_RECENT_PRICE_WARNING_PCT:
+        warnings.append(f"recent price coverage {coverage_summary['recent_price_coverage_pct']}%")
+    if coverage_summary["metadata_completion_pct"] < CATALOG_COVERAGE_METADATA_WARNING_PCT:
+        warnings.append(f"metadata completion {coverage_summary['metadata_completion_pct']}%")
+    if price_source_health_status == "degraded":
+        warnings.append("price source health is degraded")
+    if latest_import_validation_status == "invalid":
+        warnings.append(f"latest import validation report (#{latest_report.id}) is invalid")
+
+    if mapping_quality_critical_count > 0 or duplicate_summary["exact_duplicate_count"] > 0:
+        card_audit_status = "critical"
+    elif warnings:
+        card_audit_status = "warning"
+    else:
+        card_audit_status = "ok"
+
+    return {
+        "card_audit_status": card_audit_status,
+        "duplicate_risk_count": duplicate_risk_count,
+        "mapping_quality_critical_count": mapping_quality_critical_count,
+        "metadata_completion_pct": coverage_summary["metadata_completion_pct"],
+        "mapping_coverage_pct": coverage_summary["mapping_coverage_pct"],
+        "recent_price_coverage_pct": coverage_summary["recent_price_coverage_pct"],
+        "price_source_health_status": price_source_health_status,
+        "latest_import_validation_status": latest_import_validation_status,
+        "warnings": warnings,
+    }
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),

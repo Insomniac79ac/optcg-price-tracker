@@ -2675,10 +2675,23 @@ export interface SystemCheckSummary {
   critical: number;
 }
 
+export interface CatalogOperationsSummary {
+  card_audit_status: string;
+  duplicate_risk_count: number;
+  mapping_quality_critical_count: number;
+  metadata_completion_pct: number;
+  mapping_coverage_pct: number;
+  recent_price_coverage_pct: number;
+  price_source_health_status: string;
+  latest_import_validation_status: string;
+  warnings: string[];
+}
+
 export interface SystemCheckResponse {
   status: "ok" | "warning" | "critical";
   summary: SystemCheckSummary;
   checks: SystemCheckResult[];
+  catalog_operations: CatalogOperationsSummary;
 }
 
 /** Routed through the Next.js server proxy (see

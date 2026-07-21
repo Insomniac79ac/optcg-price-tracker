@@ -47,6 +47,7 @@ const ADMIN_LINKS = [
   { href: "/admin/import-validation", label: "Import validation" },
   { href: "/admin/cards", label: "Card catalog" },
   { href: "/admin/card-duplicates", label: "Card duplicates" },
+  { href: "/admin/catalog-ops", label: "Catalog operations" },
   { href: "/market/movers", label: "Market movers" },
 ];
 

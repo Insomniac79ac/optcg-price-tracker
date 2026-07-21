@@ -255,6 +255,9 @@ export default function CardDuplicatesPage() {
           <Link href="/admin/system-check" className="text-sky-400 hover:underline">
             System check
           </Link>
+          <Link href="/admin/catalog-ops" className="text-sky-400 hover:underline">
+            Catalog operations
+          </Link>
         </div>
 
         {unauthorized && <AdminAuthGate onTokenSaved={() => window.location.reload()} />}

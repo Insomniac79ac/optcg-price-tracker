@@ -82,6 +82,12 @@ export default function AdminImportValidationPage() {
               >
                 Backup
               </Link>
+              <Link
+                href="/admin/catalog-ops"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Catalog operations
+              </Link>
             </div>
           </div>
         )}

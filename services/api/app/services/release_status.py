@@ -16,7 +16,11 @@ from app.core.version import get_version_info
 from app.models import AppLogEvent, MarketWorkflowRun
 from app.services.app_logging import list_app_logs
 from app.services.db_backups import list_db_backups
-from app.services.system_check import overall_status, run_system_check
+from app.services.system_check import (
+    build_catalog_operations_summary,
+    overall_status,
+    run_system_check,
+)
 from app.settings import settings
 
 
@@ -69,6 +73,7 @@ def build_release_status(db: Session) -> ReleaseStatus:
             {"name": c.name, "status": c.status, "severity": c.severity, "message": c.message}
             for c in checks
         ],
+        "catalog_operations": build_catalog_operations_summary(db),
     }
 
     backups = list_db_backups(settings.DB_BACKUP_DIR)

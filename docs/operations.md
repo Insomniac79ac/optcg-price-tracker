@@ -263,6 +263,80 @@ filters, a match-detail modal per candidate, and a dry-run-first "rematch all" b
 deletes an existing mapping. Ambiguous candidates (top two scores within 5 points) are never
 auto-suggested - they always need a human pick.
 
+## Catalog operations workflow
+
+This is the entry point for every catalog/data-quality tool in "CSV import validation workflow",
+"Catalog coverage workflow", and "Price source health workflow" below, plus card audit, duplicate
+review, and SNKRDUNK candidate matching - all of it is also reachable from one landing page,
+`/admin/catalog-ops` (nav-linked from the admin dropdown and cross-linked from every page it
+covers), which shows a compact cross-subsystem summary (metadata completion, mapping coverage,
+recent price coverage, duplicate risk count, mapping quality critical count, price source health
+warnings, latest import validation status) alongside links to each tool.
+
+Recommended end-to-end sequence when growing or cleaning up the catalog:
+
+1. **Validate the CSV** using CSV import validation (`POST /admin/import-validation/{import_type}` or the
+   `/admin/import-validation` page) - never writes imported data, only reports what it found.
+2. **Dry-run the catalog import** (`POST /admin/cards/import.csv?dry_run=true`, or `python -m
+   app.import_cards_csv <file> --dry-run`) and review the preview.
+3. **Run the real import** (`dry_run=false`) once the dry-run preview looks right.
+4. **Check card audit** (`GET /admin/card-audit` or `/admin/card-audit`) for identity/data-quality
+   issues the import may have introduced.
+5. **Check duplicate review** (`GET /admin/cards/duplicates` or `/admin/card-duplicates`) for any
+   new duplicate-card risk.
+6. **Merge duplicates only after previewing** - `GET /admin/cards/{source_card_id}/merge-preview`
+   (or the "Preview merge" button in the UI) before `POST /admin/cards/merge`. Never merge from a
+   bulk action without reviewing each preview first.
+7. **Review SNKRDUNK candidates manually** (`/admin/snkrdunk-candidates`, see "Review SNKRDUNK
+   candidate matches" above) - ambiguous candidates always need a human pick.
+8. **Review source mapping quality** (`GET /admin/source-mappings/quality` or
+   `/admin/source-mapping-quality`) for low-confidence, stale, unverified, or duplicate-source-URL
+   mappings.
+9. **Check catalog coverage** (`GET /admin/catalog-coverage` or `/admin/catalog-coverage`) - see
+   "Catalog coverage workflow" below.
+10. **Check price source health** (`GET /admin/price-source-health` or `/admin/price-source-health`)
+    - see "Price source health workflow" below.
+11. **Run a normal price refresh** - `POST /admin/actions/refresh-prices` (see "Run Yuyu-Tei refresh
+    manually" above). This workflow never adds a new way to trigger a refresh beyond what already
+    exists.
+12. **Run system check** (`GET /admin/system-check` or `/admin/system-check`) - surfaces a
+    `catalog_operations` summary (card audit status, duplicate risk count, mapping quality critical
+    count, catalog coverage percentages, price source health status, latest import validation
+    status, and a `warnings` list) built from the same summarized services the tools above use, so
+    it stays fast even on a large catalog.
+
+**Safety notes:**
+
+- Never bypass SNKRDUNK (or Yuyu-Tei) website protections - if automated discovery reports
+  `blocked`, use the manual CSV candidate import instead of forcing discovery through anyway (see
+  "Import SNKRDUNK candidates CSV" above).
+- Use manual imports when automated discovery is blocked - the manual `snkrdunk_candidates` CSV
+  import + candidate review workflow is the supported fallback and does not scrape SNKRDUNK.
+- Validation does not write imported data - `POST /admin/import-validation/{import_type}` only ever
+  persists a summary row to `import_validation_reports`; it never writes to `cards`,
+  `source_card_mappings`, or any other imported-data table.
+- Merge tools never hard-delete cards - `POST /admin/cards/merge` marks the source card
+  `is_active=false` with `merged_into_card_id` set (see "Fix source mapping gaps"/"Review duplicate
+  risks" in "Catalog coverage workflow" below); the row and its history stay in the database.
+- Never bulk merge cards without reviewing previews - `POST /admin/cards/duplicates/bulk-preview`
+  is preview-only (no merge side effects); always inspect each `field_merge_preview`/
+  `affected_records` before calling `POST /admin/cards/merge` for a given pair.
+
+CLI reference (all run via `docker compose exec api python -m <module>`, matching the pattern used
+throughout this file):
+
+| Module | Purpose |
+|---|---|
+| `app.import_cards_csv <file> [--dry-run] [--overwrite]` | Import a canonical `card_catalog` CSV (same importer as `POST /admin/cards/import.csv`) |
+| `app.export_cards_csv [--output PATH]` | Export the canonical card catalog to CSV (default `data/exports/cards_export.csv`) |
+| `app.validate_import_csv <file> --type <type> [--strict] [--json] [--user-id N] [--no-save-report]` | Dry-run CSV validation (see "CSV import validation workflow" below); exits `0` if valid, `1` otherwise |
+| `app.catalog_coverage_report [--set-code CODE] [--json] [--output PATH]` | Catalog coverage summary (see "Catalog coverage workflow" below) |
+| `app.price_source_health_report [--source NAME] [--json] [--output PATH]` | Price source health summary (see "Price source health workflow" below) |
+
+Also runnable end-to-end via `scripts/phase9_audit.sh` (fails fast, covers every admin endpoint
+and CLI module above against a live `make dev-up` stack - see that script's header comment for env
+vars).
+
 ## CSV import validation workflow
 
 Before a larger `card_catalog`/`source_mappings`/`snkrdunk_candidates`/`collection`/`wishlist`
@@ -648,6 +722,21 @@ restarts whichever of those services were running, then runs `alembic upgrade he
 There's also an on-demand `docker compose --profile backup run --rm db-backup` service in
 `docker-compose.prod.yml` that does the same dump from inside the compose network, for
 environments where you'd rather not shell out via `docker compose exec` from the host.
+
+**Phase 9 (catalog operations) coverage.** `pg_dump`/`pg_restore` above operate on the whole
+database, so every catalog-operations table/field is captured automatically with no special
+casing needed. The selective JSON backup (`GET /admin/backup/export`, `POST
+/admin/backup/restore`, backed by `app.services.backup.MODEL_BY_TABLE`/`REQUIRED_TABLES` - see
+"Large import/export jobs" below) also covers it explicitly: `cards` (a required table) includes
+the expanded metadata fields and the card-merge fields (`merged_into_card_id`, `merged_at`,
+`merge_notes`); `card_aliases` is a required table; `import_validation_reports` is an optional
+table, included by passing `include_validation_reports=true` to `GET /admin/backup/export` - same
+opt-in convention as prices/raw snapshots/refresh runs/logs (`/admin/backup`'s UI and
+`app.export_backup`'s CLI currently only expose checkboxes/flags for that older set; call the
+query param directly to include validation reports), since validation reports are diagnostic
+history rather than data a restore strictly needs.
+`GET /admin/system-check`'s `backup_tables_included` check fails if any table required for backup
+coverage is ever missing from `MODEL_BY_TABLE`.
 
 `GET /admin/db-backups` (admin-token protected, like the rest of `/admin/*`) lists the backup
 files currently on disk (filename, size, created-at) by reading `DB_BACKUP_DIR`

@@ -3,9 +3,18 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
 from app.db import get_db
-from app.schemas import SystemCheckResponseOut, SystemCheckResultOut, SystemCheckSummaryOut
+from app.schemas import (
+    CatalogOperationsSummaryOut,
+    SystemCheckResponseOut,
+    SystemCheckResultOut,
+    SystemCheckSummaryOut,
+)
 from app.services.app_logging import record_app_log
-from app.services.system_check import overall_status, run_system_check
+from app.services.system_check import (
+    build_catalog_operations_summary,
+    overall_status,
+    run_system_check,
+)
 
 router = APIRouter(
     prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -45,4 +54,7 @@ def system_check_endpoint(db: Session = Depends(get_db)):
             )
             for c in checks
         ],
+        catalog_operations=CatalogOperationsSummaryOut(
+            **build_catalog_operations_summary(db)
+        ),
     )

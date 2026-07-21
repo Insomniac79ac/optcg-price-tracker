@@ -2842,10 +2842,23 @@ class SystemCheckSummaryOut(BaseModel):
     critical: int
 
 
+class CatalogOperationsSummaryOut(BaseModel):
+    card_audit_status: str
+    duplicate_risk_count: int
+    mapping_quality_critical_count: int
+    metadata_completion_pct: float
+    mapping_coverage_pct: float
+    recent_price_coverage_pct: float
+    price_source_health_status: str
+    latest_import_validation_status: str
+    warnings: list[str]
+
+
 class SystemCheckResponseOut(BaseModel):
     status: str
     summary: SystemCheckSummaryOut
     checks: list[SystemCheckResultOut]
+    catalog_operations: CatalogOperationsSummaryOut
 
 
 # --- env check ---------------------------------------------------------
