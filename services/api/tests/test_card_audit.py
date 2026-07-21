@@ -43,6 +43,14 @@ def test_clean_catalog_has_no_issues(db_session, yuyutei):
         )
     )
     db_session.commit()
+    # A recent price observation, or app.services.price_source_health's
+    # source_price_missing check (see _check_source_price_health) correctly
+    # flags this mapping as never-refreshed - "clean" now also means "has a
+    # recent price", not just "has a mapping".
+    db_session.add(
+        PriceObservation(card_id=card.id, source_id=yuyutei.id, price_type="sell", price_jpy=1000)
+    )
+    db_session.commit()
 
     report = run_card_audit(db_session)
 

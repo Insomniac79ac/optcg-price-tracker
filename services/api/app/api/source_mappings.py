@@ -161,6 +161,7 @@ def update_source_mapping(
     db.commit()
     db.refresh(mapping)
     delete_cache_prefix("admin/catalog_coverage")
+    delete_cache_prefix("admin/price_source_health")
     return _to_out_with_lookups(db, mapping)
 
 
@@ -172,6 +173,7 @@ def reject_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(mapping)
     delete_cache_prefix("admin/catalog_coverage")
+    delete_cache_prefix("admin/price_source_health")
     return _to_out_with_lookups(db, mapping)
 
 
@@ -184,4 +186,5 @@ def approve_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(mapping)
     delete_cache_prefix("admin/catalog_coverage")
+    delete_cache_prefix("admin/price_source_health")
     return _to_out_with_lookups(db, mapping)

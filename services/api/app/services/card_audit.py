@@ -19,6 +19,7 @@ from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
 from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
 from app.services.catalog_coverage import summarize_catalog_coverage
+from app.services.price_source_health import PriceSourceHealthFilters, compute_price_source_health
 from app.services.source_mapping_confidence import (
     MappingQualityFilters,
     evaluate_source_mappings,
@@ -775,6 +776,79 @@ def _check_critical_mapping_quality(db: Session) -> list[AuditIssue]:
     return issues
 
 
+# A source's missing-price share above this bar is worth its own audit
+# issue - same threshold app.services.price_source_health uses for its own
+# "degraded" health_status rule (DEGRADED_PRICE_GAP_THRESHOLD_PCT).
+SOURCE_MISSING_PRICE_AUDIT_THRESHOLD_PCT = 20.0
+
+
+def _check_source_price_health(db: Session) -> list[AuditIssue]:
+    """One AuditIssue per source with a notable stale-price rate, a notable
+    missing-price rate, or a failed latest refresh - reuses
+    app.services.price_source_health's per-source health_status/stale/
+    missing counts rather than emitting one issue per affected mapping (see
+    GET /admin/price-source-health for that per-mapping detail, and the
+    'only include severe/high-level summary' rule this satisfies by
+    aggregating every affected card into one issue per source)."""
+    report = compute_price_source_health(db, PriceSourceHealthFilters())
+    issues: list[AuditIssue] = []
+
+    for source in report.sources:
+        if source.latest_refresh_status == "failed":
+            issues.append(
+                AuditIssue(
+                    issue_type="source_refresh_failed",
+                    severity=CRITICAL,
+                    card_ids=[],
+                    card_code=None,
+                    message=f"{source.source_name}: latest price refresh failed",
+                    suggested_action="review_price_source_health",
+                    details={"source_name": source.source_name},
+                )
+            )
+
+        if source.active_mapping_count == 0:
+            continue
+
+        stale_card_ids = sorted({g.card_id for g in report.stale_prices if g.source_name == source.source_name})
+        if source.health_status in ("stale", "degraded") and stale_card_ids:
+            stale_pct = round((source.stale_price_count / source.active_mapping_count) * 100, 2)
+            issues.append(
+                AuditIssue(
+                    issue_type="source_price_stale",
+                    severity=WARNING,
+                    card_ids=stale_card_ids,
+                    card_code=None,
+                    message=(
+                        f"{source.source_name}: {source.stale_price_count} active mapping(s) "
+                        f"({stale_pct}%) have a stale price"
+                    ),
+                    suggested_action="review_price_source_health",
+                    details={"source_name": source.source_name, "stale_price_count": source.stale_price_count},
+                )
+            )
+
+        missing_card_ids = sorted({g.card_id for g in report.missing_prices if g.source_name == source.source_name})
+        missing_pct = round((source.missing_price_count / source.active_mapping_count) * 100, 2)
+        if missing_card_ids and missing_pct > SOURCE_MISSING_PRICE_AUDIT_THRESHOLD_PCT:
+            issues.append(
+                AuditIssue(
+                    issue_type="source_price_missing",
+                    severity=WARNING,
+                    card_ids=missing_card_ids,
+                    card_code=None,
+                    message=(
+                        f"{source.source_name}: {source.missing_price_count} active mapping(s) "
+                        f"({missing_pct}%) have no price observation"
+                    ),
+                    suggested_action="review_price_source_health",
+                    details={"source_name": source.source_name, "missing_price_count": source.missing_price_count},
+                )
+            )
+
+    return issues
+
+
 def run_card_audit(db: Session) -> CardAuditReport:
     cards = list(db.scalars(select(Card)).all())
     mappings = list(db.scalars(select(SourceCardMapping)).all())
@@ -810,6 +884,7 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_active_card_merged_into_another_card(cards),
         *_check_merged_card_still_has_active_source_mapping(mappings, cards_by_id),
         *_check_card_alias_without_card(db, set(cards_by_id.keys())),
+        *_check_source_price_health(db),
     ]
 
     return CardAuditReport(

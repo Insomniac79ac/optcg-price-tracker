@@ -533,6 +533,58 @@ def _check_catalog_coverage_summary(db: Session) -> CheckResult:
     )
 
 
+# Below these thresholds, price source health is degraded enough to be
+# worth a system-check warning - see _check_price_source_health_summary and
+# 'Price source health workflow' in docs/operations.md.
+PRICE_SOURCE_HEALTH_SUCCESS_RATE_WARNING_PCT = 80.0
+PRICE_SOURCE_HEALTH_MISSING_PRICE_WARNING_PCT = 20.0
+PRICE_SOURCE_HEALTH_STALE_PRICE_WARNING_PCT = 20.0
+
+
+def _check_price_source_health_summary(db: Session) -> CheckResult:
+    """Rolls up app.services.price_source_health.summarize_price_source_health
+    into one system-check warning - a blocked/error source, a low refresh
+    success rate, or a lot of stale/missing prices is worth a human glancing
+    at GET /admin/price-source-health."""
+    from app.services.price_source_health import summarize_price_source_health
+
+    summary = summarize_price_source_health(db)
+    reasons = []
+    if summary["blocked_source_count"] > 0:
+        reasons.append(f"{summary['blocked_source_count']} blocked source(s)")
+    if summary["error_source_count"] > 0:
+        reasons.append(f"{summary['error_source_count']} source(s) in error")
+    if summary["recent_refresh_success_rate_pct"] < PRICE_SOURCE_HEALTH_SUCCESS_RATE_WARNING_PCT:
+        reasons.append(f"recent refresh success rate {summary['recent_refresh_success_rate_pct']}%")
+    total = summary["total_active_mappings"]
+    missing_pct = (summary["mappings_without_recent_price"] / total * 100) if total else 0.0
+    if missing_pct > PRICE_SOURCE_HEALTH_MISSING_PRICE_WARNING_PCT:
+        reasons.append(
+            f"{summary['mappings_without_recent_price']} mapping(s) without a recent price "
+            f"({round(missing_pct, 2)}%)"
+        )
+    stale_pct = (summary["stale_price_count"] / total * 100) if total else 0.0
+    if stale_pct > PRICE_SOURCE_HEALTH_STALE_PRICE_WARNING_PCT:
+        reasons.append(f"{summary['stale_price_count']} stale price(s) ({round(stale_pct, 2)}%)")
+    if summary["last_successful_refresh_at"] is None:
+        reasons.append("no successful refresh recorded")
+
+    if reasons:
+        return CheckResult(
+            "price_source_health_summary",
+            "warning",
+            "warning",
+            f"Price source health needs review: {'; '.join(reasons)}. See GET /admin/price-source-health.",
+        )
+    return CheckResult(
+        "price_source_health_summary",
+        "pass",
+        "info",
+        f"Price source health looks healthy: recent refresh success rate "
+        f"{summary['recent_refresh_success_rate_pct']}%.",
+    )
+
+
 def _check_latest_import_validation_report(db: Session) -> CheckResult:
     latest = db.scalar(
         select(ImportValidationReport).order_by(ImportValidationReport.created_at.desc()).limit(1)
@@ -664,6 +716,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_duplicate_cards(db),
         _check_inactive_cards_missing_merge_target(db),
         _check_catalog_coverage_summary(db),
+        _check_price_source_health_summary(db),
         _check_latest_import_validation_report(db),
         _check_recent_failed_import_validation_reports(db),
     ]

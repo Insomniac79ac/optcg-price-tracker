@@ -69,6 +69,7 @@ _CARD_MERGE_CACHE_INVALIDATES = (
     "analytics_digest",
     "source_mappings",
     "admin/catalog_coverage",
+    "admin/price_source_health",
 )
 
 

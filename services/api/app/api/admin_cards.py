@@ -39,6 +39,7 @@ _CARD_CATALOG_CACHE_INVALIDATES = (
     "portfolio_risk",
     "analytics_digest",
     "admin/catalog_coverage",
+    "admin/price_source_health",
 )
 
 # Metadata fields considered when deciding whether a card is "missing

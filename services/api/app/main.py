@@ -21,6 +21,7 @@ from app.api.admin_job_locks import router as admin_job_locks_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
 from app.api.admin_performance import router as admin_performance_router
+from app.api.admin_price_source_health import router as admin_price_source_health_router
 from app.api.admin_rate_limit import router as admin_rate_limit_router
 from app.api.admin_release_status import router as admin_release_status_router
 from app.api.alerts import router as alerts_router
@@ -200,6 +201,7 @@ app.include_router(admin_job_locks_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)
 app.include_router(admin_performance_router)
+app.include_router(admin_price_source_health_router)
 app.include_router(admin_rate_limit_router)
 app.include_router(admin_release_status_router)
 app.include_router(market_workflow_runs_router)

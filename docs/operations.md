@@ -384,6 +384,63 @@ The report is cached under the `admin/catalog_coverage` prefix (see "Cache opera
 cards, source mappings, collection items, or wishlist items - see that write path's own
 `CACHE_INVALIDATES`/`WRITE_CACHE_PREFIXES` list.
 
+## Price source health workflow
+
+`GET /admin/price-source-health` (backed by `app.services.price_source_health`) answers "is each
+price source actually healthy right now": recent refresh success/failure, SNKRDUNK
+automated-discovery blocked status, and stale/missing prices on active `source_card_mappings`.
+Read-only - it never triggers a refresh, retries a blocked source, or scrapes anything.
+
+Recommended flow:
+
+1. **Check price source health.** `GET /admin/price-source-health` (optional `source`/`set_code`/
+   `rarity`/`variant`/`language` filters, `include_inactive_mappings=true` to include inactive
+   mappings) returns a `summary`, a per-`sources` breakdown (`health_status` one of `healthy`,
+   `degraded`, `stale`, `blocked`, `error`, `unknown`), `coverage_by_set`/`coverage_by_rarity`, the
+   `stale_prices`/`missing_prices` gap lists, recent `refresh_runs`, and `warnings`. Freshness
+   thresholds match "Catalog coverage workflow" above: Yuyu-Tei within 24 hours, SNKRDUNK within 7
+   days. Drill into `failed_refresh`/`blocked`/`low_coverage` gaps (not in the top-level report) via
+   `GET /admin/price-source-health/gaps?gap_type=<stale|missing|failed_refresh|blocked|
+   low_coverage>` (also takes `source`/`set_code`/`rarity`/`limit`/`offset`). The
+   `/admin/price-source-health` page in the web UI covers both, and is linked from the admin nav,
+   `/admin/catalog-coverage`, `/admin/source-mapping-quality`, `/admin/refresh-runs`,
+   `/admin/card-audit`, and `/admin/system-check`.
+2. **Review stale/missing prices** - a mapping with a price older than its source's freshness
+   window is `stale`; one with no price observation at all is `missing`. Both point at
+   `run_refresh_or_review_mapping`: usually just needs a normal refresh (below), but a mapping that
+   stays missing/stale across several refreshes is worth checking for a broken `source_url`/
+   `source_card_id` via `GET /admin/source-mappings/quality`.
+3. **Run a normal refresh** - `POST /admin/actions/refresh-prices` (see `/admin/actions` in the web
+   UI, or "Run Yuyu-Tei refresh manually" above) - the existing Celery-backed trigger. This
+   workflow only ever reads `price_refresh_runs`/`snkrdunk_discovery_runs` status; it never adds a
+   new way to trigger or retry a refresh beyond what already exists.
+4. **Review source mapping quality** for any source reported `error` (latest refresh failed) via
+   `GET /admin/source-mappings/quality` and "Check refresh runs" below (find the failed run, read
+   `error_message`).
+5. **Use the manual SNKRDUNK candidate import** ("Import SNKRDUNK candidates CSV" above) whenever a
+   source reports `health_status: "blocked"` - that means `snkrdunk_discovery_runs.status ==
+   "blocked"` (the site blocked automated discovery). Never bypass site protections to force
+   discovery through anyway; the manual CSV import + "Review SNKRDUNK candidate matches" workflow
+   above is the supported fallback and does not scrape SNKRDUNK.
+6. **Rerun `GET /admin/card-audit` and `GET /admin/system-check`** afterward - both surface a
+   price-source-health summary (via `app.services.price_source_health.summarize_price_source_health`)
+   without repeating every stale/missing mapping the health page already lists individually;
+   `system-check` warns on any blocked/error source, a recent refresh success rate below 80%, more
+   than 20% of mappings without a recent price, more than 20% stale, or no successful refresh ever
+   recorded.
+
+CLI equivalent (prints a summary; add `--json` for the full report, `--output PATH` to also write
+it to a file):
+
+```
+docker compose exec api python -m app.price_source_health_report --source yuyutei
+```
+
+The report is cached under the `admin/price_source_health` prefix (see "Cache operations" below,
+`CACHE_PRICE_SOURCE_HEALTH_TTL_SECONDS`, default 60s - shorter than catalog coverage's, since
+freshness is the whole point here) and is invalidated by any write that changes cards or source
+mappings.
+
 ## Check refresh runs
 
 Via the admin API (requires `X-Admin-Token`; see `docs/deployment.md`):

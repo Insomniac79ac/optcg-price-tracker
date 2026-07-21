@@ -1165,11 +1165,111 @@ class CatalogCoverageReportOut(BaseModel):
     price_gaps: list[CatalogCoverageGapItemOut]
     duplicate_risks: list[CatalogCoverageGapItemOut]
     mapping_quality_risks: list[CatalogCoverageGapItemOut]
+    # Loosely-typed (not PriceSourceHealthSummaryOut, defined later in this
+    # file) rather than reordering every catalog-coverage schema above this
+    # one - see app.services.catalog_coverage's price_source_health field,
+    # populated from app.services.price_source_health.summarize_price_source_health.
+    price_source_health: dict[str, Any] | None = None
 
 
 class CatalogCoverageGapsOut(BaseModel):
     gap_type: str
     items: list[CatalogCoverageGapItemOut]
+    pagination: PaginationMeta
+
+
+# --- price source health -------------------------------------------------
+
+
+class PriceSourceHealthSummaryOut(BaseModel):
+    sources_count: int
+    active_sources_count: int
+    total_active_mappings: int
+    mappings_with_recent_price: int
+    mappings_without_recent_price: int
+    stale_price_count: int
+    missing_price_count: int
+    last_successful_refresh_at: datetime | None
+    last_failed_refresh_at: datetime | None
+    recent_refresh_success_rate_pct: float
+    blocked_source_count: int
+    error_source_count: int
+
+
+class SourceHealthItemOut(BaseModel):
+    source_id: int
+    source_name: str
+    active_mapping_count: int
+    recent_price_count: int
+    stale_price_count: int
+    missing_price_count: int
+    latest_price_observed_at: datetime | None
+    latest_refresh_status: str | None
+    latest_refresh_started_at: datetime | None
+    latest_refresh_finished_at: datetime | None
+    recent_refresh_success_rate_pct: float
+    average_refresh_duration_seconds: float | None
+    blocked_count_7d: int
+    error_count_7d: int
+    health_status: str
+    warnings: list[str]
+
+
+class HealthCoverageBreakdownItemOut(BaseModel):
+    key: str
+    label: str
+    mapped_cards: int
+    recent_price_cards: int
+    stale_price_cards: int
+    missing_price_cards: int
+    coverage_pct: float
+
+
+class PriceGapItemOut(BaseModel):
+    mapping_id: int
+    card_id: int
+    card_code: str | None
+    name_en: str | None
+    set_code: str | None
+    rarity: str | None
+    variant: str | None
+    language: str | None
+    source_name: str
+    source_url: str | None
+    latest_price_observed_at: datetime | None
+    latest_price_type: str | None
+    latest_price_jpy: int | None
+    issue_type: str
+    severity: str
+    suggested_action: str
+
+
+class RefreshRunSummaryItemOut(BaseModel):
+    id: int
+    status: str
+    source_filter: str | None
+    started_at: datetime
+    finished_at: datetime | None
+    dry_run: bool
+    mappings_checked: int
+    mappings_failed: int
+    error_message: str | None
+
+
+class PriceSourceHealthReportOut(BaseModel):
+    summary: PriceSourceHealthSummaryOut
+    sources: list[SourceHealthItemOut]
+    coverage_by_set: list[HealthCoverageBreakdownItemOut]
+    coverage_by_rarity: list[HealthCoverageBreakdownItemOut]
+    stale_prices: list[PriceGapItemOut]
+    missing_prices: list[PriceGapItemOut]
+    refresh_runs: list[RefreshRunSummaryItemOut]
+    warnings: list[str]
+
+
+class PriceSourceHealthGapsOut(BaseModel):
+    gap_type: str
+    items: list[PriceGapItemOut]
     pagination: PaginationMeta
 
 

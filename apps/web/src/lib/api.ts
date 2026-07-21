@@ -1296,6 +1296,10 @@ export interface CatalogCoverageReport {
   price_gaps: CatalogCoverageGapItem[];
   duplicate_risks: CatalogCoverageGapItem[];
   mapping_quality_risks: CatalogCoverageGapItem[];
+  // Loosely-typed - see PriceSourceHealthSummary for the real shape (kept
+  // as Record here rather than importing that type ordering-wise, since
+  // both are declared in this same file - see the type below).
+  price_source_health: PriceSourceHealthSummary | null;
 }
 
 export type CatalogCoverageGapType = "metadata" | "mapping" | "price" | "duplicate" | "mapping_quality";
@@ -1351,6 +1355,148 @@ export function fetchCatalogCoverageGaps(params: {
   if (params.offset !== undefined) query.set("offset", String(params.offset));
   return fetchAdminJson<CatalogCoverageGapsResponse>(
     `/api/admin/catalog-coverage/gaps?${query.toString()}`,
+  );
+}
+
+// --- Price source health (see GET /admin/price-source-health*) -------------
+
+export interface PriceSourceHealthSummary {
+  sources_count: number;
+  active_sources_count: number;
+  total_active_mappings: number;
+  mappings_with_recent_price: number;
+  mappings_without_recent_price: number;
+  stale_price_count: number;
+  missing_price_count: number;
+  last_successful_refresh_at: string | null;
+  last_failed_refresh_at: string | null;
+  recent_refresh_success_rate_pct: number;
+  blocked_source_count: number;
+  error_source_count: number;
+}
+
+export interface SourceHealthItem {
+  source_id: number;
+  source_name: string;
+  active_mapping_count: number;
+  recent_price_count: number;
+  stale_price_count: number;
+  missing_price_count: number;
+  latest_price_observed_at: string | null;
+  latest_refresh_status: string | null;
+  latest_refresh_started_at: string | null;
+  latest_refresh_finished_at: string | null;
+  recent_refresh_success_rate_pct: number;
+  average_refresh_duration_seconds: number | null;
+  blocked_count_7d: number;
+  error_count_7d: number;
+  health_status: string;
+  warnings: string[];
+}
+
+export interface HealthCoverageBreakdownItem {
+  key: string;
+  label: string;
+  mapped_cards: number;
+  recent_price_cards: number;
+  stale_price_cards: number;
+  missing_price_cards: number;
+  coverage_pct: number;
+}
+
+export interface PriceGapItem {
+  mapping_id: number;
+  card_id: number;
+  card_code: string | null;
+  name_en: string | null;
+  set_code: string | null;
+  rarity: string | null;
+  variant: string | null;
+  language: string | null;
+  source_name: string;
+  source_url: string | null;
+  latest_price_observed_at: string | null;
+  latest_price_type: string | null;
+  latest_price_jpy: number | null;
+  issue_type: string;
+  severity: string;
+  suggested_action: string;
+}
+
+export interface RefreshRunSummaryItem {
+  id: number;
+  status: string;
+  source_filter: string | null;
+  started_at: string;
+  finished_at: string | null;
+  dry_run: boolean;
+  mappings_checked: number;
+  mappings_failed: number;
+  error_message: string | null;
+}
+
+export interface PriceSourceHealthReport {
+  summary: PriceSourceHealthSummary;
+  sources: SourceHealthItem[];
+  coverage_by_set: HealthCoverageBreakdownItem[];
+  coverage_by_rarity: HealthCoverageBreakdownItem[];
+  stale_prices: PriceGapItem[];
+  missing_prices: PriceGapItem[];
+  refresh_runs: RefreshRunSummaryItem[];
+  warnings: string[];
+}
+
+export type PriceSourceHealthGapType = "stale" | "missing" | "failed_refresh" | "blocked" | "low_coverage";
+
+export interface PriceSourceHealthGapsResponse {
+  gap_type: PriceSourceHealthGapType;
+  items: PriceGapItem[];
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/price-source-health/route.ts) - same reasoning as
+ * fetchCatalogCoverage. */
+export function fetchPriceSourceHealth(params?: {
+  source?: string;
+  set_code?: string;
+  rarity?: string;
+  variant?: string;
+  language?: string;
+  include_inactive_mappings?: boolean;
+}): Promise<PriceSourceHealthReport> {
+  const query = new URLSearchParams();
+  if (params?.source) query.set("source", params.source);
+  if (params?.set_code) query.set("set_code", params.set_code);
+  if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.variant) query.set("variant", params.variant);
+  if (params?.language) query.set("language", params.language);
+  if (params?.include_inactive_mappings !== undefined) {
+    query.set("include_inactive_mappings", String(params.include_inactive_mappings));
+  }
+  const qs = query.toString();
+  return fetchAdminJson<PriceSourceHealthReport>(`/api/admin/price-source-health${qs ? `?${qs}` : ""}`);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/price-source-health/gaps/route.ts). */
+export function fetchPriceSourceHealthGaps(params: {
+  gap_type: PriceSourceHealthGapType;
+  source?: string;
+  set_code?: string;
+  rarity?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PriceSourceHealthGapsResponse> {
+  const query = new URLSearchParams();
+  query.set("gap_type", params.gap_type);
+  if (params.source) query.set("source", params.source);
+  if (params.set_code) query.set("set_code", params.set_code);
+  if (params.rarity) query.set("rarity", params.rarity);
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  return fetchAdminJson<PriceSourceHealthGapsResponse>(
+    `/api/admin/price-source-health/gaps?${query.toString()}`,
   );
 }
 

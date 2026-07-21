@@ -42,6 +42,7 @@ const ADMIN_LINKS = [
   { href: "/admin/alerts", label: "Alerts" },
   { href: "/admin/card-audit", label: "Card audit" },
   { href: "/admin/catalog-coverage", label: "Catalog coverage" },
+  { href: "/admin/price-source-health", label: "Price source health" },
   { href: "/admin/source-mapping-quality", label: "Mapping quality" },
   { href: "/admin/import-validation", label: "Import validation" },
   { href: "/admin/cards", label: "Card catalog" },

@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping, WishlistItem
 from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
+from app.services.price_source_health import summarize_price_source_health
 from app.services.source_mapping_confidence import MappingQualityFilters, evaluate_source_mappings
 
 SUPPORTED_MAPPING_SOURCES = ("yuyutei", "snkrdunk")
@@ -204,6 +205,15 @@ class CatalogCoverageReport:
     price_gaps: list[CoverageGapItem] = field(default_factory=list)
     duplicate_risks: list[CoverageGapItem] = field(default_factory=list)
     mapping_quality_risks: list[CoverageGapItem] = field(default_factory=list)
+    # Populated by compute_catalog_coverage from
+    # app.services.price_source_health.summarize_price_source_health - a
+    # top-line summary only (see GET /admin/price-source-health for the full
+    # per-source breakdown and gap lists). None when
+    # include_price_source_health=False (summarize_catalog_coverage's
+    # internal call - system_check/card_audit already fetch their own price
+    # source health summary separately, so this would just be redundant
+    # work).
+    price_source_health: dict[str, Any] | None = None
 
     def gaps_for(self, gap_type: str) -> list[CoverageGapItem]:
         return {
@@ -226,6 +236,7 @@ class CatalogCoverageReport:
             "price_gaps": [i.to_dict() for i in self.price_gaps],
             "duplicate_risks": [i.to_dict() for i in self.duplicate_risks],
             "mapping_quality_risks": [i.to_dict() for i in self.mapping_quality_risks],
+            "price_source_health": self.price_source_health,
         }
 
 
@@ -554,7 +565,11 @@ def _build_summary(cards: list[Card], facts_by_id: dict[int, _CardFacts]) -> dic
 
 
 def compute_catalog_coverage(
-    db: Session, filters: CatalogCoverageFilters | None = None, *, include_gaps: bool = True
+    db: Session,
+    filters: CatalogCoverageFilters | None = None,
+    *,
+    include_gaps: bool = True,
+    include_price_source_health: bool = True,
 ) -> CatalogCoverageReport:
     """Computes the full catalog coverage report for the given filters. Pass
     include_gaps=False (see summarize_catalog_coverage) to skip building the
@@ -585,22 +600,28 @@ def compute_catalog_coverage(
         }
     )
 
+    price_source_health = summarize_price_source_health(db) if include_price_source_health else None
+
     return CatalogCoverageReport(
         summary=summary,
         coverage_by_set=coverage_by_set,
         coverage_by_rarity=coverage_by_rarity,
         coverage_by_variant=coverage_by_variant,
         coverage_by_language=coverage_by_language,
+        price_source_health=price_source_health,
         **gaps,
     )
 
 
 def summarize_catalog_coverage(db: Session) -> dict[str, Any]:
-    """Unfiltered summary-only view (no gap lists) - used by
-    app.services.system_check and app.services.card_audit so neither has to
-    pull in the full gap breakdown just to report a handful of top-line
-    numbers. See GET /admin/catalog-coverage for the full report."""
-    return compute_catalog_coverage(db, CatalogCoverageFilters(), include_gaps=False).summary
+    """Unfiltered summary-only view (no gap lists, no nested price source
+    health) - used by app.services.system_check and app.services.card_audit
+    so neither has to pull in the full gap breakdown just to report a
+    handful of top-line numbers. See GET /admin/catalog-coverage for the
+    full report."""
+    return compute_catalog_coverage(
+        db, CatalogCoverageFilters(), include_gaps=False, include_price_source_health=False
+    ).summary
 
 
 def paginated_gaps(

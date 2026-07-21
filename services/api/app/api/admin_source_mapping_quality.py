@@ -160,6 +160,7 @@ def recheck_mapping_quality(body: RecheckQualityIn, db: Session = Depends(get_db
     if not body.dry_run and summary.updated > 0:
         delete_cache_prefix("source_mappings")
         delete_cache_prefix("admin/catalog_coverage")
+        delete_cache_prefix("admin/price_source_health")
         record_app_log(
             "info",
             "api",
@@ -233,6 +234,7 @@ def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db
         db.commit()
         delete_cache_prefix("source_mappings")
         delete_cache_prefix("admin/catalog_coverage")
+        delete_cache_prefix("admin/price_source_health")
         record_app_log(
             "info",
             "api",
@@ -275,6 +277,7 @@ def replace_mapping_card(
     db.commit()
     delete_cache_prefix("source_mappings")
     delete_cache_prefix("admin/catalog_coverage")
+    delete_cache_prefix("admin/price_source_health")
     record_app_log(
         "info",
         "api",
