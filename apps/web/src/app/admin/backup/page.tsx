@@ -69,6 +69,12 @@ export default function AdminBackupPage() {
               >
                 File jobs
               </Link>
+              <Link
+                href="/admin/import-validation"
+                className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Import validation
+              </Link>
             </div>
           </div>
         )}

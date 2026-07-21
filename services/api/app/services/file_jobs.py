@@ -561,6 +561,7 @@ def _process_backup_export(db: Session, job: FileJob) -> None:
         include_raw_snapshots=params.get("include_raw_snapshots", False),
         include_refresh_runs=params.get("include_refresh_runs", False),
         include_logs=params.get("include_logs", False),
+        include_validation_reports=params.get("include_validation_reports", False),
     )
     output_path = file_job_storage.allocate_output_path(job.id, extension=".json")
     size = file_job_storage.write_output_text(output_path, json.dumps(backup, indent=2))

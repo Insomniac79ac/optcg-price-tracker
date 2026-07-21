@@ -47,6 +47,7 @@ def export_backup_endpoint(
     include_raw_snapshots: bool = Query(default=False),
     include_refresh_runs: bool = Query(default=False),
     include_logs: bool = Query(default=False),
+    include_validation_reports: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
     try:
@@ -56,6 +57,7 @@ def export_backup_endpoint(
             include_raw_snapshots=include_raw_snapshots,
             include_refresh_runs=include_refresh_runs,
             include_logs=include_logs,
+            include_validation_reports=include_validation_reports,
         )
     except Exception as exc:
         log_exception(
@@ -65,6 +67,7 @@ def export_backup_endpoint(
                 "include_raw_snapshots": include_raw_snapshots,
                 "include_refresh_runs": include_refresh_runs,
                 "include_logs": include_logs,
+                "include_validation_reports": include_validation_reports,
             },
         )
         raise
@@ -93,6 +96,7 @@ def export_backup_job_endpoint(
             "include_raw_snapshots": body.include_raw_snapshots,
             "include_refresh_runs": body.include_refresh_runs,
             "include_logs": body.include_logs,
+            "include_validation_reports": body.include_validation_reports,
         },
     )
     dispatch_file_job(job.id, background_tasks)

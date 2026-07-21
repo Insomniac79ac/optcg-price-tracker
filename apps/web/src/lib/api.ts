@@ -3116,6 +3116,184 @@ export function restoreBackup(
   return postBackupFile<BackupRestoreResponse>("/api/admin/backup/restore", file, query);
 }
 
+// --- Import templates / validation --------------------------------------
+
+export const IMPORT_TYPES = [
+  "card_catalog",
+  "source_mappings",
+  "snkrdunk_candidates",
+  "collection",
+  "wishlist",
+] as const;
+export type ImportType = (typeof IMPORT_TYPES)[number];
+
+export interface ImportTemplate {
+  template_type: ImportType;
+  filename: string;
+  description: string;
+  required_columns: string[];
+  optional_columns: string[];
+  download_url: string;
+  notes: string[];
+}
+
+export interface ImportTemplateListResponse {
+  templates: ImportTemplate[];
+}
+
+export interface ImportRowIssue {
+  row_number: number;
+  field: string | null;
+  value: unknown;
+  code: string;
+  message: string;
+}
+
+export interface ImportPreviewRow {
+  row_number: number;
+  action: "would_create" | "would_update" | "would_skip" | "invalid";
+  normalized_values: Record<string, unknown>;
+  warnings: string[];
+  errors: string[];
+}
+
+export interface ImportValidationSummary {
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  warning_rows: number;
+  duplicate_rows: number;
+  would_create: number;
+  would_update: number;
+  would_skip: number;
+}
+
+export interface ImportValidationColumns {
+  required_columns: string[];
+  optional_columns: string[];
+  received_columns: string[];
+  missing_required_columns: string[];
+  unknown_columns: string[];
+}
+
+export interface ImportValidationResponse {
+  import_type: string;
+  valid: boolean;
+  summary: ImportValidationSummary;
+  columns: ImportValidationColumns;
+  errors: ImportRowIssue[];
+  warnings: ImportRowIssue[];
+  preview: ImportPreviewRow[];
+}
+
+export interface ImportValidationReport {
+  id: number;
+  created_at: string;
+  import_type: string;
+  filename: string | null;
+  valid: boolean;
+  strict: boolean;
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  warning_rows: number;
+  duplicate_rows: number;
+}
+
+export interface ImportValidationReportDetail extends ImportValidationReport {
+  report_payload_json: ImportValidationResponse;
+}
+
+export interface ImportValidationReportListResponse {
+  reports: ImportValidationReport[];
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/import-templates/route.ts). */
+export function fetchImportTemplates(): Promise<ImportTemplateListResponse> {
+  return fetchAdminJson<ImportTemplateListResponse>("/api/admin/import-templates");
+}
+
+/** Downloads /admin/import-templates/{templateType}.csv through the Next.js
+ * proxy (see src/app/api/admin/import-templates/[type]/route.ts) and
+ * triggers a browser file download, using the filename the backend set via
+ * Content-Disposition. */
+export async function downloadImportTemplate(templateType: ImportType): Promise<void> {
+  const res = await fetch(`/api/admin/import-templates/${templateType}`, {
+    headers: adminHeaders(),
+    cache: "no-store",
+  });
+
+  if (res.status === 401) throw new AdminAuthRequiredError();
+  if (!res.ok) {
+    const details = await res
+      .json()
+      .catch(() => null as { error?: string; detail?: string } | null);
+    throw new Error(
+      details?.error || details?.detail || `Template download failed with status ${res.status}`,
+    );
+  }
+
+  const blob = await res.blob();
+  const filename =
+    filenameFromContentDisposition(res.headers.get("content-disposition")) ||
+    `${templateType}_template.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/import-validation/[type]/route.ts). */
+export function validateImportCsv(
+  importType: ImportType,
+  file: File,
+  params: { strict: boolean; maxPreviewRows: number; userId?: number },
+): Promise<ImportValidationResponse> {
+  const query: Record<string, string> = {
+    strict: String(params.strict),
+    max_preview_rows: String(params.maxPreviewRows),
+  };
+  if (params.userId !== undefined) query.user_id = String(params.userId);
+  return postBackupFile<ImportValidationResponse>(
+    `/api/admin/import-validation/${importType}`,
+    file,
+    query,
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/import-validation/reports/route.ts). */
+export function fetchImportValidationReports(params?: {
+  importType?: string;
+  valid?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<ImportValidationReportListResponse> {
+  const query = new URLSearchParams();
+  if (params?.importType) query.set("import_type", params.importType);
+  if (params?.valid !== undefined) query.set("valid", String(params.valid));
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<ImportValidationReportListResponse>(
+    `/api/admin/import-validation/reports${qs ? `?${qs}` : ""}`,
+  );
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/import-validation/reports/[id]/route.ts). */
+export function fetchImportValidationReport(id: number): Promise<ImportValidationReportDetail> {
+  return fetchAdminJson<ImportValidationReportDetail>(`/api/admin/import-validation/reports/${id}`);
+}
+
 // --- Collector tags / groups ------------------------------------------
 
 export function fetchCollectorTags(): Promise<CollectorTag[]> {

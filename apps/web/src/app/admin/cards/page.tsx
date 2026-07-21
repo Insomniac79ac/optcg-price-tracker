@@ -104,6 +104,12 @@ export default function AdminCardsPage() {
             >
               Card duplicates →
             </Link>
+            <Link
+              href="/admin/import-validation"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Import validation →
+            </Link>
           </div>
           <AdminLogoutButton />
         </div>

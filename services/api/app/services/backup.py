@@ -23,6 +23,7 @@ from app.models import (
     CollectorTag,
     DashboardPreference,
     GradingSubmission,
+    ImportValidationReport,
     MarketIntelligenceReport,
     MarketReportDigestSend,
     MarketSignalEvent,
@@ -45,14 +46,16 @@ from app.services.job_locks import with_job_lock
 # when wishlist_items was added, 5 -> 6 when dashboard_preferences was added,
 # 6 -> 7 when collector_notes/collector_activity_events (missed when those
 # tables were first added) and search_history were added, 7 -> 8 when
-# analytics_digest_reports was added, and 8 -> 9 when card_aliases was added
+# analytics_digest_reports was added, 8 -> 9 when card_aliases was added
 # (alongside cards.is_active/merged_into_card_id/merged_at/merge_notes -
 # plain new columns on an existing required table, so no version bump was
-# needed for those) - these all became required tables, so a backup from
-# before any of these changes predates them entirely. Rejecting with an
-# explicit version mismatch is clearer than a generic "missing required
-# table" error.
-BACKUP_VERSION = 9
+# needed for those), and 9 -> 10 when import_validation_reports was added -
+# these all became required tables (import_validation_reports is the one
+# exception, kept optional alongside app_log_events - see OPTIONAL_TABLES),
+# so a backup from before any of these changes predates them entirely.
+# Rejecting with an explicit version mismatch is clearer than a generic
+# "missing required table" error.
+BACKUP_VERSION = 10
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -88,6 +91,7 @@ MODEL_BY_TABLE: dict[str, type] = {
     "dashboard_preferences": DashboardPreference,
     "search_history": SearchHistory,
     "app_log_events": AppLogEvent,
+    "import_validation_reports": ImportValidationReport,
 }
 
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
@@ -124,6 +128,7 @@ OPTIONAL_TABLES: tuple[str, ...] = (
     "raw_snapshots",
     "price_refresh_runs",
     "app_log_events",
+    "import_validation_reports",
 )
 
 # Subset of OPTIONAL_TABLES that references cards/sources by FK, so
@@ -183,12 +188,14 @@ def export_backup(
     include_raw_snapshots: bool = False,
     include_refresh_runs: bool = False,
     include_logs: bool = False,
+    include_validation_reports: bool = False,
 ) -> dict[str, Any]:
     include_flags = {
         "price_observations": include_prices,
         "raw_snapshots": include_raw_snapshots,
         "price_refresh_runs": include_refresh_runs,
         "app_log_events": include_logs,
+        "import_validation_reports": include_validation_reports,
     }
 
     tables: dict[str, list[dict[str, Any]]] = {}
@@ -208,6 +215,7 @@ def export_backup(
             "include_raw_snapshots": include_raw_snapshots,
             "include_refresh_runs": include_refresh_runs,
             "include_logs": include_logs,
+            "include_validation_reports": include_validation_reports,
         },
         "tables": tables,
     }

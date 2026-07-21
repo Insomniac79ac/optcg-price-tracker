@@ -386,3 +386,56 @@ def test_system_check_warns_on_inactive_card_missing_merge_target(client, db_ses
     data = response.json()
     check = checks_by_name(data)["inactive_cards_missing_merge_target"]
     assert check["status"] == "warning"
+
+
+def test_system_check_no_import_validation_reports_passes(client, db_session):
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["latest_import_validation_report"]
+    assert check["status"] == "pass"
+    assert "no import validation" in check["message"].lower()
+
+    recent_check = checks_by_name(data)["recent_failed_import_validation_reports"]
+    assert recent_check["status"] == "pass"
+
+
+def test_system_check_warns_when_latest_import_validation_report_failed(client, db_session):
+    from app.models import ImportValidationReport
+
+    db_session.add(
+        ImportValidationReport(
+            import_type="card_catalog",
+            filename="bad.csv",
+            valid=False,
+            error_rows=3,
+            total_rows=3,
+            report_payload_json={"import_type": "card_catalog"},
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["latest_import_validation_report"]
+    assert check["status"] == "warning"
+
+
+def test_system_check_warns_on_many_recent_failed_import_validation_reports(client, db_session):
+    from app.models import ImportValidationReport
+
+    for _ in range(3):
+        db_session.add(
+            ImportValidationReport(
+                import_type="card_catalog",
+                valid=False,
+                error_rows=1,
+                total_rows=1,
+                report_payload_json={"import_type": "card_catalog"},
+            )
+        )
+    db_session.commit()
+
+    response = client.get("/admin/system-check")
+    data = response.json()
+    check = checks_by_name(data)["recent_failed_import_validation_reports"]
+    assert check["status"] == "warning"

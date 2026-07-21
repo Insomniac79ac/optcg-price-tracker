@@ -3029,6 +3029,7 @@ class BackupExportJobRequestIn(BaseModel):
     include_raw_snapshots: bool = False
     include_refresh_runs: bool = False
     include_logs: bool = False
+    include_validation_reports: bool = False
 
 
 class CollectionExportJobRequestIn(BaseModel):
@@ -3050,3 +3051,90 @@ class FileJobCleanupResponseOut(BaseModel):
     older_than_days: int
     would_delete: int
     deleted: int
+
+
+# --- Import templates / validation --------------------------------------
+
+
+class ImportTemplateOut(BaseModel):
+    template_type: str
+    filename: str
+    description: str
+    required_columns: list[str]
+    optional_columns: list[str]
+    download_url: str
+    notes: list[str]
+
+
+class ImportTemplateListOut(BaseModel):
+    templates: list[ImportTemplateOut]
+
+
+class ImportRowIssueOut(BaseModel):
+    row_number: int
+    field: str | None
+    value: Any
+    code: str
+    message: str
+
+
+class ImportPreviewRowOut(BaseModel):
+    row_number: int
+    action: str
+    normalized_values: dict[str, Any]
+    warnings: list[str]
+    errors: list[str]
+
+
+class ImportValidationSummaryOut(BaseModel):
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    warning_rows: int
+    duplicate_rows: int
+    would_create: int
+    would_update: int
+    would_skip: int
+
+
+class ImportValidationColumnsOut(BaseModel):
+    required_columns: list[str]
+    optional_columns: list[str]
+    received_columns: list[str]
+    missing_required_columns: list[str]
+    unknown_columns: list[str]
+
+
+class ImportValidationResponseOut(BaseModel):
+    import_type: str
+    valid: bool
+    summary: ImportValidationSummaryOut
+    columns: ImportValidationColumnsOut
+    errors: list[ImportRowIssueOut]
+    warnings: list[ImportRowIssueOut]
+    preview: list[ImportPreviewRowOut]
+
+
+class ImportValidationReportOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    import_type: str
+    filename: str | None
+    valid: bool
+    strict: bool
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    warning_rows: int
+    duplicate_rows: int
+
+
+class ImportValidationReportDetailOut(ImportValidationReportOut):
+    report_payload_json: dict[str, Any]
+
+
+class ImportValidationReportListOut(BaseModel):
+    reports: list[ImportValidationReportOut]
+    pagination: PaginationMeta

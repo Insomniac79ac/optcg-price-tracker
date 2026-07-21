@@ -62,6 +62,7 @@ All gated client-side by `AdminAuthGate`/`getAdminToken()` (an `X-Admin-Token` s
 | `/admin/snkrdunk-candidates` | SNKRDUNK candidate review/match/reject | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/alerts` | Alert events + alert rule config | Admin token | 200 | Yes (admin dropdown) |
 | `/admin/card-audit` | Card data-quality audit report | Admin token | 200 | Yes (admin dropdown) |
+| `/admin/import-validation` | CSV import templates + dry-run validation (card catalog, source mappings, SNKRDUNK candidates, collection, wishlist) + report history | Admin token | 200 | Yes (admin dropdown; linked from `/admin/cards`, `/admin/card-audit`, `/admin/source-mapping-quality`, `/admin/backup`) |
 | `/admin/data-health` | *(does not exist)* | - | - | - |
 
 ## API routes (backend, `services/api`, mounted directly; also reachable via Next.js server-side
@@ -88,6 +89,7 @@ per-endpoint sweep.
 | `/collector/*` | `GET/POST/PATCH/DELETE /collector/tags`, `/collector/groups`; `GET /collector/activity(/summary)`; `GET/POST/PATCH/DELETE /collector/notes` | none | 200 |
 | `/market/*` | `GET /market/movers`, `/market/signals`, `/market/signal-events(/{id})` + dismiss/watch/resolve, `/market/opportunities`, `/market/report/latest`, `/market/reports(/{id})` | none | 200 |
 | `/admin/*` (+ `/snkrdunk/*`) | See "Admin routes" table above plus `/admin/actions/*` (7 POST triggers), `/admin/backup/{export,validate,restore}`, `/admin/db-backups`, `/admin/db-index-audit`, `/admin/performance/summary`, `/admin/alert-events(/{id})`, `/admin/alert-rules/{id}`, `/snkrdunk/candidates(/{id})` + match/reject | admin | 200 (401/403 without `X-Admin-Token`, 500 if `ADMIN_TOKEN` is unset outside development) |
+| `/admin/import-templates*`, `/admin/import-validation*` | `GET /admin/import-templates`, `GET /admin/import-templates/{type}.csv`, `POST /admin/import-validation/{import_type}` (dry-run only, never writes imported data), `GET /admin/import-validation/reports(/{id})` | admin | 200 (401/403 without `X-Admin-Token`) |
 
 Full per-route detail (exact path, method, response model) is in each router module under
 `services/api/app/api/` - this table is intentionally a grouped summary, not a duplicate of the

@@ -322,7 +322,15 @@ export default function SourceMappingQualityPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Source Mapping Quality</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-neutral-100">Source Mapping Quality</h1>
+            <Link
+              href="/admin/import-validation"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Import validation →
+            </Link>
+          </div>
           <AdminLogoutButton />
         </div>
         <p className="mb-4 text-sm text-neutral-500">

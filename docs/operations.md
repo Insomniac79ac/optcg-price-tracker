@@ -263,6 +263,72 @@ filters, a match-detail modal per candidate, and a dry-run-first "rematch all" b
 deletes an existing mapping. Ambiguous candidates (top two scores within 5 points) are never
 auto-suggested - they always need a human pick.
 
+## CSV import validation workflow
+
+Before a larger `card_catalog`/`source_mappings`/`snkrdunk_candidates`/`collection`/`wishlist`
+CSV is actually imported, validate it first - `app.services.import_templates` and
+`app.services.import_validation` back a dedicated dry-run pass that never writes to the
+database, no matter how clean the file is. The recommended flow:
+
+1. **Download a template.** `GET /admin/import-templates` lists all five types (filename,
+   description, required/optional columns, a download URL); `GET
+   /admin/import-templates/{type}.csv` returns that type's header row plus a filled-in sample
+   row. Also available from the "Download templates" section of `/admin/import-validation`.
+2. **Fill in the CSV** using the template's columns - required columns must be present and
+   non-blank on every row; optional columns can be left blank.
+3. **Validate the upload**, without writing anything:
+
+   ```
+   curl -H "X-Admin-Token: $ADMIN_TOKEN" \
+     -F "file=@cards.csv" \
+     "http://localhost:8000/admin/import-validation/card_catalog?strict=false&max_preview_rows=100"
+   ```
+
+   `import_type` is one of `card_catalog`, `source_mappings`, `snkrdunk_candidates`,
+   `collection`, `wishlist`. `strict=true` turns unknown (unrecognized) columns into errors
+   instead of warnings. `collection`/`wishlist` also accept `user_id` to scope would_update/
+   likely-duplicate detection to one user's existing rows - without it, every valid
+   collection/wishlist row is reported as `would_create`. The response reports `valid`, a
+   `summary` (total/valid/error/warning/duplicate row counts, plus would_create/would_update/
+   would_skip), `columns` (required/optional/received/missing/unknown), and per-row `errors`/
+   `warnings` (`row_number`, `field`, `value`, `code`, `message`) plus a bounded `preview` of
+   what each row would do. Every call also persists a summary row to
+   `import_validation_reports` (see `GET /admin/import-validation/reports` and `GET
+   /admin/import-validation/reports/{id}` for history/detail) - nothing else is written.
+4. **Review errors/warnings.** Fix every error (missing required fields, invalid values,
+   unresolvable `card_code`/`source_name` references, ambiguous matches, ...) before proceeding;
+   warnings (a normalized value, an inferred `set_code`, a likely duplicate, a low-confidence
+   match, ...) are worth a look but don't block an import.
+5. **Run a dry-run import** through the type's real importer once validation is clean enough -
+   e.g. `POST /admin/cards/import.csv?dry_run=true` for `card_catalog`, `POST
+   /collection/import.csv?dry_run=true` for `collection`, and so on (see this file's other
+   import sections above). Validation and the real importers both resolve identity the same
+   way (card_code/set_code/rarity/variant/language for cards, (source_id, source_url) for
+   mappings, source_url for candidates, ...), but validation's preview is not a substitute for
+   the real importer's own dry-run - always dry-run the actual import too before writing.
+6. **Run the real import** (`dry_run=false`) once the dry-run preview looks right.
+7. **Check `GET /admin/card-audit` and `GET /admin/source-mappings/quality`** afterward for any
+   new duplicate-card or low-confidence-mapping issues the import introduced.
+
+The `/admin/import-validation` page in the web UI covers steps 1-4 end to end (template
+downloads, an upload form with strict-mode/max-preview-rows/user_id controls, and report
+history) and is linked from the admin nav, `/admin/cards`, `/admin/card-audit`,
+`/admin/source-mapping-quality`, and `/admin/backup`. `GET /admin/system-check` also surfaces
+the latest validation report's status and warns if several validation reports have failed in
+the last 7 days. This tool never scrapes anything and never bypasses website protections - it
+only ever reads a CSV a human already produced.
+
+CLI equivalent (also persists a report row by default):
+
+```
+docker compose exec api python -m app.validate_import_csv data/imports/cards.csv --type card_catalog
+```
+
+Flags: `--type` (required, one of the five types above), `--strict`, `--max-preview-rows N`
+(default 100), `--json` (print the full JSON report instead of a summary), `--user-id N`
+(collection/wishlist only), `--no-save-report` (skip persisting a report row). Exits `0` if the
+file is valid, `1` otherwise - suitable for a pre-import CI/scripted check.
+
 ## Check refresh runs
 
 Via the admin API (requires `X-Admin-Token`; see `docs/deployment.md`):

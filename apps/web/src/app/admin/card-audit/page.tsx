@@ -134,6 +134,12 @@ export default function CardAuditPage() {
             >
               Card duplicates →
             </Link>
+            <Link
+              href="/admin/import-validation"
+              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+            >
+              Import validation →
+            </Link>
           </div>
           <AdminLogoutButton />
         </div>
@@ -217,6 +223,19 @@ export default function CardAuditPage() {
                 tone="warning"
               />
             </div>
+
+            {report.issues.some((i) => i.issue_type === "duplicate_card_identity") && (
+              <div className="mb-4 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+                Duplicate card identity issues found — consider{" "}
+                <Link
+                  href="/admin/import-validation"
+                  className="underline decoration-amber-700 underline-offset-2 hover:text-amber-100"
+                >
+                  validating catalog imports
+                </Link>{" "}
+                before importing more cards.
+              </div>
+            )}
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <div className="flex gap-1">

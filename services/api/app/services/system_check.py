@@ -21,6 +21,7 @@ from app.models import (
     CollectionItem,
     FileJob,
     GradingSubmission,
+    ImportValidationReport,
     MarketIntelligenceReport,
     MarketSignalEvent,
     MarketWorkflowRun,
@@ -54,6 +55,13 @@ REQUIRED_SOURCE_NAMES = ("yuyutei", "snkrdunk")
 # doesn't trip this on a near-empty table.
 CANDIDATE_BACKLOG_WARNING_RATIO = 0.5
 MIN_CANDIDATES_FOR_BACKLOG_CHECK = 10
+
+# See _check_recent_failed_import_validation_reports - this many (or more)
+# failed POST /admin/import-validation/{import_type} calls within the
+# lookback window suggests a source file (or the process producing it) is
+# systematically broken, not just one bad upload.
+IMPORT_VALIDATION_FAILURE_LOOKBACK_DAYS = 7
+IMPORT_VALIDATION_FAILURE_COUNT_THRESHOLD = 3
 
 
 @dataclass
@@ -474,6 +482,57 @@ def _check_inactive_cards_missing_merge_target(db: Session) -> CheckResult:
     )
 
 
+def _check_latest_import_validation_report(db: Session) -> CheckResult:
+    latest = db.scalar(
+        select(ImportValidationReport).order_by(ImportValidationReport.created_at.desc()).limit(1)
+    )
+    if latest is None:
+        return CheckResult(
+            "latest_import_validation_report", "pass", "info", "No import validation reports yet."
+        )
+    if not latest.valid:
+        return CheckResult(
+            "latest_import_validation_report",
+            "warning",
+            "warning",
+            f"Latest import validation report (#{latest.id}, {latest.import_type}) has "
+            f"{latest.error_rows} error row(s). See GET /admin/import-validation/reports/{latest.id}.",
+        )
+    return CheckResult(
+        "latest_import_validation_report",
+        "pass",
+        "info",
+        f"Latest import validation report (#{latest.id}, {latest.import_type}) is valid.",
+    )
+
+
+def _check_recent_failed_import_validation_reports(db: Session) -> CheckResult:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=IMPORT_VALIDATION_FAILURE_LOOKBACK_DAYS)
+    failed_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(ImportValidationReport)
+            .where(ImportValidationReport.valid.is_(False), ImportValidationReport.created_at >= cutoff)
+        )
+        or 0
+    )
+    if failed_count >= IMPORT_VALIDATION_FAILURE_COUNT_THRESHOLD:
+        return CheckResult(
+            "recent_failed_import_validation_reports",
+            "warning",
+            "warning",
+            f"{failed_count} import validation report(s) failed in the last "
+            f"{IMPORT_VALIDATION_FAILURE_LOOKBACK_DAYS} day(s). See GET /admin/import-validation.",
+        )
+    return CheckResult(
+        "recent_failed_import_validation_reports",
+        "pass",
+        "info",
+        f"{failed_count} import validation report(s) failed in the last "
+        f"{IMPORT_VALIDATION_FAILURE_LOOKBACK_DAYS} day(s).",
+    )
+
+
 def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
@@ -553,6 +612,8 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_mapping_quality_summary(db),
         _check_duplicate_cards(db),
         _check_inactive_cards_missing_merge_target(db),
+        _check_latest_import_validation_report(db),
+        _check_recent_failed_import_validation_reports(db),
     ]
     return checks
 

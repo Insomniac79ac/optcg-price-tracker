@@ -16,6 +16,7 @@ from app.models.collector_tag import CollectorTag
 from app.models.dashboard_preference import DashboardPreference
 from app.models.file_job import FileJob
 from app.models.grading_submission import GradingSubmission
+from app.models.import_validation_report import ImportValidationReport
 from app.models.job_lock import JobLock
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
@@ -68,4 +69,5 @@ __all__ = [
     "JobLock",
     "FileJob",
     "AnalyticsDigestReport",
+    "ImportValidationReport",
 ]
