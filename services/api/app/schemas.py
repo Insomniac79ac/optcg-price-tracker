@@ -3331,3 +3331,83 @@ class ImportValidationReportDetailOut(ImportValidationReportOut):
 class ImportValidationReportListOut(BaseModel):
     reports: list[ImportValidationReportOut]
     pagination: PaginationMeta
+
+
+# --- saved views -----------------------------------------------------------
+
+
+class SavedViewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    name: str
+    description: str | None
+    route_path: str
+    view_type: str
+    scope: str
+    filters_json: dict[str, Any] | None
+    sort_json: dict[str, Any] | None
+    columns_json: dict[str, Any] | None
+    density: str
+    is_default: bool
+    pinned: bool
+    last_used_at: datetime | None
+    usage_count: int
+    notes: str | None
+
+
+class SavedViewListOut(BaseModel):
+    items: list[SavedViewOut]
+    pagination: PaginationMeta
+
+
+class SavedViewCreateIn(BaseModel):
+    name: str
+    description: str | None = None
+    route_path: str
+    view_type: str
+    scope: Literal["collector", "admin", "analytics", "market"] = "collector"
+    filters_json: dict[str, Any] | None = None
+    sort_json: dict[str, Any] | None = None
+    columns_json: dict[str, Any] | None = None
+    density: Literal["compact", "comfortable"] = "compact"
+    is_default: bool = False
+    pinned: bool = False
+    notes: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
+
+
+class SavedViewUpdateIn(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    filters_json: dict[str, Any] | None = None
+    sort_json: dict[str, Any] | None = None
+    columns_json: dict[str, Any] | None = None
+    density: Literal["compact", "comfortable"] | None = None
+    is_default: bool | None = None
+    pinned: bool | None = None
+    notes: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("name must not be blank")
+        return cleaned
+
+
+class ClearDefaultSavedViewIn(BaseModel):
+    route_path: str
+    view_type: str

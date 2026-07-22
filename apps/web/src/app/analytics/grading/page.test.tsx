@@ -14,10 +14,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 const fetchGradingAnalytics = vi.fn();
+const fetchSavedViews = vi.fn();
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchGradingAnalytics: (...args: unknown[]) => fetchGradingAnalytics(...args),
   };
 });
@@ -139,6 +142,8 @@ const PAGE_1_OF_2: GradingAnalytics = {
 describe("GradingAnalyticsPage", () => {
   beforeEach(() => {
     fetchGradingAnalytics.mockReset();
+    fetchSavedViews.mockReset();
+    fetchSavedViews.mockResolvedValue({ items: [], pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null } });
   });
 
   it("renders an empty response without crashing", async () => {

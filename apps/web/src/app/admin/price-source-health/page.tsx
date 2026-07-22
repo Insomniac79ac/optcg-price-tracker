@@ -11,6 +11,7 @@ import { DataTableShell } from "@/components/ui/DataTableShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PriceCell } from "@/components/ui/PriceCell";
 import { RiskBadge } from "@/components/ui/RiskBadge";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { SourceHealthBadge, type SourceHealth } from "@/components/ui/SourceHealthBadge";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
@@ -371,6 +372,35 @@ export default function PriceSourceHealthPage() {
                 Include inactive mappings
               </label>
             </div>
+
+            <SavedViewBar
+              routePath="/admin/price-source-health"
+              viewType="price_source_health"
+              scope="admin"
+              currentFilters={{
+                source,
+                setCode,
+                rarity,
+                variant,
+                language,
+                includeInactiveMappings,
+                activeTab,
+              }}
+              onApply={(filters) => {
+                if (typeof filters.source === "string") setSource(filters.source);
+                if (typeof filters.setCode === "string") setSetCode(filters.setCode);
+                if (typeof filters.rarity === "string") setRarity(filters.rarity);
+                if (typeof filters.variant === "string") setVariant(filters.variant);
+                if (typeof filters.language === "string") setLanguage(filters.language);
+                if (typeof filters.includeInactiveMappings === "boolean") {
+                  setIncludeInactiveMappings(filters.includeInactiveMappings);
+                }
+                if (typeof filters.activeTab === "string") {
+                  setActiveTab(filters.activeTab as PriceSourceHealthGapType);
+                }
+                setGapOffset(0);
+              }}
+            />
 
             {status === "loading" && (
               <div className="rounded-panel border border-border-default bg-bg-surface p-8 text-center text-sm text-text-muted">

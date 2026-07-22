@@ -14,10 +14,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 const fetchBuyDecisions = vi.fn();
+const fetchSavedViews = vi.fn();
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchBuyDecisions: (...args: unknown[]) => fetchBuyDecisions(...args),
   };
 });
@@ -120,6 +123,8 @@ const PAGE_1_OF_2: BuyDecisionSupport = {
 describe("BuyDecisionsPage", () => {
   beforeEach(() => {
     fetchBuyDecisions.mockReset();
+    fetchSavedViews.mockReset();
+    fetchSavedViews.mockResolvedValue({ items: [], pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null } });
   });
 
   it("renders an empty response without crashing", async () => {

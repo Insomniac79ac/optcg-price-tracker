@@ -8,6 +8,7 @@ import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState, MissingValue } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { WishlistImportExport } from "@/components/WishlistImportExport";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
@@ -520,6 +521,34 @@ export default function WishlistPage() {
             />
           </div>
         </div>
+
+        <SavedViewBar
+          routePath="/wishlist"
+          viewType="wishlist"
+          scope="collector"
+          currentFilters={{
+            statusFilter,
+            priorityFilter,
+            targetHitFilter,
+            ownedFilter,
+            setCodeFilter,
+            rarityFilter,
+            cardCodeFilter,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
+            if (typeof filters.priorityFilter === "string") setPriorityFilter(filters.priorityFilter);
+            if (typeof filters.targetHitFilter === "string") setTargetHitFilter(filters.targetHitFilter);
+            if (typeof filters.ownedFilter === "string") setOwnedFilter(filters.ownedFilter);
+            if (typeof filters.setCodeFilter === "string") setSetCodeFilter(filters.setCodeFilter);
+            if (typeof filters.rarityFilter === "string") setRarityFilter(filters.rarityFilter);
+            if (typeof filters.cardCodeFilter === "string") {
+              setCardCodeFilter(filters.cardCodeFilter);
+              setCardCodeInput(filters.cardCodeFilter);
+            }
+            setOffset(0);
+          }}
+        />
 
         {actionError && (
           <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">

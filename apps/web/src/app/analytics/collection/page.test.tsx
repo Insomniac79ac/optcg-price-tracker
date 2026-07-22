@@ -25,10 +25,13 @@ class ResizeObserverStub {
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 const fetchCollectionAnalytics = vi.fn();
+const fetchSavedViews = vi.fn();
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchCollectionAnalytics: (...args: unknown[]) => fetchCollectionAnalytics(...args),
   };
 });
@@ -129,6 +132,8 @@ const NULLS_ANALYTICS: CollectionAnalytics = {
 describe("CollectionAnalyticsPage", () => {
   beforeEach(() => {
     fetchCollectionAnalytics.mockReset();
+    fetchSavedViews.mockReset();
+    fetchSavedViews.mockResolvedValue({ items: [], pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null } });
   });
 
   it("renders an empty analytics response without crashing", async () => {

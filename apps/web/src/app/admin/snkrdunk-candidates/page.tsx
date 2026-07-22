@@ -7,6 +7,7 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { MatchStatusBadge } from "@/components/MatchStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
   type Card,
@@ -376,6 +377,22 @@ export default function SnkrdunkCandidatesPage() {
                 className="w-48 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
               />
             </div>
+
+            <SavedViewBar
+              routePath="/admin/snkrdunk-candidates"
+              viewType="snkrdunk_candidates"
+              scope="admin"
+              currentFilters={{ statusFilter, confidenceFilter, scoreMinFilter, cardCodeFilter }}
+              onApply={(filters) => {
+                if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
+                if (typeof filters.confidenceFilter === "string") {
+                  setConfidenceFilter(filters.confidenceFilter);
+                }
+                if (typeof filters.scoreMinFilter === "string") setScoreMinFilter(filters.scoreMinFilter);
+                if (typeof filters.cardCodeFilter === "string") setCardCodeFilter(filters.cardCodeFilter);
+                setOffset(0);
+              }}
+            />
 
             {actionError && (
               <div className="mb-4 rounded-lg border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">

@@ -23,6 +23,7 @@ import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PriceCell } from "@/components/ui/PriceCell";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { VariantBadge } from "@/components/ui/VariantBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
@@ -852,6 +853,40 @@ export default function CollectionPage() {
             )}
           </div>
         </div>
+
+        <SavedViewBar
+          routePath="/collection"
+          viewType="collection"
+          scope="collector"
+          currentFilters={{
+            statusFilter,
+            cardCodeFilter,
+            conditionFilter,
+            setCodeFilter,
+            rarityFilter,
+            tagFilter,
+            groupFilter,
+            missingPricesOnly,
+            missingCostBasisOnly,
+            aboveTargetOnly,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
+            if (typeof filters.cardCodeFilter === "string") {
+              setCardCodeFilter(filters.cardCodeFilter);
+              setCardCodeInput(filters.cardCodeFilter);
+            }
+            if (typeof filters.conditionFilter === "string") setConditionFilter(filters.conditionFilter);
+            if (typeof filters.setCodeFilter === "string") setSetCodeFilter(filters.setCodeFilter);
+            if (typeof filters.rarityFilter === "string") setRarityFilter(filters.rarityFilter);
+            if (typeof filters.tagFilter === "string") setTagFilter(filters.tagFilter);
+            if (typeof filters.groupFilter === "string") setGroupFilter(filters.groupFilter);
+            if (typeof filters.missingPricesOnly === "boolean") setMissingPricesOnly(filters.missingPricesOnly);
+            if (typeof filters.missingCostBasisOnly === "boolean") setMissingCostBasisOnly(filters.missingCostBasisOnly);
+            if (typeof filters.aboveTargetOnly === "boolean") setAboveTargetOnly(filters.aboveTargetOnly);
+            setPageOffset(0);
+          }}
+        />
 
         {actionError && (
           <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">

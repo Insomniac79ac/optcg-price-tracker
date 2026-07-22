@@ -25,10 +25,15 @@ const recheckMappingQuality = vi.fn();
 const bulkUpdateMappings = vi.fn();
 const replaceMappingCard = vi.fn();
 
+const fetchSavedViews = vi.fn().mockResolvedValue({
+  items: [],
+  pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
+});
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchMappingQuality: (...args: unknown[]) => fetchMappingQuality(...args),
     fetchCards: (...args: unknown[]) => fetchCards(...args),
     fetchSuggestedCardsForMapping: (...args: unknown[]) => fetchSuggestedCardsForMapping(...args),

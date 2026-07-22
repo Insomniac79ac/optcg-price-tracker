@@ -9,6 +9,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   MARKET_SIGNAL_EVENT_STATUSES,
   MARKET_SIGNAL_TYPES,
@@ -299,6 +300,31 @@ export default function MarketSignalEventsPage() {
             options={LIMIT_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
           />
         </div>
+
+        <SavedViewBar
+          routePath="/market/signal-events"
+          viewType="market_signal_events"
+          scope="market"
+          currentFilters={{
+            statusFilter,
+            signalTypeFilter,
+            suggestedActionFilter,
+            cardCodeFilter,
+            ownedFilter,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
+            if (typeof filters.signalTypeFilter === "string") setSignalTypeFilter(filters.signalTypeFilter);
+            if (typeof filters.suggestedActionFilter === "string")
+              setSuggestedActionFilter(filters.suggestedActionFilter);
+            if (typeof filters.cardCodeFilter === "string") {
+              setCardCodeFilter(filters.cardCodeFilter);
+              setCardCodeInput(filters.cardCodeFilter);
+            }
+            if (typeof filters.ownedFilter === "string") setOwnedFilter(filters.ownedFilter);
+            setOffset(0);
+          }}
+        />
 
         {actionMessage && (
           <div

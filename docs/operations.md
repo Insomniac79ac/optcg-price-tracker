@@ -655,6 +655,52 @@ risk posture* - wishlist targets, buy/sell recommendations, grading ROI, and por
 concentration/data-quality/liquidity/grading-exposure risk. They read overlapping underlying data
 but answer different questions and are generated/stored independently of each other.
 
+## Saved views workflow
+
+**What it does.** Single-user saved filter/sort/column presets for the dense analytics/admin/
+collector list pages (e.g. "Review Buy" on `/analytics/buy-decisions`, "Critical Mapping Issues" on
+`/admin/source-mapping-quality`) - backed by `app.services.saved_views` / the `saved_views` table.
+Read/write, but never destructive: creating, updating, or deleting a saved view only ever touches
+that one row, never the data the filters describe. There is no per-account scoping (no `user_id`
+column, matching `dashboard_preferences`) - this is one shared, global preset store, since the app
+has no multi-user accounts. Every endpoint is gated by the existing signed-in-session check
+(`require_current_user`, the same bearer token `/dashboard`, `/collection`, `/wishlist`, and
+`/grading` already require) purely as a sign-in gate, not a new permission tier - no `X-Admin-Token`
+is ever required for `/saved-views/*`, even from an admin page.
+
+**Recommended flow:**
+
+1. **Save the current filter combination.** On any page with a `SavedViewBar` (see
+   `docs/interface_design_system.md`, "Saved views," for the full page list), click "Save current
+   view," name it, optionally pin it and/or mark it default, then Save -
+   `POST /saved-views` with `filters_json` built from that page's own filter state.
+2. **Reapply a saved view.** Pick it from the same bar's dropdown - this calls
+   `POST /saved-views/{id}/use` (bumps `usage_count`/`last_used_at`) and applies its `filters_json`
+   back onto the page's local filter state (no page in this app reads filters from the URL, so
+   applying a view always means updating local state, never a query-string rewrite).
+3. **Mark/clear a default.** "Set default" (`POST /saved-views/{id}/set-default`) unsets any other
+   default sharing that page's `route_path`+`view_type` first - only one default per page. "Clear
+   default" (`POST /saved-views/clear-default`, body `{route_path, view_type}`) unsets it without
+   picking a replacement.
+4. **Pin a view for the dashboard/catalog-ops shortcut sections.** Toggle "pinned" from
+   "Manage views" (`PATCH /saved-views/{id}`) - pinned views across every scope then show up in
+   `PinnedViewsSection` on `/dashboard` and (admin-scoped ones) `/admin/catalog-ops`.
+5. **Seed the default presets** (Review Buy, Critical Mapping Issues, Stale Prices, ...) on a fresh
+   or freshly-migrated database:
+   ```
+   docker compose exec api python -m app.seed_saved_views
+   ```
+   Idempotent by `(route_path, view_type, name)` - safe to run repeatedly (e.g. on every deploy);
+   re-running against an already-seeded database inserts nothing.
+
+**Avoid saving sensitive data.** `filters_json`/`sort_json`/`columns_json` are validated to be a
+plain object (or `null`) and are rejected if any key name resembles a token/password/secret/
+confirmation field - the primary defense is simply that no page's filter-serialization code
+includes an admin token, an uploaded file, raw CSV contents, or confirm-modal state (e.g.
+card-duplicates' "type MERGE to confirm" text) in the first place, since those are already separate
+pieces of component state from a page's list filters; the backend check is a safety net, not the
+main guarantee.
+
 ## Reset local dev database
 
 ```

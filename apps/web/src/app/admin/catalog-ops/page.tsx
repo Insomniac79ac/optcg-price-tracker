@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PinnedViewsSection } from "@/components/ui/PinnedViewsSection";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -207,6 +208,8 @@ export default function CatalogOpsPage() {
                 </StatGrid>
               </div>
             )}
+
+            <PinnedViewsSection title="Pinned Admin Views" />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {OPS_CARDS.map((card) => (

@@ -9,6 +9,7 @@ import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   GRADING_COMPANY_OPTIONS,
   GRADING_SUBMISSION_STATUSES,
@@ -632,6 +633,22 @@ function GradingPageInner() {
             className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
           />
         </div>
+
+        <SavedViewBar
+          routePath="/grading"
+          viewType="grading"
+          scope="collector"
+          currentFilters={{ statusFilter, companyFilter, cardCodeFilter }}
+          onApply={(filters) => {
+            if (typeof filters.statusFilter === "string") setStatusFilter(filters.statusFilter);
+            if (typeof filters.companyFilter === "string") setCompanyFilter(filters.companyFilter);
+            if (typeof filters.cardCodeFilter === "string") {
+              setCardCodeFilter(filters.cardCodeFilter);
+              setCardCodeInput(filters.cardCodeFilter);
+            }
+            setOffset(0);
+          }}
+        />
 
         {actionError && (
           <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">

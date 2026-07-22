@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { GradingAnalyticsBreakdownTable } from "@/components/GradingAnalyticsBreakdownTable";
 import { GradingSubmissionTable } from "@/components/GradingSubmissionTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { AdminAuthRequiredError, fetchGradingAnalytics, type GradingAnalytics } from "@/lib/api";
 import { formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -174,6 +175,21 @@ export default function GradingAnalyticsPage() {
             </select>
           </div>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/grading"
+          viewType="analytics_grading"
+          scope="analytics"
+          currentFilters={{ includeCancelled, gradingCompany, submissionStatus }}
+          onApply={(filters) => {
+            if (typeof filters.includeCancelled === "boolean")
+              setIncludeCancelled(filters.includeCancelled);
+            if (typeof filters.gradingCompany === "string") setGradingCompany(filters.gradingCompany);
+            if (typeof filters.submissionStatus === "string")
+              setSubmissionStatus(filters.submissionStatus);
+            setOffset(0);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading grading analytics…</LoadingState>}
         {status === "unauthorized" && <ErrorState>Sign in to view grading analytics.</ErrorState>}

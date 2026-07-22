@@ -15,6 +15,7 @@ import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { VariantBadge } from "@/components/ui/VariantBadge";
 import {
@@ -341,6 +342,28 @@ export default function CardDuplicatesPage() {
                 Include inactive
               </label>
             </FilterBar>
+
+            <SavedViewBar
+              routePath="/admin/card-duplicates"
+              viewType="card_duplicates"
+              scope="admin"
+              currentFilters={{ q, setCode, rarity, variant, language, confidenceLabel, minScore, includeInactive }}
+              onApply={(filters) => {
+                if (typeof filters.q === "string") setQ(filters.q);
+                if (typeof filters.setCode === "string") setSetCode(filters.setCode);
+                if (typeof filters.rarity === "string") setRarity(filters.rarity);
+                if (typeof filters.variant === "string") setVariant(filters.variant);
+                if (typeof filters.language === "string") setLanguage(filters.language);
+                if (typeof filters.confidenceLabel === "string") {
+                  setConfidenceLabel(filters.confidenceLabel);
+                }
+                if (typeof filters.minScore === "number") setMinScore(filters.minScore);
+                if (typeof filters.includeInactive === "boolean") {
+                  setIncludeInactive(filters.includeInactive);
+                }
+                setOffset(0);
+              }}
+            />
 
             {status === "loading" && <LoadingState>Loading duplicate pairs…</LoadingState>}
             {status === "error" && (

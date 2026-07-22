@@ -19,10 +19,13 @@ const fetchLatestAnalyticsDigest = vi.fn();
 const fetchAnalyticsDigestReport = vi.fn();
 const triggerGenerateAnalyticsDigest = vi.fn();
 
+const fetchSavedViews = vi.fn();
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchAnalyticsDigest: (...args: unknown[]) => fetchAnalyticsDigest(...args),
     fetchAnalyticsDigestReports: (...args: unknown[]) => fetchAnalyticsDigestReports(...args),
     fetchLatestAnalyticsDigest: (...args: unknown[]) => fetchLatestAnalyticsDigest(...args),
@@ -187,6 +190,8 @@ const HISTORY_WITH_ROWS: AnalyticsDigestReportListResponse = {
 describe("AnalyticsDigestPage", () => {
   beforeEach(() => {
     fetchAnalyticsDigest.mockReset();
+    fetchSavedViews.mockReset();
+    fetchSavedViews.mockResolvedValue({ items: [], pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null } });
     fetchAnalyticsDigestReports.mockReset();
     fetchLatestAnalyticsDigest.mockReset();
     fetchAnalyticsDigestReport.mockReset();

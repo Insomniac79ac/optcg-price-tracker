@@ -127,6 +127,18 @@ for the tokens/shell to apply.
 | `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`, `DecisionBadge`, `VariantBadge` | Canonical badge vocabularies (see Badges below) |
 | `CardImageFrame`, `CardIdentityBlock`, `CardVaultTile`, `CardPricePanel`, `SourceComparisonPanel` | Collector vault / card-identity treatment (see below) |
 | `SkeletonBlock` / `SkeletonRows` | Loading shimmer (used inside `LoadingState`) |
+| `SavedViewBar`, `SaveViewModal`, `ManageSavedViewsModal`, `SavedViewPill`, `PinnedViewsSection` | Saved filter/sort/column presets (see below) |
+
+## Saved views
+
+Single-user saved filter presets (name a filter combination, reapply it later, optionally pin/default it) - backed by the `/saved-views` API (see docs/operations.md, "Saved views workflow"). No multi-user accounts or new permissions: the feature reuses the existing per-session bearer-token auth (`require_current_user`) purely as a sign-in gate, not for per-account scoping - `saved_views` is one shared, global preset store, like `dashboard_preferences`.
+
+- **`SavedViewBar`** is the per-page integration point. Every page that has it builds a plain `currentFilters` object from its own filter `useState` variables and passes an `onApply` that calls the matching setters back - none of this app's pages read filters from the URL, so applying a view always means updating local state, never a query-string rewrite. Pagination offset is never included (every paginated page already resets its own offset to 0 on any filter change - persisting it would just get immediately stomped).
+- **`SaveViewModal`** is the name/description/pinned/default/density form, in the same modal chrome as `ConfirmActionModal` (`rounded-modal`, `bg-bg-elevated`) but not a confirm-phrase gate - just a form.
+- **`ManageSavedViewsModal`** lists every saved view for the current page's route+view_type: pin/unpin, set/clear default, edit, delete (delete goes through `ConfirmActionModal`'s plain no-phrase mode).
+- **`SavedViewPill`** is the one deliberately fully-rounded badge shape in the app (`!rounded-full`, gold-tinted) - everything else uses the small `rounded-control` corner radius. Reserved for "this saved view is currently active," nothing else.
+- **`PinnedViewsSection`** renders pinned views across every scope on `/dashboard` (as a standalone section, not a `DashboardWidgetId` - it isn't personalization-scoped, so it doesn't touch `DashboardPreferences`) and `/admin/catalog-ops` (as "Pinned Admin Views," between the stat tiles and the nav-card grid). Links only navigate to the bare `route_path` - they can't pre-apply the view's filters (see the URL-params limitation above), so visiting the page and picking the view from its own `SavedViewBar` is still required. Unrelated to `DashboardPreferences.pinned_cards` (an existing, separately-schemaed, currently-unused field for pinning individual *cards*, not saved views) - don't conflate the two.
+- **Density**: `SaveViewModal`'s compact/comfortable selector is stored on the row (`density`) but no page currently reads it back - it's schema-ready for a future page to start honoring, not yet wired to any actual layout change. Whichever value a page eventually uses it for, the "dense" 11px/12px minimums from this doc still apply in both modes - `comfortable` should only ever mean more row padding, never smaller text.
 
 ## Price display rules
 

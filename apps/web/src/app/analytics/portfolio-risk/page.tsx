@@ -9,6 +9,7 @@ import { SeverityBadge } from "@/components/SeverityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { RiskBadge } from "@/components/ui/RiskBadge";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -154,6 +155,18 @@ export default function PortfolioRiskPage() {
             Include sold
           </label>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/portfolio-risk"
+          viewType="portfolio_risk"
+          scope="analytics"
+          currentFilters={{ valuationMode, includeSold }}
+          onApply={(filters) => {
+            if (typeof filters.valuationMode === "string")
+              setValuationMode(filters.valuationMode as ValuationMode);
+            if (typeof filters.includeSold === "boolean") setIncludeSold(filters.includeSold);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading portfolio risk…</LoadingState>}
         {status === "unauthorized" && <ErrorState>Sign in to view portfolio risk.</ErrorState>}

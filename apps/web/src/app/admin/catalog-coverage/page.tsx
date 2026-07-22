@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
   type CatalogCoverageBreakdownItem,
@@ -306,6 +307,35 @@ export default function CatalogCoveragePage() {
                 Include inactive
               </label>
             </div>
+
+            <SavedViewBar
+              routePath="/admin/catalog-coverage"
+              viewType="catalog_coverage"
+              scope="admin"
+              currentFilters={{
+                setCode,
+                rarity,
+                variant,
+                language,
+                includeInactive,
+                activeTab,
+                severity,
+              }}
+              onApply={(filters) => {
+                if (typeof filters.setCode === "string") setSetCode(filters.setCode);
+                if (typeof filters.rarity === "string") setRarity(filters.rarity);
+                if (typeof filters.variant === "string") setVariant(filters.variant);
+                if (typeof filters.language === "string") setLanguage(filters.language);
+                if (typeof filters.includeInactive === "boolean") {
+                  setIncludeInactive(filters.includeInactive);
+                }
+                if (typeof filters.activeTab === "string") {
+                  setActiveTab(filters.activeTab as CatalogCoverageGapType);
+                }
+                if (typeof filters.severity === "string") setSeverity(filters.severity);
+                setGapOffset(0);
+              }}
+            />
 
             {status === "loading" && (
               <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { RiskBadge, type RiskLevel } from "@/components/ui/RiskBadge";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -211,6 +212,18 @@ export default function AnalyticsDigestPage() {
           )}
         </div>
         {generateError && <p className="mb-4 text-xs text-signal-red">{generateError}</p>}
+
+        <SavedViewBar
+          routePath="/analytics/digest"
+          viewType="digest"
+          scope="analytics"
+          currentFilters={{ dataMode, valuationMode }}
+          onApply={(filters) => {
+            if (typeof filters.dataMode === "string") setDataMode(filters.dataMode as DataMode);
+            if (typeof filters.valuationMode === "string")
+              setValuationMode(filters.valuationMode as ValuationMode);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading analytics digest…</LoadingState>}
         {status === "unauthorized" && <ErrorState>Sign in to view the analytics digest.</ErrorState>}

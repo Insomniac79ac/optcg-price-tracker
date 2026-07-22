@@ -24,6 +24,7 @@ const fetchPriceSourceHealth = vi.fn();
 const fetchMappingQuality = vi.fn();
 const fetchCardDuplicates = vi.fn();
 const fetchImportValidationReports = vi.fn();
+const fetchSavedViews = vi.fn();
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -34,6 +35,7 @@ vi.mock("@/lib/api", async () => {
     fetchMappingQuality: (...args: unknown[]) => fetchMappingQuality(...args),
     fetchCardDuplicates: (...args: unknown[]) => fetchCardDuplicates(...args),
     fetchImportValidationReports: (...args: unknown[]) => fetchImportValidationReports(...args),
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
   };
 });
 
@@ -163,6 +165,19 @@ describe("CatalogOpsPage", () => {
     fetchMappingQuality.mockReset();
     fetchCardDuplicates.mockReset();
     fetchImportValidationReports.mockReset();
+    fetchSavedViews.mockReset();
+    fetchSavedViews.mockResolvedValue({
+      items: [],
+      pagination: {
+        total: 0,
+        limit: 100,
+        offset: 0,
+        has_next: false,
+        has_previous: false,
+        next_offset: null,
+        previous_offset: null,
+      },
+    });
   });
 
   it("does not crash on empty summary data and shows 'not available' for the missing validation status", async () => {

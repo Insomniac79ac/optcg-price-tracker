@@ -8,6 +8,7 @@ import { SellDecisionActionGroups } from "@/components/SellDecisionActionGroups"
 import { SellDecisionCandidateTable } from "@/components/SellDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -212,6 +213,28 @@ export default function SellDecisionsPage() {
             </select>
           </div>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/sell-decisions"
+          viewType="sell_decisions"
+          scope="analytics"
+          currentFilters={{
+            valuationMode,
+            includeSold,
+            minScore: minScore.trim() === "" ? undefined : Number(minScore),
+            action,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.valuationMode === "string")
+              setValuationMode(filters.valuationMode as ValuationMode);
+            if (typeof filters.includeSold === "boolean") setIncludeSold(filters.includeSold);
+            if (typeof filters.minScore === "number") setMinScore(String(filters.minScore));
+            else if (filters.minScore === undefined) setMinScore("");
+            if (typeof filters.action === "string")
+              setAction(filters.action as SellDecisionAction | "all");
+            setOffset(0);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading sell decision support…</LoadingState>}
         {status === "unauthorized" && (

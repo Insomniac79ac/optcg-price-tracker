@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { WishlistAnalyticsBreakdownTable } from "@/components/WishlistAnalyticsBreakdownTable";
 import { WishlistAnalyticsTargetTable } from "@/components/WishlistAnalyticsTargetTable";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { AdminAuthRequiredError, type WishlistAnalytics, fetchWishlistAnalytics } from "@/lib/api";
 import { formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -100,6 +101,18 @@ export default function WishlistAnalyticsPage() {
             Include purchased
           </label>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/wishlist"
+          viewType="analytics_wishlist"
+          scope="analytics"
+          currentFilters={{ includeRemoved, includePurchased }}
+          onApply={(filters) => {
+            if (typeof filters.includeRemoved === "boolean") setIncludeRemoved(filters.includeRemoved);
+            if (typeof filters.includePurchased === "boolean")
+              setIncludePurchased(filters.includePurchased);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading wishlist analytics…</LoadingState>}
         {status === "unauthorized" && (

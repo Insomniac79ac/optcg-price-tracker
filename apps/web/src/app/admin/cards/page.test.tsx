@@ -18,10 +18,15 @@ const importCardsCsv = vi.fn();
 const downloadCardsCsv = vi.fn();
 const getAdminToken = vi.fn();
 
+const fetchSavedViews = vi.fn().mockResolvedValue({
+  items: [],
+  pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
+});
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    fetchSavedViews: (...args: unknown[]) => fetchSavedViews(...args),
     fetchAdminCards: (...args: unknown[]) => fetchAdminCards(...args),
     importCardsCsv: (...args: unknown[]) => importCardsCsv(...args),
     downloadCardsCsv: (...args: unknown[]) => downloadCardsCsv(...args),

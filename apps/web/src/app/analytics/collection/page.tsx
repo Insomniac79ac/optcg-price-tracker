@@ -10,6 +10,7 @@ import { CollectionAnalyticsBreakdownTable } from "@/components/CollectionAnalyt
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
   type CollectionAnalytics,
@@ -134,6 +135,18 @@ export default function CollectionAnalyticsPage() {
             Include sold items
           </label>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/collection"
+          viewType="analytics_collection"
+          scope="analytics"
+          currentFilters={{ valuationMode, includeSold }}
+          onApply={(filters) => {
+            if (typeof filters.valuationMode === "string")
+              setValuationMode(filters.valuationMode as ValuationMode);
+            if (typeof filters.includeSold === "boolean") setIncludeSold(filters.includeSold);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading collection analytics…</LoadingState>}
         {status === "unauthorized" && (

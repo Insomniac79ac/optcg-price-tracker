@@ -12,6 +12,7 @@ import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge"
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   OPPORTUNITY_CATEGORIES,
@@ -322,6 +323,43 @@ export default function MarketOpportunitiesPage() {
             options={groupOptions}
           />
         </div>
+
+        <SavedViewBar
+          routePath="/market/opportunities"
+          viewType="market_opportunities"
+          scope="market"
+          currentFilters={{
+            categoryFilter,
+            ownedFilter,
+            setCodeFilter,
+            rarityFilter,
+            minScoreFilter,
+            tagFilter,
+            groupFilter,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.categoryFilter === "string") setCategoryFilter(filters.categoryFilter);
+            if (typeof filters.ownedFilter === "string") setOwnedFilter(filters.ownedFilter);
+            if (typeof filters.setCodeFilter === "string") {
+              setSetCodeFilter(filters.setCodeFilter);
+              setSetCodeInput(filters.setCodeFilter);
+            }
+            if (typeof filters.rarityFilter === "string") {
+              setRarityFilter(filters.rarityFilter);
+              setRarityInput(filters.rarityFilter);
+            }
+            if (typeof filters.minScoreFilter === "number") {
+              setMinScoreFilter(filters.minScoreFilter);
+              setMinScoreInput(String(filters.minScoreFilter));
+            } else if (filters.minScoreFilter === undefined) {
+              setMinScoreFilter(undefined);
+              setMinScoreInput("");
+            }
+            if (typeof filters.tagFilter === "string") setTagFilter(filters.tagFilter);
+            if (typeof filters.groupFilter === "string") setGroupFilter(filters.groupFilter);
+            setOffset(0);
+          }}
+        />
 
         {actionMessage && (
           <div

@@ -8,6 +8,7 @@ import { BuyDecisionActionGroups } from "@/components/BuyDecisionActionGroups";
 import { BuyDecisionCandidateTable } from "@/components/BuyDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -261,6 +262,34 @@ export default function BuyDecisionsPage() {
             </select>
           </div>
         </div>
+
+        <SavedViewBar
+          routePath="/analytics/buy-decisions"
+          viewType="buy_decisions"
+          scope="analytics"
+          currentFilters={{
+            sourcePreference,
+            includeOwned,
+            includePurchased,
+            minScore: minScore.trim() === "" ? undefined : Number(minScore),
+            action,
+            priority,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.sourcePreference === "string")
+              setSourcePreference(filters.sourcePreference as BuySourcePreference);
+            if (typeof filters.includeOwned === "boolean") setIncludeOwned(filters.includeOwned);
+            if (typeof filters.includePurchased === "boolean")
+              setIncludePurchased(filters.includePurchased);
+            if (typeof filters.minScore === "number") setMinScore(String(filters.minScore));
+            else if (filters.minScore === undefined) setMinScore("");
+            if (typeof filters.action === "string")
+              setAction(filters.action as BuyDecisionAction | "all");
+            if (typeof filters.priority === "string")
+              setPriority(filters.priority as BuyDecisionPriorityFilter | "all");
+            setOffset(0);
+          }}
+        />
 
         {status === "loading" && <LoadingState>Loading buy decision support…</LoadingState>}
         {status === "unauthorized" && <ErrorState>Sign in to view buy decision support.</ErrorState>}

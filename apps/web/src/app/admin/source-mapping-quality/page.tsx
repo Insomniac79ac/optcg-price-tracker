@@ -16,6 +16,7 @@ import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -437,6 +438,37 @@ export default function SourceMappingQualityPage() {
                 className={`w-56 ${FILTER_INPUT_CLASS}`}
               />
             </FilterBar>
+
+            <SavedViewBar
+              routePath="/admin/source-mapping-quality"
+              viewType="source_mapping_quality"
+              scope="admin"
+              currentFilters={{
+                source,
+                reviewStatus,
+                isActive,
+                manualVerified,
+                confidenceLabel,
+                riskLevel,
+                issueType,
+                q,
+              }}
+              onApply={(filters) => {
+                if (typeof filters.source === "string") setSource(filters.source);
+                if (typeof filters.reviewStatus === "string") setReviewStatus(filters.reviewStatus);
+                if (typeof filters.isActive === "string") setIsActive(filters.isActive);
+                if (typeof filters.manualVerified === "string") {
+                  setManualVerified(filters.manualVerified);
+                }
+                if (typeof filters.confidenceLabel === "string") {
+                  setConfidenceLabel(filters.confidenceLabel);
+                }
+                if (typeof filters.riskLevel === "string") setRiskLevel(filters.riskLevel);
+                if (typeof filters.issueType === "string") setIssueType(filters.issueType);
+                if (typeof filters.q === "string") setQ(filters.q);
+                setOffset(0);
+              }}
+            />
 
             <div className="mb-4 flex flex-wrap gap-1">
               {RISK_FILTERS.map((f) => (

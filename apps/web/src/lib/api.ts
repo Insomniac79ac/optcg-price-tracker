@@ -5444,3 +5444,138 @@ export async function fetchVersionInfo(): Promise<VersionInfo> {
   if (!res.ok) throw new Error(`Request to /api/version failed with status ${res.status}`);
   return res.json() as Promise<VersionInfo>;
 }
+
+// --- saved views ------------------------------------------------------------
+//
+// Single-user saved filter/sort/column presets (see docs/operations.md,
+// "Saved views workflow"). Routed through the Next.js server proxy (see
+// src/app/api/saved-views/**/route.ts), which forwards the caller's NextAuth
+// session as a bearer token - same reasoning as dashboard/preferences. A
+// missing/expired session surfaces as AdminAuthRequiredError (fetchAdminJson's
+// naming - it's the generic "same-origin proxy" error, not admin-token
+// specific), which SavedViewBar catches to render a "sign in" prompt instead
+// of a hard failure.
+
+export type SavedViewScope = "collector" | "admin" | "analytics" | "market";
+export type SavedViewDensity = "compact" | "comfortable";
+
+export interface SavedView {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  description: string | null;
+  route_path: string;
+  view_type: string;
+  scope: SavedViewScope;
+  filters_json: Record<string, unknown> | null;
+  sort_json: Record<string, unknown> | null;
+  columns_json: Record<string, unknown> | null;
+  density: SavedViewDensity;
+  is_default: boolean;
+  pinned: boolean;
+  last_used_at: string | null;
+  usage_count: number;
+  notes: string | null;
+}
+
+export interface SavedViewListResponse {
+  items: SavedView[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    has_next: boolean;
+    has_previous: boolean;
+    next_offset: number | null;
+    previous_offset: number | null;
+  };
+}
+
+export interface SavedViewCreateInput {
+  name: string;
+  description?: string | null;
+  route_path: string;
+  view_type: string;
+  scope?: SavedViewScope;
+  filters_json?: Record<string, unknown> | null;
+  sort_json?: Record<string, unknown> | null;
+  columns_json?: Record<string, unknown> | null;
+  density?: SavedViewDensity;
+  is_default?: boolean;
+  pinned?: boolean;
+  notes?: string | null;
+}
+
+export type SavedViewUpdateInput = Partial<
+  Pick<
+    SavedViewCreateInput,
+    | "name"
+    | "description"
+    | "filters_json"
+    | "sort_json"
+    | "columns_json"
+    | "density"
+    | "is_default"
+    | "pinned"
+    | "notes"
+  >
+>;
+
+export interface SavedViewQuery {
+  route_path?: string;
+  view_type?: string;
+  scope?: SavedViewScope;
+  pinned?: boolean;
+  is_default?: boolean;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+function savedViewsQueryString(query?: SavedViewQuery): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function fetchSavedViews(query?: SavedViewQuery): Promise<SavedViewListResponse> {
+  return fetchAdminJson<SavedViewListResponse>(`/api/saved-views${savedViewsQueryString(query)}`);
+}
+
+export function getSavedView(id: number): Promise<SavedView> {
+  return fetchAdminJson<SavedView>(`/api/saved-views/${id}`);
+}
+
+export function createSavedView(body: SavedViewCreateInput): Promise<SavedView> {
+  return fetchAdminJson<SavedView>("/api/saved-views", { method: "POST", body });
+}
+
+export function updateSavedView(id: number, body: SavedViewUpdateInput): Promise<SavedView> {
+  return fetchAdminJson<SavedView>(`/api/saved-views/${id}`, { method: "PATCH", body });
+}
+
+export function deleteSavedView(id: number): Promise<void> {
+  return fetchAdminJson<void>(`/api/saved-views/${id}`, { method: "DELETE" });
+}
+
+export function markSavedViewUsed(id: number): Promise<SavedView> {
+  return fetchAdminJson<SavedView>(`/api/saved-views/${id}/use`, { method: "POST" });
+}
+
+export function setDefaultSavedView(id: number): Promise<SavedView> {
+  return fetchAdminJson<SavedView>(`/api/saved-views/${id}/set-default`, { method: "POST" });
+}
+
+export function clearDefaultSavedView(routePath: string, viewType: string): Promise<void> {
+  return fetchAdminJson<void>("/api/saved-views/clear-default", {
+    method: "POST",
+    body: { route_path: routePath, view_type: viewType },
+  });
+}

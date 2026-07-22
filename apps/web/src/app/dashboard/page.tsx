@@ -12,6 +12,7 @@ import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge"
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PinnedViewsSection } from "@/components/ui/PinnedViewsSection";
 import { StatCard, type StatTone } from "@/components/ui/StatCard";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
@@ -268,6 +269,8 @@ export default function DashboardPage() {
             <span className="text-text-faint">→</span>
           </Link>
         </div>
+
+        <PinnedViewsSection />
 
         {status === "loading" && <LoadingState>Loading dashboard…</LoadingState>}
 

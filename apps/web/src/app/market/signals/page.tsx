@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   MARKET_SIGNAL_TYPES,
   type Card,
@@ -297,6 +298,33 @@ export default function MarketSignalsPage() {
             options={LIMIT_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
           />
         </div>
+
+        <SavedViewBar
+          routePath="/market/signals"
+          viewType="market_signals"
+          scope="market"
+          currentFilters={{
+            signalTypeFilter,
+            setCodeFilter,
+            rarityFilter,
+            ownedFilter,
+            sourceFilter,
+            activeTab,
+          }}
+          onApply={(filters) => {
+            if (typeof filters.signalTypeFilter === "string") setSignalTypeFilter(filters.signalTypeFilter);
+            if (typeof filters.setCodeFilter === "string") setSetCodeFilter(filters.setCodeFilter);
+            if (typeof filters.rarityFilter === "string") setRarityFilter(filters.rarityFilter);
+            if (typeof filters.ownedFilter === "string") setOwnedFilter(filters.ownedFilter);
+            if (typeof filters.sourceFilter === "string") setSourceFilter(filters.sourceFilter);
+            if (
+              typeof filters.activeTab === "string" &&
+              TAB_OPTIONS.some((t) => t.key === filters.activeTab)
+            ) {
+              setActiveTab(filters.activeTab as TabKey);
+            }
+          }}
+        />
 
         <div className="mb-4 flex flex-wrap gap-1">
           {TAB_OPTIONS.map((tab) => (

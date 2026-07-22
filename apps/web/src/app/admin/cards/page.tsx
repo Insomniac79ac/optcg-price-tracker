@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
   type AdminCard,
@@ -154,6 +155,24 @@ export default function AdminCardsPage() {
               onLanguageChange={setLanguage}
               missingMetadata={missingMetadata}
               onMissingMetadataChange={setMissingMetadata}
+            />
+
+            <SavedViewBar
+              routePath="/admin/cards"
+              viewType="cards"
+              scope="admin"
+              currentFilters={{ q, setCode, rarity, variant, language, missingMetadata }}
+              onApply={(filters) => {
+                if (typeof filters.q === "string") setQ(filters.q);
+                if (typeof filters.setCode === "string") setSetCode(filters.setCode);
+                if (typeof filters.rarity === "string") setRarity(filters.rarity);
+                if (typeof filters.variant === "string") setVariant(filters.variant);
+                if (typeof filters.language === "string") setLanguage(filters.language);
+                if (typeof filters.missingMetadata === "string") {
+                  setMissingMetadata(filters.missingMetadata);
+                }
+                setOffset(0);
+              }}
             />
 
             {status === "loading" && (

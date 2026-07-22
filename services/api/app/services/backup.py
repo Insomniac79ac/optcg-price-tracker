@@ -32,6 +32,7 @@ from app.models import (
     PriceObservation,
     PriceRefreshRun,
     RawSnapshot,
+    SavedView,
     SearchHistory,
     Source,
     SourceCardMapping,
@@ -49,13 +50,13 @@ from app.services.job_locks import with_job_lock
 # analytics_digest_reports was added, 8 -> 9 when card_aliases was added
 # (alongside cards.is_active/merged_into_card_id/merged_at/merge_notes -
 # plain new columns on an existing required table, so no version bump was
-# needed for those), and 9 -> 10 when import_validation_reports was added -
-# these all became required tables (import_validation_reports is the one
-# exception, kept optional alongside app_log_events - see OPTIONAL_TABLES),
-# so a backup from before any of these changes predates them entirely.
-# Rejecting with an explicit version mismatch is clearer than a generic
-# "missing required table" error.
-BACKUP_VERSION = 10
+# needed for those), 9 -> 10 when import_validation_reports was added, and
+# 10 -> 11 when saved_views was added - these all became required tables
+# (import_validation_reports is the one exception, kept optional alongside
+# app_log_events - see OPTIONAL_TABLES), so a backup from before any of
+# these changes predates them entirely. Rejecting with an explicit version
+# mismatch is clearer than a generic "missing required table" error.
+BACKUP_VERSION = 11
 APP_NAME = "opcg-price-tracker"
 
 # Registration order doubles as FK-safe insert order (parents before
@@ -92,6 +93,7 @@ MODEL_BY_TABLE: dict[str, type] = {
     "search_history": SearchHistory,
     "app_log_events": AppLogEvent,
     "import_validation_reports": ImportValidationReport,
+    "saved_views": SavedView,
 }
 
 TABLE_INSERT_ORDER: tuple[str, ...] = tuple(MODEL_BY_TABLE.keys())
@@ -121,6 +123,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "collector_activity_events",
     "search_history",
     "card_aliases",
+    "saved_views",
 )
 
 OPTIONAL_TABLES: tuple[str, ...] = (
