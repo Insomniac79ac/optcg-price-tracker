@@ -14,6 +14,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PinnedViewsSection } from "@/components/ui/PinnedViewsSection";
 import { StatCard, type StatTone } from "@/components/ui/StatCard";
+import { VaultHighlightsSection } from "@/components/ui/VaultHighlightsSection";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   DASHBOARD_TIMEFRAMES,
@@ -269,6 +270,8 @@ export default function DashboardPage() {
             <span className="text-text-faint">→</span>
           </Link>
         </div>
+
+        <VaultHighlightsSection />
 
         <PinnedViewsSection />
 

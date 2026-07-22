@@ -171,9 +171,51 @@ the basis chip.
 - Card detail pages (`/cards/[id]`) prioritize, top to bottom: card image →
   card_code/name/rarity/variant/language (`CardIdentityBlock` with
   `asHeading`) → ownership/grading status → price source comparison.
-- `CardVaultTile` is the compact tile for top-holdings/wishlist-hit/
-  priority-card lists: image or placeholder, identity, badges, price with
-  basis, optional status pill.
+- `CardVaultTile` is the tile for top-holdings/wishlist-hit/priority-card
+  lists and the `/collection/vault` grid: image or placeholder, identity,
+  badges, price with basis, optional status pill.
+
+### Card detail layout (full hero + panel-grid version)
+
+`/cards/[id]` is an inventory record + trading terminal, not a flat stack of
+sections. Order, top to bottom:
+
+1. **Hero**: `CardImageFrame` (large, `size="lg"`) + `CardIdentityBlock`
+   (`asHeading`) + a compact metadata grid (cost/power/counter/attribute/
+   color/type/artist/character/release date - each field only rendered if
+   the card actually has it; catalog enrichment is sparse, so this section
+   can legitimately show very little for an older card) + effect/trigger
+   text (only when present).
+2. **Ownership / wishlist / grading** (`OwnershipSummaryPanel` /
+   `WishlistSummaryPanel` / `GradingSummaryPanel`, side by side on wide
+   screens) - each has its own quiet empty state ("Not in collection yet.",
+   "Not on wishlist.", "No grading submissions.") and its own existing
+   add-action slotted in, never a shared generic "no data" box.
+3. **Price source panel** (`CardPricePanel`, 4 lines: Yuyu-Tei sell/buy,
+   SNKRDUNK floor, SNKRDUNK sold - the last one is genuinely new to this
+   panel and follows the same "not available" fallback as the other three).
+4. **Market context** (`MarketContextPanel`) - signal events + opportunities
+   for this one card, deterministic labels straight from the existing APIs,
+   never an invented recommendation.
+5. **Notes/activity** (`CardActivityPanel`).
+6. **Admin mini-panel** (source mappings) - only rendered for admin-token
+   holders, styled with `.admin-preview` (the gold-outline admin treatment,
+   not a full page section) to read as clearly admin-only at a glance.
+7. Price history chart + price observations table (unchanged from before).
+
+### Card vault tile density
+
+`CardVaultTile`'s `density` prop is `"compact" | "standard" | "showcase"`
+(default `"standard"`):
+- `"compact"` - image+code+name+one price line+status pill only. Used for
+  dashboard/pinned-card contexts where many tiles need to fit densely.
+- `"standard"` - adds quantity/condition, a second signed P&L price line,
+  and a target-sell/target-hit row. The default for `/collection/vault`.
+- `"showcase"` - same content as `"standard"` with a larger
+  (`CardImageFrame size="md"`) image - a deliberate, occasional "look at
+  this card" mode, not the default grid density (avoid making every page
+  showcase-dense, which would fight the "dense throughout" rule elsewhere
+  in this doc).
 
 ## Admin safety rules
 
@@ -249,7 +291,7 @@ mismatch against its own filters.
 
 ## Pages fully migrated in this pass
 
-`/dashboard`, `/collection`, `/search`, `/cards/[id]`,
+`/dashboard`, `/collection`, `/collection/vault`, `/search`, `/cards/[id]`,
 `/analytics/digest`, `/analytics/buy-decisions`, `/analytics/sell-decisions`,
 `/analytics/portfolio-risk`, `/admin/catalog-ops`, `/admin/import-validation`,
 `/admin/card-duplicates`, `/admin/source-mapping-quality`,

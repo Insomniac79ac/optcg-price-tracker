@@ -30,7 +30,10 @@ const COLLECTOR_ITEMS: NavItem[] = [
   {
     href: "/collection",
     label: "Collection",
-    children: [{ href: "/analytics/collection", label: "Collection Analytics" }],
+    children: [
+      { href: "/analytics/collection", label: "Collection Analytics" },
+      { href: "/collection/vault", label: "Vault View" },
+    ],
   },
   {
     href: "/wishlist",

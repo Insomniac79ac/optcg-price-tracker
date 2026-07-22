@@ -561,11 +561,24 @@ export default function CollectionPage() {
             </span>
           }
           actions={
-            listStatus === "ready" && (
-              <span className="mono tabular text-sm text-text-muted">
-                {total} item{total === 1 ? "" : "s"}
-              </span>
-            )
+            <div className="flex items-center gap-2">
+              {listStatus === "ready" && (
+                <span className="mono tabular text-sm text-text-muted">
+                  {total} item{total === 1 ? "" : "s"}
+                </span>
+              )}
+              <div className="flex gap-1">
+                <span className="rounded-control bg-accent-gold px-2.5 py-1 text-xs font-medium text-black/80 ring-1 ring-inset ring-accent-gold">
+                  Table View
+                </span>
+                <Link
+                  href="/collection/vault"
+                  className="rounded-control bg-bg-surface px-2.5 py-1 text-xs font-medium text-text-secondary ring-1 ring-inset ring-border-default hover:text-text-primary"
+                >
+                  Vault View →
+                </Link>
+              </div>
+            </div>
           }
         />
 

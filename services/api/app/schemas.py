@@ -225,6 +225,22 @@ class CardOut(BaseModel):
     language: str
     image_url: str | None
     tags: list[CollectorTagOut] = []
+    # Catalog-enrichment fields (see app.services.card_catalog_import) - all
+    # nullable, since most existing rows predate this metadata being
+    # collected. Exposed here (previously only used internally by CSV import
+    # preview) so the card detail page can render a metadata grid/effect
+    # text without a new endpoint.
+    release_date: date | None = None
+    artist: str | None = None
+    character: str | None = None
+    color: str | None = None
+    card_type: str | None = None
+    cost: int | None = None
+    power: int | None = None
+    counter: int | None = None
+    attribute: str | None = None
+    effect_text: str | None = None
+    trigger_text: str | None = None
     created_at: datetime
     updated_at: datetime
 

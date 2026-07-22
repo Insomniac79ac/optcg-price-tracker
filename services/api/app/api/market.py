@@ -338,6 +338,7 @@ def market_opportunities(
     owned: bool | None = Query(default=None),
     set_code: str | None = Query(default=None),
     rarity: str | None = Query(default=None),
+    card_code: str | None = Query(default=None),
     min_score: int | None = Query(default=None, ge=0, le=100),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -350,7 +351,7 @@ def market_opportunities(
         )
 
     cache_key = (
-        f"market_opportunities:{category}:{owned}:{set_code}:{rarity}:"
+        f"market_opportunities:{category}:{owned}:{set_code}:{rarity}:{card_code}:"
         f"{min_score}:{limit}:{offset}"
     )
     ttl = settings.CACHE_MARKET_TTL_SECONDS
@@ -363,6 +364,7 @@ def market_opportunities(
             owned=owned,
             set_code=set_code,
             rarity=rarity,
+            card_code=card_code,
             min_score=min_score,
             limit=limit,
             offset=offset,

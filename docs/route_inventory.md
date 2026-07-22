@@ -20,6 +20,7 @@ enforced by `apps/web/middleware.ts` (redirects an anonymous visitor to `/market
 | `/dashboard` | Personalized portfolio/wishlist/grading overview plus shared market widgets | Google sign-in | 200 | Yes (primary nav, brand link) |
 | `/search` | Card search (Ctrl/Cmd+K opens it) | No | 200 | Yes (primary nav) |
 | `/collection` | Collection tracker: items, valuation, CSV import/export, links to wishlist/grading | Google sign-in | 200 | Yes (primary nav) |
+| `/collection/vault` | Collector vault view: grid of owned cards (CardVaultTile), search/set/rarity/variant/status/condition filters, valuation mode, sort, density, saved views | Google sign-in | 200 | Yes (Collection's "Vault View" nav child; linked from `/collection` and `/dashboard`) |
 | `/analytics/collection` | Collection analytics: composition, valuation exposure, cost basis, concentration risk, grading exposure | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/collection`, `/grading`) |
 | `/analytics/wishlist` | Wishlist analytics: budget planning, target hits, priority exposure, acquisition planning | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/collection`) |
 | `/analytics/buy-decisions` | Buy decision support: deterministic review-buy/wait/skip/monitor scoring for wishlist cards | Google sign-in | 200 | Yes (primary nav; linked from `/dashboard`, `/wishlist`, `/analytics/wishlist`, `/market/opportunities`) |

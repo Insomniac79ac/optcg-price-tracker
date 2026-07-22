@@ -304,6 +304,7 @@ def get_opportunities(
     owned: bool | None = None,
     set_code: str | None = None,
     rarity: str | None = None,
+    card_code: str | None = None,
     min_score: int | None = None,
     limit: int = 100,
     offset: int = 0,
@@ -311,12 +312,14 @@ def get_opportunities(
     status_filter = MarketSignalEvent.status.in_(INCLUDED_STATUSES)
 
     query = select(MarketSignalEvent)
-    if set_code is not None or rarity is not None:
+    if set_code is not None or rarity is not None or card_code is not None:
         card_filters = []
         if set_code is not None:
             card_filters.append(Card.set_code == set_code)
         if rarity is not None:
             card_filters.append(Card.rarity == rarity)
+        if card_code is not None:
+            card_filters.append(Card.card_code == card_code)
         query = query.join(Card, MarketSignalEvent.card_id == Card.id).where(
             status_filter, *card_filters
         )

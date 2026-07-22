@@ -360,6 +360,32 @@ def test_rarity_filter_works(db_session):
     assert response.opportunities[0].rarity == "L"
 
 
+def test_card_code_filter_works(db_session):
+    luffy = make_card(db_session, card_code="OP01-001")
+    zoro = make_card(db_session, card_code="OP01-013")
+    make_event(db_session, card_id=luffy.id)
+    make_event(db_session, card_id=zoro.id)
+
+    response = get_opportunities(db_session, card_code="OP01-013")
+
+    assert len(response.opportunities) == 1
+    assert response.opportunities[0].card_code == "OP01-013"
+
+
+def test_card_code_filter_endpoint_works(client, db_session):
+    luffy = make_card(db_session, card_code="OP01-001")
+    zoro = make_card(db_session, card_code="OP01-013")
+    make_event(db_session, card_id=luffy.id)
+    make_event(db_session, card_id=zoro.id)
+
+    response = client.get("/market/opportunities", params={"card_code": "OP01-013"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["opportunities"]) == 1
+    assert data["opportunities"][0]["card_code"] == "OP01-013"
+
+
 # --- GET /market/opportunities ----------------------------------------------
 
 

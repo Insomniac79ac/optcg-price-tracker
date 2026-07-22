@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -39,6 +39,61 @@ def test_get_card_returns_one_card(client, seeded_db):
     body = response.json()
     assert body["card_code"] == "OP01-001"
     assert body["name_en"] == "Monkey D. Luffy"
+
+
+def test_get_card_returns_enrichment_fields_when_present(client, db_session):
+    card = Card(
+        card_code="OP01-001",
+        name_en="Monkey D. Luffy",
+        name_jp="モンキー・D・ルフィ",
+        set_code="OP01",
+        rarity="L",
+        variant="leader",
+        language="en",
+        release_date=date(2022, 12, 2),
+        artist="Some Artist",
+        character="Monkey D. Luffy",
+        color="red",
+        card_type="leader",
+        cost=None,
+        power=5000,
+        counter=None,
+        attribute="strike",
+        effect_text="[Activate: Main] Once per turn...",
+        trigger_text=None,
+    )
+    db_session.add(card)
+    db_session.commit()
+
+    response = client.get(f"/cards/{card.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["release_date"] == "2022-12-02"
+    assert body["artist"] == "Some Artist"
+    assert body["character"] == "Monkey D. Luffy"
+    assert body["color"] == "red"
+    assert body["card_type"] == "leader"
+    assert body["power"] == 5000
+    assert body["attribute"] == "strike"
+    assert body["effect_text"] == "[Activate: Main] Once per turn..."
+    assert body["cost"] is None
+    assert body["counter"] is None
+    assert body["trigger_text"] is None
+
+
+def test_get_card_enrichment_fields_null_when_absent(client, seeded_db):
+    luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
+
+    response = client.get(f"/cards/{luffy.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    for field in (
+        "release_date", "artist", "character", "color", "card_type",
+        "cost", "power", "counter", "attribute", "effect_text", "trigger_text",
+    ):
+        assert body[field] is None
 
 
 def test_get_card_not_found_returns_404(client, seeded_db):

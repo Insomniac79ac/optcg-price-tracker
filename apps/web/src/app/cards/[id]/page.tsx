@@ -7,42 +7,57 @@ import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
-import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { FormField } from "@/components/FormField";
-import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { SourceBadge } from "@/components/SourceBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { CardActivityPanel } from "@/components/ui/CardActivityPanel";
 import { CardIdentityBlock } from "@/components/ui/CardIdentityBlock";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
-import { ActionButton } from "@/components/ui/ActionButton";
 import { CardPricePanel, type PriceLine } from "@/components/ui/CardPricePanel";
 import { DataTableShell } from "@/components/ui/DataTableShell";
+import { GradingSummaryPanel } from "@/components/ui/GradingSummaryPanel";
+import { MarketContextPanel } from "@/components/ui/MarketContextPanel";
+import { OwnershipSummaryPanel } from "@/components/ui/OwnershipSummaryPanel";
 import { accentForVariant } from "@/components/ui/VariantBadge";
+import { WishlistSummaryPanel } from "@/components/ui/WishlistSummaryPanel";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
-import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
-import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
   WISHLIST_PRIORITIES,
+  getAdminToken,
   type Card,
   type CollectionItem,
   type CollectionItemInput,
+  type CollectorActivityEvent,
+  type CollectorNote,
   type CollectorTag,
+  type MarketOpportunity,
+  type MarketSignalEvent,
+  type PortfolioValuationItem,
   type PriceObservation,
+  type SourceCardMapping,
+  type ValuationMode,
   type WishlistItem,
   type WishlistPriority,
   assignCardTag,
   createCollectionItem,
   createWishlistItem,
+  fetchAdminSourceMappings,
   fetchCard,
   fetchCardPrices,
   fetchCollectionItems,
+  fetchCollectionValuation,
+  fetchCollectorActivity,
+  fetchCollectorNotes,
   fetchCollectorTags,
+  fetchMarketOpportunities,
+  fetchMarketSignalEvents,
   fetchWishlistItems,
   unassignCardTag,
 } from "@/lib/api";
-import { cardDisplayName, formatDateTime, formatJpy, formatSignedJpy } from "@/lib/format";
+import { cardDisplayName, formatDate, formatDateTime, formatJpy } from "@/lib/format";
 
 // Dynamically imported (recharts is a sizeable chunk) so pages that never
 // render a price chart - most of this app - don't pay for it. ssr: false
@@ -65,6 +80,7 @@ const KEY_PRICE_LINES: KeyPriceLine[] = [
   { label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell" },
   { label: "Yuyu-Tei buy", source: "yuyutei", priceType: "buy" },
   { label: "SNKRDUNK floor", source: "snkrdunk", priceType: "floor" },
+  { label: "SNKRDUNK sold", source: "snkrdunk", priceType: "sold" },
 ];
 
 function keyPriceLines(prices: PriceObservation[]): PriceLine[] {
@@ -187,6 +203,68 @@ export default function CardDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [card?.card_code]);
 
+  // Ownership valuation (cost basis/current value/P&L) - same source
+  // /collection itself uses, so the numbers never disagree.
+  const [valuationMode] = useState<ValuationMode>("raw_market");
+  const [valuationItems, setValuationItems] = useState<PortfolioValuationItem[]>([]);
+
+  useEffect(() => {
+    fetchCollectionValuation(valuationMode)
+      .then((data) => setValuationItems(data.items.filter((i) => i.card_id === Number(cardId))))
+      .catch(() => setValuationItems([]));
+  }, [cardId, valuationMode]);
+
+  // Market context - both endpoints already support a card_code filter.
+  const [signalEvents, setSignalEvents] = useState<MarketSignalEvent[]>([]);
+  const [opportunities, setOpportunities] = useState<MarketOpportunity[]>([]);
+
+  useEffect(() => {
+    if (!card) return;
+    fetchMarketSignalEvents({ card_code: card.card_code })
+      .then((data) => setSignalEvents(data.events))
+      .catch(() => setSignalEvents([]));
+    fetchMarketOpportunities({ card_code: card.card_code })
+      .then((data) => setOpportunities(data.opportunities))
+      .catch(() => setOpportunities([]));
+  }, [card?.card_code]);
+
+  // Notes/activity for this card.
+  const [notes, setNotes] = useState<CollectorNote[]>([]);
+  const [activity, setActivity] = useState<CollectorActivityEvent[]>([]);
+
+  function refreshNotes() {
+    fetchCollectorNotes({ card_id: Number(cardId) })
+      .then((data) => setNotes(data.items))
+      .catch(() => setNotes([]));
+  }
+
+  useEffect(() => {
+    refreshNotes();
+    fetchCollectorActivity({ card_id: Number(cardId) })
+      .then((data) => setActivity(data.events))
+      .catch(() => setActivity([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardId]);
+
+  // Admin-only source mappings mini panel - only fetched (and only ever
+  // shown) when an admin token is already present, same gate as every
+  // other admin-only UI element in this app.
+  const [hasAdminToken, setHasAdminToken] = useState(false);
+  const [adminMappings, setAdminMappings] = useState<SourceCardMapping[]>([]);
+
+  useEffect(() => {
+    setHasAdminToken(!!getAdminToken());
+  }, []);
+
+  useEffect(() => {
+    if (!hasAdminToken || !card) return;
+    fetchAdminSourceMappings({ card_code: card.card_code })
+      .then((data) => setAdminMappings(data.items))
+      .catch(() => setAdminMappings([]));
+  }, [hasAdminToken, card?.card_code]);
+
+  const gradingSubmissions = collectionItems.flatMap((item) => item.grading_submissions);
+
   const latestFirst = prices
     .slice()
     .sort(
@@ -213,6 +291,7 @@ export default function CardDetailPage() {
 
         {status === "ready" && card && (
           <div className="space-y-6">
+            {/* 1. Hero - image + identity + compact metadata grid + effect/trigger text */}
             <div className="panel flex flex-col gap-4 p-4 sm:flex-row">
               <CardImageFrame
                 imageUrl={card.image_url}
@@ -223,7 +302,7 @@ export default function CardDetailPage() {
                 accent={accentForVariant(card.variant)}
                 size="lg"
               />
-              <div className="flex-1">
+              <div className="flex-1 space-y-3">
                 <CardIdentityBlock
                   cardCode={card.card_code}
                   name={cardDisplayName(card)}
@@ -234,6 +313,8 @@ export default function CardDetailPage() {
                   setCode={card.set_code}
                   asHeading
                 />
+                <CardMetadataGrid card={card} />
+                <CardEffectText card={card} />
               </div>
             </div>
 
@@ -252,21 +333,65 @@ export default function CardDetailPage() {
               />
             </div>
 
-            <CollectionSection
-              cardId={card.id}
-              status={collectionStatus}
-              items={collectionItems}
-              onChanged={refreshCollectionItems}
-            />
+            {/* 2. Ownership / wishlist / grading */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {collectionStatus === "ready" ? (
+                <OwnershipSummaryPanel
+                  items={collectionItems}
+                  valuationItems={valuationItems}
+                  valuationMode={valuationMode}
+                  onChanged={refreshCollectionItems}
+                  addAction={<QuickAddForm cardId={card.id} onAdded={refreshCollectionItems} />}
+                />
+              ) : (
+                <div className="panel p-4">
+                  <p className="text-sm text-text-muted">
+                    {collectionStatus === "error"
+                      ? "Failed to load collection status."
+                      : "Loading collection status…"}
+                  </p>
+                </div>
+              )}
 
-            <WishlistSection
-              cardId={card.id}
-              status={wishlistStatus}
-              items={wishlistItems}
-              onChanged={() => refreshWishlistItems(card.card_code)}
-            />
+              {wishlistStatus === "ready" ? (
+                <WishlistSummaryPanel
+                  items={wishlistItems}
+                  addAction={
+                    <QuickAddWishlistForm
+                      cardId={card.id}
+                      onAdded={() => refreshWishlistItems(card.card_code)}
+                    />
+                  }
+                />
+              ) : (
+                <div className="panel p-4">
+                  <p className="text-sm text-text-muted">
+                    {wishlistStatus === "error"
+                      ? "Failed to load wishlist status."
+                      : "Loading wishlist status…"}
+                  </p>
+                </div>
+              )}
 
+              <GradingSummaryPanel submissions={gradingSubmissions} />
+            </div>
+
+            {/* 3. Price source panel */}
             <CardPricePanel lines={keyPriceLines(prices)} />
+
+            {/* 4. Market context */}
+            <MarketContextPanel signalEvents={signalEvents} opportunities={opportunities} />
+
+            {/* 5. Notes/activity */}
+            <CardActivityPanel
+              cardId={card.id}
+              notes={notes}
+              activity={activity}
+              onNoteAdded={refreshNotes}
+            />
+
+            {/* 6. Admin mini-panel - only rendered for admin-token holders */}
+            {hasAdminToken && <AdminSourceMappingsMiniPanel mappings={adminMappings} />}
 
             <div>
               <h2 className="mb-2 text-sm font-semibold text-text-primary">
@@ -327,156 +452,6 @@ export default function CardDetailPage() {
   );
 }
 
-function CollectionSection({
-  cardId,
-  status,
-  items,
-  onChanged,
-}: {
-  cardId: number;
-  status: Status;
-  items: CollectionItem[];
-  onChanged: () => void;
-}) {
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  return (
-    <div className="rounded-panel border border-border-default bg-bg-surface p-4">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Collection</h2>
-        <Link
-          href="/collection"
-          className="text-xs text-sky-400 hover:text-sky-300"
-        >
-          View collection →
-        </Link>
-      </div>
-
-      {status === "loading" && (
-        <p className="text-sm text-text-muted">Loading collection status…</p>
-      )}
-
-      {status === "error" && (
-        <p className="text-sm text-signal-red">
-          Failed to load collection status.
-        </p>
-      )}
-
-      {status === "ready" && items.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-sm text-text-secondary">
-            You own{" "}
-            <span className="font-semibold text-text-primary">
-              {totalQuantity}
-            </span>{" "}
-            cop{totalQuantity === 1 ? "y" : "ies"}.
-          </p>
-          <div className="divide-y divide-border-muted rounded border border-border-default">
-            {items.map((item) => (
-              <div key={item.id} className="space-y-1.5 px-3 py-2">
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="font-medium text-text-primary">
-                    {item.quantity}×
-                  </span>
-                  <span className="text-text-secondary">
-                    {item.condition_label ?? "raw"}
-                  </span>
-                  <span className="text-text-primary">
-                    {formatJpy(item.purchase_price_jpy)}
-                  </span>
-                  <CollectionStatusBadge status={item.status} />
-                  {item.latest_grading_status && (
-                    <GradingStatusBadge status={item.latest_grading_status} />
-                  )}
-                  <Link
-                    href={`/grading?item_id=${item.id}`}
-                    className="text-xs font-medium text-violet-400 hover:text-violet-300"
-                  >
-                    Create grading submission
-                  </Link>
-                </div>
-                {item.grading_submissions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 text-xs text-text-muted">
-                    {item.grading_submissions.map((s) => (
-                      <span
-                        key={s.id}
-                        className="rounded border border-border-default bg-bg-page px-2 py-1"
-                      >
-                        {s.grading_company} · {s.submission_status.replace(/_/g, " ")}
-                        {s.final_grade ? ` · grade ${s.final_grade}` : ""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {status === "ready" && items.length === 0 && (
-        <QuickAddForm cardId={cardId} onAdded={onChanged} />
-      )}
-    </div>
-  );
-}
-
-function WishlistSection({
-  cardId,
-  status,
-  items,
-  onChanged,
-}: {
-  cardId: number;
-  status: Status;
-  items: WishlistItem[];
-  onChanged: () => void;
-}) {
-  return (
-    <div className="rounded-panel border border-border-default bg-bg-surface p-4">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-text-primary">Wishlist</h2>
-        <Link href="/wishlist" className="text-xs text-sky-400 hover:text-sky-300">
-          View wishlist →
-        </Link>
-      </div>
-
-      {status === "loading" && <p className="text-sm text-text-muted">Loading wishlist status…</p>}
-
-      {status === "error" && <p className="text-sm text-signal-red">Failed to load wishlist status.</p>}
-
-      {status === "ready" && items.length > 0 && (
-        <div className="mb-3 divide-y divide-border-muted rounded border border-border-default">
-          {items.map((item) => (
-            <div key={item.id} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
-              <WishlistPriorityBadge priority={item.priority} />
-              <WishlistStatusBadge status={item.status} />
-              <span className="text-text-secondary">
-                Target: {item.target_buy_price_jpy !== null ? formatJpy(item.target_buy_price_jpy) : "not set"}
-              </span>
-              {item.target_hit && (
-                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                  target hit
-                </span>
-              )}
-              {item.gap_to_target_jpy !== null && (
-                <span className="text-xs text-text-muted">
-                  gap {formatSignedJpy(item.gap_to_target_jpy)}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {status === "ready" && items.length === 0 && (
-        <p className="mb-3 text-sm text-text-muted">Not on your wishlist yet.</p>
-      )}
-
-      {status === "ready" && <QuickAddWishlistForm cardId={cardId} onAdded={onChanged} />}
-    </div>
-  );
-}
 
 interface QuickAddWishlistFormState {
   priority: WishlistPriority;
@@ -844,5 +819,119 @@ function QuickAddForm({
         </button>
       </div>
     </form>
+  );
+}
+
+const META_FIELDS: { key: keyof Card; label: string }[] = [
+  { key: "cost", label: "Cost" },
+  { key: "power", label: "Power" },
+  { key: "counter", label: "Counter" },
+  { key: "attribute", label: "Attribute" },
+  { key: "color", label: "Color" },
+  { key: "card_type", label: "Type" },
+  { key: "artist", label: "Artist" },
+  { key: "character", label: "Character" },
+];
+
+/** Compact metadata grid (cost/power/counter/attribute/color/type/artist/
+ * character/release date) - only rendered fields the card actually has
+ * (catalog enrichment is sparse; most existing rows have none of this),
+ * never a "not available" wall for a field that's simply not part of this
+ * card's data at all. */
+function CardMetadataGrid({ card }: { card: Card }) {
+  const present = META_FIELDS.filter(({ key }) => card[key] !== null && card[key] !== undefined);
+  if (present.length === 0 && !card.release_date) return null;
+
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+      {present.map(({ key, label }) => (
+        <div key={key}>
+          <dt className="text-[11px] uppercase tracking-wide text-text-secondary">{label}</dt>
+          <dd className="text-text-primary">{String(card[key])}</dd>
+        </div>
+      ))}
+      {card.release_date && (
+        <div>
+          <dt className="text-[11px] uppercase tracking-wide text-text-secondary">Release date</dt>
+          <dd className="text-text-primary">{formatDate(card.release_date)}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
+/** Effect/trigger text - only rendered when at least one is present. */
+function CardEffectText({ card }: { card: Card }) {
+  if (!card.effect_text && !card.trigger_text) return null;
+
+  return (
+    <div className="space-y-2 text-sm">
+      {card.effect_text && (
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-text-secondary">Effect</div>
+          <p className="whitespace-pre-line text-text-primary">{card.effect_text}</p>
+        </div>
+      )}
+      {card.trigger_text && (
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-text-secondary">Trigger</div>
+          <p className="whitespace-pre-line text-text-primary">{card.trigger_text}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Admin-only source-mappings mini panel - compact, clearly admin-styled,
+ * only ever rendered when an admin token is present (see hasAdminToken in
+ * the page component). Uses the existing admin-token-gated GET /admin/
+ * source-mappings?card_code= list, not the /quality review endpoint. */
+function AdminSourceMappingsMiniPanel({ mappings }: { mappings: SourceCardMapping[] }) {
+  return (
+    <div className="admin-preview rounded-panel p-4">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-text-primary">Source mappings (admin)</h2>
+        <div className="flex flex-wrap gap-3 text-xs">
+          <Link href="/admin/source-mapping-quality" className="text-sky-400 hover:text-sky-300">
+            Source Mapping Quality →
+          </Link>
+          <Link href="/admin/card-audit" className="text-sky-400 hover:text-sky-300">
+            Card Audit →
+          </Link>
+        </div>
+      </div>
+
+      {mappings.length === 0 ? (
+        <EmptyState variant="inline">No source mappings for this card.</EmptyState>
+      ) : (
+        <div className="space-y-1.5">
+          {mappings.map((m) => (
+            <div
+              key={m.id}
+              className="flex flex-wrap items-center gap-2 rounded-control border border-border-default bg-bg-page px-2 py-1.5 text-xs"
+            >
+              <SourceBadge source={m.source_name ?? "unknown"} />
+              <span className="text-text-secondary">{m.is_active ? "active" : "inactive"}</span>
+              <span className="text-text-secondary">
+                {m.manual_verified ? "verified" : "unverified"}
+              </span>
+              {m.match_confidence_label && (
+                <span className="text-text-muted">{m.match_confidence_label}</span>
+              )}
+              {m.source_url && (
+                <a
+                  href={m.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto text-sky-400 hover:underline"
+                >
+                  source link
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

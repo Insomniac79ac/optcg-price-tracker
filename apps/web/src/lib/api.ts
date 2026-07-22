@@ -60,6 +60,19 @@ export interface Card {
   language: string;
   image_url: string | null;
   tags: CollectorTag[];
+  // Catalog-enrichment fields - nullable, most existing rows predate this
+  // metadata being collected (see app.services.card_catalog_import).
+  release_date: string | null;
+  artist: string | null;
+  character: string | null;
+  color: string | null;
+  card_type: string | null;
+  cost: number | null;
+  power: number | null;
+  counter: number | null;
+  attribute: string | null;
+  effect_text: string | null;
+  trigger_text: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -999,6 +1012,58 @@ export interface BulkMappingUpdateResponse {
 export interface SuggestedCardsForMapping {
   mapping_id: number;
   matches: CandidateMatch[];
+}
+
+export interface SourceCardMapping {
+  id: number;
+  card_id: number;
+  card_code: string | null;
+  name_en: string | null;
+  name_jp: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  source_card_id: string;
+  manual_verified: boolean;
+  match_confidence: number | null;
+  match_confidence_label: string | null;
+  last_match_checked_at: string | null;
+  is_active: boolean;
+  review_status: string;
+  review_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  last_verified_at: string | null;
+}
+
+export interface SourceCardMappingList {
+  items: SourceCardMapping[];
+  total: number;
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
+/** Routed through the Next.js server proxy (see
+ * src/app/api/admin/source-mappings/route.ts) - the plain mapping list (not
+ * the /quality review view), used by the card detail page's admin-only
+ * source-mappings mini panel. */
+export function fetchAdminSourceMappings(params?: {
+  source?: string;
+  review_status?: string;
+  is_active?: boolean;
+  card_code?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<SourceCardMappingList> {
+  const query = new URLSearchParams();
+  if (params?.source) query.set("source", params.source);
+  if (params?.review_status) query.set("review_status", params.review_status);
+  if (params?.is_active !== undefined) query.set("is_active", String(params.is_active));
+  if (params?.card_code) query.set("card_code", params.card_code);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  return fetchAdminJson<SourceCardMappingList>(`/api/admin/source-mappings${qs ? `?${qs}` : ""}`);
 }
 
 /* Source mapping quality review goes through the Next.js server proxy (see
@@ -2463,6 +2528,7 @@ export function fetchMarketOpportunities(params?: {
   owned?: boolean;
   set_code?: string;
   rarity?: string;
+  card_code?: string;
   min_score?: number;
   limit?: number;
   offset?: number;
@@ -2472,6 +2538,7 @@ export function fetchMarketOpportunities(params?: {
   if (params?.owned !== undefined) query.set("owned", String(params.owned));
   if (params?.set_code) query.set("set_code", params.set_code);
   if (params?.rarity) query.set("rarity", params.rarity);
+  if (params?.card_code) query.set("card_code", params.card_code);
   if (params?.min_score !== undefined) query.set("min_score", String(params.min_score));
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
@@ -5179,11 +5246,13 @@ export interface CollectorNoteList {
 
 export function fetchCollectorNotes(params?: {
   note_type?: string;
+  card_id?: number;
   limit?: number;
   offset?: number;
 }): Promise<CollectorNoteList> {
   const query = new URLSearchParams();
   if (params?.note_type) query.set("note_type", params.note_type);
+  if (params?.card_id !== undefined) query.set("card_id", String(params.card_id));
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
