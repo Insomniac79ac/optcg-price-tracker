@@ -6,7 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   MARKET_SIGNAL_TYPES,
   type Card,
@@ -206,40 +210,42 @@ export default function MarketSignalsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">
-              Market signals
-            </h1>
-            <Link
-              href="/market/signal-events"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Review signal events
-            </Link>
-            <Link
-              href="/market/opportunities"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Ranked opportunities
-            </Link>
-            <Link
-              href="/market/report"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Market report
-            </Link>
-          </div>
-          {status === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {visibleSignals.length} of {signals.length} signal
-              {signals.length === 1 ? "" : "s"}
+        <PageHeader
+          title="Market signals"
+          description={
+            <span className="flex flex-wrap items-baseline gap-3">
+              <Link
+                href="/market/signal-events"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Review signal events
+              </Link>
+              <Link
+                href="/market/opportunities"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Ranked opportunities
+              </Link>
+              <Link
+                href="/market/report"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Market report
+              </Link>
             </span>
-          )}
-        </div>
+          }
+          actions={
+            status === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {visibleSignals.length} of {signals.length} signal
+                {signals.length === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         {summary && (
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <StatGrid>
             <StatCard label="Total signals" value={summary.total_signals} />
             <StatCard label="Market signals" value={summary.market_signal_count} />
             <StatCard label="Owned signals" value={summary.owned_signal_count} />
@@ -251,7 +257,7 @@ export default function MarketSignalsPage() {
               label="Top signal type"
               value={topSignalType(summary.by_signal_type)}
             />
-          </div>
+          </StatGrid>
         )}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -345,28 +351,14 @@ export default function MarketSignalsPage() {
           ))}
         </div>
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading market signals…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading market signals…</LoadingState>}
 
-        {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load market signals from the API.
-          </div>
-        )}
+        {status === "error" && <ErrorState>Failed to load market signals from the API.</ErrorState>}
 
-        {status === "ready" && visibleSignals.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No market signals found
-          </div>
-        )}
-
-        {status === "ready" && visibleSignals.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+        {status === "ready" && (
+          <DataTableShell isEmpty={visibleSignals.length === 0} emptyLabel="No market signals found" minWidth={1100}>
             <table className="w-full border-collapse text-xs">
-              <thead>
+              <thead className="sticky-thead">
                 <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
                   <th className="px-2 py-1.5 font-medium">Signal type</th>
                   <th className="px-2 py-1.5 font-medium">Severity</th>
@@ -455,22 +447,9 @@ export default function MarketSignalsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTableShell>
         )}
       </main>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-2xl font-semibold text-neutral-100">
-        {value}
-      </div>
     </div>
   );
 }

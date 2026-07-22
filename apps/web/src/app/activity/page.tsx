@@ -7,6 +7,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
 import { SearchTypeBadge } from "@/components/SearchTypeBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   ACTIVITY_EVENT_SOURCES,
   type CollectorActivityEvent,
@@ -52,28 +54,30 @@ export default function ActivityPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Activity</h1>
-          {status === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {events.length} event{events.length === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          A log of notable actions across your collection, wishlist, grading, market signals,
-          reports, backups, and workflow runs.
-        </p>
+        <PageHeader
+          title="Activity"
+          description="A log of notable actions across your collection, wishlist, grading, market
+          signals, reports, backups, and workflow runs."
+          actions={
+            status === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {events.length} event{events.length === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         {summary && (
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard label="Total events" value={summary.total_events} />
-            {Object.entries(summary.by_source)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 3)
-              .map(([source, count]) => (
-                <StatCard key={source} label={source.replace("_", " ")} value={count} />
-              ))}
+          <div className="mb-4">
+            <StatGrid>
+              <StatCard label="Total events" value={summary.total_events} />
+              {Object.entries(summary.by_source)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([source, count]) => (
+                  <StatCard key={source} label={source.replace("_", " ")} value={count} />
+                ))}
+            </StatGrid>
           </div>
         )}
 
@@ -146,15 +150,6 @@ export default function ActivityPage() {
           />
         )}
       </main>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="truncate text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-1 truncate text-2xl font-semibold text-neutral-100">{value}</div>
     </div>
   );
 }

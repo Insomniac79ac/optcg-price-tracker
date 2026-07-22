@@ -13,7 +13,9 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   OPPORTUNITY_CATEGORIES,
@@ -201,52 +203,54 @@ export default function MarketOpportunitiesPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">
-              Market opportunities
-            </h1>
-            <Link
-              href="/market/signal-events"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Review signal events
-            </Link>
-            <Link
-              href="/market/signals"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Market signals
-            </Link>
-            <Link
-              href="/market/report"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Market report
-            </Link>
-            <Link
-              href="/analytics/buy-decisions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Buy decision support
-            </Link>
-            <Link
-              href="/analytics/sell-decisions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Sell decision support
-            </Link>
-          </div>
-          {status === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {filteredOpportunities.length} of {opportunities.length} opportunit
-              {opportunities.length === 1 ? "y" : "ies"}
+        <PageHeader
+          title="Market opportunities"
+          description={
+            <span className="flex flex-wrap items-baseline gap-3">
+              <Link
+                href="/market/signal-events"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Review signal events
+              </Link>
+              <Link
+                href="/market/signals"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Market signals
+              </Link>
+              <Link
+                href="/market/report"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Market report
+              </Link>
+              <Link
+                href="/analytics/buy-decisions"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Buy decision support
+              </Link>
+              <Link
+                href="/analytics/sell-decisions"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Sell decision support
+              </Link>
             </span>
-          )}
-        </div>
+          }
+          actions={
+            status === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {filteredOpportunities.length} of {opportunities.length} opportunit
+                {opportunities.length === 1 ? "y" : "ies"}
+              </span>
+            )
+          }
+        />
 
         {summary && (
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
+          <StatGrid>
             <StatCard label="Total" value={summary.total_opportunities} />
             <StatCard label="Avg score" value={summary.average_score} />
             <StatCard label="Highest" value={summary.highest_score} />
@@ -257,7 +261,7 @@ export default function MarketOpportunitiesPage() {
             <StatCard label="Data quality" value={summary.by_category.data_quality ?? 0} />
             <StatCard label="Owned" value={summary.by_category.owned ?? 0} />
             <StatCard label="Wishlist target hit" value={summary.wishlist_target_hit_count} />
-          </div>
+          </StatGrid>
         )}
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -605,15 +609,6 @@ export default function MarketOpportunitiesPage() {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-1 truncate text-2xl font-semibold text-neutral-100">{value}</div>
     </div>
   );
 }

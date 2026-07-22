@@ -9,9 +9,12 @@ import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   GRADING_COMPANY_OPTIONS,
   GRADING_SUBMISSION_STATUSES,
@@ -340,28 +343,32 @@ function GradingPageInner() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">Grading</h1>
-            <Link
-              href="/analytics/collection"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Analytics →
-            </Link>
-            <Link
-              href="/analytics/grading"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              ROI analytics →
-            </Link>
-          </div>
-          {listStatus === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {total} submission{total === 1 ? "" : "s"}
+        <PageHeader
+          title="Grading"
+          description={
+            <span className="flex flex-wrap items-baseline gap-3">
+              <Link
+                href="/analytics/collection"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Analytics →
+              </Link>
+              <Link
+                href="/analytics/grading"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                ROI analytics →
+              </Link>
             </span>
-          )}
-        </div>
+          }
+          actions={
+            listStatus === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {total} submission{total === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         <QuickActionBar
           actions={[
@@ -374,7 +381,7 @@ function GradingPageInner() {
         />
 
         {summary && (
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <StatGrid>
             <StatCard label="Total submissions" value={summary.total_submissions} />
             <StatCard label="Planned" value={summary.by_status.planned ?? 0} />
             <StatCard
@@ -403,7 +410,7 @@ function GradingPageInner() {
               label="Average grade"
               value={summary.average_grade === null ? "not set" : summary.average_grade}
             />
-          </div>
+          </StatGrid>
         )}
 
         <section ref={formSectionRef} className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
@@ -604,13 +611,9 @@ function GradingPageInner() {
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-              >
+              <ActionButton type="submit" variant="primary" disabled={saving}>
                 {saving ? "Saving…" : isEditing ? "Update submission" : "Create submission"}
-              </button>
+              </ActionButton>
               {isEditing && (
                 <button
                   type="button"
@@ -804,15 +807,6 @@ function GradingPageInner() {
           </Link>
         </div>
       </main>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-1 truncate text-2xl font-semibold text-neutral-100">{value}</div>
     </div>
   );
 }

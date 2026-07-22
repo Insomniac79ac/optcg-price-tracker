@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   AdminNotFoundError,
   type MarketIntelligenceReport,
@@ -114,46 +117,45 @@ export default function MarketReportPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">
-              Market Intelligence Report
-            </h1>
-            <Link
-              href="/admin/actions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Generate new report
-            </Link>
-            <Link
-              href="/admin/market-workflow-runs"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Workflow runs
-            </Link>
-          </div>
-          {reportsList.length > 0 && (
-            <label className="flex items-center gap-1.5 text-xs text-neutral-500">
-              Previous reports
-              <select
-                value={selectedValue}
-                onChange={(e) => handleSelectReport(e.target.value)}
-                className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+        <PageHeader
+          title="Market Intelligence Report"
+          description={
+            <span className="flex flex-wrap items-baseline gap-3">
+              <span>Reports update after successful price refreshes.</span>
+              <Link
+                href="/admin/actions"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
               >
-                <option value="latest">Latest</option>
-                {reportsList.map((r) => (
-                  <option key={r.id} value={String(r.id)}>
-                    {formatDate(r.report_date)} · {formatDateTime(r.created_at)} · {r.total_opportunities} opp · high {reportNumber(r.highest_score)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
-
-        <p className="mb-4 text-xs text-neutral-500">
-          Reports update after successful price refreshes.
-        </p>
+                Generate new report
+              </Link>
+              <Link
+                href="/admin/market-workflow-runs"
+                className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+              >
+                Workflow runs
+              </Link>
+            </span>
+          }
+          actions={
+            reportsList.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+                Previous reports
+                <select
+                  value={selectedValue}
+                  onChange={(e) => handleSelectReport(e.target.value)}
+                  className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                >
+                  <option value="latest">Latest</option>
+                  {reportsList.map((r) => (
+                    <option key={r.id} value={String(r.id)}>
+                      {formatDate(r.report_date)} · {formatDateTime(r.created_at)} · {r.total_opportunities} opp · high {reportNumber(r.highest_score)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          }
+        />
 
         {selectorError && (
           <div className="mb-4 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
@@ -247,32 +249,28 @@ function ReportView({ report }: { report: MarketIntelligenceReport }) {
       <section>
         <SectionTitle>Top opportunities</SectionTitle>
 
-        <div className="mb-3 overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                <th className="px-2 py-1.5 font-medium">Score</th>
-                <th className="px-2 py-1.5 font-medium">Category</th>
-                <th className="px-2 py-1.5 font-medium">Code</th>
-                <th className="px-2 py-1.5 font-medium">Name</th>
-                <th className="px-2 py-1.5 font-medium">Message</th>
-                <th className="px-2 py-1.5 font-medium">Suggested action</th>
-                <th className="px-2 py-1.5 font-medium">Seen</th>
-                <th className="px-2 py-1.5 font-medium">Links</th>
-              </tr>
-            </thead>
-            <tbody>
-              {top.top_5.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-2 py-4 text-center text-neutral-500">
-                    {NA}
-                  </td>
+        <div className="mb-3">
+          <DataTableShell isEmpty={top.top_5.length === 0} emptyLabel={NA}>
+            <table className="w-full border-collapse text-xs">
+              <thead className="sticky-thead">
+                <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+                  <th className="px-2 py-1.5 font-medium">Score</th>
+                  <th className="px-2 py-1.5 font-medium">Category</th>
+                  <th className="px-2 py-1.5 font-medium">Code</th>
+                  <th className="px-2 py-1.5 font-medium">Name</th>
+                  <th className="px-2 py-1.5 font-medium">Message</th>
+                  <th className="px-2 py-1.5 font-medium">Suggested action</th>
+                  <th className="px-2 py-1.5 font-medium">Seen</th>
+                  <th className="px-2 py-1.5 font-medium">Links</th>
                 </tr>
-              ) : (
-                top.top_5.map((opp) => <OpportunityRow key={opp.event_id} opp={opp} />)
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {top.top_5.map((opp) => (
+                  <OpportunityRow key={opp.event_id} opp={opp} />
+                ))}
+              </tbody>
+            </table>
+          </DataTableShell>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -323,12 +321,10 @@ function ReportView({ report }: { report: MarketIntelligenceReport }) {
           <StatCard
             label="Most common signal type"
             value={reportText(report.signal_event_summary.most_common_signal_type)}
-            wrap
           />
           <StatCard
             label="Most common suggested action"
             value={reportText(report.signal_event_summary.most_common_suggested_action)}
-            wrap
           />
         </div>
         <Link
@@ -345,31 +341,6 @@ function ReportView({ report }: { report: MarketIntelligenceReport }) {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 className="mb-2 text-sm font-semibold text-neutral-200">{children}</h2>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  wrap = false,
-}: {
-  label: string;
-  value: string;
-  wrap?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div
-        className={
-          wrap
-            ? "mt-1 break-words text-sm font-semibold leading-snug text-neutral-100"
-            : "mt-1 truncate text-xl font-semibold text-neutral-100"
-        }
-      >
-        {value}
-      </div>
-    </div>
   );
 }
 

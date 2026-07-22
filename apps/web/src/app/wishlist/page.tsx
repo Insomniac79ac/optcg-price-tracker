@@ -8,9 +8,12 @@ import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState, MissingValue } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { WishlistImportExport } from "@/components/WishlistImportExport";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import { WishlistStatusBadge } from "@/components/WishlistStatusBadge";
@@ -327,28 +330,32 @@ export default function WishlistPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">Wishlist</h1>
-            <Link href="/collection" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
-              Collection →
-            </Link>
-            <Link href="/analytics/wishlist" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
-              Analytics →
-            </Link>
-            <Link href="/analytics/buy-decisions" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
-              Buy decisions →
-            </Link>
-            <Link href="/market/opportunities" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
-              Opportunities →
-            </Link>
-          </div>
-          {listStatus === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {total} item{total === 1 ? "" : "s"}
+        <PageHeader
+          title="Wishlist"
+          description={
+            <span className="flex flex-wrap items-baseline gap-3">
+              <Link href="/collection" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+                Collection →
+              </Link>
+              <Link href="/analytics/wishlist" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+                Analytics →
+              </Link>
+              <Link href="/analytics/buy-decisions" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+                Buy decisions →
+              </Link>
+              <Link href="/market/opportunities" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+                Opportunities →
+              </Link>
             </span>
-          )}
-        </div>
+          }
+          actions={
+            listStatus === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {total} item{total === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         <QuickActionBar
           actions={[
@@ -366,20 +373,20 @@ export default function WishlistPage() {
 
         {summary && (
           <div className="mb-6 space-y-3">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <StatGrid>
               <StatCard label="Total wishlist items" value={summary.total_wishlist_items} />
               <StatCard label="Watching" value={summary.watching} />
               <StatCard label="Target hit" value={summary.items_with_target_hit} />
               <StatCard label="Purchased" value={summary.purchased} />
               <StatCard label="Grails" value={summary.grail_count} />
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            </StatGrid>
+            <StatGrid>
               <StatCard label="High priority" value={summary.high_priority_count} />
               <StatCard label="Total target budget" value={formatJpy(summary.total_target_budget_jpy)} />
               <StatCard label="Total max budget" value={formatJpy(summary.total_max_budget_jpy)} />
               <StatCard label="Owned already" value={summary.items_owned_already} />
               <StatCard label="Passed" value={summary.passed} />
-            </div>
+            </StatGrid>
           </div>
         )}
 
@@ -495,13 +502,9 @@ export default function WishlistPage() {
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-              >
+              <ActionButton type="submit" variant="primary" disabled={saving}>
                 {saving ? "Saving…" : editingId !== null ? "Update item" : "Add to wishlist"}
-              </button>
+              </ActionButton>
               {editingId !== null && (
                 <button
                   type="button"
@@ -763,15 +766,6 @@ export default function WishlistPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-1 truncate text-2xl font-semibold text-neutral-100">{value}</div>
-    </div>
-  );
-}
-
 function FilterSelect({
   label,
   value,
@@ -911,20 +905,12 @@ function MarkPurchasedModal({
           />
         </FormField>
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-          >
+          <ActionButton type="submit" variant="primary" disabled={saving}>
             {saving ? "Saving…" : "Mark purchased"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100"
-          >
+          </ActionButton>
+          <ActionButton type="button" onClick={onClose}>
             Cancel
-          </button>
+          </ActionButton>
         </div>
       </form>
     </ModalShell>
@@ -1048,20 +1034,12 @@ function ConvertToCollectionModal({
           </FormField>
         </div>
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-          >
+          <ActionButton type="submit" variant="primary" disabled={saving}>
             {saving ? "Saving…" : "Convert to collection"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100"
-          >
+          </ActionButton>
+          <ActionButton type="button" onClick={onClose}>
             Cancel
-          </button>
+          </ActionButton>
         </div>
       </form>
     </ModalShell>

@@ -7,6 +7,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SourceBadge } from "@/components/SourceBadge";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   type Card,
   type MarketMover,
@@ -91,14 +94,16 @@ export default function MarketMoversPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Market movers</h1>
-          {status === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {movers.length} card{movers.length === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
+        <PageHeader
+          title="Market movers"
+          actions={
+            status === "ready" && (
+              <span className="text-sm text-neutral-500">
+                {movers.length} card{movers.length === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         <div className="mb-4 flex gap-3 text-xs text-neutral-500">
           <Link
@@ -192,28 +197,16 @@ export default function MarketMoversPage() {
           />
         </div>
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading market data…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading market data…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load market data from the API. Is the backend running?
-          </div>
+          <ErrorState>Failed to load market data from the API. Is the backend running?</ErrorState>
         )}
 
-        {status === "ready" && movers.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No cards match these filters.
-          </div>
-        )}
-
-        {status === "ready" && movers.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+        {status === "ready" && (
+          <DataTableShell isEmpty={movers.length === 0} emptyLabel="No cards match these filters.">
             <table className="w-full border-collapse text-sm">
-              <thead>
+              <thead className="sticky-thead">
                 <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
                   <th className="px-3 py-2 font-medium">Card</th>
                   <th className="px-3 py-2 font-medium">Code</th>
@@ -281,7 +274,7 @@ export default function MarketMoversPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTableShell>
         )}
       </main>
     </div>
