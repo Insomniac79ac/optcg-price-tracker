@@ -76,10 +76,10 @@ export function PortfolioValuationHistoryChart({
             <button
               key={opt.value}
               onClick={() => onTimeframeChange(opt.value)}
-              className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+              className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
                 timeframe === opt.value
-                  ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                  : "bg-neutral-950 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                  ? "bg-accent-gold text-black/80 ring-accent-gold"
+                  : "bg-bg-surface text-text-muted ring-border-default hover:text-text-primary"
               }`}
             >
               {opt.label}

@@ -3,7 +3,14 @@
 import { useState } from "react";
 
 import { setAdminToken } from "@/lib/api";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
 
+/** The single admin-token entry point, shown by every /admin/* page when no
+ * token is set or the last request came back unauthorized - keeping this
+ * one component consistent keeps token UX consistent everywhere it's used
+ * (design brief "Admin token UX consistency"). Never logs or persists the
+ * token anywhere but localStorage via setAdminToken (see lib/api.ts). */
 export function AdminAuthGate({ onTokenSaved }: { onTokenSaved: () => void }) {
   const [tokenInput, setTokenInput] = useState("");
 
@@ -16,8 +23,10 @@ export function AdminAuthGate({ onTokenSaved }: { onTokenSaved: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border border-amber-900/50 bg-amber-950/30 p-8 text-center">
-      <p className="mb-3 text-sm text-amber-200">Admin token required.</p>
+    <div className="rounded-panel border border-signal-warning/40 bg-signal-warning/10 p-8 text-center">
+      <p className="mb-3 text-sm text-signal-warning">
+        Admin token required. Enter the token to continue.
+      </p>
       <form onSubmit={submit} className="flex justify-center gap-2">
         <input
           type="password"
@@ -25,14 +34,11 @@ export function AdminAuthGate({ onTokenSaved }: { onTokenSaved: () => void }) {
           value={tokenInput}
           onChange={(e) => setTokenInput(e.target.value)}
           placeholder="Admin token"
-          className="w-64 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+          className={`w-64 ${FILTER_INPUT_CLASS}`}
         />
-        <button
-          type="submit"
-          className="rounded bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-900 hover:bg-white"
-        >
+        <ActionButton type="submit" variant="primary">
           Save token
-        </button>
+        </ActionButton>
       </form>
     </div>
   );

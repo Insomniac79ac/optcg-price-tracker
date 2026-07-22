@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { type FileJob, cancelFileJob, downloadFileJob, fetchFileJob } from "@/lib/api";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 
 const POLL_INTERVAL_MS = 1500;
 const ACTIVE_STATUSES = new Set(["queued", "running"]);
@@ -128,24 +130,24 @@ export function FileJobTracker({
         {progressLabel && <span className="text-neutral-400">rows: {progressLabel}</span>}
 
         {job.download_ready && (
-          <button
-            type="button"
+          <ActionButton
+            variant="primary"
             onClick={handleDownload}
             disabled={downloadPending}
-            className="ml-auto rounded bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
+            className="ml-auto"
           >
             {downloadPending ? "Downloading…" : "Download"}
-          </button>
+          </ActionButton>
         )}
         {ACTIVE_STATUSES.has(job.status) && (
-          <button
-            type="button"
+          <ActionButton
+            variant="default"
             onClick={handleCancel}
             disabled={cancelPending}
-            className={`rounded border border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50 ${job.download_ready ? "" : "ml-auto"}`}
+            className={job.download_ready ? "" : "ml-auto"}
           >
             {cancelPending ? "Cancelling…" : "Cancel"}
-          </button>
+          </ActionButton>
         )}
       </div>
 
@@ -156,20 +158,20 @@ export function FileJobTracker({
           {Object.entries(job.summary)
             .filter(([, v]) => typeof v === "number" || typeof v === "string")
             .map(([key, value]) => (
-              <span key={key} className="rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-neutral-300">
-                <span className="text-neutral-500">{key}:</span> {String(value)}
+              <span key={key} className="rounded-control border border-border-default bg-bg-surface px-2 py-1 text-text-secondary">
+                <span className="text-text-muted">{key}:</span> {String(value)}
               </span>
             ))}
         </div>
       )}
 
       {Array.isArray(job.errors) && job.errors.length > 0 && (
-        <div className="mt-2 max-h-40 overflow-y-auto rounded border border-rose-900/50">
-          <table className="w-full border-collapse text-xs">
+        <TableScrollContainer showScrollHint={false} className="mt-2 border-signal-red/40">
+          <table className="data-table">
             <tbody>
               {job.errors.map((e, idx) => (
-                <tr key={idx} className="border-b border-rose-900/30 last:border-0">
-                  <td className="px-2 py-1 text-rose-300">
+                <tr key={idx}>
+                  <td className="text-signal-red">
                     {typeof e === "object" && e !== null
                       ? `${e.row_number ? `Row ${e.row_number}: ` : ""}${e.error ?? JSON.stringify(e)}`
                       : String(e)}
@@ -178,7 +180,7 @@ export function FileJobTracker({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScrollContainer>
       )}
     </div>
   );

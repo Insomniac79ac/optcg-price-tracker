@@ -5,6 +5,8 @@ import { useState } from "react";
 
 import { FileJobTracker } from "@/components/FileJobTracker";
 import { FormField } from "@/components/FormField";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import {
   COLLECTION_IMPORT_MODES,
   type CollectionImportMode,
@@ -100,14 +102,9 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
       <h2 className="mb-3 text-sm font-semibold text-neutral-200">Collection import/export</h2>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-neutral-800 pb-3">
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          disabled={exportPending}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-        >
+        <ActionButton variant="primary" onClick={handleExportCsv} disabled={exportPending}>
           {exportPending ? "Exporting…" : "Export collection CSV"}
-        </button>
+        </ActionButton>
         <span className="text-xs text-neutral-600">Downloads /collection/export.csv</span>
 
         <button
@@ -237,55 +234,53 @@ export function CollectionImportExport({ onImported }: { onImported: () => void 
           </div>
 
           {importResult.errors.length > 0 && (
-            <div className="overflow-x-auto rounded border border-rose-900/50">
-              <table className="w-full border-collapse text-xs">
+            <TableScrollContainer showScrollHint={false} className="border-signal-red/40">
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-rose-900/50 bg-rose-950/30 text-left text-[11px] uppercase tracking-wide text-rose-300">
-                    <th className="px-2 py-1.5 font-medium">Row</th>
-                    <th className="px-2 py-1.5 font-medium">Card code</th>
-                    <th className="px-2 py-1.5 font-medium">Error</th>
+                  <tr>
+                    <th>Row</th>
+                    <th>Card code</th>
+                    <th>Error</th>
                   </tr>
                 </thead>
                 <tbody>
                   {importResult.errors.map((e, idx) => (
-                    <tr key={`${e.row_number}-${idx}`} className="border-b border-neutral-900 last:border-0">
-                      <td className="px-2 py-1.5 text-neutral-400">{e.row_number}</td>
-                      <td className="px-2 py-1.5 font-mono text-neutral-400">
-                        {e.card_code ?? "—"}
-                      </td>
-                      <td className="px-2 py-1.5 text-rose-300">{e.error}</td>
+                    <tr key={`${e.row_number}-${idx}`}>
+                      <td>{e.row_number}</td>
+                      <td className="mono">{e.card_code ?? "—"}</td>
+                      <td className="text-signal-red">{e.error}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScrollContainer>
           )}
 
           {importResult.preview.length > 0 && (
-            <div className="overflow-x-auto rounded border border-neutral-800">
-              <table className="w-full border-collapse text-xs">
+            <TableScrollContainer showScrollHint={false}>
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                    <th className="px-2 py-1.5 font-medium">Row</th>
-                    <th className="px-2 py-1.5 font-medium">Card code</th>
-                    <th className="px-2 py-1.5 font-medium">Action</th>
-                    <th className="px-2 py-1.5 font-medium">Qty</th>
-                    <th className="px-2 py-1.5 font-medium">Status</th>
+                  <tr>
+                    <th>Row</th>
+                    <th>Card code</th>
+                    <th>Action</th>
+                    <th>Qty</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {importResult.preview.map((p, idx) => (
-                    <tr key={`${p.row_number}-${idx}`} className="border-b border-neutral-900 last:border-0">
-                      <td className="px-2 py-1.5 text-neutral-400">{p.row_number}</td>
-                      <td className="px-2 py-1.5 font-mono text-neutral-300">{p.card_code}</td>
-                      <td className="px-2 py-1.5 text-neutral-200">{p.action}</td>
-                      <td className="px-2 py-1.5 text-neutral-300">{p.quantity}</td>
-                      <td className="px-2 py-1.5 text-neutral-300">{p.status}</td>
+                    <tr key={`${p.row_number}-${idx}`}>
+                      <td>{p.row_number}</td>
+                      <td className="mono">{p.card_code}</td>
+                      <td>{p.action}</td>
+                      <td className="mono tabular">{p.quantity}</td>
+                      <td>{p.status}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScrollContainer>
           )}
         </div>
       )}

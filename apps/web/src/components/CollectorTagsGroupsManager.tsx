@@ -15,6 +15,7 @@ import {
 
 import { CollectorGroupLabel } from "./CollectorGroupLabel";
 import { CollectorTagBadge } from "./CollectorTagBadge";
+import { ActionButton } from "./ui/ActionButton";
 import { FormField } from "./FormField";
 
 export function CollectorTagsGroupsManager({
@@ -155,13 +156,9 @@ function TagManager({
             className="w-40 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100"
           />
         </FormField>
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-        >
+        <ActionButton type="submit" variant="primary" disabled={saving || !name.trim()}>
           Create tag
-        </button>
+        </ActionButton>
       </form>
 
       {tags.length === 0 ? (
@@ -193,14 +190,13 @@ function TagManager({
                   onChange={(e) => setEditDescription(e.target.value)}
                   className="w-32 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100"
                 />
-                <button
-                  type="button"
+                <ActionButton
+                  variant="primary"
                   onClick={() => handleSaveEdit(tag.id)}
                   disabled={saving || !editName.trim()}
-                  className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
                 >
                   Save
-                </button>
+                </ActionButton>
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
@@ -360,13 +356,9 @@ function GroupManager({
             className="w-16 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100"
           />
         </FormField>
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-        >
+        <ActionButton type="submit" variant="primary" disabled={saving || !name.trim()}>
           Create group
-        </button>
+        </ActionButton>
       </form>
 
       {groups.length === 0 ? (
@@ -397,14 +389,13 @@ function GroupManager({
                   onChange={(e) => setEditSortOrder(e.target.value)}
                   className="w-16 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-100"
                 />
-                <button
-                  type="button"
+                <ActionButton
+                  variant="primary"
                   onClick={() => handleSaveEdit(group.id)}
                   disabled={saving || !editName.trim()}
-                  className="rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
                 >
                   Save
-                </button>
+                </ActionButton>
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
