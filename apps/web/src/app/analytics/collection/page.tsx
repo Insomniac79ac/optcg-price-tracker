@@ -12,6 +12,7 @@ import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type CollectionAnalytics,
@@ -64,7 +65,7 @@ export default function CollectionAnalyticsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Collection Analytics</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Collection Analytics</h1>
           <Link
             href="/collection"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -102,23 +103,25 @@ export default function CollectionAnalyticsPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
+        <p className="mb-4 text-sm text-text-muted">
           Composition, valuation exposure, and concentration risk.
         </p>
 
         <div className="mb-6 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-neutral-500">Valuation mode</span>
-            <div className="flex gap-1">
+          <div>
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
+              Valuation mode
+            </label>
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {VALUATION_MODE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setValuationMode(opt.value)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                  className={`px-2.5 py-1 ${
                     valuationMode === opt.value
-                      ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                      : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                      ? "bg-sky-500/20 text-sky-300"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {opt.label}
@@ -126,12 +129,12 @@ export default function CollectionAnalyticsPage() {
               ))}
             </div>
           </div>
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeSold}
               onChange={(e) => setIncludeSold(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include sold items
           </label>
@@ -175,20 +178,21 @@ export default function CollectionAnalyticsPage() {
                 label="Graded adjusted value"
                 value={formatJPY(data.summary.graded_adjusted_value_jpy)}
               />
-              <PnlStatCard
+              <StatCard
                 label="Unrealized P/L"
-                jpy={data.summary.unrealized_pnl_jpy}
-                pct={data.summary.unrealized_pnl_pct}
+                value={formatSignedJpy(data.summary.unrealized_pnl_jpy)}
+                tone={pnlTone(data.summary.unrealized_pnl_jpy)}
+                hint={formatPercent(data.summary.unrealized_pnl_pct)}
               />
               <StatCard
                 label="Items missing cost basis"
                 value={formatNumber(data.summary.items_missing_cost_basis)}
-                tone={data.summary.items_missing_cost_basis > 0 ? "warning" : undefined}
+                tone={data.summary.items_missing_cost_basis > 0 ? "bad" : undefined}
               />
               <StatCard
                 label="Items missing market price"
                 value={formatNumber(data.summary.items_missing_market_price)}
-                tone={data.summary.items_missing_market_price > 0 ? "warning" : undefined}
+                tone={data.summary.items_missing_market_price > 0 ? "bad" : undefined}
               />
               <StatCard
                 label="Wishlist unique cards"
@@ -265,17 +269,14 @@ export default function CollectionAnalyticsPage() {
             <Section title="Concentration risk">
               <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <StatCard
-                  size="sm"
                   label="Top 10 cards value %"
                   value={formatPercent(data.concentration.top_10_cards_value_pct)}
                 />
                 <StatCard
-                  size="sm"
                   label="Largest single card value %"
                   value={formatPercent(data.concentration.largest_single_card_value_pct)}
                 />
                 <StatCard
-                  size="sm"
                   label="Largest set exposure"
                   value={
                     data.concentration.largest_set_exposure
@@ -286,7 +287,6 @@ export default function CollectionAnalyticsPage() {
                   }
                 />
                 <StatCard
-                  size="sm"
                   label="Largest rarity exposure"
                   value={
                     data.concentration.largest_rarity_exposure
@@ -298,30 +298,27 @@ export default function CollectionAnalyticsPage() {
                 />
               </div>
 
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
                 Top 5 cards by value
               </h3>
               {data.concentration.top_5_cards_by_value.length === 0 ? (
                 <EmptyState variant="inline">No data available.</EmptyState>
               ) : (
                 <TableScrollContainer showScrollHint={false}>
-                  <table className="w-full min-w-[560px] border-collapse text-xs">
-                    <thead className="sticky-thead">
-                      <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                        <th className="px-3 py-2 font-medium">Card</th>
-                        <th className="px-3 py-2 font-medium">Set</th>
-                        <th className="px-3 py-2 font-medium">Rarity</th>
-                        <th className="px-3 py-2 text-right font-medium">Value</th>
-                        <th className="px-3 py-2 text-right font-medium">Weight %</th>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Card</th>
+                        <th>Set</th>
+                        <th>Rarity</th>
+                        <th className="text-right">Value</th>
+                        <th className="text-right">Weight %</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.concentration.top_5_cards_by_value.map((card) => (
-                        <tr
-                          key={card.collection_item_id}
-                          className="border-b border-neutral-900 last:border-0"
-                        >
-                          <td className="px-3 py-2 text-neutral-200">
+                        <tr key={card.collection_item_id}>
+                          <td>
                             <Link
                               href={`/cards/${card.card_id}`}
                               className="text-sky-400 hover:text-sky-300"
@@ -329,14 +326,12 @@ export default function CollectionAnalyticsPage() {
                               {card.card_code} · {cardDisplayName(card)}
                             </Link>
                           </td>
-                          <td className="px-3 py-2 text-neutral-300">{card.set_code}</td>
-                          <td className="px-3 py-2">
+                          <td className="text-text-secondary">{card.set_code}</td>
+                          <td>
                             <RarityBadge rarity={card.rarity} />
                           </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
-                            {formatJPY(card.value_jpy)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
+                          <td className="mono tabular text-right">{formatJPY(card.value_jpy)}</td>
+                          <td className="mono tabular text-right">
                             {formatPercent(card.portfolio_weight_pct)}
                           </td>
                         </tr>
@@ -350,51 +345,44 @@ export default function CollectionAnalyticsPage() {
             <Section title="Cost basis">
               <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <StatCard
-                  size="sm"
                   label="Items with cost basis"
                   value={formatNumber(data.cost_basis.items_with_cost_basis)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items without cost basis"
                   value={formatNumber(data.cost_basis.items_without_cost_basis)}
                 />
                 <StatCard
-                  size="sm"
                   label="Average cost basis"
                   value={formatJPY(data.cost_basis.average_cost_basis_jpy)}
                 />
                 <StatCard
-                  size="sm"
                   label="Median cost basis"
                   value={formatJPY(data.cost_basis.median_cost_basis_jpy)}
                 />
               </div>
 
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
                 Highest cost basis items
               </h3>
               {data.cost_basis.highest_cost_basis_items.length === 0 ? (
                 <EmptyState variant="inline">No data available.</EmptyState>
               ) : (
                 <TableScrollContainer showScrollHint={false}>
-                  <table className="w-full min-w-[620px] border-collapse text-xs">
-                    <thead className="sticky-thead">
-                      <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                        <th className="px-3 py-2 font-medium">Card</th>
-                        <th className="px-3 py-2 text-right font-medium">Purchase price</th>
-                        <th className="px-3 py-2 text-right font-medium">Quantity</th>
-                        <th className="px-3 py-2 text-right font-medium">Cost basis</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Card</th>
+                        <th className="text-right">Purchase price</th>
+                        <th className="text-right">Quantity</th>
+                        <th className="text-right">Cost basis</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.cost_basis.highest_cost_basis_items.map((item) => (
-                        <tr
-                          key={item.collection_item_id}
-                          className="border-b border-neutral-900 last:border-0"
-                        >
-                          <td className="px-3 py-2 text-neutral-200">
+                        <tr key={item.collection_item_id}>
+                          <td>
                             <Link
                               href={`/cards/${item.card_id}`}
                               className="text-sky-400 hover:text-sky-300"
@@ -402,16 +390,12 @@ export default function CollectionAnalyticsPage() {
                               {item.card_code} · {cardDisplayName(item)}
                             </Link>
                           </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
+                          <td className="mono tabular text-right">
                             {formatJPY(item.purchase_price_jpy)}
                           </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
-                            {formatNumber(item.quantity)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
-                            {formatJPY(item.cost_basis_jpy)}
-                          </td>
-                          <td className="px-3 py-2">
+                          <td className="mono tabular text-right">{formatNumber(item.quantity)}</td>
+                          <td className="mono tabular text-right">{formatJPY(item.cost_basis_jpy)}</td>
+                          <td>
                             <CollectionStatusBadge status={item.status} />
                           </td>
                         </tr>
@@ -425,32 +409,26 @@ export default function CollectionAnalyticsPage() {
             <Section title="Valuation quality">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 <StatCard
-                  size="sm"
                   label="Items with Yuyu-Tei sell"
                   value={formatNumber(data.valuation_quality.items_with_yuyutei_sell)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items with Yuyu-Tei buy"
                   value={formatNumber(data.valuation_quality.items_with_yuyutei_buy)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items with SNKRDUNK floor"
                   value={formatNumber(data.valuation_quality.items_with_snkrdunk_floor)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items using graded value"
                   value={formatNumber(data.valuation_quality.items_using_graded_value)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items using raw fallback"
                   value={formatNumber(data.valuation_quality.items_using_raw_fallback)}
                 />
                 <StatCard
-                  size="sm"
                   label="Coverage %"
                   value={formatPercent(data.valuation_quality.coverage_pct)}
                 />
@@ -466,40 +444,14 @@ export default function CollectionAnalyticsPage() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-  size = "lg",
-}: {
-  label: string;
-  value: number | string;
-  tone?: "warning";
-  size?: "lg" | "sm";
-}) {
-  const valueSizeClass = size === "lg" ? "text-2xl" : "text-lg";
-  const toneClass = tone === "warning" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 font-semibold ${valueSizeClass} ${toneClass}`}>{value}</div>
-    </div>
-  );
-}
-
-function PnlStatCard({ label, jpy, pct }: { label: string; jpy: number; pct: number }) {
-  const tone = jpy > 0 ? "text-emerald-400" : jpy < 0 ? "text-rose-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${tone}`}>{formatSignedJpy(jpy)}</div>
-      <div className={`text-xs ${tone}`}>{formatPercent(pct)}</div>
-    </div>
-  );
+function pnlTone(jpy: number): StatTone {
+  if (jpy > 0) return "good";
+  if (jpy < 0) return "bad";
+  return "neutral";
 }

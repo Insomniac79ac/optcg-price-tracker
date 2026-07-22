@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { WishlistAnalyticsBreakdownTable } from "@/components/WishlistAnalyticsBreakdownTable";
 import { WishlistAnalyticsTargetTable } from "@/components/WishlistAnalyticsTargetTable";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard } from "@/components/ui/StatCard";
 import { AdminAuthRequiredError, type WishlistAnalytics, fetchWishlistAnalytics } from "@/lib/api";
 import { formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -51,7 +52,7 @@ export default function WishlistAnalyticsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Wishlist Analytics</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Wishlist Analytics</h1>
           <Link
             href="/wishlist"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -77,26 +78,26 @@ export default function WishlistAnalyticsPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
+        <p className="mb-4 text-sm text-text-muted">
           Budget planning, target hits, and acquisition priorities.
         </p>
 
         <div className="mb-6 flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeRemoved}
               onChange={(e) => setIncludeRemoved(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include removed
           </label>
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includePurchased}
               onChange={(e) => setIncludePurchased(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include purchased
           </label>
@@ -265,18 +266,15 @@ export default function WishlistAnalyticsPage() {
             <Section title="Price coverage" last>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <StatCard
-                  size="sm"
                   label="Items with current price"
                   value={formatNumber(data.price_coverage.items_with_current_price)}
                 />
                 <StatCard
-                  size="sm"
                   label="Items missing current price"
                   value={formatNumber(data.price_coverage.items_missing_current_price)}
                   tone={data.price_coverage.items_missing_current_price > 0 ? "bad" : undefined}
                 />
                 <StatCard
-                  size="sm"
                   label="Coverage %"
                   value={formatPercent(data.price_coverage.coverage_pct)}
                 />
@@ -292,7 +290,7 @@ export default function WishlistAnalyticsPage() {
 function Section({ title, children, last = false }: { title: string; children: ReactNode; last?: boolean }) {
   return (
     <section className={last ? "mb-2" : "mb-8"}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -309,29 +307,8 @@ function SubSection({
 }) {
   return (
     <div className={last ? "mb-0" : "mb-4"}>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
       {children}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-  size = "lg",
-}: {
-  label: string;
-  value: number | string;
-  tone?: "good" | "bad";
-  size?: "lg" | "sm";
-}) {
-  const valueSizeClass = size === "lg" ? "text-2xl" : "text-lg";
-  const toneClass = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 font-semibold ${valueSizeClass} ${toneClass}`}>{value}</div>
     </div>
   );
 }

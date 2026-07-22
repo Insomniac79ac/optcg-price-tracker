@@ -8,6 +8,7 @@ import { GradingAnalyticsBreakdownTable } from "@/components/GradingAnalyticsBre
 import { GradingSubmissionTable } from "@/components/GradingSubmissionTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard } from "@/components/ui/StatCard";
 import { AdminAuthRequiredError, fetchGradingAnalytics, type GradingAnalytics } from "@/lib/api";
 import { formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -72,7 +73,7 @@ export default function GradingAnalyticsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Grading ROI Analytics</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Grading ROI Analytics</h1>
           <Link
             href="/grading"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -92,20 +93,20 @@ export default function GradingAnalyticsPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-1 text-sm text-neutral-500">
+        <p className="mb-1 text-sm text-text-muted">
           Costs, outcomes, pending submissions, and post-grade value.
         </p>
-        <p className="mb-4 text-xs text-neutral-600">
+        <p className="mb-4 text-xs text-text-faint">
           ROI is calculated from your entered cost basis, grading costs, and graded value.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeCancelled}
               onChange={(e) => setIncludeCancelled(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include cancelled
           </label>
@@ -113,7 +114,7 @@ export default function GradingAnalyticsPage() {
           <div>
             <label
               htmlFor="grading-analytics-company"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Company
             </label>
@@ -121,7 +122,7 @@ export default function GradingAnalyticsPage() {
               id="grading-analytics-company"
               value={gradingCompany}
               onChange={(e) => setGradingCompany(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-secondary"
             >
               <option value="">All companies</option>
               {COMPANY_OPTIONS.map((c) => (
@@ -135,7 +136,7 @@ export default function GradingAnalyticsPage() {
           <div>
             <label
               htmlFor="grading-analytics-status"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Status
             </label>
@@ -143,7 +144,7 @@ export default function GradingAnalyticsPage() {
               id="grading-analytics-status"
               value={submissionStatus}
               onChange={(e) => setSubmissionStatus(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-secondary"
             >
               <option value="">All statuses</option>
               {STATUS_OPTIONS.map((s) => (
@@ -157,7 +158,7 @@ export default function GradingAnalyticsPage() {
           <div>
             <label
               htmlFor="grading-analytics-limit"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Per page
             </label>
@@ -165,7 +166,7 @@ export default function GradingAnalyticsPage() {
               id="grading-analytics-limit"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-secondary"
             >
               {LIMIT_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -346,7 +347,7 @@ export default function GradingAnalyticsPage() {
                     actions
                     onSubmissionUpdated={load}
                   />
-                  <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
+                  <div className="mt-3 flex items-center justify-between text-xs text-text-muted">
                     <span>
                       Showing {data.submissions.length === 0 ? 0 : offset + 1}–
                       {offset + data.submissions.length} of {formatNumber(data.pagination.total)}
@@ -356,7 +357,7 @@ export default function GradingAnalyticsPage() {
                         type="button"
                         onClick={() => setOffset(data.pagination.previous_offset ?? 0)}
                         disabled={!data.pagination.has_previous}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+                        className="rounded border border-border-default px-2.5 py-1 text-text-secondary hover:text-text-primary disabled:opacity-40"
                       >
                         Previous
                       </button>
@@ -364,7 +365,7 @@ export default function GradingAnalyticsPage() {
                         type="button"
                         onClick={() => setOffset(data.pagination.next_offset ?? offset)}
                         disabled={!data.pagination.has_next}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+                        className="rounded border border-border-default px-2.5 py-1 text-text-secondary hover:text-text-primary disabled:opacity-40"
                       >
                         Next
                       </button>
@@ -391,7 +392,7 @@ function Section({
 }) {
   return (
     <section className={last ? "mb-2" : "mb-8"}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -408,26 +409,8 @@ function SubSection({
 }) {
   return (
     <div className={last ? "mb-0" : "mb-4"}>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
       {children}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone?: "good" | "bad";
-}) {
-  const toneClass = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
     </div>
   );
 }
