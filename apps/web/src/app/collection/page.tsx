@@ -17,6 +17,13 @@ import { PaginationControls } from "@/components/PaginationControls";
 import type { HistoryTimeframe } from "@/components/PortfolioValuationHistoryChart";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PriceCell } from "@/components/ui/PriceCell";
+import { VariantBadge } from "@/components/ui/VariantBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
   type Card,
@@ -47,12 +54,7 @@ import {
   unassignCollectionItemTag,
   updateCollectionItem,
 } from "@/lib/api";
-import {
-  cardDisplayName,
-  formatJpy,
-  formatSignedJpy,
-  formatSignedPct,
-} from "@/lib/format";
+import { cardDisplayName } from "@/lib/format";
 
 // Dynamically imported (recharts is a sizeable chunk) so pages that never
 // render this chart don't pay for it. ssr: false sidesteps recharts'
@@ -173,6 +175,7 @@ export default function CollectionPage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CollectionItem | null>(null);
 
   useEffect(() => {
     fetchCards()
@@ -472,16 +475,12 @@ export default function CollectionPage() {
   }
 
   async function handleDelete(item: CollectionItem) {
-    const confirmed = window.confirm(
-      `Delete ${item.quantity}x ${item.card_code} — ${cardDisplayName(item)} from your collection? This cannot be undone.`,
-    );
-    if (!confirmed) return;
-
     setActionError(null);
     setPendingDeleteId(item.id);
     try {
       await deleteCollectionItem(item.id);
       if (editingId === item.id) cancelEdit();
+      setDeleteTarget(null);
       refreshList();
       refreshSummary();
       refreshValuation();
@@ -536,54 +535,38 @@ export default function CollectionPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">
-              Collection
-            </h1>
-            <Link
-              href="/analytics/collection"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Analytics →
-            </Link>
-            <Link
-              href="/analytics/sell-decisions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Sell decisions →
-            </Link>
-            <Link
-              href="/grading"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Grading →
-            </Link>
-            <Link
-              href="/analytics/grading"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Grading ROI →
-            </Link>
-            <Link
-              href="/analytics/portfolio-risk"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Portfolio Risk →
-            </Link>
-            <Link
-              href="/wishlist"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Wishlist →
-            </Link>
-          </div>
-          {listStatus === "ready" && (
-            <span className="text-sm text-neutral-500">
-              {total} item{total === 1 ? "" : "s"}
+        <PageHeader
+          title="Collection"
+          description={
+            <span className="flex flex-wrap gap-3">
+              <Link href="/analytics/collection" className="text-sky-400 hover:text-sky-300">
+                Analytics →
+              </Link>
+              <Link href="/analytics/sell-decisions" className="text-sky-400 hover:text-sky-300">
+                Sell decisions →
+              </Link>
+              <Link href="/grading" className="text-sky-400 hover:text-sky-300">
+                Grading →
+              </Link>
+              <Link href="/analytics/grading" className="text-sky-400 hover:text-sky-300">
+                Grading ROI →
+              </Link>
+              <Link href="/analytics/portfolio-risk" className="text-sky-400 hover:text-sky-300">
+                Portfolio Risk →
+              </Link>
+              <Link href="/wishlist" className="text-sky-400 hover:text-sky-300">
+                Wishlist →
+              </Link>
             </span>
-          )}
-        </div>
+          }
+          actions={
+            listStatus === "ready" && (
+              <span className="mono tabular text-sm text-text-muted">
+                {total} item{total === 1 ? "" : "s"}
+              </span>
+            )
+          }
+        />
 
         <CollectionImportExport
           onImported={() => {
@@ -617,17 +600,17 @@ export default function CollectionPage() {
         />
 
         {summary && (
-          <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-            <span className="text-xs uppercase tracking-wide text-neutral-500">
+          <div className="panel mb-6 flex flex-wrap items-center gap-2 px-4 py-3">
+            <span className="text-xs uppercase tracking-wide text-text-muted">
               By status
             </span>
             {STATUS_OPTIONS.map((s) => (
               <span
                 key={s}
-                className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1"
+                className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1"
               >
                 <CollectionStatusBadge status={s} />
-                <span className="text-xs text-neutral-400">
+                <span className="text-xs text-text-secondary">
                   {summary.items_by_status[s] ?? 0}
                 </span>
               </span>
@@ -635,13 +618,13 @@ export default function CollectionPage() {
           </div>
         )}
 
-        <section className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-200">
+        <section className="panel mb-6 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
             {editingId !== null ? "Edit collection item" : "Add collection item"}
           </h2>
 
           {formError && (
-            <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+            <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
               {formError}
             </div>
           )}
@@ -654,12 +637,12 @@ export default function CollectionPage() {
                   value={cardSearch}
                   onChange={(e) => setCardSearch(e.target.value)}
                   placeholder="Search card code or name…"
-                  className="mb-1 w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600"
+                  className="mb-1 w-full rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
                 />
                 <select
                   value={form.card_id}
                   onChange={(e) => updateField("card_id", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 >
                   <option value="">Select a card…</option>
                   {filteredCardOptions.map((c) => (
@@ -676,7 +659,7 @@ export default function CollectionPage() {
                   min={1}
                   value={form.quantity}
                   onChange={(e) => updateField("quantity", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -688,7 +671,7 @@ export default function CollectionPage() {
                     updateField("condition_label", e.target.value)
                   }
                   placeholder="raw, PSA 10, …"
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                 />
               </FormField>
 
@@ -700,7 +683,7 @@ export default function CollectionPage() {
                   onChange={(e) =>
                     updateField("purchase_price_jpy", e.target.value)
                   }
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -709,7 +692,7 @@ export default function CollectionPage() {
                   type="date"
                   value={form.purchase_date}
                   onChange={(e) => updateField("purchase_date", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -721,7 +704,7 @@ export default function CollectionPage() {
                     updateField("purchase_source", e.target.value)
                   }
                   placeholder="Yuyu-Tei, SNKRDUNK, …"
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                 />
               </FormField>
 
@@ -733,7 +716,7 @@ export default function CollectionPage() {
                   onChange={(e) =>
                     updateField("target_sell_price_jpy", e.target.value)
                   }
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -741,7 +724,7 @@ export default function CollectionPage() {
                 <select
                   value={form.status}
                   onChange={(e) => updateField("status", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
@@ -756,32 +739,23 @@ export default function CollectionPage() {
                   type="text"
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-              >
+              <ActionButton variant="primary" type="submit" disabled={saving}>
                 {saving
                   ? "Saving…"
                   : editingId !== null
                     ? "Update item"
                     : "Add item"}
-              </button>
+              </ActionButton>
               {editingId !== null && (
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  disabled={saving}
-                  className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
-                >
+                <ActionButton type="button" onClick={cancelEdit} disabled={saving}>
                   Cancel
-                </button>
+                </ActionButton>
               )}
             </div>
           </form>
@@ -794,10 +768,10 @@ export default function CollectionPage() {
                 <button
                   key={f.value}
                   onClick={() => setStatusFilter(f.value)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                  className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
                     statusFilter === f.value
-                      ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                      : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                      ? "bg-accent-gold/15 text-accent-gold ring-accent-gold/40"
+                      : "bg-bg-surface text-text-secondary ring-border-default hover:text-text-primary"
                   }`}
                 >
                   {f.label}
@@ -809,7 +783,7 @@ export default function CollectionPage() {
               value={cardCodeInput}
               onChange={(e) => setCardCodeInput(e.target.value)}
               placeholder="Filter by card code…"
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+              className={FILTER_INPUT_CLASS}
             />
           </div>
 
@@ -844,35 +818,35 @@ export default function CollectionPage() {
               onChange={setGroupFilter}
               options={groupOptions}
             />
-            <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-400">
+            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
               <input
                 type="checkbox"
                 checked={missingPricesOnly}
                 onChange={(e) => setMissingPricesOnly(e.target.checked)}
-                className="rounded border-neutral-700 bg-neutral-950"
+                className="rounded border-border-default bg-bg-page"
               />
               Missing prices
             </label>
-            <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-400">
+            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
               <input
                 type="checkbox"
                 checked={missingCostBasisOnly}
                 onChange={(e) => setMissingCostBasisOnly(e.target.checked)}
-                className="rounded border-neutral-700 bg-neutral-950"
+                className="rounded border-border-default bg-bg-page"
               />
               Missing cost basis
             </label>
-            <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-neutral-400">
+            <label className={`${FILTER_LABEL_CLASS} rounded-control border border-border-default bg-bg-surface px-2 py-1`}>
               <input
                 type="checkbox"
                 checked={aboveTargetOnly}
                 onChange={(e) => setAboveTargetOnly(e.target.checked)}
-                className="rounded border-neutral-700 bg-neutral-950"
+                className="rounded border-border-default bg-bg-page"
               />
               Above target sell
             </label>
             {items.length > 0 && (
-              <span className="text-xs text-neutral-600">
+              <span className="text-xs text-text-faint">
                 {filteredItems.length} of {items.length} shown
               </span>
             )}
@@ -880,7 +854,7 @@ export default function CollectionPage() {
         </div>
 
         {actionError && (
-          <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
             {actionError}
           </div>
         )}
@@ -900,10 +874,10 @@ export default function CollectionPage() {
         )}
 
         {listStatus === "ready" && filteredItems.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full border-collapse text-xs">
+          <DataTableShell>
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+                <tr>
                   <th className="px-2 py-1.5 font-medium">Code</th>
                   <th className="px-2 py-1.5 font-medium">Name</th>
                   <th className="px-2 py-1.5 font-medium">Set</th>
@@ -941,33 +915,30 @@ export default function CollectionPage() {
                 {pagedItems.map((item) => {
                   const v = valuationByItemId.get(item.id);
                   return (
-                    <tr
-                      key={item.id}
-                      className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                    >
-                      <td className="px-2 py-1.5 font-mono text-neutral-400">
+                    <tr key={item.id}>
+                      <td className="px-2 py-1.5 font-mono text-text-secondary">
                         {item.card_code}
                       </td>
-                      <td className="px-2 py-1.5 font-medium text-neutral-100">
+                      <td className="px-2 py-1.5 font-medium text-text-primary">
                         {cardDisplayName(item)}
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-400">
+                      <td className="px-2 py-1.5 text-text-secondary">
                         {item.set_code}
                       </td>
                       <td className="px-2 py-1.5">
                         <RarityBadge rarity={item.rarity} />
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-400">
-                        {item.variant ?? "—"}
+                      <td className="px-2 py-1.5">
+                        <VariantBadge variant={item.variant} />
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-200">
+                      <td className="mono tabular px-2 py-1.5 text-text-primary">
                         {item.quantity}
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-400">
+                      <td className="px-2 py-1.5 text-text-secondary">
                         {item.condition_label ?? "—"}
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-200">
-                        {formatJpy(item.purchase_price_jpy)}
+                      <td className="px-2 py-1.5">
+                        <PriceCell valueJpy={item.purchase_price_jpy} size="sm" />
                       </td>
                       <td className="px-2 py-1.5">
                         <CostBasisCell costBasisJpy={v?.cost_basis_jpy ?? null} />
@@ -1011,14 +982,14 @@ export default function CollectionPage() {
                           missingCostBasis={v?.flags.missing_cost_basis ?? true}
                         />
                       </td>
-                      <td className="px-2 py-1.5 text-neutral-200">
-                        {formatJpy(item.target_sell_price_jpy)}
+                      <td className="px-2 py-1.5">
+                        <PriceCell valueJpy={item.target_sell_price_jpy} size="sm" />
                       </td>
                       <td className="px-2 py-1.5">
                         {v ? (
                           <FlagsCell flags={v.flags} />
                         ) : (
-                          <span className="text-neutral-600">—</span>
+                          <span className="text-text-faint">—</span>
                         )}
                       </td>
                       {valuationMode === "graded_adjusted" && (
@@ -1047,7 +1018,7 @@ export default function CollectionPage() {
                         {item.latest_grading_status ? (
                           <GradingStatusBadge status={item.latest_grading_status} />
                         ) : (
-                          <span className="text-neutral-600">—</span>
+                          <span className="text-text-faint">—</span>
                         )}
                       </td>
                       <td className="px-2 py-1.5">
@@ -1062,9 +1033,9 @@ export default function CollectionPage() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(item)}
+                            onClick={() => setDeleteTarget(item)}
                             disabled={pendingDeleteId === item.id}
-                            className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50"
+                            className="text-xs font-medium text-signal-red hover:text-signal-red disabled:opacity-50"
                           >
                             {pendingDeleteId === item.id
                               ? "Deleting…"
@@ -1083,7 +1054,7 @@ export default function CollectionPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </DataTableShell>
         )}
 
         {listStatus === "ready" && filteredItems.length > 0 && (
@@ -1099,6 +1070,20 @@ export default function CollectionPage() {
           </div>
         )}
       </main>
+
+      <ConfirmActionModal
+        open={deleteTarget !== null}
+        title="Remove from collection"
+        description={
+          deleteTarget
+            ? `Delete ${deleteTarget.quantity}x ${deleteTarget.card_code} — ${cardDisplayName(deleteTarget)} from your collection? This cannot be undone.`
+            : undefined
+        }
+        confirmLabel={pendingDeleteId !== null ? "Deleting…" : "Delete"}
+        pending={pendingDeleteId !== null}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
@@ -1115,12 +1100,12 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+    <label className={FILTER_LABEL_CLASS}>
       {label}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+        className={FILTER_INPUT_CLASS}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -1135,10 +1120,10 @@ function FilterSelect({
 function CostBasisCell({ costBasisJpy }: { costBasisJpy: number | null }) {
   if (costBasisJpy === null) {
     return (
-      <span className="italic text-neutral-600">missing cost basis</span>
+      <span className="italic text-text-faint">missing cost basis</span>
     );
   }
-  return <span className="text-neutral-200">{formatJpy(costBasisJpy)}</span>;
+  return <PriceCell valueJpy={costBasisJpy} size="sm" />;
 }
 
 function PriceSnapshotCell({
@@ -1147,9 +1132,13 @@ function PriceSnapshotCell({
   snapshot: YuyuteiPriceSnapshot | SnkrdunkFloorSnapshot | null;
 }) {
   if (!snapshot) {
-    return <span className="italic text-neutral-600">missing price</span>;
+    return <span className="italic text-text-faint">missing price</span>;
   }
-  return <span className="text-neutral-200">{formatJpy(snapshot.price_jpy)}</span>;
+  // No source/priceType passed here - the column header already names the
+  // basis (Yuyu-Tei sell/buy, SNKRDUNK floor), so repeating it as a chip on
+  // every row would be redundant noise in an already-dense table. Still
+  // gets PriceCell's mono/tabular formatting and stale badge.
+  return <PriceCell valueJpy={snapshot.price_jpy} observedAt={snapshot.observed_at} size="sm" />;
 }
 
 function PnlCell({
@@ -1164,28 +1153,14 @@ function PnlCell({
   missingCostBasis: boolean;
 }) {
   if (missingPrice) {
-    return <span className="italic text-neutral-600">missing price</span>;
+    return <span className="italic text-text-faint">missing price</span>;
   }
   if (missingCostBasis) {
     return (
-      <span className="italic text-neutral-600">missing cost basis</span>
+      <span className="italic text-text-faint">missing cost basis</span>
     );
   }
-  if (pnlJpy === null) {
-    return <span className="text-neutral-600">—</span>;
-  }
-  const tone =
-    pnlJpy > 0
-      ? "text-emerald-400"
-      : pnlJpy < 0
-        ? "text-rose-400"
-        : "text-neutral-400";
-  return (
-    <span className={tone}>
-      {formatSignedJpy(pnlJpy)}{" "}
-      <span className="text-neutral-500">({formatSignedPct(pnlPct)})</span>
-    </span>
-  );
+  return <PriceCell valueJpy={pnlJpy} percent={pnlPct} signed size="sm" />;
 }
 
 function FlagsCell({
@@ -1211,7 +1186,7 @@ function FlagsCell({
   }
 
   if (activeFlags.length === 0) {
-    return <span className="text-neutral-600">—</span>;
+    return <span className="text-text-faint">—</span>;
   }
 
   return (
@@ -1219,10 +1194,10 @@ function FlagsCell({
       {activeFlags.map((f) => (
         <span
           key={f.key}
-          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+          className={`rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
             f.positive
               ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-              : "bg-neutral-500/15 text-neutral-400 ring-neutral-500/30"
+              : "bg-neutral-500/15 text-text-secondary ring-neutral-500/30"
           }`}
         >
           {f.label}
@@ -1239,7 +1214,7 @@ function GradedAdjustedBasisLabel({
 }) {
   if (gradedAdjusted.basis === "graded_value") {
     return (
-      <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300 ring-1 ring-inset ring-violet-500/30">
+      <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[11px] font-medium text-violet-300 ring-1 ring-inset ring-violet-500/30">
         Graded value
       </span>
     );
@@ -1250,12 +1225,12 @@ function GradedAdjustedBasisLabel({
         ? "SNKRDUNK floor"
         : "Yuyu-Tei sell";
     return (
-      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 ring-1 ring-inset ring-amber-500/30">
+      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-signal-warning ring-1 ring-inset ring-amber-500/30">
         Raw fallback ({label})
       </span>
     );
   }
-  return <span className="italic text-neutral-600">no graded value</span>;
+  return <span className="italic text-text-faint">no graded value</span>;
 }
 
 /** Five <td>s covering the graded-adjusted breakdown for one row - only
@@ -1274,11 +1249,11 @@ function GradedAdjustedCells({
   if (!gradedAdjusted) {
     return (
       <>
-        <td className="px-2 py-1.5 text-neutral-600">—</td>
-        <td className="px-2 py-1.5 text-neutral-600">—</td>
-        <td className="px-2 py-1.5 text-neutral-600">—</td>
-        <td className="px-2 py-1.5 text-neutral-600">—</td>
-        <td className="px-2 py-1.5 text-neutral-600">—</td>
+        <td className="px-2 py-1.5 text-text-faint">—</td>
+        <td className="px-2 py-1.5 text-text-faint">—</td>
+        <td className="px-2 py-1.5 text-text-faint">—</td>
+        <td className="px-2 py-1.5 text-text-faint">—</td>
+        <td className="px-2 py-1.5 text-text-faint">—</td>
       </>
     );
   }
@@ -1292,28 +1267,31 @@ function GradedAdjustedCells({
     <>
       <td className="px-2 py-1.5">
         {gradedAdjusted.value_jpy === null ? (
-          <span className="italic text-neutral-600">no graded value</span>
+          <span className="italic text-text-faint">no graded value</span>
         ) : (
-          <span className="text-neutral-200">{formatJpy(gradedAdjusted.value_jpy)}</span>
+          // No `mode` prop here - the adjacent "Graded-adj. basis" column
+          // (GradedAdjustedBasisLabel below) already names the basis, so a
+          // second badge in this cell would just repeat it.
+          <PriceCell valueJpy={gradedAdjusted.value_jpy} size="sm" />
         )}
       </td>
       <td className="px-2 py-1.5">
         <GradedAdjustedBasisLabel gradedAdjusted={gradedAdjusted} />
         {notReceivedYet && (
-          <div className="mt-0.5 text-[10px] italic text-neutral-600">not received</div>
+          <div className="mt-0.5 text-[11px] italic text-text-faint">not received</div>
         )}
       </td>
-      <td className="px-2 py-1.5 text-neutral-300">
+      <td className="px-2 py-1.5 text-text-secondary">
         {gradedAdjusted.final_grade ?? "—"}
       </td>
-      <td className="px-2 py-1.5 text-neutral-300">
+      <td className="px-2 py-1.5 text-text-secondary">
         {gradedAdjusted.grading_company ?? "—"}
       </td>
       <td className="px-2 py-1.5">
         {gradedAdjusted.value_jpy === null ? (
-          <span className="italic text-neutral-600">no graded value</span>
+          <span className="italic text-text-faint">no graded value</span>
         ) : gradedAdjusted.pnl_jpy === null ? (
-          <span className="italic text-neutral-600">missing cost basis</span>
+          <span className="italic text-text-faint">missing cost basis</span>
         ) : (
           <PnlCell
             pnlJpy={gradedAdjusted.pnl_jpy}

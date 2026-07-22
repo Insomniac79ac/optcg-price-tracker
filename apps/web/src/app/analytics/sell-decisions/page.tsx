@@ -7,6 +7,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { SellDecisionActionGroups } from "@/components/SellDecisionActionGroups";
 import { SellDecisionCandidateTable } from "@/components/SellDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   fetchSellDecisions,
@@ -82,7 +84,7 @@ export default function SellDecisionsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Sell Decision Support</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Sell Decision Support</h1>
           <Link
             href="/collection"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -108,20 +110,20 @@ export default function SellDecisionsPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-1 text-sm text-neutral-500">
+        <p className="mb-1 text-sm text-text-muted">
           Review owned cards that may be worth selling, holding, grading first, or monitoring.
         </p>
-        <p className="mb-4 text-xs text-neutral-600">
+        <p className="mb-4 text-xs text-text-faint">
           This is decision support, not financial advice. Signals are deterministic from your tracker
           data. Review manually before selling.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
               Valuation mode
             </label>
-            <div className="flex overflow-hidden rounded border border-neutral-700 text-xs">
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {(["raw_market", "graded_adjusted"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -130,7 +132,7 @@ export default function SellDecisionsPage() {
                   className={`px-2.5 py-1 ${
                     valuationMode === mode
                       ? "bg-sky-500/20 text-sky-300"
-                      : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {mode === "raw_market" ? "Raw market" : "Graded adjusted"}
@@ -139,12 +141,12 @@ export default function SellDecisionsPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeSold}
               onChange={(e) => setIncludeSold(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include sold
           </label>
@@ -152,7 +154,7 @@ export default function SellDecisionsPage() {
           <div>
             <label
               htmlFor="sell-decisions-min-score"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Min score
             </label>
@@ -164,14 +166,14 @@ export default function SellDecisionsPage() {
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
               placeholder="0"
-              className="w-20 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="w-20 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             />
           </div>
 
           <div>
             <label
               htmlFor="sell-decisions-action"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Action
             </label>
@@ -179,7 +181,7 @@ export default function SellDecisionsPage() {
               id="sell-decisions-action"
               value={action}
               onChange={(e) => setAction(e.target.value as SellDecisionAction | "all")}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             >
               {ACTION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -192,7 +194,7 @@ export default function SellDecisionsPage() {
           <div>
             <label
               htmlFor="sell-decisions-limit"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Per page
             </label>
@@ -200,7 +202,7 @@ export default function SellDecisionsPage() {
               id="sell-decisions-limit"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             >
               {LIMIT_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -268,28 +270,28 @@ export default function SellDecisionsPage() {
 
                 <Section title="Candidates" last>
                   <SellDecisionCandidateTable candidates={data.candidates} onCandidateUpdated={load} />
-                  <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
+                  {/* Hand-rolled rather than the shared PaginationControls: this
+                      API echoes authoritative next_offset/previous_offset/has_next/
+                      has_previous (server-driven paging), which PaginationControls
+                      doesn't use - it recomputes purely from client offset/limit/total. */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-text-muted">
                     <span>
                       Showing {data.candidates.length === 0 ? 0 : offset + 1}–{offset + data.candidates.length} of{" "}
                       {formatNumber(data.pagination.total)}
                     </span>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
+                      <ActionButton
                         onClick={() => setOffset(data.pagination.previous_offset ?? 0)}
                         disabled={!data.pagination.has_previous}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
                       >
                         Previous
-                      </button>
-                      <button
-                        type="button"
+                      </ActionButton>
+                      <ActionButton
                         onClick={() => setOffset(data.pagination.next_offset ?? offset)}
                         disabled={!data.pagination.has_next}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
                       >
                         Next
-                      </button>
+                      </ActionButton>
                     </div>
                   </div>
                 </Section>
@@ -313,7 +315,7 @@ function Section({
 }) {
   return (
     <section className={last ? "mb-2" : "mb-8"}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -326,13 +328,7 @@ function StatCard({
 }: {
   label: string;
   value: number | string;
-  tone?: "good" | "bad";
+  tone?: StatTone;
 }) {
-  const toneClass = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
+  return <SharedStatCard label={label} value={value} tone={tone} />;
 }

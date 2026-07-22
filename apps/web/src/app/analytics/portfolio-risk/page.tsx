@@ -7,6 +7,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { RarityBadge } from "@/components/RarityBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { RiskBadge } from "@/components/ui/RiskBadge";
+import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   fetchPortfolioRisk,
@@ -40,12 +43,11 @@ import {
 type PageStatus = "loading" | "unauthorized" | "error" | "ready";
 type ValuationMode = "raw_market" | "graded_adjusted";
 
-const LEVEL_STYLES: Record<PortfolioRiskLevel, string> = {
-  low: "text-emerald-400",
-  medium: "text-amber-400",
-  high: "text-orange-400",
-  critical: "text-rose-400",
-};
+function riskTone(level: PortfolioRiskLevel): StatTone {
+  if (level === "low") return "good";
+  if (level === "high" || level === "critical") return "bad";
+  return "neutral";
+}
 
 const EXPOSURE_TABS: { key: keyof PortfolioRiskExposures; label: string }[] = [
   { key: "by_set", label: "By set" },
@@ -92,7 +94,7 @@ export default function PortfolioRiskPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Portfolio Risk</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Portfolio Risk</h1>
           <Link
             href="/collection"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -112,19 +114,19 @@ export default function PortfolioRiskPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-1 text-sm text-neutral-500">
+        <p className="mb-1 text-sm text-text-muted">
           Concentration, data quality, liquidity proxies, and grading exposure.
         </p>
-        <p className="mb-4 text-xs text-neutral-600">
+        <p className="mb-4 text-xs text-text-faint">
           Risk score is deterministic from your tracker data and should be reviewed manually.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
               Valuation mode
             </label>
-            <div className="flex overflow-hidden rounded border border-neutral-700 text-xs">
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {(["raw_market", "graded_adjusted"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -133,7 +135,7 @@ export default function PortfolioRiskPage() {
                   className={`px-2.5 py-1 ${
                     valuationMode === mode
                       ? "bg-sky-500/20 text-sky-300"
-                      : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {mode === "raw_market" ? "Raw market" : "Graded adjusted"}
@@ -142,12 +144,12 @@ export default function PortfolioRiskPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeSold}
               onChange={(e) => setIncludeSold(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include sold
           </label>
@@ -188,7 +190,7 @@ function Section({
 }) {
   return (
     <section id={id} className={`scroll-mt-16 ${last ? "mb-2" : "mb-8"}`}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -201,15 +203,9 @@ function StatCard({
 }: {
   label: string;
   value: number | string;
-  tone?: "good" | "bad";
+  tone?: StatTone;
 }) {
-  const toneClass = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
+  return <SharedStatCard label={label} value={value} tone={tone} />;
 }
 
 function CardCell({ cardId, cardCode, nameEn }: { cardId: number; cardCode: string; nameEn: string | null }) {
@@ -218,7 +214,7 @@ function CardCell({ cardId, cardCode, nameEn }: { cardId: number; cardCode: stri
       <Link href={`/cards/${cardId}`} className="text-sky-400 hover:text-sky-300">
         {cardCode}
       </Link>
-      <div className="text-xs text-neutral-500">{nameEn || "Unknown card"}</div>
+      <div className="text-xs text-text-muted">{nameEn || "Unknown card"}</div>
     </>
   );
 }
@@ -226,13 +222,13 @@ function CardCell({ cardId, cardCode, nameEn }: { cardId: number; cardCode: stri
 function SummaryCards({ summary }: { summary: PortfolioRiskSummary }) {
   return (
     <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3 sm:col-span-2">
-        <div className="text-xs uppercase tracking-wide text-neutral-500">Risk score</div>
+      <div className="panel px-4 py-3 sm:col-span-2">
+        <div className="text-xs uppercase tracking-wide text-text-muted">Risk score</div>
         <div className="mt-1 flex items-baseline gap-2">
-          <span className={`text-4xl font-bold ${LEVEL_STYLES[summary.risk_level]}`}>{summary.risk_score}</span>
-          <span className={`text-sm font-semibold uppercase ${LEVEL_STYLES[summary.risk_level]}`}>
-            {summary.risk_level}
+          <span className={`mono tabular text-4xl font-bold ${riskTone(summary.risk_level) === "good" ? "price-positive" : riskTone(summary.risk_level) === "bad" ? "price-negative" : "text-text-primary"}`}>
+            {summary.risk_score}
           </span>
+          <RiskBadge level={summary.risk_level} />
         </div>
       </div>
       <StatCard label="Total value" value={formatJPY(summary.total_value_jpy)} />
@@ -278,20 +274,24 @@ function RiskBreakdownSection({ breakdown }: { breakdown: PortfolioRiskBreakdown
         {BREAKDOWN_CARDS.map(({ key, title, anchor }) => {
           const b = breakdown[key];
           return (
-            <div key={key} className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+            <div key={key} className="panel px-4 py-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
-                <span className={`text-xs font-semibold uppercase ${LEVEL_STYLES[b.level]}`}>{b.level}</span>
+                <div className="text-xs uppercase tracking-wide text-text-muted">{title}</div>
+                <RiskBadge level={b.level} />
               </div>
-              <div className={`mt-1 text-2xl font-semibold ${LEVEL_STYLES[b.level]}`}>{b.score}</div>
+              <div
+                className={`mono tabular mt-1 text-2xl font-semibold ${riskTone(b.level) === "good" ? "price-positive" : riskTone(b.level) === "bad" ? "price-negative" : "text-text-primary"}`}
+              >
+                {b.score}
+              </div>
               {b.warnings.length > 0 ? (
-                <ul className="mt-2 space-y-1 text-xs text-neutral-400">
+                <ul className="mt-2 space-y-1 text-xs text-text-secondary">
                   {b.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-neutral-600">No warnings.</p>
+                <p className="mt-2 text-xs text-text-faint">No warnings.</p>
               )}
               <Link
                 href={anchor}
@@ -310,38 +310,34 @@ function RiskBreakdownSection({ breakdown }: { breakdown: PortfolioRiskBreakdown
 function RecommendationFlagsSection({ flags }: { flags: PortfolioRiskFlag[] }) {
   return (
     <Section title="Recommendation flags">
-      {flags.length === 0 ? (
-        <EmptyState variant="inline">No risk flags triggered.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Severity</th>
-                <th className="px-3 py-2">Flag type</th>
-                <th className="px-3 py-2">Message</th>
-                <th className="px-3 py-2">Suggested action</th>
-                <th className="px-3 py-2">Related cards</th>
+      <DataTableShell isEmpty={flags.length === 0} emptyLabel="No risk flags triggered.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Flag type</th>
+              <th>Message</th>
+              <th>Suggested action</th>
+              <th>Related cards</th>
+            </tr>
+          </thead>
+          <tbody>
+            {flags.map((f, i) => (
+              <tr key={i}>
+                <td>
+                  <SeverityBadge severity={f.severity} />
+                </td>
+                <td className="text-text-secondary">{f.flag_type.replace(/_/g, " ")}</td>
+                <td className="text-text-secondary">{f.message}</td>
+                <td className="text-text-secondary">{f.suggested_action.replace(/_/g, " ")}</td>
+                <td className="text-text-secondary">
+                  {f.related_cards.length === 0 ? "not available" : f.related_cards.join(", ")}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {flags.map((f, i) => (
-                <tr key={i}>
-                  <td className="px-3 py-2">
-                    <SeverityBadge severity={f.severity} />
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">{f.flag_type.replace(/_/g, " ")}</td>
-                  <td className="px-3 py-2 text-neutral-300">{f.message}</td>
-                  <td className="px-3 py-2 text-neutral-400">{f.suggested_action.replace(/_/g, " ")}</td>
-                  <td className="px-3 py-2 text-neutral-400">
-                    {f.related_cards.length === 0 ? "not available" : f.related_cards.join(", ")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </Section>
   );
 }
@@ -367,108 +363,96 @@ function ExposuresSection({
             className={`rounded px-2.5 py-1 text-xs ${
               tab === t.key
                 ? "bg-sky-500/20 text-sky-300"
-                : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                : "bg-bg-surface text-text-secondary hover:text-text-primary"
             }`}
           >
             {t.label}
           </button>
         ))}
       </div>
-      {rows.length === 0 ? (
-        <EmptyState variant="inline">No exposure data.</EmptyState>
-      ) : (
-        <ExposureTable rows={rows} />
-      )}
+      <ExposureTable rows={rows} />
     </Section>
   );
 }
 
 function ExposureTable({ rows }: { rows: PortfolioRiskExposureItem[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
+    <DataTableShell isEmpty={rows.length === 0} emptyLabel="No exposure data.">
+      <table className="data-table">
+        <thead>
           <tr>
-            <th className="px-3 py-2">Label</th>
-            <th className="px-3 py-2 text-right">Quantity</th>
-            <th className="px-3 py-2 text-right">Value</th>
-            <th className="px-3 py-2 text-right">Weight %</th>
-            <th className="px-3 py-2 text-right">Cost basis</th>
-            <th className="px-3 py-2 text-right">P/L</th>
-            <th className="px-3 py-2">Risk flags</th>
+            <th>Label</th>
+            <th className="text-right">Quantity</th>
+            <th className="text-right">Value</th>
+            <th className="text-right">Weight %</th>
+            <th className="text-right">Cost basis</th>
+            <th className="text-right">P/L</th>
+            <th>Risk flags</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-800">
+        <tbody>
           {rows.map((r) => (
             <tr key={r.key}>
-              <td className="px-3 py-2 text-neutral-200">{r.label}</td>
-              <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(r.quantity)}</td>
-              <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(r.value_jpy)}</td>
-              <td className="px-3 py-2 text-right text-neutral-300">{formatPercent(r.portfolio_weight_pct)}</td>
-              <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(r.cost_basis_jpy)}</td>
-              <td className="px-3 py-2 text-right">
-                <span
-                  className={
-                    r.pnl_jpy > 0 ? "text-emerald-400" : r.pnl_jpy < 0 ? "text-amber-400" : "text-neutral-300"
-                  }
-                >
+              <td className="text-text-primary">{r.label}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatNumber(r.quantity)}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatJPY(r.value_jpy)}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatPercent(r.portfolio_weight_pct)}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatJPY(r.cost_basis_jpy)}</td>
+              <td className="mono tabular text-right">
+                <span className={r.pnl_jpy > 0 ? "price-positive" : r.pnl_jpy < 0 ? "price-negative" : "price-muted"}>
                   {formatSignedJpy(r.pnl_jpy)}
                 </span>
               </td>
-              <td className="px-3 py-2 text-neutral-400">
+              <td className="text-text-secondary">
                 {r.risk_flags.length === 0 ? "none" : r.risk_flags.join(", ")}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </DataTableShell>
   );
 }
 
 function ConcentrationDetails({ concentration }: { concentration: PortfolioRiskConcentration }) {
   return (
     <Section title="Concentration details" id="concentration-details">
-      {concentration.top_cards.length === 0 ? (
-        <EmptyState variant="inline">No cards to show.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Card</th>
-                <th className="px-3 py-2">Set</th>
-                <th className="px-3 py-2">Rarity</th>
-                <th className="px-3 py-2 text-right">Quantity</th>
-                <th className="px-3 py-2 text-right">Value</th>
-                <th className="px-3 py-2 text-right">Weight %</th>
-                <th className="px-3 py-2 text-right">Cost basis</th>
-                <th className="px-3 py-2">Warnings</th>
+      <DataTableShell isEmpty={concentration.top_cards.length === 0} emptyLabel="No cards to show.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Set</th>
+              <th>Rarity</th>
+              <th className="text-right">Quantity</th>
+              <th className="text-right">Value</th>
+              <th className="text-right">Weight %</th>
+              <th className="text-right">Cost basis</th>
+              <th>Warnings</th>
+            </tr>
+          </thead>
+          <tbody>
+            {concentration.top_cards.map((c) => (
+              <tr key={c.collection_item_id}>
+                <td>
+                  <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
+                </td>
+                <td className="text-text-secondary">{c.set_code}</td>
+                <td>
+                  <RarityBadge rarity={c.rarity} />
+                </td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(c.quantity)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.value_jpy)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatPercent(c.portfolio_weight_pct)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.cost_basis_jpy)}</td>
+                <td className="text-text-secondary">
+                  {c.warnings.length === 0 ? "none" : c.warnings.join(", ")}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {concentration.top_cards.map((c) => (
-                <tr key={c.collection_item_id}>
-                  <td className="px-3 py-2">
-                    <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">{c.set_code}</td>
-                  <td className="px-3 py-2">
-                    <RarityBadge rarity={c.rarity} />
-                  </td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(c.quantity)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.value_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatPercent(c.portfolio_weight_pct)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.cost_basis_jpy)}</td>
-                  <td className="px-3 py-2 text-neutral-400">
-                    {c.warnings.length === 0 ? "none" : c.warnings.join(", ")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </Section>
   );
 }
@@ -476,41 +460,39 @@ function ConcentrationDetails({ concentration }: { concentration: PortfolioRiskC
 function DataQualityTable({ title, rows }: { title: string; rows: PortfolioRiskDataQualityCard[] }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
-      {rows.length === 0 ? (
-        <EmptyState variant="inline">None.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Card</th>
-                <th className="px-3 py-2">Issue</th>
-                <th className="px-3 py-2">Latest observed</th>
-                <th className="px-3 py-2">Suggested action</th>
-                <th className="px-3 py-2" />
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
+      <DataTableShell isEmpty={rows.length === 0} emptyLabel="None.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Issue</th>
+              <th>Latest observed</th>
+              <th>Suggested action</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.collection_item_id}>
+                <td>
+                  <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
+                </td>
+                <td className="text-text-secondary">{c.issue}</td>
+                <td className="mono tabular text-text-secondary">
+                  {formatNullable(c.latest_observed_at, formatDateTime)}
+                </td>
+                <td className="text-text-secondary">{c.suggested_action.replace(/_/g, " ")}</td>
+                <td>
+                  <Link href={`/cards/${c.card_id}`} className="text-sky-400 hover:text-sky-300">
+                    View →
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {rows.map((c) => (
-                <tr key={c.collection_item_id}>
-                  <td className="px-3 py-2">
-                    <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">{c.issue}</td>
-                  <td className="px-3 py-2 text-neutral-400">{formatNullable(c.latest_observed_at, formatDateTime)}</td>
-                  <td className="px-3 py-2 text-neutral-400">{c.suggested_action.replace(/_/g, " ")}</td>
-                  <td className="px-3 py-2">
-                    <Link href={`/cards/${c.card_id}`} className="text-sky-400 hover:text-sky-300">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </div>
   );
 }
@@ -530,45 +512,41 @@ function DataQualityDetails({ dataQuality }: { dataQuality: PortfolioRiskDataQua
 function LiquidityTable({ title, rows }: { title: string; rows: PortfolioRiskLiquidityCard[] }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
-      {rows.length === 0 ? (
-        <EmptyState variant="inline">None.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Card</th>
-                <th className="px-3 py-2 text-right">Yuyu-Tei sell</th>
-                <th className="px-3 py-2 text-right">Yuyu-Tei buy</th>
-                <th className="px-3 py-2 text-right">Spread %</th>
-                <th className="px-3 py-2 text-right">SNKRDUNK floor</th>
-                <th className="px-3 py-2 text-right">Listing count</th>
-                <th className="px-3 py-2" />
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
+      <DataTableShell isEmpty={rows.length === 0} emptyLabel="None.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th className="text-right">Yuyu-Tei sell</th>
+              <th className="text-right">Yuyu-Tei buy</th>
+              <th className="text-right">Spread %</th>
+              <th className="text-right">SNKRDUNK floor</th>
+              <th className="text-right">Listing count</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.collection_item_id}>
+                <td>
+                  <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
+                </td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.yuyutei_sell_jpy)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.yuyutei_buy_jpy)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatPercent(c.spread_pct)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.snkrdunk_floor_jpy)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(c.listing_count)}</td>
+                <td>
+                  <Link href={`/cards/${c.card_id}`} className="text-sky-400 hover:text-sky-300">
+                    View →
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {rows.map((c) => (
-                <tr key={c.collection_item_id}>
-                  <td className="px-3 py-2">
-                    <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
-                  </td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.yuyutei_sell_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.yuyutei_buy_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatPercent(c.spread_pct)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.snkrdunk_floor_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(c.listing_count)}</td>
-                  <td className="px-3 py-2">
-                    <Link href={`/cards/${c.card_id}`} className="text-sky-400 hover:text-sky-300">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </div>
   );
 }
@@ -587,59 +565,53 @@ function LiquidityDetails({ liquidity }: { liquidity: PortfolioRiskLiquidityProx
 function GradingTable({ title, rows }: { title: string; rows: PortfolioRiskGradingCard[] }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
-      {rows.length === 0 ? (
-        <EmptyState variant="inline">None.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Card</th>
-                <th className="px-3 py-2">Grading company</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Cost basis</th>
-                <th className="px-3 py-2 text-right">Grading cost</th>
-                <th className="px-3 py-2">Expected return</th>
-                <th className="px-3 py-2">Overdue</th>
-                <th className="px-3 py-2" />
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
+      <DataTableShell isEmpty={rows.length === 0} emptyLabel="None.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Grading company</th>
+              <th>Status</th>
+              <th className="text-right">Cost basis</th>
+              <th className="text-right">Grading cost</th>
+              <th>Expected return</th>
+              <th>Overdue</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.collection_item_id}>
+                <td>
+                  <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
+                </td>
+                <td className="text-text-secondary">{formatNullable(c.grading_company, (v) => v)}</td>
+                <td className="text-text-secondary">
+                  {formatNullable(c.submission_status, (v) => v.replace(/_/g, " "))}
+                </td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.cost_basis_jpy)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatJPY(c.grading_cost_jpy)}</td>
+                <td className="mono tabular text-text-secondary">
+                  {formatNullable(c.expected_return_date, formatDate)}
+                </td>
+                <td>
+                  {c.overdue ? (
+                    <span className="price-negative">Yes</span>
+                  ) : (
+                    <span className="text-text-muted">No</span>
+                  )}
+                </td>
+                <td>
+                  <Link href="/grading" className="text-sky-400 hover:text-sky-300">
+                    View →
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {rows.map((c) => (
-                <tr key={c.collection_item_id}>
-                  <td className="px-3 py-2">
-                    <CardCell cardId={c.card_id} cardCode={c.card_code} nameEn={c.name_en} />
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">
-                    {formatNullable(c.grading_company, (v) => v)}
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">
-                    {formatNullable(c.submission_status, (v) => v.replace(/_/g, " "))}
-                  </td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.cost_basis_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(c.grading_cost_jpy)}</td>
-                  <td className="px-3 py-2 text-neutral-300">
-                    {formatNullable(c.expected_return_date, formatDate)}
-                  </td>
-                  <td className="px-3 py-2">
-                    {c.overdue ? (
-                      <span className="text-rose-400">Yes</span>
-                    ) : (
-                      <span className="text-neutral-500">No</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Link href="/grading" className="text-sky-400 hover:text-sky-300">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </div>
   );
 }
@@ -658,44 +630,40 @@ function GradingDetails({ grading }: { grading: PortfolioRiskGradingExposure }) 
 function WishlistOverlapDetails({ wishlistOverlap }: { wishlistOverlap: PortfolioRiskWishlistOverlap }) {
   return (
     <Section title="Wishlist overlap details" id="wishlist-overlap-details" last>
-      {wishlistOverlap.owned_wishlist_items.length === 0 ? (
-        <EmptyState variant="inline">None.</EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Card</th>
-                <th className="px-3 py-2">Priority</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Owned qty</th>
-                <th className="px-3 py-2 text-right">Desired qty</th>
-                <th className="px-3 py-2">Suggested action</th>
-                <th className="px-3 py-2" />
+      <DataTableShell isEmpty={wishlistOverlap.owned_wishlist_items.length === 0} emptyLabel="None.">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th className="text-right">Owned qty</th>
+              <th className="text-right">Desired qty</th>
+              <th>Suggested action</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {wishlistOverlap.owned_wishlist_items.map((w: PortfolioRiskWishlistCard) => (
+              <tr key={w.wishlist_item_id}>
+                <td>
+                  <CardCell cardId={w.card_id} cardCode={w.card_code} nameEn={w.name_en} />
+                </td>
+                <td className="text-text-secondary">{w.wishlist_priority}</td>
+                <td className="text-text-secondary">{w.wishlist_status.replace(/_/g, " ")}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(w.owned_quantity)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(w.desired_quantity)}</td>
+                <td className="text-text-secondary">{w.suggested_action.replace(/_/g, " ")}</td>
+                <td>
+                  <Link href="/wishlist" className="text-sky-400 hover:text-sky-300">
+                    View →
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {wishlistOverlap.owned_wishlist_items.map((w: PortfolioRiskWishlistCard) => (
-                <tr key={w.wishlist_item_id}>
-                  <td className="px-3 py-2">
-                    <CardCell cardId={w.card_id} cardCode={w.card_code} nameEn={w.name_en} />
-                  </td>
-                  <td className="px-3 py-2 text-neutral-300">{w.wishlist_priority}</td>
-                  <td className="px-3 py-2 text-neutral-300">{w.wishlist_status.replace(/_/g, " ")}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(w.owned_quantity)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(w.desired_quantity)}</td>
-                  <td className="px-3 py-2 text-neutral-400">{w.suggested_action.replace(/_/g, " ")}</td>
-                  <td className="px-3 py-2">
-                    <Link href="/wishlist" className="text-sky-400 hover:text-sky-300">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </Section>
   );
 }

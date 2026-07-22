@@ -1,1 +1,328 @@
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * TCG Vault design tokens
+ *
+ * Single source of truth: plain CSS variables (exact names from
+ * docs/interface_design_system.md) in :root, aliased into Tailwind's v4
+ * @theme so both hand-written CSS (var(--bg-page)) and generated utilities
+ * (bg-bg-page, rounded-panel, font-mono, ...) read from the same values.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Surfaces */
+  --bg-page: #0b0b0d;
+  --bg-surface: #141416;
+  --bg-elevated: #1b1b1f;
+  --bg-card: #202024;
+
+  /* Borders */
+  --border-default: #2c2c32;
+  --border-muted: rgba(255, 255, 255, 0.08);
+
+  /* Text */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-faint: #52525a;
+
+  /* Accent */
+  --accent-gold: #d6a84f;
+  --accent-gold-hover: #e6bd6a;
+
+  /* Signals */
+  --signal-green: #22c55e;
+  --signal-red: #ef4444;
+  --signal-blue: #38bdf8;
+  --signal-purple: #a78bfa;
+  --signal-warning: #f59e0b;
+
+  /* Radius */
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-panel-lg: 10px;
+  --radius-modal: 12px;
+}
+
+@theme inline {
+  --color-bg-page: var(--bg-page);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-card: var(--bg-card);
+
+  --color-border-default: var(--border-default);
+  --color-border-muted: var(--border-muted);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-gold-hover: var(--accent-gold-hover);
+
+  --color-signal-green: var(--signal-green);
+  --color-signal-red: var(--signal-red);
+  --color-signal-blue: var(--signal-blue);
+  --color-signal-purple: var(--signal-purple);
+  --color-signal-warning: var(--signal-warning);
+
+  --radius-control: var(--radius-control);
+  --radius-panel: var(--radius-panel);
+  --radius-panel-lg: var(--radius-panel-lg);
+  --radius-modal: var(--radius-modal);
+
+  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  background-color: var(--bg-page);
+}
+
+/* ---------------------------------------------------------------------------
+ * Utility classes
+ * ------------------------------------------------------------------------- */
+
+@layer components {
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Panels/surfaces --------------------------------------------------------- */
+
+  .panel {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-panel);
+  }
+
+  .panel-elevated {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-panel-lg);
+  }
+
+  /* Collector vault frames --------------------------------------------------- */
+
+  .vault-frame {
+    position: relative;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-panel);
+    box-shadow: inset 0 0 0 1px var(--border-muted);
+  }
+
+  .vault-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-panel);
+    transition: border-color 150ms ease;
+  }
+
+  .vault-card:hover {
+    border-color: color-mix(in srgb, var(--border-default) 60%, var(--text-muted));
+  }
+
+  /* Restrained gold glow - rare-card emphasis only, never flashing */
+  .glow-gold {
+    box-shadow:
+      0 0 0 1px rgba(214, 168, 79, 0.35),
+      0 0 14px rgba(214, 168, 79, 0.16);
+  }
+
+  .glow-purple {
+    box-shadow:
+      0 0 0 1px rgba(167, 139, 250, 0.35),
+      0 0 14px rgba(167, 139, 250, 0.14);
+  }
+
+  /* Tables -------------------------------------------------------------------- */
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    line-height: 1.1rem;
+  }
+
+  .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+  }
+
+  .data-table tbody td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border-muted);
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .data-table tbody tr:hover {
+    background-color: var(--bg-elevated);
+  }
+
+  .data-table tbody tr.row-warning {
+    background-color: rgba(245, 158, 11, 0.05);
+  }
+
+  /* Badges/pills ---------------------------------------------------------------- */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: var(--radius-control);
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.2rem;
+    white-space: nowrap;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.0625rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: var(--radius-control);
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  /* Risk levels - canonical low/medium/high/critical vocabulary */
+  .risk-low {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3);
+  }
+  .risk-medium {
+    background-color: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3);
+  }
+  .risk-high {
+    background-color: rgba(245, 158, 11, 0.14);
+    color: #fcd34d;
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.32);
+  }
+  .risk-critical {
+    background-color: rgba(239, 68, 68, 0.14);
+    color: #fca5a5;
+    box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.32);
+  }
+
+  /* Confidence levels */
+  .confidence-exact {
+    background-color: rgba(214, 168, 79, 0.14);
+    color: #ecd19f;
+    box-shadow: inset 0 0 0 1px rgba(214, 168, 79, 0.32);
+  }
+  .confidence-high {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.3);
+  }
+  .confidence-medium {
+    background-color: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3);
+  }
+  .confidence-low {
+    background-color: rgba(245, 158, 11, 0.14);
+    color: #fcd34d;
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.32);
+  }
+  .confidence-very-low {
+    background-color: rgba(239, 68, 68, 0.14);
+    color: #fca5a5;
+    box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.32);
+  }
+  .confidence-unknown {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border-muted);
+  }
+
+  /* Prices */
+  .price-positive {
+    color: #86efac;
+  }
+  .price-negative {
+    color: #fca5a5;
+  }
+  .price-muted {
+    color: var(--text-muted);
+  }
+
+  /* Admin safety treatment ------------------------------------------------------ */
+
+  .admin-dry-run {
+    background-color: transparent;
+    border: 1px dashed rgba(56, 189, 248, 0.5);
+    color: #7dd3fc;
+  }
+  .admin-dry-run:hover {
+    background-color: rgba(56, 189, 248, 0.08);
+  }
+
+  .admin-preview {
+    background-color: rgba(214, 168, 79, 0.08);
+    border: 1px solid rgba(214, 168, 79, 0.4);
+    color: var(--accent-gold);
+  }
+  .admin-preview:hover {
+    background-color: rgba(214, 168, 79, 0.14);
+  }
+
+  .admin-real-action {
+    background-color: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+  }
+  .admin-real-action:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+  }
+
+  .admin-danger {
+    background-color: #ef4444;
+    border: 1px solid #ef4444;
+    color: #200404;
+    font-weight: 600;
+  }
+  .admin-danger:hover {
+    background-color: #f87171;
+  }
+}

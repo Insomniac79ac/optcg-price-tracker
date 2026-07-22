@@ -7,6 +7,16 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
+import { RarityBadge } from "@/components/RarityBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { VariantBadge } from "@/components/ui/VariantBadge";
 import {
   AdminAuthRequiredError,
   type CardMergeFieldStrategy,
@@ -39,34 +49,38 @@ const FIELD_STRATEGY_OPTIONS: { value: CardMergeFieldStrategy; label: string }[]
 const LIMIT_OPTIONS = [50, 100, 200, 500] as const;
 
 const CONFIDENCE_STYLES: Record<string, string> = {
-  exact_duplicate: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-  likely_duplicate: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  exact_duplicate: "bg-rose-500/15 text-signal-red ring-rose-500/30",
+  likely_duplicate: "bg-amber-500/15 text-signal-warning ring-amber-500/30",
   possible_duplicate: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  weak_match: "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30",
+  weak_match: "bg-neutral-500/15 text-text-secondary ring-neutral-500/30",
   not_duplicate: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
 };
 
 const MERGE_CONFIRM_PHRASE = "MERGE";
 
+/** Duplicate-match confidence has its own domain vocabulary (distinct from
+ * the app-wide exact/high/medium/low/very_low/unknown ConfidenceBadge) -
+ * kept as a local badge on the shared `Badge` shell rather than forced
+ * through a mismatched vocabulary. */
 function ConfidenceBadge({ label }: { label: string }) {
-  const style = CONFIDENCE_STYLES[label] ?? "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30";
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${style}`}>
-      {label}
-    </span>
-  );
+  const style = CONFIDENCE_STYLES[label] ?? "bg-neutral-500/15 text-text-secondary ring-1 ring-inset ring-neutral-500/30";
+  return <Badge label={label} className={`ring-1 ring-inset ${style}`} />;
 }
 
 function CardCell({ card }: { card: DuplicatePair["source_card"] }) {
   return (
     <div>
-      <Link href={`/cards/${card.id}`} className="text-sky-400 hover:underline">
-        {card.card_code}
-      </Link>
-      <div className="text-xs text-neutral-500">{cardDisplayName(card)}</div>
-      <div className="text-[10px] text-neutral-600">
-        {card.set_code} / {card.rarity} / {card.variant ?? "base"} / {card.language}
-        {!card.is_active && " / inactive"}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Link href={`/cards/${card.id}`} className="mono text-sm text-sky-400 hover:underline">
+          {card.card_code}
+        </Link>
+        <RarityBadge rarity={card.rarity} />
+        <VariantBadge variant={card.variant} />
+      </div>
+      <div className="text-xs text-text-secondary">{cardDisplayName(card)}</div>
+      <div className="text-[11px] text-text-muted">
+        {card.set_code} · {card.language}
+        {!card.is_active && " · inactive"}
       </div>
     </div>
   );
@@ -101,7 +115,6 @@ export default function CardDuplicatesPage() {
   const [mergeNotes, setMergeNotes] = useState("");
   const [approveLowConfidence, setApproveLowConfidence] = useState(false);
   const [mergeResult, setMergeResult] = useState<CardMergeResult | null>(null);
-  const [confirmText, setConfirmText] = useState("");
 
   const [bulkMinScore, setBulkMinScore] = useState(90);
   const [bulkConfidenceLabel, setBulkConfidenceLabel] = useState("exact_duplicate");
@@ -159,7 +172,6 @@ export default function CardDuplicatesPage() {
     setMergeNotes("");
     setApproveLowConfidence(false);
     setMergeResult(null);
-    setConfirmText("");
     fetchCardMergePreview(pair.source_card.id, pair.target_card.id)
       .then(setPreview)
       .catch((err) => {
@@ -229,20 +241,17 @@ export default function CardDuplicatesPage() {
     : [];
 
   const requiresApproval = preview !== null && preview.duplicate_score < 75;
-  const canExecute = confirmText.trim() === MERGE_CONFIRM_PHRASE && (!requiresApproval || approveLowConfidence);
 
   return (
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Card Duplicate Review</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          Review duplicate canonical cards and merge identities safely.
-        </p>
-        <div className="mb-4 flex flex-wrap gap-3 text-xs text-neutral-500">
+        <PageHeader
+          title="Card Duplicate Review"
+          description="Review duplicate canonical cards and merge identities safely."
+          actions={<AdminLogoutButton />}
+        />
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
           <Link href="/admin/cards" className="text-sky-400 hover:underline">
             Card catalog
           </Link>
@@ -265,51 +274,48 @@ export default function CardDuplicatesPage() {
         {!unauthorized && (
           <>
             {summary && (
-              <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+              <StatGrid>
                 {summaryCards.map((c) => (
-                  <div key={c.label} className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="text-xs text-neutral-500">{c.label}</div>
-                    <div className="text-lg font-semibold text-neutral-100">{c.value}</div>
-                  </div>
+                  <StatCard key={c.label} label={c.label} value={c.value} />
                 ))}
-              </div>
+              </StatGrid>
             )}
 
-            <div className="mb-4 flex flex-wrap items-center gap-2">
+            <FilterBar>
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search card code / name…"
-                className="w-56 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-56 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={setCode}
                 onChange={(e) => setSetCode(e.target.value)}
                 placeholder="Set code"
-                className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-28 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={rarity}
                 onChange={(e) => setRarity(e.target.value)}
                 placeholder="Rarity"
-                className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-24 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={variant}
                 onChange={(e) => setVariant(e.target.value)}
                 placeholder="Variant"
-                className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-28 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 placeholder="Language"
-                className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-24 ${FILTER_INPUT_CLASS}`}
               />
               <select
                 value={confidenceLabel}
                 onChange={(e) => setConfidenceLabel(e.target.value)}
-                className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                className={FILTER_INPUT_CLASS}
               >
                 {CONFIDENCE_LABEL_OPTIONS.map((v) => (
                   <option key={v} value={v}>
@@ -317,16 +323,16 @@ export default function CardDuplicatesPage() {
                   </option>
                 ))}
               </select>
-              <label className="flex items-center gap-1 text-xs text-neutral-400">
+              <label className="flex items-center gap-1 text-xs text-text-secondary">
                 Min score
                 <input
                   type="number"
                   value={minScore}
                   onChange={(e) => setMinScore(Number(e.target.value) || 0)}
-                  className="w-16 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className={`w-16 ${FILTER_INPUT_CLASS}`}
                 />
               </label>
-              <label className="flex items-center gap-1 text-xs text-neutral-400">
+              <label className="flex items-center gap-1 text-xs text-text-secondary">
                 <input
                   type="checkbox"
                   checked={includeInactive}
@@ -334,55 +340,41 @@ export default function CardDuplicatesPage() {
                 />
                 Include inactive
               </label>
-            </div>
+            </FilterBar>
 
-            {actionError && (
-              <div className="mb-4 rounded-lg border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">{actionError}</div>
-            )}
-
-            {status === "loading" && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">Loading duplicate pairs…</div>
-            )}
+            {status === "loading" && <LoadingState>Loading duplicate pairs…</LoadingState>}
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                Failed to load duplicate cards from the API. Is the backend running?
-              </div>
-            )}
-            {status === "ready" && pairs.length === 0 && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">No duplicate pairs found.</div>
+              <ErrorState>Failed to load duplicate cards from the API. Is the backend running?</ErrorState>
             )}
 
-            {status === "ready" && pairs.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-neutral-800">
-                <table className="w-full border-collapse text-sm">
+            {status === "ready" && (
+              <DataTableShell isEmpty={pairs.length === 0} emptyLabel="No duplicate pairs found.">
+                <table className="data-table">
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                      <th className="px-3 py-2 font-medium text-right">Score</th>
-                      <th className="px-3 py-2 font-medium">Confidence</th>
-                      <th className="px-3 py-2 font-medium">Source card</th>
-                      <th className="px-3 py-2 font-medium">Target card</th>
-                      <th className="px-3 py-2 font-medium">Explanation</th>
-                      <th className="px-3 py-2 font-medium">Warnings</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
+                    <tr>
+                      <th className="text-right">Score</th>
+                      <th>Confidence</th>
+                      <th>Source card</th>
+                      <th>Target card</th>
+                      <th>Explanation</th>
+                      <th>Warnings</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pairs.map((pair) => (
-                      <tr
-                        key={`${pair.source_card.id}-${pair.target_card.id}`}
-                        className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                      >
-                        <td className="px-3 py-2 text-right text-neutral-300">{pair.score}</td>
-                        <td className="px-3 py-2">
+                      <tr key={`${pair.source_card.id}-${pair.target_card.id}`}>
+                        <td className="mono tabular text-right text-text-secondary">{pair.score}</td>
+                        <td>
                           <ConfidenceBadge label={pair.confidence_label} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td>
                           <CardCell card={pair.source_card} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td>
                           <CardCell card={pair.target_card} />
                         </td>
-                        <td className="px-3 py-2 max-w-[14rem]">
+                        <td className="max-w-[14rem]">
                           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
                             {pair.explanation.positive.map((p) => (
                               <span key={p} className="text-emerald-400">
@@ -390,32 +382,25 @@ export default function CardDuplicatesPage() {
                               </span>
                             ))}
                             {pair.explanation.negative.map((n) => (
-                              <span key={n} className="text-rose-400">
+                              <span key={n} className="text-signal-red">
                                 − {n}
                               </span>
                             ))}
                           </div>
                         </td>
-                        <td className="px-3 py-2 max-w-[10rem] text-[11px] text-amber-400">
+                        <td className="max-w-[10rem] text-[11px] text-signal-warning">
                           {pair.warnings.map((w) => (
                             <div key={w}>{w}</div>
                           ))}
                         </td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            <button
-                              onClick={() => openPreview(pair)}
-                              className="rounded bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-                            >
-                              Preview merge
-                            </button>
-                          </div>
+                        <td>
+                          <ActionButton onClick={() => openPreview(pair)}>Preview merge</ActionButton>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTableShell>
             )}
 
             {status === "ready" && (
@@ -424,22 +409,22 @@ export default function CardDuplicatesPage() {
               </div>
             )}
 
-            <div className="mt-8 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-              <div className="mb-3 text-sm font-medium text-neutral-200">Bulk merge suggestions (preview only)</div>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <label className="flex items-center gap-1 text-xs text-neutral-400">
+            <div className="panel mt-8 p-3">
+              <div className="mb-3 text-sm font-medium text-text-primary">Bulk merge suggestions (preview only)</div>
+              <FilterBar>
+                <label className="flex items-center gap-1 text-xs text-text-secondary">
                   Min score
                   <input
                     type="number"
                     value={bulkMinScore}
                     onChange={(e) => setBulkMinScore(Number(e.target.value) || 0)}
-                    className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={`w-20 ${FILTER_INPUT_CLASS}`}
                   />
                 </label>
                 <select
                   value={bulkConfidenceLabel}
                   onChange={(e) => setBulkConfidenceLabel(e.target.value)}
-                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className={FILTER_INPUT_CLASS}
                 >
                   {CONFIDENCE_LABEL_OPTIONS.map((v) => (
                     <option key={v} value={v}>
@@ -447,37 +432,33 @@ export default function CardDuplicatesPage() {
                     </option>
                   ))}
                 </select>
-                <label className="flex items-center gap-1 text-xs text-neutral-400">
+                <label className="flex items-center gap-1 text-xs text-text-secondary">
                   Limit
                   <input
                     type="number"
                     value={bulkLimit}
                     onChange={(e) => setBulkLimit(Number(e.target.value) || 50)}
-                    className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={`w-20 ${FILTER_INPUT_CLASS}`}
                   />
                 </label>
-                <button
-                  onClick={runBulkPreview}
-                  disabled={bulkLoading}
-                  className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
-                >
+                <ActionButton variant="preview" onClick={runBulkPreview} disabled={bulkLoading}>
                   {bulkLoading ? "Loading…" : "Bulk preview"}
-                </button>
-              </div>
-              {bulkError && <div className="mb-3 text-sm text-rose-300">{bulkError}</div>}
+                </ActionButton>
+              </FilterBar>
+              {bulkError && <div className="mb-3 text-sm text-signal-red">{bulkError}</div>}
               {bulkPreviews && bulkPreviews.length === 0 && (
-                <div className="text-sm text-neutral-500">No clear duplicate pairs match these filters.</div>
+                <EmptyState variant="inline">No clear duplicate pairs match these filters.</EmptyState>
               )}
               {bulkPreviews && bulkPreviews.length > 0 && (
                 <div className="space-y-2">
                   {bulkPreviews.map((p) => (
                     <div
                       key={`${p.source_card.id}-${p.target_card.id}`}
-                      className="rounded border border-neutral-800 bg-neutral-950 p-2 text-xs text-neutral-300"
+                      className="rounded-control border border-border-default bg-bg-page p-2 text-xs text-text-secondary"
                     >
-                      <span className="font-medium text-neutral-100">{p.source_card.card_code}</span>
+                      <span className="mono font-medium text-text-primary">{p.source_card.card_code}</span>
                       {" → "}
-                      <span className="font-medium text-neutral-100">{p.target_card.card_code}</span>
+                      <span className="mono font-medium text-text-primary">{p.target_card.card_code}</span>
                       {" · score "}
                       {p.duplicate_score} ({p.confidence_label})
                     </div>
@@ -488,164 +469,149 @@ export default function CardDuplicatesPage() {
           </>
         )}
 
-        {previewPair && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-5">
-              <div className="mb-3 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-semibold text-neutral-100">Merge preview</h2>
-                  <div className="text-xs text-neutral-500">
-                    {previewPair.source_card.card_code} → {previewPair.target_card.card_code}
-                  </div>
-                </div>
-                <button onClick={closePreview} className="rounded px-2 py-1 text-xs font-medium text-neutral-400 hover:text-neutral-100">
-                  Close
-                </button>
+        <ConfirmActionModal
+          open={previewPair !== null}
+          title="Merge preview"
+          description={
+            previewPair
+              ? `${previewPair.source_card.card_code} → ${previewPair.target_card.card_code}`
+              : undefined
+          }
+          affectedRecords={
+            preview
+              ? Object.entries(preview.affected_records).map(([key, value]) => ({
+                  label: key,
+                  value,
+                }))
+              : undefined
+          }
+          confirmPhrase={MERGE_CONFIRM_PHRASE}
+          confirmLabel="Execute merge"
+          pending={pendingAction === "execute"}
+          disableConfirm={requiresApproval && !approveLowConfidence}
+          error={actionError}
+          onConfirm={() => runMerge(false)}
+          onCancel={closePreview}
+        >
+          {previewLoading && <p className="p-6 text-center text-sm text-text-muted">Loading preview…</p>}
+          {previewError && (
+            <div className="rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
+              {previewError}
+            </div>
+          )}
+
+          {!previewLoading && preview && previewPair && (
+            <>
+              <div className="mb-3 flex items-center gap-2 text-sm">
+                <span className="text-text-secondary">Score {preview.duplicate_score}</span>
+                <ConfidenceBadge label={preview.confidence_label} />
               </div>
 
-              {previewLoading && <div className="p-6 text-center text-sm text-neutral-500">Loading preview…</div>}
-              {previewError && <div className="rounded border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">{previewError}</div>}
+              <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                {preview.explanation.positive.map((p) => (
+                  <span key={p} className="text-emerald-400">
+                    + {p}
+                  </span>
+                ))}
+                {preview.explanation.negative.map((n) => (
+                  <span key={n} className="text-signal-red">
+                    − {n}
+                  </span>
+                ))}
+                {preview.explanation.caps_applied.map((c) => (
+                  <span key={c} className="text-signal-warning">
+                    cap: {c}
+                  </span>
+                ))}
+              </div>
 
-              {!previewLoading && preview && (
-                <>
-                  <div className="mb-3 flex items-center gap-2 text-sm">
-                    <span className="text-neutral-400">Score {preview.duplicate_score}</span>
-                    <ConfidenceBadge label={preview.confidence_label} />
-                  </div>
-
-                  <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                    {preview.explanation.positive.map((p) => (
-                      <span key={p} className="text-emerald-400">
-                        + {p}
-                      </span>
-                    ))}
-                    {preview.explanation.negative.map((n) => (
-                      <span key={n} className="text-rose-400">
-                        − {n}
-                      </span>
-                    ))}
-                    {preview.explanation.caps_applied.map((c) => (
-                      <span key={c} className="text-amber-400">
-                        cap: {c}
-                      </span>
-                    ))}
-                  </div>
-
-                  {preview.warnings.length > 0 && (
-                    <div className="mb-3 rounded border border-amber-900/50 bg-amber-950/20 p-2 text-xs text-amber-300">
-                      {preview.warnings.map((w) => (
-                        <div key={w}>{w}</div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="mb-2 text-xs font-medium text-neutral-400">Affected records</div>
-                    <div className="grid grid-cols-2 gap-1 text-xs text-neutral-300 sm:grid-cols-3">
-                      {Object.entries(preview.affected_records).map(([key, value]) => (
-                        <div key={key}>
-                          {key}: <span className="text-neutral-100">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {Object.keys(preview.field_merge_preview).length > 0 && (
-                    <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-                      <div className="mb-2 text-xs font-medium text-neutral-400">Field merge preview</div>
-                      <div className="space-y-1 text-xs text-neutral-300">
-                        {Object.entries(preview.field_merge_preview).map(([field, change]) => (
-                          <div key={field}>
-                            <span className="font-medium text-neutral-100">{field}</span>: {String(change.source ?? "—")}
-                            {" → "}
-                            {String(change.result ?? "—")} ({change.action})
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <select
-                        value={fieldStrategy}
-                        onChange={(e) => {
-                          setFieldStrategy(e.target.value as CardMergeFieldStrategy);
-                          fetchCardMergePreview(
-                            previewPair.source_card.id,
-                            previewPair.target_card.id,
-                            e.target.value as CardMergeFieldStrategy,
-                          )
-                            .then(setPreview)
-                            .catch(() => {});
-                        }}
-                        className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
-                      >
-                        {FIELD_STRATEGY_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        value={mergeNotes}
-                        onChange={(e) => setMergeNotes(e.target.value)}
-                        placeholder="Merge notes (optional)…"
-                        className="w-64 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
-                      />
-                    </div>
-
-                    {requiresApproval && (
-                      <label className="mb-2 flex items-center gap-1 text-xs text-amber-300">
-                        <input
-                          type="checkbox"
-                          checked={approveLowConfidence}
-                          onChange={(e) => setApproveLowConfidence(e.target.checked)}
-                        />
-                        Approve low-confidence merge (score below 75)
-                      </label>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => runMerge(true)}
-                        disabled={pendingAction === "dry-run"}
-                        className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
-                      >
-                        Dry-run merge
-                      </button>
-                      <input
-                        value={confirmText}
-                        onChange={(e) => setConfirmText(e.target.value)}
-                        placeholder={`Type ${MERGE_CONFIRM_PHRASE} to confirm`}
-                        className="w-48 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
-                      />
-                      <button
-                        onClick={() => runMerge(false)}
-                        disabled={!canExecute || pendingAction === "execute"}
-                        className="rounded bg-rose-950/60 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
-                      >
-                        Execute merge
-                      </button>
-                    </div>
-                  </div>
-
-                  {mergeResult && (
-                    <div className="rounded border border-neutral-800 bg-neutral-900 p-3 text-xs text-neutral-300">
-                      <div>dry_run: {String(mergeResult.dry_run)}</div>
-                      <div>merged: {String(mergeResult.merged)}</div>
-                      {mergeResult.warnings.map((w) => (
-                        <div key={w} className="text-amber-400">
-                          {w}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
+              {preview.warnings.length > 0 && (
+                <div className="mb-3 rounded-control border border-signal-warning/40 bg-signal-warning/10 p-2 text-xs text-signal-warning">
+                  {preview.warnings.map((w) => (
+                    <div key={w}>{w}</div>
+                  ))}
+                </div>
               )}
-            </div>
-          </div>
-        )}
+
+              {Object.keys(preview.field_merge_preview).length > 0 && (
+                <div className="mb-3 panel p-3">
+                  <div className="mb-2 text-xs font-medium text-text-secondary">Field merge preview</div>
+                  <div className="space-y-1 text-xs text-text-secondary">
+                    {Object.entries(preview.field_merge_preview).map(([field, change]) => (
+                      <div key={field}>
+                        <span className="font-medium text-text-primary">{field}</span>: {String(change.source ?? "—")}
+                        {" → "}
+                        {String(change.result ?? "—")} ({change.action})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-3 panel p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={fieldStrategy}
+                    onChange={(e) => {
+                      setFieldStrategy(e.target.value as CardMergeFieldStrategy);
+                      fetchCardMergePreview(
+                        previewPair.source_card.id,
+                        previewPair.target_card.id,
+                        e.target.value as CardMergeFieldStrategy,
+                      )
+                        .then(setPreview)
+                        .catch(() => {});
+                    }}
+                    className={FILTER_INPUT_CLASS}
+                  >
+                    {FIELD_STRATEGY_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={mergeNotes}
+                    onChange={(e) => setMergeNotes(e.target.value)}
+                    placeholder="Merge notes (optional)…"
+                    className={`w-64 ${FILTER_INPUT_CLASS}`}
+                  />
+                </div>
+
+                {requiresApproval && (
+                  <label className="mb-2 flex items-center gap-1 text-xs text-signal-warning">
+                    <input
+                      type="checkbox"
+                      checked={approveLowConfidence}
+                      onChange={(e) => setApproveLowConfidence(e.target.checked)}
+                    />
+                    Approve low-confidence merge (score below 75)
+                  </label>
+                )}
+
+                <ActionButton
+                  variant="dry-run"
+                  onClick={() => runMerge(true)}
+                  disabled={pendingAction === "dry-run"}
+                >
+                  Dry-run merge
+                </ActionButton>
+              </div>
+
+              {mergeResult && (
+                <div className="panel p-3 text-xs text-text-secondary">
+                  <div>dry_run: {String(mergeResult.dry_run)}</div>
+                  <div>merged: {String(mergeResult.merged)}</div>
+                  {mergeResult.warnings.map((w) => (
+                    <div key={w} className="text-signal-warning">
+                      {w}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </ConfirmActionModal>
       </main>
     </div>
   );

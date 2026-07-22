@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
 import { SearchTypeBadge } from "@/components/SearchTypeBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   SEARCH_TYPES,
   type SearchResult,
@@ -132,7 +133,7 @@ export default function SearchPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <h1 className="mb-4 text-lg font-semibold text-neutral-100">Search Command Center</h1>
+        <PageHeader title="Search Command Center" />
 
         <form onSubmit={handleSubmit} className="mb-4">
           <input
@@ -141,7 +142,7 @@ export default function SearchPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Search cards, collection, wishlist, grading, notes, activity, signals, opportunities, reports…"
-            className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
+            className="w-full rounded-panel border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-faint focus:border-sky-600 focus:outline-none"
           />
         </form>
 
@@ -163,22 +164,22 @@ export default function SearchPage() {
 
         {showSuggestions && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center text-sm text-neutral-500">
+            <div className="panel p-6 text-center text-sm text-text-muted">
               Search for a card, note, wishlist target, grading submission, or signal.
             </div>
             {suggestions.length > 0 && (
               <div>
-                <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
                   Suggestions
                 </h2>
-                <div className="divide-y divide-neutral-900 rounded-lg border border-neutral-800">
+                <div className="panel divide-y divide-border-muted">
                   {suggestions.map((s, i) => (
                     <Link
                       key={`${s.type}-${s.label}-${i}`}
                       href={s.url}
-                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-neutral-900/60"
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-bg-elevated"
                     >
-                      <span className="truncate text-neutral-200">{s.label}</span>
+                      <span className="truncate text-text-primary">{s.label}</span>
                       <SearchTypeBadge type={s.type} />
                     </Link>
                   ))}
@@ -196,9 +197,9 @@ export default function SearchPage() {
 
         {showResults && status === "ready" && summary && (
           <>
-            <div className="mb-4 text-xs text-neutral-500">
+            <div className="mb-4 text-xs text-text-muted">
               {summary.total_results} result{summary.total_results === 1 ? "" : "s"} for{" "}
-              <span className="text-neutral-300">&ldquo;{submittedQuery}&rdquo;</span>
+              <span className="text-text-secondary">&ldquo;{submittedQuery}&rdquo;</span>
             </div>
 
             {results.length === 0 && <EmptyState>No results found</EmptyState>}
@@ -206,11 +207,11 @@ export default function SearchPage() {
             <div className="space-y-6">
               {SEARCH_TYPES.filter((t) => grouped[t] && grouped[t]!.length > 0).map((t) => (
                 <section key={t}>
-                  <h2 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  <h2 className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-text-muted">
                     {TYPE_LABELS[t]}
-                    <span className="text-neutral-700">({grouped[t]!.length})</span>
+                    <span className="text-text-faint">({grouped[t]!.length})</span>
                   </h2>
-                  <div className="divide-y divide-neutral-900 rounded-lg border border-neutral-800">
+                  <div className="panel divide-y divide-border-muted">
                     {grouped[t]!.map((result) => (
                       <ResultRow key={`${result.type}-${result.id}`} result={result} />
                     ))}
@@ -249,10 +250,10 @@ function TypeChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded px-2.5 py-1 text-xs font-medium ${
+      className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
         active
-          ? "bg-neutral-100 text-neutral-900"
-          : "border border-neutral-700 text-neutral-400 hover:text-neutral-100"
+          ? "bg-accent-gold/15 text-accent-gold ring-accent-gold/40"
+          : "text-text-secondary ring-border-default hover:text-text-primary"
       }`}
     >
       {label}
@@ -264,19 +265,19 @@ function ResultRow({ result }: { result: SearchResult }) {
   const metadataEntries = Object.entries(result.metadata).filter(([, v]) => v !== undefined);
 
   return (
-    <div className="flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-neutral-900/60">
+    <div className="flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-bg-elevated">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <SearchTypeBadge type={result.type} />
-          <span className="truncate text-sm font-medium text-neutral-100">{result.title}</span>
-          <span className="shrink-0 text-xs font-semibold text-neutral-500">
+          <span className="truncate text-sm font-medium text-text-primary">{result.title}</span>
+          <span className="shrink-0 text-xs font-semibold text-text-muted">
             score {result.score}
           </span>
         </div>
-        <div className="mt-0.5 text-xs text-neutral-500">{result.subtitle}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-600">
+        <div className="mt-0.5 text-xs text-text-muted">{result.subtitle}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-faint">
           {result.card_code && (
-            <span className="font-mono text-neutral-500">{result.card_code}</span>
+            <span className="mono text-text-muted">{result.card_code}</span>
           )}
           {result.matched_fields.length > 0 && (
             <span>matched: {result.matched_fields.join(", ")}</span>

@@ -8,6 +8,7 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/",
 }));
 
 const getAdminToken = vi.fn();
@@ -140,7 +141,10 @@ describe("AdminImportValidationPage", () => {
 
   it("renders the page header", async () => {
     render(<AdminImportValidationPage />);
-    expect(screen.getByText("Import Validation")).toBeInTheDocument();
+    // getByRole (not getByText) - the sidebar nav now also has an "Import
+    // Validation" link with the same text, so this needs to target the
+    // page's own <h1> specifically rather than any matching text node.
+    expect(screen.getByRole("heading", { name: "Import Validation" })).toBeInTheDocument();
     await waitFor(() => expect(fetchImportTemplates).toHaveBeenCalled());
   });
 

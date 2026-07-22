@@ -10,6 +10,9 @@ import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStat
 import { MarketWorkflowRunStatusBadge } from "@/components/MarketWorkflowRunStatusBadge";
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, type StatTone } from "@/components/ui/StatCard";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
   DASHBOARD_TIMEFRAMES,
@@ -194,27 +197,22 @@ export default function DashboardPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Dashboard</h1>
-          <button
-            type="button"
-            onClick={openCustomize}
-            disabled={!overview}
-            className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
-          >
-            Customize dashboard
-          </button>
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          Your collection, wishlist, grading, and market signals in one view.
-        </p>
+        <PageHeader
+          title="Dashboard"
+          description="Your collection, wishlist, grading, and market signals in one view."
+          actions={
+            <ActionButton onClick={openCustomize} disabled={!overview}>
+              Customize dashboard
+            </ActionButton>
+          }
+        />
 
         <Link
           href="/search"
-          className="mb-3 flex items-center justify-between rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+          className="mb-3 flex items-center justify-between rounded-panel border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-muted hover:border-text-faint hover:text-text-secondary"
         >
           <span>Search cards, collection, wishlist, notes, signals…</span>
-          <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-600">
+          <span className="mono rounded-control border border-border-default px-1.5 py-0.5 text-[10px] text-text-faint">
             Ctrl/Cmd+K
           </span>
         </Link>
@@ -222,52 +220,52 @@ export default function DashboardPage() {
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Link
             href="/analytics/collection"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Collection Analytics — composition, valuation exposure, and concentration risk</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/wishlist"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Wishlist Analytics — budget planning, target hits, and acquisition priorities</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/buy-decisions"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Buy Decision Support — review buy, wait, skip, and monitor recommendations</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/sell-decisions"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Sell Decision Support — sell, hold, grade-first, and monitor recommendations</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/grading"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Grading ROI Analytics — costs, outcomes, and pending submissions</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/portfolio-risk"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Portfolio Risk — concentration, data quality, liquidity, and grading exposure</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
           <Link
             href="/analytics/digest"
-            className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+            className="vault-card flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
           >
             <span>Analytics Digest — everything above, combined in one view</span>
-            <span className="text-neutral-600">→</span>
+            <span className="text-text-faint">→</span>
           </Link>
         </div>
 
@@ -301,39 +299,39 @@ export default function DashboardPage() {
 
       {customizing && overview && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 px-4">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-900 p-4 shadow-xl">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-modal border border-border-default bg-bg-elevated p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-neutral-100">Customize dashboard</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Customize dashboard</h3>
               <button
                 onClick={() => setCustomizing(false)}
-                className="text-xs text-neutral-500 hover:text-neutral-200"
+                className="text-xs text-text-muted hover:text-text-primary"
               >
                 ✕
               </button>
             </div>
 
             {saveError && (
-              <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+              <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
                 {saveError}
               </div>
             )}
 
             <div className="mb-4">
-              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
                 Widgets
               </div>
               <div className="space-y-1">
                 {draftOrder.map((id, idx) => (
                   <div
                     key={id}
-                    className="flex items-center justify-between rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5"
+                    className="flex items-center justify-between rounded border border-border-default bg-bg-page px-2 py-1.5"
                   >
-                    <label className="flex items-center gap-2 text-xs text-neutral-200">
+                    <label className="flex items-center gap-2 text-xs text-text-primary">
                       <input
                         type="checkbox"
                         checked={!draftHidden.has(id)}
                         onChange={() => toggleHidden(id)}
-                        className="rounded border-neutral-700 bg-neutral-950"
+                        className="rounded border-border-default bg-bg-page"
                       />
                       {WIDGET_LABELS[id]}
                     </label>
@@ -342,7 +340,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => moveWidget(id, -1)}
                         disabled={idx === 0}
-                        className="rounded border border-neutral-700 px-1.5 py-0.5 text-xs text-neutral-300 hover:text-neutral-100 disabled:opacity-30"
+                        className="rounded border border-border-default px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-30"
                       >
                         ↑
                       </button>
@@ -350,7 +348,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => moveWidget(id, 1)}
                         disabled={idx === draftOrder.length - 1}
-                        className="rounded border border-neutral-700 px-1.5 py-0.5 text-xs text-neutral-300 hover:text-neutral-100 disabled:opacity-30"
+                        className="rounded border border-border-default px-1.5 py-0.5 text-xs text-text-secondary hover:text-text-primary disabled:opacity-30"
                       >
                         ↓
                       </button>
@@ -361,18 +359,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <label className="flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300">
+              <label className="flex items-center gap-2 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
                 <input
                   type="checkbox"
                   checked={draftBooleans.show_raw_market_value}
                   onChange={(e) =>
                     setDraftBooleans((prev) => ({ ...prev, show_raw_market_value: e.target.checked }))
                   }
-                  className="rounded border-neutral-700 bg-neutral-950"
+                  className="rounded border-border-default bg-bg-page"
                 />
                 Show raw market value
               </label>
-              <label className="flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300">
+              <label className="flex items-center gap-2 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
                 <input
                   type="checkbox"
                   checked={draftBooleans.show_graded_adjusted_value}
@@ -382,41 +380,41 @@ export default function DashboardPage() {
                       show_graded_adjusted_value: e.target.checked,
                     }))
                   }
-                  className="rounded border-neutral-700 bg-neutral-950"
+                  className="rounded border-border-default bg-bg-page"
                 />
                 Show graded-adjusted value
               </label>
-              <label className="flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300">
+              <label className="flex items-center gap-2 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
                 <input
                   type="checkbox"
                   checked={draftBooleans.show_wishlist_budget}
                   onChange={(e) =>
                     setDraftBooleans((prev) => ({ ...prev, show_wishlist_budget: e.target.checked }))
                   }
-                  className="rounded border-neutral-700 bg-neutral-950"
+                  className="rounded border-border-default bg-bg-page"
                 />
                 Show wishlist budget
               </label>
-              <label className="flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-300">
+              <label className="flex items-center gap-2 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
                 <input
                   type="checkbox"
                   checked={draftBooleans.show_grading_costs}
                   onChange={(e) =>
                     setDraftBooleans((prev) => ({ ...prev, show_grading_costs: e.target.checked }))
                   }
-                  className="rounded border-neutral-700 bg-neutral-950"
+                  className="rounded border-border-default bg-bg-page"
                 />
                 Show grading costs
               </label>
             </div>
 
             <div className="mb-4">
-              <label className="flex items-center gap-2 text-xs text-neutral-400">
+              <label className="flex items-center gap-2 text-xs text-text-secondary">
                 Default timeframe
                 <select
                   value={draftTimeframe}
                   onChange={(e) => setDraftTimeframe(e.target.value as DashboardTimeframe)}
-                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100"
+                  className="rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary"
                 >
                   {DASHBOARD_TIMEFRAMES.map((tf) => (
                     <option key={tf} value={tf}>
@@ -428,30 +426,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={saveCustomization}
-                disabled={saving}
-                className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-              >
+              <ActionButton variant="primary" onClick={saveCustomization} disabled={saving}>
                 {saving ? "Saving…" : "Save"}
-              </button>
-              <button
-                type="button"
-                onClick={resetToDefaults}
-                disabled={saving}
-                className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
-              >
+              </ActionButton>
+              <ActionButton onClick={resetToDefaults} disabled={saving}>
                 Reset to defaults
-              </button>
-              <button
-                type="button"
-                onClick={() => setCustomizing(false)}
-                disabled={saving}
-                className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
-              >
+              </ActionButton>
+              <ActionButton onClick={() => setCustomizing(false)} disabled={saving}>
                 Cancel
-              </button>
+              </ActionButton>
             </div>
           </div>
         </div>
@@ -468,9 +451,9 @@ function WidgetCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="h-full rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+    <section className="panel h-full p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-200">{WIDGET_LABELS[id]}</h2>
+        <h2 className="text-sm font-semibold text-text-primary">{WIDGET_LABELS[id]}</h2>
         <Link
           href={WIDGET_LINKS[id]}
           className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -483,13 +466,24 @@ function WidgetCard({
   );
 }
 
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className="mt-0.5 text-sm font-medium text-neutral-100">{value}</div>
-    </div>
-  );
+/** Thin wrapper over the shared StatCard, keeping every WidgetRenderer case
+ * below unchanged - only this definition needed to move to the new design
+ * system for all of them to pick it up. */
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: StatTone;
+}) {
+  return <StatCard label={label} value={value} tone={tone} />;
+}
+
+function pnlTone(value: number | null | undefined): StatTone {
+  if (value === null || value === undefined || value === 0) return "neutral";
+  return value > 0 ? "good" : "bad";
 }
 
 function WidgetRenderer({
@@ -517,10 +511,11 @@ function WidgetRenderer({
             {preferences.show_raw_market_value && (
               <Stat
                 label="P&L vs market floor"
+                tone={pnlTone(w.pnl_vs_market_floor_jpy)}
                 value={
                   <>
                     {formatSignedJpy(w.pnl_vs_market_floor_jpy)}{" "}
-                    <span className="text-neutral-500">
+                    <span className="text-text-muted">
                       ({formatSignedPct(w.pnl_vs_market_floor_pct)})
                     </span>
                   </>
@@ -530,10 +525,11 @@ function WidgetRenderer({
             {preferences.show_graded_adjusted_value && (
               <Stat
                 label="P&L vs graded-adjusted"
+                tone={pnlTone(w.pnl_vs_graded_adjusted_jpy)}
                 value={
                   <>
                     {formatSignedJpy(w.pnl_vs_graded_adjusted_jpy)}{" "}
-                    <span className="text-neutral-500">
+                    <span className="text-text-muted">
                       ({formatSignedPct(w.pnl_vs_graded_adjusted_pct)})
                     </span>
                   </>
@@ -578,7 +574,7 @@ function WidgetRenderer({
               {w.items.slice(0, 5).map((item) => (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-2 text-xs text-neutral-300"
+                  className="flex items-center justify-between gap-2 text-xs text-text-secondary"
                 >
                   <span className="flex items-center gap-1.5 truncate">
                     <WishlistPriorityBadge priority={item.priority} />
@@ -586,7 +582,7 @@ function WidgetRenderer({
                       {cardDisplayName(item)}
                     </Link>
                   </span>
-                  <span className="whitespace-nowrap text-neutral-500">
+                  <span className="whitespace-nowrap text-text-muted">
                     {formatJpy(item.target_buy_price_jpy)}
                   </span>
                 </li>
@@ -608,17 +604,17 @@ function WidgetRenderer({
               {w.opportunities.map((opp) => (
                 <li
                   key={opp.event_id}
-                  className="flex items-center justify-between gap-2 text-xs text-neutral-300"
+                  className="flex items-center justify-between gap-2 text-xs text-text-secondary"
                 >
                   <span className="flex items-center gap-1.5 truncate">
-                    <span className="font-semibold text-neutral-100">{opp.score}</span>
+                    <span className="font-semibold text-text-primary">{opp.score}</span>
                     <OpportunityCategoryBadge category={opp.category} />
                     {opp.card_id !== null ? (
                       <Link href={`/cards/${opp.card_id}`} className="truncate hover:text-sky-400">
                         {cardDisplayName(opp)}
                       </Link>
                     ) : (
-                      <span className="truncate text-neutral-500">{opp.signal_type}</span>
+                      <span className="truncate text-text-muted">{opp.signal_type}</span>
                     )}
                   </span>
                 </li>
@@ -659,7 +655,7 @@ function WidgetRenderer({
                 <Stat label="Highest score" value={w.highest_score ?? "not available"} />
               </div>
               {w.deterministic_summary_lines.length > 0 && (
-                <ul className="space-y-1 text-xs text-neutral-400">
+                <ul className="space-y-1 text-xs text-text-secondary">
                   {w.deterministic_summary_lines.map((line, idx) => (
                     <li key={idx}>• {line}</li>
                   ))}
@@ -695,7 +691,7 @@ function WidgetRenderer({
               {w.events.map((event) => (
                 <li
                   key={event.id}
-                  className="flex items-center justify-between gap-2 text-xs text-neutral-300"
+                  className="flex items-center justify-between gap-2 text-xs text-text-secondary"
                 >
                   <span className="flex items-center gap-1.5 truncate">
                     <MarketSignalEventStatusBadge status={event.status} />
@@ -704,10 +700,10 @@ function WidgetRenderer({
                         {cardDisplayName(event)}
                       </Link>
                     ) : (
-                      <span className="truncate text-neutral-500">{event.signal_type}</span>
+                      <span className="truncate text-text-muted">{event.signal_type}</span>
                     )}
                   </span>
-                  <span className="whitespace-nowrap text-neutral-500">
+                  <span className="whitespace-nowrap text-text-muted">
                     {formatDateTime(event.last_seen_at)}
                   </span>
                 </li>
@@ -764,11 +760,11 @@ function WidgetRenderer({
           {hasIssues && (
             <Link
               href="/admin/logs"
-              className="mt-3 flex items-center gap-2 rounded border border-rose-900/50 bg-rose-950/30 px-2 py-1.5 text-xs text-rose-300 hover:bg-rose-950/50"
+              className="mt-3 flex items-center gap-2 rounded border border-signal-red/40 bg-signal-red/10 px-2 py-1.5 text-xs text-signal-red hover:bg-rose-950/50"
             >
               {w.error_count_24h > 0 && <span>{w.error_count_24h} error(s)</span>}
               {w.warning_count_24h > 0 && <span>{w.warning_count_24h} warning(s)</span>}
-              <span className="text-rose-400">in the last 24h - view logs</span>
+              <span className="text-signal-red">in the last 24h - view logs</span>
             </Link>
           )}
         </WidgetCard>

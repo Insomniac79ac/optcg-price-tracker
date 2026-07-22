@@ -7,6 +7,16 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton, type ActionButtonVariant } from "@/components/ui/ActionButton";
+import { AdminActionPanel } from "@/components/ui/AdminActionPanel";
+import { Badge } from "@/components/ui/Badge";
+import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type BulkMappingAction,
@@ -52,30 +62,35 @@ const ISSUE_TYPE_OPTIONS = [
 const RISK_STYLES: Record<string, string> = {
   ok: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
   review: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  warning: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-  critical: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  warning: "bg-amber-500/15 text-signal-warning ring-amber-500/30",
+  critical: "bg-rose-500/15 text-signal-red ring-rose-500/30",
 };
 
 const LIMIT_OPTIONS = [50, 100, 200, 500] as const;
 
 const DESTRUCTIVE_ACTIONS: BulkMappingAction[] = ["reject", "deactivate"];
 
-const BULK_ACTIONS: { action: BulkMappingAction; label: string; className: string }[] = [
-  { action: "approve", label: "Approve", className: "bg-emerald-800/60 text-emerald-200 hover:bg-emerald-700/60" },
-  { action: "reject", label: "Reject", className: "bg-rose-950/60 text-rose-300 hover:bg-rose-900/60" },
-  { action: "deactivate", label: "Deactivate", className: "bg-rose-950/60 text-rose-300 hover:bg-rose-900/60" },
-  { action: "activate", label: "Activate", className: "bg-neutral-800 text-neutral-200 hover:bg-neutral-700" },
-  { action: "mark_verified", label: "Mark verified", className: "bg-neutral-800 text-neutral-200 hover:bg-neutral-700" },
-  { action: "mark_pending", label: "Mark pending", className: "bg-neutral-800 text-neutral-200 hover:bg-neutral-700" },
+const BULK_ACTIONS: { action: BulkMappingAction; label: string; variant: ActionButtonVariant }[] = [
+  { action: "approve", label: "Approve", variant: "default" },
+  { action: "reject", label: "Reject", variant: "danger" },
+  { action: "deactivate", label: "Deactivate", variant: "danger" },
+  { action: "activate", label: "Activate", variant: "default" },
+  { action: "mark_verified", label: "Mark verified", variant: "default" },
+  { action: "mark_pending", label: "Mark pending", variant: "default" },
 ];
 
+function destructiveLabel(action: BulkMappingAction): string {
+  return action === "reject" ? "Reject" : "Deactivate";
+}
+
+/** Mapping risk has its own ok/review/warning/critical vocabulary (distinct
+ * from the app-wide low/medium/high/critical RiskBadge) - it's also the
+ * exact vocabulary the RISK_FILTERS segmented buttons above already use, so
+ * keeping this page's own labels/colors (on the shared Badge shell) avoids
+ * a mismatch between the filter buttons and the badges they filter by. */
 function RiskBadge({ level }: { level: string }) {
-  const style = RISK_STYLES[level] ?? "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30";
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${style}`}>
-      {level}
-    </span>
-  );
+  const style = RISK_STYLES[level] ?? "bg-neutral-500/15 text-text-secondary ring-neutral-500/30";
+  return <Badge label={level} className={`ring-1 ring-inset ${style}`} />;
 }
 
 export default function SourceMappingQualityPage() {
@@ -99,6 +114,12 @@ export default function SourceMappingQualityPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [pendingDestructive, setPendingDestructive] = useState<{
+    kind: "bulk" | "row";
+    action: BulkMappingAction;
+    mappingId?: number;
+  } | null>(null);
+  const [recheckConfirmOpen, setRecheckConfirmOpen] = useState(false);
 
   const [recheckLimit, setRecheckLimit] = useState(100);
   const [recheckResult, setRecheckResult] = useState<RecheckQualityResult | null>(null);
@@ -193,14 +214,7 @@ export default function SourceMappingQualityPage() {
     });
   }
 
-  async function runBulkAction(action: BulkMappingAction) {
-    if (selected.size === 0) return;
-    if (DESTRUCTIVE_ACTIONS.includes(action)) {
-      const confirmed = window.confirm(
-        `${action === "reject" ? "Reject" : "Deactivate"} ${selected.size} selected mapping(s)?`,
-      );
-      if (!confirmed) return;
-    }
+  async function executeBulkAction(action: BulkMappingAction) {
     setPendingAction(action);
     setActionError(null);
     try {
@@ -213,6 +227,15 @@ export default function SourceMappingQualityPage() {
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function runBulkAction(action: BulkMappingAction) {
+    if (selected.size === 0) return;
+    if (DESTRUCTIVE_ACTIONS.includes(action)) {
+      setPendingDestructive({ kind: "bulk", action });
+      return;
+    }
+    executeBulkAction(action);
   }
 
   async function runRecheck(dryRun: boolean) {
@@ -235,6 +258,11 @@ export default function SourceMappingQualityPage() {
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function confirmRecheckReal() {
+    setRecheckConfirmOpen(false);
+    runRecheck(false);
   }
 
   function openSuggested(item: MappingQualityItem) {
@@ -281,11 +309,7 @@ export default function SourceMappingQualityPage() {
     }
   }
 
-  async function quickAction(mappingId: number, action: BulkMappingAction) {
-    if (DESTRUCTIVE_ACTIONS.includes(action)) {
-      const confirmed = window.confirm(`${action === "reject" ? "Reject" : "Deactivate"} this mapping?`);
-      if (!confirmed) return;
-    }
+  async function executeQuickAction(mappingId: number, action: BulkMappingAction) {
     setPendingAction(`row-${mappingId}`);
     setActionError(null);
     try {
@@ -297,6 +321,22 @@ export default function SourceMappingQualityPage() {
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function quickAction(mappingId: number, action: BulkMappingAction) {
+    if (DESTRUCTIVE_ACTIONS.includes(action)) {
+      setPendingDestructive({ kind: "row", action, mappingId });
+      return;
+    }
+    executeQuickAction(mappingId, action);
+  }
+
+  function confirmDestructive() {
+    if (!pendingDestructive) return;
+    const { kind, action, mappingId } = pendingDestructive;
+    setPendingDestructive(null);
+    if (kind === "bulk") executeBulkAction(action);
+    else if (mappingId !== undefined) executeQuickAction(mappingId, action);
   }
 
   const allOnPageSelected = items.length > 0 && items.every((i) => selected.has(i.mapping_id));
@@ -321,86 +361,69 @@ export default function SourceMappingQualityPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">Source Mapping Quality</h1>
-            <Link
-              href="/admin/import-validation"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Import validation →
-            </Link>
-            <Link
-              href="/admin/catalog-coverage"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog coverage →
-            </Link>
-            <Link
-              href="/admin/price-source-health"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Price source health →
-            </Link>
-            <Link
-              href="/admin/catalog-ops"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog operations →
-            </Link>
-          </div>
-          <AdminLogoutButton />
+        <PageHeader
+          title="Source Mapping Quality"
+          description="Review mapping confidence, mismatches, stale mappings, and duplicate source URLs."
+          actions={<AdminLogoutButton />}
+        />
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
+          <Link href="/admin/import-validation" className="text-sky-400 hover:underline">
+            Import validation →
+          </Link>
+          <Link href="/admin/catalog-coverage" className="text-sky-400 hover:underline">
+            Catalog coverage →
+          </Link>
+          <Link href="/admin/price-source-health" className="text-sky-400 hover:underline">
+            Price source health →
+          </Link>
+          <Link href="/admin/catalog-ops" className="text-sky-400 hover:underline">
+            Catalog operations →
+          </Link>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          Review mapping confidence, mismatches, stale mappings, and duplicate source URLs.
-        </p>
 
         {unauthorized && <AdminAuthGate onTokenSaved={() => window.location.reload()} />}
 
         {!unauthorized && (
           <>
             {summary && (
-              <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+              <StatGrid>
                 {summaryCards.map((c) => (
-                  <div key={c.label} className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="text-xs text-neutral-500">{c.label}</div>
-                    <div className="text-lg font-semibold text-neutral-100">{c.value}</div>
-                  </div>
+                  <StatCard key={c.label} label={c.label} value={c.value} />
                 ))}
-              </div>
+              </StatGrid>
             )}
 
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <select value={source} onChange={(e) => setSource(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+            <FilterBar>
+              <select value={source} onChange={(e) => setSource(e.target.value)} className={FILTER_INPUT_CLASS}>
                 <option value="">Any source</option>
                 <option value="yuyutei">yuyutei</option>
                 <option value="snkrdunk">snkrdunk</option>
               </select>
-              <select value={reviewStatus} onChange={(e) => setReviewStatus(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+              <select value={reviewStatus} onChange={(e) => setReviewStatus(e.target.value)} className={FILTER_INPUT_CLASS}>
                 {REVIEW_STATUS_OPTIONS.map((v) => (
                   <option key={v} value={v}>
                     {v || "Any review status"}
                   </option>
                 ))}
               </select>
-              <select value={isActive} onChange={(e) => setIsActive(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+              <select value={isActive} onChange={(e) => setIsActive(e.target.value)} className={FILTER_INPUT_CLASS}>
                 <option value="">Active: any</option>
                 <option value="true">Active only</option>
                 <option value="false">Inactive only</option>
               </select>
-              <select value={manualVerified} onChange={(e) => setManualVerified(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+              <select value={manualVerified} onChange={(e) => setManualVerified(e.target.value)} className={FILTER_INPUT_CLASS}>
                 <option value="">Verified: any</option>
                 <option value="true">Verified only</option>
                 <option value="false">Unverified only</option>
               </select>
-              <select value={confidenceLabel} onChange={(e) => setConfidenceLabel(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+              <select value={confidenceLabel} onChange={(e) => setConfidenceLabel(e.target.value)} className={FILTER_INPUT_CLASS}>
                 {CONFIDENCE_LABEL_OPTIONS.map((v) => (
                   <option key={v} value={v}>
                     {v || "Any confidence"}
                   </option>
                 ))}
               </select>
-              <select value={issueType} onChange={(e) => setIssueType(e.target.value)} className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100">
+              <select value={issueType} onChange={(e) => setIssueType(e.target.value)} className={FILTER_INPUT_CLASS}>
                 {ISSUE_TYPE_OPTIONS.map((v) => (
                   <option key={v} value={v}>
                     {v || "Any issue type"}
@@ -411,59 +434,57 @@ export default function SourceMappingQualityPage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search URL / source id / card code…"
-                className="w-56 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-56 ${FILTER_INPUT_CLASS}`}
               />
-            </div>
+            </FilterBar>
 
-            <div className="mb-4 flex gap-1">
+            <div className="mb-4 flex flex-wrap gap-1">
               {RISK_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setRiskLevel(f.value)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                  className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
                     riskLevel === f.value
-                      ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                      : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                      ? "bg-accent-gold text-black/80 ring-accent-gold"
+                      : "bg-bg-surface text-text-secondary ring-border-default hover:text-text-primary"
                   }`}
                 >
                   {f.label}
                 </button>
               ))}
-              <button
-                onClick={() => setBulkToolsOpen((v) => !v)}
-                className="ml-auto rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-              >
+              <ActionButton className="ml-auto" onClick={() => setBulkToolsOpen((v) => !v)}>
                 {bulkToolsOpen ? "Hide bulk tools" : "Bulk tools…"}
-              </button>
+              </ActionButton>
             </div>
 
             {bulkToolsOpen && (
-              <div className="mb-4 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-neutral-500">Recheck quality (uses current source/review/active/verified filters):</span>
+              <AdminActionPanel
+                description="Recheck quality (uses current source/review/active/verified filters):"
+              >
+                <div className="flex w-full flex-wrap items-center gap-2">
                   <input
                     type="number"
                     value={recheckLimit}
                     onChange={(e) => setRecheckLimit(Number(e.target.value) || 100)}
-                    className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={`w-24 ${FILTER_INPUT_CLASS}`}
                   />
-                  <button
+                  <ActionButton
+                    variant="dry-run"
                     onClick={() => runRecheck(true)}
                     disabled={pendingAction === "recheck-dry"}
-                    className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
                   >
                     Dry run
-                  </button>
-                  <button
-                    onClick={() => runRecheck(false)}
+                  </ActionButton>
+                  <ActionButton
+                    variant="danger"
+                    onClick={() => setRecheckConfirmOpen(true)}
                     disabled={pendingAction === "recheck-real"}
-                    className="rounded bg-emerald-800/60 px-2.5 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                   >
                     Apply real run
-                  </button>
+                  </ActionButton>
                 </div>
                 {recheckResult && (
-                  <div className="mb-3 flex flex-wrap gap-4 text-xs text-neutral-400">
+                  <div className="mt-3 flex w-full flex-wrap gap-4 text-xs text-text-secondary">
                     <span>dry_run: {String(recheckResult.dry_run)}</span>
                     <span>selected: {recheckResult.summary.selected}</span>
                     <span>would_update: {recheckResult.summary.would_update}</span>
@@ -475,103 +496,96 @@ export default function SourceMappingQualityPage() {
                   </div>
                 )}
 
-                <div className="mb-2 text-xs text-neutral-500">
+                <div className="mt-3 w-full text-xs text-text-muted">
                   Bulk actions apply to {selected.size} selected mapping{selected.size === 1 ? "" : "s"}:
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-wrap gap-2">
                   {BULK_ACTIONS.map((a) => (
-                    <button
+                    <ActionButton
                       key={a.action}
+                      variant={a.variant}
                       onClick={() => runBulkAction(a.action)}
                       disabled={selected.size === 0 || pendingAction === a.action}
-                      className={`rounded px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${a.className}`}
                     >
                       {a.label}
-                    </button>
+                    </ActionButton>
                   ))}
                 </div>
                 {bulkResults && (
-                  <div className="mt-3 text-xs text-neutral-400">
+                  <div className="mt-3 w-full text-xs text-text-secondary">
                     {bulkResults.action}: {bulkResults.results.filter((r) => r.ok).length}/{bulkResults.results.length} succeeded
                     {bulkResults.results.some((r) => !r.ok) && (
-                      <span className="text-rose-400">
+                      <span className="text-signal-red">
                         {" "}
                         (failed: {bulkResults.results.filter((r) => !r.ok).map((r) => r.mapping_id).join(", ")})
                       </span>
                     )}
                   </div>
                 )}
-              </div>
+              </AdminActionPanel>
             )}
 
             {actionError && (
-              <div className="mb-4 rounded-lg border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">{actionError}</div>
+              <div className="mb-4 rounded-panel border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">{actionError}</div>
             )}
 
-            {status === "loading" && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">Loading mappings…</div>
-            )}
+            {status === "loading" && <LoadingState>Loading mappings…</LoadingState>}
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                Failed to load source mappings from the API. Is the backend running?
-              </div>
-            )}
-            {status === "ready" && items.length === 0 && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">No mappings found.</div>
+              <ErrorState>Failed to load source mappings from the API. Is the backend running?</ErrorState>
             )}
 
-            {status === "ready" && items.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-neutral-800">
-                <table className="w-full border-collapse text-sm">
+            {status === "ready" && (
+              <DataTableShell isEmpty={items.length === 0} emptyLabel="No mappings found.">
+                <table className="data-table">
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                      <th className="px-3 py-2">
+                    <tr>
+                      <th>
                         <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAllOnPage} />
                       </th>
-                      <th className="px-3 py-2 font-medium">Risk</th>
-                      <th className="px-3 py-2 font-medium">Issues</th>
-                      <th className="px-3 py-2 font-medium">Source</th>
-                      <th className="px-3 py-2 font-medium">Mapped card</th>
-                      <th className="px-3 py-2 font-medium">URL</th>
-                      <th className="px-3 py-2 font-medium">Active</th>
-                      <th className="px-3 py-2 font-medium">Verified</th>
-                      <th className="px-3 py-2 font-medium">Review</th>
-                      <th className="px-3 py-2 font-medium text-right">Score</th>
-                      <th className="px-3 py-2 font-medium">Confidence</th>
-                      <th className="px-3 py-2 font-medium">Latest price</th>
-                      <th className="px-3 py-2 font-medium">Last checked</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
+                      <th>Risk</th>
+                      <th>Issues</th>
+                      <th>Source</th>
+                      <th>Mapped card</th>
+                      <th>URL</th>
+                      <th>Active</th>
+                      <th>Verified</th>
+                      <th>Review</th>
+                      <th className="text-right">Score</th>
+                      <th>Confidence</th>
+                      <th>Latest price</th>
+                      <th>Last checked</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr key={item.mapping_id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                        <td className="px-3 py-2">
+                      <tr key={item.mapping_id}>
+                        <td>
                           <input type="checkbox" checked={selected.has(item.mapping_id)} onChange={() => toggleSelect(item.mapping_id)} />
                         </td>
-                        <td className="px-3 py-2">
+                        <td>
                           <RiskBadge level={item.risk_level} />
                         </td>
-                        <td className="px-3 py-2 max-w-[12rem]">
+                        <td className="max-w-[12rem]">
                           <div className="flex flex-wrap gap-1">
                             {item.issue_types.map((t) => (
-                              <span key={t} className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
+                              <span key={t} className="rounded-control bg-bg-elevated px-1.5 py-0.5 text-[11px] text-text-secondary">
                                 {t}
                               </span>
                             ))}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-neutral-400">{item.source_name ?? "—"}</td>
-                        <td className="px-3 py-2 text-neutral-300">
+                        <td className="text-text-secondary">{item.source_name ?? "—"}</td>
+                        <td className="text-text-secondary">
                           {item.card_id ? (
-                            <Link href={`/cards/${item.card_id}`} className="text-sky-400 hover:underline">
+                            <Link href={`/cards/${item.card_id}`} className="mono text-sky-400 hover:underline">
                               {item.card_code ?? item.card_id}
                             </Link>
                           ) : (
                             "—"
                           )}
                         </td>
-                        <td className="px-3 py-2 max-w-[10rem] truncate">
+                        <td className="max-w-[10rem] truncate">
                           {item.source_url ? (
                             <a href={item.source_url} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">
                               link
@@ -580,42 +594,38 @@ export default function SourceMappingQualityPage() {
                             "—"
                           )}
                         </td>
-                        <td className="px-3 py-2 text-neutral-400">{item.is_active ? "yes" : "no"}</td>
-                        <td className="px-3 py-2 text-neutral-400">{item.manual_verified ? "yes" : "no"}</td>
-                        <td className="px-3 py-2 text-neutral-400">{item.review_status}</td>
-                        <td className="px-3 py-2 text-right text-neutral-400">{item.match_confidence ?? "—"}</td>
-                        <td className="px-3 py-2 text-neutral-400">{item.match_confidence_label}</td>
-                        <td className="px-3 py-2 text-xs text-neutral-500">{formatDateTime(item.latest_price_observed_at)}</td>
-                        <td className="px-3 py-2 text-xs text-neutral-500">{formatDateTime(item.last_match_checked_at)}</td>
-                        <td className="px-3 py-2">
+                        <td className="text-text-secondary">{item.is_active ? "yes" : "no"}</td>
+                        <td className="text-text-secondary">{item.manual_verified ? "yes" : "no"}</td>
+                        <td className="text-text-secondary">{item.review_status}</td>
+                        <td className="mono tabular text-right text-text-secondary">{item.match_confidence ?? "—"}</td>
+                        <td>
+                          <ConfidenceBadge level={item.match_confidence_label} />
+                        </td>
+                        <td className="mono text-xs text-text-muted">{formatDateTime(item.latest_price_observed_at)}</td>
+                        <td className="mono text-xs text-text-muted">{formatDateTime(item.last_match_checked_at)}</td>
+                        <td>
                           <div className="flex flex-wrap gap-1.5">
-                            <button
-                              onClick={() => openSuggested(item)}
-                              className="rounded bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-                            >
-                              Suggested cards
-                            </button>
-                            <button
+                            <ActionButton onClick={() => openSuggested(item)}>Suggested cards</ActionButton>
+                            <ActionButton
                               onClick={() => quickAction(item.mapping_id, "approve")}
                               disabled={pendingAction === `row-${item.mapping_id}`}
-                              className="rounded bg-emerald-800/60 px-2 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                             >
                               Approve
-                            </button>
-                            <button
+                            </ActionButton>
+                            <ActionButton
+                              variant="danger"
                               onClick={() => quickAction(item.mapping_id, "reject")}
                               disabled={pendingAction === `row-${item.mapping_id}`}
-                              className="rounded bg-rose-950/60 px-2 py-1 text-xs font-medium text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
                             >
                               Reject
-                            </button>
+                            </ActionButton>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTableShell>
             )}
 
             {status === "ready" && (
@@ -628,11 +638,11 @@ export default function SourceMappingQualityPage() {
 
         {detailMapping && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-5">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-modal border border-border-default bg-bg-elevated p-5">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-neutral-100">Suggested cards</h2>
-                  <div className="text-xs text-neutral-500">
+                  <h2 className="text-base font-semibold text-text-primary">Suggested cards</h2>
+                  <div className="text-xs text-text-muted">
                     Mapping {detailMapping.mapping_id} — {detailMapping.source_card_id}
                   </div>
                   {detailMapping.source_url && (
@@ -641,46 +651,47 @@ export default function SourceMappingQualityPage() {
                     </a>
                   )}
                 </div>
-                <button onClick={closeDetail} className="rounded px-2 py-1 text-xs font-medium text-neutral-400 hover:text-neutral-100">
+                <button onClick={closeDetail} className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary">
                   Close
                 </button>
               </div>
 
-              {detailLoading && <div className="p-6 text-center text-sm text-neutral-500">Loading suggested cards…</div>}
-              {detailError && <div className="rounded border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">{detailError}</div>}
+              {detailLoading && <p className="p-6 text-center text-sm text-text-muted">Loading suggested cards…</p>}
+              {detailError && (
+                <div className="rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
+                  {detailError}
+                </div>
+              )}
 
               {!detailLoading && detailData && (
                 <>
                   {detailData.matches.length === 0 && (
-                    <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-500">
-                      No candidate cards above the scoring threshold.
-                    </div>
+                    <EmptyState>No candidate cards above the scoring threshold.</EmptyState>
                   )}
                   <div className="mb-4 space-y-2">
                     {detailData.matches.map((match) => (
-                      <div key={match.card_id} className="rounded border border-neutral-800 bg-neutral-900 p-3">
+                      <div key={match.card_id} className="panel p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-sm font-medium text-neutral-100">
-                            {match.card_code} — {match.name_en ?? match.name_jp}
+                          <div className="text-sm font-medium text-text-primary">
+                            <span className="mono">{match.card_code}</span> — {match.name_en ?? match.name_jp}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-neutral-400">
+                            <span className="mono tabular text-xs text-text-secondary">
                               score {match.score} ({match.confidence_label})
                             </span>
-                            <button
+                            <ActionButton
                               onClick={() => handleReplace(match.card_id, false)}
                               disabled={pendingAction === `replace-${detailMapping.mapping_id}`}
-                              className="rounded bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
                             >
                               Replace
-                            </button>
-                            <button
+                            </ActionButton>
+                            <ActionButton
+                              variant="primary"
                               onClick={() => handleReplace(match.card_id, true)}
                               disabled={pendingAction === `replace-${detailMapping.mapping_id}`}
-                              className="rounded bg-emerald-800/60 px-2 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                             >
                               Replace &amp; approve
-                            </button>
+                            </ActionButton>
                           </div>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -690,12 +701,12 @@ export default function SourceMappingQualityPage() {
                             </span>
                           ))}
                           {match.explanation.negative.map((n) => (
-                            <span key={n} className="text-rose-400">
+                            <span key={n} className="text-signal-red">
                               − {n}
                             </span>
                           ))}
                           {match.explanation.caps_applied.map((c) => (
-                            <span key={c} className="text-amber-400">
+                            <span key={c} className="text-signal-warning">
                               cap: {c}
                             </span>
                           ))}
@@ -704,19 +715,19 @@ export default function SourceMappingQualityPage() {
                     ))}
                   </div>
 
-                  <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="mb-2 text-xs font-medium text-neutral-400">Replace with a different card</div>
-                    <div className="flex flex-wrap items-center gap-2">
+                  <div className="panel mb-3 p-3">
+                    <div className="mb-2 text-xs font-medium text-text-secondary">Replace with a different card</div>
+                    <FilterBar>
                       <input
                         value={cardQuery}
                         onChange={(e) => setCardQuery(e.target.value)}
                         placeholder="Search by card code or name…"
-                        className="w-56 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                        className={`w-56 ${FILTER_INPUT_CLASS}`}
                       />
                       <select
                         value={selectedCardId ?? ""}
                         onChange={(e) => setSelectedCardId(e.target.value ? Number(e.target.value) : null)}
-                        className="w-64 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                        className={`w-64 ${FILTER_INPUT_CLASS}`}
                       >
                         <option value="">Select a card…</option>
                         {filteredCards.map((card) => (
@@ -729,29 +740,60 @@ export default function SourceMappingQualityPage() {
                         value={reviewNotes}
                         onChange={(e) => setReviewNotes(e.target.value)}
                         placeholder="Review notes (optional)…"
-                        className="w-56 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                        className={`w-56 ${FILTER_INPUT_CLASS}`}
                       />
-                      <button
+                      <ActionButton
                         onClick={() => selectedCardId !== null && handleReplace(selectedCardId, false)}
                         disabled={selectedCardId === null || pendingAction === `replace-${detailMapping.mapping_id}`}
-                        className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
                       >
                         Replace
-                      </button>
-                      <button
+                      </ActionButton>
+                      <ActionButton
+                        variant="primary"
                         onClick={() => selectedCardId !== null && handleReplace(selectedCardId, true)}
                         disabled={selectedCardId === null || pendingAction === `replace-${detailMapping.mapping_id}`}
-                        className="rounded bg-emerald-800/60 px-2.5 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                       >
                         Replace &amp; approve
-                      </button>
-                    </div>
+                      </ActionButton>
+                    </FilterBar>
                   </div>
                 </>
               )}
             </div>
           </div>
         )}
+
+        <ConfirmActionModal
+          open={pendingDestructive !== null}
+          title={pendingDestructive ? `${destructiveLabel(pendingDestructive.action)} mapping${pendingDestructive.kind === "bulk" ? "s" : ""}` : ""}
+          description={
+            pendingDestructive?.kind === "bulk"
+              ? `${destructiveLabel(pendingDestructive.action)} ${selected.size} selected mapping${selected.size === 1 ? "" : "s"}? This cannot be undone from here.`
+              : `${pendingDestructive ? destructiveLabel(pendingDestructive.action) : ""} this mapping?`
+          }
+          confirmLabel={pendingDestructive ? destructiveLabel(pendingDestructive.action) : "Confirm"}
+          onConfirm={confirmDestructive}
+          onCancel={() => setPendingDestructive(null)}
+        />
+
+        <ConfirmActionModal
+          open={recheckConfirmOpen}
+          title="Apply real recheck run"
+          description="This updates risk/confidence scoring for mappings matching the current filters. Dry-run first to preview affected counts."
+          affectedRecords={
+            recheckResult
+              ? [
+                  { label: "selected", value: recheckResult.summary.selected },
+                  { label: "would_update", value: recheckResult.summary.would_update },
+                ]
+              : undefined
+          }
+          confirmPhrase="RUN"
+          confirmLabel="Apply real run"
+          pending={pendingAction === "recheck-real"}
+          onConfirm={confirmRecheckReal}
+          onCancel={() => setRecheckConfirmOpen(false)}
+        />
       </main>
     </div>
   );

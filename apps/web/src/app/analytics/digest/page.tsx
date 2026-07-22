@@ -6,6 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { RiskBadge, type RiskLevel } from "@/components/ui/RiskBadge";
+import { StatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   AdminNotFoundError,
@@ -29,12 +33,12 @@ type ValuationMode = "raw_market" | "graded_adjusted";
 type DataMode = "live" | "latest";
 type HistoryStatus = "loading" | "error" | "ready";
 
-const LEVEL_STYLES: Record<string, string> = {
-  low: "text-emerald-400",
-  medium: "text-amber-400",
-  high: "text-orange-400",
-  critical: "text-rose-400",
-};
+function riskTone(level: string): StatTone {
+  const normalized = level as RiskLevel;
+  if (normalized === "low") return "good";
+  if (normalized === "high" || normalized === "critical") return "bad";
+  return "neutral";
+}
 
 const PRIORITY_SECTIONS: { key: keyof AnalyticsDigestPriorityItems; title: string }[] = [
   { key: "top_buy_decisions", title: "Top buy decisions" },
@@ -128,7 +132,7 @@ export default function AnalyticsDigestPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex flex-wrap items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Analytics Digest</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Analytics Digest</h1>
           <Link href="/analytics/collection" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
             Collection →
           </Link>
@@ -148,19 +152,19 @@ export default function AnalyticsDigestPage() {
             Portfolio risk →
           </Link>
         </div>
-        <p className="mb-1 text-sm text-neutral-500">
+        <p className="mb-1 text-sm text-text-muted">
           Collection, wishlist, grading, buy/sell decisions, and portfolio risk in one view.
         </p>
-        <p className="mb-4 text-xs text-neutral-600">
+        <p className="mb-4 text-xs text-text-faint">
           Risk score is deterministic from your tracker data and should be reviewed manually.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
               Valuation mode
             </label>
-            <div className="flex overflow-hidden rounded border border-neutral-700 text-xs">
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {(["raw_market", "graded_adjusted"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -169,7 +173,7 @@ export default function AnalyticsDigestPage() {
                   className={`px-2.5 py-1 ${
                     valuationMode === mode
                       ? "bg-sky-500/20 text-sky-300"
-                      : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {mode === "raw_market" ? "Raw market" : "Graded adjusted"}
@@ -179,10 +183,10 @@ export default function AnalyticsDigestPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
               Data source
             </label>
-            <div className="flex overflow-hidden rounded border border-neutral-700 text-xs">
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {(["live", "latest"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -191,7 +195,7 @@ export default function AnalyticsDigestPage() {
                   className={`px-2.5 py-1 ${
                     dataMode === mode
                       ? "bg-sky-500/20 text-sky-300"
-                      : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {mode === "live" ? "Live calculation" : "Latest stored report"}
@@ -201,17 +205,12 @@ export default function AnalyticsDigestPage() {
           </div>
 
           {hasAdminToken && (
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating}
-              className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
-            >
+            <ActionButton variant="primary" onClick={handleGenerate} disabled={generating}>
               {generating ? "Generating…" : "Generate new digest"}
-            </button>
+            </ActionButton>
           )}
         </div>
-        {generateError && <p className="mb-4 text-xs text-rose-400">{generateError}</p>}
+        {generateError && <p className="mb-4 text-xs text-signal-red">{generateError}</p>}
 
         {status === "loading" && <LoadingState>Loading analytics digest…</LoadingState>}
         {status === "unauthorized" && <ErrorState>Sign in to view the analytics digest.</ErrorState>}
@@ -249,46 +248,24 @@ function Section({
 }) {
   return (
     <section className={last ? "mb-2" : "mb-8"}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-  valueClassName,
-}: {
-  label: string;
-  value: number | string;
-  tone?: "good" | "bad";
-  valueClassName?: string;
-}) {
-  const toneClass =
-    valueClassName ?? (tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100");
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
-}
-
 function SummaryCards({ digest }: { digest: AnalyticsDigest | AnalyticsDigestReport }) {
   const s = digest.summary;
-  const levelClass = LEVEL_STYLES[s.portfolio_risk_level] ?? "text-neutral-100";
   return (
     <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       <StatCard label="Collection value" value={formatJPY(s.collection_value_jpy)} />
       <StatCard label="Graded adjusted value" value={formatJPY(s.graded_adjusted_value_jpy)} />
-      <StatCard label="Portfolio risk score" value={s.portfolio_risk_score} valueClassName={levelClass} />
       <StatCard
-        label="Portfolio risk level"
-        value={s.portfolio_risk_level}
-        valueClassName={`uppercase ${levelClass}`}
+        label="Portfolio risk score"
+        value={s.portfolio_risk_score}
+        tone={riskTone(s.portfolio_risk_level)}
       />
+      <StatCard label="Portfolio risk level" value={<RiskBadge level={s.portfolio_risk_level} />} />
       <StatCard label="Wishlist target hits" value={formatNumber(s.wishlist_target_hits)} />
       <StatCard label="Buy review count" value={formatNumber(s.buy_review_count)} />
       <StatCard label="Sell review count" value={formatNumber(s.sell_review_count)} />
@@ -314,7 +291,7 @@ function DeterministicSummarySection({ lines }: { lines: string[] }) {
       {lines.length === 0 ? (
         <EmptyState variant="inline">No summary lines.</EmptyState>
       ) : (
-        <ul className="list-disc space-y-1 rounded-lg border border-neutral-800 bg-neutral-900 px-8 py-4 text-sm text-neutral-300">
+        <ul className="list-disc space-y-1 rounded-panel border border-border-default bg-bg-surface px-8 py-4 text-sm text-text-secondary">
           {lines.map((line, i) => (
             <li key={i}>{line}</li>
           ))}
@@ -338,19 +315,19 @@ function PriorityItemsSection({ priorityItems }: { priorityItems: AnalyticsDiges
 
 function PriorityItemList({ title, items }: { title: string; items: AnalyticsDigestPriorityItem[] }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+    <div className="rounded-panel border border-border-default bg-bg-surface px-4 py-3">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
       {items.length === 0 ? (
-        <p className="text-xs text-neutral-600">None.</p>
+        <p className="text-xs text-text-faint">None.</p>
       ) : (
         <ul className="space-y-2">
           {items.map((item, i) => (
-            <li key={i} className="border-t border-neutral-800 pt-2 text-sm first:border-t-0 first:pt-0">
+            <li key={i} className="border-t border-border-default pt-2 text-sm first:border-t-0 first:pt-0">
               <Link href={item.link} className="text-sky-400 hover:text-sky-300">
                 {formatNullable(item.card_code, (v) => v)}
               </Link>
-              {item.name_en && <span className="ml-1 text-xs text-neutral-500">{item.name_en}</span>}
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
+              {item.name_en && <span className="ml-1 text-xs text-text-muted">{item.name_en}</span>}
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
                 {item.score !== null && <span>Score: {item.score}</span>}
                 {item.risk_level !== null && <span>Risk: {item.risk_level}</span>}
                 {item.severity !== null && <SeverityBadge severity={item.severity} />}
@@ -374,14 +351,14 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+    <div className="rounded-panel border border-border-default bg-bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
         <Link href={href} className="text-xs text-sky-400 hover:text-sky-300">
           View →
         </Link>
       </div>
-      <dl className="space-y-1 text-sm text-neutral-300">{children}</dl>
+      <dl className="space-y-1 text-sm text-text-secondary">{children}</dl>
     </div>
   );
 }
@@ -389,7 +366,7 @@ function SectionCard({
 function SectionRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <dt className="text-neutral-500">{label}</dt>
+      <dt className="text-text-muted">{label}</dt>
       <dd>{value}</dd>
     </div>
   );
@@ -470,39 +447,42 @@ function DigestHistorySection({
     <Section title="Digest history" last>
       {status === "loading" && <LoadingState>Loading digest history…</LoadingState>}
       {status === "error" && <ErrorState>Failed to load digest history.</ErrorState>}
-      {status === "ready" && history && history.reports.length === 0 && (
-        <EmptyState variant="inline">No stored digests yet.</EmptyState>
-      )}
-      {status === "ready" && history && history.reports.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500">
+      {status === "ready" && history && (
+        <DataTableShell isEmpty={history.reports.length === 0} emptyLabel="No stored digests yet.">
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-3 py-2">Created</th>
-                <th className="px-3 py-2">Valuation mode</th>
-                <th className="px-3 py-2 text-right">Collection value</th>
-                <th className="px-3 py-2 text-right">Risk score</th>
-                <th className="px-3 py-2">Risk level</th>
-                <th className="px-3 py-2 text-right">Buy review</th>
-                <th className="px-3 py-2 text-right">Sell review</th>
-                <th className="px-3 py-2" />
+                <th>Created</th>
+                <th>Valuation mode</th>
+                <th className="text-right">Collection value</th>
+                <th className="text-right">Risk score</th>
+                <th>Risk level</th>
+                <th className="text-right">Buy review</th>
+                <th className="text-right">Sell review</th>
+                <th />
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800">
+            <tbody>
               {history.reports.map((r) => (
                 <tr key={r.id}>
-                  <td className="px-3 py-2 text-neutral-300">{formatDateTime(r.created_at)}</td>
-                  <td className="px-3 py-2 text-neutral-300">{r.valuation_mode}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatJPY(r.collection_value_jpy)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">
+                  <td className="mono tabular text-text-secondary">{formatDateTime(r.created_at)}</td>
+                  <td className="text-text-secondary">{r.valuation_mode}</td>
+                  <td className="mono tabular text-right text-text-secondary">
+                    {formatJPY(r.collection_value_jpy)}
+                  </td>
+                  <td className="mono tabular text-right text-text-secondary">
                     {formatNullable(r.portfolio_risk_score, (v) => String(v))}
                   </td>
-                  <td className="px-3 py-2 text-neutral-300">
-                    {formatNullable(r.portfolio_risk_level, (v) => v)}
+                  <td>
+                    {r.portfolio_risk_level ? (
+                      <RiskBadge level={r.portfolio_risk_level} />
+                    ) : (
+                      <span className="text-text-faint">not available</span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(r.buy_review_count)}</td>
-                  <td className="px-3 py-2 text-right text-neutral-300">{formatNumber(r.sell_review_count)}</td>
-                  <td className="px-3 py-2">
+                  <td className="mono tabular text-right text-text-secondary">{formatNumber(r.buy_review_count)}</td>
+                  <td className="mono tabular text-right text-text-secondary">{formatNumber(r.sell_review_count)}</td>
+                  <td>
                     <button
                       type="button"
                       onClick={() => onView(r.id)}
@@ -515,7 +495,7 @@ function DigestHistorySection({
               ))}
             </tbody>
           </table>
-        </div>
+        </DataTableShell>
       )}
     </Section>
   );

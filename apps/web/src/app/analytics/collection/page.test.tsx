@@ -10,6 +10,7 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/",
 }));
 
 // jsdom has no ResizeObserver - recharts' ResponsiveContainer needs one, but

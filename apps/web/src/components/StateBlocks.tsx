@@ -1,16 +1,23 @@
 import type { ReactNode } from "react";
 
+import { SkeletonRows } from "@/components/ui/SkeletonBlock";
+
 /** The loading/error/empty "box" markup repeated near-verbatim across most
  * admin and list pages (system-check, performance, data-retention, logs,
  * collection, wishlist, market opportunities, ...) - centralized here so a
  * page swaps in a component instead of retyping the same className string,
  * not to change how any of them look. */
-const BLOCK_BASE = "rounded-lg border p-8 text-center text-sm";
+const BLOCK_BASE = "rounded-panel border p-8 text-center text-sm";
 
-/** Full-width "still loading" block. */
+/** Full-width "still loading" block - a quiet skeleton shimmer plus the
+ * caption text (kept, not decorative-only, since several pages' tests
+ * assert on the exact loading caption, e.g. "Loading dashboard…"). */
 export function LoadingState({ children = "Loading…" }: { children?: ReactNode }) {
   return (
-    <div className={`${BLOCK_BASE} border-neutral-800 bg-neutral-900 text-neutral-500`}>
+    <div className={`${BLOCK_BASE} border-border-default bg-bg-surface text-text-muted`}>
+      <div className="mx-auto mb-3 max-w-xs">
+        <SkeletonRows rows={2} />
+      </div>
       {children}
     </div>
   );
@@ -26,7 +33,7 @@ export function ErrorState({
   action?: ReactNode;
 }) {
   return (
-    <div className={`${BLOCK_BASE} border-rose-900/50 bg-rose-950/30 text-rose-300`}>
+    <div className={`${BLOCK_BASE} border-signal-red/40 bg-signal-red/10 text-signal-red`}>
       <p>{children}</p>
       {action && <div className="mt-3">{action}</div>}
     </div>
@@ -37,7 +44,9 @@ export function ErrorState({
  * style as LoadingState/ErrorState - use it for a whole page/section with no
  * results (e.g. "no items match the selected filters"). `variant="inline"`
  * is the lighter plain-text style already used inside dashboard widget
- * cards, for when a full-width box would be too heavy in that context. */
+ * cards, for when a full-width box would be too heavy in that context.
+ * Deliberately plain/quiet ("vault, empty" not a bright SaaS illustration
+ * or anime art - see docs "do not do" list). */
 export function EmptyState({
   children,
   variant = "block",
@@ -46,10 +55,10 @@ export function EmptyState({
   variant?: "block" | "inline";
 }) {
   if (variant === "inline") {
-    return <p className="text-xs text-neutral-500">{children}</p>;
+    return <p className="text-xs text-text-muted">{children}</p>;
   }
   return (
-    <div className={`${BLOCK_BASE} border-neutral-800 bg-neutral-900 text-neutral-500`}>
+    <div className={`${BLOCK_BASE} border-border-default bg-bg-surface text-text-muted`}>
       {children}
     </div>
   );
@@ -67,5 +76,5 @@ export function MissingValue({
   label?: string;
   italic?: boolean;
 }) {
-  return <span className={italic ? "italic text-neutral-600" : "text-neutral-600"}>{label}</span>;
+  return <span className={italic ? "italic text-text-faint" : "text-text-faint"}>{label}</span>;
 }

@@ -7,6 +7,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { BuyDecisionActionGroups } from "@/components/BuyDecisionActionGroups";
 import { BuyDecisionCandidateTable } from "@/components/BuyDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   fetchBuyDecisions,
@@ -101,7 +103,7 @@ export default function BuyDecisionsPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <div className="mb-1 flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Buy Decision Support</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Buy Decision Support</h1>
           <Link
             href="/wishlist"
             className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
@@ -127,19 +129,19 @@ export default function BuyDecisionsPage() {
             Digest →
           </Link>
         </div>
-        <p className="mb-1 text-sm text-neutral-500">
+        <p className="mb-1 text-sm text-text-muted">
           Review wishlist cards that may be worth buying, waiting on, skipping, or monitoring.
         </p>
-        <p className="mb-4 text-xs text-neutral-600">
+        <p className="mb-4 text-xs text-text-faint">
           Signals are deterministic from your tracker data. Review manually before buying.
         </p>
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+            <label className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
               Source preference
             </label>
-            <div className="flex overflow-hidden rounded border border-neutral-700 text-xs">
+            <div className="flex overflow-hidden rounded border border-border-default text-xs">
               {SOURCE_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -148,7 +150,7 @@ export default function BuyDecisionsPage() {
                   className={`px-2.5 py-1 ${
                     sourcePreference === opt.value
                       ? "bg-sky-500/20 text-sky-300"
-                      : "bg-neutral-900 text-neutral-400 hover:text-neutral-200"
+                      : "bg-bg-surface text-text-secondary hover:text-text-primary"
                   }`}
                 >
                   {opt.label}
@@ -157,22 +159,22 @@ export default function BuyDecisionsPage() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includeOwned}
               onChange={(e) => setIncludeOwned(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include owned
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={includePurchased}
               onChange={(e) => setIncludePurchased(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-neutral-700 bg-neutral-900"
+              className="h-3.5 w-3.5 rounded border-border-default bg-bg-surface"
             />
             Include purchased
           </label>
@@ -180,7 +182,7 @@ export default function BuyDecisionsPage() {
           <div>
             <label
               htmlFor="buy-decisions-min-score"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Min score
             </label>
@@ -192,14 +194,14 @@ export default function BuyDecisionsPage() {
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
               placeholder="0"
-              className="w-20 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="w-20 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             />
           </div>
 
           <div>
             <label
               htmlFor="buy-decisions-action"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Action
             </label>
@@ -207,7 +209,7 @@ export default function BuyDecisionsPage() {
               id="buy-decisions-action"
               value={action}
               onChange={(e) => setAction(e.target.value as BuyDecisionAction | "all")}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             >
               {ACTION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -220,7 +222,7 @@ export default function BuyDecisionsPage() {
           <div>
             <label
               htmlFor="buy-decisions-priority"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Priority
             </label>
@@ -228,7 +230,7 @@ export default function BuyDecisionsPage() {
               id="buy-decisions-priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as BuyDecisionPriorityFilter | "all")}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             >
               {PRIORITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -241,7 +243,7 @@ export default function BuyDecisionsPage() {
           <div>
             <label
               htmlFor="buy-decisions-limit"
-              className="mb-1 block text-[11px] uppercase tracking-wide text-neutral-500"
+              className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted"
             >
               Per page
             </label>
@@ -249,7 +251,7 @@ export default function BuyDecisionsPage() {
               id="buy-decisions-limit"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
             >
               {LIMIT_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -317,28 +319,28 @@ export default function BuyDecisionsPage() {
 
                 <Section title="Candidates" last>
                   <BuyDecisionCandidateTable candidates={data.candidates} onCandidateUpdated={load} />
-                  <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
+                  {/* Hand-rolled rather than the shared PaginationControls: this
+                      API echoes authoritative next_offset/previous_offset/has_next/
+                      has_previous (server-driven paging), which PaginationControls
+                      doesn't use - it recomputes purely from client offset/limit/total. */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-text-muted">
                     <span>
                       Showing {data.candidates.length === 0 ? 0 : offset + 1}–
                       {offset + data.candidates.length} of {formatNumber(data.pagination.total)}
                     </span>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
+                      <ActionButton
                         onClick={() => setOffset(data.pagination.previous_offset ?? 0)}
                         disabled={!data.pagination.has_previous}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
                       >
                         Previous
-                      </button>
-                      <button
-                        type="button"
+                      </ActionButton>
+                      <ActionButton
                         onClick={() => setOffset(data.pagination.next_offset ?? offset)}
                         disabled={!data.pagination.has_next}
-                        className="rounded border border-neutral-700 px-2.5 py-1 text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
                       >
                         Next
-                      </button>
+                      </ActionButton>
                     </div>
                   </div>
                 </Section>
@@ -362,7 +364,7 @@ function Section({
 }) {
   return (
     <section className={last ? "mb-2" : "mb-8"}>
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -375,13 +377,7 @@ function StatCard({
 }: {
   label: string;
   value: number | string;
-  tone?: "good" | "bad";
+  tone?: StatTone;
 }) {
-  const toneClass = tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
+  return <SharedStatCard label={label} value={value} tone={tone} />;
 }

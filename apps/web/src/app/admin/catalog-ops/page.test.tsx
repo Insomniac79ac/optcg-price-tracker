@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -16,6 +16,7 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/",
 }));
 
 const fetchCatalogCoverage = vi.fn();
@@ -202,8 +203,13 @@ describe("CatalogOpsPage", () => {
       ["System Check", "/admin/system-check"],
     ];
 
+    // Scoped to <main> - the sidebar nav now also links to several of these
+    // same admin pages with the same link text (Import Validation, Source
+    // Mapping Quality, Catalog Coverage, Price Source Health, System
+    // Check), so an unscoped query would match more than one element.
+    const main = within(screen.getByRole("main"));
     for (const [title, href] of expectedLinks) {
-      const link = screen.getByText(title).closest("a");
+      const link = main.getByText(title).closest("a");
       expect(link).toHaveAttribute("href", href);
     }
   });

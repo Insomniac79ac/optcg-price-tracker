@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   fetchCardDuplicates,
@@ -82,15 +84,6 @@ const OPS_CARDS: OpsCard[] = [
   },
 ];
 
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className="text-lg font-semibold text-neutral-100">{value}</div>
-    </div>
-  );
-}
-
 function formatCount(value: number | null): string {
   if (value === null) return NOT_AVAILABLE;
   return new Intl.NumberFormat("en-US").format(value);
@@ -163,68 +156,63 @@ export default function CatalogOpsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Catalog Operations</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          One landing page for canonical catalog import/export, matching, duplicate review,
-          mapping quality, coverage, and price source health.
-        </p>
+        <PageHeader
+          title="Catalog Operations"
+          description="One landing page for canonical catalog import/export, matching, duplicate review, mapping quality, coverage, and price source health."
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && <AdminAuthGate onTokenSaved={() => window.location.reload()} />}
 
         {!unauthorized && (
           <>
             {status === "loading" && (
-              <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
+              <div className="mb-6 rounded-panel border border-border-default bg-bg-surface p-8 text-center text-sm text-text-muted">
                 Loading catalog operations summary…
               </div>
             )}
             {status === "error" && (
-              <div className="mb-6 rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+              <div className="mb-6 rounded-panel border border-signal-red/40 bg-signal-red/10 p-8 text-center text-sm text-signal-red">
                 Failed to load the catalog operations summary. Is the backend running?
               </div>
             )}
             {status === "ready" && summary && (
-              <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-                <StatTile
-                  label="Metadata completion"
-                  value={formatPercent(summary.metadataCompletionPct)}
-                />
-                <StatTile
-                  label="Mapping coverage"
-                  value={formatPercent(summary.mappingCoveragePct)}
-                />
-                <StatTile
-                  label="Recent price coverage"
-                  value={formatPercent(summary.recentPriceCoveragePct)}
-                />
-                <StatTile label="Duplicate risks" value={formatCount(summary.duplicateRiskCount)} />
-                <StatTile
-                  label="Mapping quality critical"
-                  value={formatCount(summary.mappingQualityCriticalCount)}
-                />
-                <StatTile
-                  label="Price source health warnings"
-                  value={formatCount(summary.priceSourceHealthWarningCount)}
-                />
-                <StatTile
-                  label="Latest validation report"
-                  value={formatValidationStatus(summary.latestValidationStatus)}
-                />
+              <div className="mb-6">
+                <StatGrid>
+                  <StatCard
+                    label="Metadata completion"
+                    value={formatPercent(summary.metadataCompletionPct)}
+                  />
+                  <StatCard
+                    label="Mapping coverage"
+                    value={formatPercent(summary.mappingCoveragePct)}
+                  />
+                  <StatCard
+                    label="Recent price coverage"
+                    value={formatPercent(summary.recentPriceCoveragePct)}
+                  />
+                  <StatCard label="Duplicate risks" value={formatCount(summary.duplicateRiskCount)} />
+                  <StatCard
+                    label="Mapping quality critical"
+                    value={formatCount(summary.mappingQualityCriticalCount)}
+                  />
+                  <StatCard
+                    label="Price source health warnings"
+                    value={formatCount(summary.priceSourceHealthWarningCount)}
+                  />
+                  <StatCard
+                    label="Latest validation report"
+                    value={formatValidationStatus(summary.latestValidationStatus)}
+                  />
+                </StatGrid>
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {OPS_CARDS.map((card) => (
-                <Link
-                  key={card.href}
-                  href={card.href}
-                  className="rounded-lg border border-neutral-800 bg-neutral-900 p-4 hover:border-neutral-700 hover:bg-neutral-900/80"
-                >
-                  <div className="text-sm font-medium text-neutral-100">{card.title}</div>
-                  <div className="mt-1 text-xs text-neutral-500">{card.description}</div>
+                <Link key={card.href} href={card.href} className="vault-card block p-4">
+                  <div className="text-sm font-medium text-text-primary">{card.title}</div>
+                  <div className="mt-1 text-xs text-text-muted">{card.description}</div>
                 </Link>
               ))}
             </div>
