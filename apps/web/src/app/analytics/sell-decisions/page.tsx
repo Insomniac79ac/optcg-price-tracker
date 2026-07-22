@@ -8,6 +8,7 @@ import { SellDecisionActionGroups } from "@/components/SellDecisionActionGroups"
 import { SellDecisionCandidateTable } from "@/components/SellDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
@@ -118,6 +119,14 @@ export default function SellDecisionsPage() {
           This is decision support, not financial advice. Signals are deterministic from your tracker
           data. Review manually before selling.
         </p>
+
+        <QuickActionBar
+          actions={[
+            { label: "Buy Decisions", href: "/analytics/buy-decisions" },
+            { label: "Portfolio Risk", href: "/analytics/portfolio-risk" },
+            { label: "Refresh", onClick: load },
+          ]}
+        />
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>

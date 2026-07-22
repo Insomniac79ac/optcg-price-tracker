@@ -1,49 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 
 export function TopBar({
   onToggleMobileNav,
+  onOpenPalette,
+  onOpenShortcuts,
 }: {
   onToggleMobileNav?: () => void;
+  onOpenPalette?: () => void;
+  onOpenShortcuts?: () => void;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        router.push("/search");
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
-
   return (
     <header className="sticky top-0 z-30 h-12 border-b border-border-default bg-bg-page/95 backdrop-blur">
-      <div className="flex h-full items-center gap-3 px-3 md:px-4">
+      <div className="flex h-full items-center gap-2 px-3 sm:gap-3 md:px-4">
         <button
           type="button"
           onClick={onToggleMobileNav}
           aria-label="Toggle navigation"
-          className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary hover:text-text-primary md:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border-default text-sm text-text-secondary hover:text-text-primary lg:hidden"
         >
           ☰
         </button>
 
+        {/* Compact on mobile (icon-ish wordmark), full "OPTCG Vault" from sm+ -
+            keeps the topbar from crowding the palette trigger + auth control
+            at 360px. */}
         <Link
           href="/dashboard"
           className="shrink-0 text-sm font-semibold tracking-tight text-text-primary"
         >
-          <span className="text-accent-gold">OPTCG</span> Vault
+          <span className="text-accent-gold">OPTCG</span>
+          <span className="hidden sm:inline"> Vault</span>
         </Link>
 
-        <Link
-          href="/search"
+        {/* Full search bar from sm+ */}
+        <button
+          type="button"
+          onClick={onOpenPalette}
           title="Search (Ctrl/Cmd+K)"
           className="hidden flex-1 items-center justify-between rounded-control border border-border-default bg-bg-surface px-3 py-1.5 text-xs text-text-muted hover:border-border-default hover:text-text-secondary sm:flex sm:max-w-sm"
         >
@@ -51,9 +46,31 @@ export function TopBar({
           <span className="mono rounded border border-border-default px-1 py-0.5 text-[10px] text-text-faint">
             ⌘K
           </span>
-        </Link>
+        </button>
+
+        {/* Icon-only command palette trigger below sm, where the full search
+            bar has no room - command palette must stay reachable on mobile. */}
+        <button
+          type="button"
+          onClick={onOpenPalette}
+          title="Search (Ctrl/Cmd+K)"
+          aria-label="Open command palette"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-border-default text-text-muted hover:text-text-secondary sm:hidden"
+        >
+          ⌕
+        </button>
 
         <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={onOpenShortcuts}
+          title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-border-default text-xs text-text-faint hover:text-text-secondary"
+        >
+          ?
+        </button>
 
         <AuthControl />
       </div>
@@ -75,19 +92,24 @@ function AuthControl() {
         onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
         className="rounded-control bg-accent-gold px-2.5 py-1 text-xs font-medium text-black/80 hover:bg-accent-gold-hover"
       >
-        Sign in with Google
+        <span className="sm:hidden">Sign in</span>
+        <span className="hidden sm:inline">Sign in with Google</span>
       </button>
     );
   }
 
   return (
     <div className="flex items-center gap-2 text-xs text-text-secondary">
-      <span className="max-w-[10rem] truncate" title={session.user?.email ?? undefined}>
+      <span
+        className="hidden max-w-[10rem] truncate sm:inline"
+        title={session.user?.email ?? undefined}
+      >
         {session.user?.name || session.user?.email}
       </span>
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/dashboard" })}
+        title={session.user?.name || session.user?.email || undefined}
         className="rounded-control border border-border-default px-2 py-1 font-medium text-text-secondary hover:text-text-primary"
       >
         Sign out

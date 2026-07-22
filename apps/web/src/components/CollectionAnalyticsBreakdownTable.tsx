@@ -1,4 +1,5 @@
 import { EmptyState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import type { CollectionAnalyticsBreakdownItem } from "@/lib/api";
 import { formatNumber, formatPercent, formatSignedJpy, formatJPY } from "@/lib/format";
 
@@ -54,9 +55,9 @@ export function CollectionAnalyticsBreakdownTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
+    <TableScrollContainer showScrollHint={false}>
       <table className="w-full min-w-[420px] border-collapse text-xs">
-        <thead>
+        <thead className="sticky-thead">
           <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
             <th className="px-3 py-2 font-medium">{firstColumnLabel}</th>
             {columns.map((column) => (
@@ -79,6 +80,6 @@ export function CollectionAnalyticsBreakdownTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

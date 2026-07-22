@@ -290,7 +290,12 @@ export default function CardDetailPage() {
         )}
 
         {status === "ready" && card && (
-          <div className="space-y-6">
+          // flex + explicit order (not space-y) so mobile can prioritize the
+          // price panel above ownership/wishlist/grading while desktop keeps
+          // the original document order (see design brief "Card detail" -
+          // mobile: image/identity, then price source, then ownership panels;
+          // admin panel stays lowest-priority on every breakpoint).
+          <div className="flex flex-col gap-6">
             {/* 1. Hero - image + identity + compact metadata grid + effect/trigger text */}
             <div className="panel flex flex-col gap-4 p-4 sm:flex-row">
               <CardImageFrame
@@ -318,7 +323,7 @@ export default function CardDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-panel border border-border-default bg-bg-surface p-4">
+            <div className="order-3 rounded-panel border border-border-default bg-bg-surface p-4 lg:order-none">
               <h2 className="mb-2 text-sm font-semibold text-text-primary">Card tags</h2>
               {tagError && (
                 <div className="mb-2 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
@@ -334,7 +339,7 @@ export default function CardDetailPage() {
             </div>
 
             {/* 2. Ownership / wishlist / grading */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="order-2 grid grid-cols-1 gap-4 lg:order-none lg:grid-cols-3">
               {collectionStatus === "ready" ? (
                 <OwnershipSummaryPanel
                   items={collectionItems}
@@ -376,35 +381,53 @@ export default function CardDetailPage() {
               <GradingSummaryPanel submissions={gradingSubmissions} />
             </div>
 
-            {/* 3. Price source panel */}
-            <CardPricePanel lines={keyPriceLines(prices)} />
+            {/* 3. Price source panel - highest-priority data panel on mobile,
+                right after the hero (design brief - "price source panel
+                next"), same position as always on desktop. */}
+            <div className="order-1 lg:order-none">
+              <CardPricePanel lines={keyPriceLines(prices)} />
+            </div>
 
             {/* 4. Market context */}
-            <MarketContextPanel signalEvents={signalEvents} opportunities={opportunities} />
+            <div className="order-4 lg:order-none">
+              <MarketContextPanel signalEvents={signalEvents} opportunities={opportunities} />
+            </div>
 
             {/* 5. Notes/activity */}
-            <CardActivityPanel
-              cardId={card.id}
-              notes={notes}
-              activity={activity}
-              onNoteAdded={refreshNotes}
-            />
+            <div className="order-5 lg:order-none">
+              <CardActivityPanel
+                cardId={card.id}
+                notes={notes}
+                activity={activity}
+                onNoteAdded={refreshNotes}
+              />
+            </div>
 
-            {/* 6. Admin mini-panel - only rendered for admin-token holders */}
-            {hasAdminToken && <AdminSourceMappingsMiniPanel mappings={adminMappings} />}
+            {/* 6. Admin mini-panel - only rendered for admin-token holders;
+                lowest-priority panel on mobile (design brief - "admin mini
+                panel should be collapsed or lower priority"). */}
+            {hasAdminToken && (
+              <div className="order-6 lg:order-none">
+                <AdminSourceMappingsMiniPanel mappings={adminMappings} />
+              </div>
+            )}
 
-            <div>
+            <div className="order-7 lg:order-none">
               <h2 className="mb-2 text-sm font-semibold text-text-primary">
                 Price history
               </h2>
               <PriceChart observations={prices} />
             </div>
 
-            <div>
+            <div className="order-8 lg:order-none">
               <h2 className="mb-2 text-sm font-semibold text-text-primary">
                 Price observations
               </h2>
-              <DataTableShell isEmpty={latestFirst.length === 0} emptyLabel="No price observations yet.">
+              <DataTableShell
+                isEmpty={latestFirst.length === 0}
+                emptyLabel="No price observations yet."
+                minWidth={640}
+              >
                 <table className="data-table">
                   <thead>
                     <tr>

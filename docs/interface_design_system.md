@@ -128,6 +128,7 @@ for the tokens/shell to apply.
 | `CardImageFrame`, `CardIdentityBlock`, `CardVaultTile`, `CardPricePanel`, `SourceComparisonPanel` | Collector vault / card-identity treatment (see below) |
 | `SkeletonBlock` / `SkeletonRows` | Loading shimmer (used inside `LoadingState`) |
 | `SavedViewBar`, `SaveViewModal`, `ManageSavedViewsModal`, `SavedViewPill`, `PinnedViewsSection` | Saved filter/sort/column presets (see below) |
+| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar`, `WorkflowShortcutsSection` | Global Cmd/Ctrl+K palette, shortcuts reference, per-page shortcut pills (see "Command palette and workflow shortcuts" below) |
 
 ## Saved views
 
@@ -139,6 +140,64 @@ Single-user saved filter presets (name a filter combination, reapply it later, o
 - **`SavedViewPill`** is the one deliberately fully-rounded badge shape in the app (`!rounded-full`, gold-tinted) - everything else uses the small `rounded-control` corner radius. Reserved for "this saved view is currently active," nothing else.
 - **`PinnedViewsSection`** renders pinned views across every scope on `/dashboard` (as a standalone section, not a `DashboardWidgetId` - it isn't personalization-scoped, so it doesn't touch `DashboardPreferences`) and `/admin/catalog-ops` (as "Pinned Admin Views," between the stat tiles and the nav-card grid). Links only navigate to the bare `route_path` - they can't pre-apply the view's filters (see the URL-params limitation above), so visiting the page and picking the view from its own `SavedViewBar` is still required. Unrelated to `DashboardPreferences.pinned_cards` (an existing, separately-schemaed, currently-unused field for pinning individual *cards*, not saved views) - don't conflate the two.
 - **Density**: `SaveViewModal`'s compact/comfortable selector is stored on the row (`density`) but no page currently reads it back - it's schema-ready for a future page to start honoring, not yet wired to any actual layout change. Whichever value a page eventually uses it for, the "dense" 11px/12px minimums from this doc still apply in both modes - `comfortable` should only ever mean more row padding, never smaller text.
+
+## Command palette and workflow shortcuts
+
+Global `Cmd/Ctrl+K` command palette (navigation + card search + saved views
++ recent workflows), a per-page `QuickActionBar`, a keyboard-shortcuts
+reference modal, and a dashboard "Workflow Shortcuts" section - navigation
+convenience layered on top of the existing sidebar, not a replacement for
+it.
+
+- **`CommandPalette`** mounts once, globally, in `AppShell` (so every page
+  gets it with zero per-page wiring). Sources merged per keystroke: (1) the
+  static `commandRegistry.ts` list (fuzzy-ish substring match against
+  label/description/keywords), (2) saved views (`fetchSavedViews`, fetched
+  once when the palette opens, filtered client-side - not on every
+  keystroke), (3) recent workflows (from `localStorage`, shown when the
+  query is empty), (4) card search (`fetchSearch({ types: ["cards"] })`,
+  only once the query is 2+ characters, 250ms debounced, stale requests
+  dropped via a request-id guard). `Cmd/Ctrl+K` toggles it, `Esc` closes,
+  `↑`/`↓` move the selection, `Enter` activates.
+- **`commandRegistry.ts`** is a static list covering only routes that
+  actually exist - if a route named in a future brief doesn't exist yet
+  (e.g. there is no standalone `/admin/source-mappings`, only
+  `/admin/source-mapping-quality`), it's omitted rather than linked as a
+  dead end, same rule `SidebarNav` already follows.
+- **Admin/dangerous commands never execute directly from the palette.** A
+  global component can't reach into a specific page's mounted React state,
+  so every command in the registry is navigation-only - it routes to the
+  admin page where the real dry-run/confirm button already lives, it never
+  re-implements that page's write logic. The palette's `dangerous` +
+  `ConfirmActionModal` typed-phrase code path is implemented generically
+  (in case a future command needs it), but no command in the current
+  registry sets `dangerous: true`.
+- **`QuickActionBar`** is the actual place a real dry-run/preview trigger
+  lives: a small, deliberately dumb row of pills per page, each either
+  `{ label, href }` (a `Link`) or `{ label, onClick, variant? }` (an
+  `ActionButton` calling a handler the page already owns - e.g.
+  source-mapping-quality's own `runRecheck(true)`, card-duplicates' own
+  `runBulkPreview()`). It never contains its own mutation logic.
+- **Recent-workflow tracking is `localStorage`-only** (`lib/recentWorkflows.ts`),
+  not a new backend table - this is ephemeral, single-browser, low-stakes
+  UX convenience, not data that needs to survive a device change or appear
+  in backups. The stored shape mirrors what a backend table would look
+  like, so it could migrate later with no data-shape change. It never
+  stores an admin token, file contents, or confirmation text - only
+  `item_type`/`label`/`route_path`/`payload_json`/`last_used_at`/`usage_count`.
+- **Keyboard shortcuts**: `Cmd/Ctrl+K` (palette), `Esc` (close), `/`
+  (open palette, when nothing else is focused and no modal is open), `?`
+  (open `KeyboardShortcutsModal`), and `g` then a key for direct
+  navigation (`g d` dashboard, `g c` collection, `g v` vault, `g w`
+  wishlist, `g b` buy decisions, `g s` sell decisions, `g r` portfolio
+  risk, `g a` admin catalog ops). All single-key shortcuts are guarded
+  against firing while focus is inside an input/textarea/select/
+  contenteditable, or while the palette/shortcuts modal is open - `Esc`
+  and `Cmd/Ctrl+K` are the only two that always fire.
+- **Saved-view palette entries navigate to the bare `route_path`** - same
+  limitation `PinnedViewsSection` already documented: no page in this app
+  reads filters from the URL, so a saved view's filters can't be
+  pre-applied via a link click.
 
 ## Price display rules
 
@@ -319,3 +378,95 @@ first, then remaining admin utility pages.
   `/admin/data-retention`, `/admin/file-jobs`, `/admin/job-locks`,
   `/admin/logs`, `/admin/market-workflow-runs`, `/admin/performance`,
   `/admin/refresh-runs`, `/admin/release-status`
+
+## Phase 10 — mobile/tablet responsiveness and UX polish
+
+This pass fixed responsive behavior, table usability, and consistency
+issues without redesigning the app or adding product features. It's a
+polish pass on top of everything above, not a replacement for it.
+
+### Responsive layout rules
+
+- Breakpoints: **mobile** < 768px, **tablet** 768–1023px, **desktop**
+  1024px+ (Tailwind `lg`). The fixed 224px sidebar (`AppShell`) and its
+  `lg:pl-56` body clearance only apply at `lg`+ — tablet (768px) keeps the
+  same drawer nav as mobile rather than squeezing a permanently-open rail
+  next to a narrow content column.
+- `TopBar` always shows: a menu button (drawer toggle, hidden at `lg`+), a
+  compact "OPTCG" wordmark (full "OPTCG Vault" from `sm`+), a command
+  palette trigger (icon-only below `sm`, full search bar from `sm`+), and
+  the keyboard-shortcuts/auth controls — every element has a `h-9 w-9`
+  minimum touch target below `lg`.
+- `SidebarNav` groups are Collector / Analytics / Admin / Admin · More —
+  Analytics routes (including the per-domain `analytics/collection`,
+  `analytics/wishlist`, `analytics/grading`) live in their own group rather
+  than nested under Collector items, so the mobile drawer separates the
+  three clearly (per the design brief).
+- No page should rely on horizontal body scroll — the only horizontal
+  scroll containers are table scroll containers (see below).
+
+### Mobile table rules
+
+- `TableScrollContainer` (in `components/ui/DataTableShell.tsx`) is the
+  shared wrapper for every wide table: horizontal + capped vertical scroll
+  inside its own box (never the page), a CSS-only "scroll shadow" fade at
+  the leading/trailing edge (`.table-scroll-fade` in `globals.css` — no JS
+  scroll listener needed), and a one-line `ColumnOverflowHint` ("← scroll
+  horizontally for more columns →") on mobile. `DataTableShell` builds on
+  it and keeps its existing `isEmpty`/`emptyLabel` API plus an optional
+  `minWidth`.
+- `STICKY_TABLE_HEADER_CLASS` (`sticky-thead`) - add to a bespoke table's
+  `<thead>` for the same sticky-header behavior `.data-table` gets for
+  free.
+- `STICKY_FIRST_COLUMN_CLASS` (`sticky-col-first`) - add to a table's first
+  `<th>` and every first `<td>` to keep that identifying column in view
+  while the rest of a wide row scrolls underneath it. Applied to the
+  highest-value dense tables (buy/sell decision candidates, wishlist
+  targets, grading submissions, wishlist table, market opportunities).
+- `MobileRecordList` - a card-per-row fallback for the rare table that's
+  genuinely unusable even with horizontal scroll. Not used anywhere in this
+  pass (horizontal scroll was always workable) - available for a future
+  table where it isn't.
+- Never remove columns globally to make mobile fit — scroll instead.
+  Minimum table text stays 12px (`text-xs`).
+
+### Filter/saved-view collapse rules
+
+- `FilterBar` shows every filter inline on tablet/desktop; on mobile
+  (< `sm`, 640px) only the first 3 filter controls stay visible, the rest
+  collapse behind a "More filters (N) ▸" toggle — generic (based on child
+  count), so no per-page filter-priority wiring was needed.
+- `SavedViewBar`'s secondary actions (Update current view / Set default /
+  Clear default / Manage views) collapse behind a "More…" toggle on
+  mobile; "Save current view" and the saved-view select stay always
+  visible.
+- `QuickActionBar` wraps (`flex-wrap`) rather than scrolling — acceptable
+  per the design brief ("wrap **or** horizontal-scroll pills").
+- Never render a file upload input, an admin token, or confirmation text
+  into a saved view — verified: every page's `currentFilters` is built from
+  plain filter state (strings/numbers/booleans/enums) only.
+
+### Modal responsiveness
+
+- Every modal (`ConfirmActionModal`, `SaveViewModal`, `ManageSavedViewsModal`,
+  `CommandPalette`, `KeyboardShortcutsModal`, and the per-page detail/preview
+  modals) caps at `max-h-[80–90vh]` with internal `overflow-y-auto`, and a
+  responsive `max-w-*` — action buttons stay in the (non-scrolling) footer.
+- Esc closes every modal: `CommandPalette`/`KeyboardShortcutsModal` already
+  got this from `AppShell`'s global key handler; the standalone modals
+  (`ConfirmActionModal`, `SaveViewModal`, `ManageSavedViewsModal`) now use
+  the shared `useEscapeKey` hook (`lib/useEscapeKey.ts`).
+
+### Price/source display audit rules
+
+Already-established rule (see "Price display rules" above), re-verified
+across every page in the design brief's Part 7 list during this pass — no
+"Market" label appears without a source/basis, and `PriceCell`/
+`PriceBasisLabel` are the only price-display path used.
+
+### Admin safety UI rules
+
+Already-established rules (see "Admin safety rules" above) — re-verified,
+no changes needed. `admin/backup`'s restore action already gates behind a
+dry-run checkbox + typed confirmation + a distinct red button only in real
+"replace" mode.

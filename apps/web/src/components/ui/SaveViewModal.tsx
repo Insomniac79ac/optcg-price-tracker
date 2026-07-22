@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { SavedViewDensity } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { ActionButton } from "./ActionButton";
 
 export interface SaveViewFormValues {
@@ -46,6 +47,8 @@ export function SaveViewModal({
     ...EMPTY_VALUES,
     ...initialValues,
   });
+
+  useEscapeKey(open, onCancel);
 
   if (!open) return null;
 

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState, MissingValue } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { WishlistImportExport } from "@/components/WishlistImportExport";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
@@ -318,6 +320,9 @@ export default function WishlistPage() {
   const purchaseTarget = items.find((i) => i.id === purchaseTargetId) ?? null;
   const convertTarget = items.find((i) => i.id === convertTargetId) ?? null;
 
+  const addFormRef = useRef<HTMLElement>(null);
+  const importExportRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="min-h-screen">
       <AppHeader />
@@ -345,6 +350,20 @@ export default function WishlistPage() {
           )}
         </div>
 
+        <QuickActionBar
+          actions={[
+            { label: "Wishlist Analytics", href: "/analytics/wishlist" },
+            {
+              label: "Add to wishlist",
+              onClick: () => addFormRef.current?.scrollIntoView({ behavior: "smooth" }),
+            },
+            {
+              label: "Import / Export",
+              onClick: () => importExportRef.current?.scrollIntoView({ behavior: "smooth" }),
+            },
+          ]}
+        />
+
         {summary && (
           <div className="mb-6 space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -364,7 +383,7 @@ export default function WishlistPage() {
           </div>
         )}
 
-        <section className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+        <section ref={addFormRef} className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
           <h2 className="mb-3 text-sm font-semibold text-neutral-200">
             {editingId !== null ? "Edit wishlist item" : "Add to wishlist"}
           </h2>
@@ -497,12 +516,14 @@ export default function WishlistPage() {
           </form>
         </section>
 
-        <WishlistImportExport
-          onImported={() => {
-            refreshList();
-            refreshSummary();
-          }}
-        />
+        <div ref={importExportRef}>
+          <WishlistImportExport
+            onImported={() => {
+              refreshList();
+              refreshSummary();
+            }}
+          />
+        </div>
 
         <div className="mb-4 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -567,11 +588,11 @@ export default function WishlistPage() {
         )}
 
         {listStatus === "ready" && items.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+          <TableScrollContainer minWidth={1100}>
             <table className="w-full border-collapse text-xs">
-              <thead>
+              <thead className="sticky-thead">
                 <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                  <th className="px-2 py-1.5 font-medium">Priority</th>
+                  <th className="sticky-col-first px-2 py-1.5 font-medium">Priority</th>
                   <th className="px-2 py-1.5 font-medium">Status</th>
                   <th className="px-2 py-1.5 font-medium">Code</th>
                   <th className="px-2 py-1.5 font-medium">Name</th>
@@ -594,7 +615,7 @@ export default function WishlistPage() {
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                    <td className="px-2 py-1.5">
+                    <td className="sticky-col-first px-2 py-1.5">
                       <WishlistPriorityBadge priority={item.priority} />
                     </td>
                     <td className="px-2 py-1.5">
@@ -698,7 +719,7 @@ export default function WishlistPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScrollContainer>
         )}
 
         {listStatus === "ready" && (

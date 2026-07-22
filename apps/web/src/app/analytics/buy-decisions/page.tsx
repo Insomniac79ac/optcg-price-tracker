@@ -8,6 +8,7 @@ import { BuyDecisionActionGroups } from "@/components/BuyDecisionActionGroups";
 import { BuyDecisionCandidateTable } from "@/components/BuyDecisionCandidateTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, type StatTone } from "@/components/ui/StatCard";
 import {
@@ -136,6 +137,14 @@ export default function BuyDecisionsPage() {
         <p className="mb-4 text-xs text-text-faint">
           Signals are deterministic from your tracker data. Review manually before buying.
         </p>
+
+        <QuickActionBar
+          actions={[
+            { label: "Sell Decisions", href: "/analytics/sell-decisions" },
+            { label: "Portfolio Risk", href: "/analytics/portfolio-risk" },
+            { label: "Refresh", onClick: load },
+          ]}
+        />
 
         <div className="mb-6 flex flex-wrap items-end gap-4">
           <div>

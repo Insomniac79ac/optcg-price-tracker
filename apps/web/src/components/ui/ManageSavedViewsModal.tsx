@@ -2,6 +2,7 @@
 
 import type { SavedView } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { ActionButton } from "./ActionButton";
 import { EmptyState } from "@/components/StateBlocks";
 
@@ -28,6 +29,8 @@ export function ManageSavedViewsModal({
   onClearDefault: (view: SavedView) => void;
   onTogglePinned: (view: SavedView) => void;
 }) {
+  useEscapeKey(open, onClose);
+
   if (!open) return null;
 
   return (

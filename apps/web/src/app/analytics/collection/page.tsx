@@ -10,6 +10,7 @@ import { CollectionAnalyticsBreakdownTable } from "@/components/CollectionAnalyt
 import { CollectionStatusBadge } from "@/components/CollectionStatusBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
@@ -303,9 +304,9 @@ export default function CollectionAnalyticsPage() {
               {data.concentration.top_5_cards_by_value.length === 0 ? (
                 <EmptyState variant="inline">No data available.</EmptyState>
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-neutral-800">
+                <TableScrollContainer showScrollHint={false}>
                   <table className="w-full min-w-[560px] border-collapse text-xs">
-                    <thead>
+                    <thead className="sticky-thead">
                       <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
                         <th className="px-3 py-2 font-medium">Card</th>
                         <th className="px-3 py-2 font-medium">Set</th>
@@ -342,7 +343,7 @@ export default function CollectionAnalyticsPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableScrollContainer>
               )}
             </Section>
 
@@ -376,9 +377,9 @@ export default function CollectionAnalyticsPage() {
               {data.cost_basis.highest_cost_basis_items.length === 0 ? (
                 <EmptyState variant="inline">No data available.</EmptyState>
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-neutral-800">
+                <TableScrollContainer showScrollHint={false}>
                   <table className="w-full min-w-[620px] border-collapse text-xs">
-                    <thead>
+                    <thead className="sticky-thead">
                       <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
                         <th className="px-3 py-2 font-medium">Card</th>
                         <th className="px-3 py-2 text-right font-medium">Purchase price</th>
@@ -417,7 +418,7 @@ export default function CollectionAnalyticsPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableScrollContainer>
               )}
             </Section>
 

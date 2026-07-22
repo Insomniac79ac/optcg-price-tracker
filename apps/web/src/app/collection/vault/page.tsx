@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { CardVaultTile, type CardVaultTileDensity } from "@/components/ui/CardVaultTile";
 import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   fetchCards,
@@ -229,6 +230,13 @@ export default function CollectionVaultPage() {
               </span>
             )
           }
+        />
+
+        <QuickActionBar
+          actions={[
+            { label: "Table View", href: "/collection" },
+            { label: "Collection Analytics", href: "/analytics/collection" },
+          ]}
         />
 
         <div className="mb-4 space-y-2">

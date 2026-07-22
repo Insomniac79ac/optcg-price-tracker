@@ -34,9 +34,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
-      {/* md:pl-56 clears AppShell's fixed sidebar (see components/ui/AppShell.tsx) -
-          set here once rather than in every page so no page.tsx needs to change. */}
-      <body className="min-h-screen bg-bg-page font-sans text-text-primary antialiased md:pl-56">
+      {/* lg:pl-56 clears AppShell's fixed sidebar (see components/ui/AppShell.tsx) -
+          set here once rather than in every page so no page.tsx needs to change.
+          Sidebar only becomes a fixed, always-visible rail at the `lg` (1024px)
+          breakpoint - below that (including tablet/768px) it stays a drawer so
+          content gets the full viewport width. */}
+      <body className="min-h-screen bg-bg-page font-sans text-text-primary antialiased lg:pl-56">
         <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>

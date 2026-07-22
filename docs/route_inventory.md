@@ -103,6 +103,12 @@ Full per-route detail (exact path, method, response model) is in each router mod
 `services/api/app/api/` - this table is intentionally a grouped summary, not a duplicate of the
 OpenAPI schema (`GET /openapi.json` on a running instance is the source of truth for that).
 
+Note: the command palette's "recent workflows" tracking (see
+`docs/interface_design_system.md`, "Command palette and workflow shortcuts")
+is `localStorage`-only - there is no `/workflow/recent` or similar backend
+route. Don't go looking for one; it was a deliberate choice, not an
+oversight.
+
 ## Findings from this audit (2026-07-17)
 
 **Navigation audit** - no broken links found (verified: every `AppHeader` link resolves to an

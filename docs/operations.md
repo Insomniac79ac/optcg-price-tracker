@@ -701,6 +701,49 @@ card-duplicates' "type MERGE to confirm" text) in the first place, since those a
 pieces of component state from a page's list filters; the backend check is a safety net, not the
 main guarantee.
 
+## Workflow shortcuts
+
+**What it does.** A global `Cmd/Ctrl+K` command palette, a per-page
+`QuickActionBar` of contextual shortcut pills, a `?` keyboard-shortcuts
+reference modal, and a "Workflow Shortcuts" section on `/dashboard` - pure
+frontend navigation convenience layered on top of the existing sidebar, no
+new backend routes or tables. See `docs/interface_design_system.md`,
+"Command palette and workflow shortcuts," for the full component/behavior
+reference.
+
+**Recommended flow:**
+
+1. **Open the palette.** `Cmd/Ctrl+K` from anywhere (also `/` when nothing
+   else is focused). Type to filter static commands (pages), saved views,
+   and - once you've typed 2+ characters - matching cards. Recently used
+   commands show first when the query is empty.
+2. **Navigate.** `↑`/`↓` to move, `Enter` to go. Selecting a saved view or
+   a card jumps straight to its page - same URL-params limitation saved
+   views already have (see "Saved views workflow" above): the destination
+   page's own filter bar still needs to be used to reapply a saved view's
+   filters, a palette click can't pre-apply them.
+3. **Admin/dry-run actions never execute from the palette.** Every admin
+   command is navigation-only - it takes you to the admin page where the
+   real dry-run/preview/confirm button already lives (e.g.
+   `/admin/source-mapping-quality`, `/admin/card-duplicates`). The actual
+   one-click dry-run/preview triggers live in that page's own
+   `QuickActionBar` instead, wired directly to the page's existing handler
+   function - no new write path is introduced anywhere in this feature.
+4. **`g` then a key** jumps directly to a handful of high-traffic pages
+   without opening the palette at all (`g d` dashboard, `g c` collection,
+   `g v` vault, `g w` wishlist, `g b` buy decisions, `g s` sell decisions,
+   `g r` portfolio risk, `g a` admin catalog ops) - press `?` for the full
+   list any time.
+5. **Recent-workflow tracking is `localStorage`-only**, not a new backend
+   table or endpoint - it's per-browser, ephemeral, low-stakes UX
+   convenience (which page/saved-view/card you opened most recently), not
+   data that needs to survive a device change or appear in a backup/
+   restore. It never stores an admin token, file contents, or confirm-
+   modal text. If you clear browser storage, the "Recent" list in the
+   palette and the recent-items row on the dashboard's "Workflow
+   Shortcuts" section both just go back to empty - nothing else is
+   affected.
+
 ## Reset local dev database
 
 ```
@@ -1445,3 +1488,55 @@ The five admin pages above (`/admin/performance`, `/admin/cache`, `/admin/job-lo
 `scripts/phase7_audit.sh` runs the automated version of this checklist end-to-end (tests, all six
 admin endpoints above, web route smoke test, and optionally the load tests) - see
 [docs/performance_testing.md](performance_testing.md#automated-phase-7-audit).
+
+## Phase 10 UX audit
+
+Phase 10 was a mobile/tablet responsiveness and UX polish pass over the existing dense collector/
+admin dashboard (responsive shell, responsive table system, filter/saved-view collapse, card vault/
+detail responsiveness, modal responsiveness, empty/loading/error consistency, price/source display
+audit, admin safety UI audit) - see [docs/interface_design_system.md](interface_design_system.md#phase-10--mobiletablet-responsiveness-and-ux-polish)
+for the design rules it established. It adds no new pages/routes and no new product features.
+
+### Running `scripts/phase10_ux_audit.sh`
+
+```bash
+make dev-up   # or: docker compose up -d
+scripts/phase10_ux_audit.sh
+```
+
+Same fail-fast convention as `scripts/phase7_audit.sh`/`phase8_audit.sh`/`phase9_audit.sh` - stops
+at the first failing step and prints `Phase 10 UX audit passed` at the end.
+
+Env vars (all optional):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `SKIP_TESTS` | `false` | Set `true` to skip the `docker compose exec api pytest` / `docker compose run --rm worker pytest` steps |
+| `ADMIN_TOKEN` | `local-dev-admin-token` | Sent as `X-Admin-Token` on the admin endpoint checks |
+| `BASE_API_URL` | `http://127.0.0.1:8000` | Backend base URL |
+| `BASE_WEB_URL` | `http://127.0.0.1:3000` | Frontend base URL |
+
+What it checks:
+
+1. `scripts/check_secrets.sh`
+2. Backend/worker pytest suites (unless `SKIP_TESTS=true`)
+3. HTTP 200 on every key web route touched by this phase (dashboard, collection, vault, wishlist,
+   grading, the analytics pages, and the dense admin pages)
+4. HTTP 200 on `/health`, `/saved-views`, `/analytics/digest`, `/analytics/buy-decisions`,
+   `/analytics/sell-decisions` (public) and `/admin/catalog-coverage`, `/admin/price-source-health`,
+   `/admin/source-mappings/quality` (admin-token-gated)
+5. A Playwright viewport/overflow smoke test *if* Playwright (or an equivalent frontend test setup)
+   already exists in `apps/web` - it doesn't as of this phase, so this step is a no-op that prints
+   why it's skipped rather than adding a new test framework just for this check. If one is added
+   later, wire it in here at 360×800 / 768×1024 / 1440×900 against `/dashboard`,
+   `/collection/vault`, `/analytics/buy-decisions`, and `/admin/source-mapping-quality`, asserting
+   `document.documentElement.scrollWidth <= window.innerWidth + <small tolerance>`.
+
+### Manual QA checklist
+
+Since there's no automated viewport/overflow test yet, mobile/tablet/desktop UX has to be checked
+by hand after any layout/table/filter change. See
+[docs/manual_qa_checklist.md](manual_qa_checklist.md) for the practical, page-by-page checklist
+(desktop 1440px+, tablet 768px, mobile 360px, card detail, collection vault, analytics tables,
+admin tables, modals, command palette, saved views, price basis labels, empty/loading/error states,
+admin safety).

@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { createCollectorNote, updateCollectionItem, type SellDecisionCandidate } from "@/lib/api";
 import { cardDisplayName, formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -125,11 +126,11 @@ export function SellDecisionCandidateTable({
   return (
     <div>
       {actionError && <p className="mb-2 text-xs text-rose-400">{actionError}</p>}
-      <div className="overflow-x-auto rounded-lg border border-neutral-800">
+      <TableScrollContainer>
         <table className="w-full min-w-[2400px] border-collapse text-xs">
-          <thead>
+          <thead className="sticky-thead">
             <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-              <th className="px-3 py-2 font-medium">Score</th>
+              <th className="sticky-col-first px-3 py-2 font-medium">Score</th>
               <th className="px-3 py-2 font-medium">Action</th>
               <th className="px-3 py-2 font-medium">Card</th>
               <th className="px-3 py-2 font-medium">Set / Rarity</th>
@@ -155,7 +156,7 @@ export function SellDecisionCandidateTable({
           <tbody>
             {candidates.map((c) => (
               <tr key={c.collection_item_id} className="border-b border-neutral-900 align-top last:border-0">
-                <td className="px-3 py-2">
+                <td className="sticky-col-first px-3 py-2">
                   <ScoreBadge score={c.score} />
                 </td>
                 <td className="px-3 py-2">
@@ -275,7 +276,7 @@ export function SellDecisionCandidateTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScrollContainer>
     </div>
   );
 }

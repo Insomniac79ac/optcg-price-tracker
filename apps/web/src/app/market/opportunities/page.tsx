@@ -12,6 +12,7 @@ import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge"
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { WishlistPriorityBadge } from "@/components/WishlistPriorityBadge";
 import {
@@ -388,11 +389,11 @@ export default function MarketOpportunitiesPage() {
         )}
 
         {status === "ready" && filteredOpportunities.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+          <TableScrollContainer minWidth={1200}>
             <table className="w-full border-collapse text-xs">
-              <thead>
+              <thead className="sticky-thead">
                 <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                  <th className="px-2 py-1.5 font-medium">Score</th>
+                  <th className="sticky-col-first px-2 py-1.5 font-medium">Score</th>
                   <th className="px-2 py-1.5 font-medium">Category</th>
                   <th className="px-2 py-1.5 font-medium">Status</th>
                   <th className="px-2 py-1.5 font-medium">Signal type</th>
@@ -422,7 +423,7 @@ export default function MarketOpportunitiesPage() {
                         opp.wishlist_target_hit ? "bg-emerald-500/[0.04]" : ""
                       }`}
                     >
-                      <td className="px-2 py-1.5">
+                      <td className="sticky-col-first px-2 py-1.5">
                         <span className={`text-base font-bold ${scoreColor(opp.score)}`}>
                           {opp.score}
                         </span>
@@ -590,7 +591,7 @@ export default function MarketOpportunitiesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScrollContainer>
         )}
 
         {status === "ready" && summary && (

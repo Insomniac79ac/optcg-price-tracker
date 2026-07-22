@@ -20,31 +20,21 @@ interface NavGroup {
   defaultCollapsed?: boolean;
 }
 
-// Collector section - the brief's exact list, in order. Routes not named in
-// the brief (analytics/collection, analytics/wishlist, analytics/grading)
-// are nested under their closest parent rather than dropped, so nothing
-// existing loses a nav entry.
+// Collector section - the brief's exact list, in order. Analytics routes
+// (analytics/collection, analytics/wishlist, analytics/grading, and the
+// top-level analytics/* pages) live in their own ANALYTICS_ITEMS group below
+// rather than nested here, so the mobile nav drawer can clearly separate
+// Collector / Analytics / Admin per the design brief.
 const COLLECTOR_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/search", label: "Cards / Search" },
   {
     href: "/collection",
     label: "Collection",
-    children: [
-      { href: "/analytics/collection", label: "Collection Analytics" },
-      { href: "/collection/vault", label: "Vault View" },
-    ],
+    children: [{ href: "/collection/vault", label: "Vault View" }],
   },
-  {
-    href: "/wishlist",
-    label: "Wishlist",
-    children: [{ href: "/analytics/wishlist", label: "Wishlist Analytics" }],
-  },
-  {
-    href: "/grading",
-    label: "Grading",
-    children: [{ href: "/analytics/grading", label: "Grading Analytics" }],
-  },
+  { href: "/wishlist", label: "Wishlist" },
+  { href: "/grading", label: "Grading" },
   { href: "/activity", label: "Activity" },
   {
     href: "/market/report",
@@ -57,7 +47,15 @@ const COLLECTOR_ITEMS: NavItem[] = [
       { href: "/market/movers", label: "Movers" },
     ],
   },
+];
+
+// Analytics section - its own group (not nested under Collector) so the
+// mobile drawer separates Collector / Analytics / Admin clearly.
+const ANALYTICS_ITEMS: NavItem[] = [
   { href: "/analytics/digest", label: "Analytics Digest" },
+  { href: "/analytics/collection", label: "Collection Analytics" },
+  { href: "/analytics/wishlist", label: "Wishlist Analytics" },
+  { href: "/analytics/grading", label: "Grading Analytics" },
   { href: "/analytics/buy-decisions", label: "Buy Decisions" },
   { href: "/analytics/sell-decisions", label: "Sell Decisions" },
   { href: "/analytics/portfolio-risk", label: "Portfolio Risk" },
@@ -98,6 +96,7 @@ const ADMIN_MORE_ITEMS: NavItem[] = [
 
 const GROUPS: NavGroup[] = [
   { key: "collector", label: "Collector", items: COLLECTOR_ITEMS },
+  { key: "analytics", label: "Analytics", items: ANALYTICS_ITEMS },
   { key: "admin", label: "Admin", items: ADMIN_ITEMS },
   { key: "admin-more", label: "Admin · More", items: ADMIN_MORE_ITEMS, defaultCollapsed: true },
 ];

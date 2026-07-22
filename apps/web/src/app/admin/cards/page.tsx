@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
@@ -360,9 +361,9 @@ function SearchFilters({
 
 function CardsTable({ cards }: { cards: AdminCard[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
+    <TableScrollContainer minWidth={960}>
       <table className="w-full border-collapse text-sm">
-        <thead>
+        <thead className="sticky-thead">
           <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
             <th className="px-3 py-2 font-medium">Card code</th>
             <th className="px-3 py-2 font-medium">Name</th>
@@ -397,7 +398,7 @@ function CardsTable({ cards }: { cards: AdminCard[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }
 
@@ -545,9 +546,9 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
           </div>
 
           {importResult.errors.length > 0 && (
-            <div className="overflow-x-auto rounded border border-rose-900/50">
+            <TableScrollContainer showScrollHint={false}>
               <table className="w-full border-collapse text-xs">
-                <thead>
+                <thead className="sticky-thead">
                   <tr className="border-b border-rose-900/50 bg-rose-950/30 text-left text-[11px] uppercase tracking-wide text-rose-300">
                     <th className="px-2 py-1.5 font-medium">Row</th>
                     <th className="px-2 py-1.5 font-medium">Card code</th>
@@ -566,13 +567,13 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScrollContainer>
           )}
 
           {importResult.preview.length > 0 && (
-            <div className="overflow-x-auto rounded border border-neutral-800">
+            <TableScrollContainer showScrollHint={false}>
               <table className="w-full border-collapse text-xs">
-                <thead>
+                <thead className="sticky-thead">
                   <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
                     <th className="px-2 py-1.5 font-medium">Row</th>
                     <th className="px-2 py-1.5 font-medium">Card code</th>
@@ -595,7 +596,7 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScrollContainer>
           )}
         </div>
       )}

@@ -8,6 +8,7 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PinnedViewsSection } from "@/components/ui/PinnedViewsSection";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
@@ -167,6 +168,14 @@ export default function CatalogOpsPage() {
 
         {!unauthorized && (
           <>
+            <QuickActionBar
+              actions={[
+                { label: "Source Mapping Quality", href: "/admin/source-mapping-quality" },
+                { label: "Catalog Coverage", href: "/admin/catalog-coverage" },
+                { label: "Price Source Health", href: "/admin/price-source-health" },
+              ]}
+            />
+
             {status === "loading" && (
               <div className="mb-6 rounded-panel border border-border-default bg-bg-surface p-8 text-center text-sm text-text-muted">
                 Loading catalog operations summary…
@@ -211,7 +220,10 @@ export default function CatalogOpsPage() {
 
             <PinnedViewsSection title="Pinned Admin Views" />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              data-testid="catalog-ops-links"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            >
               {OPS_CARDS.map((card) => (
                 <Link key={card.href} href={card.href} className="vault-card block p-4">
                   <div className="text-sm font-medium text-text-primary">{card.title}</div>

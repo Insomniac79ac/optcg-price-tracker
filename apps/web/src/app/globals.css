@@ -185,6 +185,52 @@ body {
     background-color: rgba(245, 158, 11, 0.05);
   }
 
+  /* Sticky first column - so the identifying column (card code, name, ...)
+   * stays put while the rest of a wide row scrolls under it. Opt-in per
+   * table (add to the first th/td) since not every table wants it. */
+  .sticky-col-first {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: var(--bg-surface);
+  }
+
+  .data-table tbody tr:hover .sticky-col-first {
+    background-color: var(--bg-elevated);
+  }
+
+  /* Sticky thead for tables that don't use the .data-table class (older
+   * bespoke tables predating it) - same effect as .data-table's built-in
+   * sticky header, opt-in via a class on <thead> instead of every <th>. */
+  .sticky-thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--bg-surface);
+  }
+
+  /* CSS-only "scroll shadow" - subtle fade at the leading/trailing edge of
+   * a horizontally-scrollable container, present only while there's more
+   * to scroll to (no JS scroll listener needed: the "local" backgrounds
+   * scroll with the content while the "scroll" ones stay pinned to the
+   * viewport, so the shadow layer only shows once content has scrolled
+   * under it). Apply to the *scrolling* element itself. */
+  .table-scroll-fade {
+    background:
+      linear-gradient(to right, var(--bg-surface) 30%, rgba(20, 20, 22, 0)) left,
+      linear-gradient(to left, var(--bg-surface) 30%, rgba(20, 20, 22, 0)) right,
+      linear-gradient(to right, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)) left,
+      linear-gradient(to left, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0)) right;
+    background-repeat: no-repeat;
+    background-color: var(--bg-surface);
+    background-size:
+      24px 100%,
+      24px 100%,
+      10px 100%,
+      10px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
   /* Badges/pills ---------------------------------------------------------------- */
 
   .badge {

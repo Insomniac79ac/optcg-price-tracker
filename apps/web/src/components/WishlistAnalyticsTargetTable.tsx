@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import type { WishlistAnalyticsTargetItem } from "@/lib/api";
 import { cardDisplayName, formatJPY, formatNumber, formatPercent, formatSignedJpy } from "@/lib/format";
 
@@ -67,7 +68,7 @@ function renderCell(item: WishlistAnalyticsTargetItem, column: TargetColumn) {
     case "target_hit":
       // Clear but not flashy - a plain colored label, no icon/animation.
       return (
-        <span className={item.target_hit ? "text-emerald-400" : "text-neutral-600"}>
+        <span className={item.target_hit ? "text-emerald-400" : "text-neutral-500"}>
           {item.target_hit ? "Hit" : "—"}
         </span>
       );
@@ -91,11 +92,11 @@ export function WishlistAnalyticsTargetTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
+    <TableScrollContainer showScrollHint={false}>
       <table className="w-full min-w-[720px] border-collapse text-xs">
-        <thead>
+        <thead className="sticky-thead">
           <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-            <th className="px-3 py-2 font-medium">Card</th>
+            <th className="sticky-col-first px-3 py-2 font-medium">Card</th>
             {columns.map((column) => (
               <th key={column} className="px-3 py-2 font-medium">
                 {COLUMN_LABELS[column]}
@@ -107,7 +108,7 @@ export function WishlistAnalyticsTargetTable({
         <tbody>
           {items.map((item) => (
             <tr key={item.wishlist_item_id} className="border-b border-neutral-900 last:border-0">
-              <td className="px-3 py-2 text-neutral-200">
+              <td className="sticky-col-first px-3 py-2 text-neutral-200">
                 <Link href={`/cards/${item.card_id}`} className="text-sky-400 hover:text-sky-300">
                   {item.card_code} · {cardDisplayName(item)}
                 </Link>
@@ -126,6 +127,6 @@ export function WishlistAnalyticsTargetTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

@@ -15,6 +15,7 @@ import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { VariantBadge } from "@/components/ui/VariantBadge";
@@ -274,6 +275,13 @@ export default function CardDuplicatesPage() {
 
         {!unauthorized && (
           <>
+            <QuickActionBar
+              actions={[
+                { label: "Bulk Preview", onClick: () => runBulkPreview(), variant: "preview" },
+                { label: "Catalog Ops", href: "/admin/catalog-ops" },
+              ]}
+            />
+
             {summary && (
               <StatGrid>
                 {summaryCards.map((c) => (

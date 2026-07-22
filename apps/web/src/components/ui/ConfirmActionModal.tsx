@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { ActionButton } from "./ActionButton";
 
 interface AffectedRecord {
@@ -46,6 +47,8 @@ export function ConfirmActionModal({
   disableConfirm?: boolean;
 }) {
   const [typed, setTyped] = useState("");
+
+  useEscapeKey(open, onCancel);
 
   if (!open) return null;
 

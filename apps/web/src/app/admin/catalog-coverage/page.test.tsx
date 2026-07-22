@@ -68,6 +68,7 @@ const EMPTY_REPORT: CatalogCoverageReport = {
   price_gaps: [],
   duplicate_risks: [],
   mapping_quality_risks: [],
+  price_source_health: null,
 };
 
 function makeGapItem(overrides: Partial<CatalogCoverageGapItem> = {}): CatalogCoverageGapItem {

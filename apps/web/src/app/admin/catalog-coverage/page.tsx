@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
@@ -88,9 +89,9 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
           </select>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <TableScrollContainer>
         <table className="w-full min-w-[900px] border-collapse text-sm">
-          <thead>
+          <thead className="sticky-thead">
             <tr className="border-b border-neutral-800 text-left text-xs uppercase tracking-wide text-neutral-500">
               <th className="px-3 py-2 font-medium">Label</th>
               <th className="px-3 py-2 text-right font-medium">Total</th>
@@ -127,7 +128,7 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScrollContainer>
     </div>
   );
 }
@@ -406,9 +407,9 @@ export default function CatalogCoveragePage() {
                   </div>
                 )}
                 {gapStatus === "ready" && gapItems.length > 0 && (
-                  <div className="overflow-x-auto rounded-lg border border-neutral-800">
+                  <TableScrollContainer>
                     <table className="w-full min-w-[900px] border-collapse text-sm">
-                      <thead>
+                      <thead className="sticky-thead">
                         <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
                           <th className="px-3 py-2 font-medium">Severity</th>
                           <th className="px-3 py-2 font-medium">Issue types</th>
@@ -482,7 +483,7 @@ export default function CatalogCoveragePage() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TableScrollContainer>
                 )}
 
                 {gapStatus === "ready" && (

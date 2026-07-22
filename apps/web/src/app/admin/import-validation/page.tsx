@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import {
   AdminAuthRequiredError,
   IMPORT_TYPES,
@@ -55,8 +56,28 @@ export default function AdminImportValidationPage() {
 
         {!unauthorized && (
           <div className="flex flex-col gap-6">
-            <TemplatesSection />
-            <ValidatorAndReportsSection />
+            <QuickActionBar
+              actions={[
+                {
+                  label: "Jump to Templates",
+                  onClick: () =>
+                    document.getElementById("import-templates-section")?.scrollIntoView({ behavior: "smooth" }),
+                },
+                {
+                  label: "Jump to Validator",
+                  onClick: () =>
+                    document.getElementById("import-validator-section")?.scrollIntoView({ behavior: "smooth" }),
+                },
+                { label: "Catalog Ops", href: "/admin/catalog-ops" },
+              ]}
+            />
+
+            <div id="import-templates-section">
+              <TemplatesSection />
+            </div>
+            <div id="import-validator-section">
+              <ValidatorAndReportsSection />
+            </div>
 
             <div className="flex flex-wrap gap-3 text-xs">
               <Link

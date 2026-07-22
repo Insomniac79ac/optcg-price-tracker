@@ -16,6 +16,7 @@ import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
@@ -386,6 +387,13 @@ export default function SourceMappingQualityPage() {
 
         {!unauthorized && (
           <>
+            <QuickActionBar
+              actions={[
+                { label: "Run Recheck (dry run)", onClick: () => runRecheck(true), variant: "dry-run" },
+                { label: "Catalog Ops", href: "/admin/catalog-ops" },
+              ]}
+            />
+
             {summary && (
               <StatGrid>
                 {summaryCards.map((c) => (

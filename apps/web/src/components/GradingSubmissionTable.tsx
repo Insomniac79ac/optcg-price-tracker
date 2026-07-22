@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { createCollectorNote, type GradingAnalyticsSubmission } from "@/lib/api";
 import { cardDisplayName, formatDate, formatJPY, formatNumber, formatPercent } from "@/lib/format";
 
@@ -162,11 +163,11 @@ export function GradingSubmissionTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
+    <TableScrollContainer showScrollHint={false}>
       <table className="w-full min-w-[900px] border-collapse text-xs">
-        <thead>
+        <thead className="sticky-thead">
           <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-            <th className="px-3 py-2 font-medium">Card</th>
+            <th className="sticky-col-first px-3 py-2 font-medium">Card</th>
             {columns.map((column) => (
               <th key={column} className="px-3 py-2 font-medium">
                 {COLUMN_LABELS[column]}
@@ -178,7 +179,7 @@ export function GradingSubmissionTable({
         <tbody>
           {submissions.map((s) => (
             <tr key={s.grading_submission_id} className="border-b border-neutral-900 align-top last:border-0">
-              <td className="px-3 py-2 text-neutral-200">
+              <td className="sticky-col-first px-3 py-2 text-neutral-200">
                 <Link href={`/cards/${s.card_id}`} className="text-sky-400 hover:text-sky-300">
                   {s.card_code}
                 </Link>
@@ -227,6 +228,6 @@ export function GradingSubmissionTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableScrollContainer>
   );
 }

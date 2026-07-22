@@ -50,6 +50,7 @@ export function SavedViewBar({
 
   const [manageOpen, setManageOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SavedView | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   function load() {
     setStatus("loading");
@@ -186,14 +187,27 @@ export function SavedViewBar({
       </select>
 
       <ActionButton onClick={() => setSaveOpen(true)}>Save current view</ActionButton>
-      <ActionButton disabled={!activeView} onClick={handleUpdateCurrent}>
-        Update current view
-      </ActionButton>
-      <ActionButton disabled={!activeView || activeView.is_default} onClick={handleSetDefault}>
-        Set default
-      </ActionButton>
-      <ActionButton onClick={handleClearDefault}>Clear default</ActionButton>
-      <ActionButton onClick={() => setManageOpen(true)}>Manage views</ActionButton>
+
+      {/* Secondary view actions - compact on mobile behind a toggle so this
+          row doesn't wrap to several lines above every filterable page. */}
+      <button
+        type="button"
+        onClick={() => setMoreOpen((v) => !v)}
+        aria-expanded={moreOpen}
+        className="rounded-control border border-border-default px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary sm:hidden"
+      >
+        {moreOpen ? "Less…" : "More…"}
+      </button>
+      <div className={`${moreOpen ? "flex" : "hidden"} flex-wrap items-center gap-2 sm:flex`}>
+        <ActionButton disabled={!activeView} onClick={handleUpdateCurrent}>
+          Update current view
+        </ActionButton>
+        <ActionButton disabled={!activeView || activeView.is_default} onClick={handleSetDefault}>
+          Set default
+        </ActionButton>
+        <ActionButton onClick={handleClearDefault}>Clear default</ActionButton>
+        <ActionButton onClick={() => setManageOpen(true)}>Manage views</ActionButton>
+      </div>
 
       <SaveViewModal
         open={saveOpen}

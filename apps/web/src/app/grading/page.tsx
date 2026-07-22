@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { GradingStatusBadge } from "@/components/GradingStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   GRADING_COMPANY_OPTIONS,
@@ -332,6 +334,7 @@ function GradingPageInner() {
   }
 
   const isEditing = editingId !== null;
+  const formSectionRef = useRef<HTMLElement>(null);
 
   return (
     <div className="min-h-screen">
@@ -359,6 +362,16 @@ function GradingPageInner() {
             </span>
           )}
         </div>
+
+        <QuickActionBar
+          actions={[
+            { label: "Grading Analytics", href: "/analytics/grading" },
+            {
+              label: "New submission",
+              onClick: () => formSectionRef.current?.scrollIntoView({ behavior: "smooth" }),
+            },
+          ]}
+        />
 
         {summary && (
           <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -393,7 +406,7 @@ function GradingPageInner() {
           </div>
         )}
 
-        <section className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+        <section ref={formSectionRef} className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
           <h2 className="mb-3 text-sm font-semibold text-neutral-200">
             {isEditing ? "Edit grading submission" : "Add grading submission"}
           </h2>
@@ -667,11 +680,11 @@ function GradingPageInner() {
         )}
 
         {listStatus === "ready" && submissions.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+          <TableScrollContainer minWidth={900}>
             <table className="w-full border-collapse text-xs">
-              <thead>
+              <thead className="sticky-thead">
                 <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                  <th className="px-2 py-1.5 font-medium">Code</th>
+                  <th className="px-2 py-1.5 font-medium sticky-col-first">Code</th>
                   <th className="px-2 py-1.5 font-medium">Name</th>
                   <th className="px-2 py-1.5 font-medium">Qty</th>
                   <th className="px-2 py-1.5 font-medium">Company</th>
@@ -695,7 +708,7 @@ function GradingPageInner() {
                     key={s.id}
                     className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
                   >
-                    <td className="px-2 py-1.5 font-mono text-neutral-400">{s.card_code}</td>
+                    <td className="sticky-col-first px-2 py-1.5 font-mono text-neutral-400">{s.card_code}</td>
                     <td className="px-2 py-1.5 font-medium text-neutral-100">
                       {cardDisplayName(s)}
                     </td>
@@ -766,7 +779,7 @@ function GradingPageInner() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScrollContainer>
         )}
 
         {listStatus === "ready" && (

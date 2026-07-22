@@ -7,6 +7,7 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { MatchStatusBadge } from "@/components/MatchStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
+import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import {
   AdminAuthRequiredError,
@@ -419,9 +420,9 @@ export default function SnkrdunkCandidatesPage() {
             )}
 
             {status === "ready" && filteredCandidates.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-neutral-800">
+              <TableScrollContainer minWidth={960}>
                 <table className="w-full border-collapse text-sm">
-                  <thead>
+                  <thead className="sticky-thead">
                     <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
                       <th className="px-3 py-2 font-medium">Title</th>
                       <th className="px-3 py-2 font-medium text-right">Price</th>
@@ -533,7 +534,7 @@ export default function SnkrdunkCandidatesPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollContainer>
             )}
 
             {status === "ready" && (

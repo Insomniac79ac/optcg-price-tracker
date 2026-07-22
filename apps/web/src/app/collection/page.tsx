@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionImportExport } from "@/components/CollectionImportExport";
@@ -23,6 +23,7 @@ import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PriceCell } from "@/components/ui/PriceCell";
+import { QuickActionBar } from "@/components/ui/QuickActionBar";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { VariantBadge } from "@/components/ui/VariantBadge";
 import {
@@ -177,6 +178,9 @@ export default function CollectionPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CollectionItem | null>(null);
+
+  const formSectionRef = useRef<HTMLElement>(null);
+  const importExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCards()
@@ -582,13 +586,30 @@ export default function CollectionPage() {
           }
         />
 
-        <CollectionImportExport
-          onImported={() => {
-            refreshList();
-            refreshSummary();
-            refreshValuation();
-          }}
+        <QuickActionBar
+          actions={[
+            { label: "Vault View", href: "/collection/vault" },
+            { label: "Collection Analytics", href: "/analytics/collection" },
+            {
+              label: "Add Item",
+              onClick: () => formSectionRef.current?.scrollIntoView({ behavior: "smooth" }),
+            },
+            {
+              label: "Import / Export",
+              onClick: () => importExportRef.current?.scrollIntoView({ behavior: "smooth" }),
+            },
+          ]}
         />
+
+        <div ref={importExportRef}>
+          <CollectionImportExport
+            onImported={() => {
+              refreshList();
+              refreshSummary();
+              refreshValuation();
+            }}
+          />
+        </div>
 
         <div className="mb-6">
           <CollectorTagsGroupsManager
@@ -632,7 +653,7 @@ export default function CollectionPage() {
           </div>
         )}
 
-        <section className="panel mb-6 p-4">
+        <section ref={formSectionRef} className="panel mb-6 p-4">
           <h2 className="mb-3 text-sm font-semibold text-text-primary">
             {editingId !== null ? "Edit collection item" : "Add collection item"}
           </h2>
