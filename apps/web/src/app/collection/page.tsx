@@ -18,6 +18,7 @@ import type { HistoryTimeframe } from "@/components/PortfolioValuationHistoryCha
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
 import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "@/components/ui/FilterBar";
@@ -1261,16 +1262,15 @@ function FlagsCell({
   return (
     <div className="flex flex-wrap gap-1">
       {activeFlags.map((f) => (
-        <span
+        <Badge
           key={f.key}
-          className={`rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${
+          label={f.label}
+          className={
             f.positive
-              ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-              : "bg-neutral-500/15 text-text-secondary ring-neutral-500/30"
-          }`}
-        >
-          {f.label}
-        </span>
+              ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+              : "bg-neutral-500/15 text-text-secondary ring-1 ring-inset ring-neutral-500/30"
+          }
+        />
       ))}
     </div>
   );
@@ -1283,9 +1283,10 @@ function GradedAdjustedBasisLabel({
 }) {
   if (gradedAdjusted.basis === "graded_value") {
     return (
-      <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[11px] font-medium text-violet-300 ring-1 ring-inset ring-violet-500/30">
-        Graded value
-      </span>
+      <Badge
+        label="Graded value"
+        className="bg-violet-500/15 text-violet-300 ring-1 ring-inset ring-violet-500/30"
+      />
     );
   }
   if (gradedAdjusted.raw_fallback_basis) {
@@ -1294,9 +1295,10 @@ function GradedAdjustedBasisLabel({
         ? "SNKRDUNK floor"
         : "Yuyu-Tei sell";
     return (
-      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-signal-warning ring-1 ring-inset ring-amber-500/30">
-        Raw fallback ({label})
-      </span>
+      <Badge
+        label={`Raw fallback (${label})`}
+        className="bg-amber-500/15 text-signal-warning ring-1 ring-inset ring-amber-500/30"
+      />
     );
   }
   return <span className="italic text-text-faint">no graded value</span>;

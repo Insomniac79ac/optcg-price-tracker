@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, ErrorState, LoadingState, MissingValue } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
@@ -664,9 +665,7 @@ export default function WishlistPage() {
                     </td>
                     <td className="px-2 py-1.5">
                       {item.target_hit ? (
-                        <span className="rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                          hit
-                        </span>
+                        <Badge label="hit" className="bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30" />
                       ) : (
                         <MissingValue />
                       )}

@@ -11,6 +11,7 @@ import { MarketSignalEventStatusBadge } from "@/components/MarketSignalEventStat
 import { OpportunityCategoryBadge } from "@/components/OpportunityCategoryBadge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -472,9 +473,10 @@ export default function MarketOpportunitiesPage() {
                                 <WishlistPriorityBadge priority={opp.wishlist_priority} />
                               )}
                               {opp.wishlist_target_hit && (
-                                <span className="rounded px-1.5 py-0.5 text-[10px] font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
-                                  target hit
-                                </span>
+                                <Badge
+                                  label="target hit"
+                                  className="bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+                                />
                               )}
                             </div>
                             {opp.wishlist_target_buy_price_jpy !== null && (
