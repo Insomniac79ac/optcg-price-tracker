@@ -7,6 +7,7 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { QuickActionBar } from "@/components/ui/QuickActionBar";
@@ -619,15 +620,14 @@ function PreviewTable({ rows }: { rows: ImportPreviewRow[] }) {
 
 function StatusBadge({ valid }: { valid: boolean }) {
   return (
-    <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+    <Badge
+      label={valid ? "Valid" : "Invalid"}
+      className={
         valid
-          ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-          : "bg-rose-500/15 text-signal-red ring-rose-500/30"
-      }`}
-    >
-      {valid ? "Valid" : "Invalid"}
-    </span>
+          ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+          : "bg-rose-500/15 text-signal-red ring-1 ring-inset ring-rose-500/30"
+      }
+    />
   );
 }
 

@@ -4,17 +4,18 @@ import { useEffect, useRef, useState } from "react";
 
 import { type FileJob, cancelFileJob, downloadFileJob, fetchFileJob } from "@/lib/api";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
 
 const POLL_INTERVAL_MS = 1500;
 const ACTIVE_STATUSES = new Set(["queued", "running"]);
 
 const STATUS_STYLES: Record<string, string> = {
-  queued: "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30",
-  running: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  success: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  failed: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-  cancelled: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  queued: "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30",
+  running: "bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/30",
+  success: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  failed: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
+  cancelled: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
 };
 
 /** Polls GET /file-jobs/{id} while the job is queued/running and renders
@@ -120,13 +121,10 @@ export function FileJobTracker({
     <div className="mt-3 rounded border border-neutral-800 bg-neutral-950 p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-neutral-500">File job #{job.id}</span>
-        <span
-          className={`inline-flex items-center rounded px-1.5 py-0.5 font-medium ring-1 ring-inset ${
-            STATUS_STYLES[job.status] ?? "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30"
-          }`}
-        >
-          {job.status}
-        </span>
+        <Badge
+          label={job.status}
+          className={STATUS_STYLES[job.status] ?? "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30"}
+        />
         {progressLabel && <span className="text-neutral-400">rows: {progressLabel}</span>}
 
         {job.download_ready && (
