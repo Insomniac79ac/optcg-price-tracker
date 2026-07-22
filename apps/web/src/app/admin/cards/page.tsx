@@ -9,8 +9,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { FormField } from "@/components/FormField";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard as SharedStatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type AdminCard,
@@ -91,45 +95,43 @@ export default function AdminCardsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">Card catalog</h1>
-            <Link
-              href="/admin/card-audit"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Card audit →
-            </Link>
-            <Link
-              href="/admin/catalog-coverage"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog coverage →
-            </Link>
-            <Link
-              href="/admin/card-duplicates"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Card duplicates →
-            </Link>
-            <Link
-              href="/admin/import-validation"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Import validation →
-            </Link>
-            <Link
-              href="/admin/catalog-ops"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog operations →
-            </Link>
-          </div>
-          <AdminLogoutButton />
+        <PageHeader
+          title="Card catalog"
+          description="Browse, search, and bulk import/export the canonical cards table."
+          actions={<AdminLogoutButton />}
+        />
+        <div className="mb-6 flex flex-wrap gap-3">
+          <Link
+            href="/admin/card-audit"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Card audit →
+          </Link>
+          <Link
+            href="/admin/catalog-coverage"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Catalog coverage →
+          </Link>
+          <Link
+            href="/admin/card-duplicates"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Card duplicates →
+          </Link>
+          <Link
+            href="/admin/import-validation"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Import validation →
+          </Link>
+          <Link
+            href="/admin/catalog-ops"
+            className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
+          >
+            Catalog operations →
+          </Link>
         </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Browse, search, and bulk import/export the canonical cards table.
-        </p>
 
         {unauthorized && (
           <AdminAuthGate
@@ -176,16 +178,10 @@ export default function AdminCardsPage() {
               }}
             />
 
-            {status === "loading" && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                Loading cards…
-              </div>
-            )}
+            {status === "loading" && <LoadingState>Loading cards…</LoadingState>}
 
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                Failed to load the card catalog from the API.
-              </div>
+              <ErrorState>Failed to load the card catalog from the API.</ErrorState>
             )}
 
             {status === "ready" && data && (
@@ -193,9 +189,7 @@ export default function AdminCardsPage() {
                 <SummaryCards data={data} />
 
                 {data.cards.length === 0 ? (
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                    No cards match the current filters.
-                  </div>
+                  <EmptyState>No cards match the current filters.</EmptyState>
                 ) : (
                   <>
                     <CardsTable cards={data.cards} />
@@ -233,35 +227,17 @@ function SummaryCards({ data }: { data: AdminCardListResponse }) {
     .join(", ");
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatCard label="Total cards" value={formatNumber(data.summary.total_cards)} />
-      <StatCard
-        label="Missing metadata"
-        value={formatNumber(data.summary.missing_metadata_count)}
-        tone={data.summary.missing_metadata_count > 0 ? "bad" : undefined}
-      />
-      <StatCard label="Top sets" value={topSets || "not available"} small />
-      <StatCard label="Top rarities" value={topRarities || "not available"} small />
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-  small,
-}: {
-  label: string;
-  value: number | string;
-  tone?: "bad";
-  small?: boolean;
-}) {
-  const toneClass = tone === "bad" ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 ${small ? "text-sm" : "text-2xl"} font-semibold ${toneClass}`}>{value}</div>
+    <div className="mb-6">
+      <StatGrid>
+        <SharedStatCard label="Total cards" value={formatNumber(data.summary.total_cards)} />
+        <SharedStatCard
+          label="Missing metadata"
+          value={formatNumber(data.summary.missing_metadata_count)}
+          tone={data.summary.missing_metadata_count > 0 ? "bad" : "neutral"}
+        />
+        <SharedStatCard label="Top sets" value={topSets || "not available"} />
+        <SharedStatCard label="Top rarities" value={topRarities || "not available"} />
+      </StatGrid>
     </div>
   );
 }
@@ -301,7 +277,7 @@ function SearchFilters({
           value={q}
           onChange={(e) => onQChange(e.target.value)}
           placeholder="card code or name"
-          className="w-48 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+          className="w-48 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
         />
       </FormField>
       <FormField label="Set code">
@@ -310,7 +286,7 @@ function SearchFilters({
           value={setCode}
           onChange={(e) => onSetCodeChange(e.target.value)}
           placeholder="OP01"
-          className="w-24 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+          className="w-24 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
         />
       </FormField>
       <FormField label="Rarity">
@@ -319,7 +295,7 @@ function SearchFilters({
           value={rarity}
           onChange={(e) => onRarityChange(e.target.value)}
           placeholder="L"
-          className="w-20 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+          className="w-20 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
         />
       </FormField>
       <FormField label="Variant">
@@ -328,14 +304,14 @@ function SearchFilters({
           value={variant}
           onChange={(e) => onVariantChange(e.target.value)}
           placeholder="parallel"
-          className="w-28 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+          className="w-28 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
         />
       </FormField>
       <FormField label="Language">
         <select
           value={language}
           onChange={(e) => onLanguageChange(e.target.value)}
-          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+          className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
         >
           <option value="">Any</option>
           <option value="jp">jp</option>
@@ -346,7 +322,7 @@ function SearchFilters({
         <select
           value={missingMetadata}
           onChange={(e) => onMissingMetadataChange(e.target.value)}
-          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+          className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
         >
           {MISSING_METADATA_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -364,7 +340,7 @@ function CardsTable({ cards }: { cards: AdminCard[] }) {
     <TableScrollContainer minWidth={960}>
       <table className="w-full border-collapse text-sm">
         <thead className="sticky-thead">
-          <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
+          <tr className="border-b border-border-default bg-bg-surface text-left text-xs uppercase tracking-wide text-text-muted">
             <th className="px-3 py-2 font-medium">Card code</th>
             <th className="px-3 py-2 font-medium">Name</th>
             <th className="px-3 py-2 font-medium">Set</th>
@@ -377,23 +353,23 @@ function CardsTable({ cards }: { cards: AdminCard[] }) {
         </thead>
         <tbody>
           {cards.map((card) => (
-            <tr key={card.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-              <td className="px-3 py-2 font-mono text-xs text-neutral-300">
+            <tr key={card.id} className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60">
+              <td className="px-3 py-2 font-mono text-xs text-text-secondary">
                 <Link href={`/cards/${card.id}`} className="hover:text-sky-400">
                   {card.card_code}
                 </Link>
               </td>
-              <td className="max-w-xs px-3 py-2 text-neutral-300" title={card.name_en ?? undefined}>
+              <td className="max-w-xs px-3 py-2 text-text-secondary" title={card.name_en ?? undefined}>
                 {formatNullable(card.name_en, (v) => v)}
               </td>
-              <td className="px-3 py-2 text-neutral-400">{card.set_code}</td>
+              <td className="px-3 py-2 text-text-secondary">{card.set_code}</td>
               <td className="px-3 py-2">
                 <RarityBadge rarity={card.rarity} />
               </td>
-              <td className="px-3 py-2 text-neutral-400">{formatNullable(card.variant, (v) => v)}</td>
-              <td className="px-3 py-2 text-neutral-400">{card.language}</td>
-              <td className="px-3 py-2 text-neutral-400">{formatNullable(card.artist, (v) => v)}</td>
-              <td className="px-3 py-2 text-xs text-neutral-500">{formatDateTime(card.updated_at)}</td>
+              <td className="px-3 py-2 text-text-secondary">{formatNullable(card.variant, (v) => v)}</td>
+              <td className="px-3 py-2 text-text-secondary">{card.language}</td>
+              <td className="px-3 py-2 text-text-secondary">{formatNullable(card.artist, (v) => v)}</td>
+              <td className="px-3 py-2 text-xs text-text-muted">{formatDateTime(card.updated_at)}</td>
             </tr>
           ))}
         </tbody>
@@ -450,23 +426,18 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
   }
 
   return (
-    <section className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">Import / export</h2>
+    <section className="mb-6 rounded-panel border border-border-default bg-bg-surface p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">Import / export</h2>
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-neutral-800 pb-3">
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          disabled={exportPending}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-        >
+      <div className="flex flex-wrap items-center gap-3 border-b border-border-default pb-3">
+        <ActionButton variant="primary" onClick={handleExportCsv} disabled={exportPending}>
           {exportPending ? "Exporting…" : "Export cards CSV"}
-        </button>
-        <span className="text-xs text-neutral-600">Downloads /admin/cards/export.csv</span>
+        </ActionButton>
+        <span className="text-xs text-text-faint">Downloads /admin/cards/export.csv</span>
       </div>
 
       {exportError && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {exportError}
         </div>
       )}
@@ -477,59 +448,49 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
             type="file"
             accept=".csv,text/csv"
             onChange={handleImportFileChange}
-            className="block w-full text-xs text-neutral-300 file:mr-2 file:rounded file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-xs file:font-medium file:text-neutral-200 hover:file:bg-neutral-700"
+            className="block w-full text-xs text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-bg-card file:px-2 file:py-1 file:text-xs file:font-medium file:text-text-primary hover:file:bg-bg-elevated"
           />
         </FormField>
 
-        <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={importDryRun}
             onChange={(e) => setImportDryRun(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Dry run
         </label>
 
-        <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={importOverwrite}
             onChange={(e) => setImportOverwrite(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Overwrite existing fields
         </label>
 
-        <button
-          type="button"
-          onClick={() => runImport(true)}
-          disabled={importPending || !importFile}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
-        >
+        <ActionButton variant="dry-run" onClick={() => runImport(true)} disabled={importPending || !importFile}>
           {importPending ? "Working…" : "Preview import"}
-        </button>
+        </ActionButton>
 
         {!importDryRun && (
-          <button
-            type="button"
-            onClick={() => runImport(false)}
-            disabled={importPending || !importFile}
-            className="rounded bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50"
-          >
+          <ActionButton variant="danger" onClick={() => runImport(false)} disabled={importPending || !importFile}>
             {importPending ? "Working…" : "Import for real"}
-          </button>
+          </ActionButton>
         )}
       </div>
 
       {!importDryRun && (
-        <div className="mt-3 rounded border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
+        <div className="mt-3 rounded border border-signal-warning/40 bg-signal-warning/10 px-3 py-2 text-xs text-signal-warning">
           This will write changes to the card catalog.
         </div>
       )}
 
       {importError && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {importError}
         </div>
       )}
@@ -549,7 +510,7 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
             <TableScrollContainer showScrollHint={false}>
               <table className="w-full border-collapse text-xs">
                 <thead className="sticky-thead">
-                  <tr className="border-b border-rose-900/50 bg-rose-950/30 text-left text-[11px] uppercase tracking-wide text-rose-300">
+                  <tr className="border-b border-signal-red/40 bg-signal-red/10 text-left text-[11px] uppercase tracking-wide text-signal-red">
                     <th className="px-2 py-1.5 font-medium">Row</th>
                     <th className="px-2 py-1.5 font-medium">Card code</th>
                     <th className="px-2 py-1.5 font-medium">Error</th>
@@ -557,12 +518,12 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
                 </thead>
                 <tbody>
                   {importResult.errors.map((e, idx) => (
-                    <tr key={`${e.row_number}-${idx}`} className="border-b border-neutral-900 last:border-0">
-                      <td className="px-2 py-1.5 text-neutral-400">{e.row_number}</td>
-                      <td className="px-2 py-1.5 font-mono text-neutral-400">
+                    <tr key={`${e.row_number}-${idx}`} className="border-b border-border-muted last:border-0">
+                      <td className="px-2 py-1.5 text-text-secondary">{e.row_number}</td>
+                      <td className="px-2 py-1.5 font-mono text-text-secondary">
                         {e.card_code ?? "not available"}
                       </td>
-                      <td className="px-2 py-1.5 text-rose-300">{e.error}</td>
+                      <td className="px-2 py-1.5 text-signal-red">{e.error}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -574,7 +535,7 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
             <TableScrollContainer showScrollHint={false}>
               <table className="w-full border-collapse text-xs">
                 <thead className="sticky-thead">
-                  <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+                  <tr className="border-b border-border-default bg-bg-page text-left text-[11px] uppercase tracking-wide text-text-muted">
                     <th className="px-2 py-1.5 font-medium">Row</th>
                     <th className="px-2 py-1.5 font-medium">Card code</th>
                     <th className="px-2 py-1.5 font-medium">Action</th>
@@ -583,11 +544,11 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
                 </thead>
                 <tbody>
                   {importResult.preview.map((p, idx) => (
-                    <tr key={`${p.row_number}-${idx}`} className="border-b border-neutral-900 last:border-0">
-                      <td className="px-2 py-1.5 text-neutral-400">{p.row_number}</td>
-                      <td className="px-2 py-1.5 font-mono text-neutral-300">{p.card_code}</td>
-                      <td className="px-2 py-1.5 text-neutral-200">{p.action}</td>
-                      <td className="px-2 py-1.5 text-neutral-400">
+                    <tr key={`${p.row_number}-${idx}`} className="border-b border-border-muted last:border-0">
+                      <td className="px-2 py-1.5 text-text-secondary">{p.row_number}</td>
+                      <td className="px-2 py-1.5 font-mono text-text-secondary">{p.card_code}</td>
+                      <td className="px-2 py-1.5 text-text-primary">{p.action}</td>
+                      <td className="px-2 py-1.5 text-text-secondary">
                         {Object.keys(p.changes).length === 0
                           ? "none"
                           : Object.keys(p.changes).join(", ")}
@@ -606,8 +567,8 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
 
 function ImportStat({ label, value }: { label: string; value: number }) {
   return (
-    <span className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300">
-      <span className="text-neutral-500">{label}:</span> {value}
+    <span className="rounded border border-border-default bg-bg-page px-2 py-1 text-text-secondary">
+      <span className="text-text-muted">{label}:</span> {value}
     </span>
   );
 }

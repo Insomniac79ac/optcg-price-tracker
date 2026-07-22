@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type CacheClearResponse,
@@ -66,13 +70,11 @@ export default function CachePage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Cache</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Short-lived cache for dashboard and market read endpoints.
-        </p>
+        <PageHeader
+          title="Cache"
+          description="Short-lived cache for dashboard and market read endpoints."
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && (
           <AdminAuthGate
@@ -86,7 +88,7 @@ export default function CachePage() {
         {!unauthorized && (
           <div className="flex flex-col gap-6">
             {error && (
-              <div className="rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+              <div className="rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
                 {error}
               </div>
             )}
@@ -142,8 +144,8 @@ export default function CachePage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">{title}</h2>
+    <section className="panel p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -159,52 +161,29 @@ function SummaryCards({
   return (
     <Section title="Status">
       <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100"
-        >
+        <ActionButton variant="default" onClick={onRefresh}>
           Refresh
-        </button>
+        </ActionButton>
       </div>
       {!status ? (
-        <p className="text-xs text-neutral-500">Loading cache status…</p>
+        <p className="text-xs text-text-muted">Loading cache status…</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatGrid>
           <StatCard
             label="Enabled"
             value={status.enabled ? "yes" : "no"}
-            tone={status.enabled ? "pass" : "warning"}
+            tone={status.enabled ? "good" : "bad"}
           />
           <StatCard label="Backend" value={status.backend} />
           <StatCard label="Keys" value={status.stats.keys} />
-          <StatCard label="Hits" value={status.stats.hits} tone="pass" />
+          <StatCard label="Hits" value={status.stats.hits} tone="good" />
           <StatCard label="Misses" value={status.stats.misses} />
           <StatCard label="Dashboard TTL (s)" value={status.ttl.dashboard} />
           <StatCard label="Market TTL (s)" value={status.ttl.market} />
           <StatCard label="Collection TTL (s)" value={status.ttl.collection} />
-        </div>
+        </StatGrid>
       )}
     </Section>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  tone?: "pass" | "warning";
-}) {
-  const toneClass =
-    tone === "warning" ? "text-amber-400" : tone === "pass" ? "text-emerald-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-950 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
   );
 }
 
@@ -246,43 +225,38 @@ function ClearCacheSection({ onCleared }: { onCleared: () => void }) {
   return (
     <Section title="Clear cache">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-neutral-400">
+        <label className="flex flex-col gap-1 text-xs text-text-secondary">
           Prefix (optional - leave blank to clear all)
           <input
             type="text"
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             placeholder="e.g. dashboard"
-            className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
+            className={FILTER_INPUT_CLASS}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-400">
-          Type <span className="font-mono text-neutral-200">{CONFIRM_PHRASE}</span> to confirm
+        <label className="flex flex-col gap-1 text-xs text-text-secondary">
+          Type <span className="mono text-text-primary">{CONFIRM_PHRASE}</span> to confirm
           <input
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
+            className={FILTER_INPUT_CLASS}
           />
         </label>
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={pending}
-          className="rounded bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50"
-        >
+        <ActionButton variant="danger" onClick={handleClear} disabled={pending}>
           {pending ? "Clearing…" : "Clear cache"}
-        </button>
+        </ActionButton>
       </div>
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
 
       {result && (
-        <div className="mt-3 rounded border border-emerald-900/50 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-300">
+        <div className="mt-3 rounded-control border border-signal-green/40 bg-signal-green/10 px-3 py-2 text-xs text-signal-green">
           Cleared {result.prefix ? `prefix "${result.prefix}"` : "all cache keys"}
           {result.deleted_count !== null ? ` - ${result.deleted_count} key(s) deleted.` : "."}
         </div>
@@ -298,7 +272,7 @@ function HelpfulPrefixes() {
         {HELPFUL_PREFIXES.map((p) => (
           <span
             key={p}
-            className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 font-mono text-xs text-neutral-400"
+            className="rounded-control border border-border-default bg-bg-surface px-2 py-1 font-mono text-xs text-text-secondary"
           >
             {p}
           </span>

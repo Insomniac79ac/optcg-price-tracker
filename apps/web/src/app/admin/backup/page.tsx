@@ -7,6 +7,8 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { FileJobTracker } from "@/components/FileJobTracker";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   AdminAuthRequiredError,
   type BackupRestoreMode,
@@ -33,14 +35,11 @@ export default function AdminBackupPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Backup &amp; restore</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Export, validate, and restore tracker data (cards, collection, mappings, reports,
-          signals, and workflow history). Never includes tokens, passwords, or other secrets.
-        </p>
+        <PageHeader
+          title="Backup & restore"
+          description="Export, validate, and restore tracker data (cards, collection, mappings, reports, signals, and workflow history). Never includes tokens, passwords, or other secrets."
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && <AdminAuthGate onTokenSaved={() => setUnauthorized(false)} />}
 
@@ -91,8 +90,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">{title}</h2>
+    <section className="panel p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -152,74 +151,64 @@ function ExportSection() {
   return (
     <Section title="Export backup">
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={includePrices}
             onChange={(e) => setIncludePrices(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Include prices
         </label>
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={includeRawSnapshots}
             onChange={(e) => setIncludeRawSnapshots(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Include raw snapshots
         </label>
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={includeRefreshRuns}
             onChange={(e) => setIncludeRefreshRuns(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Include refresh runs
         </label>
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={includeLogs}
             onChange={(e) => setIncludeLogs(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Include logs
         </label>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={pending}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
-        >
+        <ActionButton variant="primary" onClick={handleDownload} disabled={pending}>
           {pending ? "Exporting…" : "Download backup JSON"}
-        </button>
+        </ActionButton>
 
-        <button
-          type="button"
-          onClick={handlePrepareJob}
-          disabled={jobPending}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
-        >
+        <ActionButton variant="default" onClick={handlePrepareJob} disabled={jobPending}>
           {jobPending ? "Preparing…" : "Prepare backup in background"}
-        </button>
-        <span className="text-xs text-neutral-600">
+        </ActionButton>
+        <span className="text-xs text-text-faint">
           Generates in the background - useful for a large backup
         </span>
       </div>
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
       {jobError && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {jobError}
         </div>
       )}
@@ -266,20 +255,20 @@ function ValidateSection() {
             setResult(null);
             setError(null);
           }}
-          className="block text-xs text-neutral-300 file:mr-2 file:rounded file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-xs file:font-medium file:text-neutral-200 hover:file:bg-neutral-700"
+          className="block text-xs text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-bg-card file:px-2 file:py-1 file:text-xs file:font-medium file:text-text-primary hover:file:bg-bg-elevated"
         />
         <button
           type="button"
           onClick={handleValidate}
           disabled={pending || !file}
-          className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
+          className="rounded border border-border-default px-3 py-1.5 text-xs font-medium text-text-primary hover:text-text-primary disabled:opacity-50"
         >
           {pending ? "Validating…" : "Validate"}
         </button>
       </div>
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
@@ -288,7 +277,7 @@ function ValidateSection() {
         <div className="mt-4 space-y-3">
           <div className="flex items-center gap-2">
             <StatusBadge valid={result.valid} />
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-text-muted">
               backup_version: {result.backup_version ?? "—"}
             </span>
           </div>
@@ -298,9 +287,9 @@ function ValidateSection() {
               {Object.entries(result.summary).map(([table, count]) => (
                 <span
                   key={table}
-                  className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300"
+                  className="rounded border border-border-default bg-bg-page px-2 py-1 text-text-secondary"
                 >
-                  <span className="text-neutral-500">{table}:</span> {count}
+                  <span className="text-text-muted">{table}:</span> {count}
                 </span>
               ))}
             </div>
@@ -366,15 +355,15 @@ function RestoreSection() {
             setResult(null);
             setError(null);
           }}
-          className="block text-xs text-neutral-300 file:mr-2 file:rounded file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-xs file:font-medium file:text-neutral-200 hover:file:bg-neutral-700"
+          className="block text-xs text-text-secondary file:mr-2 file:rounded file:border-0 file:bg-bg-card file:px-2 file:py-1 file:text-xs file:font-medium file:text-text-primary hover:file:bg-bg-elevated"
         />
 
-        <label className="text-xs text-neutral-500">
+        <label className="text-xs text-text-muted">
           Mode
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as BackupRestoreMode)}
-            className="ml-2 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+            className="ml-2 rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
           >
             {BACKUP_RESTORE_MODES.map((m) => (
               <option key={m} value={m}>
@@ -384,45 +373,40 @@ function RestoreSection() {
           </select>
         </label>
 
-        <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={dryRun}
             onChange={(e) => setDryRun(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Dry run
         </label>
 
-        <button
-          type="button"
+        <ActionButton
+          variant={isRealReplace ? "danger" : dryRun ? "dry-run" : "real"}
           onClick={handleRestore}
           disabled={pending || !file || !confirmSatisfied}
-          className={`rounded px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-            isRealReplace
-              ? "bg-rose-600 text-white hover:bg-rose-500"
-              : "bg-neutral-100 text-neutral-900 hover:bg-white"
-          }`}
         >
           {pending ? "Working…" : "Restore"}
-        </button>
+        </ActionButton>
       </div>
 
       {mode === "replace" && (
         <div className="mt-3 space-y-2">
-          <div className="rounded border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
+          <div className="rounded border border-signal-warning/40 bg-signal-warning/10 px-3 py-2 text-xs text-signal-warning">
             Replace mode can delete existing tracker data.
           </div>
           {!dryRun && (
-            <label className="flex items-center gap-2 text-xs text-neutral-400">
-              Type <span className="font-mono text-neutral-200">{CONFIRM_PHRASE}</span> to
+            <label className="flex items-center gap-2 text-xs text-text-secondary">
+              Type <span className="font-mono text-text-primary">{CONFIRM_PHRASE}</span> to
               confirm:
               <input
                 type="text"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder={CONFIRM_PHRASE}
-                className="w-40 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-700"
+                className="w-40 rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
               />
             </label>
           )}
@@ -430,7 +414,7 @@ function RestoreSection() {
       )}
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
@@ -439,7 +423,7 @@ function RestoreSection() {
         <div className="mt-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge valid={result.valid} />
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-text-muted">
               dry_run: {String(result.dry_run)} · mode: {result.mode} · backup_version:{" "}
               {result.backup_version ?? "—"}
             </span>
@@ -461,11 +445,11 @@ function RestoreSection() {
           <MessageList label="Warnings" items={result.warnings} tone="amber" />
           <MessageList label="Errors" items={result.errors} tone="rose" />
 
-          <details className="text-xs text-neutral-500">
-            <summary className="cursor-pointer select-none hover:text-neutral-300">
+          <details className="text-xs text-text-muted">
+            <summary className="cursor-pointer select-none hover:text-text-secondary">
               Raw JSON
             </summary>
-            <pre className="mt-2 max-h-64 overflow-auto rounded bg-neutral-950 p-3 text-[11px] text-neutral-400">
+            <pre className="mt-2 max-h-64 overflow-auto rounded bg-bg-page p-3 text-[11px] text-text-secondary">
               {JSON.stringify(result, null, 2)}
             </pre>
           </details>
@@ -494,14 +478,14 @@ function SummaryTable({ title, data }: { title: string; data: Record<string, num
   if (entries.length === 0) return null;
   return (
     <div>
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">{title}</div>
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">{title}</div>
       <div className="flex flex-wrap gap-2 text-xs">
         {entries.map(([table, value]) => (
           <span
             key={table}
-            className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300"
+            className="rounded border border-border-default bg-bg-page px-2 py-1 text-text-secondary"
           >
-            <span className="text-neutral-500">{table}:</span> {value}
+            <span className="text-text-muted">{table}:</span> {value}
           </span>
         ))}
       </div>
@@ -514,14 +498,14 @@ function PreviewTable({ data }: { data: Record<string, Record<string, number>> }
   if (entries.length === 0) return null;
   return (
     <div>
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">Preview</div>
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">Preview</div>
       <div className="flex flex-wrap gap-2 text-xs">
         {entries.map(([table, counts]) => (
           <span
             key={table}
-            className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300"
+            className="rounded border border-border-default bg-bg-page px-2 py-1 text-text-secondary"
           >
-            <span className="text-neutral-500">{table}:</span>{" "}
+            <span className="text-text-muted">{table}:</span>{" "}
             {Object.entries(counts)
               .map(([action, n]) => `${action}=${n}`)
               .join(", ")}
@@ -544,11 +528,11 @@ function MessageList({
   if (items.length === 0) return null;
   const toneClass =
     tone === "amber"
-      ? "border-amber-900/50 bg-amber-950/20 text-amber-200"
-      : "border-rose-900/50 bg-rose-950/20 text-rose-300";
+      ? "border-signal-warning/40 bg-signal-warning/10 text-signal-warning"
+      : "border-signal-red/40 bg-signal-red/10 text-signal-red";
   return (
     <div>
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">{label}</div>
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">{label}</div>
       <ul className={`list-disc space-y-1 rounded border p-3 pl-8 text-xs ${toneClass}`}>
         {items.map((item, i) => (
           <li key={i}>{item}</li>

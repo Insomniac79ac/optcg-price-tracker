@@ -7,8 +7,13 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { MatchStatusBadge } from "@/components/MatchStatusBadge";
 import { PaginationControls } from "@/components/PaginationControls";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type Card,
@@ -259,19 +264,19 @@ export default function SnkrdunkCandidatesPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">
-            SNKRDUNK candidates
-          </h1>
-          <div className="flex items-center gap-3">
-            {status === "ready" && (
-              <span className="text-sm text-neutral-500">
-                {total} candidate{total === 1 ? "" : "s"}
-              </span>
-            )}
-            <AdminLogoutButton />
+        <PageHeader
+          title="SNKRDUNK candidates"
+          description="Review imported SNKRDUNK product candidates and match them to canonical cards."
+          actions={<AdminLogoutButton />}
+        />
+
+        {status === "ready" && (
+          <div className="mb-4">
+            <StatGrid>
+              <StatCard label="Candidates" value={total.toLocaleString("en-US")} />
+            </StatGrid>
           </div>
-        </div>
+        )}
 
         {unauthorized && (
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
@@ -284,32 +289,30 @@ export default function SnkrdunkCandidatesPage() {
                 {STATUS_FILTERS.map((f) => (
                   <button
                     key={f.value}
+                    type="button"
                     onClick={() => setStatusFilter(f.value)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                    className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
                       statusFilter === f.value
-                        ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                        : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                        ? "bg-accent-gold text-black/80 ring-accent-gold"
+                        : "bg-bg-surface text-text-muted ring-border-default hover:text-text-primary"
                     }`}
                   >
                     {f.label}
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => setBulkOpen((v) => !v)}
-                className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-              >
+              <ActionButton variant="default" onClick={() => setBulkOpen((v) => !v)}>
                 {bulkOpen ? "Hide rematch all" : "Rematch all…"}
-              </button>
+              </ActionButton>
             </div>
 
             {bulkOpen && (
-              <div className="mb-4 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+              <div className="mb-4 panel p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <select
                     value={bulkStatus}
                     onChange={(e) => setBulkStatus(e.target.value)}
-                    className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={FILTER_INPUT_CLASS}
                   >
                     {REMATCH_ALL_STATUS_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -321,25 +324,25 @@ export default function SnkrdunkCandidatesPage() {
                     type="number"
                     value={bulkLimit}
                     onChange={(e) => setBulkLimit(Number(e.target.value) || 100)}
-                    className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={`w-24 ${FILTER_INPUT_CLASS}`}
                   />
-                  <button
+                  <ActionButton
+                    variant="dry-run"
                     onClick={() => runBulkRematch(true)}
                     disabled={pendingAction === "bulk"}
-                    className="rounded bg-neutral-800 px-2.5 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
                   >
                     Dry run
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
+                    variant="real"
                     onClick={() => runBulkRematch(false)}
                     disabled={pendingAction === "bulk"}
-                    className="rounded bg-emerald-800/60 px-2.5 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                   >
                     Apply
-                  </button>
+                  </ActionButton>
                 </div>
                 {bulkResult && (
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-neutral-400">
+                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-text-secondary">
                     <span>dry_run: {String(bulkResult.dry_run)}</span>
                     <span>would_update: {bulkResult.would_update}</span>
                     <span>updated: {bulkResult.updated}</span>
@@ -355,7 +358,7 @@ export default function SnkrdunkCandidatesPage() {
               <select
                 value={confidenceFilter}
                 onChange={(e) => setConfidenceFilter(e.target.value)}
-                className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                className={FILTER_INPUT_CLASS}
               >
                 <option value="">Any confidence</option>
                 {CONFIDENCE_LABELS.map((label) => (
@@ -369,13 +372,13 @@ export default function SnkrdunkCandidatesPage() {
                 placeholder="Min score"
                 value={scoreMinFilter}
                 onChange={(e) => setScoreMinFilter(e.target.value)}
-                className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-28 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 placeholder="Card code contains…"
                 value={cardCodeFilter}
                 onChange={(e) => setCardCodeFilter(e.target.value)}
-                className="w-48 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-48 ${FILTER_INPUT_CLASS}`}
               />
             </div>
 
@@ -396,34 +399,26 @@ export default function SnkrdunkCandidatesPage() {
             />
 
             {actionError && (
-              <div className="mb-4 rounded-lg border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">
+              <div className="mb-4 rounded-panel border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
                 {actionError}
               </div>
             )}
 
-            {status === "loading" && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                Loading candidates…
-              </div>
-            )}
+            {status === "loading" && <LoadingState>Loading candidates…</LoadingState>}
 
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                Failed to load candidates from the API. Is the backend running?
-              </div>
+              <ErrorState>Failed to load candidates from the API. Is the backend running?</ErrorState>
             )}
 
             {status === "ready" && filteredCandidates.length === 0 && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                No candidates found.
-              </div>
+              <EmptyState>No candidates found.</EmptyState>
             )}
 
             {status === "ready" && filteredCandidates.length > 0 && (
               <TableScrollContainer minWidth={960}>
                 <table className="w-full border-collapse text-sm">
                   <thead className="sticky-thead">
-                    <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
+                    <tr className="border-b border-border-default bg-bg-surface text-left text-xs uppercase tracking-wide text-text-muted">
                       <th className="px-3 py-2 font-medium">Title</th>
                       <th className="px-3 py-2 font-medium text-right">Price</th>
                       <th className="px-3 py-2 font-medium">Source</th>
@@ -444,19 +439,19 @@ export default function SnkrdunkCandidatesPage() {
                       return (
                         <tr
                           key={candidate.id}
-                          className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
+                          className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60"
                         >
                           <td className="px-3 py-2 max-w-xs">
-                            <div className="truncate font-medium text-neutral-100">
+                            <div className="truncate font-medium text-text-primary">
                               {candidate.title ?? "—"}
                             </div>
                             {candidate.detected_card_code && (
-                              <div className="font-mono text-xs text-neutral-500">
+                              <div className="font-mono text-xs text-text-muted">
                                 {candidate.detected_card_code}
                               </div>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-right text-neutral-300">
+                          <td className="px-3 py-2 text-right text-text-secondary">
                             {formatJpy(candidate.price_jpy)}
                           </td>
                           <td className="px-3 py-2">
@@ -472,39 +467,37 @@ export default function SnkrdunkCandidatesPage() {
                           <td className="px-3 py-2">
                             <MatchStatusBadge status={candidate.match_status} />
                           </td>
-                          <td className="px-3 py-2 text-neutral-400">
+                          <td className="px-3 py-2 text-text-secondary">
                             {candidate.matched_card
                               ? `${cardDisplayName(candidate.matched_card)} (${candidate.matched_card.card_code})`
                               : bestMatchCard
                                 ? `${cardDisplayName(bestMatchCard)} (${bestMatchCard.card_code})`
                                 : "—"}
                           </td>
-                          <td className="px-3 py-2 text-right text-neutral-400">
+                          <td className="px-3 py-2 text-right text-text-secondary">
                             {candidate.best_match_score ?? "—"}
                           </td>
-                          <td className="px-3 py-2 text-neutral-400">
+                          <td className="px-3 py-2 text-text-secondary">
                             {candidate.best_match_confidence_label ?? "—"}
                           </td>
-                          <td className="px-3 py-2 text-xs text-neutral-500">
+                          <td className="px-3 py-2 text-xs text-text-muted">
                             {formatDateTime(candidate.updated_at)}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={() => openDetail(candidate)}
-                                className="rounded bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700"
-                              >
+                              <ActionButton variant="default" onClick={() => openDetail(candidate)}>
                                 Matches
-                              </button>
-                              <button
+                              </ActionButton>
+                              <ActionButton
+                                variant="default"
                                 onClick={() => handleRematch(candidate.id)}
                                 disabled={pendingAction === candidate.id}
-                                className="rounded bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50"
                               >
                                 Rematch
-                              </button>
+                              </ActionButton>
                               {candidate.best_match_card_id !== null && (
-                                <button
+                                <ActionButton
+                                  variant="primary"
                                   onClick={() =>
                                     handleApprove(
                                       candidate.id,
@@ -512,21 +505,20 @@ export default function SnkrdunkCandidatesPage() {
                                     )
                                   }
                                   disabled={pendingAction === candidate.id}
-                                  className="rounded bg-emerald-800/60 px-2 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                                 >
                                   Approve best
-                                </button>
+                                </ActionButton>
                               )}
-                              <button
+                              <ActionButton
+                                variant="real"
                                 onClick={() => handleReject(candidate.id)}
                                 disabled={
                                   pendingAction === candidate.id ||
                                   candidate.match_status === "rejected"
                                 }
-                                className="rounded bg-rose-950/60 px-2 py-1 text-xs font-medium text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
                               >
                                 Reject
-                              </button>
+                              </ActionButton>
                             </div>
                           </td>
                         </tr>
@@ -554,10 +546,10 @@ export default function SnkrdunkCandidatesPage() {
 
         {detailCandidateId !== null && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-950 p-5">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-panel border border-border-default bg-bg-page p-5">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-neutral-100">
+                  <h2 className="text-base font-semibold text-text-primary">
                     {detailCandidate?.title ?? "Candidate matches"}
                   </h2>
                   {detailCandidate && (
@@ -573,7 +565,7 @@ export default function SnkrdunkCandidatesPage() {
                 </div>
                 <button
                   onClick={closeDetail}
-                  className="rounded px-2 py-1 text-xs font-medium text-neutral-400 hover:text-neutral-100"
+                  className="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary"
                 >
                   Close
                 </button>
@@ -584,24 +576,24 @@ export default function SnkrdunkCandidatesPage() {
                 <img
                   src={detailCandidate.image_url}
                   alt={detailCandidate.title ?? "Candidate listing"}
-                  className="mb-3 max-h-48 rounded border border-neutral-800 object-contain"
+                  className="mb-3 max-h-48 rounded border border-border-default object-contain"
                 />
               )}
 
               {detailCandidate?.raw_text && (
-                <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-2 text-xs text-neutral-400">
+                <div className="mb-3 rounded border border-border-default bg-bg-surface p-2 text-xs text-text-secondary">
                   {detailCandidate.raw_text}
                 </div>
               )}
 
               {detailLoading && (
-                <div className="p-6 text-center text-sm text-neutral-500">
+                <div className="p-6 text-center text-sm text-text-muted">
                   Loading matches…
                 </div>
               )}
 
               {detailError && (
-                <div className="rounded border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">
+                <div className="rounded border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
                   {detailError}
                 </div>
               )}
@@ -609,7 +601,7 @@ export default function SnkrdunkCandidatesPage() {
               {!detailLoading && detailData && (
                 <>
                   {detailData.matches.length === 0 && (
-                    <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-500">
+                    <div className="mb-3 rounded border border-border-default bg-bg-surface p-3 text-sm text-text-muted">
                       No candidate matches above the scoring threshold.
                     </div>
                   )}
@@ -617,10 +609,10 @@ export default function SnkrdunkCandidatesPage() {
                     {detailData.matches.map((match) => (
                       <div
                         key={match.card_id}
-                        className="rounded border border-neutral-800 bg-neutral-900 p-3"
+                        className="rounded border border-border-default bg-bg-surface p-3"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-sm font-medium text-neutral-100">
+                          <div className="text-sm font-medium text-text-primary">
                             {match.card_code} — {match.name_en ?? match.name_jp}
                             {match.ambiguous && (
                               <span className="ml-2 inline-flex items-center rounded bg-orange-500/15 px-1.5 py-0.5 text-xs font-medium text-orange-300 ring-1 ring-inset ring-orange-500/30">
@@ -629,19 +621,19 @@ export default function SnkrdunkCandidatesPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-neutral-400">
+                            <span className="text-xs text-text-secondary">
                               score {match.score} ({match.confidence_label})
                             </span>
-                            <button
+                            <ActionButton
+                              variant="primary"
                               onClick={() =>
                                 detailCandidateId !== null &&
                                 handleApprove(detailCandidateId, match.card_id)
                               }
                               disabled={pendingAction === detailCandidateId}
-                              className="rounded bg-emerald-800/60 px-2 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                             >
                               Approve
-                            </button>
+                            </ActionButton>
                           </div>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -665,8 +657,8 @@ export default function SnkrdunkCandidatesPage() {
                     ))}
                   </div>
 
-                  <div className="mb-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-                    <div className="mb-2 text-xs font-medium text-neutral-400">
+                  <div className="mb-3 rounded border border-border-default bg-bg-surface p-3">
+                    <div className="mb-2 text-xs font-medium text-text-secondary">
                       Approve a different card
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -674,7 +666,7 @@ export default function SnkrdunkCandidatesPage() {
                         value={cardQuery}
                         onChange={(e) => setCardQuery(e.target.value)}
                         placeholder="Search by card code or name…"
-                        className="w-56 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                        className="w-56 rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                       />
                       <select
                         value={selectedCardId ?? ""}
@@ -683,7 +675,7 @@ export default function SnkrdunkCandidatesPage() {
                             e.target.value ? Number(e.target.value) : null,
                           )
                         }
-                        className="w-64 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                        className="w-64 rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                       >
                         <option value="">Select a card…</option>
                         {filteredCards.map((card) => (
@@ -692,7 +684,8 @@ export default function SnkrdunkCandidatesPage() {
                           </option>
                         ))}
                       </select>
-                      <button
+                      <ActionButton
+                        variant="primary"
                         onClick={() =>
                           selectedCardId !== null &&
                           detailCandidateId !== null &&
@@ -702,10 +695,9 @@ export default function SnkrdunkCandidatesPage() {
                           selectedCardId === null ||
                           pendingAction === detailCandidateId
                         }
-                        className="rounded bg-emerald-800/60 px-2.5 py-1 text-xs font-medium text-emerald-200 hover:bg-emerald-700/60 disabled:opacity-50"
                       >
                         Approve selected
-                      </button>
+                      </ActionButton>
                     </div>
                   </div>
 
@@ -714,18 +706,18 @@ export default function SnkrdunkCandidatesPage() {
                       value={reviewNotes}
                       onChange={(e) => setReviewNotes(e.target.value)}
                       placeholder="Review notes (optional)…"
-                      className="flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                      className="flex-1 rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                     />
-                    <button
+                    <ActionButton
+                      variant="real"
                       onClick={() =>
                         detailCandidateId !== null &&
                         handleReject(detailCandidateId)
                       }
                       disabled={pendingAction === detailCandidateId}
-                      className="rounded bg-rose-950/60 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
                     >
                       Reject match
-                    </button>
+                    </ActionButton>
                   </div>
                 </>
               )}

@@ -7,6 +7,8 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { VersionFooter } from "@/components/VersionFooter";
+import { ActionButton as SharedActionButton, type ActionButtonVariant } from "@/components/ui/ActionButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ADMIN_ACTION_SOURCES,
   AdminAuthRequiredError,
@@ -221,13 +223,11 @@ export default function AdminActionsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Admin Actions</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Trigger refreshes, snapshots, and report generation.
-        </p>
+        <PageHeader
+          title="Admin Actions"
+          description="Trigger refreshes, snapshots, and report generation."
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && (
           <AdminAuthGate onTokenSaved={() => setUnauthorized(false)} />
@@ -243,7 +243,7 @@ export default function AdminActionsPage() {
                       value={refreshSource}
                       onChange={(e) => setRefreshSource(e.target.value)}
                       disabled={isBusy}
-                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
                     >
                       {ADMIN_ACTION_SOURCES.map((s) => (
                         <option key={s} value={s}>
@@ -260,10 +260,10 @@ export default function AdminActionsPage() {
                       onChange={(e) => setRefreshLimit(e.target.value)}
                       disabled={isBusy}
                       placeholder="default 10"
-                      className="w-28 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
+                      className="w-28 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint disabled:opacity-50"
                     />
                   </FieldRow>
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={refreshDryRun}
@@ -276,6 +276,7 @@ export default function AdminActionsPage() {
                 <ActionButton
                   disabled={isBusy}
                   pending={pendingAction === "refresh-prices"}
+                  variant={refreshDryRun ? "dry-run" : "real"}
                   onClick={() =>
                     runAction("refresh-prices", () =>
                       triggerRefreshPrices({
@@ -291,7 +292,7 @@ export default function AdminActionsPage() {
               </ActionCard>
 
               <ActionCard title="Portfolio snapshot">
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-text-muted">
                   Create one portfolio valuation snapshot from current data.
                 </p>
                 <ActionButton
@@ -304,7 +305,7 @@ export default function AdminActionsPage() {
               </ActionCard>
 
               <ActionCard title="Market signal snapshot">
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-text-muted">
                   Snapshot current market signals into persistent signal events.
                 </p>
                 <ActionButton
@@ -319,7 +320,7 @@ export default function AdminActionsPage() {
               </ActionCard>
 
               <ActionCard title="Generate market report">
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-text-muted">
                   Generate and store one deterministic market intelligence report.
                 </p>
                 <ActionButton
@@ -344,13 +345,13 @@ export default function AdminActionsPage() {
                         )
                       }
                       disabled={isBusy}
-                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
                     >
                       <option value="raw_market">Raw market</option>
                       <option value="graded_adjusted">Graded adjusted</option>
                     </select>
                   </FieldRow>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-text-muted">
                     Generate and store one combined analytics digest (collection, wishlist,
                     buy/sell decisions, grading ROI, and portfolio risk).
                   </p>
@@ -377,7 +378,7 @@ export default function AdminActionsPage() {
                       value={fullSource}
                       onChange={(e) => setFullSource(e.target.value)}
                       disabled={isBusy}
-                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
                     >
                       {ADMIN_ACTION_SOURCES.map((s) => (
                         <option key={s} value={s}>
@@ -394,10 +395,10 @@ export default function AdminActionsPage() {
                       onChange={(e) => setFullLimit(e.target.value)}
                       disabled={isBusy}
                       placeholder="default 10"
-                      className="w-28 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
+                      className="w-28 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint disabled:opacity-50"
                     />
                   </FieldRow>
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={fullDryRun}
@@ -406,7 +407,7 @@ export default function AdminActionsPage() {
                     />
                     Dry run
                   </label>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-text-muted">
                     Refreshes prices, then (unless dry run) snapshots the portfolio, snapshots
                     market signals, and generates a market report.
                   </p>
@@ -414,6 +415,7 @@ export default function AdminActionsPage() {
                 <ActionButton
                   disabled={isBusy}
                   pending={pendingAction === "full-market-refresh"}
+                  variant={fullDryRun ? "dry-run" : "real"}
                   onClick={() =>
                     runAction("full-market-refresh", () =>
                       triggerFullMarketRefresh({
@@ -430,7 +432,7 @@ export default function AdminActionsPage() {
 
               <ActionCard title="Send market report digest" className="md:col-span-2">
                 <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={digestDryRun}
@@ -439,7 +441,7 @@ export default function AdminActionsPage() {
                     />
                     Dry run
                   </label>
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={digestForce}
@@ -448,7 +450,7 @@ export default function AdminActionsPage() {
                     />
                     Force (resend even if already sent)
                   </label>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-text-muted">
                     Sends a concise Telegram digest of the latest market intelligence report.
                     Skipped if Telegram is not configured or already sent for this report.
                   </p>
@@ -456,6 +458,7 @@ export default function AdminActionsPage() {
                 <ActionButton
                   disabled={isBusy}
                   pending={pendingAction === "send-market-report-digest"}
+                  variant={digestDryRun ? "dry-run" : "real"}
                   onClick={() =>
                     runAction("send-market-report-digest", () =>
                       triggerSendMarketReportDigest({
@@ -476,7 +479,7 @@ export default function AdminActionsPage() {
                       value={workflowSource}
                       onChange={(e) => setWorkflowSource(e.target.value)}
                       disabled={isBusy}
-                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50"
+                      className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary disabled:opacity-50"
                     >
                       {ADMIN_ACTION_SOURCES.map((s) => (
                         <option key={s} value={s}>
@@ -493,10 +496,10 @@ export default function AdminActionsPage() {
                       onChange={(e) => setWorkflowLimit(e.target.value)}
                       disabled={isBusy}
                       placeholder="default 10"
-                      className="w-28 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600 disabled:opacity-50"
+                      className="w-28 rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint disabled:opacity-50"
                     />
                   </FieldRow>
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={workflowSendTelegram}
@@ -505,7 +508,7 @@ export default function AdminActionsPage() {
                     />
                     Send Telegram digest
                   </label>
-                  <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                     <input
                       type="checkbox"
                       checked={workflowDryRun}
@@ -514,7 +517,7 @@ export default function AdminActionsPage() {
                     />
                     Dry run
                   </label>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-text-muted">
                     Runs the same sequence as the scheduled daily workflow: refresh prices,
                     snapshot the portfolio and market signals, generate a report, and
                     optionally send a Telegram digest. Recorded as a market workflow run.
@@ -523,6 +526,7 @@ export default function AdminActionsPage() {
                 <ActionButton
                   disabled={isBusy}
                   pending={pendingAction === "run-market-workflow"}
+                  variant={workflowDryRun ? "dry-run" : "real"}
                   onClick={() =>
                     runAction("run-market-workflow", () =>
                       triggerRunMarketWorkflow({
@@ -658,9 +662,9 @@ function ActionCard({
 }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 ${className}`}
+      className={`flex flex-col gap-3 rounded-panel border border-border-default bg-bg-surface p-4 ${className}`}
     >
-      <h2 className="text-sm font-semibold text-neutral-200">{title}</h2>
+      <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </div>
   );
@@ -668,7 +672,7 @@ function ActionCard({
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-neutral-500">
+    <label className="flex items-center gap-2 text-xs text-text-muted">
       <span className="w-12 shrink-0">{label}</span>
       {children}
     </label>
@@ -680,20 +684,25 @@ function ActionButton({
   onClick,
   disabled,
   pending,
+  variant = "real",
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled: boolean;
   pending: boolean;
+  /** Admin-safety tier (design brief §6) - "dry-run" while the action's own
+   * dry-run checkbox is checked, "real" once it will actually write. */
+  variant?: ActionButtonVariant;
 }) {
   return (
-    <button
+    <SharedActionButton
+      variant={variant}
       onClick={onClick}
       disabled={disabled}
-      className="mt-1 self-start rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+      className="mt-1 self-start"
     >
       {pending ? "Running…" : children}
-    </button>
+    </SharedActionButton>
   );
 }
 
@@ -703,7 +712,7 @@ function ResultPanel({ result }: { result: ActionResult }) {
   const messagePreview = result.success ? messagePreviewOf(result.action, result.data) : null;
 
   return (
-    <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+    <div className="mt-6 rounded-panel border border-border-default bg-bg-surface p-4">
       <div className="mb-2 flex items-center gap-2">
         <span
           className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
@@ -714,7 +723,7 @@ function ResultPanel({ result }: { result: ActionResult }) {
         >
           {result.success ? "Success" : "Failed"}
         </span>
-        <span className="text-sm font-semibold text-neutral-200">
+        <span className="text-sm font-semibold text-text-primary">
           {ACTION_LABELS[result.action]}
         </span>
       </div>
@@ -726,22 +735,22 @@ function ResultPanel({ result }: { result: ActionResult }) {
       {result.success && summary.length > 0 && (
         <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {summary.map((item) => (
-            <div key={item.label} className="rounded border border-neutral-800 px-2 py-1.5">
-              <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+            <div key={item.label} className="rounded border border-border-default px-2 py-1.5">
+              <div className="text-[11px] uppercase tracking-wide text-text-muted">
                 {item.label}
               </div>
-              <div className="text-sm font-medium text-neutral-100">{item.value}</div>
+              <div className="text-sm font-medium text-text-primary">{item.value}</div>
             </div>
           ))}
         </div>
       )}
 
       {messagePreview && (
-        <div className="mb-2 rounded border border-neutral-800 bg-neutral-950 p-3">
-          <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">
+        <div className="mb-2 rounded border border-border-default bg-bg-page p-3">
+          <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">
             Message preview
           </div>
-          <pre className="whitespace-pre-wrap text-xs text-neutral-300">{messagePreview}</pre>
+          <pre className="whitespace-pre-wrap text-xs text-text-secondary">{messagePreview}</pre>
         </div>
       )}
 
@@ -754,11 +763,11 @@ function ResultPanel({ result }: { result: ActionResult }) {
       )}
 
       {result.success && (
-        <details className="text-xs text-neutral-500">
-          <summary className="cursor-pointer select-none hover:text-neutral-300">
+        <details className="text-xs text-text-muted">
+          <summary className="cursor-pointer select-none hover:text-text-secondary">
             Raw JSON
           </summary>
-          <pre className="mt-2 max-h-64 overflow-auto rounded bg-neutral-950 p-3 text-[11px] text-neutral-400">
+          <pre className="mt-2 max-h-64 overflow-auto rounded bg-bg-page p-3 text-[11px] text-text-secondary">
             {JSON.stringify(result.data, null, 2)}
           </pre>
         </details>

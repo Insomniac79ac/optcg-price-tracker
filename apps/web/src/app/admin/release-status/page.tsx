@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid, type StatTone } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   AdminNetworkError,
@@ -36,6 +40,12 @@ const STATUS_STYLES: Record<string, string> = {
   ok: "text-emerald-400",
   warning: "text-amber-400",
   critical: "text-rose-400",
+};
+
+const READINESS_STATUS_TONE: Record<string, StatTone> = {
+  ok: "good",
+  warning: "bad",
+  critical: "bad",
 };
 
 export default function ReleaseStatusPage() {
@@ -74,61 +84,58 @@ export default function ReleaseStatusPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Release status</h1>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={load}
-              className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100"
-            >
-              Refresh
-            </button>
-            <AdminLogoutButton />
-          </div>
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          Version/build metadata plus the latest system check, workflow run, backup, and error -
-          the same checklist as docs/release_checklist.md&apos;s post-deploy validation step.
-        </p>
+        <PageHeader
+          title="Release status"
+          description={
+            <>
+              Version/build metadata plus the latest system check, workflow run, backup, and
+              error - the same checklist as docs/release_checklist.md&apos;s post-deploy
+              validation step.
+            </>
+          }
+          actions={
+            <>
+              <ActionButton variant="default" onClick={load}>
+                Refresh
+              </ActionButton>
+              <AdminLogoutButton />
+            </>
+          }
+        />
 
         {pageStatus === "unauthorized" && (
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
         )}
 
-        {pageStatus === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading release status…
-          </div>
-        )}
+        {pageStatus === "loading" && <LoadingState>Loading release status…</LoadingState>}
 
         {pageStatus === "not_found" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             The release-status endpoint was not found (404). Is the backend up to date?
-          </div>
+          </ErrorState>
         )}
 
         {pageStatus === "timeout" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Timed out waiting for release status (15s). Is the backend running and reachable?
-          </div>
+          </ErrorState>
         )}
 
         {pageStatus === "network_error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Could not reach the API proxy. Check that the web and api containers are both
             running.
-          </div>
+          </ErrorState>
         )}
 
         {pageStatus === "proxy_error" && proxyError && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-6 text-sm text-rose-300">
+          <div className="rounded-panel border border-signal-red/40 bg-signal-red/10 p-6 text-sm text-signal-red">
             <p className="font-medium">{proxyError.message}</p>
             {proxyError.backendStatus !== undefined && (
-              <p className="mt-1 text-rose-400">backend_status: {proxyError.backendStatus}</p>
+              <p className="mt-1">backend_status: {proxyError.backendStatus}</p>
             )}
             {proxyError.bodyPreview && (
-              <pre className="mt-3 max-h-48 overflow-auto rounded border border-rose-900/50 bg-rose-950/40 p-3 text-xs whitespace-pre-wrap text-rose-200">
+              <pre className="mt-3 max-h-48 overflow-auto rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-xs whitespace-pre-wrap">
                 {proxyError.bodyPreview}
               </pre>
             )}
@@ -136,65 +143,39 @@ export default function ReleaseStatusPage() {
         )}
 
         {pageStatus === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load release status. Is the backend running?
-          </div>
+          <ErrorState>Failed to load release status. Is the backend running?</ErrorState>
         )}
 
         {pageStatus === "ready" && status && (
           <>
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <InfoCard label="Version" value={status.version} mono />
-              <InfoCard label="Git commit" value={status.git_commit} mono />
-              <InfoCard label="Build time" value={status.build_time} mono />
-              <InfoCard label="App env" value={status.app_env} />
+            <div className="mb-6">
+              <StatGrid>
+                <StatCard label="Version" value={status.version} />
+                <StatCard label="Git commit" value={status.git_commit} />
+                <StatCard label="Build time" value={status.build_time} />
+                <StatCard label="App env" value={status.app_env} />
+              </StatGrid>
             </div>
 
-            <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-              <h2 className="mb-3 text-sm font-semibold text-neutral-200">Release readiness</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">
-                    System check status
-                  </div>
-                  <div
-                    className={`mt-1 text-lg font-semibold uppercase ${
-                      STATUS_STYLES[status.release_readiness.system_check_status] ??
-                      "text-neutral-100"
-                    }`}
-                  >
-                    {status.release_readiness.system_check_status}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">
-                    Critical logs (24h)
-                  </div>
-                  <div
-                    className={`mt-1 text-lg font-semibold ${
-                      status.release_readiness.critical_logs_last_24h > 0
-                        ? "text-rose-400"
-                        : "text-neutral-100"
-                    }`}
-                  >
-                    {status.release_readiness.critical_logs_last_24h}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">
-                    Latest backup available
-                  </div>
-                  <div
-                    className={`mt-1 text-lg font-semibold ${
-                      status.release_readiness.latest_backup_available
-                        ? "text-emerald-400"
-                        : "text-amber-400"
-                    }`}
-                  >
-                    {status.release_readiness.latest_backup_available ? "Yes" : "No"}
-                  </div>
-                </div>
-              </div>
+            <div className="mb-6 panel p-4">
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">Release readiness</h2>
+              <StatGrid>
+                <StatCard
+                  label="System check status"
+                  value={status.release_readiness.system_check_status}
+                  tone={READINESS_STATUS_TONE[status.release_readiness.system_check_status] ?? "neutral"}
+                />
+                <StatCard
+                  label="Critical logs (24h)"
+                  value={status.release_readiness.critical_logs_last_24h}
+                  tone={status.release_readiness.critical_logs_last_24h > 0 ? "bad" : "neutral"}
+                />
+                <StatCard
+                  label="Latest backup available"
+                  value={status.release_readiness.latest_backup_available ? "Yes" : "No"}
+                  tone={status.release_readiness.latest_backup_available ? "good" : "bad"}
+                />
+              </StatGrid>
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -202,12 +183,12 @@ export default function ReleaseStatusPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <span
                     className={`text-sm font-semibold uppercase ${
-                      STATUS_STYLES[status.latest_system_check.status] ?? "text-neutral-100"
+                      STATUS_STYLES[status.latest_system_check.status] ?? "text-text-primary"
                     }`}
                   >
                     {status.latest_system_check.status}
                   </span>
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-text-muted">
                     {status.latest_system_check.summary.checks_passed}/
                     {status.latest_system_check.summary.checks_total} checks passed
                     {status.latest_system_check.summary.warnings > 0 &&
@@ -226,10 +207,10 @@ export default function ReleaseStatusPage() {
 
               <Section title="Latest market workflow run">
                 {status.latest_market_workflow_run ? (
-                  <div className="text-xs text-neutral-400">
+                  <div className="text-xs text-text-secondary">
                     <p>
                       Run #{String(status.latest_market_workflow_run.id)} -{" "}
-                      <span className="font-medium text-neutral-200">
+                      <span className="font-medium text-text-primary">
                         {String(status.latest_market_workflow_run.status)}
                       </span>
                     </p>
@@ -237,13 +218,13 @@ export default function ReleaseStatusPage() {
                       Started: {String(status.latest_market_workflow_run.started_at)}
                     </p>
                     {status.latest_market_workflow_run.error_message ? (
-                      <p className="mt-1 text-rose-300">
+                      <p className="mt-1 text-signal-red">
                         {String(status.latest_market_workflow_run.error_message)}
                       </p>
                     ) : null}
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-500">No workflow runs yet.</p>
+                  <p className="text-xs text-text-muted">No workflow runs yet.</p>
                 )}
                 <Link
                   href="/admin/market-workflow-runs"
@@ -255,8 +236,8 @@ export default function ReleaseStatusPage() {
 
               <Section title="Latest backup">
                 {status.latest_backup ? (
-                  <div className="text-xs text-neutral-400">
-                    <p className="font-mono text-neutral-200">
+                  <div className="text-xs text-text-secondary">
+                    <p className="mono text-text-primary">
                       {String(status.latest_backup.filename)}
                     </p>
                     <p className="mt-1">
@@ -265,7 +246,7 @@ export default function ReleaseStatusPage() {
                     </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-500">No backups found.</p>
+                  <p className="text-xs text-text-muted">No backups found.</p>
                 )}
                 <Link
                   href="/admin/backup"
@@ -277,15 +258,15 @@ export default function ReleaseStatusPage() {
 
               <Section title="Latest error">
                 {status.latest_error ? (
-                  <div className="text-xs text-neutral-400">
-                    <p className="font-medium text-rose-300">{status.latest_error.message}</p>
+                  <div className="text-xs text-text-secondary">
+                    <p className="font-medium text-signal-red">{status.latest_error.message}</p>
                     <p className="mt-1">
                       {status.latest_error.level} - {status.latest_error.service} -{" "}
                       {status.latest_error.created_at}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-500">No errors recorded.</p>
+                  <p className="text-xs text-text-muted">No errors recorded.</p>
                 )}
                 <Link
                   href="/admin/logs"
@@ -329,24 +310,10 @@ export default function ReleaseStatusPage() {
   );
 }
 
-function InfoCard({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div
-        className={`mt-1 truncate text-sm font-semibold text-neutral-100 ${mono ? "font-mono" : ""}`}
-        title={value}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-2 text-sm font-semibold text-neutral-200">{title}</h2>
+    <div className="panel p-4">
+      <h2 className="mb-2 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </div>
   );

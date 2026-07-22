@@ -7,8 +7,12 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
+import { StatCard as SharedStatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type CatalogCoverageBreakdownItem,
@@ -47,15 +51,6 @@ function SeverityPill({ severity }: { severity: string }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className="text-lg font-semibold text-neutral-100">{value}</div>
-    </div>
-  );
-}
-
 const BREAKDOWN_LIMIT_OPTIONS = [10, 25, 50] as const;
 
 function BreakdownTable({ title, items }: { title: string; items: CatalogCoverageBreakdownItem[] }) {
@@ -63,22 +58,22 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-sm text-neutral-500">
-        <div className="mb-2 text-sm font-medium text-neutral-300">{title}</div>
+      <div className="rounded-panel border border-border-default bg-bg-surface p-4 text-sm text-text-muted">
+        <div className="mb-2 text-sm font-medium text-text-secondary">{title}</div>
         No data.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900">
-      <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-2">
-        <span className="text-sm font-medium text-neutral-300">{title}</span>
+    <div className="rounded-panel border border-border-default bg-bg-surface">
+      <div className="flex items-center justify-between border-b border-border-default px-4 py-2">
+        <span className="text-sm font-medium text-text-secondary">{title}</span>
         {items.length > BREAKDOWN_LIMIT_OPTIONS[0] && (
           <select
             value={visible}
             onChange={(e) => setVisible(Number(e.target.value))}
-            className="rounded border border-neutral-700 bg-neutral-950 px-1.5 py-0.5 text-xs text-neutral-300"
+            className="rounded border border-border-default bg-bg-page px-1.5 py-0.5 text-xs text-text-secondary"
           >
             {BREAKDOWN_LIMIT_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -92,7 +87,7 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
       <TableScrollContainer>
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead className="sticky-thead">
-            <tr className="border-b border-neutral-800 text-left text-xs uppercase tracking-wide text-neutral-500">
+            <tr className="border-b border-border-default text-left text-xs uppercase tracking-wide text-text-muted">
               <th className="px-3 py-2 font-medium">Label</th>
               <th className="px-3 py-2 text-right font-medium">Total</th>
               <th className="px-3 py-2 text-right font-medium">Mapped</th>
@@ -110,20 +105,20 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
           </thead>
           <tbody>
             {items.slice(0, visible).map((item) => (
-              <tr key={item.key} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                <td className="px-3 py-2 font-medium text-neutral-200">{item.label}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.total_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.mapped_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.unmapped_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.recent_price_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.collection_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.wishlist_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.missing_metadata_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.duplicate_risk_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatNumber(item.mapping_quality_risk_cards)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatPercent(item.mapping_coverage_pct)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatPercent(item.recent_price_coverage_pct)}</td>
-                <td className="px-3 py-2 text-right text-neutral-400">{formatPercent(item.metadata_completion_pct)}</td>
+              <tr key={item.key} className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60">
+                <td className="px-3 py-2 font-medium text-text-primary">{item.label}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.total_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.mapped_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.unmapped_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.recent_price_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.collection_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.wishlist_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.missing_metadata_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.duplicate_risk_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.mapping_quality_risk_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.mapping_coverage_pct)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.recent_price_coverage_pct)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.metadata_completion_pct)}</td>
               </tr>
             ))}
           </tbody>
@@ -239,8 +234,12 @@ export default function CatalogCoveragePage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex flex-wrap items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-neutral-100">Catalog Coverage</h1>
+        <PageHeader
+          title="Catalog Coverage"
+          description="Track canonical card coverage, metadata gaps, mappings, prices, and quality risks."
+          actions={<AdminLogoutButton />}
+        />
+        <div className="mb-4 flex flex-wrap gap-3">
           <Link href="/admin/cards" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
             Card catalog →
           </Link>
@@ -262,13 +261,7 @@ export default function CatalogCoveragePage() {
           <Link href="/admin/catalog-ops" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
             Catalog operations →
           </Link>
-          <span className="ml-auto">
-            <AdminLogoutButton />
-          </span>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          Track canonical card coverage, metadata gaps, mappings, prices, and quality risks.
-        </p>
 
         {unauthorized && <AdminAuthGate onTokenSaved={() => window.location.reload()} />}
 
@@ -279,27 +272,27 @@ export default function CatalogCoveragePage() {
                 value={setCode}
                 onChange={(e) => setSetCode(e.target.value)}
                 placeholder="Set code (e.g. OP01)…"
-                className="w-40 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-40 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={rarity}
                 onChange={(e) => setRarity(e.target.value)}
                 placeholder="Rarity…"
-                className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-28 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={variant}
                 onChange={(e) => setVariant(e.target.value)}
                 placeholder="Variant…"
-                className="w-32 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-32 ${FILTER_INPUT_CLASS}`}
               />
               <input
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
                 placeholder="Language…"
-                className="w-28 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                className={`w-28 ${FILTER_INPUT_CLASS}`}
               />
-              <label className="flex items-center gap-1.5 text-sm text-neutral-400">
+              <label className="flex items-center gap-1.5 text-sm text-text-secondary">
                 <input
                   type="checkbox"
                   checked={includeInactive}
@@ -338,23 +331,19 @@ export default function CatalogCoveragePage() {
               }}
             />
 
-            {status === "loading" && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                Loading catalog coverage…
-              </div>
-            )}
+            {status === "loading" && <LoadingState>Loading catalog coverage…</LoadingState>}
             {status === "error" && (
-              <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                Failed to load catalog coverage from the API. Is the backend running?
-              </div>
+              <ErrorState>Failed to load catalog coverage from the API. Is the backend running?</ErrorState>
             )}
 
             {status === "ready" && report && (
               <>
-                <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-                  {summaryCards.map((c) => (
-                    <StatCard key={c.label} label={c.label} value={c.value} />
-                  ))}
+                <div className="mb-6">
+                  <StatGrid>
+                    {summaryCards.map((c) => (
+                      <SharedStatCard key={c.label} label={c.label} value={c.value} />
+                    ))}
+                  </StatGrid>
                 </div>
 
                 <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -368,11 +357,12 @@ export default function CatalogCoveragePage() {
                   {GAP_TABS.map((tab) => (
                     <button
                       key={tab.value}
+                      type="button"
                       onClick={() => setActiveTab(tab.value)}
-                      className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                      className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
                         activeTab === tab.value
-                          ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                          : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                          ? "bg-accent-gold text-black/80 ring-accent-gold"
+                          : "bg-bg-surface text-text-muted ring-border-default hover:text-text-primary"
                       }`}
                     >
                       {tab.label}
@@ -381,7 +371,7 @@ export default function CatalogCoveragePage() {
                   <select
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value)}
-                    className="ml-auto rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-200"
+                    className={`ml-auto ${FILTER_INPUT_CLASS}`}
                   >
                     {SEVERITY_OPTIONS.map((v) => (
                       <option key={v} value={v}>
@@ -392,25 +382,19 @@ export default function CatalogCoveragePage() {
                 </div>
 
                 {gapStatus === "loading" && (
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                    Loading {activeTabMeta.label.toLowerCase()}…
-                  </div>
+                  <LoadingState>Loading {activeTabMeta.label.toLowerCase()}…</LoadingState>
                 )}
                 {gapStatus === "error" && (
-                  <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                    Failed to load {activeTabMeta.label.toLowerCase()}.
-                  </div>
+                  <ErrorState>Failed to load {activeTabMeta.label.toLowerCase()}.</ErrorState>
                 )}
                 {gapStatus === "ready" && gapItems.length === 0 && (
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                    {activeTabMeta.emptyLabel}
-                  </div>
+                  <EmptyState>{activeTabMeta.emptyLabel}</EmptyState>
                 )}
                 {gapStatus === "ready" && gapItems.length > 0 && (
                   <TableScrollContainer>
                     <table className="w-full min-w-[900px] border-collapse text-sm">
                       <thead className="sticky-thead">
-                        <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
+                        <tr className="border-b border-border-default bg-bg-surface text-left text-xs uppercase tracking-wide text-text-muted">
                           <th className="px-3 py-2 font-medium">Severity</th>
                           <th className="px-3 py-2 font-medium">Issue types</th>
                           <th className="px-3 py-2 font-medium">Card code</th>
@@ -427,7 +411,7 @@ export default function CatalogCoveragePage() {
                         {gapItems.map((item) => (
                           <tr
                             key={`${item.card_id}-${item.issue_types.join(",")}`}
-                            className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
+                            className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60"
                           >
                             <td className="px-3 py-2">
                               <SeverityPill severity={item.severity} />
@@ -435,31 +419,31 @@ export default function CatalogCoveragePage() {
                             <td className="px-3 py-2 max-w-[14rem]">
                               <div className="flex flex-wrap gap-1">
                                 {item.issue_types.map((t) => (
-                                  <span key={t} className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
+                                  <span key={t} className="rounded bg-bg-card px-1.5 py-0.5 text-[10px] text-text-secondary">
                                     {t}
                                   </span>
                                 ))}
                               </div>
                             </td>
-                            <td className="px-3 py-2 font-mono text-xs text-neutral-300">
+                            <td className="px-3 py-2 font-mono text-xs text-text-secondary">
                               {formatNullable(item.card_code, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-neutral-300">
+                            <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.name_en ?? item.name_jp, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-neutral-400">
+                            <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.set_code, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-neutral-400">
+                            <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.rarity, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-neutral-400">
+                            <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.variant, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-neutral-400">
+                            <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.language, (v) => v, NOT_AVAILABLE)}
                             </td>
-                            <td className="px-3 py-2 text-xs text-neutral-500">{item.suggested_action}</td>
+                            <td className="px-3 py-2 text-xs text-text-muted">{item.suggested_action}</td>
                             <td className="px-3 py-2">
                               <div className="flex flex-wrap gap-2 text-xs">
                                 <Link href={`/cards/${item.card_id}`} className="text-sky-400 hover:underline">
