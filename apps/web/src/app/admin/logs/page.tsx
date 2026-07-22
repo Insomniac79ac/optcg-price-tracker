@@ -9,7 +9,12 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { LogLevelBadge } from "@/components/LogLevelBadge";
 import { PaginationControls } from "@/components/PaginationControls";
-import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { DataTableShell, TABLE_ROW_WARNING_CLASS } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   APP_LOG_LEVELS,
@@ -123,27 +128,19 @@ function AdminLogsPageInner() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">App logs</h1>
-            <Link
-              href="/admin/actions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Admin actions
-            </Link>
-            <Link
-              href="/admin/data-retention"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Data retention
-            </Link>
-          </div>
-          <AdminLogoutButton />
+        <PageHeader
+          title="App logs"
+          description="Recent app, worker, backup, import, and workflow events."
+          actions={<AdminLogoutButton />}
+        />
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
+          <Link href="/admin/actions" className="text-sky-400 hover:underline">
+            Admin actions
+          </Link>
+          <Link href="/admin/data-retention" className="text-sky-400 hover:underline">
+            Data retention
+          </Link>
         </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Recent app, worker, backup, import, and workflow events.
-        </p>
 
         {unauthorized && (
           <AdminAuthGate
@@ -208,25 +205,14 @@ function AdminLogsPageInner() {
   );
 }
 
-function SummaryCard({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="mb-1 text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      {children}
-    </div>
-  );
-}
-
 function SummaryCards({ summary }: { summary: ObservabilitySummary | null }) {
   if (!summary) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <StatGrid>
         {Array.from({ length: 6 }).map((_, i) => (
-          <SummaryCard key={i} label="…">
-            <span className="text-sm text-neutral-500">{NA}</span>
-          </SummaryCard>
+          <StatCard key={i} label="…" value={NA} />
         ))}
-      </div>
+      </StatGrid>
     );
   }
 
@@ -237,44 +223,29 @@ function SummaryCards({ summary }: { summary: ObservabilitySummary | null }) {
   const backup = summary.latest_backup as { filename?: string; created_at?: string } | null;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      <SummaryCard label="Critical (24h)">
-        <span
-          className={`text-lg font-semibold ${summary.last_24h.critical > 0 ? "text-rose-300" : "text-neutral-100"}`}
-        >
-          {summary.last_24h.critical}
-        </span>
-      </SummaryCard>
-      <SummaryCard label="Errors (24h)">
-        <span
-          className={`text-lg font-semibold ${summary.last_24h.error > 0 ? "text-rose-300" : "text-neutral-100"}`}
-        >
-          {summary.last_24h.error}
-        </span>
-      </SummaryCard>
-      <SummaryCard label="Warnings (24h)">
-        <span
-          className={`text-lg font-semibold ${summary.last_24h.warning > 0 ? "text-amber-300" : "text-neutral-100"}`}
-        >
-          {summary.last_24h.warning}
-        </span>
-      </SummaryCard>
-      <SummaryCard label="Latest workflow">
-        <span className="text-sm font-medium text-neutral-100">
-          {workflow ? naText(workflow.status) : NA}
-        </span>
-      </SummaryCard>
-      <SummaryCard label="Latest price refresh">
-        <span className="text-sm font-medium text-neutral-100">
-          {refresh ? naText(refresh.status) : NA}
-        </span>
-      </SummaryCard>
-      <SummaryCard label="Latest backup">
-        <span className="text-sm font-medium text-neutral-100">
-          {backup ? formatDateTime(backup.created_at ?? null) : NA}
-        </span>
-      </SummaryCard>
-    </div>
+    <StatGrid>
+      <StatCard
+        label="Critical (24h)"
+        value={summary.last_24h.critical}
+        tone={summary.last_24h.critical > 0 ? "bad" : "neutral"}
+      />
+      <StatCard
+        label="Errors (24h)"
+        value={summary.last_24h.error}
+        tone={summary.last_24h.error > 0 ? "bad" : "neutral"}
+      />
+      <StatCard
+        label="Warnings (24h)"
+        value={summary.last_24h.warning}
+        tone={summary.last_24h.warning > 0 ? "bad" : "neutral"}
+      />
+      <StatCard label="Latest workflow" value={workflow ? naText(workflow.status) : NA} />
+      <StatCard label="Latest price refresh" value={refresh ? naText(refresh.status) : NA} />
+      <StatCard
+        label="Latest backup"
+        value={backup ? formatDateTime(backup.created_at ?? null) : NA}
+      />
+    </StatGrid>
   );
 }
 
@@ -295,15 +266,12 @@ function Filters(props: {
   eventTypeOptions: string[];
   onRefresh: () => void;
 }) {
-  const selectClass =
-    "rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-200";
-
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+    <div className="panel flex flex-wrap items-center gap-2 p-3">
       <select
         value={props.level}
         onChange={(e) => props.setLevel(e.target.value)}
-        className={selectClass}
+        className={FILTER_INPUT_CLASS}
       >
         <option value="">All levels</option>
         {APP_LOG_LEVELS.map((l) => (
@@ -316,7 +284,7 @@ function Filters(props: {
       <select
         value={props.service}
         onChange={(e) => props.setService(e.target.value)}
-        className={selectClass}
+        className={FILTER_INPUT_CLASS}
       >
         <option value="">All services</option>
         {props.serviceOptions.map((s) => (
@@ -329,7 +297,7 @@ function Filters(props: {
       <select
         value={props.eventType}
         onChange={(e) => props.setEventType(e.target.value)}
-        className={selectClass}
+        className={FILTER_INPUT_CLASS}
       >
         <option value="">All event types</option>
         {props.eventTypeOptions.map((e) => (
@@ -344,13 +312,13 @@ function Filters(props: {
         placeholder="Search message…"
         value={props.q}
         onChange={(e) => props.setQ(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+        className={FILTER_INPUT_CLASS}
       />
 
       <select
         value={props.sinceHours}
         onChange={(e) => props.setSinceHours(e.target.value)}
-        className={selectClass}
+        className={FILTER_INPUT_CLASS}
       >
         <option value="">All time</option>
         <option value="1">Last 1h</option>
@@ -362,7 +330,7 @@ function Filters(props: {
       <select
         value={String(props.limit)}
         onChange={(e) => props.setLimit(Number(e.target.value))}
-        className={selectClass}
+        className={FILTER_INPUT_CLASS}
       >
         <option value="50">50 rows</option>
         <option value="100">100 rows</option>
@@ -370,13 +338,7 @@ function Filters(props: {
         <option value="500">500 rows</option>
       </select>
 
-      <button
-        type="button"
-        onClick={props.onRefresh}
-        className="rounded bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-900 hover:bg-white"
-      >
-        Refresh
-      </button>
+      <ActionButton onClick={props.onRefresh}>Refresh</ActionButton>
     </div>
   );
 }
@@ -388,22 +350,18 @@ function LogsTable({
   data: AppLogListResponse;
   onSelect: (log: AppLogEvent) => void;
 }) {
-  if (data.logs.length === 0) {
-    return <EmptyState>No log events match these filters.</EmptyState>;
-  }
-
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-800">
-      <table className="w-full border-collapse text-xs">
+    <DataTableShell isEmpty={data.logs.length === 0} emptyLabel="No log events match these filters.">
+      <table className="data-table">
         <thead>
-          <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-            <th className="px-2 py-1.5 font-medium">Time</th>
-            <th className="px-2 py-1.5 font-medium">Level</th>
-            <th className="px-2 py-1.5 font-medium">Service</th>
-            <th className="px-2 py-1.5 font-medium">Event type</th>
-            <th className="px-2 py-1.5 font-medium">Message</th>
-            <th className="px-2 py-1.5 font-medium">Related</th>
-            <th className="px-2 py-1.5 font-medium">Actions</th>
+          <tr>
+            <th>Time</th>
+            <th>Level</th>
+            <th>Service</th>
+            <th>Event type</th>
+            <th>Message</th>
+            <th>Related</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -413,52 +371,42 @@ function LogsTable({
               ? RELATED_ENTITY_LINKS[log.related_entity_type]
               : undefined;
             return (
-              <tr
-                key={log.id}
-                className={`border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60 ${
-                  isNoteworthy ? "bg-rose-950/10" : ""
-                }`}
-              >
-                <td className="whitespace-nowrap px-2 py-1.5 text-neutral-400">
+              <tr key={log.id} className={isNoteworthy ? TABLE_ROW_WARNING_CLASS : undefined}>
+                <td className="mono whitespace-nowrap text-text-secondary">
                   {formatDateTime(log.created_at)}
                 </td>
-                <td className="px-2 py-1.5">
+                <td>
                   <LogLevelBadge level={log.level} />
                 </td>
-                <td className="px-2 py-1.5 text-neutral-300">{log.service}</td>
-                <td className="px-2 py-1.5 text-neutral-300">{log.event_type}</td>
-                <td className="max-w-[24rem] px-2 py-1.5">
-                  <span className="block truncate text-neutral-200" title={log.message}>
+                <td className="text-text-secondary">{log.service}</td>
+                <td className="text-text-secondary">{log.event_type}</td>
+                <td className="max-w-[24rem]">
+                  <span className="block truncate text-text-primary" title={log.message}>
                     {log.message}
                   </span>
                 </td>
-                <td className="px-2 py-1.5 text-neutral-400">
+                <td className="text-text-secondary">
                   {log.related_entity_type ? (
                     relatedHref ? (
-                      <Link href={relatedHref} className="text-sky-400 hover:text-sky-300">
+                      <Link href={relatedHref} className="text-sky-400 hover:underline">
                         {log.related_entity_type}#{naText(log.related_entity_id)}
                       </Link>
                     ) : (
                       `${log.related_entity_type}#${naText(log.related_entity_id)}`
                     )
                   ) : (
-                    <span className="text-neutral-600">{NA}</span>
+                    <span className="text-text-faint">{NA}</span>
                   )}
                 </td>
-                <td className="px-2 py-1.5">
-                  <button
-                    onClick={() => onSelect(log)}
-                    className="text-xs font-medium text-neutral-400 hover:text-neutral-200"
-                  >
-                    View
-                  </button>
+                <td>
+                  <ActionButton onClick={() => onSelect(log)}>View</ActionButton>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-    </div>
+    </DataTableShell>
   );
 }
 
@@ -474,7 +422,7 @@ function CollapsibleJson({ value }: { value: Record<string, unknown> }) {
         {open ? "Hide context JSON" : "Show context JSON"}
       </button>
       {open && (
-        <pre className="mt-2 max-h-64 overflow-auto rounded border border-neutral-800 bg-neutral-950 p-2 text-[11px] text-neutral-300">
+        <pre className="mt-2 max-h-64 overflow-auto rounded-control border border-border-default bg-bg-page p-2 text-[11px] text-text-secondary">
           {JSON.stringify(value, null, 2)}
         </pre>
       )}
@@ -493,40 +441,34 @@ function LogDetailModal({ log, onClose }: { log: AppLogEvent; onClose: () => voi
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-lg border border-neutral-800 bg-neutral-900 p-5"
+        className="w-full max-w-2xl rounded-modal border border-border-default bg-bg-elevated p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             <LogLevelBadge level={log.level} />
-            <span className="text-sm font-semibold text-neutral-100">
+            <span className="text-sm font-semibold text-text-primary">
               {log.service} / {log.event_type}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-medium text-neutral-500 hover:text-neutral-200"
-          >
-            Close
-          </button>
+          <ActionButton onClick={onClose}>Close</ActionButton>
         </div>
 
-        <div className="mb-3 text-xs text-neutral-500">{formatDateTime(log.created_at)}</div>
+        <div className="mb-3 text-xs text-text-muted">{formatDateTime(log.created_at)}</div>
 
-        <p className="mb-4 whitespace-pre-wrap text-sm text-neutral-200">{log.message}</p>
+        <p className="mb-4 whitespace-pre-wrap text-sm text-text-primary">{log.message}</p>
 
         <div className="mb-3 grid grid-cols-2 gap-3 text-xs">
           <div>
-            <div className="text-[11px] uppercase tracking-wide text-neutral-500">Related run</div>
-            <div className="text-neutral-300">{naText(log.related_run_id)}</div>
+            <div className="text-[11px] uppercase tracking-wide text-text-muted">Related run</div>
+            <div className="text-text-secondary">{naText(log.related_run_id)}</div>
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-wide text-neutral-500">Related entity</div>
-            <div className="text-neutral-300">
+            <div className="text-[11px] uppercase tracking-wide text-text-muted">Related entity</div>
+            <div className="text-text-secondary">
               {log.related_entity_type ? (
                 relatedHref ? (
-                  <Link href={relatedHref} className="text-sky-400 hover:text-sky-300">
+                  <Link href={relatedHref} className="text-sky-400 hover:underline">
                     {log.related_entity_type}#{naText(log.related_entity_id)}
                   </Link>
                 ) : (
@@ -547,10 +489,10 @@ function LogDetailModal({ log, onClose }: { log: AppLogEvent; onClose: () => voi
 
         {log.traceback && (
           <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-neutral-500">
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-text-muted">
               Traceback
             </div>
-            <pre className="max-h-64 overflow-auto rounded border border-neutral-800 bg-neutral-950 p-2 text-[11px] text-rose-200">
+            <pre className="max-h-64 overflow-auto rounded-control border border-signal-red/40 bg-signal-red/10 p-2 text-[11px] text-signal-red">
               {log.traceback}
             </pre>
           </div>
@@ -594,53 +536,47 @@ function PruneSection({ onPruned }: { onPruned: () => void }) {
   }
 
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">Prune logs</h2>
+    <section className="panel p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">Prune logs</h2>
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
           Older than (days)
           <input
             type="number"
             min={1}
             value={olderThanDays}
             onChange={(e) => setOlderThanDays(Number(e.target.value))}
-            className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-200"
+            className={`w-20 ${FILTER_INPUT_CLASS}`}
           />
         </label>
-        <label className="flex items-center gap-1.5 text-xs text-neutral-400">
-          <input
-            type="checkbox"
-            checked={dryRun}
-            onChange={(e) => setDryRun(e.target.checked)}
-            className="rounded border-neutral-700 bg-neutral-950"
-          />
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary">
+          <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
           Dry run
         </label>
         {needsConfirm && (
-          <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+          <label className="flex items-center gap-1.5 text-xs text-text-secondary">
             Type PRUNE to confirm
             <input
               type="text"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-200"
+              className={`w-24 ${FILTER_INPUT_CLASS}`}
             />
           </label>
         )}
-        <button
-          type="button"
+        <ActionButton
+          variant={dryRun ? "dry-run" : "danger"}
           onClick={handlePrune}
           disabled={pending || (needsConfirm && confirm !== "PRUNE")}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-white disabled:opacity-50"
         >
           {pending ? "Working…" : dryRun ? "Preview prune" : "Prune logs"}
-        </button>
+        </ActionButton>
       </div>
 
-      {error && <p className="mt-3 text-xs text-rose-300">{error}</p>}
+      {error && <p className="mt-3 text-xs text-signal-red">{error}</p>}
 
       {result && (
-        <p className="mt-3 text-xs text-neutral-400">
+        <p className="mt-3 text-xs text-text-secondary">
           {result.dry_run
             ? `Would delete ${result.would_delete} log(s).`
             : `Deleted ${result.deleted} log(s).`}

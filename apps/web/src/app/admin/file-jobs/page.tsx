@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   AdminAuthRequiredError,
   FILE_JOB_STATUSES,
@@ -21,11 +26,11 @@ import {
 const CLEANUP_CONFIRM_PHRASE = "CLEANUP";
 
 const STATUS_STYLES: Record<string, string> = {
-  queued: "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30",
-  running: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
-  success: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  failed: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-  cancelled: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
+  queued: "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30",
+  running: "bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/30",
+  success: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  failed: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
+  cancelled: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
 };
 
 const HELPFUL_LIMIT = 50;
@@ -95,14 +100,16 @@ export default function FileJobsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">File jobs</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Background collection/wishlist import/export and backup export jobs - see &quot;Large
-          import/export jobs&quot; in docs/operations.md.
-        </p>
+        <PageHeader
+          title="File jobs"
+          description={
+            <>
+              Background collection/wishlist import/export and backup export jobs - see
+              &quot;Large import/export jobs&quot; in docs/operations.md.
+            </>
+          }
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && (
           <AdminAuthGate
@@ -115,15 +122,15 @@ export default function FileJobsPage() {
 
         {!unauthorized && (
           <div className="flex flex-col gap-6">
-            <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+            <section className="panel p-4">
               <div className="mb-3 flex flex-wrap items-center gap-3">
-                <h2 className="text-sm font-semibold text-neutral-200">Jobs</h2>
-                <label className="ml-auto flex items-center gap-1.5 text-xs text-neutral-400">
+                <h2 className="text-sm font-semibold text-text-primary">Jobs</h2>
+                <label className="ml-auto flex items-center gap-1.5 text-xs text-text-secondary">
                   Type
                   <select
                     value={jobTypeFilter}
                     onChange={(e) => setJobTypeFilter(e.target.value)}
-                    className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={FILTER_INPUT_CLASS}
                   >
                     <option value="">All</option>
                     {FILE_JOB_TYPES.map((t) => (
@@ -133,12 +140,12 @@ export default function FileJobsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="flex items-center gap-1.5 text-xs text-neutral-400">
+                <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                   Status
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                    className={FILTER_INPUT_CLASS}
                   >
                     <option value="">All</option>
                     {FILE_JOB_STATUSES.map((s) => (
@@ -148,122 +155,94 @@ export default function FileJobsPage() {
                     ))}
                   </select>
                 </label>
-                <button
-                  type="button"
-                  onClick={load}
-                  className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100"
-                >
-                  Refresh
-                </button>
+                <ActionButton onClick={load}>Refresh</ActionButton>
               </div>
 
               {error && (
-                <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+                <div className="mb-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
                   {error}
                 </div>
               )}
               {actionError && (
-                <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+                <div className="mb-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
                   {actionError}
                 </div>
               )}
 
-              <div className="overflow-x-auto rounded-lg border border-neutral-800">
-                <table className="w-full border-collapse text-xs">
+              <DataTableShell isEmpty={!jobs || jobs.length === 0} emptyLabel={!jobs ? "Loading file jobs…" : "No file jobs found."}>
+                <table className="data-table">
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                      <th className="px-3 py-2 font-medium">ID</th>
-                      <th className="px-3 py-2 font-medium">Type</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
-                      <th className="px-3 py-2 font-medium">Filename</th>
-                      <th className="px-3 py-2 font-medium">Progress</th>
-                      <th className="px-3 py-2 font-medium">Created</th>
-                      <th className="px-3 py-2 font-medium">Started</th>
-                      <th className="px-3 py-2 font-medium">Finished</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
+                    <tr>
+                      <th>ID</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Filename</th>
+                      <th>Progress</th>
+                      <th>Created</th>
+                      <th>Started</th>
+                      <th>Finished</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {!jobs ? (
-                      <tr>
-                        <td colSpan={9} className="px-3 py-6 text-center text-neutral-500">
-                          Loading file jobs…
+                    {jobs?.map((job) => (
+                      <tr key={job.id}>
+                        <td className="mono tabular text-text-secondary">{job.id}</td>
+                        <td className="mono text-text-secondary">{job.job_type}</td>
+                        <td>
+                          <Badge
+                            label={job.status}
+                            className={
+                              STATUS_STYLES[job.status] ??
+                              "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30"
+                            }
+                          />
+                        </td>
+                        <td className="text-text-secondary">
+                          {job.original_filename ?? job.output_filename ?? "—"}
+                        </td>
+                        <td className="mono tabular text-text-secondary">
+                          {job.progress_total !== null
+                            ? `${job.progress_current}/${job.progress_total}`
+                            : job.progress_current > 0
+                              ? job.progress_current
+                              : "—"}
+                        </td>
+                        <td className="mono whitespace-nowrap text-text-secondary">
+                          {new Date(job.created_at).toLocaleString()}
+                        </td>
+                        <td className="mono whitespace-nowrap text-text-secondary">
+                          {job.started_at ? new Date(job.started_at).toLocaleString() : "—"}
+                        </td>
+                        <td className="mono whitespace-nowrap text-text-secondary">
+                          {job.finished_at ? new Date(job.finished_at).toLocaleString() : "—"}
+                        </td>
+                        <td>
+                          <div className="flex flex-wrap gap-2">
+                            {job.download_ready && (
+                              <ActionButton
+                                onClick={() => handleDownload(job)}
+                                disabled={pendingActionId === job.id}
+                              >
+                                Download
+                              </ActionButton>
+                            )}
+                            {(job.status === "queued" || job.status === "running") && (
+                              <ActionButton
+                                onClick={() => handleCancel(job)}
+                                disabled={pendingActionId === job.id}
+                              >
+                                Cancel
+                              </ActionButton>
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    ) : jobs.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="px-3 py-6 text-center text-neutral-500">
-                          No file jobs found.
-                        </td>
-                      </tr>
-                    ) : (
-                      jobs.map((job) => (
-                        <tr
-                          key={job.id}
-                          className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                        >
-                          <td className="px-3 py-2 text-neutral-300">{job.id}</td>
-                          <td className="px-3 py-2 font-mono text-neutral-300">{job.job_type}</td>
-                          <td className="px-3 py-2">
-                            <span
-                              className={`inline-flex items-center rounded px-1.5 py-0.5 font-medium ring-1 ring-inset ${
-                                STATUS_STYLES[job.status] ??
-                                "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30"
-                              }`}
-                            >
-                              {job.status}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {job.original_filename ?? job.output_filename ?? "—"}
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {job.progress_total !== null
-                              ? `${job.progress_current}/${job.progress_total}`
-                              : job.progress_current > 0
-                                ? job.progress_current
-                                : "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-neutral-400">
-                            {new Date(job.created_at).toLocaleString()}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-neutral-400">
-                            {job.started_at ? new Date(job.started_at).toLocaleString() : "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-neutral-400">
-                            {job.finished_at ? new Date(job.finished_at).toLocaleString() : "—"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex flex-wrap gap-2">
-                              {job.download_ready && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownload(job)}
-                                  disabled={pendingActionId === job.id}
-                                  className="rounded border border-neutral-700 px-2 py-1 text-xs font-medium text-neutral-200 hover:text-neutral-100 disabled:opacity-50"
-                                >
-                                  Download
-                                </button>
-                              )}
-                              {(job.status === "queued" || job.status === "running") && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancel(job)}
-                                  disabled={pendingActionId === job.id}
-                                  className="rounded border border-neutral-700 px-2 py-1 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
-                                >
-                                  Cancel
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                    ))}
                   </tbody>
                 </table>
-              </div>
-              <p className="mt-2 text-[11px] text-neutral-600">
+              </DataTableShell>
+              <p className="mt-2 text-[11px] text-text-faint">
                 Showing {jobs?.length ?? 0} of {total}
               </p>
             </section>
@@ -361,26 +340,26 @@ function CleanupSection({ onCleaned }: { onCleaned: () => void }) {
   }
 
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">Cleanup old file jobs</h2>
-      <p className="mb-3 text-[11px] text-neutral-500">
+    <section className="panel p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">Cleanup old file jobs</h2>
+      <p className="mb-3 text-[11px] text-text-muted">
         Deletes completed/failed/cancelled jobs (and their input/output files) older than the
         given number of days. Queued/running jobs are never touched.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-neutral-400">
+        <label className="flex flex-col gap-1 text-xs text-text-secondary">
           Older than (days)
           <input
             type="number"
             min={1}
             value={olderThanDays}
             onChange={(e) => setOlderThanDays(Number(e.target.value))}
-            className="w-24 rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100"
+            className={`w-24 ${FILTER_INPUT_CLASS}`}
           />
         </label>
 
-        <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 rounded-control border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={dryRun}
@@ -388,51 +367,41 @@ function CleanupSection({ onCleaned }: { onCleaned: () => void }) {
               setDryRun(e.target.checked);
               setError(null);
             }}
-            className="rounded border-neutral-700 bg-neutral-950"
           />
           Dry run
         </label>
 
         {!dryRun && (
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
-            Type <span className="font-mono text-neutral-200">{CLEANUP_CONFIRM_PHRASE}</span> to
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Type <span className="mono text-text-primary">{CLEANUP_CONFIRM_PHRASE}</span> to
             confirm:
             <input
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className={FILTER_INPUT_CLASS}
             />
           </label>
         )}
 
-        <button
-          type="button"
-          onClick={handleRun}
-          disabled={pending}
-          className={`rounded px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-            dryRun
-              ? "bg-neutral-100 text-neutral-900 hover:bg-white"
-              : "bg-rose-600 text-white hover:bg-rose-500"
-          }`}
-        >
+        <ActionButton variant={dryRun ? "dry-run" : "danger"} onClick={handleRun} disabled={pending}>
           {pending ? "Working…" : dryRun ? "Preview cleanup" : "Run cleanup"}
-        </button>
+        </ActionButton>
       </div>
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
 
       {result && (
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300">
-            <span className="text-neutral-500">Would delete:</span> {result.would_delete}
+          <span className="rounded-control border border-border-default bg-bg-page px-2 py-1 text-text-secondary">
+            <span className="text-text-muted">Would delete:</span> {result.would_delete}
           </span>
-          <span className="rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-neutral-300">
-            <span className="text-neutral-500">Deleted:</span> {result.deleted}
+          <span className="rounded-control border border-border-default bg-bg-page px-2 py-1 text-text-secondary">
+            <span className="text-text-muted">Deleted:</span> {result.deleted}
           </span>
         </div>
       )}

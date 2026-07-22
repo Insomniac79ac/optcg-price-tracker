@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type DataRetentionPolicy,
@@ -18,9 +23,9 @@ import {
 const CONFIRM_PHRASE = "PRUNE";
 
 const STATUS_STYLES: Record<string, string> = {
-  ok: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  skipped: "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30",
-  error: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  ok: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  skipped: "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30",
+  error: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
 };
 
 export default function DataRetentionPage() {
@@ -53,13 +58,11 @@ export default function DataRetentionPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Data retention</h1>
-          <AdminLogoutButton />
-        </div>
-        <p className="mb-6 text-xs text-neutral-500">
-          Review and prune old high-volume data safely.
-        </p>
+        <PageHeader
+          title="Data retention"
+          description="Review and prune old high-volume data safely."
+          actions={<AdminLogoutButton />}
+        />
 
         {unauthorized && (
           <AdminAuthGate
@@ -123,8 +126,8 @@ export default function DataRetentionPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-200">{title}</h2>
+    <section className="panel p-4">
+      <h2 className="mb-3 text-sm font-semibold text-text-primary">{title}</h2>
       {children}
     </section>
   );
@@ -140,61 +143,43 @@ function PolicySection({
   return (
     <Section title="Retention policy">
       {error && (
-        <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mb-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
-      <div className="overflow-x-auto rounded-lg border border-neutral-800">
-        <table className="w-full border-collapse text-xs">
+      <DataTableShell isEmpty={!policies || policies.length === 0} emptyLabel={!policies ? "Loading policy…" : "No prunable tables configured."}>
+        <table className="data-table">
           <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-              <th className="px-3 py-2 font-medium">Table</th>
-              <th className="px-3 py-2 font-medium">Retention days</th>
-              <th className="px-3 py-2 font-medium">Mode</th>
-              <th className="px-3 py-2 font-medium">Protected records</th>
-              <th className="px-3 py-2 font-medium">Enabled</th>
+            <tr>
+              <th>Table</th>
+              <th>Retention days</th>
+              <th>Mode</th>
+              <th>Protected records</th>
+              <th>Enabled</th>
             </tr>
           </thead>
           <tbody>
-            {!policies ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
-                  Loading policy…
+            {policies?.map((p) => (
+              <tr key={p.table}>
+                <td className="mono text-text-secondary">{p.table}</td>
+                <td className="mono tabular">{p.retention_days}</td>
+                <td className="mono text-text-secondary">{p.mode}</td>
+                <td className="text-text-secondary">{p.protected_records}</td>
+                <td>
+                  <Badge
+                    label={p.enabled ? "enabled" : "disabled"}
+                    className={
+                      p.enabled
+                        ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+                        : "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30"
+                    }
+                  />
                 </td>
               </tr>
-            ) : policies.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-neutral-500">
-                  No prunable tables configured.
-                </td>
-              </tr>
-            ) : (
-              policies.map((p) => (
-                <tr
-                  key={p.table}
-                  className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                >
-                  <td className="px-3 py-2 font-mono text-neutral-300">{p.table}</td>
-                  <td className="px-3 py-2 text-neutral-300">{p.retention_days}</td>
-                  <td className="px-3 py-2 font-mono text-neutral-400">{p.mode}</td>
-                  <td className="px-3 py-2 text-neutral-400">{p.protected_records}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                        p.enabled
-                          ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-                          : "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30"
-                      }`}
-                    >
-                      {p.enabled ? "enabled" : "disabled"}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
-      </div>
+      </DataTableShell>
     </Section>
   );
 }
@@ -255,29 +240,29 @@ function PruneSection({ policies }: { policies: DataRetentionPolicy[] | null }) 
     <Section title="Prune old data">
       <div className="mb-3 flex flex-wrap gap-2">
         {allTables.length === 0 && (
-          <span className="text-xs text-neutral-500">Loading tables…</span>
+          <span className="text-xs text-text-muted">Loading tables…</span>
         )}
         {allTables.map((table) => (
           <label
             key={table}
-            className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-neutral-400"
+            className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-secondary"
           >
             <input
               type="checkbox"
               checked={selectedTables.has(table)}
               onChange={() => toggleTable(table)}
-              className="rounded border-neutral-700 bg-neutral-950"
+              className="rounded border-border-default bg-bg-page"
             />
             <span className="font-mono">{table}</span>
           </label>
         ))}
       </div>
-      <p className="mb-3 text-[11px] text-neutral-500">
+      <p className="mb-3 text-[11px] text-text-muted">
         Leave all unchecked to evaluate every prunable table.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-400">
+        <label className="flex items-center gap-1.5 rounded border border-border-default bg-bg-page px-2 py-1.5 text-xs text-text-secondary">
           <input
             type="checkbox"
             checked={dryRun}
@@ -285,87 +270,79 @@ function PruneSection({ policies }: { policies: DataRetentionPolicy[] | null }) 
               setDryRun(e.target.checked);
               setError(null);
             }}
-            className="rounded border-neutral-700 bg-neutral-950"
+            className="rounded border-border-default bg-bg-page"
           />
           Dry run
         </label>
 
         {!dryRun && (
-          <label className="flex items-center gap-2 text-xs text-neutral-400">
-            Type <span className="font-mono text-neutral-200">{CONFIRM_PHRASE}</span> to confirm:
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            Type <span className="font-mono text-text-primary">{CONFIRM_PHRASE}</span> to confirm:
             <input
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </label>
         )}
 
-        <button
-          type="button"
+        <ActionButton
+          variant={dryRun ? "dry-run" : "danger"}
           onClick={handleRun}
           disabled={pending || !confirmSatisfied}
-          className={`rounded px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-            dryRun
-              ? "bg-neutral-100 text-neutral-900 hover:bg-white"
-              : "bg-rose-600 text-white hover:bg-rose-500"
-          }`}
         >
           {pending ? "Working…" : dryRun ? "Preview prune" : "Run prune"}
-        </button>
+        </ActionButton>
       </div>
 
       {error && (
-        <div className="mt-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mt-3 rounded-control border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
 
       {summary && (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatGrid>
           <StatCard label="Tables checked" value={summary.tables_checked} />
           <StatCard label="Would delete" value={summary.total_rows_would_delete} />
           <StatCard label="Deleted" value={summary.total_rows_deleted} />
-          <StatCard label="Warnings" value={summary.warnings} tone="warning" />
-        </div>
+          <StatCard
+            label="Warnings"
+            value={summary.warnings}
+            tone={summary.warnings > 0 ? "bad" : "neutral"}
+          />
+        </StatGrid>
       )}
 
       {results && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                <th className="px-3 py-2 font-medium">Table</th>
-                <th className="px-3 py-2 font-medium">Would delete</th>
-                <th className="px-3 py-2 font-medium">Deleted</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Warning</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((r) => (
-                <tr
-                  key={r.table}
-                  className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                >
-                  <td className="px-3 py-2 font-mono text-neutral-300">{r.table}</td>
-                  <td className="px-3 py-2 text-neutral-300">{r.rows_would_delete}</td>
-                  <td className="px-3 py-2 text-neutral-300">{r.rows_deleted}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                        STATUS_STYLES[r.status] ?? STATUS_STYLES.skipped
-                      }`}
-                    >
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-neutral-400">{r.warning ?? "—"}</td>
+        <div className="mt-4">
+          <DataTableShell isEmpty={results.length === 0} emptyLabel="No prune results.">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Table</th>
+                  <th>Would delete</th>
+                  <th>Deleted</th>
+                  <th>Status</th>
+                  <th>Warning</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <tr key={r.table}>
+                    <td className="mono text-text-secondary">{r.table}</td>
+                    <td className="mono tabular">{r.rows_would_delete}</td>
+                    <td className="mono tabular">{r.rows_deleted}</td>
+                    <td>
+                      <Badge label={r.status} className={STATUS_STYLES[r.status] ?? STATUS_STYLES.skipped} />
+                    </td>
+                    <td className="text-text-secondary">{r.warning ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DataTableShell>
         </div>
       )}
     </Section>
@@ -375,7 +352,7 @@ function PruneSection({ policies }: { policies: DataRetentionPolicy[] | null }) 
 function SafetyNotes() {
   return (
     <Section title="Safety notes">
-      <ul className="list-disc space-y-1 pl-4 text-xs text-neutral-400">
+      <ul className="list-disc space-y-1 pl-4 text-xs text-text-secondary">
         <li>The latest price observation for every card/source/price type is always protected.</li>
         <li>Open and watching signal events are always protected.</li>
         <li>
@@ -397,20 +374,3 @@ function SafetyNotes() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: "warning";
-}) {
-  const toneClass = tone === "warning" && value > 0 ? "text-amber-400" : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
-}

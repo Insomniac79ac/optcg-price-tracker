@@ -8,6 +8,9 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
 import { RunStatusBadge } from "@/components/RunStatusBadge";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   AdminAuthRequiredError,
   type PriceRefreshRun,
@@ -65,49 +68,41 @@ export default function RefreshRunsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">
-              Price refresh runs
-            </h1>
-            <Link
-              href="/admin/actions"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Admin actions
-            </Link>
-            <Link
-              href="/admin/market-workflow-runs"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Market workflow runs
-            </Link>
-            <Link
-              href="/admin/price-source-health"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Price source health
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            {status === "ready" && (
-              <span className="text-sm text-neutral-500">
-                {total} run{total === 1 ? "" : "s"}
-              </span>
-            )}
-            <AdminLogoutButton />
-          </div>
+        <PageHeader
+          title="Price refresh runs"
+          actions={
+            <>
+              {status === "ready" && (
+                <span className="text-sm text-text-muted">
+                  {total} run{total === 1 ? "" : "s"}
+                </span>
+              )}
+              <AdminLogoutButton />
+            </>
+          }
+        />
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
+          <Link href="/admin/actions" className="text-sky-400 hover:underline">
+            Admin actions
+          </Link>
+          <Link href="/admin/market-workflow-runs" className="text-sky-400 hover:underline">
+            Market workflow runs
+          </Link>
+          <Link href="/admin/price-source-health" className="text-sky-400 hover:underline">
+            Price source health
+          </Link>
         </div>
 
         <div className="mb-4 flex gap-1">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
+              type="button"
               onClick={() => setStatusFilter(f.value)}
-              className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+              className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
                 statusFilter === f.value
-                  ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                  : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                  ? "bg-accent-gold text-black/80 ring-accent-gold"
+                  : "bg-bg-surface text-text-secondary ring-border-default hover:text-text-primary"
               }`}
             >
               {f.label}
@@ -119,104 +114,64 @@ export default function RefreshRunsPage() {
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Loading refresh runs…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Loading refresh runs…</LoadingState>}
 
         {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to load refresh runs from the API. Is the backend running?
-          </div>
+          <ErrorState>Failed to load refresh runs from the API. Is the backend running?</ErrorState>
         )}
 
-        {status === "ready" && runs.length === 0 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            No refresh runs found.
-          </div>
-        )}
-
-        {status === "ready" && runs.length > 0 && (
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full border-collapse text-sm">
+        {status === "ready" && (
+          <DataTableShell isEmpty={runs.length === 0} emptyLabel="No refresh runs found.">
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Mode</th>
-                  <th className="px-3 py-2 font-medium">Source</th>
-                  <th className="px-3 py-2 font-medium">Started</th>
-                  <th className="px-3 py-2 font-medium">Finished</th>
-                  <th className="px-3 py-2 font-medium text-right">
-                    Checked
-                  </th>
-                  <th className="px-3 py-2 font-medium text-right">
-                    Inserted
-                  </th>
-                  <th className="px-3 py-2 font-medium text-right">Failed</th>
-                  <th className="px-3 py-2 font-medium">Error</th>
+                <tr>
+                  <th>Status</th>
+                  <th>Mode</th>
+                  <th>Source</th>
+                  <th>Started</th>
+                  <th>Finished</th>
+                  <th className="text-right">Checked</th>
+                  <th className="text-right">Inserted</th>
+                  <th className="text-right">Failed</th>
+                  <th>Error</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
-                  <tr
-                    key={run.id}
-                    className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                  >
-                    <td className="px-3 py-2">
+                  <tr key={run.id}>
+                    <td>
                       <RunStatusBadge status={run.status} />
                     </td>
-                    <td className="px-3 py-2 text-neutral-300">
+                    <td className="text-text-secondary">
                       {run.scraping_mode}
-                      {run.dry_run && (
-                        <span className="ml-1 text-xs text-neutral-500">
-                          (dry-run)
-                        </span>
-                      )}
+                      {run.dry_run && <span className="ml-1 text-xs text-text-muted">(dry-run)</span>}
                     </td>
-                    <td className="px-3 py-2 text-neutral-400">
-                      {run.source_filter ?? "all"}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-neutral-500">
-                      {formatDateTime(run.started_at)}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-neutral-500">
-                      {formatDateTime(run.finished_at)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-neutral-300">
-                      {run.mappings_checked}
-                    </td>
-                    <td className="px-3 py-2 text-right text-neutral-300">
+                    <td className="text-text-secondary">{run.source_filter ?? "all"}</td>
+                    <td className="mono text-xs text-text-muted">{formatDateTime(run.started_at)}</td>
+                    <td className="mono text-xs text-text-muted">{formatDateTime(run.finished_at)}</td>
+                    <td className="mono tabular text-right text-text-secondary">{run.mappings_checked}</td>
+                    <td className="mono tabular text-right text-text-secondary">
                       {run.observations_inserted}
                     </td>
-                    <td className="px-3 py-2 text-right">
-                      <span
-                        className={
-                          run.mappings_failed > 0
-                            ? "font-medium text-rose-400"
-                            : "text-neutral-400"
-                        }
-                      >
+                    <td className="mono tabular text-right">
+                      <span className={run.mappings_failed > 0 ? "font-medium text-signal-red" : "text-text-secondary"}>
                         {run.mappings_failed}
                       </span>
                     </td>
-                    <td className="max-w-xs px-3 py-2">
+                    <td className="max-w-xs">
                       {run.error_message ? (
-                        <span
-                          className="block truncate text-xs text-rose-300"
-                          title={run.error_message}
-                        >
+                        <span className="block truncate text-xs text-signal-red" title={run.error_message}>
                           {run.error_message}
                         </span>
                       ) : (
-                        <span className="text-neutral-600">—</span>
+                        <span className="text-text-faint">—</span>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </DataTableShell>
         )}
 
         {status === "ready" && (

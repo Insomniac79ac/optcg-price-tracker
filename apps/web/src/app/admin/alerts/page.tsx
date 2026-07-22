@@ -7,6 +7,10 @@ import { AdminAuthGate } from "@/components/AdminAuthGate";
 import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AlertStatusBadge } from "@/components/AlertStatusBadge";
 import { AppHeader } from "@/components/AppHeader";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { FILTER_INPUT_CLASS } from "@/components/ui/FilterBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   AdminAuthRequiredError,
   type AlertEvent,
@@ -124,10 +128,7 @@ export default function AlertsPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <div className="mb-6 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-neutral-100">Alerts</h1>
-          <AdminLogoutButton />
-        </div>
+        <PageHeader title="Alerts" actions={<AdminLogoutButton />} />
 
         {unauthorized && (
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
@@ -137,11 +138,9 @@ export default function AlertsPage() {
           <>
             <section className="mb-8">
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="text-sm font-semibold text-neutral-200">
-                  Alert events
-                </h2>
+                <h2 className="text-sm font-semibold text-text-primary">Alert events</h2>
                 {eventsStatus === "ready" && (
-                  <span className="text-sm text-neutral-500">
+                  <span className="text-sm text-text-muted">
                     {eventsTotal} event{eventsTotal === 1 ? "" : "s"}
                   </span>
                 )}
@@ -151,11 +150,12 @@ export default function AlertsPage() {
                 {EVENT_STATUS_FILTERS.map((f) => (
                   <button
                     key={f.value}
+                    type="button"
                     onClick={() => setEventsStatusFilter(f.value)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                    className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors ${
                       eventsStatusFilter === f.value
-                        ? "bg-neutral-100 text-neutral-900 ring-neutral-100"
-                        : "bg-neutral-900 text-neutral-400 ring-neutral-800 hover:text-neutral-100"
+                        ? "bg-accent-gold text-black/80 ring-accent-gold"
+                        : "bg-bg-surface text-text-secondary ring-border-default hover:text-text-primary"
                     }`}
                   >
                     {f.label}
@@ -163,161 +163,102 @@ export default function AlertsPage() {
                 ))}
               </div>
 
-              {eventsStatus === "loading" && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                  Loading alert events…
-                </div>
-              )}
+              {eventsStatus === "loading" && <LoadingState>Loading alert events…</LoadingState>}
 
               {eventsStatus === "error" && (
-                <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                  Failed to load alert events from the API. Is the backend
-                  running?
-                </div>
+                <ErrorState>Failed to load alert events from the API. Is the backend running?</ErrorState>
               )}
 
-              {eventsStatus === "ready" && events.length === 0 && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                  No alert events found.
-                </div>
-              )}
-
-              {eventsStatus === "ready" && events.length > 0 && (
-                <div className="overflow-x-auto rounded-lg border border-neutral-800">
-                  <table className="w-full border-collapse text-sm">
+              {eventsStatus === "ready" && (
+                <DataTableShell isEmpty={events.length === 0} emptyLabel="No alert events found.">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                        <th className="px-3 py-2 font-medium">Status</th>
-                        <th className="px-3 py-2 font-medium">Event type</th>
-                        <th className="px-3 py-2 font-medium">Card</th>
-                        <th className="px-3 py-2 font-medium">Source</th>
-                        <th className="px-3 py-2 font-medium">Title</th>
-                        <th className="px-3 py-2 font-medium">Sent</th>
-                        <th className="px-3 py-2 font-medium">Error</th>
+                      <tr>
+                        <th>Status</th>
+                        <th>Event type</th>
+                        <th>Card</th>
+                        <th>Source</th>
+                        <th>Title</th>
+                        <th>Sent</th>
+                        <th>Error</th>
                       </tr>
                     </thead>
                     <tbody>
                       {events.map((event) => (
-                        <tr
-                          key={event.id}
-                          className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                        >
-                          <td className="px-3 py-2">
+                        <tr key={event.id}>
+                          <td>
                             <AlertStatusBadge status={event.status} />
                           </td>
-                          <td className="px-3 py-2 text-neutral-300">
-                            {event.event_type}
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
+                          <td className="text-text-secondary">{event.event_type}</td>
+                          <td className="text-text-secondary">
                             {event.card_id ? (
-                              <Link
-                                href={`/cards/${event.card_id}`}
-                                className="hover:text-sky-400"
-                              >
-                                {event.card_name ??
-                                  event.card_code ??
-                                  `#${event.card_id}`}
+                              <Link href={`/cards/${event.card_id}`} className="hover:text-sky-400">
+                                {event.card_name ?? event.card_code ?? `#${event.card_id}`}
                               </Link>
                             ) : (
                               "—"
                             )}
                           </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {event.source_name ?? "—"}
-                          </td>
-                          <td className="max-w-sm px-3 py-2">
-                            <span
-                              className="block truncate text-neutral-200"
-                              title={event.title}
-                            >
+                          <td className="text-text-secondary">{event.source_name ?? "—"}</td>
+                          <td className="max-w-sm">
+                            <span className="block truncate text-text-primary" title={event.title}>
                               {event.title}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-xs text-neutral-500">
-                            {formatDateTime(event.sent_at)}
-                          </td>
-                          <td className="max-w-xs px-3 py-2">
+                          <td className="mono text-xs text-text-muted">{formatDateTime(event.sent_at)}</td>
+                          <td className="max-w-xs">
                             {event.error_message ? (
-                              <span
-                                className="block truncate text-xs text-rose-300"
-                                title={event.error_message}
-                              >
+                              <span className="block truncate text-xs text-signal-red" title={event.error_message}>
                                 {event.error_message}
                               </span>
                             ) : (
-                              <span className="text-neutral-600">—</span>
+                              <span className="text-text-faint">—</span>
                             )}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTableShell>
               )}
             </section>
 
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-neutral-200">
-                Alert rules
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold text-text-primary">Alert rules</h2>
 
               {ruleActionError && (
-                <div className="mb-3 rounded-lg border border-rose-900/50 bg-rose-950/30 p-3 text-sm text-rose-300">
+                <div className="mb-3 rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
                   {ruleActionError}
                 </div>
               )}
 
-              {rulesStatus === "loading" && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                  Loading alert rules…
-                </div>
-              )}
+              {rulesStatus === "loading" && <LoadingState>Loading alert rules…</LoadingState>}
 
               {rulesStatus === "error" && (
-                <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-                  Failed to load alert rules from the API. Is the backend
-                  running?
-                </div>
+                <ErrorState>Failed to load alert rules from the API. Is the backend running?</ErrorState>
               )}
 
-              {rulesStatus === "ready" && rules.length === 0 && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-                  No alert rules configured.
-                </div>
-              )}
-
-              {rulesStatus === "ready" && rules.length > 0 && (
-                <div className="overflow-x-auto rounded-lg border border-neutral-800">
-                  <table className="w-full border-collapse text-sm">
+              {rulesStatus === "ready" && (
+                <DataTableShell isEmpty={rules.length === 0} emptyLabel="No alert rules configured.">
+                  <table className="data-table">
                     <thead>
-                      <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                        <th className="px-3 py-2 font-medium">Name</th>
-                        <th className="px-3 py-2 font-medium">Rule type</th>
-                        <th className="px-3 py-2 font-medium">Source</th>
-                        <th className="px-3 py-2 font-medium">Price type</th>
-                        <th className="px-3 py-2 font-medium">Threshold %</th>
-                        <th className="px-3 py-2 font-medium">Active</th>
+                      <tr>
+                        <th>Name</th>
+                        <th>Rule type</th>
+                        <th>Source</th>
+                        <th>Price type</th>
+                        <th>Threshold %</th>
+                        <th>Active</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rules.map((rule) => (
-                        <tr
-                          key={rule.id}
-                          className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                        >
-                          <td className="px-3 py-2 font-medium text-neutral-100">
-                            {rule.name}
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {rule.rule_type}
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {rule.source_name ?? "—"}
-                          </td>
-                          <td className="px-3 py-2 text-neutral-400">
-                            {rule.price_type ?? "—"}
-                          </td>
-                          <td className="px-3 py-2">
+                        <tr key={rule.id}>
+                          <td className="font-medium text-text-primary">{rule.name}</td>
+                          <td className="text-text-secondary">{rule.rule_type}</td>
+                          <td className="text-text-secondary">{rule.source_name ?? "—"}</td>
+                          <td className="text-text-secondary">{rule.price_type ?? "—"}</td>
+                          <td>
                             <input
                               value={ruleDrafts[rule.id] ?? ""}
                               onChange={(e) =>
@@ -328,14 +269,15 @@ export default function AlertsPage() {
                               }
                               onBlur={() => saveThreshold(rule)}
                               disabled={pendingRuleId === rule.id}
-                              className="w-20 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 disabled:opacity-50"
+                              className={`w-20 ${FILTER_INPUT_CLASS} disabled:opacity-50`}
                             />
                           </td>
-                          <td className="px-3 py-2">
+                          <td>
                             <button
+                              type="button"
                               onClick={() => toggleActive(rule)}
                               disabled={pendingRuleId === rule.id}
-                              className={`rounded px-2.5 py-1 text-xs font-medium ring-1 ring-inset disabled:opacity-50 ${
+                              className={`rounded-control px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition-colors disabled:opacity-50 ${
                                 rule.is_active
                                   ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30 hover:bg-emerald-500/25"
                                   : "bg-neutral-500/15 text-neutral-400 ring-neutral-500/30 hover:bg-neutral-500/25"
@@ -348,7 +290,7 @@ export default function AlertsPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTableShell>
               )}
             </section>
           </>

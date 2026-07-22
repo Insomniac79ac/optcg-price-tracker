@@ -8,6 +8,12 @@ import { AdminLogoutButton } from "@/components/AdminLogoutButton";
 import { AppHeader } from "@/components/AppHeader";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { VersionFooter } from "@/components/VersionFooter";
+import { ErrorState, LoadingState } from "@/components/StateBlocks";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Badge } from "@/components/ui/Badge";
+import { DataTableShell } from "@/components/ui/DataTableShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   AdminNetworkError,
@@ -36,15 +42,15 @@ interface ProxyErrorDetails {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  ok: "text-emerald-400",
-  warning: "text-amber-400",
-  critical: "text-rose-400",
+  ok: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  warning: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
+  critical: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
 };
 
 const CHECK_STATUS_STYLES: Record<string, string> = {
-  pass: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  warning: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-  fail: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  pass: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  warning: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
+  fail: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
 };
 
 export default function SystemCheckPage() {
@@ -83,176 +89,138 @@ export default function SystemCheckPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-4 flex items-baseline justify-between">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold text-neutral-100">System check</h1>
-            <Link
-              href="/admin/logs"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              App logs
-            </Link>
-            <Link
-              href="/admin/release-status"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Release status
-            </Link>
-            <Link
-              href="/admin/catalog-coverage"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog coverage
-            </Link>
-            <Link
-              href="/admin/price-source-health"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Price source health
-            </Link>
-            <Link
-              href="/admin/source-mapping-quality"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Source mapping quality
-            </Link>
-            <Link
-              href="/admin/card-duplicates"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Card duplicates
-            </Link>
-            <Link
-              href="/admin/catalog-ops"
-              className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-            >
-              Catalog operations
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={load}
-              className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:text-neutral-100"
-            >
-              Re-run
-            </button>
-            <AdminLogoutButton />
-          </div>
+        <PageHeader
+          title="System check"
+          description="A read-only consistency sweep across the database, backup coverage, and cross-table references."
+          actions={
+            <>
+              <ActionButton onClick={load}>Re-run</ActionButton>
+              <AdminLogoutButton />
+            </>
+          }
+        />
+        <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
+          <Link href="/admin/logs" className="text-sky-400 hover:underline">
+            App logs
+          </Link>
+          <Link href="/admin/release-status" className="text-sky-400 hover:underline">
+            Release status
+          </Link>
+          <Link href="/admin/catalog-coverage" className="text-sky-400 hover:underline">
+            Catalog coverage
+          </Link>
+          <Link href="/admin/price-source-health" className="text-sky-400 hover:underline">
+            Price source health
+          </Link>
+          <Link href="/admin/source-mapping-quality" className="text-sky-400 hover:underline">
+            Source mapping quality
+          </Link>
+          <Link href="/admin/card-duplicates" className="text-sky-400 hover:underline">
+            Card duplicates
+          </Link>
+          <Link href="/admin/catalog-ops" className="text-sky-400 hover:underline">
+            Catalog operations
+          </Link>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          A read-only consistency sweep across the database, backup coverage, and cross-table
-          references.
-        </p>
 
         {status === "unauthorized" && (
           <AdminAuthGate onTokenSaved={() => window.location.reload()} />
         )}
 
-        {status === "loading" && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-8 text-center text-sm text-neutral-500">
-            Running system check…
-          </div>
-        )}
+        {status === "loading" && <LoadingState>Running system check…</LoadingState>}
 
         {status === "not_found" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             The system-check endpoint was not found (404). Is the backend up to date?
-          </div>
+          </ErrorState>
         )}
 
         {status === "timeout" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Timed out waiting for the system check (15s). Is the backend running and reachable?
-          </div>
+          </ErrorState>
         )}
 
         {status === "network_error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
+          <ErrorState>
             Could not reach the API proxy. Check that the web and api containers are both
             running.
-          </div>
+          </ErrorState>
         )}
 
         {status === "proxy_error" && proxyError && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-6 text-sm text-rose-300">
+          <ErrorState>
             <p className="font-medium">{proxyError.message}</p>
             {proxyError.backendStatus !== undefined && (
-              <p className="mt-1 text-rose-400">backend_status: {proxyError.backendStatus}</p>
+              <p className="mt-1">backend_status: {proxyError.backendStatus}</p>
             )}
             {proxyError.bodyPreview && (
-              <pre className="mt-3 max-h-48 overflow-auto rounded border border-rose-900/50 bg-rose-950/40 p-3 text-xs whitespace-pre-wrap text-rose-200">
+              <pre className="mt-3 max-h-48 overflow-auto rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-left text-xs whitespace-pre-wrap text-signal-red">
                 {proxyError.bodyPreview}
               </pre>
             )}
-          </div>
+          </ErrorState>
         )}
 
-        {status === "error" && (
-          <div className="rounded-lg border border-rose-900/50 bg-rose-950/30 p-8 text-center text-sm text-rose-300">
-            Failed to run the system check. Is the backend running?
-          </div>
-        )}
+        {status === "error" && <ErrorState>Failed to run the system check. Is the backend running?</ErrorState>}
 
         {status === "ready" && report && (
           <>
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-neutral-500">
-                  Overall status
-                </div>
-                <div
-                  className={`mt-1 text-2xl font-semibold uppercase ${
-                    STATUS_STYLES[report.status] ?? "text-neutral-100"
-                  }`}
-                >
-                  {report.status}
-                </div>
-              </div>
+            <StatGrid>
+              <StatCard
+                label="Overall status"
+                value={<Badge label={report.status} className={`uppercase ${STATUS_STYLES[report.status] ?? ""}`} />}
+              />
               <StatCard label="Checks total" value={report.summary.checks_total} />
-              <StatCard label="Passed" value={report.summary.checks_passed} tone="pass" />
-              <StatCard label="Warnings" value={report.summary.warnings} tone="warning" />
-              <StatCard label="Critical" value={report.summary.critical} tone="critical" />
+              <StatCard label="Passed" value={report.summary.checks_passed} tone="good" />
+              <StatCard
+                label="Warnings"
+                value={report.summary.warnings}
+                tone={report.summary.warnings > 0 ? "bad" : "neutral"}
+              />
+              <StatCard
+                label="Critical"
+                value={report.summary.critical}
+                tone={report.summary.critical > 0 ? "bad" : "neutral"}
+              />
+            </StatGrid>
+
+            <div className="mt-6">
+              <CatalogOperationsSection catalogOperations={report.catalog_operations} />
             </div>
 
-            <CatalogOperationsSection catalogOperations={report.catalog_operations} />
-
-            <div className="overflow-x-auto rounded-lg border border-neutral-800">
-              <table className="w-full border-collapse text-xs">
+            <DataTableShell isEmpty={report.checks.length === 0} emptyLabel="No checks reported.">
+              <table className="data-table">
                 <thead>
-                  <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
-                    <th className="px-3 py-2 font-medium">Check</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Severity</th>
-                    <th className="px-3 py-2 font-medium">Message</th>
+                  <tr>
+                    <th>Check</th>
+                    <th>Status</th>
+                    <th>Severity</th>
+                    <th>Message</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.checks.map((check) => (
-                    <tr
-                      key={check.name}
-                      className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                    >
-                      <td className="px-3 py-2 font-mono text-neutral-300">{check.name}</td>
-                      <td className="px-3 py-2">
-                        <span
-                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                    <tr key={check.name}>
+                      <td className="mono text-text-secondary">{check.name}</td>
+                      <td>
+                        <Badge
+                          label={check.status}
+                          className={
                             CHECK_STATUS_STYLES[check.status] ??
-                            "bg-neutral-500/15 text-neutral-300 ring-neutral-500/30"
-                          }`}
-                        >
-                          {check.status}
-                        </span>
+                            "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30"
+                          }
+                        />
                       </td>
-                      <td className="px-3 py-2">
+                      <td>
                         <SeverityBadge severity={check.severity} />
                       </td>
-                      <td className="px-3 py-2 text-neutral-400">{check.message}</td>
+                      <td className="text-text-secondary">{check.message}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </DataTableShell>
           </>
         )}
         <VersionFooter />
@@ -261,48 +229,21 @@ export default function SystemCheckPage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: "pass" | "warning" | "critical";
-}) {
-  const toneClass =
-    tone === "critical" && value > 0
-      ? "text-rose-400"
-      : tone === "warning" && value > 0
-        ? "text-amber-400"
-        : tone === "pass"
-          ? "text-emerald-400"
-          : "text-neutral-100";
-  return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{label}</div>
-      <div className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</div>
-    </div>
-  );
-}
-
 const OPS_STATUS_TONE: Record<string, string> = {
-  ok: "text-emerald-400",
-  healthy: "text-emerald-400",
-  valid: "text-emerald-400",
-  warning: "text-amber-400",
-  degraded: "text-amber-400",
-  critical: "text-rose-400",
-  invalid: "text-rose-400",
-  none: "text-neutral-400",
+  ok: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  healthy: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  valid: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
+  warning: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
+  degraded: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
+  critical: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
+  invalid: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
+  none: "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30",
 };
 
+const DEFAULT_OPS_STATUS_TONE = "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30";
+
 function OpsStatusValue({ status }: { status: string }) {
-  return (
-    <div className={`mt-1 text-lg font-semibold uppercase ${OPS_STATUS_TONE[status] ?? "text-neutral-100"}`}>
-      {status}
-    </div>
-  );
+  return <Badge label={status} className={`uppercase ${OPS_STATUS_TONE[status] ?? DEFAULT_OPS_STATUS_TONE}`} />;
 }
 
 function CatalogOperationsSection({
@@ -312,67 +253,45 @@ function CatalogOperationsSection({
 }) {
   const ops = catalogOperations;
   return (
-    <div className="mb-6">
+    <div>
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-medium text-neutral-300">Catalog operations</h2>
-        <Link
-          href="/admin/catalog-ops"
-          className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300"
-        >
+        <h2 className="text-sm font-medium text-text-secondary">Catalog operations</h2>
+        <Link href="/admin/catalog-ops" className="text-xs text-sky-400 hover:underline">
           Catalog operations dashboard →
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Card audit</div>
-          <OpsStatusValue status={ops.card_audit_status} />
-        </div>
-        <StatCard label="Duplicate risk" value={ops.duplicate_risk_count} tone={ops.duplicate_risk_count > 0 ? "warning" : "pass"} />
+      <StatGrid>
+        <StatCard label="Card audit" value={<OpsStatusValue status={ops.card_audit_status} />} />
+        <StatCard
+          label="Duplicate risk"
+          value={ops.duplicate_risk_count}
+          tone={ops.duplicate_risk_count > 0 ? "bad" : "good"}
+        />
         <StatCard
           label="Mapping quality critical"
           value={ops.mapping_quality_critical_count}
-          tone={ops.mapping_quality_critical_count > 0 ? "critical" : "pass"}
+          tone={ops.mapping_quality_critical_count > 0 ? "bad" : "good"}
         />
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Metadata completion</div>
-          <div className="mt-1 text-lg font-semibold text-neutral-100">
-            {formatPercent(ops.metadata_completion_pct)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Mapping coverage</div>
-          <div className="mt-1 text-lg font-semibold text-neutral-100">
-            {formatPercent(ops.mapping_coverage_pct)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Recent price coverage</div>
-          <div className="mt-1 text-lg font-semibold text-neutral-100">
-            {formatPercent(ops.recent_price_coverage_pct)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">Price source health</div>
-          <OpsStatusValue status={ops.price_source_health_status} />
-        </div>
-      </div>
-      <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
+        <StatCard label="Metadata completion" value={formatPercent(ops.metadata_completion_pct)} />
+        <StatCard label="Mapping coverage" value={formatPercent(ops.mapping_coverage_pct)} />
+        <StatCard label="Recent price coverage" value={formatPercent(ops.recent_price_coverage_pct)} />
+        <StatCard label="Price source health" value={<OpsStatusValue status={ops.price_source_health_status} />} />
+      </StatGrid>
+      <div className="panel mt-3 px-4 py-3">
         <div className="flex items-baseline justify-between">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">
+          <div className="text-xs uppercase tracking-wide text-text-muted">
             Latest import validation report
           </div>
-          <span className={`text-xs font-medium uppercase ${OPS_STATUS_TONE[ops.latest_import_validation_status] ?? "text-neutral-100"}`}>
-            {ops.latest_import_validation_status}
-          </span>
+          <OpsStatusValue status={ops.latest_import_validation_status} />
         </div>
         {ops.warnings.length > 0 ? (
-          <ul className="mt-2 list-inside list-disc text-xs text-amber-300">
+          <ul className="mt-2 list-inside list-disc text-xs text-signal-warning">
             {ops.warnings.map((w) => (
               <li key={w}>{w}</li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-xs text-neutral-500">No catalog-operations warnings.</p>
+          <p className="mt-2 text-xs text-text-muted">No catalog-operations warnings.</p>
         )}
       </div>
     </div>
