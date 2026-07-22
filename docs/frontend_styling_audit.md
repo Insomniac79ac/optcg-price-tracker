@@ -93,17 +93,56 @@ Tailwind patterns: `bg-white`, `text-blue-*`, `rounded-xl`, `bg-gradient-*`,
 
 ## Summary counts
 
-- **A (fully styled):** 15 routes (`/`, `/dashboard`, `/collection`, `/collection/vault`, `/search`, `/cards/[id]`, `/analytics/digest`, `/analytics/buy-decisions`, `/analytics/sell-decisions`, `/analytics/portfolio-risk`, `/admin/catalog-ops`, `/admin/import-validation`, `/admin/card-duplicates`, `/admin/source-mapping-quality`, `/admin/price-source-health`)
+**Pre-pass** (original audit, before Parts 2-5/8/9 fixes below):
+- **A (fully styled):** 15 routes
 - **B (partially styled):** 24 routes
-- **C (old/generic):** 4 routes (`/admin/data-retention`, `/admin/file-jobs`, `/market/movers`, and effectively the raw-table cluster bordering C — see notes)
+- **C (old/generic):** 4 routes
 - **D (broken/unused):** 0 routes
 
-## Prioritized fix list for Parts 2–4
+**Post-pass** (current state, all committed):
+- **A (fully styled):** 43 of 43 routes (100%) — every route in every section
+  table above is now category A.
+- **B/C/D:** 0 routes.
 
-**Collector (Part 2):** `/wishlist`, `/grading`, `/activity` — mostly need `PageHeader` added and the three leftover `bg-neutral-100 ... hover:bg-white` buttons replaced with `ActionButton`.
+28 of the 43 routes were fixed in this pass (see "Fixed in this pass"
+column per-route above); the other 15 were already category A before this
+pass started. Beyond the 43 page-level routes, this pass also fixed the
+same pre-design-system patterns living in several *shared* components that
+multiple already-A pages render through (`AdminAuthGate`,
+`AdminLogoutButton`, `FileJobTracker`, `CollectorTagsGroupsManager`,
+`CollectionImportExport`, `WishlistImportExport`, plus the tab-toggle style
+in `PortfolioValuationHistoryChart`/`CollectionValuationSummary`/
+`market/signals`) — not reflected in the per-route table above since the
+audit was scoped to `page.tsx` files, but tracked in
+`docs/interface_design_system.md`'s "Phase 10 — styling consistency pass"
+section and covered by `scripts/phase10_ux_audit.sh`.
 
-**Analytics (Part 3):** `/analytics/collection`, `/analytics/wishlist`, `/analytics/grading` — add `PageHeader` + convert ad-hoc summary numbers to `StatCard`.
+## Fix history (Parts 2–5/8/9)
 
-**Admin (Part 4):** Highest priority — the raw-`<table>` cluster with zero/near-zero shared-component adoption: `/admin/data-retention`, `/admin/file-jobs`, `/admin/card-audit`, `/admin/system-check`, `/admin/market-workflow-runs`, `/admin/refresh-runs`, `/admin/performance`, `/admin/job-locks`, `/admin/alerts`, `/admin/logs` (convert to `DataTableShell` + add `PageHeader`). Lower priority (no raw table, just missing `PageHeader`/legacy buttons): `/admin/cards`, `/admin/catalog-coverage`, `/admin/snkrdunk-candidates`, `/admin/backup`, `/admin/cache`, `/admin/actions`, `/admin/release-status`.
+**Collector + market (Part 2):** `/wishlist`, `/grading`, `/activity`,
+`/market/opportunities`, `/market/signals`, `/market/signal-events`,
+`/market/report`, `/market/movers` — added `PageHeader`, converted ad-hoc
+stat markup to `StatCard`/`StatGrid`, converted raw `<table>` to
+`DataTableShell`, replaced legacy `bg-neutral-100 ... hover:bg-white`
+buttons with `ActionButton`.
 
-**Market (part of Part 2/3 scope):** `/market/movers`, `/market/signals`, `/market/signal-events`, `/market/report` need `DataTableShell` + `PageHeader`; `/market/opportunities` just needs `PageHeader`/`StatCard` polish.
+**Analytics (Part 3):** `/analytics/collection`, `/analytics/wishlist`,
+`/analytics/grading` — added `PageHeader` + `StatCard`/`StatGrid`.
+
+**Admin (Part 4):** All 17 remaining admin routes — the raw-`<table>`
+cluster (`/admin/data-retention`, `/admin/file-jobs`, `/admin/card-audit`,
+`/admin/system-check`, `/admin/market-workflow-runs`,
+`/admin/refresh-runs`, `/admin/performance`, `/admin/job-locks`,
+`/admin/alerts`, `/admin/logs`) converted to `DataTableShell` + `PageHeader`
++ `StatCard`; the remaining set (`/admin/cards`, `/admin/catalog-coverage`,
+`/admin/snkrdunk-candidates`, `/admin/backup`, `/admin/cache`,
+`/admin/actions`, `/admin/release-status`) got `PageHeader`/`StatCard` and
+legacy-button cleanup.
+
+**Shared components (Part 5/8/9):** `AdminAuthGate`/`AdminLogoutButton`
+(the app-wide admin-token UI), `FileJobTracker`, `CollectorTagsGroupsManager`,
+`CollectionImportExport`, `WishlistImportExport` (legacy buttons +
+un-migrated raw tables), and the `bg-neutral-100` "selected" tab-toggle
+pattern in three components, all retokenized. `FileJobTracker`'s job-status
+pill and `import-validation`'s valid/invalid `StatusBadge` deduped onto the
+shared `Badge` primitive.

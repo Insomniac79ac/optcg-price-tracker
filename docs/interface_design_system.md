@@ -348,36 +348,15 @@ mismatch against its own filters.
 - Do not make tables spacious — keep them dense.
 - Do not use sub-11px text for anything the user needs to scan.
 
-## Pages fully migrated in this pass
+## Pages fully migrated
 
-`/dashboard`, `/collection`, `/collection/vault`, `/search`, `/cards/[id]`,
-`/analytics/digest`, `/analytics/buy-decisions`, `/analytics/sell-decisions`,
-`/analytics/portfolio-risk`, `/admin/catalog-ops`, `/admin/import-validation`,
-`/admin/card-duplicates`, `/admin/source-mapping-quality`,
-`/admin/price-source-health`.
-
-Every other existing page gets the new shell/tokens/fonts for free (via the
-`AppHeader` shim + global CSS) but keeps its previous internal markup.
-
-## TODO — pages not yet deeply migrated
-
-These pages render inside the new shell already, but their internal
-tables/stat tiles/badges have not yet been converted to the shared
-components above. Recommended order: highest-traffic collector pages
-first, then remaining admin utility pages.
-
-- `/wishlist`
-- `/grading`
-- `/activity`
-- `/market/movers`, `/market/opportunities`, `/market/report`,
-  `/market/signal-events`, `/market/signals`
-- `/analytics/collection`, `/analytics/wishlist`, `/analytics/grading`
-- `/admin/cards`, `/admin/card-audit`, `/admin/catalog-coverage`,
-  `/admin/snkrdunk-candidates`, `/admin/system-check`
-- `/admin/actions`, `/admin/alerts`, `/admin/backup`, `/admin/cache`,
-  `/admin/data-retention`, `/admin/file-jobs`, `/admin/job-locks`,
-  `/admin/logs`, `/admin/market-workflow-runs`, `/admin/performance`,
-  `/admin/refresh-runs`, `/admin/release-status`
+As of the Phase 10 styling-consistency pass (see "Phase 10 — styling
+consistency pass" below and `docs/frontend_styling_audit.md` for the
+route-by-route detail), every one of the 43 actual routes under
+`apps/web/src/app` is category A ("fully styled") except `/` itself, which
+is a 5-line redirect with no rendered UI of its own. There is no longer a
+"not yet migrated" list — see "Remaining known styling debt" below for the
+few small, deliberately-deferred items instead.
 
 ## Phase 10 — mobile/tablet responsiveness and UX polish
 
@@ -470,3 +449,202 @@ Already-established rules (see "Admin safety rules" above) — re-verified,
 no changes needed. `admin/backup`'s restore action already gates behind a
 dry-run checkbox + typed confirmation + a distinct red button only in real
 "replace" mode.
+
+## Phase 10 — styling consistency pass
+
+A final sweep bringing every remaining route (mostly built before this
+design system existed) up to the same visual language as the pages above.
+Not a redesign, not a new feature — see `docs/frontend_styling_audit.md`
+for the full route-by-route before/after detail this section summarizes.
+
+### Final component inventory
+
+`apps/web/src/components/ui/` (the design-system layer):
+
+| Component | Purpose |
+|---|---|
+| `AppShell`, `TopBar`, `SidebarNav` | Persistent layout shell (see "Layout shell") |
+| `PageHeader` | Title + description + actions header, one per page |
+| `StatCard` / `StatGrid` | Dense top-line stat tiles |
+| `DataTableShell` / `TableScrollContainer` / `MobileRecordList` | Table chrome: scroll, empty state, sticky header, mobile fallback |
+| `FilterBar` (+ `FILTER_INPUT_CLASS`/`FILTER_LABEL_CLASS`) | Inline filter row with mobile collapse |
+| `SavedViewBar`, `SaveViewModal`, `ManageSavedViewsModal`, `SavedViewPill`, `PinnedViewsSection` | Saved views/filter presets |
+| `CommandPalette`, `KeyboardShortcutsModal`, `QuickActionBar`, `WorkflowShortcutsSection` | Command palette and workflow shortcuts |
+| `CardVaultTile`, `CardImageFrame`, `CardIdentityBlock`, `CardPricePanel`, `CardActivityPanel` | Card identity/detail building blocks |
+| `OwnershipSummaryPanel`, `WishlistSummaryPanel`, `GradingSummaryPanel`, `MarketContextPanel`, `SourceComparisonPanel` | Card-detail side panels |
+| `PriceCell`, `PriceBasisLabel` | Canonical price + basis display (see "Price/source display examples") |
+| `Badge` (primitive), `VariantBadge`, `RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`, `DecisionBadge` | Shared status/category pills (see "Badge/status mapping" below) |
+| `ActionButton` | Button with admin-safety-tier variants (`default`/`primary`/`dry-run`/`preview`/`real`/`danger`) |
+| `ConfirmActionModal`, `AdminActionPanel` | Destructive-action confirmation gates |
+| `SkeletonBlock` (`SkeletonRows`) | Loading shimmer |
+
+`apps/web/src/components/` (domain-specific, built on the primitives above):
+`RarityBadge`, `SourceBadge`, and one status badge per domain vocabulary
+(`AlertStatusBadge`, `CollectionStatusBadge`, `GradingStatusBadge`,
+`LogLevelBadge`, `MarketSignalEventStatusBadge`,
+`MarketWorkflowRunStatusBadge`, `MatchStatusBadge`,
+`OpportunityCategoryBadge`, `PriceTypeBadge`, `RunStatusBadge`,
+`SearchTypeBadge`, `SeverityBadge`, `StockStatusBadge`,
+`WishlistPriorityBadge`, `WishlistStatusBadge`, `CollectorTagBadge`) — kept
+separate from `components/ui/` deliberately, see "Page adoption rules"
+below. `StateBlocks.tsx` exports `LoadingState`/`ErrorState`/`EmptyState`/
+`MissingValue`, the shared loading/error/empty/missing-value primitives
+every page uses instead of hand-rolled boxes. `AdminAuthGate` (the single
+admin-token entry form every `/admin/*` page renders) and
+`AdminLogoutButton` are the canonical admin-token UI (see "Admin token UX"
+below).
+
+### Page adoption rules
+
+- A page's own header is always `PageHeader`, not a hand-rolled `<h1>`.
+- Top-line numbers are always `StatCard`/`StatGrid`, not ad-hoc `<div>`
+  markup — even a single-page-local stat tile should use the shared
+  component rather than duplicating its className string.
+- Every table wider than a couple columns renders inside
+  `DataTableShell`/`TableScrollContainer` with the `.data-table` CSS class
+  on the `<table>` element — no hand-rolled `overflow-x-auto rounded
+  border` wrapper.
+- A domain that already has its own status vocabulary that doesn't cleanly
+  map onto an app-wide badge (e.g. `source-mapping-quality`'s
+  `ok`/`review`/`warning`/`critical`, which matches its own filter buttons
+  exactly) may keep a locally-scoped badge built on the shared `Badge`
+  primitive rather than being forced onto a mismatched canonical one — this
+  is why `components/` still holds many domain-specific badge files
+  alongside the smaller canonical set in `components/ui/`. What's not
+  acceptable is a badge that isn't built on `Badge` at all (hand-rolled
+  `<span>` with its own ring/bg/padding classes).
+- Every button maps to an `ActionButton` variant — never a raw `<button
+  className="...">` with hand-typed colors.
+- Buttons/tabs that need a "selected" state use the gold-accent pattern
+  (`bg-accent-gold text-black/80 ring-accent-gold` selected, `bg-bg-surface
+  text-text-muted ring-border-default hover:text-text-primary`
+  unselected) — not an inverted white/light chip.
+
+### Badge/status mapping table
+
+Extends "Badge color meaning" above with the full category → component
+mapping from the design brief's Part 7:
+
+| Category | Component | Notes |
+|---|---|---|
+| Rarity | `RarityBadge` | L / SR / SEC / R / UC / C |
+| Variant | `VariantBadge` | Manga/SP/SEC gold family, Parallel/Alt Art purple family |
+| Source | `SourceBadge` | Yuyu-Tei / SNKRDUNK |
+| Valuation mode | `PriceBasisLabel` (`mode` prop) | Raw market / Graded adjusted |
+| Decision action | `DecisionBadge` | review_buy / review_sell / wait / hold / monitor / grade_first / missing_data / skip |
+| Risk level | `RiskBadge` | low / medium / high / critical |
+| Confidence label | `ConfidenceBadge` | exact / high / medium / low / very_low / unknown |
+| Source health | `SourceHealthBadge` | healthy / degraded / stale / blocked / error / unknown |
+| Review status (source mapping quality) | local `RiskBadge`-style badge on `Badge` | own `ok`/`review`/`warning`/`critical` vocabulary, matches its filters |
+| Review status (SNKRDUNK candidates) | `MatchStatusBadge` | own matched/unmatched/rejected vocabulary |
+| Job status (file jobs) | `Badge` (via `FileJobTracker`'s `STATUS_STYLES` map) | queued/running/success/failed/cancelled |
+| Import validation status | `Badge` (via `import-validation`'s `StatusBadge`) | valid/invalid |
+| Workflow status | `MarketWorkflowRunStatusBadge` | market workflow runs |
+| Refresh run status | `RunStatusBadge` | price refresh runs |
+| Alert status | `AlertStatusBadge` | alert events |
+| Log level | `LogLevelBadge` | structured app logs |
+| Severity (audits) | `SeverityBadge` | card audit, system check, performance |
+
+An unknown/unrecognized status value must always render as a muted
+"unknown" badge (every badge component above falls back to a neutral
+style + the raw value as label when it doesn't recognize the value) — never
+throw or render blank.
+
+### Price/source display examples
+
+The only two price-display building blocks a page should ever need:
+
+```tsx
+// A price with its basis, staleness, and missing-value handling all built in
+<PriceCell
+  valueJpy={card.latest_price_jpy}
+  source="snkrdunk"
+  priceType="floor"
+  observedAt={card.observed_at}
+/>
+// renders: "¥1,234" + a "SNKRDUNK floor" basis chip (+ a "stale" chip if
+// observedAt is >48h old), or "not available" if valueJpy is null/undefined
+
+// A basis label on its own (e.g. next to a manually-formatted price)
+<PriceBasisLabel mode="graded_adjusted" />
+// renders: "Graded adjusted" — never a bare "Market"
+```
+
+`formatJpy`/`formatSignedJpy`/`formatSignedPct`/`formatDate`/
+`formatDateTime` (`@/lib/format`) are the only JPY/date formatters used
+app-wide; all fall back to `"—"` (or `formatJPY`/`formatPercent`/
+`formatPriceOrMissing`'s more descriptive `"not available"`/`"missing"`
+variants) rather than a raw `null`/`undefined`. `PriceCell`'s internal
+`isStale()` (48h threshold against `observedAt`) is the one staleness rule
+in the app — no page re-implements it.
+
+### Admin safety component examples
+
+```tsx
+// A read-only/low-stakes action
+<ActionButton variant="default" onClick={refresh}>Refresh</ActionButton>
+
+// The page's main positive action
+<ActionButton variant="primary" onClick={save}>Save</ActionButton>
+
+// A dry-run/preview-only trigger
+<ActionButton variant="dry-run" onClick={runDryRun}>Dry run</ActionButton>
+
+// A real write about to happen, before the confirm gate
+<ActionButton variant="real" onClick={openConfirm}>Restore backup</ActionButton>
+
+// The final confirmed destructive action, only inside a confirm gate
+<ActionButton variant="danger" onClick={executeDelete}>Delete</ActionButton>
+
+// Confirmation gate for a small/single-row destructive action
+<ConfirmActionModal
+  open={confirmOpen}
+  title="Reject this match?"
+  onConfirm={reject}
+  onCancel={() => setConfirmOpen(false)}
+/>
+
+// Confirmation gate for a high-blast-radius action - stays disabled until
+// the exact phrase is typed
+<ConfirmActionModal
+  open={confirmOpen}
+  title="Merge these cards?"
+  confirmPhrase="MERGE"
+  onConfirm={merge}
+  onCancel={() => setConfirmOpen(false)}
+/>
+```
+
+Admin token entry is a single component (`AdminAuthGate`) rendered by every
+`/admin/*` page's auth gate — never a per-page hand-rolled token form. The
+token is only ever read/written via `getAdminToken`/`setAdminToken`/
+`clearAdminToken` in `lib/api.ts`; it is never rendered into page text,
+never included in a saved view's `currentFilters` payload, and never
+logged. `AdminLogoutButton` (the "Clear admin token" control) is the one
+shared "clear token" component, styled as a plain `ActionButton
+variant="default"` — never styled to look like a primary/destructive
+action, since clearing a token isn't itself destructive.
+
+### Remaining known styling debt
+
+Small, deliberately-deferred items that don't block calling this pass
+complete:
+
+- `CollectorTagsGroupsManager`, `CollectionValuationSummary`'s non-button
+  markup (inputs, containers) and a handful of other shared
+  components/tables still use `neutral-*`/`rose-*` Tailwind colors directly
+  instead of the `text-*`/`bg-*`/`border-*` semantic tokens — visually
+  equivalent (the token values point at the same palette) but not yet
+  swapped to the token classes. Low priority: no visual inconsistency, just
+  a maintainability nit for a future pass.
+- `catalog-coverage`'s `SeverityPill` intentionally keeps its own `review`
+  status label rather than mapping onto the shared `SeverityBadge`'s
+  `info` vocabulary — a deliberate exception (see "Page adoption rules"),
+  not debt, but noted here since it's easy to mistake for an inconsistency.
+- The mobile-vs-desktop responsive rules (Phase 10 §"mobile/tablet
+  responsiveness") were verified for every page that existed at the time of
+  that pass; the newly-migrated pages in this pass reuse the same
+  `TableScrollContainer`/`FilterBar`/`SavedViewBar` collapse behavior, so
+  no separate re-audit was needed, but a fresh manual pass on a real mobile
+  viewport is still worthwhile before calling Phase 10 fully closed (see
+  `docs/manual_qa_checklist.md`).

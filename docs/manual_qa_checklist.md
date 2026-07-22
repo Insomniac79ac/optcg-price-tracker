@@ -123,3 +123,34 @@ detail, merge preview.
 - [ ] Disabled buttons look disabled (dimmed, `cursor-not-allowed`).
 - [ ] Success/error results are shown inline after the action runs.
 - [ ] The admin token is never visible in a saved view, a recent-workflow entry, or the URL.
+- [ ] `AdminAuthGate`'s token-entry form (warning-amber box, "Save token" button) looks the same on
+      every admin page that shows it — it's a single shared component, so a difference here means
+      something is overriding it.
+- [ ] `AdminLogoutButton`'s "Clear admin token" control looks like a plain secondary button, never a
+      danger button — clearing a token isn't itself destructive.
+- [ ] Visiting an `/admin/*` route with no token set (or an expired one) shows `AdminAuthGate` with a
+      clear "Admin token required" message, not a silent blank page or a raw 401.
+
+## 14. Route-by-route styling-consistency check (Phase 10 styling pass)
+
+Spot-check per `docs/frontend_styling_audit.md` — every route below should show a `PageHeader`
+(title + description at the top), `StatCard`/`StatGrid` for any top-line numbers, and tables inside
+the shared scrollable/sticky-header chrome (no visible difference in table look-and-feel from an
+already-established page like `/collection` or `/admin/card-duplicates`).
+
+- [ ] Collector: `/wishlist`, `/grading`, `/activity`
+- [ ] Market: `/market/opportunities`, `/market/signals`, `/market/signal-events`,
+      `/market/report`, `/market/movers`
+- [ ] Analytics: `/analytics/collection`, `/analytics/wishlist`, `/analytics/grading`
+- [ ] Admin (raw-table cluster): `/admin/data-retention`, `/admin/file-jobs`, `/admin/card-audit`,
+      `/admin/system-check`, `/admin/market-workflow-runs`, `/admin/refresh-runs`,
+      `/admin/performance`, `/admin/job-locks`, `/admin/alerts`, `/admin/logs`
+- [ ] Admin (header/button cleanup): `/admin/cards`, `/admin/catalog-coverage`,
+      `/admin/snkrdunk-candidates`, `/admin/backup`, `/admin/cache`, `/admin/actions`,
+      `/admin/release-status`
+- [ ] No page shows a `bg-neutral-100`/white-filled button, a bright gradient, or an inverted
+      white "selected" tab chip — selected states use the gold-accent pattern
+      (`bg-accent-gold`/`ring-accent-gold`).
+- [ ] Every badge/status pill on the page (rarity, source, risk, confidence, decision, workflow/job
+      status, severity, alert status) renders with a label plus color, and an unrecognized value
+      renders a muted "unknown" pill rather than crashing the page.
