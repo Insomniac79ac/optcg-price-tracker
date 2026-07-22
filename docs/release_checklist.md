@@ -6,6 +6,9 @@ A repeatable checklist for cutting and shipping a release of the OPTCG price tra
 section D. See `docs/deployment.md` for the full deploy reference and `docs/operations.md` for
 day-to-day commands - this document is the checklist that ties them together for a single release.
 
+For the specific `v1.0.0` tag, also see section G below and `docs/release_candidate_report.md` /
+`docs/release_blockers.md`.
+
 ## A. Pre-release
 
 - [ ] `git status` is clean (no uncommitted changes on the branch being released).
@@ -137,3 +140,44 @@ prints the current branch/commit/`VERSION`, fails if `git status` isn't clean (u
 `docker-compose.prod.yml` and the `docker-compose.prod.yml` + `docker-compose.prod.private.yml`
 combination with `docker compose ... config`. Set `RUN_TESTS=true` to also run the backend and
 worker test suites. See the script's own header comment for the full env var reference.
+
+## G. v1.0 release candidate checklist
+
+Additional checklist specific to tagging `v1.0.0` (and its release candidates, `v1.0.0-rc.N`).
+Everything in sections A-F above still applies; this is what's specific to the first stable tag.
+See `docs/release_candidate_report.md` for the practical writeup and `docs/release_blockers.md`
+for tracking anything found along the way.
+
+- [ ] Run `scripts/release_candidate_audit.sh` (the single gate covering everything below in one
+      command) - see the script's own header comment for env vars. A clean pass prints "Release
+      candidate audit passed"; a pass with non-blocking observations prints "Release candidate
+      audit passed with warnings" and lists them.
+- [ ] Run `scripts/final_audit.sh` (also run as part of the release candidate audit, but worth
+      running standalone too if only re-verifying production readiness).
+- [ ] Run the phase audits (`scripts/phase7_audit.sh`, `scripts/phase8_audit.sh`,
+      `scripts/phase9_audit.sh`, `scripts/phase10_ux_audit.sh`) - confirms nothing from earlier
+      phases regressed.
+- [ ] Run the production smoke test (`RUN_PROD_SMOKE=true scripts/release_candidate_audit.sh`, or
+      `make prod-smoke` directly) against an actual deployed stack, not just the dev stack.
+- [ ] Verify backup export/validate: `GET /admin/backup/export` returns valid JSON and
+      `POST /admin/backup/validate` on it reports `valid: true` (the audit script does this; a
+      real, non-dry-run restore cycle should still be exercised manually at least once in a
+      disposable environment - see docs/operations.md's "Database backup and restore drill").
+- [ ] Verify admin actions safety: admin token only ever persisted via `getAdminToken`/
+      `setAdminToken`/`clearAdminToken`, no token in saved-view payloads, destructive actions
+      (merge/restore/import) gated by `ConfirmActionModal`.
+- [ ] Verify no secrets: `scripts/check_secrets.sh` passes and the working tree has nothing new
+      that looks like a generated/synthetic data export.
+- [ ] Verify mobile/tablet/desktop manually - see `docs/manual_qa_checklist.md`.
+- [ ] Verify the command palette (Ctrl/Cmd+K) opens, searches, and navigates correctly.
+- [ ] Verify saved views (create/apply/set default/delete) on at least the vault view and one
+      analytics page.
+- [ ] Verify the card detail page (`/cards/[id]`) and `/collection/vault` render correctly with
+      real data.
+- [ ] Verify catalog ops (`/admin/catalog-ops` and its linked sub-pages).
+- [ ] Verify price source health (`/admin/price-source-health`) reflects a real refresh run.
+- [ ] Verify import validation (`/admin/import-validation`) correctly previews errors on a bad CSV.
+- [ ] Update `CHANGELOG.md` with the release candidate's changes.
+- [ ] Bump `VERSION` (`1.0.0-rc.N` for a release candidate, `1.0.0` for the final tag).
+- [ ] Tag the release candidate (`git tag v1.0.0-rc.1`) - not automated by any script here;
+      tagging is a deliberate, manual step.

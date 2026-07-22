@@ -41,6 +41,15 @@
 #                 see 'Catalog operations workflow' in docs/operations.md).
 #                 Off by default, same reasoning as RUN_PHASE7_AUDIT above;
 #                 ADMIN_TOKEN/BASE_API_URL are forwarded to it unchanged.
+#   RUN_RELEASE_CANDIDATE_AUDIT  default false - set true to also run
+#                 scripts/release_candidate_audit.sh (Phase 11 release-
+#                 candidate audit - see docs/release_candidate_report.md).
+#                 Off by default, same reasoning as RUN_PHASE7_AUDIT/
+#                 RUN_PHASE9_AUDIT above - this script itself already runs
+#                 as part of scripts/release_candidate_audit.sh's own phase-
+#                 audit step, so running it from here too would normally be
+#                 redundant; ADMIN_TOKEN/BASE_API_URL/WEB_BASE_URL are
+#                 forwarded to it unchanged (as BASE_API_URL/BASE_WEB_URL).
 
 set -euo pipefail
 
@@ -53,6 +62,7 @@ SKIP_WEB_SMOKE="${SKIP_WEB_SMOKE:-false}"
 WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
 RUN_PHASE7_AUDIT="${RUN_PHASE7_AUDIT:-false}"
 RUN_PHASE9_AUDIT="${RUN_PHASE9_AUDIT:-false}"
+RUN_RELEASE_CANDIDATE_AUDIT="${RUN_RELEASE_CANDIDATE_AUDIT:-false}"
 export ALLOW_DIRTY
 
 fail() {
@@ -123,6 +133,10 @@ REQUIRED_FILES=(
   scripts/load_test_web.sh
   docs/performance_testing.md
   scripts/phase9_audit.sh
+  scripts/phase10_ux_audit.sh
+  scripts/release_candidate_audit.sh
+  docs/release_candidate_report.md
+  docs/release_blockers.md
 )
 for f in "${REQUIRED_FILES[@]}"; do
   if [[ -f "$f" ]]; then
@@ -156,6 +170,24 @@ if [[ "$RUN_PHASE9_AUDIT" == "true" ]]; then
     || fail "scripts/phase9_audit.sh"
 else
   echo "skipped (RUN_PHASE9_AUDIT=true to enable)"
+fi
+echo
+
+echo "== 11. scripts/release_candidate_audit.sh is executable =="
+if [[ -x scripts/release_candidate_audit.sh ]]; then
+  echo "PASS: scripts/release_candidate_audit.sh is executable"
+else
+  fail "scripts/release_candidate_audit.sh is not executable (chmod +x scripts/release_candidate_audit.sh)"
+fi
+echo
+
+echo "== 12. Release candidate audit (RUN_RELEASE_CANDIDATE_AUDIT=$RUN_RELEASE_CANDIDATE_AUDIT) =="
+if [[ "$RUN_RELEASE_CANDIDATE_AUDIT" == "true" ]]; then
+  SKIP_TESTS="$SKIP_TESTS" RUN_PHASE_AUDITS=false BASE_WEB_URL="$WEB_BASE_URL" \
+    bash scripts/release_candidate_audit.sh \
+    || fail "scripts/release_candidate_audit.sh"
+else
+  echo "skipped (RUN_RELEASE_CANDIDATE_AUDIT=true to enable)"
 fi
 echo
 

@@ -4,6 +4,51 @@ All notable changes to the OPTCG price tracker are documented in this file. See
 `docs/release_checklist.md` for the release process and `GET /version` / `GET /admin/release-status`
 for a running deployment's build metadata.
 
+## 1.0.0-rc.1 - Unreleased
+
+Phase 11: a release-candidate audit pass over the app built out in `0.1.0` below - no new product
+features, no formula changes, no scraping behavior changes. See `docs/release_candidate_report.md`
+and `docs/release_blockers.md` for the full readiness writeup.
+
+### Added
+
+- `scripts/release_candidate_audit.sh` (`docs/release_candidate_report.md`,
+  `docs/release_blockers.md`): a single fail-fast command covering secrets/repo hygiene, backend/
+  worker tests, the frontend build, Alembic migrations, API and web route health, the phase 7-10
+  audits, backup/restore and import/export dry-run checks, admin-safety and UI-text static checks,
+  and release artifact presence - the one gate for "is this ready to tag `v1.0.0-rc.1`".
+
+### Changed
+
+- `docs/release_checklist.md`: added a "v1.0 release candidate checklist" section tying the new
+  audit script to the rest of the existing pre-release/build/deploy/rollback checklist.
+- `scripts/final_audit.sh`: now also verifies `scripts/release_candidate_audit.sh` exists and is
+  executable, with an opt-in `RUN_RELEASE_CANDIDATE_AUDIT=true` to run it inline (off by default,
+  same convention as the existing `RUN_PHASE7_AUDIT`/`RUN_PHASE9_AUDIT` flags).
+- `VERSION` bumped to `1.0.0-rc.1`.
+
+### Fixed
+
+- N/A (audit pass - no functional changes were needed as a result of this phase).
+
+### Security
+
+- No changes - `scripts/check_secrets.sh` and the existing admin-token/JWT/rate-limit/header
+  protections from `0.1.0` are unchanged; the release candidate audit re-verifies them, it does not
+  add new ones.
+
+### Operations
+
+- Release-candidate readiness is now a single command
+  (`scripts/release_candidate_audit.sh`) rather than several audits run and cross-checked by hand.
+
+### Known limitations
+
+- The release candidate audit's static admin-safety/UI-text checks are best-effort greps, not a
+  full audit of every admin action - see `docs/manual_qa_checklist.md` for what still needs a
+  manual pass before tagging.
+- No `v1.0.0` tag has been cut yet - see `docs/release_blockers.md` for anything still open.
+
 ## 0.1.0 - 2026-07-17
 
 Initial tracked release - the application as it exists going into formal release versioning.
