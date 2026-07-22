@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Phase 10 UX audit - verifies the mobile/tablet responsiveness and UX
-# polish pass (responsive shell, responsive table system, filter/saved-view
-# bar collapse, card vault/detail responsiveness, modal responsiveness,
-# empty/loading/error consistency, price/source display, admin safety UI)
-# didn't break anything that already worked: same standard checks as
-# scripts/phase8_audit.sh/phase9_audit.sh, plus HTTP 200 checks across every
-# route/endpoint this phase touched. Fails fast: stops at the first failing
-# step.
+# Phase 10 UX audit - verifies the mobile/tablet responsiveness/UX polish
+# pass and the later styling-consistency pass (every apps/web/src/app route
+# migrated to the TCG Vault design system - see
+# docs/frontend_styling_audit.md) didn't break anything that already worked:
+# same standard checks as scripts/phase8_audit.sh/phase9_audit.sh, HTTP 200
+# checks across every route/endpoint this phase touched, and a handful of
+# static source greps for the styling-pass anti-patterns (bare "Market"
+# labels, literal undefined/null/NaN rendered as text, bright gradients,
+# admin token persisted somewhere it shouldn't be). Fails fast: stops at the
+# first failing step.
 #
 # This is a UX/frontend polish pass, not a new feature - it never adds user
 # accounts/login, never adds scraping logic (SNKRDUNK or otherwise), and
@@ -74,12 +76,18 @@ fi
 echo
 
 echo "== 3. Web route checks (BASE_WEB_URL=$BASE_WEB_URL) =="
+# Every apps/web/src/app/**/page.tsx route (see docs/frontend_styling_audit.md
+# for the full inventory this was cross-checked against) except /cards/[id]
+# (dynamic - needs a real card id, exercised separately/manually) and /
+# (a redirect, not an HTTP-200 page).
 WEB_ROUTES=(
   /dashboard
+  /search
   /collection
   /collection/vault
   /wishlist
   /grading
+  /activity
   /analytics/digest
   /analytics/collection
   /analytics/wishlist
@@ -87,6 +95,11 @@ WEB_ROUTES=(
   /analytics/sell-decisions
   /analytics/grading
   /analytics/portfolio-risk
+  /market/movers
+  /market/report
+  /market/opportunities
+  /market/signals
+  /market/signal-events
   /admin/catalog-ops
   /admin/import-validation
   /admin/card-duplicates
@@ -94,6 +107,21 @@ WEB_ROUTES=(
   /admin/catalog-coverage
   /admin/price-source-health
   /admin/system-check
+  /admin/cards
+  /admin/card-audit
+  /admin/snkrdunk-candidates
+  /admin/actions
+  /admin/refresh-runs
+  /admin/market-workflow-runs
+  /admin/backup
+  /admin/performance
+  /admin/logs
+  /admin/release-status
+  /admin/alerts
+  /admin/job-locks
+  /admin/file-jobs
+  /admin/data-retention
+  /admin/cache
 )
 for route in "${WEB_ROUTES[@]}"; do
   http_status=$(curl -sS -L -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 15 \
@@ -138,7 +166,61 @@ for path in "${ADMIN_GET_CHECKS[@]}"; do
 done
 echo
 
-echo "== 5. Frontend viewport/overflow smoke tests =="
+echo "== 5. Static styling/safety checks (grep, no live stack needed) =="
+# Cheap source greps for the styling-consistency-pass anti-patterns called
+# out in docs/interface_design_system.md ("Do-not list", "Price/source
+# display audit rules", "Admin safety UI rules"). Deliberately narrow
+# patterns so this doesn't flag legitimate code comments/docs - see notes
+# per check.
+WEB_SRC="apps/web/src"
+
+# Literal "undefined"/"null"/"NaN" rendered as JSX text is almost always a
+# missing-fallback bug (should be MissingValue/"not available"/"—" instead).
+# Matches a JSX text node exactly, e.g. `>undefined<` from `{value}`
+# rendering an actual undefined - not TS type unions (`: T | null`) or JS
+# comparisons (`=== null`), which never look like this.
+if grep -rnE '>(undefined|null|NaN)<' "$WEB_SRC" --include="*.tsx" | grep -v '\.test\.tsx'; then
+  fail "found literal undefined/null/NaN rendered as JSX text above - use MissingValue/formatNullable/\"not available\" instead"
+else
+  echo "PASS: no literal undefined/null/NaN rendered as JSX text"
+fi
+
+# A bare "Market" price-basis label (no source/mode qualifier) is exactly
+# the ambiguity PriceBasisLabel exists to prevent. SidebarNav's top-level
+# "Market" nav section label is a legitimate exception (it's a nav category,
+# not a price basis), not a price display.
+if grep -rn '>Market<' "$WEB_SRC" --include="*.tsx" | grep -v 'SidebarNav.tsx'; then
+  fail "found a standalone \"Market\" label above - price basis labels must name the source/mode (see PriceBasisLabel)"
+else
+  echo "PASS: no standalone \"Market\" price-basis labels"
+fi
+
+# Bright gradients are on the design system's do-not list (vault aesthetic,
+# not a SaaS landing page).
+if grep -rn 'bg-gradient-to' "$WEB_SRC" --include="*.tsx"; then
+  fail "found bg-gradient-* usage above - not part of the TCG Vault design system (see docs/interface_design_system.md Do-not list)"
+else
+  echo "PASS: no bright gradient classes"
+fi
+
+# Admin token persistence: the admin token must only ever be read/written
+# via getAdminToken/setAdminToken/clearAdminToken in lib/api.ts. Any other
+# file touching localStorage with an admin/token-ish key, or building a
+# saved-view/recent-workflow payload that includes a token field, would leak
+# it into persisted state the token should never reach.
+if grep -rniE "localStorage\.(get|set|remove)Item\(['\"].*(admin|token)" "$WEB_SRC" --include="*.ts" --include="*.tsx" | grep -v 'lib/api.ts' | grep -v '\.test\.'; then
+  fail "found localStorage admin/token access above outside lib/api.ts - the admin token must only be persisted via getAdminToken/setAdminToken/clearAdminToken"
+else
+  echo "PASS: admin token localStorage access confined to lib/api.ts"
+fi
+if grep -rniE "(payload_json|currentFilters|filters)[^;]*:\s*\{[^}]*\btoken\b" "$WEB_SRC" --include="*.tsx" --include="*.ts" | grep -v '\.test\.'; then
+  fail "found a token field inside a saved-view/recent-workflow payload above - the admin token must never be saved into saved views or recent workflows"
+else
+  echo "PASS: no admin token found in saved-view/recent-workflow payloads"
+fi
+echo
+
+echo "== 6. Frontend viewport/overflow smoke tests =="
 if [[ -f "apps/web/playwright.config.ts" || -f "apps/web/playwright.config.js" ]]; then
   (cd apps/web && npx playwright test ux-viewport-smoke) \
     || fail "apps/web viewport smoke tests"
