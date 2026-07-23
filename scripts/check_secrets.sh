@@ -28,16 +28,18 @@ fail() {
   FAILURES=$((FAILURES + 1))
 }
 
-# --- 1. No tracked env-style files, other than the two allowed examples -----
-# (.env, .env.production, .env.local, .env.*, ...) - the only files allowed
-# to be tracked are .env.example and .env.production.example, which must
-# only ever contain placeholders (see docs/deployment.md).
+# --- 1. No tracked env-style files, other than the three allowed examples ---
+# (.env, .env.production, .env.staging, .env.local, .env.*, ...) - the only
+# files allowed to be tracked are .env.example, .env.production.example, and
+# .env.staging.example, which must only ever contain placeholders (see
+# docs/deployment.md and docs/staging_deployment.md).
 
 echo "== 1. Tracked env files =="
 offending_env=$(git ls-files \
   | grep -E '(^|/)\.env(\.[^/]*)?$' \
   | grep -v -E '(^|/)\.env\.example$' \
   | grep -v -E '(^|/)\.env\.production\.example$' \
+  | grep -v -E '(^|/)\.env\.staging\.example$' \
   || true)
 
 if [[ -n "$offending_env" ]]; then
@@ -89,13 +91,14 @@ else
 fi
 echo
 
-# --- 3. Placeholder-only values in the two allowed example env files -------
-# .env.example / .env.production.example are allowed to be tracked, but must
-# never contain anything other than an obvious placeholder for a secret-
-# shaped key - see docs/deployment.md.
+# --- 3. Placeholder-only values in the three allowed example env files -----
+# .env.example / .env.production.example / .env.staging.example are allowed
+# to be tracked, but must never contain anything other than an obvious
+# placeholder for a secret-shaped key - see docs/deployment.md and
+# docs/staging_deployment.md.
 
 echo "== 3. Example env files contain placeholders only =="
-EXAMPLE_FILES=(.env.example .env.production.example)
+EXAMPLE_FILES=(.env.example .env.production.example .env.staging.example)
 SECRET_KEYS_PATTERN='(ADMIN_TOKEN|TELEGRAM_BOT_TOKEN|POSTGRES_PASSWORD|API_JWT_SECRET|AUTH_SECRET|AUTH_GOOGLE_SECRET)'
 # A value counts as an obvious placeholder if it's empty, or matches one of
 # these case-insensitive substrings. Anything else (e.g. a real-looking
@@ -129,6 +132,7 @@ echo "== 4. No literal secret values committed outside the example files =="
 CONTENT_SCAN_EXCLUDES=(
   ':!.env.example'
   ':!.env.production.example'
+  ':!.env.staging.example'
   ':!scripts/check_secrets.sh'
   ':!*/tests/*'
   ':!.github/workflows/*'

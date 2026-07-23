@@ -1540,3 +1540,65 @@ by hand after any layout/table/filter change. See
 (desktop 1440px+, tablet 768px, mobile 360px, card detail, collection vault, analytics tables,
 admin tables, modals, command palette, saved views, price basis labels, empty/loading/error states,
 admin safety).
+
+## Staging operations
+
+Day-to-day commands for the Vercel (web) + Railway (api/worker/beat/Postgres/Redis) staging
+deployment - see [docs/staging_deployment.md](staging_deployment.md) for the full architecture,
+[docs/railway_staging.md](railway_staging.md) for per-service Railway setup, and
+[docs/staging_checklist.md](staging_checklist.md) for the step-by-step deploy checklist. Everything
+below targets the deployed staging URLs, not the local dev/prod Docker Compose stacks - swap in
+your actual Railway `api` URL and Vercel staging URL wherever a placeholder appears.
+
+**Run migrations**:
+
+```
+DATABASE_URL=<railway-postgres-url> bash scripts/staging_migrate.sh
+```
+
+or, run inside the Railway `api` service directly (avoids needing `services/api`'s Python
+dependencies installed locally):
+
+```
+railway run --service api alembic upgrade head
+```
+
+**Run the smoke test**:
+
+```
+STAGING_API_URL=<railway-api-url> STAGING_WEB_URL=<vercel-staging-url> \
+ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh
+```
+
+**Disable/enable workflow flags** - set on the Railway `beat` service, then redeploy/restart it for
+the change to take effect (Celery beat only rebuilds its schedule at process start):
+
+- `MARKET_WORKFLOW_ENABLED=false` (default for a first staging deploy) / `true` (once
+  `api`/`worker`/`beat` are confirmed stable).
+- `DATA_RETENTION_ENABLED=false` (default for a first staging deploy) / `true`.
+- `SCRAPING_MODE=mock` (default, safe) / `live` (real Yuyu-Tei requests - only after everything
+  else is verified; see [Safety notes](staging_deployment.md#11-safety-notes) in
+  docs/staging_deployment.md). Never `live` for SNKRDUNK - that source stays manual-import-only.
+
+**Check logs**:
+
+- Railway: `railway logs --service api` (swap in `worker`/`beat`), or the Railway dashboard's Logs
+  tab for each service.
+- Vercel: the Vercel dashboard's Deployments -> a specific deployment's Build Logs (build-time
+  errors) and Functions/Runtime Logs (request-time errors from `src/app/api/**` route handlers).
+
+**Backup before real data imports** - `scripts/db_backup.sh`/`scripts/db_restore.sh` shell into a
+*local* `postgres` Docker Compose container (`docker compose exec`), so they don't work as-is
+against Railway's remote managed Postgres. For staging, either:
+
+- run `pg_dump`/`pg_restore` directly against the Railway Postgres connection string from a machine
+  with the Postgres client tools installed (`pg_dump "$DATABASE_URL" -Fc -f staging_backup.dump`),
+  or
+- use Railway's own Postgres plugin backup/restore feature if available on your plan (check the
+  plugin's dashboard tab), or
+- run `pg_dump` from inside the Railway `api` service's shell (`railway run --service api
+  pg_dump ...`, if the `api` image has `pg_dump` available - it's a Python slim image and may not;
+  installing a Postgres client isn't part of this staging pass).
+
+Take a backup before importing a real/large card catalog or watchlist CSV into staging, same as you
+would before a production import.

@@ -7,7 +7,8 @@ section D. See `docs/deployment.md` for the full deploy reference and `docs/oper
 day-to-day commands - this document is the checklist that ties them together for a single release.
 
 For the specific `v1.0.0` tag, also see section G below and `docs/release_candidate_report.md` /
-`docs/release_blockers.md`.
+`docs/release_blockers.md`. For a Vercel+Railway staging deployment specifically, see section I
+below and `docs/staging_deployment.md` / `docs/railway_staging.md` / `docs/staging_checklist.md`.
 
 ## A. Pre-release
 
@@ -217,3 +218,25 @@ Tagging (manual step - do not run automatically; documented here for a human to 
 git tag -a v1.0.0 -m "v1.0.0"
 git push origin v1.0.0
 ```
+
+## I. Staging deployment (Vercel + Railway)
+
+Additional checklist items specific to a Vercel (web) + Railway (api/worker/beat/Postgres/Redis)
+staging deployment - see `docs/staging_deployment.md`, `docs/railway_staging.md`, and
+`docs/staging_checklist.md` (the full step-by-step version of this) for details.
+
+- [ ] Staging deploy completed - Railway `api`/`worker`/`beat` and Vercel `web` all deployed, in the
+      order documented in `docs/staging_deployment.md` section 6.
+- [ ] Staging migrations applied - `bash scripts/staging_migrate.sh` (or the Railway-side
+      `alembic upgrade head`) ran cleanly against the Railway Postgres.
+- [ ] Staging smoke test passed - `bash scripts/staging_smoke_test.sh` against the deployed
+      Railway `api`/Vercel `web` URLs (see `docs/staging_deployment.md` section 8).
+- [ ] Staging env vars verified - every value in `.env.staging.example`'s "Backend/Railway" section
+      is set on the Railway services (not left as a placeholder), every value in its
+      "Frontend/Vercel" section is set on the Vercel project, `ADMIN_TOKEN`/`API_JWT_SECRET` match
+      where required, and `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on Railway `api` include
+      the Vercel staging domain.
+- [ ] Railway logs checked - `api`/`worker`/`beat` all started cleanly with no unexpected errors.
+- [ ] Vercel logs checked - build log and function/runtime logs both clean.
+- [ ] `scripts/check_secrets.sh` passes (confirms `.env.staging.example` still contains
+      placeholders only and no real `.env.staging` was ever committed).

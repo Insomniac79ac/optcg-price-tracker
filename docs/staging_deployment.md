@@ -1,0 +1,300 @@
+# Staging deployment (Vercel + Railway)
+
+Staging deployment of the OPTCG price tracker (`v1.0.0`) onto a split hosting topology: Vercel
+hosts the Next.js frontend (`apps/web`), Railway hosts everything else (`api`, `worker`, `beat`,
+managed Postgres, managed Redis). This document covers the target architecture, required env
+vars, deploy order, migrations, smoke tests, rollback, and known limitations.
+
+This is additive infrastructure/config work only - it does not change any valuation, analytics, or
+matching formula, does not change scraping behavior, and does not add SNKRDUNK live scraping or
+bypass any site protection. See [docs/railway_staging.md](railway_staging.md) for the Railway
+service setup in full detail and [docs/staging_checklist.md](staging_checklist.md) for the
+step-by-step deploy runbook. `docs/deployment.md` section 11 already covers the general shape of a
+Vercel+Railway split for a *production* deploy - this document is the staging-specific version of
+that, with staging-safe defaults (`SCRAPING_MODE=mock`, workflows disabled) and its own checklist.
+
+## 1. Architecture overview
+
+```
+Browser
+  |
+  v
+Vercel (apps/web, Next.js)
+  |  - pages render server-side and client-side
+  |  - Next.js API route handlers (src/app/api/**) proxy to Railway's api
+  |    service using API_INTERNAL_URL/API_BASE_URL (server-side only)
+  |  - a subset of pages call the Railway api service *directly* from the
+  |    browser via NEXT_PUBLIC_API_URL - see section "Known direct backend
+  |    calls to fix before production" below
+  v
+Railway
+  |-- api service (FastAPI/uvicorn)      <- public HTTPS URL, /health, /version
+  |-- worker service (Celery worker)      <- no public URL
+  |-- beat service (Celery beat/scheduler) <- no public URL
+  |-- Postgres (managed plugin)           <- private networking URL preferred
+  |-- Redis (managed plugin)              <- private networking URL preferred
+```
+
+The browser's primary path is Vercel frontend routes. Server-side Next.js route handlers proxy
+backend API calls to Railway's `api` service over its public URL (Railway does not expose a
+network path from Vercel to a "private only" service - see [section
+4](#4-known-direct-backend-calls-to-fix-before-production)/[section
+9](#9-known-limitations) for why `api` must have a public URL in this topology regardless).
+`worker` and `beat` never need a public URL - they only consume/schedule Celery jobs against
+Redis/Postgres.
+
+## 2. Vercel services
+
+One Vercel project:
+
+| Setting | Value |
+|---|---|
+| Service name | `web` |
+| Root directory | `apps/web` (monorepo project setting) |
+| Framework preset | Next.js (auto-detected) |
+| Build command | existing project command - `npm run build` (`package.json`'s `build` script, unchanged) |
+| Install command | existing project command - `npm ci` (Vercel's Next.js default; this repo only has `package-lock.json`, no other lockfile) |
+| Output | Next.js default / Vercel-managed (no static export - this app uses server-side API routes and SSR) |
+| Environment | Preview or a dedicated "staging" environment/branch (Vercel's Preview Deployments, or a custom environment on paid plans) |
+
+Environment variables (Preview/staging scope, not Production):
+
+| Variable | Value | Notes |
+|---|---|---|
+| `APP_ENV` | `staging` | Not read by any frontend code path today - set for visibility/future use. Never a secret. |
+| `NEXT_PUBLIC_APP_ENV` | `staging` | Same as above, client-bundle-visible mirror. Frontend does not currently branch on this. |
+| `API_BASE_URL` | Railway `api` service's public HTTPS URL | Not currently read directly by any route handler in this codebase (each route handler under `src/app/api/**` reads `API_INTERNAL_URL` itself, hardcoded per file) - set for consistency with the task's naming and in case a future refactor centralizes it. Keep it equal to `API_INTERNAL_URL`. |
+| `API_INTERNAL_URL` | Railway `api` service's public HTTPS URL | **Required.** Read server-side only by every route handler under `apps/web/src/app/api/**`. Falls back to `http://api:8000` (the Docker Compose service DNS name) when unset - that fallback only works inside the local Docker Compose network, so this must always be set explicitly on Vercel. |
+| `NEXT_PUBLIC_API_URL` | Railway `api` service's public HTTPS URL, or blank | Only needed if you want the browser-direct pages/functions listed in [section 4](#4-known-direct-backend-calls-to-fix-before-production) to work. Baked into the client bundle at build time - changing it requires a redeploy. **Never** set this to a bare `/api` path; the direct calls it feeds do not go through the Next.js proxy layer. |
+| `API_JWT_SECRET` | shared secret, same value as the Railway `api` service | Required for per-user auth (`/collection`, `/grading`, `/collector`) - see `docs/deployment.md` section 10. |
+| `AUTH_SECRET` | random value (`openssl rand -base64 33`) | Auth.js session-encryption secret. |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | staging OAuth client credentials | Use a separate Google OAuth client from production, with `<vercel-staging-domain>/api/auth/callback/google` as an authorized redirect URI. |
+
+**Do not** set `ADMIN_TOKEN` (or any `NEXT_PUBLIC_ADMIN_TOKEN`) as a Vercel environment variable -
+the admin token is entered by the operator in the browser and stored in `localStorage`
+(`getAdminToken`/`setAdminToken` in `apps/web/src/lib/api.ts`), then forwarded as `X-Admin-Token`
+by server-side route handlers. It is never baked into the frontend build or deployment config, and
+`apps/web/scripts/check-env.js` fails the build/start if a `NEXT_PUBLIC_*` variable name looks like
+a secret.
+
+## 3. Railway services
+
+Four services (two managed plugins, two/three code services) in one Railway project - see
+[docs/railway_staging.md](railway_staging.md) for full per-service setup:
+
+| Service | Type | Public URL? |
+|---|---|---|
+| Postgres | managed plugin | no (private networking only) |
+| Redis | managed plugin | no (private networking only) |
+| `api` | code service, `deploy/railway/api.Dockerfile`, Root Directory `/` | **yes** - `/health`, `/version`, and everything the browser/Vercel proxy needs to reach |
+| `worker` | code service, `deploy/railway/worker.Dockerfile`, Root Directory `/`, command `celery -A worker.celery_app worker --loglevel=info` | no |
+| `beat` | code service, `deploy/railway/beat.Dockerfile`, Root Directory `/`, command `celery -A worker.celery_app beat --loglevel=info` | no |
+
+`apps/web` (the Next.js frontend) is **not** a Railway service at all - it deploys to Vercel only
+(section 2 above). None of the three Railway services build or reference `apps/web`.
+
+Each Railway service builds from the **repo root** as its Docker build context, using a
+Railway-specific Dockerfile under `deploy/railway/` rather than the original
+`services/api/Dockerfile`/`services/worker/Dockerfile` directly - see "Why a separate Dockerfile
+per Railway service" in [docs/railway_staging.md](railway_staging.md) for why (short version: those
+original Dockerfiles assume the build context is their own subdirectory, which only holds if
+Railway's Root Directory setting is scoped exactly right - easy to get wrong in a multi-language
+monorepo, and the cause of this staging deployment's original Railway build failure).
+
+## 4. Known direct backend calls to fix before production
+
+Most of the app already goes through Next.js server-side proxy routes (`apps/web/src/app/api/**`,
+using `API_INTERNAL_URL`) - notably every `/admin/*` curation workflow added after the original
+build (SNKRDUNK candidate matching, source-mapping quality review, card duplicate/merge, catalog
+coverage, price source health, saved views, analytics digest, dashboard overview, backup
+export/restore, etc. - see `fetchAdminJson`/`authedGet` callers wired to a `src/app/api/**` route
+in `apps/web/src/lib/api.ts`).
+
+However, a meaningful set of older functions in `apps/web/src/lib/api.ts` call the backend
+**directly from the browser** via `NEXT_PUBLIC_API_URL` (this was already true before this staging
+work, and is documented as a known tradeoff in `docs/deployment.md` section 6/13). Rewriting all of
+these to go through a server proxy route is a real, multi-file frontend change - out of scope for
+this staging pass (risk of regressions outweighs the benefit for a first staging deploy). They are
+listed here so staging config accounts for them, and so a future pass can migrate them
+incrementally:
+
+**Public/general reads** (`apiGet`/`apiPost`, admin-token header attached if present, but usable
+unauthenticated too):
+- `fetchCards`, `fetchCard`, `fetchCardPrices` - card catalog/detail/prices (`/cards/*`)
+- `fetchMarketMovers` - `/market/movers` (used by `/market/movers`, a public page)
+- `fetchAlertEvents`, `fetchAlertEvent`, `fetchAlertRules`, `updateAlertRule` - `/admin/alert-events`, `/admin/alert-rules`
+- `fetchRefreshRuns`, `fetchRefreshRun` - `/admin/refresh-runs`
+- `fetchSnkrdunkCandidates`, `matchSnkrdunkCandidate`, `rejectSnkrdunkCandidate` - `/snkrdunk/candidates`
+
+**Per-user pages** (`authedGet`/`authedPost`/`authedPatch`/`authedDelete`, bearer token from the
+NextAuth session attached): every read/write behind `/collection`, `/wishlist`, `/grading`, and
+`/collector` (tags/groups/notes/activity) - e.g. `fetchCollectionItems`, `createCollectionItem`,
+`fetchGradingSubmissions`, `createGradingSubmission`, `fetchWishlistItems`,
+`createWishlistItem`, `fetchCollectorTags`, `createCollectorTag`, `fetchCollectorActivity`, and
+their corresponding update/delete functions.
+
+**What this means for staging**:
+- `NEXT_PUBLIC_API_URL` **must** be set to the Railway `api` service's public HTTPS URL, or
+  `/dashboard`, `/collection`, `/wishlist`, `/grading`, `/collector`, `/market/movers`, card detail
+  pages, and the admin alert/refresh-run pages will fail with network errors in the browser.
+- Because the browser calls a different origin (`*.up.railway.app`) than the page is served from
+  (`*.vercel.app`), Railway's `api` service **must** set `CORS_ALLOWED_ORIGINS`/
+  `CORS_ALLOW_ORIGIN_REGEX` to the Vercel staging domain (see `services/api/app/main.py`), or every
+  one of these calls fails as a CORS error, not a 4xx/5xx - check the browser console, not just
+  the Network tab's status codes, if these pages don't load.
+- `api` therefore cannot be made Railway-private-only for this app in its current form, unlike a
+  pure API-gateway architecture - see [Known limitations](#9-known-limitations).
+
+## 5. Required staging environment variables
+
+See [.env.staging.example](../.env.staging.example) for the full annotated list (Vercel frontend
+vars, Railway backend vars, workflow vars, Telegram vars). Summary:
+
+**Vercel (web)**: `APP_ENV`, `NEXT_PUBLIC_APP_ENV`, `API_BASE_URL`, `API_INTERNAL_URL`,
+`NEXT_PUBLIC_API_URL` (see section 4), `API_JWT_SECRET`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`,
+`AUTH_GOOGLE_SECRET`.
+
+**Railway (api, worker, beat - shared)**: `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `ADMIN_TOKEN`,
+`SCRAPING_MODE`, `YUYUTEI_REQUEST_DELAY_MS`, `SNKRDUNK_REQUEST_DELAY_MS`,
+`PRICE_REFRESH_INTERVAL_HOURS`, `CACHE_ENABLED`, `CACHE_BACKEND`.
+
+**Railway api only**: `API_JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, `CORS_ALLOW_ORIGIN_REGEX`.
+
+**Railway beat only**: `MARKET_WORKFLOW_ENABLED=false`, `MARKET_WORKFLOW_SOURCE`,
+`MARKET_WORKFLOW_LIMIT`, `MARKET_WORKFLOW_SEND_TELEGRAM=false`, `DATA_RETENTION_ENABLED=false`.
+
+**Telegram (optional, all services that send alerts)**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` -
+omit both, or point at a staging-only test channel/bot. Never the production bot/channel.
+
+## 6. Deployment order
+
+1. Create the Railway project; add the Postgres and Redis managed plugins first (other services
+   depend on their connection strings existing).
+2. Create the Railway `api` service from this GitHub repo, with Root Directory `/` and Dockerfile
+   Path `deploy/railway/api.Dockerfile` (see `docs/railway_staging.md` section 3 - do **not** point
+   Root Directory at `services/api` with the original `services/api/Dockerfile`; that combination
+   is what caused this staging deployment's original Railway build failure). Set its env vars
+   (section 5). Deploy it and confirm `GET /health` responds before continuing.
+3. Run migrations against the Railway Postgres (`scripts/staging_migrate.sh` - see section 7).
+4. Create the Railway `worker` service (same repo, Root Directory `/`, Dockerfile Path
+   `deploy/railway/worker.Dockerfile`). Set its env vars. Deploy.
+5. Create the Railway `beat` service (same repo, Root Directory `/`, Dockerfile Path
+   `deploy/railway/beat.Dockerfile`). Set its env vars, with workflows disabled (section 5). Deploy.
+6. Create the Vercel project with Root Directory `apps/web`. Set its env vars (section 2), pointing
+   `API_INTERNAL_URL`/`API_BASE_URL` (and `NEXT_PUBLIC_API_URL`, if used) at the now-running Railway
+   `api` service's public URL.
+7. Deploy Vercel. If any Vercel env var changed after the first deploy (common - you don't know the
+   Railway `api` URL until step 2 finishes), redeploy Vercel once more so the build picks it up
+   (`NEXT_PUBLIC_API_URL` is baked in at build time).
+8. Run `scripts/staging_smoke_test.sh` against the deployed URLs (section 7/8, and
+   `docs/staging_checklist.md`).
+
+## 7. Migration steps
+
+Use `scripts/staging_migrate.sh` (see the script's own header for full usage):
+
+```
+DATABASE_URL=<railway-postgres-url> bash scripts/staging_migrate.sh
+```
+
+Run this once after the Railway Postgres plugin and `api` service both exist, before relying on
+`api`/`worker`/`beat` to serve real traffic. If running it locally is impractical (the Python
+dependencies in `services/api/requirements.txt` aren't installed locally), run the equivalent
+command directly inside the deployed Railway `api` service instead (Railway dashboard's "Shell" /
+`railway run`, or a one-off Railway CLI command):
+
+```
+railway run --service api alembic upgrade head
+```
+
+## 8. Smoke tests
+
+`scripts/staging_smoke_test.sh` (see its header for the full env var reference):
+
+```
+STAGING_API_URL=https://<railway-api-url> \
+STAGING_WEB_URL=https://<vercel-staging-url> \
+ADMIN_TOKEN=<staging-admin-token> \
+bash scripts/staging_smoke_test.sh
+```
+
+Checks API `/health`, `/version` (if present), `/analytics/digest`, `/saved-views?limit=5`, the two
+admin checks (`/admin/system-check`, `/admin/catalog-coverage`) if `ADMIN_TOKEN` is set, and the
+web app's `/`, `/dashboard`, `/collection`, `/collection/vault`, `/analytics/digest`, and
+`/admin/catalog-ops` routes. Prints `PASS`/`FAIL` per check; does not run any destructive action.
+
+## 9. Rollback notes
+
+- **Frontend (Vercel)**: use Vercel's own deployment history - "Instant Rollback" to the previous
+  deployment from the project dashboard, or `git revert`/redeploy the previous commit. No database
+  is involved on the Vercel side, so this is always safe and immediate.
+- **Backend (Railway)**: redeploy the previous commit/image for `api`/`worker`/`beat` from the
+  Railway dashboard's deployment history, or `git checkout <previous-commit> && git push` to the
+  branch Railway tracks.
+- **Database**: if a migration ran as part of the deploy being rolled back, restore the most recent
+  backup taken before that migration (see `docs/operations.md`'s backup/restore drill - the same
+  `scripts/db_backup.sh`/`scripts/db_restore.sh` pattern applies, pointed at the Railway Postgres
+  connection string instead of the local `postgres` container). Skip this step if the deploy didn't
+  change the schema or existing data.
+- Re-run `scripts/staging_smoke_test.sh` after any rollback - don't consider it complete until it
+  passes.
+
+## 10. Known limitations
+
+- **Railway's "error deploying from source" diagnosis was inferred from repo structure, not
+  confirmed by a build log.** An initial Railway deploy of this staging setup failed with only a
+  generic "error deploying from source" message and no detailed log available. Based on how
+  `services/api/Dockerfile`/`services/worker/Dockerfile` assume their build context is their own
+  subdirectory (see `docs/railway_staging.md` "Why a separate Dockerfile per Railway service"),
+  the most likely cause is a Root Directory/build-context mismatch - not confirmed against an
+  actual failing build log. The fix applied (repo-root-context `deploy/railway/*.Dockerfile` files)
+  removes that whole class of failure regardless of the exact variant, and all three images have
+  been verified to build and run locally (see `docs/railway_staging.md` "Local build
+  verification"). If a real Railway deploy still fails after this change, capture the actual build
+  log before further changes - do not re-guess.
+- **`api` cannot be Railway-private-only** while the direct browser calls in [section
+  4](#4-known-direct-backend-calls-to-fix-before-production) exist - it needs a public HTTPS URL
+  reachable from the browser, with CORS configured for the Vercel domain. This differs from the
+  ideal "browser only ever talks to Vercel" architecture the task describes; the gap is tracked in
+  section 4, not silently worked around.
+- **Vercel never runs `apps/web`'s `start` script** (`npm start` / `node scripts/check-env.js
+  start && next start ...`) - Vercel builds with `next build` and serves pages through its own
+  managed runtime, not this repo's Docker `CMD`. This means the `API_INTERNAL_URL`-presence check
+  in `check-env.js`'s `start` phase never runs on Vercel; a missing `API_INTERNAL_URL` on Vercel
+  fails silently at request time (each proxy route falls back to `http://api:8000`, which doesn't
+  resolve outside Docker, so the browser sees a 502 from that route) rather than failing the build
+  up front. Double-check `API_INTERNAL_URL` is set in the Vercel dashboard - there is no automated
+  gate catching a missing value the way there is in the Docker/Compose path.
+- **`APP_ENV=staging` is not a recognized value in the backend's own env validation**
+  (`services/api/app/core/env_validation.py`/`services/worker/worker/env_validation.py` only
+  special-case `production` and `development` - anything else, including `staging`, is treated
+  like "not production", so the hard production-only startup checks (`ADMIN_TOKEN` shape/length,
+  `SCRAPING_MODE=live` minimum delays, Telegram completeness) do not hard-fail on staging the way
+  they would in a real production deploy). This is existing app behavior, intentionally left
+  unchanged for this staging pass (no formula/validation-logic changes) - set staging values
+  correctly by hand regardless of what startup validation would or wouldn't catch (see
+  [.env.staging.example](../.env.staging.example)).
+- **Single Railway region/instance assumptions in the app's rate limiting** (`app.core.rate_limit`)
+  carry over unchanged from production - see `docs/deployment.md` section 12. Not a staging-specific
+  concern, just worth knowing if `api` is ever scaled to multiple Railway replicas.
+- **No staging-specific test data seed script** is added here - use
+  `python -m app.seed` (reference `sources` rows) and a small watchlist CSV import
+  (`python -m app.import_watchlist <path>`, run inside the Railway `api` service) if you want
+  realistic data rather than an empty catalog. Do not use `app.seed_performance_data` against
+  staging unless you specifically want synthetic load-test data.
+
+## 11. Safety notes
+
+- Staging starts with `SCRAPING_MODE=mock` on `api`/`worker`/`beat` - no real requests to
+  Yuyu-Tei/SNKRDUNK. Do not switch to `live` until `api`/`worker`/`beat` have been running stably on
+  staging for a while and you've deliberately decided to exercise the real scrape path (staging's
+  own dry-run/mock refresh is sufficient for most verification).
+- `MARKET_WORKFLOW_ENABLED=false` and `DATA_RETENTION_ENABLED=false` by default on the `beat`
+  service for the first staging deploy - enable them explicitly, and only after confirming
+  `api`/`worker`/`beat` are stable, per `docs/staging_checklist.md`.
+- Never attempt a SNKRDUNK live-scrape or any bypass of Yuyu-Tei/SNKRDUNK site protections, in
+  staging or production. SNKRDUNK data only ever enters this app through the existing manual
+  candidate-import workflow (`/admin/snkrdunk-candidates` uploading manually-collected listings),
+  regardless of environment.
+- Never commit `.env.staging` (only `.env.staging.example`, with placeholders, is tracked - see
+  `.gitignore` and `scripts/check_secrets.sh`).

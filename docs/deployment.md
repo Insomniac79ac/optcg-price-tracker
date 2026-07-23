@@ -406,6 +406,22 @@ Render/Fly.io - the same shape applies).
 - Set `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on the Railway `api` service to your Vercel
   domain (and `https://.*\.vercel\.app` for preview deployments).
 
+## 11a. Staging deployment (Vercel + Railway)
+
+Section 11 above sketches the general shape of a Vercel+Railway split for a *production* deploy.
+For a staging environment specifically - its own env vars, safe defaults (`SCRAPING_MODE=mock`,
+scheduled workflows disabled), deploy order, migrations, smoke tests, and a step-by-step
+checklist - see:
+
+- [docs/staging_deployment.md](staging_deployment.md) - architecture overview, required env vars,
+  deploy order, migration/smoke-test steps, rollback notes, known limitations, and safety notes.
+- [docs/railway_staging.md](railway_staging.md) - per-service Railway setup (`api`, `worker`,
+  `beat`, managed Postgres, managed Redis), reusing this repo's existing Dockerfiles.
+- [docs/staging_checklist.md](staging_checklist.md) - the before/deploy/smoke/after-deploy
+  checklist to run through for an actual staging deploy.
+- [.env.staging.example](../.env.staging.example) - the staging env var template (placeholders
+  only, never commit a real `.env.staging`).
+
 ## 12. Security headers, CSP, and rate limiting
 
 This app has no user accounts and no external auth - the hardening here is aimed at basic
