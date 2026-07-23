@@ -200,6 +200,25 @@ From this pass's `scripts/release_candidate_audit.sh` run:
 - `web route /admin/env-check does not exist in apps/web/src/app - skipping` - expected, documented
   above; no frontend page for this route by design.
 
+**v1.0.0 passed with these two warnings, and they remain expected/non-blocking as of the
+post-tag cleanup pass below.**
+
+### Post-v1.0.0 cleanup: route-detection audit fix (no retag)
+
+A follow-up cleanup pass (same day, on top of the `v1.0.0` tag - see `docs/release_blockers.md`
+RC-10) confirmed these two warnings are a genuine route-inventory gap (`/admin/source-mappings`
+and `/admin/env-check` truly have no frontend page), **not** a false positive from the audit
+script assuming the wrong Next.js app directory. `scripts/release_candidate_audit.sh`'s
+`web_route_exists`/`check_web_route` helpers previously hardcoded `apps/web/src/app`; they now
+detect `WEB_APP_DIR` at startup (`apps/web/src/app` if present, else `apps/web/app`) and use that
+variable everywhere a route or the admin `ConfirmActionModal` grep needs the app directory. Re-run
+of `BASE_WEB_URL=http://127.0.0.1:3001 SKIP_TESTS=true RUN_PHASE_AUDITS=false bash
+scripts/release_candidate_audit.sh` after this fix reproduces the exact same two warnings (plus
+the expected dirty-tree warning until this cleanup itself is committed) - confirming the warnings
+were never a directory-detection bug, and no v1.0.0 behavior changed. This is cleanup only: no
+product features, formula changes, or scraping behavior changed; the `v1.0.0` tag itself was not
+recut.
+
 Also observed (not from the audit script, but worth recording):
 
 - `docker compose exec web npm run build` succeeds but prints a Turbopack warning about `fs`/`path`
@@ -210,8 +229,9 @@ Also observed (not from the audit script, but worth recording):
 
 See `docs/release_blockers.md` for the tracked table. Summary as of this report:
 
-**No open release blockers.** 9 issues found across the Phase 11 pass; 8 fixed, 1 deferred
-(cosmetic, no action needed). No open `blocker` rows remain. No open `high` rows remain.
+**No open release blockers.** 10 issues found across the Phase 11 pass (including the post-v1.0.0
+route-detection cleanup below); 9 fixed, 1 deferred (cosmetic, no action needed). No open `blocker`
+rows remain. No open `high` rows remain.
 
 | ID | Severity | Area | Status |
 |----|----------|------|--------|
@@ -224,6 +244,7 @@ See `docs/release_blockers.md` for the tracked table. Summary as of this report:
 | RC-7 | low | Turbopack build warning | deferred (cosmetic) |
 | RC-8 | low | Dirty git tree | fixed (resolved once committed) |
 | RC-9 | high | Audit scripts' repo-root resolution + port 3000 conflict | fixed |
+| RC-10 | low | Audit script's hardcoded app-directory route detection | fixed |
 
 ## Manual QA required before tag
 

@@ -58,6 +58,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
+# Next.js supports either a top-level `apps/web/app` directory or a
+# `apps/web/src/app` directory (the `src/` layout) - this repo uses the
+# `src/` layout, but detect it rather than hardcode it, so route-existence
+# checks below don't silently go stale (and warn on every route as "missing")
+# if the frontend's directory layout ever changes.
+if [[ -d "apps/web/src/app" ]]; then
+  WEB_APP_DIR="apps/web/src/app"
+elif [[ -d "apps/web/app" ]]; then
+  WEB_APP_DIR="apps/web/app"
+else
+  echo "FAIL: could not find a Next.js app directory at apps/web/src/app or apps/web/app" >&2
+  exit 1
+fi
+
 BASE_API_URL="${BASE_API_URL:-http://127.0.0.1:8000}"
 BASE_WEB_URL="${BASE_WEB_URL:-http://127.0.0.1:3000}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-local-dev-admin-token}"
@@ -356,17 +370,17 @@ admin_get_optional "/admin/logs?limit=5"
 # --- 7. Web route smoke -------------------------------------------------------
 section "7. Web route smoke (BASE_WEB_URL=$BASE_WEB_URL)"
 
-# Route existence is determined by apps/web/src/app (this repo's actual app
-# directory - not apps/web/app) having a page.tsx/page.ts under that path.
+# Route existence is determined by WEB_APP_DIR (detected above - either
+# apps/web/src/app or apps/web/app) having a page.tsx/page.ts under that path.
 web_route_exists() {
-  local dir="apps/web/src/app$1"
+  local dir="$WEB_APP_DIR$1"
   [[ -f "$dir/page.tsx" || -f "$dir/page.ts" ]]
 }
 
 check_web_route() {
   local route="$1"
   if ! web_route_exists "$route"; then
-    warn "web route $route does not exist in apps/web/src/app - skipping"
+    warn "web route $route does not exist in $WEB_APP_DIR - skipping"
     return
   fi
   local http_status
@@ -386,6 +400,13 @@ MARKET_ANALYTICS_ROUTES=(
   /analytics/buy-decisions /analytics/sell-decisions /analytics/grading
   /analytics/portfolio-risk
 )
+# /admin/source-mappings and /admin/env-check are intentionally kept in this
+# list even though neither has a frontend page in this codebase today (the
+# API routes they'd correspond to exist and are checked separately in
+# section 6b - see docs/release_candidate_report.md's "Known warnings"). They
+# always print as a WARN, not a FAIL, since a missing frontend page for these
+# is expected, not a regression - kept here as a reminder in case a page is
+# ever added and should be wired into this list's HTTP check.
 ADMIN_ROUTES=(
   /admin/catalog-ops /admin/cards /admin/import-validation /admin/card-audit
   /admin/card-duplicates /admin/snkrdunk-candidates /admin/source-mappings
@@ -572,11 +593,11 @@ fi
 # This can't reliably verify every dangerous action is gated (would need a
 # real per-action audit), so it only warns, not fails, on an unexpected
 # zero count.
-confirm_modal_usage=$(grep -rl "ConfirmActionModal" "$WEB_SRC/app/admin" --include="*.tsx" 2>/dev/null | grep -v '\.test\.' | wc -l | tr -d ' ')
+confirm_modal_usage=$(grep -rl "ConfirmActionModal" "$WEB_APP_DIR/admin" --include="*.tsx" 2>/dev/null | grep -v '\.test\.' | wc -l | tr -d ' ')
 if [[ "${confirm_modal_usage:-0}" -gt 0 ]]; then
   pass "ConfirmActionModal is used in $confirm_modal_usage admin page(s)"
 else
-  warn "ConfirmActionModal was not found used in any apps/web/src/app/admin page - verify merge/restore/import actions are gated manually (see docs/manual_qa_checklist.md)"
+  warn "ConfirmActionModal was not found used in any $WEB_APP_DIR/admin page - verify merge/restore/import actions are gated manually (see docs/manual_qa_checklist.md)"
 fi
 
 # --- 12. UI text sanity checks -----------------------------------------------------
