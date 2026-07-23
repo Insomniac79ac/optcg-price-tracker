@@ -49,6 +49,6 @@ def test_release_blockers_doc_exists():
     assert (REPO_ROOT / "docs" / "release_blockers.md").is_file()
 
 
-def test_version_file_is_release_candidate():
+def test_version_file_is_v1():
     version = (REPO_ROOT / "VERSION").read_text().strip()
-    assert version == "1.0.0-rc.1"
+    assert version == "1.0.0"

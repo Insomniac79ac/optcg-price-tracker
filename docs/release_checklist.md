@@ -181,3 +181,39 @@ for tracking anything found along the way.
 - [ ] Bump `VERSION` (`1.0.0-rc.N` for a release candidate, `1.0.0` for the final tag).
 - [ ] Tag the release candidate (`git tag v1.0.0-rc.1`) - not automated by any script here;
       tagging is a deliberate, manual step.
+
+## H. Final v1.0.0 tag checklist
+
+The exact command sequence for cutting the `v1.0.0` tag itself, once `docs/release_blockers.md`
+has no open blockers and section G above is complete. Run everything from the repo root
+(`git rev-parse --show-toplevel` - not from `/` or any other directory).
+
+Before tagging:
+
+- [ ] Confirm repo root: `pwd`, `git rev-parse --show-toplevel`, `ls docker-compose.yml`.
+- [ ] Run `bash scripts/check_secrets.sh`.
+- [ ] Run backend tests: `docker compose exec api pytest`.
+- [ ] Run worker tests: `docker compose run --rm worker pytest`.
+- [ ] Run frontend build: `docker compose exec web npm run build`.
+- [ ] Run `docker compose exec api alembic upgrade head`.
+- [ ] Run `scripts/release_candidate_audit.sh` (if port 3000 is already in use by another stack,
+      use `WEB_PORT=3001 docker compose up -d --build api web worker` and pass
+      `BASE_WEB_URL=http://127.0.0.1:3001` - see section 12 above / `docs/release_candidate_report.md`
+      for the full command).
+- [ ] Run `scripts/final_audit.sh` (same `WEB_BASE_URL` override as above if needed).
+- [ ] Verify `VERSION` reads `1.0.0`.
+- [ ] Verify `CHANGELOG.md` has a `## 1.0.0` entry.
+- [ ] Verify `docs/release_blockers.md` states "No open release blockers."
+- [ ] Verify a production smoke test if a deployment target is ready
+      (`ADMIN_TOKEN=<token> scripts/prod_smoke_test.sh`).
+- [ ] Verify backup export/validate (`GET /admin/backup/export` + `POST /admin/backup/validate`
+      report `valid: true`).
+- [ ] Verify the manual QA checklist (`docs/manual_qa_checklist.md`).
+- [ ] Verify `git status` shows a clean working tree.
+
+Tagging (manual step - do not run automatically; documented here for a human to execute):
+
+```
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
+```

@@ -4,7 +4,57 @@ All notable changes to the OPTCG price tracker are documented in this file. See
 `docs/release_checklist.md` for the release process and `GET /version` / `GET /admin/release-status`
 for a running deployment's build metadata.
 
-## 1.0.0-rc.1 - Unreleased
+## 1.0.0 - 2026-07-23
+
+First stable release. Everything below `0.1.0` plus the Phase 11 release-candidate audit and bug
+bash: no new product features, no formula changes, no scraping behavior changes relative to
+`1.0.0-rc.1`. See `docs/release_candidate_report.md`, `docs/release_blockers.md`, and
+`docs/releases/v1.0.0.md` for the full readiness writeup and release notes.
+
+### Added
+
+- `docs/releases/v1.0.0.md`: the first-tag release notes (major capabilities, admin/data safety
+  notes, known limitations, upgrade/deployment notes, post-release monitoring checklist).
+- A final v1.0 tagging checklist in `docs/release_checklist.md` (section G) covering the exact
+  pre-tag command sequence and the manual `git tag`/`git push` steps.
+
+### Changed
+
+- `VERSION` bumped from `1.0.0-rc.1` to `1.0.0`.
+- `docs/release_candidate_report.md` and `docs/release_blockers.md` updated to reflect the
+  completed bug-bash pass: all blocker/high rows fixed or resolved, working tree confirmed clean,
+  full test/audit re-run recorded.
+- `scripts/release_candidate_audit.sh` banner text now reads "target: v1.0.0" (was
+  "v1.0.0-rc.1") - cosmetic only, no check logic changed.
+
+### Fixed
+
+- N/A beyond what's already recorded as fixed in the `1.0.0-rc.1` entry below and
+  `docs/release_blockers.md` (RC-1 through RC-9, all fixed; RC-7 deferred as cosmetic-only).
+
+### Security
+
+- No changes since `1.0.0-rc.1` - re-verified by this pass's `scripts/check_secrets.sh` run and the
+  existing admin-token/JWT/rate-limit/header protections.
+
+### Operations
+
+- Re-ran the full verification suite (backend/worker/frontend tests, frontend build, Alembic
+  migrations, `scripts/release_candidate_audit.sh`, `scripts/final_audit.sh`) against a clean git
+  tree ahead of tagging.
+
+### Known limitations
+
+- SNKRDUNK automated discovery may be blocked by site protections; manual CSV import remains the
+  documented fallback when that happens - see `docs/releases/v1.0.0.md`.
+- Analytics and decision-support output is deterministic and rules-based, not financial advice.
+- Single-user/local-admin style app - no multi-user auth system, no automatic buy/sell execution.
+- Manual QA's viewport/responsiveness pass and a production smoke test against a real deployed
+  stack are still recommended before/soon after tagging - not re-run in this pass (no browser
+  automation or separate deploy target available in this environment); see
+  `docs/release_candidate_report.md`.
+
+## 1.0.0-rc.1 - 2026-07-23
 
 Phase 11: a release-candidate audit pass over the app built out in `0.1.0` below - no new product
 features, no formula changes, no scraping behavior changes. See `docs/release_candidate_report.md`

@@ -1,4 +1,4 @@
-# Release candidate report - v1.0.0-rc.1
+# Release candidate report - v1.0.0
 
 Phase 11 output: a practical snapshot of release-candidate readiness, produced by (and meant to be
 read alongside) `scripts/release_candidate_audit.sh`. This is not a marketing summary - it's the
@@ -7,12 +7,32 @@ working document you fill in each time the audit is run, until every checklist i
 
 ## Release candidate version
 
-`1.0.0-rc.1` (see `VERSION`, `GET /version`, `GET /admin/release-status`).
+`1.0.0` (see `VERSION`, `GET /version`, `GET /admin/release-status`). Bumped from `1.0.0-rc.1` after
+this pass's bug-bash fixes (RC-1 through RC-9 in `docs/release_blockers.md`) were committed and the
+full verification suite re-run clean against a committed, non-dirty tree.
 
 ## Audit date
 
-`2026-07-23 05:40 UTC`, git commit `a341e0b` (Phase 11 bug-bash pass; working tree has the fixes
-below applied but not yet committed - see "Known warnings").
+Original bug-bash pass: `2026-07-23 05:40 UTC`, git commit `a341e0b`.
+
+Final v1.0.0 tagging pass: `2026-07-23`, on top of `6ecee3f` (repo-root/port-robustness fix for the
+audit scripts, committed after the original pass). Working tree is clean. Re-ran the full suite
+against the dev stack on `WEB_PORT=3001` (port 3000 occupied by a separate `opcg-*-prod` stack in
+this environment):
+
+- `bash scripts/check_secrets.sh` - pass.
+- `docker compose exec api alembic upgrade head` / `alembic current` / `alembic heads` - single head
+  `e7a1c4d9b2f6`, applies cleanly.
+- `docker compose exec api pytest` - `1227 passed, 11 skipped`.
+- `docker compose run --rm worker pytest` - `223 passed`.
+- `docker compose exec web npm run build` - succeeds (exit 0).
+- `docker compose exec web npm test` - `150 passed` across 32 files.
+- `BASE_WEB_URL=http://127.0.0.1:3001 SKIP_TESTS=true RUN_PHASE_AUDITS=false bash
+  scripts/release_candidate_audit.sh` - "Release candidate audit passed with warnings" (the same 2
+  expected, documented non-blocker warnings as before: `/admin/source-mappings` and
+  `/admin/env-check` have no frontend page by design).
+- `BASE_WEB_URL=http://127.0.0.1:3001 WEB_BASE_URL=http://127.0.0.1:3001 bash
+  scripts/final_audit.sh` - "Final production readiness audit passed".
 
 ## Scope
 
@@ -159,12 +179,9 @@ warning rather than guessing a URL that doesn't exist. Confirmed still accurate 
       literal secret values). **Fixed this pass** - the script itself had two false-positive bugs
       (misattributed which `KEY=value` on a line it was judging, and truncated values containing
       `$`); see RC-3 in `docs/release_blockers.md`. No real secret was ever present.
-- [ ] Git working tree is clean (or `STRICT_GIT=true` is used deliberately for a stricter gate) -
-      **not clean as of this report**: this Phase 11 pass's own fixes are staged as uncommitted
-      changes (see "Known warnings"). Commit them, then re-run `scripts/final_audit.sh` (default,
-      no `ALLOW_DIRTY`) to confirm a clean pass.
-- [x] `scripts/final_audit.sh` passes (`ALLOW_DIRTY=true` used for this run, for the reason above;
-      re-run without it after committing).
+- [x] Git working tree is clean - confirmed via `git status` immediately before this pass's test/
+      audit run (RC-8 resolved; see `docs/release_blockers.md`).
+- [x] `scripts/final_audit.sh` passes - run with no `ALLOW_DIRTY` override against the clean tree.
 - [x] Phase 7/8/9/10 audits pass (`SKIP_TESTS=true`, since the backend/worker/web build steps
       already ran once in this audit). Verified individually this pass.
 - [ ] Production smoke test passes (`RUN_PROD_SMOKE=true`), run against an actual deployed stack
@@ -178,8 +195,6 @@ warning rather than guessing a URL that doesn't exist. Confirmed still accurate 
 
 From this pass's `scripts/release_candidate_audit.sh` run:
 
-- Git working tree has uncommitted changes (`STRICT_GIT=true` would hard-fail this) - expected
-  mid-fix; see docs/release_blockers.md RC-8.
 - `web route /admin/source-mappings does not exist in apps/web/src/app - skipping` - expected,
   documented above; no frontend page for this route by design.
 - `web route /admin/env-check does not exist in apps/web/src/app - skipping` - expected, documented
@@ -195,9 +210,8 @@ Also observed (not from the audit script, but worth recording):
 
 See `docs/release_blockers.md` for the tracked table. Summary as of this report:
 
-**6 issues found this pass, all fixed; 1 deferred (cosmetic, no action needed); 1 open (expected -
-uncommitted working tree, resolves on commit).** No open `blocker` rows remain. No open `high` rows
-remain.
+**No open release blockers.** 9 issues found across the Phase 11 pass; 8 fixed, 1 deferred
+(cosmetic, no action needed). No open `blocker` rows remain. No open `high` rows remain.
 
 | ID | Severity | Area | Status |
 |----|----------|------|--------|
@@ -208,7 +222,8 @@ remain.
 | RC-5 | high | Admin safety - unconfirmed card import | fixed |
 | RC-6 | high | Frontend test infra (`NODE_ENV`) | fixed |
 | RC-7 | low | Turbopack build warning | deferred (cosmetic) |
-| RC-8 | low | Dirty git tree | open (expected mid-fix) |
+| RC-8 | low | Dirty git tree | fixed (resolved once committed) |
+| RC-9 | high | Audit scripts' repo-root resolution + port 3000 conflict | fixed |
 
 ## Manual QA required before tag
 
@@ -283,18 +298,18 @@ silently and left the script's working directory wherever the caller started fro
 
 ## Release recommendation
 
-**Ready with warnings.**
+**Ready for v1.0.0.**
 
-No open `blocker` or `high` severity rows remain in `docs/release_blockers.md`. All automated
-checks in this environment pass: secrets check, backend tests (1223 passed), worker tests (223
-passed), frontend build, frontend component tests (150 passed), migrations, the full API/web route
-checklist, admin-safety static checks, and `scripts/final_audit.sh`/`scripts/phase7-10_audit.sh`.
+No open `blocker` or `high` severity rows remain in `docs/release_blockers.md`. Working tree is
+clean. All required automated checks pass against this commit: `scripts/check_secrets.sh`, backend
+tests (1227 passed, 11 skipped), worker tests (223 passed), frontend build, frontend component
+tests (150 passed), Alembic migrations (single head), the full API/web route checklist,
+admin-safety static checks, `scripts/release_candidate_audit.sh` (passed with only the 2 expected
+non-blocker warnings), and `scripts/final_audit.sh` (passed, no `ALLOW_DIRTY`).
 
-Before tagging `v1.0.0`:
+Recommended (not blocking, per the criteria above) before or shortly after tagging:
 
-1. Review and commit this pass's fixes (see `git status` - currently uncommitted).
-2. Re-run `scripts/final_audit.sh` with no `ALLOW_DIRTY` override to confirm a clean-tree pass.
-3. Complete the manual QA checklist's viewport/responsiveness/visual pass by hand (or with browser
+1. Complete the manual QA checklist's viewport/responsiveness/visual pass by hand (or with browser
    automation) - not performed in this session, see "Environment constraints" above.
-4. Run `scripts/prod_smoke_test.sh` against an actual deployed stack, not just this dev stack.
-5. Exercise one real (non-dry-run) backup export/restore cycle in a disposable environment.
+2. Run `scripts/prod_smoke_test.sh` against an actual deployed stack, not just this dev stack.
+3. Exercise one real (non-dry-run) backup export/restore cycle in a disposable environment.

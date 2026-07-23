@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Release-candidate audit - the single gate for "is this app ready to tag
-# v1.0.0-rc.1". Phase 11: this only *audits* readiness - it adds no product
+# v1.0.0". Phase 11: this only *audits* readiness - it adds no product
 # features, changes no valuation formulas, and never touches scraping
 # behavior (no SNKRDUNK live scraping, no bypassing Yuyu-Tei/SNKRDUNK site
 # protections - every check here either reads existing data or exercises a
@@ -190,7 +190,7 @@ public_or_session_get() {
 }
 
 echo "======================================================"
-echo " Release candidate audit - target: v1.0.0-rc.1"
+echo " Release candidate audit - target: v1.0.0"
 echo " BASE_API_URL=$BASE_API_URL  BASE_WEB_URL=$BASE_WEB_URL"
 echo " SKIP_TESTS=$SKIP_TESTS  RUN_PHASE_AUDITS=$RUN_PHASE_AUDITS"
 echo " RUN_PROD_SMOKE=$RUN_PROD_SMOKE  RUN_LOAD_TESTS=$RUN_LOAD_TESTS"
