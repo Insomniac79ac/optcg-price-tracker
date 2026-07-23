@@ -6,11 +6,19 @@ human. Does not actually run the script (it needs a live docker compose
 stack) - see docs/operations.md's 'Catalog operations workflow'."""
 
 import os
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-PHASE9_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "phase9_audit.sh"
-FINAL_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "final_audit.sh"
+import pytest
+
+from tests._repo_root import find_repo_root
+
+REPO_ROOT = find_repo_root()
+pytestmark = pytest.mark.skipif(
+    REPO_ROOT is None,
+    reason="repo root not visible from this environment (e.g. the api Docker image only "
+    "copies services/api to /app) - run against a full dev checkout to exercise these",
+)
+PHASE9_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "phase9_audit.sh" if REPO_ROOT else None
+FINAL_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "final_audit.sh" if REPO_ROOT else None
 
 
 def test_phase9_audit_script_exists():

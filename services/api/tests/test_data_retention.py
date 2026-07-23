@@ -443,7 +443,12 @@ def test_price_observations_within_fresh_window_not_thinned(db_session):
 
 
 def test_portfolio_valuation_snapshots_thinning_keeps_one_per_week_when_old(db_session):
+    # Anchor to the Monday of that ISO week so `base` and `base + 1 day`
+    # can never straddle an ISO week boundary (which happens whenever
+    # NOW - 200 days happens to fall on a Sunday) - otherwise this test is
+    # flaky depending on what day it's run.
     base = NOW - timedelta(days=200)
+    base = base - timedelta(days=base.isoweekday() - 1)
     db_session.add_all(
         [
             PortfolioValuationSnapshot(

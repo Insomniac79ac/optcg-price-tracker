@@ -47,7 +47,15 @@
 
 set -uo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Resolve the repo root from this script's own location rather than
+# `git rev-parse --show-toplevel` (which depends on the caller's current
+# working directory - if invoked from outside the repo entirely, that
+# lookup fails, leaving repo_root empty; without `set -e` the script would
+# then silently `cd ""` - a no-op - and every subsequent `docker compose`
+# call would fail with "no configuration file provided: not found" instead
+# of a clear error).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
 BASE_API_URL="${BASE_API_URL:-http://127.0.0.1:8000}"

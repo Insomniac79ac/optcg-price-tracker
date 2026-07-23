@@ -175,4 +175,42 @@ describe("AdminCardsPage", () => {
 
     await waitFor(() => expect(screen.getByText("card_code is required")).toBeInTheDocument());
   });
+
+  it("requires typing IMPORT to confirm before a real (non-dry-run) import runs", async () => {
+    fetchAdminCards.mockResolvedValue(EMPTY_LIST);
+    const result: CardCatalogImportResponse = {
+      dry_run: false,
+      overwrite: false,
+      summary: { total_rows: 1, valid_rows: 1, error_rows: 0, created: 1, updated: 0, skipped: 0 },
+      errors: [],
+      preview: [],
+    };
+    importCardsCsv.mockResolvedValue(result);
+    render(<AdminCardsPage />);
+
+    await waitFor(() => expect(fetchAdminCards).toHaveBeenCalled());
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [makeCsvFile()] } });
+
+    fireEvent.click(screen.getByLabelText("Dry run"));
+    fireEvent.click(screen.getByRole("button", { name: "Import for real" }));
+
+    // Modal is open, but confirm is disabled until "IMPORT" is typed.
+    expect(screen.getByText("Import card catalog for real")).toBeInTheDocument();
+    expect(importCardsCsv).not.toHaveBeenCalled();
+
+    const confirmButtons = screen.getAllByRole("button", { name: "Import for real" });
+    const modalConfirmButton = confirmButtons[confirmButtons.length - 1];
+    expect(modalConfirmButton).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("Type IMPORT to confirm"), {
+      target: { value: "IMPORT" },
+    });
+    expect(modalConfirmButton).not.toBeDisabled();
+
+    fireEvent.click(modalConfirmButton);
+
+    await waitFor(() => expect(importCardsCsv).toHaveBeenCalledWith(expect.anything(), { dryRun: false, overwrite: false }));
+  });
 });

@@ -11,7 +11,14 @@
 
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Resolve the repo root from this script's own location rather than
+# `git rev-parse --show-toplevel` (which depends on the caller's current
+# working directory - if invoked via an absolute path from outside the repo
+# entirely, e.g. `bash /path/to/scripts/check_secrets.sh` from `/`, that
+# lookup fails, leaving repo_root empty and every subsequent `docker
+# compose`/`git` call silently running against the wrong directory).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
 FAILURES=0
@@ -135,9 +142,14 @@ CONTENT_SCAN_EXCLUDES=(
 SAFE_LITERAL_PATTERN='change-me|changeme|placeholder|local-dev-admin-token|opcg:opcg@|^x$'
 
 content_failures=0
-while IFS=: read -r file lineno rest; do
+# -o restricts each match to the actual `KEY=value` token instead of the
+# whole line, so a line with multiple assignments (e.g.
+# `SKIP_TESTS=true ... ADMIN_TOKEN="$ADMIN_TOKEN" ...`) is judged on the
+# secret key's own value, not whatever the line's first `=` happens to be.
+while IFS=: read -r file lineno match; do
   [[ -z "$file" ]] && continue
-  value="${rest#*=}"
+  key="${match%%=*}"
+  value="${match#*=}"
   # Shell variable references (${VAR}, "$VAR") and doc-style <placeholder>
   # values are never real secrets.
   stripped_value="${value#\"}"
@@ -145,9 +157,9 @@ while IFS=: read -r file lineno rest; do
   if echo "$value" | grep -qiE "$SAFE_LITERAL_PATTERN"; then
     continue
   fi
-  fail "$file:$lineno: literal value for a secret-shaped key: ${rest%%=*}=..."
+  fail "$file:$lineno: literal value for a secret-shaped key: ${key}=..."
   content_failures=$((content_failures + 1))
-done < <(git grep -nE "\\b${SECRET_KEYS_PATTERN}=[^\$[:space:]<]" -- . "${CONTENT_SCAN_EXCLUDES[@]}" 2>/dev/null || true)
+done < <(git grep -noE "\\b${SECRET_KEYS_PATTERN}=[^\$[:space:]<][^[:space:]]*" -- . "${CONTENT_SCAN_EXCLUDES[@]}" 2>/dev/null || true)
 
 # DATABASE_URL=postgresql://... with a password other than the known local
 # dev default (opcg:opcg) or a shell/placeholder reference.

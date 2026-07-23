@@ -9,7 +9,7 @@
     "start": "node scripts/check-env.js start && next start -H 0.0.0.0 -p 3000",
     "check-env": "node scripts/check-env.js",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "NODE_ENV=test vitest run"
   },
   "dependencies": {
     "jose": "^6.2.3",

@@ -20,7 +20,11 @@
 
 set -uo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Resolve the repo root from this script's own location rather than
+# `git rev-parse --show-toplevel` (which depends on the caller's current
+# working directory and fails outright if invoked from outside the repo).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
 FAILURES=0

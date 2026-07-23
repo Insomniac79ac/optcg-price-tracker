@@ -31,7 +31,11 @@
 
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Resolve the repo root from this script's own location rather than
+# `git rev-parse --show-toplevel` (which depends on the caller's current
+# working directory and fails outright if invoked from outside the repo).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
 SKIP_TESTS="${SKIP_TESTS:-false}"
@@ -137,10 +141,6 @@ echo
 echo "== 4. API endpoint checks (BASE_API_URL=$BASE_API_URL) =="
 PUBLIC_GET_CHECKS=(
   "/health"
-  "/saved-views?limit=5"
-  "/analytics/digest"
-  "/analytics/buy-decisions?limit=5"
-  "/analytics/sell-decisions?limit=5"
 )
 for path in "${PUBLIC_GET_CHECKS[@]}"; do
   http_get "$BASE_API_URL$path"
@@ -148,6 +148,24 @@ for path in "${PUBLIC_GET_CHECKS[@]}"; do
     echo "PASS: GET $path returned 200"
   else
     fail "GET $path returned HTTP $HTTP_STATUS (expected 200)"
+  fi
+done
+
+# Session-gated (require_current_user, no admin token involved) - 401
+# without a session is correct auth behavior, not a broken route. Matches
+# how scripts/release_candidate_audit.sh treats these same routes.
+SESSION_GATED_GET_CHECKS=(
+  "/saved-views?limit=5"
+  "/analytics/digest"
+  "/analytics/buy-decisions?limit=5"
+  "/analytics/sell-decisions?limit=5"
+)
+for path in "${SESSION_GATED_GET_CHECKS[@]}"; do
+  http_get "$BASE_API_URL$path"
+  if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "401" ]]; then
+    echo "PASS: GET $path returned $HTTP_STATUS"
+  else
+    fail "GET $path returned HTTP $HTTP_STATUS (expected 200 or 401)"
   fi
 done
 

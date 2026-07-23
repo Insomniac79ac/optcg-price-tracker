@@ -11,6 +11,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { RarityBadge } from "@/components/RarityBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { ConfirmActionModal } from "@/components/ui/ConfirmActionModal";
 import { TableScrollContainer } from "@/components/ui/DataTableShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SavedViewBar } from "@/components/ui/SavedViewBar";
@@ -35,6 +36,8 @@ const MISSING_METADATA_OPTIONS = [
   { value: "true", label: "Missing metadata" },
   { value: "false", label: "Has metadata" },
 ] as const;
+
+const IMPORT_CONFIRM_PHRASE = "IMPORT";
 
 export default function AdminCardsPage() {
   const [unauthorized, setUnauthorized] = useState(false);
@@ -388,6 +391,7 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
   const [importPending, setImportPending] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<CardCatalogImportResponse | null>(null);
+  const [confirmingRealImport, setConfirmingRealImport] = useState(false);
 
   async function handleExportCsv() {
     setExportError(null);
@@ -477,7 +481,11 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
         </ActionButton>
 
         {!importDryRun && (
-          <ActionButton variant="danger" onClick={() => runImport(false)} disabled={importPending || !importFile}>
+          <ActionButton
+            variant="danger"
+            onClick={() => setConfirmingRealImport(true)}
+            disabled={importPending || !importFile}
+          >
             {importPending ? "Working…" : "Import for real"}
           </ActionButton>
         )}
@@ -494,6 +502,25 @@ function ImportExportSection({ onImported }: { onImported: () => void }) {
           {importError}
         </div>
       )}
+
+      <ConfirmActionModal
+        open={confirmingRealImport}
+        title="Import card catalog for real"
+        description={
+          importOverwrite
+            ? "This overwrites existing fields on matched cards and writes new rows for the rest - it cannot be previewed away once run."
+            : "This creates/updates card catalog rows from the CSV. Run \"Preview import\" first if you haven't already."
+        }
+        confirmPhrase={IMPORT_CONFIRM_PHRASE}
+        confirmLabel="Import for real"
+        pending={importPending}
+        error={importError}
+        onConfirm={() => {
+          setConfirmingRealImport(false);
+          runImport(false);
+        }}
+        onCancel={() => setConfirmingRealImport(false)}
+      />
 
       {importResult && (
         <div className="mt-4 space-y-3">

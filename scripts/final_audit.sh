@@ -29,7 +29,11 @@
 #                 (not failed) rather than requiring every environment this
 #                 script runs in to also have the web container up.
 #   WEB_BASE_URL  default http://127.0.0.1:3000 - forwarded to
-#                 scripts/web_route_smoke.sh.
+#                 scripts/web_route_smoke.sh. `BASE_WEB_URL` (the name every
+#                 other audit script in this repo reads) is also accepted as
+#                 an alias, so setting one consistently across a whole audit
+#                 run works regardless of which script you're calling -
+#                 WEB_BASE_URL wins if both happen to be set.
 #   RUN_PHASE7_AUDIT  default false - set RUN_PHASE7_AUDIT=true to also run
 #                 scripts/phase7_audit.sh (Phase 7 performance/scale audit -
 #                 see docs/performance_testing.md). Off by default so this
@@ -53,13 +57,17 @@
 
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Resolve the repo root from this script's own location rather than
+# `git rev-parse --show-toplevel` (which depends on the caller's current
+# working directory and fails outright if invoked from outside the repo).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$repo_root"
 
 SKIP_TESTS="${SKIP_TESTS:-false}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-false}"
 SKIP_WEB_SMOKE="${SKIP_WEB_SMOKE:-false}"
-WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:3000}"
+WEB_BASE_URL="${WEB_BASE_URL:-${BASE_WEB_URL:-http://127.0.0.1:3000}}"
 RUN_PHASE7_AUDIT="${RUN_PHASE7_AUDIT:-false}"
 RUN_PHASE9_AUDIT="${RUN_PHASE9_AUDIT:-false}"
 RUN_RELEASE_CANDIDATE_AUDIT="${RUN_RELEASE_CANDIDATE_AUDIT:-false}"

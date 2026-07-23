@@ -6,11 +6,21 @@ live docker compose stack, and its own test suites are what's being run) -
 see docs/release_candidate_report.md."""
 
 import os
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-RELEASE_CANDIDATE_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "release_candidate_audit.sh"
-FINAL_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "final_audit.sh"
+import pytest
+
+from tests._repo_root import find_repo_root
+
+REPO_ROOT = find_repo_root()
+pytestmark = pytest.mark.skipif(
+    REPO_ROOT is None,
+    reason="repo root not visible from this environment (e.g. the api Docker image only "
+    "copies services/api to /app) - run against a full dev checkout to exercise these",
+)
+RELEASE_CANDIDATE_AUDIT_SCRIPT = (
+    REPO_ROOT / "scripts" / "release_candidate_audit.sh" if REPO_ROOT else None
+)
+FINAL_AUDIT_SCRIPT = REPO_ROOT / "scripts" / "final_audit.sh" if REPO_ROOT else None
 
 
 def test_release_candidate_audit_script_exists():

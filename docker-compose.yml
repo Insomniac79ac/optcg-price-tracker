@@ -82,7 +82,7 @@ services:
     build: ./apps/web
     container_name: opcg-web
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     environment:
       HOSTNAME: 0.0.0.0
       PORT: 3000
