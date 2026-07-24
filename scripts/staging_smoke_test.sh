@@ -14,11 +14,16 @@
 #   ADMIN_TOKEN=<staging-admin-token> \
 #   bash scripts/staging_smoke_test.sh
 #
+# STAGING_WEB_URL and ADMIN_TOKEN may be left unset to skip their checks
+# (e.g. before Vercel is deployed).
+#
 # Env vars:
 #   STAGING_API_URL   required. The Railway api service's public HTTPS URL.
 #                     Fails fast with a clear message if unset.
-#   STAGING_WEB_URL   required. The Vercel staging deployment's URL. Fails
-#                     fast with a clear message if unset.
+#   STAGING_WEB_URL   optional. The Vercel staging deployment's URL. Only
+#                     gates the web page checks (step 6) - leave unset/empty
+#                     to skip those when the Vercel deployment isn't up yet;
+#                     every API check still runs.
 #   ADMIN_TOKEN       optional. Must match the staging deployment's
 #                     configured ADMIN_TOKEN. Only gates the two admin
 #                     checks below (system-check, catalog-coverage) - every
@@ -34,13 +39,7 @@ ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 if [[ -z "$STAGING_API_URL" ]]; then
   echo "FAIL: STAGING_API_URL is not set." >&2
-  echo "Usage: STAGING_API_URL=https://<railway-api-url> STAGING_WEB_URL=https://<vercel-staging-url> [ADMIN_TOKEN=<token>] bash scripts/staging_smoke_test.sh" >&2
-  exit 1
-fi
-
-if [[ -z "$STAGING_WEB_URL" ]]; then
-  echo "FAIL: STAGING_WEB_URL is not set." >&2
-  echo "Usage: STAGING_API_URL=https://<railway-api-url> STAGING_WEB_URL=https://<vercel-staging-url> [ADMIN_TOKEN=<token>] bash scripts/staging_smoke_test.sh" >&2
+  echo "Usage: STAGING_API_URL=https://<railway-api-url> [STAGING_WEB_URL=https://<vercel-staging-url>] [ADMIN_TOKEN=<token>] bash scripts/staging_smoke_test.sh" >&2
   exit 1
 fi
 
@@ -106,7 +105,11 @@ web_get() {
 echo "== OPTCG staging smoke test =="
 echo "STAGING_API_URL=$STAGING_API_URL"
 echo "STAGING_WEB_URL=$STAGING_WEB_URL"
-echo "ADMIN_TOKEN=${ADMIN_TOKEN:+<set>}${ADMIN_TOKEN:-<unset - skipping admin checks>}"
+if [[ -n "$ADMIN_TOKEN" ]]; then
+  echo "ADMIN_TOKEN=<set>"
+else
+  echo "ADMIN_TOKEN=<unset - skipping admin checks>"
+fi
 echo
 
 echo "-- 1. API health (GET \$STAGING_API_URL/health) --"
@@ -168,14 +171,20 @@ else
   echo
 fi
 
-echo "-- 6. Web pages --"
-web_get "/"
-web_get "/dashboard"
-web_get "/collection"
-web_get "/collection/vault"
-web_get "/analytics/digest"
-web_get "/admin/catalog-ops"
-echo
+if [[ -z "$STAGING_WEB_URL" ]]; then
+  echo "-- 6. Web pages --"
+  echo "Skipping (STAGING_WEB_URL not set)."
+  echo
+else
+  echo "-- 6. Web pages --"
+  web_get "/"
+  web_get "/dashboard"
+  web_get "/collection"
+  web_get "/collection/vault"
+  web_get "/analytics/digest"
+  web_get "/admin/catalog-ops"
+  echo
+fi
 
 echo "== Summary =="
 if [[ "$FAILURES" -eq 0 ]]; then
