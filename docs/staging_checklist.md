@@ -30,6 +30,15 @@ order - later sections assume earlier ones are done.
       service: check branch, commit/push status, Root Directory, and case-sensitive path - see
       `docs/railway_staging.md` "Troubleshooting: couldn't locate the dockerfile path ... in code
       archive".
+- [ ] `WORKER_CONCURRENCY=2` set on the Railway `worker` service (staging default - do not leave
+      unset). If worker logs show a high prefork concurrency (e.g. `concurrency: 48`) and the
+      service crash-loops with no traceback, this is almost certainly it - see
+      `docs/railway_staging.md` "Worker concurrency". Do not deploy `beat` until `worker` is
+      confirmed stable (no crash loop) with this set - `--concurrency` doesn't apply to `beat`.
+- [ ] Confirm which Railway environment you're actually deploying into - it may be named
+      `production` in the dashboard even when it's the intended staging deployment (`APP_ENV`
+      still `staging`). See `docs/railway_staging.md` "Operational warning: Railway environment
+      named production" - don't rename/switch environments as an incidental fix.
 - [ ] All env vars set on every service (see [.env.staging.example](../.env.staging.example) and
       `docs/staging_deployment.md` section 5) - double check none are left as the literal
       `change-me`/`<...>` placeholder.

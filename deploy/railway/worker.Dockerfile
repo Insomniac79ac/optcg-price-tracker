@@ -11,6 +11,15 @@
 # unchanged. No public port - worker only consumes Celery tasks over Redis,
 # it never serves HTTP (do not enable public networking for this service in
 # Railway).
+#
+# Celery's --concurrency defaults to the HOST's CPU count (multiprocessing.
+# cpu_count()), not the container's actual resource allocation - on Railway
+# this showed up as "concurrency: 48 (prefork)" and the container crash-
+# looped (OOM-killed forking that many worker processes on a small
+# instance, no Python traceback since the kill is external to the
+# process). WORKER_CONCURRENCY lets Railway set a safe value via a service
+# variable without rebuilding the image; defaults to 2 if unset - see
+# docs/railway_staging.md.
 
 FROM python:3.12-slim
 
@@ -28,4 +37,4 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 ENV BUILD_TIME=${BUILD_TIME}
 ENV APP_VERSION=${APP_VERSION}
 
-CMD ["celery", "-A", "worker.celery_app", "worker", "--loglevel=info"]
+CMD ["sh", "-c", "celery -A worker.celery_app worker --loglevel=info --concurrency=${WORKER_CONCURRENCY:-2}"]

@@ -14,6 +14,26 @@ separate Dockerfile per Railway service" below for why. Nothing here changes loc
 exactly as before; the `deploy/railway/*.Dockerfile` files are additive, Railway-only build
 definitions that `COPY` from the same `services/api`/`services/worker` source.
 
+## Operational warning: Railway environment named "production"
+
+The Railway project's environment currently in use for this staging deployment is named
+**`production`** in the Railway dashboard - not `staging` - even though `APP_ENV=staging` is set
+on the services in it and it's functionally the staging deployment described in this doc. A
+separate environment actually named `staging` exists in the same Railway project but has no
+worker service instance provisioned in it (only `api`, Postgres, and Redis) - it is not the
+environment these docs' worker/beat instructions apply to.
+
+Do not rename or switch the Railway environment as a "fix" for this without first confirming with
+whoever owns the Railway project - environment renames/switches touch the connected domains,
+variable set, and deployment history, and are not something to do casually while debugging an
+unrelated issue. Prefer creating/using a Railway environment actually named `staging` going
+forward for clarity, but treat that as a deliberate follow-up, not an incidental change.
+
+If you're continuing work in the `production`-named environment: confirm `APP_ENV=staging` is
+still set on every service before assuming anything about behavior, and use staging-only URLs,
+tokens, and secrets throughout - never production credentials - regardless of what the Railway
+dashboard calls the environment.
+
 ## Why a separate Dockerfile per Railway service
 
 `services/api/Dockerfile` and `services/worker/Dockerfile` both use a bare `COPY requirements.txt
@@ -108,10 +128,27 @@ alembic upgrade head
 | Source | same GitHub repo |
 | Root Directory | `/` (repo root) |
 | Dockerfile Path | `deploy/railway/worker.Dockerfile` |
-| Start command | Dockerfile default - `celery -A worker.celery_app worker --loglevel=info`. Set it explicitly in Railway's service settings anyway (belt-and-suspenders - visible/auditable in the dashboard, not just implied by the Dockerfile's `CMD`). |
+| Start command | Dockerfile default - `celery -A worker.celery_app worker --loglevel=info --concurrency=${WORKER_CONCURRENCY:-2}`. Do **not** override the start command in Railway's service settings unless the override also includes an explicit `--concurrency` - an override without one reverts to Celery's default (host CPU count, not the container's allocation - see "Worker concurrency" below). |
 | Public networking | **disabled** - `worker` never serves HTTP, only consumes Celery tasks over Redis. Does not need to bind any port. |
 | Health check | none needed (Railway has no Celery-aware healthcheck; `docker-compose.prod.yml`'s `celery inspect ping` healthcheck is Compose-specific and has no direct Railway equivalent - rely on Railway's deploy logs and `/admin/refresh-runs`/`/admin/system-check` in the web app instead) |
-| Env vars | see [.env.staging.example](../.env.staging.example) - `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `SCRAPING_MODE=mock`, `YUYUTEI_REQUEST_DELAY_MS`, `SNKRDUNK_REQUEST_DELAY_MS`, `PRICE_REFRESH_INTERVAL_HOURS`, `CACHE_ENABLED`, `CACHE_BACKEND` (`ADMIN_TOKEN` only if a specific internal job needs it - none do by default) |
+| Env vars | see [.env.staging.example](../.env.staging.example) - `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `SCRAPING_MODE=mock`, `YUYUTEI_REQUEST_DELAY_MS`, `SNKRDUNK_REQUEST_DELAY_MS`, `PRICE_REFRESH_INTERVAL_HOURS`, `CACHE_ENABLED`, `CACHE_BACKEND`, `WORKER_CONCURRENCY=2` (`ADMIN_TOKEN` only if a specific internal job needs it - none do by default) |
+
+#### Worker concurrency
+
+Celery's `--concurrency` defaults to `multiprocessing.cpu_count()`, which reads the **host's**
+CPU count, not the container's actual cgroup allocation. On Railway this surfaced as
+`concurrency: 48 (prefork)` in the worker's startup banner and a tight crash loop: the container
+forks that many prefork worker processes, gets OOM-killed almost immediately (no Python traceback
+- the kill is external to the process, so the same Celery startup banner just repeats every few
+seconds), and Railway's restart policy eventually exhausts its retries, leaving the service stuck
+in `CRASHED`.
+
+`WORKER_CONCURRENCY` (default `2` if unset, set explicitly in the Railway service's Variables tab
+for staging) fixes this without a rebuild - see `deploy/railway/worker.Dockerfile`'s `CMD`. If a
+future deploy's logs show a high prefork concurrency again (e.g. `concurrency: 48`), check that
+`WORKER_CONCURRENCY` is actually set on the service and that nothing overrides the start command
+without also passing `--concurrency`. `beat` runs a single scheduler process with no prefork pool,
+so this setting doesn't apply there.
 
 ### 5. `beat` service
 
