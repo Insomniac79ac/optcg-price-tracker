@@ -131,6 +131,23 @@ workflow entry as a no-op. Flip `MARKET_WORKFLOW_ENABLED=true` on the `beat` ser
 it) only once `api`/`worker`/`beat` have been confirmed stable per
 `docs/staging_checklist.md`.
 
+## Troubleshooting: "couldn't locate the dockerfile path ... in code archive"
+
+Railway reports this when it cannot find the configured Dockerfile Path in the commit it just
+pulled for the connected branch - the file exists somewhere in the repo's history, just not in
+the tree Railway fetched. Check, in order:
+
+1. **Branch** - which branch is the service's Source actually connected to (GitHub repo settings
+   in the Railway dashboard for that service)? `deploy/railway/*.Dockerfile` may exist on one
+   branch (e.g. `staging`) and not on another (e.g. `main`) if it hasn't been merged yet. Confirm
+   with `git ls-tree -r origin/<branch> -- deploy/railway`.
+2. **Commit/push status** - is the file committed and pushed to that exact branch? `git log
+   --oneline -- deploy/railway/worker.Dockerfile` and `git status`.
+3. **Root Directory** - must be `/` (repo root), not `services/worker` or anything else; the
+   Dockerfile Path is resolved relative to Root Directory.
+4. **Case sensitivity** - the path is case-sensitive; `Worker.dockerfile` or `worker.Dockerfile `
+   (trailing space) will not match `deploy/railway/worker.Dockerfile`.
+
 ## Local build verification
 
 Confirmed working from the repo root (not `services/api`/`services/worker`):

@@ -26,6 +26,10 @@ order - later sections assume earlier ones are done.
       `deploy/railway/beat.Dockerfile` all build successfully locally from the repo root:
       `docker build -f deploy/railway/api.Dockerfile -t opcg-api-railway-test .` (and the
       worker/beat equivalents) - see `docs/railway_staging.md` "Local build verification".
+- [ ] If Railway reports `couldn't locate the dockerfile path ... in code archive` for any
+      service: check branch, commit/push status, Root Directory, and case-sensitive path - see
+      `docs/railway_staging.md` "Troubleshooting: couldn't locate the dockerfile path ... in code
+      archive".
 - [ ] All env vars set on every service (see [.env.staging.example](../.env.staging.example) and
       `docs/staging_deployment.md` section 5) - double check none are left as the literal
       `change-me`/`<...>` placeholder.
