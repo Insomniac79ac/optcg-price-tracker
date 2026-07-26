@@ -105,15 +105,24 @@ ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confir
 
 ## After deploy
 
-- [ ] Create a staging backup once real-ish data exists (`scripts/db_backup.sh` pointed at the
+- [x] Create a staging backup once real-ish data exists (`scripts/db_backup.sh` pointed at the
       Railway Postgres connection string, or a manual `pg_dump` via Railway's Shell/CLI - see
-      `docs/operations.md`'s backup/restore drill for the general pattern).
+      `docs/operations.md`'s backup/restore drill for the general pattern). Taken 2026-07-26
+      before the first catalogue import, via `pg_dump "$DATABASE_PUBLIC_URL" -Fc` run inside a
+      `postgres:18` container (the Codespace's own `pg_dump` was v16, too old for this Postgres
+      18 server) - stored outside the repo, not committed. See docs/staging_data.md.
 - [ ] Seed saved views if needed (`python -m app.seed_saved_views`, run inside the Railway `api`
       service, if this repo has that seed command - check `services/api/app/seed_saved_views.py`).
-- [ ] Import a small test card catalog CSV if needed
-      (`python -m app.import_watchlist <path-to-csv>`, run inside the Railway `api` service - do
-      **not** pass `--demo-data` to `app.seed`, same rule as production per `docs/deployment.md`
-      section 4).
+      Not done in this pass - out of scope for the catalogue/pricing dataset work.
+- [x] Import a small test card catalog CSV if needed
+      (`python -m app.import_watchlist <path-to-csv>`, run inside the Railway `api` service).
+      Done 2026-07-26: `python -m app.seed --demo-data` (10 labeled placeholder cards) **then**
+      `python -m app.import_watchlist data/watchlists/opcg_watchlist.csv` (2 real, verified card
+      codes) - in that order specifically, see docs/staging_data.md for why. **Note**: the
+      "do not pass `--demo-data`" rule in `docs/deployment.md` section 4 is a *production* rule
+      (real customers must never see placeholder cards) - it does not apply to staging, where a
+      small labeled synthetic dataset is an explicitly sanctioned way to reach a representative
+      catalogue size.
 - [x] Run `scripts/staging_smoke_test.sh` (see "Smoke" above) - don't consider staging live until
       it passes. Passed 2026-07-25 (API-only run; `STAGING_WEB_URL` not yet set). Re-ran and
       passed again 2026-07-26 with `STAGING_WEB_URL` set - all API and web checks green.
@@ -229,3 +238,50 @@ ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confir
   15 warnings) and Vitest (149/150, one pre-existing wishlist empty-state timing failure) issues
   from local frontend validation are unchanged and remain non-blocking - out of scope for this
   pass.
+
+## 2026-07-26 - Staging catalogue and mock price data loaded; full dataset validated
+
+Populated the previously-empty staging catalogue with a small, representative, non-fabricated
+dataset so the deployed prototype can be exercised meaningfully. Full detail (exact commands,
+rehearsal results, every validation check) is in [docs/staging_data.md](staging_data.md) - this
+entry is the checklist-level summary.
+
+- **Backup**: taken before any import, via `pg_dump` in a `postgres:18` container against
+  `DATABASE_PUBLIC_URL` (the Codespace's native `pg_dump` was v16, incompatible with this
+  project's Postgres 18 server). Stored outside the repo; not committed. Verified valid
+  (`pg_restore --list`, 432 TOC entries) before proceeding.
+- **Dataset**: `python -m app.seed --demo-data` (10 explicitly-labeled placeholder cards, an
+  existing documented command) followed by `python -m app.import_watchlist
+  data/watchlists/opcg_watchlist.csv` (2 real, `manual_verified=true` card codes with genuine
+  Yuyu-Tei/SNKRDUNK URLs, already committed to this repo since 2026-07-10) - in that exact order,
+  because running the demo seed *after* the watchlist import hits a latent `MultipleResultsFound`
+  crash in `app.seed.seed_demo_data`'s mapping step once two cards share a `card_code`. Rehearsed
+  first against a disposable local Postgres 18 container running this repo's actual migrations,
+  then repeated identically against the real staging database. Result: 12 canonical cards, 5 sets
+  (OP01-OP05), 5 rarities, 3 variants, all `jp`. Below the 20-50 target - no more verified/safe
+  data exists to reach it, which the task's own instructions treat as acceptable rather than a
+  reason to fabricate.
+- **Idempotency**: `import_watchlist` re-run a second time against the real staging DB - 0 new
+  cards, 0 new mappings (12/16 unchanged), confirming its upsert-by-identity logic is safe to
+  repeat.
+- **Mock price refresh**: triggered via `POST /admin/actions/refresh-prices` (dry run, then one
+  real bounded run, then a second dry run) - no `beat` involved, no recurring schedule. Real run
+  (`run_id=2`): 16 mappings checked, 16 raw snapshots stored, 28 price observations inserted, 0
+  failed, finished in ~150ms. Only 3 of the 12 canonical cards can ever show mock prices, because
+  the mock adapters' fixture JSON (`services/worker/fixtures/{yuyutei,snkrdunk}_sample.json`) only
+  has entries for `source_card_id` values `OP01-001`/`OP01-013` - a pre-existing constraint, not
+  something this pass worked around or extended.
+- **Validation**: `/admin/system-check` moved from `critical` (pre-existing, missing sources) to
+  `warning` (expected - real coverage gaps, not brokenness); `/admin/catalog-coverage`,
+  `/admin/source-mappings/quality`, and `/admin/price-source-health` all report numbers that match
+  the import exactly; `duplicate_cards` and every `*_valid_card_id` check in system-check pass
+  (no orphans, no wrong-card mappings); `scripts/staging_smoke_test.sh` re-run with both URLs and
+  passed in full. One known, pre-existing data-shape quirk (not a bug introduced here): the real
+  watchlist CSV reuses the same `variant` value across genuinely different print rarities of
+  `OP01-001`/`OP01-002`, so 4-6 source rows collapse onto fewer canonical card rows than a human
+  cataloguer would probably choose - documented in docs/staging_data.md rather than silently
+  patched, since fixing it would mean reinterpreting a file this task's rules say to treat as
+  verified/authoritative as-is.
+- No live SNKRDUNK collection occurred; `SNKRDUNK` candidate table remains empty (0 rows) by
+  design. `SCRAPING_MODE` remains `mock`. Google OAuth remains unconfigured. Beat remains blocked
+  by the Railway plan limit.
