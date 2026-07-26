@@ -312,3 +312,60 @@ web app's `/`, `/dashboard`, `/collection`, `/collection/vault`, `/analytics/dig
   regardless of environment.
 - Never commit `.env.staging` (only `.env.staging.example`, with placeholders, is tracked - see
   `.gitignore` and `scripts/check_secrets.sh`).
+
+## 12. Frontend containment deploy (2026-07-26)
+
+Collector-first redesign, Phase 1 (`collector-blueprint.pdf`) - closes the audit's frontend
+findings (unauthenticated visitors redirected to `/market/movers`, `/` redirecting to `/dashboard`,
+`/activity` ungated, admin nav/commands visible with no session concept, `/admin/*` gated only
+client-side after the page shell rendered) before the visual redesign begins. Full route-level
+detail is in `docs/route_inventory.md`'s "Update (2026-07-26)" section; this entry is the
+deploy/infra record.
+
+**What changed**: `middleware.ts` -> `proxy.ts` (Next.js 16 rename); signed-out redirect target is
+now `/sign-in` (never `/market/movers`), with `callbackUrl` preserved and validated same-origin-only;
+`/` is a real public Discover page instead of a redirect; `/activity` and `/analytics/*` are now in
+the protected matcher; public/collector nav and the command palette are reduced to a working route
+set with `requires_admin`/`scope` actually enforced; `/admin/*` gets a shared server-side boundary
+(`app/admin/layout.tsx`, unconditional `notFound()` - no `role` field exists yet) in front of the
+existing client-side `AdminAuthGate`. Backend `X-Admin-Token` enforcement, the database, pricing,
+image models, and Market Index are unchanged.
+
+**Deploy mechanics** (not a change to the topology in section 2, just a record of what actually
+running a deploy looked like): this Vercel project's Git "Production Branch" is still `main` (see
+section 2's "What was actually done"), so `git push origin staging` does **not** auto-deploy it -
+every deploy in this pass was `vercel deploy --prod` run explicitly from a `staging` checkout,
+authenticated with `vercel login`/a pasted `VERCEL_TOKEN` (never committed, only exported into the
+shell environment for the duration of the deploy command).
+
+**Two bugs found only by live-verifying the first deploy, not by `next build` or the test
+suite** - both are recorded in commit `0ca3f40`'s message in full; summarized here because they're
+exactly the kind of thing a future proxy.ts change could reintroduce silently:
+
+1. `proxy.ts` was placed at `apps/web/proxy.ts` (package root). This project's app router lives at
+   `src/app`, and Next.js's docs say proxy.ts belongs "at the same level as pages or app" - at the
+   root it compiled cleanly and even showed as `ƒ Proxy (Middleware)` in the `next build` summary,
+   but was never invoked at request time, on Vercel *or* locally via `next build && next start`.
+   Fixed by moving it to `src/proxy.ts`.
+2. Once discoverable, `auth()`'s internal session check threw `UntrustedHost`
+   (https://errors.authjs.dev#untrustedhost) and - critically - failed *open*, letting the
+   "protected" route render normally instead of redirecting. Fixed with `trustHost: true` in
+   `src/lib/auth.ts`'s NextAuth config (safe on Vercel - its edge network sets the Host header
+   itself, it can't be spoofed by the client).
+
+Neither bug was visible in `npm run build`, `npm test`, or a code review of the diff - both only
+showed up by actually curling the deployed protected routes and checking for a 307, which is why
+section 8's smoke tests and the "Live staging verification" step in this kind of task matter even
+when the build and test suite are green. **Post-fix, live-verified against
+`https://optcg-price-tracker-staging.vercel.app`**: `/collection`, `/dashboard`, `/wishlist`,
+`/grading`, `/activity` (including `?query=strings`) all 307 to `/sign-in?callbackUrl=...`; `/`,
+`/search`, `/market/movers` stay 200; `/admin/system-check`, `/admin/backup`, `/admin/cards` all
+404 with no admin shell/content in the response (verified the response body, not just the status
+code - Next.js's RSC flight payload echoes the requested route segments even on a 404 page, which
+looks like a match for an `admin`/page-name grep but isn't a content leak).
+
+**Still true, unchanged by this task**: Google OAuth has no real credentials on staging (`/sign-in`
+correctly shows "collector accounts are not enabled" rather than a broken sign-in button); there is
+no admin session/login yet, so `/admin/*` is unconditionally unreachable from the browser - use
+direct backend tooling (`curl -H "X-Admin-Token: ..."`, per `docs/operations.md`) until the
+dedicated admin-login task lands.
