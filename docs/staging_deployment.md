@@ -57,18 +57,32 @@ One Vercel project:
 | Output | Next.js default / Vercel-managed (no static export - this app uses server-side API routes and SSR) |
 | Environment | Preview or a dedicated "staging" environment/branch (Vercel's Preview Deployments, or a custom environment on paid plans) |
 
-Environment variables (Preview/staging scope, not Production):
+**What was actually done (2026-07-26)**: rather than a Preview environment on the main
+production-named project, this deployed to its own dedicated Vercel project,
+`optcg-price-tracker-staging`, with env vars in **Production** scope (not Preview) so the
+deployment gets a stable, permanent domain (`optcg-price-tracker-staging.vercel.app`) instead of
+an ephemeral per-commit preview URL. The project's Git "Production Branch" setting could not be
+changed from `main` to `staging` via the Vercel REST API (`PATCH /v9|v10/projects/:id` rejects a
+`link`/`productionBranch` body with a schema error) - it remains a manual dashboard step
+(Settings -> Git -> Production Branch). Until that's changed, deploys are pushed explicitly via
+`vercel deploy --prod` from a local `staging` checkout rather than triggered automatically by
+`git push`.
+
+Environment variables (Production scope on the dedicated staging project):
 
 | Variable | Value | Notes |
 |---|---|---|
-| `APP_ENV` | `staging` | Not read by any frontend code path today - set for visibility/future use. Never a secret. |
-| `NEXT_PUBLIC_APP_ENV` | `staging` | Same as above, client-bundle-visible mirror. Frontend does not currently branch on this. |
-| `API_BASE_URL` | Railway `api` service's public HTTPS URL | Not currently read directly by any route handler in this codebase (each route handler under `src/app/api/**` reads `API_INTERNAL_URL` itself, hardcoded per file) - set for consistency with the task's naming and in case a future refactor centralizes it. Keep it equal to `API_INTERNAL_URL`. |
+| `NEXT_PUBLIC_APP_ENV` | `staging` | Set for visibility/future use. Not read by any current frontend code path (`apps/web/scripts/check-env.js` reads bare `APP_ENV`/`NODE_ENV`, not this). Never a secret. |
 | `API_INTERNAL_URL` | Railway `api` service's public HTTPS URL | **Required.** Read server-side only by every route handler under `apps/web/src/app/api/**`. Falls back to `http://api:8000` (the Docker Compose service DNS name) when unset - that fallback only works inside the local Docker Compose network, so this must always be set explicitly on Vercel. |
 | `NEXT_PUBLIC_API_URL` | Railway `api` service's public HTTPS URL, or blank | Only needed if you want the browser-direct pages/functions listed in [section 4](#4-known-direct-backend-calls-to-fix-before-production) to work. Baked into the client bundle at build time - changing it requires a redeploy. **Never** set this to a bare `/api` path; the direct calls it feeds do not go through the Next.js proxy layer. |
-| `API_JWT_SECRET` | shared secret, same value as the Railway `api` service | Required for per-user auth (`/collection`, `/grading`, `/collector`) - see `docs/deployment.md` section 10. |
+| `AUTH_URL` | the stable Vercel staging domain (`https://optcg-price-tracker-staging.vercel.app`) | Auth.js's canonical base URL - avoids relying on header-based origin detection. |
+| `API_JWT_SECRET` | shared secret, same value as the Railway `api` service | Required for per-user auth (`/collection`, `/grading`, `/collector`) - see `docs/deployment.md` section 10. Copy it byte-for-byte (e.g. `railway variables --kv | grep ^API_JWT_SECRET= | cut -d= -f2- | vercel env add API_JWT_SECRET production --sensitive`) rather than retyping it. |
 | `AUTH_SECRET` | random value (`openssl rand -base64 33`) | Auth.js session-encryption secret. |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | staging OAuth client credentials | Use a separate Google OAuth client from production, with `<vercel-staging-domain>/api/auth/callback/google` as an authorized redirect URI. |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | staging OAuth client credentials | Use a separate Google OAuth client from production, with `<vercel-staging-domain>/api/auth/callback/google` as an authorized redirect URI. **Not yet set** - no real credentials exist for staging as of 2026-07-26; Google sign-in is untested until these are created and added. |
+
+`API_BASE_URL` and bare `APP_ENV` (listed in earlier drafts of this doc) were deliberately **not**
+set: neither is read anywhere in `apps/web`'s application code (confirmed by search), so adding
+them would just be inert configuration.
 
 **Do not** set `ADMIN_TOKEN` (or any `NEXT_PUBLIC_ADMIN_TOKEN`) as a Vercel environment variable -
 the admin token is entered by the operator in the browser and stored in `localStorage`

@@ -21,8 +21,9 @@ order - later sections assume earlier ones are done.
       `deploy/railway/beat.Dockerfile`, start command `celery -A worker.celery_app beat
       --loglevel=info`, no public networking - section 5). **Not yet created** - blocked by a
       Railway free-plan resource provision limit as of 2026-07-25; see dated note below.
-- [ ] Vercel project configured with Root Directory `apps/web`. Confirm Railway is **not** building
-      `apps/web` anywhere - `apps/web` deploys to Vercel only.
+- [x] Vercel project configured with Root Directory `apps/web`. Confirm Railway is **not** building
+      `apps/web` anywhere - `apps/web` deploys to Vercel only. Project `optcg-price-tracker-staging`,
+      GitHub repo connected, Root Directory `apps/web`, framework Next.js (auto-detected).
 - [x] `deploy/railway/api.Dockerfile`, `deploy/railway/worker.Dockerfile`, and
       `deploy/railway/beat.Dockerfile` all build successfully locally from the repo root:
       `docker build -f deploy/railway/api.Dockerfile -t opcg-api-railway-test .` (and the
@@ -42,26 +43,27 @@ order - later sections assume earlier ones are done.
       named production" - don't rename/switch environments as an incidental fix. Confirmed as of
       2026-07-25: this deployment targets the dashboard environment actually named `staging`
       (`05d1eac2-...`), distinct from the `production`-named environment, which is left untouched.
-- [ ] All env vars set on every service (see [.env.staging.example](../.env.staging.example) and
+- [x] All env vars set on every service (see [.env.staging.example](../.env.staging.example) and
       `docs/staging_deployment.md` section 5) - double check none are left as the literal
-      `change-me`/`<...>` placeholder. Done for `api`/`worker`; not yet applicable to `beat`
-      (not created) or Vercel `web` (not set up).
+      `change-me`/`<...>` placeholder. Done for `api`/`worker`/Vercel `web`; not yet applicable to
+      `beat` (not created).
 - [x] `ADMIN_TOKEN` generated (`openssl rand -hex 32`) and set identically wherever it's needed
       (Railway `api`; `worker`/`beat` only if a specific job needs it).
-- [ ] `API_JWT_SECRET` generated and set identically on Railway `api` and Vercel `web`. Generated
-      and set on Railway `api` (2026-07-25); Vercel `web` side pending (out of scope for this
-      pass).
+- [x] `API_JWT_SECRET` generated and set identically on Railway `api` and Vercel `web`. Generated
+      and set on Railway `api` (2026-07-25); copied byte-for-byte to Vercel `web` (2026-07-26) by
+      piping directly from the Railway CLI into `vercel env add` - value never displayed or
+      written to a file.
 - [ ] `SCRAPING_MODE=mock` on `api`/`worker`/`beat`. Confirmed `mock` on `api` and `worker`; `beat`
       not yet created.
 - [ ] `MARKET_WORKFLOW_ENABLED=false` and `DATA_RETENTION_ENABLED=false` on `beat`. N/A - `beat`
       not yet created.
 - [x] Telegram disabled (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` both blank), or both pointed at a
       staging-only test bot/channel - never the production one.
-- [ ] `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on Railway `api` set to the Vercel staging
+- [x] `CORS_ALLOWED_ORIGINS`/`CORS_ALLOW_ORIGIN_REGEX` on Railway `api` set to the Vercel staging
       domain (see "Known direct backend calls to fix before production" in
       `docs/staging_deployment.md` - several pages call `api` directly from the browser and will
-      fail as CORS errors without this). Deliberately deferred until the Vercel staging URL
-      exists.
+      fail as CORS errors without this). Set to the exact origin `https://optcg-price-tracker-staging.vercel.app`
+      (2026-07-26) - no wildcard, no broad `*.vercel.app` match.
 
 ## Deploy
 
@@ -71,11 +73,12 @@ order - later sections assume earlier ones are done.
 - [x] Deploy Railway `worker`. Confirm it starts without crash-looping (check Railway's deploy
       logs).
 - [ ] Deploy Railway `beat`. Confirm it starts without crash-looping. **Blocked** - see dated note.
-- [ ] Deploy Vercel `web`, with `API_BASE_URL`/`API_INTERNAL_URL` (and `NEXT_PUBLIC_API_URL`, if
-      used) already set to the Railway `api` service's public URL from the previous steps.
-- [ ] Redeploy Vercel `web` once more if any env var was set/changed after the first deploy -
+- [x] Deploy Vercel `web`, with `API_BASE_URL`/`API_INTERNAL_URL` (and `NEXT_PUBLIC_API_URL`, if
+      used) already set to the Railway `api` service's public URL from the previous steps. Deployed
+      2026-07-26 to `optcg-price-tracker-staging.vercel.app`.
+- [x] Redeploy Vercel `web` once more if any env var was set/changed after the first deploy -
       `NEXT_PUBLIC_API_URL` and other build-time vars only take effect on the build they're present
-      for.
+      for. Final deploy (2026-07-26) ran after all six env vars were confirmed/re-set.
 
 ## Smoke
 
@@ -83,23 +86,22 @@ Run `STAGING_API_URL=<railway-api-url> STAGING_WEB_URL=<vercel-staging-url>
 ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confirm:
 
 - [x] API `/health` works.
-- [ ] Web `/dashboard` works. N/A - Vercel not set up yet.
+- [x] Web `/dashboard` works.
 - [x] Admin token works (`/admin/system-check` returns 200, not `critical`).
 - [x] Saved views works (`/saved-views?limit=5` returns 200 or 401 - 401 without a signed-in
       session is expected/healthy).
-- [ ] Analytics digest works (`/analytics/digest` - same 200-or-401 note as saved views; web
-      `/analytics/digest` page itself returns 200). API-side confirmed (401, healthy); web-page
-      portion pending Vercel.
-- [ ] Catalog ops works (`/admin/catalog-coverage` returns 200; web `/admin/catalog-ops` page
-      returns 200). API-side confirmed (200); web-page portion pending Vercel.
+- [x] Analytics digest works (`/analytics/digest` - same 200-or-401 note as saved views; web
+      `/analytics/digest` page itself returns 200).
+- [x] Catalog ops works (`/admin/catalog-coverage` returns 200; web `/admin/catalog-ops` page
+      returns 200).
 - [ ] Source health works - manually check `/admin/price-source-health` in the web UI (no dedicated
       smoke-test check for this route; it's a frontend-only aggregation page, same as
-      `scripts/release_candidate_audit.sh` section 6b notes for `/admin/catalog-ops`). Pending
-      Vercel.
+      `scripts/release_candidate_audit.sh` section 6b notes for `/admin/catalog-ops`). Not yet
+      manually verified in a browser.
 - [ ] Command palette works - manually verify (Ctrl/Cmd+K opens, searches, navigates) on the
-      deployed staging URL; not automatable via curl. Pending Vercel.
-- [ ] Collection vault works (web `/collection/vault` returns 200 after following the sign-in
-      redirect, same as `/collection`/`/dashboard`). Pending Vercel.
+      deployed staging URL; not automatable via curl. Not yet manually verified in a browser.
+- [x] Collection vault works (web `/collection/vault` returns 200 after following the sign-in
+      redirect, same as `/collection`/`/dashboard`).
 
 ## After deploy
 
@@ -113,10 +115,14 @@ ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confir
       **not** pass `--demo-data` to `app.seed`, same rule as production per `docs/deployment.md`
       section 4).
 - [x] Run `scripts/staging_smoke_test.sh` (see "Smoke" above) - don't consider staging live until
-      it passes. Passed 2026-07-25 (API-only run; `STAGING_WEB_URL` not yet set).
+      it passes. Passed 2026-07-25 (API-only run; `STAGING_WEB_URL` not yet set). Re-ran and
+      passed again 2026-07-26 with `STAGING_WEB_URL` set - all API and web checks green.
 - [ ] Review Railway logs for all three services (`api`, `worker`, `beat`) for unexpected errors in
       the first few minutes after deploy. Done for `api`/`worker`; `beat` not yet created.
-- [ ] Review Vercel deployment logs (build log + function logs) for unexpected errors.
+- [x] Review Vercel deployment logs (build log + function logs) for unexpected errors. Build log
+      reviewed inline during the 2026-07-26 deploy - compiled successfully, no errors (one
+      pre-existing Turbopack NFT-tracing warning on `next.config.ts`, unrelated to this change and
+      non-blocking).
 - [ ] Only then consider enabling live Yuyu-Tei staging refresh - flip `SCRAPING_MODE=live` on
       `api`/`worker`/`beat` deliberately, one service at a time, and only after everything above is
       green. Never enable SNKRDUNK live scraping or attempt to bypass its site protections - SNKRDUNK
@@ -152,3 +158,74 @@ ADMIN_TOKEN=<staging-admin-token> bash scripts/staging_smoke_test.sh` and confir
 - `SCRAPING_MODE` remains `mock` on both `api` and `worker`. No live scraping was enabled.
   `CORS_ALLOWED_ORIGINS` deliberately left unset pending the Vercel staging URL. Vercel, frontend,
   Google OAuth, and final CORS configuration are unchanged and out of scope for this pass.
+
+## 2026-07-26 - Vercel staging frontend deployed; end-to-end smoke tests green
+
+- **Vercel project**: `optcg-price-tracker-staging` (already existed from an earlier session
+  in this branch's history - discovered, not recreated). Owner `insomniac79ac's projects`,
+  Root Directory `apps/web`, Framework Next.js (auto-detected), GitHub repo
+  `Insomniac79ac/optcg-price-tracker` connected. **Production Branch is still `main` in the
+  Vercel dashboard** - the Vercel REST API rejects programmatic changes to this field (`PATCH
+  /v9|v10/projects/:id` with a `link`/`productionBranch` body both return `400 Invalid request:
+  should NOT have additional property`), so this could not be set via CLI/API. Deploys in this
+  pass were pushed with `vercel deploy --prod` from a local `staging` branch checkout, which
+  targets the Production environment directly regardless of the git production-branch setting -
+  so the live deployment **is** built from `staging`, but automatic deploy-on-push from `staging`
+  is **not** configured yet. **Manual step remaining**: Vercel dashboard -> this project ->
+  Settings -> Git -> Production Branch -> change `main` to `staging`.
+- **Environment variables** (all Production scope, all type "Sensitive" where supported):
+  `NEXT_PUBLIC_API_URL`, `API_INTERNAL_URL` -> Railway staging API public URL; `AUTH_URL` ->
+  the stable Vercel staging domain; `NEXT_PUBLIC_APP_ENV` -> `staging` (present but not read by
+  any current code path - see `apps/web/scripts/check-env.js`, which only reads bare `APP_ENV`/
+  `NODE_ENV` for its own severity logic); `AUTH_SECRET` -> unchanged from the prior session (5-6h
+  old at the time of this pass, already configured, value never inspected); `API_JWT_SECRET` ->
+  re-copied byte-for-byte from Railway `optcg-price-tracker` (staging) via a direct
+  `railway variables --kv | ... | vercel env add --sensitive` pipe, so it is now guaranteed to
+  match rather than merely assumed to. `ADMIN_TOKEN` was **not** added to Vercel, per policy.
+- **Stable frontend URL**: `https://optcg-price-tracker-staging.vercel.app` (aliased). Immutable
+  deployment: `https://optcg-price-tracker-staging-phapv59yk-insomniac79acs-projects.vercel.app`
+  (`dpl_3RKmmvDAikwa8ETcs8DZSnpp4kh9`), built from `staging` at commit `6c2ba76`, `readyState:
+  READY`.
+- **Build/runtime verification**: production build succeeded (Next.js 16.2.10, Turbopack);
+  homepage and all sampled public/protected pages return the expected status (200 for public
+  pages, 307 redirect to a public page for unauthenticated protected routes - no crash, no data
+  leak); all sampled `_next/static` JS chunks return 200; the client bundle was scanned for the
+  Railway staging URL (present, exactly once, as expected for `NEXT_PUBLIC_API_URL`), for
+  `localhost` (only a hard-coded default inside Auth.js's own library code, always overridden by
+  `AUTH_URL`/request host at runtime - not a real staging URL), and for secret variable names
+  (none found).
+- **Railway staging CORS**: `CORS_ALLOWED_ORIGINS` set on the Railway `staging` `optcg-price-
+  tracker` service to exactly `https://optcg-price-tracker-staging.vercel.app` (no wildcard, no
+  `*.vercel.app`, no localhost). Service redeployed automatically on variable change; `/health`
+  confirmed `200`/`status=ok`/`app_env=staging`/`database_connected=true`/`redis_connected=true`
+  afterward. Verified via `curl` preflight: the exact Vercel origin gets
+  `access-control-allow-origin` echoed back; an unrelated origin (`https://evil.example.com`)
+  gets rejected (`400`, no permissive CORS header granted). The production-named Railway
+  environment was not touched.
+- **End-to-end smoke test**: `scripts/staging_smoke_test.sh` run with `STAGING_API_URL`,
+  `STAGING_WEB_URL`, and `ADMIN_TOKEN` (injected via a `railway variables --kv` pipe, never
+  displayed or written to a file) - **all checks passed**: API `/health`, `/version`,
+  `/analytics/digest` (401, healthy), `/saved-views` (401, healthy), `/admin/system-check`
+  (`warning`, not `critical`), `/admin/catalog-coverage` (200), and web `/`, `/dashboard`,
+  `/collection`, `/collection/vault`, `/analytics/digest`, `/admin/catalog-ops` (all 200).
+  Additional manual checks beyond the script: `/search` (catalogue page, 200), a nonexistent
+  route (`404`, no stack trace in the response body), and `/api/auth/session`/`/api/auth/
+  providers` (200, no secret values exposed). The card catalog is currently empty (no cards
+  seeded yet), which is expected and unrelated to this pass - see "Recommended next task" below.
+- **Google OAuth**: no real `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` exist anywhere - not in Vercel,
+  not in any local `.env*` file (only literal `change-me`/blank placeholders in the `.example`
+  files). `google` still appears in `/api/auth/providers` because the app registers
+  `GoogleProvider` unconditionally, but a real sign-in would fail (invalid client). Per the task's
+  safety constraints, no attempt was made to exercise the interactive consent flow. **Authenticated
+  flows (collection, wishlist, grading, saved views under a real session) remain untested.**
+  Manual steps required before this can be enabled, in Google Cloud Console:
+  - Authorized JavaScript origin: `https://optcg-price-tracker-staging.vercel.app`
+  - Authorized redirect URI: `https://optcg-price-tracker-staging.vercel.app/api/auth/callback/google`
+
+  Then set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` on Vercel (Production scope, sensitive) and
+  redeploy.
+- **Beat** remains blocked by the Railway free-plan resource provision limit (unchanged from
+  2026-07-25). `SCRAPING_MODE` remains `mock` on `api`/`worker`. The pre-existing lint (61 errors,
+  15 warnings) and Vitest (149/150, one pre-existing wishlist empty-state timing failure) issues
+  from local frontend validation are unchanged and remain non-blocking - out of scope for this
+  pass.
