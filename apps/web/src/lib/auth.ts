@@ -15,6 +15,16 @@ function apiJwtSecretKey(): Uint8Array {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   session: { strategy: "jwt" },
+  // Vercel sets the incoming request's Host header safely (it can't be
+  // spoofed by the client - Vercel's edge network overwrites it), so
+  // trusting it here is the documented-safe case, not a host-header-
+  // injection risk. Without this, proxy.ts's `auth()` wrapper throws
+  // UntrustedHost internally (see https://errors.authjs.dev#untrustedhost)
+  // and - critically - fails *open*: the protected route it's wrapping
+  // renders normally instead of redirecting to /sign-in. Reproduced
+  // locally via `next start` (which lacks Vercel's auto-detection) while
+  // investigating why proxy.ts wasn't gating /collection etc. in staging.
+  trustHost: true,
   callbacks: {
     async jwt({ token, profile }) {
       // `profile` is only present on the initial sign-in request - carry the

@@ -7,6 +7,15 @@ import { buildSignInRedirect } from "@/lib/proxyGuard";
 // is now deprecated - https://nextjs.org/docs/app/api-reference/file-conventions/proxy).
 // This is that migration: same request-guard behaviour, new file/export name.
 //
+// Lives at src/proxy.ts, not apps/web/proxy.ts - Next.js's docs say the file
+// belongs "at the same level as pages or app", and this project's app
+// directory is src/app, not app. Placing it at the package root instead
+// compiled without error and even showed up as "ƒ Proxy (Middleware)" in
+// the build summary, but silently never ran at request time - confirmed via
+// a local `next build && next start` repro (a hand-rolled proxy with no
+// auth logic, just a response header, never appeared on any response) while
+// diagnosing why staging's /collection etc. weren't redirecting.
+//
 // /collection, /grading, /wishlist, /dashboard, /activity, and /analytics/*
 // require a signed-in collector - they expose the caller's own
 // portfolio/wishlist/grading/analytics data. Public catalogue and Market
