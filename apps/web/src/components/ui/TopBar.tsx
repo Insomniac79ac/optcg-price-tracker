@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
 export function TopBar({
   onToggleMobileNav,
@@ -28,7 +29,7 @@ export function TopBar({
             keeps the topbar from crowding the palette trigger + auth control
             at 360px. */}
         <Link
-          href="/dashboard"
+          href="/"
           className="shrink-0 text-sm font-semibold tracking-tight text-text-primary"
         >
           <span className="text-accent-gold">OPTCG</span>
@@ -80,21 +81,35 @@ export function TopBar({
 
 function AuthControl() {
   const { data: session, status } = useSession();
+  // Deliberately pathname-only (no query string) - useSearchParams() would
+  // require every page that renders <AppHeader /> (nearly all of them) to
+  // add its own Suspense boundary to stay statically-optimizable, which is
+  // out of scope for this task. The redirect flow that actually needs full
+  // pathname+query preservation (proxy.ts -> /sign-in for a protected
+  // route) already has it - see src/lib/proxyGuard.ts.
+  const pathname = usePathname() ?? "/";
+  const currentPath = pathname;
 
   if (status === "loading") {
     return <span className="text-xs text-text-faint">…</span>;
   }
 
   if (!session) {
+    // Routes to /sign-in rather than calling next-auth's signIn() directly -
+    // that page is the single place that checks whether Google OAuth is
+    // actually configured (it isn't, in this staging build) before showing
+    // a working sign-in action, so this button never promises an auth flow
+    // that doesn't work yet. callbackUrl is validated there too (see
+    // src/lib/callbackUrl.ts) before ever being used.
+    const signInHref = `/sign-in?callbackUrl=${encodeURIComponent(currentPath)}`;
     return (
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+      <Link
+        href={signInHref}
         className="rounded-control bg-accent-gold px-2.5 py-1 text-xs font-medium text-black/80 hover:bg-accent-gold-hover"
       >
         <span className="sm:hidden">Sign in</span>
-        <span className="hidden sm:inline">Sign in with Google</span>
-      </button>
+        <span className="hidden sm:inline">Sign in</span>
+      </Link>
     );
   }
 
@@ -108,7 +123,7 @@ function AuthControl() {
       </span>
       <button
         type="button"
-        onClick={() => signOut({ callbackUrl: "/dashboard" })}
+        onClick={() => signOut({ callbackUrl: "/" })}
         title={session.user?.name || session.user?.email || undefined}
         className="rounded-control border border-border-default px-2 py-1 font-medium text-text-secondary hover:text-text-primary"
       >

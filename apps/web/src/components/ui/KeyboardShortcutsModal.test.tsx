@@ -12,8 +12,8 @@ describe("KeyboardShortcutsModal", () => {
   it("lists the goto sequences and general shortcuts when open", () => {
     render(<KeyboardShortcutsModal open onClose={vi.fn()} />);
     expect(screen.getByText("Keyboard shortcuts")).toBeInTheDocument();
-    expect(screen.getByText("Go to Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("g d")).toBeInTheDocument();
+    expect(screen.getByText("Go to My Collection")).toBeInTheDocument();
+    expect(screen.getByText("g c")).toBeInTheDocument();
     expect(screen.getByText("Open the command palette")).toBeInTheDocument();
   });
 

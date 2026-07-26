@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useMemo, useState } from "react";
 
 interface NavItem {
   href: string;
@@ -14,56 +15,42 @@ interface NavGroup {
   key: string;
   label: string;
   items: NavItem[];
-  /** Collapsed groups are for existing routes the design brief didn't call
-   * out by name (see docs/interface_design_system.md "nav mapping" note) -
-   * kept reachable, just deprioritized visually. */
   defaultCollapsed?: boolean;
 }
 
-// Collector section - the brief's exact list, in order. Analytics routes
-// (analytics/collection, analytics/wishlist, analytics/grading, and the
-// top-level analytics/* pages) live in their own ANALYTICS_ITEMS group below
-// rather than nested here, so the mobile nav drawer can clearly separate
-// Collector / Analytics / Admin per the design brief.
+// Public tier - visible to every visitor, signed in or not (collector-first
+// redesign audit, Phase 3). /cards and /sets don't exist yet, so "Cards"
+// temporarily points at /search and there is no "Sets" entry - see
+// collector-blueprint.pdf.
+const PUBLIC_ITEMS: NavItem[] = [
+  { href: "/", label: "Discover" },
+  { href: "/search", label: "Cards" },
+  { href: "/market/movers", label: "Market Index" },
+];
+
+// Collector tier - only shown once a session exists. Trading/internal pages
+// (Opportunities, Signals, Signal Events, Report, Buy/Sell Decisions,
+// Portfolio Risk, and the rest of the old Analytics group) are deliberately
+// left out of navigation here, pending a later product decision on where
+// they belong - their routes still exist and are still reachable directly,
+// just not linked from here or from the command palette (see
+// commandRegistry.ts and CommandPalette.tsx).
 const COLLECTOR_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/search", label: "Cards / Search" },
   {
     href: "/collection",
-    label: "Collection",
+    label: "My Collection",
     children: [{ href: "/collection/vault", label: "Vault View" }],
   },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/grading", label: "Grading" },
   { href: "/activity", label: "Activity" },
-  {
-    href: "/market/report",
-    label: "Market",
-    children: [
-      { href: "/market/report", label: "Report" },
-      { href: "/market/opportunities", label: "Opportunities" },
-      { href: "/market/signals", label: "Signals" },
-      { href: "/market/signal-events", label: "Signal events" },
-      { href: "/market/movers", label: "Movers" },
-    ],
-  },
 ];
 
-// Analytics section - its own group (not nested under Collector) so the
-// mobile drawer separates Collector / Analytics / Admin clearly.
-const ANALYTICS_ITEMS: NavItem[] = [
-  { href: "/analytics/digest", label: "Analytics Digest" },
-  { href: "/analytics/collection", label: "Collection Analytics" },
-  { href: "/analytics/wishlist", label: "Wishlist Analytics" },
-  { href: "/analytics/grading", label: "Grading Analytics" },
-  { href: "/analytics/buy-decisions", label: "Buy Decisions" },
-  { href: "/analytics/sell-decisions", label: "Sell Decisions" },
-  { href: "/analytics/portfolio-risk", label: "Portfolio Risk" },
-];
-
-// Admin section - the brief's exact list. "Source Mappings" is omitted: no
-// route exists for it separately from source-mapping-quality (see plan /
-// docs note - "do not invent route links if they do not exist").
+// Kept as data (not deleted, per the audit's "do not delete admin pages"
+// instruction) for the dedicated admin-login task to reintroduce once a real
+// `session.user.role === "admin"` exists. Deliberately NOT referenced by
+// `buildGroups` below - no session concept for "admin" exists yet, so these
+// two groups must render for nobody, full stop, until that task lands.
 const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/catalog-ops", label: "Catalog Ops" },
   { href: "/admin/cards", label: "Cards" },
@@ -80,9 +67,6 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/performance", label: "Performance" },
 ];
-
-// Existing admin routes the brief didn't name - kept reachable in a
-// collapsed "More" group instead of being removed from navigation.
 const ADMIN_MORE_ITEMS: NavItem[] = [
   { href: "/admin/alerts", label: "Alerts" },
   { href: "/admin/cache", label: "Cache" },
@@ -93,13 +77,18 @@ const ADMIN_MORE_ITEMS: NavItem[] = [
   { href: "/admin/refresh-runs", label: "Refresh Runs" },
   { href: "/admin/release-status", label: "Release Status" },
 ];
+// Referenced only to satisfy lint's no-unused-vars until the admin-login
+// task wires these back in behind a real role check.
+void ADMIN_ITEMS;
+void ADMIN_MORE_ITEMS;
 
-const GROUPS: NavGroup[] = [
-  { key: "collector", label: "Collector", items: COLLECTOR_ITEMS },
-  { key: "analytics", label: "Analytics", items: ANALYTICS_ITEMS },
-  { key: "admin", label: "Admin", items: ADMIN_ITEMS },
-  { key: "admin-more", label: "Admin · More", items: ADMIN_MORE_ITEMS, defaultCollapsed: true },
-];
+function buildGroups(isAuthenticated: boolean): NavGroup[] {
+  const groups: NavGroup[] = [{ key: "public", label: "Browse", items: PUBLIC_ITEMS }];
+  if (isAuthenticated) {
+    groups.push({ key: "collector", label: "Collector", items: COLLECTOR_ITEMS });
+  }
+  return groups;
+}
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -196,9 +185,13 @@ function GroupBlock({ group, pathname }: { group: NavGroup; pathname: string }) 
 
 export function SidebarNav({ className = "" }: { className?: string }) {
   const pathname = usePathname() ?? "";
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const groups = useMemo(() => buildGroups(isAuthenticated), [isAuthenticated]);
+
   return (
     <div className={`overflow-y-auto py-3 ${className}`}>
-      {GROUPS.map((group, idx) => (
+      {groups.map((group, idx) => (
         <div key={group.key}>
           {idx > 0 && <div className="mx-4 my-1 border-t border-border-muted" />}
           <GroupBlock group={group} pathname={pathname} />

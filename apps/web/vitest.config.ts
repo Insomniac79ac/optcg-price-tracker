@@ -11,8 +11,10 @@ export default defineConfig({
     globals: true,
     // scripts/*.test.js is a separate suite that runs on Node's built-in
     // test runner (require("node:test")), not Vitest - only src/**/*.test.*
-    // (React/Vitest) belongs here.
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // (React/Vitest) belongs here. proxy.test.ts is the one exception: it
+    // tests apps/web/proxy.ts, which Next.js requires to live at the app
+    // root (not under src/), so its test is co-located there too.
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "proxy.test.ts"],
   },
   resolve: {
     alias: {

@@ -9,16 +9,16 @@ import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
 
 // "g then <key>" goto-shortcut targets (design brief - "Workflow
-// shortcuts"). Kept in sync with KeyboardShortcutsModal's reference list.
+// shortcuts"). Kept in sync with KeyboardShortcutsModal's reference list and
+// with SidebarNav/commandRegistry's approved route set - shortcuts to
+// Dashboard, Buy/Sell Decisions, Portfolio Risk and Admin Catalog Ops were
+// removed here for the same reason those were removed from navigation and
+// the command palette (collector-blueprint.pdf Phase 3/4); their routes
+// still exist, just no longer surfaced from this shell.
 const GOTO_ROUTES: Record<string, string> = {
-  d: "/dashboard",
   c: "/collection",
   v: "/collection/vault",
   w: "/wishlist",
-  b: "/analytics/buy-decisions",
-  s: "/analytics/sell-decisions",
-  r: "/analytics/portfolio-risk",
-  a: "/admin/catalog-ops",
 };
 
 const GOTO_RESET_MS = 600;

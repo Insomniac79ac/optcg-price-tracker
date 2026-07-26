@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSavedViews, fetchSearch, type SavedView, type SearchResult } from "@/lib/api";
-import { COMMAND_REGISTRY, searchCommands, type Command } from "@/lib/commandRegistry";
+import { COMMAND_REGISTRY, searchCommands, visibleCommands, type Command } from "@/lib/commandRegistry";
 import { getRecentWorkflows, recordRecentWorkflow, type RecentWorkflowEntry } from "@/lib/recentWorkflows";
 
 import { Badge } from "./Badge";
@@ -23,6 +24,12 @@ type PaletteItem =
  * component can't safely trigger a specific page's dry-run handlers. */
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  // No admin session concept exists yet (see the dedicated admin-login
+  // task in collector-blueprint.pdf Phase 10) - every visitor is non-admin
+  // until that lands a real session.user.role value.
+  const isAdmin = false;
   const [query, setQuery] = useState("");
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [recent, setRecent] = useState<RecentWorkflowEntry[]>([]);
@@ -72,7 +79,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     return () => window.clearTimeout(debounceTimer);
   }, [open, query]);
 
-  const filteredCommands = useMemo(() => searchCommands(query), [query]);
+  const filteredCommands = useMemo(
+    () => searchCommands(query, { isAuthenticated, isAdmin }),
+    [query, isAuthenticated, isAdmin],
+  );
 
   const filteredSavedViews = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -214,7 +224,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
         <div className="flex items-center justify-between border-t border-border-default px-3 py-2 text-[11px] text-text-faint">
           <span>↑↓ navigate · Enter select · Esc close</span>
-          <span className="mono">{COMMAND_REGISTRY.length} commands</span>
+          <span className="mono">
+            {visibleCommands(COMMAND_REGISTRY, { isAuthenticated, isAdmin }).length} commands
+          </span>
         </div>
       </div>
 

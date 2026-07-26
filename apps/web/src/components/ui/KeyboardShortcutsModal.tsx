@@ -8,14 +8,9 @@ const GENERAL_SHORTCUTS: { keys: string; description: string }[] = [
 ];
 
 const GOTO_SHORTCUTS: { keys: string; description: string }[] = [
-  { keys: "g d", description: "Go to Dashboard" },
-  { keys: "g c", description: "Go to Collection" },
+  { keys: "g c", description: "Go to My Collection" },
   { keys: "g v", description: "Go to Collection Vault" },
   { keys: "g w", description: "Go to Wishlist" },
-  { keys: "g b", description: "Go to Buy Decisions" },
-  { keys: "g s", description: "Go to Sell Decisions" },
-  { keys: "g r", description: "Go to Portfolio Risk" },
-  { keys: "g a", description: "Go to Admin Catalog Ops" },
 ];
 
 /** Plain reference modal for keyboard shortcuts - opened from the palette

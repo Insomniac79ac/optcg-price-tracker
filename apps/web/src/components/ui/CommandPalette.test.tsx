@@ -7,6 +7,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
 }));
 
+const useSessionMock = vi.fn();
+vi.mock("next-auth/react", () => ({
+  useSession: () => useSessionMock(),
+}));
+
 const fetchSavedViews = vi.fn();
 const fetchSearch = vi.fn();
 
@@ -41,6 +46,7 @@ describe("CommandPalette", () => {
     fetchSavedViews.mockReset().mockResolvedValue(EMPTY_SAVED_VIEWS);
     fetchSearch.mockReset().mockResolvedValue(EMPTY_SEARCH);
     window.localStorage.clear();
+    useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
   });
 
   it("renders nothing when closed", () => {
@@ -48,10 +54,10 @@ describe("CommandPalette", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("renders static commands when open, grouped under Commands", async () => {
+  it("renders static public commands when open, grouped under Commands", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Commands")).toBeInTheDocument();
   });
 
@@ -60,11 +66,11 @@ describe("CommandPalette", () => {
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
     fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
-      target: { value: "wishlist" },
+      target: { value: "market index" },
     });
 
-    await waitFor(() => expect(screen.getByText("Wishlist")).toBeInTheDocument());
-    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Market Index")).toBeInTheDocument());
+    expect(screen.queryByText("Discover")).not.toBeInTheDocument();
   });
 
   it("navigates and closes when a command is selected", async () => {
@@ -72,9 +78,9 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={onClose} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByText("Dashboard"));
+    fireEvent.click(screen.getByText("Discover"));
 
-    expect(push).toHaveBeenCalledWith("/dashboard");
+    expect(push).toHaveBeenCalledWith("/");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -87,7 +93,7 @@ describe("CommandPalette", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("shows the admin badge for admin commands", async () => {
+  it("does not render admin commands for a signed-out visitor", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
@@ -95,8 +101,54 @@ describe("CommandPalette", () => {
       target: { value: "Catalog Ops" },
     });
 
-    await waitFor(() => expect(screen.getByText("Catalog Ops")).toBeInTheDocument());
-    expect(screen.getByText("ADMIN")).toBeInTheDocument();
+    // No results at all - the admin command is filtered out before the
+    // text search even runs against it, not merely hidden behind a badge.
+    await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+    expect(screen.queryByText("Catalog Ops")).not.toBeInTheDocument();
+    expect(screen.queryByText("ADMIN")).not.toBeInTheDocument();
+  });
+
+  it("does not render admin commands even for an authenticated collector session", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" } },
+      status: "authenticated",
+    });
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+      target: { value: "Catalog Ops" },
+    });
+
+    await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+    expect(screen.queryByText("Catalog Ops")).not.toBeInTheDocument();
+  });
+
+  it("hides collector-scoped commands when signed out", async () => {
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+      target: { value: "wishlist" },
+    });
+
+    await waitFor(() => expect(screen.getByText(/no matches/i)).toBeInTheDocument());
+    expect(screen.queryByText("Wishlist")).not.toBeInTheDocument();
+  });
+
+  it("shows collector-scoped commands once a session exists", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" } },
+      status: "authenticated",
+    });
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+      target: { value: "wishlist" },
+    });
+
+    await waitFor(() => expect(screen.getByText("Wishlist")).toBeInTheDocument());
   });
 
   it("renders saved views under a Saved Views group", async () => {

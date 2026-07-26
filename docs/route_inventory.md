@@ -12,8 +12,12 @@ AppHeader.tsx`) or from another page's own links (e.g. `/admin/release-status` c
 ## Public/user routes (frontend pages)
 
 All of these are server-rendered Next.js pages under `apps/web/src/app/`. "Auth required" is
-enforced by `apps/web/middleware.ts` (redirects an anonymous visitor to `/market/movers`) - it does
-**not** gate `/search`, `/market/*`, `/activity`, or `/cards/[id]`, which stay publicly browsable.
+enforced by `apps/web/proxy.ts` (redirects an anonymous visitor to `/sign-in`, preserving the
+original path+query as `callbackUrl`) - it does **not** gate `/`, `/search`, `/market/*`, or
+`/cards/[id]`, which stay publicly browsable. This table predates the 2026-07-26 frontend
+containment pass - see "Update (2026-07-26)" below for what changed (`/activity` is now gated,
+`/` no longer redirects to `/dashboard`, and most rows' "Nav-linked" column is stale: the sidebar
+only links a reduced route set now).
 
 | Route | Purpose | Auth required | Expected status (healthy) | Nav-linked |
 |---|---|---|---|---|
@@ -152,3 +156,47 @@ and 200 with the right one. Every Next.js proxy route under `apps/web/src/app/ap
 `AUTH_GOOGLE_SECRET`/`DATABASE_URL` outside the two allowed `.env*.example` files, and for any
 secret-shaped `NEXT_PUBLIC_*` variable name anywhere in the tree. `.gitignore` now also excludes
 `data/backups/`, `*.sql.gz`, and `opcg_backup_*.json`.
+
+## Update (2026-07-26) - collector-first redesign, Phase 1: frontend containment
+
+This audit's findings (anonymous visitors redirected to `/market/movers`, `/` redirecting to
+`/dashboard`, `/activity` ungated, static nav arrays with no role filtering, `/admin/*` gated only
+client-side by `AdminAuthGate` after the page shell had already rendered) were the basis for a
+follow-up implementation task, `collector-blueprint.pdf`. That task changed:
+
+- **`apps/web/middleware.ts` -> `apps/web/proxy.ts`** - Next.js 16 renamed the convention; same
+  request-guard behaviour, new file/export name. The static `config.matcher` (Next.js requires
+  this to be a literal array, not an imported constant) lives in `proxy.ts` and must stay
+  identical to `src/lib/proxyGuard.ts`'s `PROTECTED_MATCHER`, which `proxy.test.ts` enforces.
+- **Protected matcher** now covers `/collection`, `/grading`, `/wishlist`, `/dashboard`,
+  `/activity` (previously ungated - this closed the audit's finding), and `/analytics/*`. `/admin`
+  is deliberately not in the matcher - see below.
+- **Signed-out redirect target is `/sign-in`, never `/market/movers`** - a new neutral page that
+  preserves the full `callbackUrl` (validated same-origin-only by `src/lib/callbackUrl.ts`, which
+  rejects absolute/protocol-relative targets), explains that collector accounts require
+  Google sign-in, and only shows the sign-in action when `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are
+  actually configured (they still aren't, in this staging build - Google OAuth remains
+  unavailable, unchanged from this audit's finding).
+- **`/` is now a real public Discover page** (`apps/web/src/app/page.tsx`), not a redirect to
+  `/dashboard`. Links to `/search` (Cards) and `/market/movers` (Market Index); explains that
+  collection/wishlist/grading need an account.
+- **Public nav reduced to Discover (`/`), Cards (`/search`), Market Index (`/market/movers`)**;
+  a collector session additionally sees My Collection, Wishlist, Grading, Activity. The old
+  Opportunities/Signals/Signal Events/Report/Buy Decisions/Sell Decisions/Portfolio Risk/Analytics
+  Digest links and the Admin/Admin-More dropdowns are gone from `SidebarNav.tsx` and
+  `commandRegistry.ts` (enforced via a `requires_admin`/`scope` check in
+  `visibleCommands()`, not just advisory metadata) - **routes still exist and are still directly
+  reachable**, per this audit's own "no broken links" finding; they're just not linked from nav or
+  the command palette pending a later product decision. This makes most "Nav-linked" values in the
+  tables above stale for the current build.
+- **`/admin/*` now has a shared server-side boundary**: `apps/web/src/app/admin/layout.tsx` calls
+  `notFound()` unconditionally (no `role` field exists yet on the session/JWT - see
+  `src/lib/auth.ts`), before any admin page shell, chrome, or nav renders. This replaces
+  `AdminAuthGate` as the *first* gate - `AdminAuthGate` still exists and still gates each page's
+  own data fetch as defense in depth, but a signed-out or non-admin visitor now gets a 404 before
+  reaching it. Every Next.js `/api/admin/**` route handler was re-verified as still doing what this
+  audit already found: forwarding the caller-supplied `X-Admin-Token` header to the backend rather
+  than holding a secret itself, so the backend's `require_admin_token` dependency (unchanged) is
+  still the real enforcement point - this task did not touch it.
+- Not done in this task (tracked as the next one): a real admin login. Until then, admin access is
+  direct backend tooling (`curl -H "X-Admin-Token: ..."`, per `docs/operations.md`) only.

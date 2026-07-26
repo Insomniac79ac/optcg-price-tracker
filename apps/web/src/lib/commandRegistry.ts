@@ -1,20 +1,28 @@
-// Static command list for the global Cmd/Ctrl+K palette (see
-// docs/interface_design_system.md "Command palette"). Every `route_path`
-// here has been confirmed against the actual App Router tree / SidebarNav -
-// routes the design brief named that don't exist (e.g. a standalone
-// "/admin/source-mappings") are omitted rather than linked as dead ends.
+// Static command list for the global Cmd/Ctrl+K palette. Every `route_path`
+// here has been confirmed against the actual App Router tree / SidebarNav.
+//
+// Visibility is enforced by `visibleCommands` below, called from
+// CommandPalette.tsx with the caller's actual session state - `scope` and
+// `requires_admin` are read there, not just advisory metadata (see
+// collector-blueprint.pdf Part 9's audit finding that this used to be
+// advisory-only). This mirrors SidebarNav.tsx's own public/collector split
+// so the two surfaces never drift apart:
+//   - scope "public": always visible.
+//   - scope "collector": visible only once a session exists.
+//   - requires_admin: never visible today - no admin session concept exists
+//     yet (see the dedicated admin-login task). Left enforced-but-always-
+//     false rather than deleted so that task only has to change the check,
+//     not rebuild it.
+//
+// Trading/internal commands (market opportunities/signals/signal-events,
+// the old Analytics group, Dashboard) have been removed from this registry
+// entirely, matching their removal from SidebarNav - their routes still
+// exist, they're just not linked from either navigation surface pending a
+// later product decision (collector-blueprint.pdf Phase 3).
 
-export type CommandGroup =
-  | "Navigate"
-  | "Cards"
-  | "Collection"
-  | "Wishlist"
-  | "Grading"
-  | "Market"
-  | "Analytics"
-  | "Admin";
+export type CommandGroup = "Navigate" | "Cards" | "Collection" | "Wishlist" | "Grading" | "Market" | "Admin";
 
-export type CommandScope = "collector" | "admin" | "analytics" | "market";
+export type CommandScope = "public" | "collector" | "admin";
 
 export interface Command {
   id: string;
@@ -37,28 +45,39 @@ function cmd(partial: Omit<Command, "scope" | "icon_key"> & { scope: CommandScop
 }
 
 export const COMMAND_REGISTRY: Command[] = [
-  // --- Navigate --------------------------------------------------------
+  // --- Public ------------------------------------------------------------
   cmd({
-    id: "nav-dashboard",
-    label: "Dashboard",
-    description: "Portfolio overview, pinned views, vault highlights",
+    id: "nav-discover",
+    label: "Discover",
+    description: "Public landing page",
     group: "Navigate",
-    route_path: "/dashboard",
-    keywords: ["home", "overview"],
-    scope: "collector",
+    route_path: "/",
+    keywords: ["home", "discover"],
+    scope: "public",
   }),
   cmd({
     id: "nav-search",
-    label: "Cards / Search",
-    description: "Search cards, collection, signals and more",
-    group: "Navigate",
+    label: "Cards",
+    description: "Browse and search the card catalogue",
+    group: "Cards",
     route_path: "/search",
-    keywords: ["find", "lookup"],
-    scope: "collector",
+    keywords: ["find", "lookup", "browse", "catalogue"],
+    scope: "public",
   }),
   cmd({
+    id: "nav-market-index",
+    label: "Market Index",
+    description: "Market Index movers across Yuyu-Tei and SNKRDUNK",
+    group: "Market",
+    route_path: "/market/movers",
+    keywords: ["market", "index", "price"],
+    scope: "public",
+  }),
+
+  // --- Collector -----------------------------------------------------------
+  cmd({
     id: "nav-collection-table",
-    label: "Collection (Table)",
+    label: "My Collection (Table)",
     description: "Owned cards in table view",
     group: "Collection",
     route_path: "/collection",
@@ -67,7 +86,7 @@ export const COMMAND_REGISTRY: Command[] = [
   }),
   cmd({
     id: "nav-collection-vault",
-    label: "Collection (Vault)",
+    label: "My Collection (Vault)",
     description: "Owned cards in card-grid vault view",
     group: "Collection",
     route_path: "/collection/vault",
@@ -101,100 +120,11 @@ export const COMMAND_REGISTRY: Command[] = [
     keywords: ["history", "log"],
     scope: "collector",
   }),
-  cmd({
-    id: "nav-market-opportunities",
-    label: "Market Opportunities",
-    description: "Buy/sell opportunity scoring",
-    group: "Market",
-    route_path: "/market/opportunities",
-    keywords: ["deals", "score"],
-    scope: "market",
-  }),
-  cmd({
-    id: "nav-market-signals",
-    label: "Market Signals",
-    description: "Price movement signals",
-    group: "Market",
-    route_path: "/market/signals",
-    keywords: ["signal", "alert"],
-    scope: "market",
-  }),
-  cmd({
-    id: "nav-market-signal-events",
-    label: "Market Signal Events",
-    description: "Signal event history",
-    group: "Market",
-    route_path: "/market/signal-events",
-    keywords: ["signal", "events"],
-    scope: "market",
-  }),
-
-  // --- Analytics ---------------------------------------------------------
-  cmd({
-    id: "analytics-digest",
-    label: "Analytics Digest",
-    description: "Rolled-up analytics summary",
-    group: "Analytics",
-    route_path: "/analytics/digest",
-    keywords: ["summary", "digest"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-collection",
-    label: "Collection Analytics",
-    description: "Value and composition of your collection",
-    group: "Analytics",
-    route_path: "/analytics/collection",
-    keywords: ["value", "composition"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-wishlist",
-    label: "Wishlist Analytics",
-    description: "Wishlist cost and priority breakdown",
-    group: "Analytics",
-    route_path: "/analytics/wishlist",
-    keywords: ["wishlist", "cost"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-buy-decisions",
-    label: "Buy Decisions",
-    description: "Recommended buy candidates",
-    group: "Analytics",
-    route_path: "/analytics/buy-decisions",
-    keywords: ["buy", "recommend"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-sell-decisions",
-    label: "Sell Decisions",
-    description: "Recommended sell candidates",
-    group: "Analytics",
-    route_path: "/analytics/sell-decisions",
-    keywords: ["sell", "recommend"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-grading-roi",
-    label: "Grading ROI",
-    description: "Grading analytics and return on investment",
-    group: "Analytics",
-    route_path: "/analytics/grading",
-    keywords: ["grading", "roi"],
-    scope: "analytics",
-  }),
-  cmd({
-    id: "analytics-portfolio-risk",
-    label: "Portfolio Risk",
-    description: "Concentration and risk exposure",
-    group: "Analytics",
-    route_path: "/analytics/portfolio-risk",
-    keywords: ["risk", "exposure"],
-    scope: "analytics",
-  }),
 
   // --- Admin ---------------------------------------------------------
+  // Kept as data (not deleted) for the dedicated admin-login task - see the
+  // module comment above. `requires_admin: true` is enforced in
+  // CommandPalette.tsx and today evaluates to "hidden for everyone."
   cmd({
     id: "admin-catalog-ops",
     label: "Catalog Ops",
@@ -384,12 +314,30 @@ export const COMMAND_REGISTRY: Command[] = [
   }),
 ];
 
+export interface CommandVisibilityContext {
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}
+
+/** The actual enforcement point for `scope`/`requires_admin` - both
+ * CommandPalette.tsx and searchCommands() below must go through this rather
+ * than reading the registry directly, or the two could drift. */
+export function visibleCommands(commands: Command[], ctx: CommandVisibilityContext): Command[] {
+  return commands.filter((c) => {
+    if (c.requires_admin && !ctx.isAdmin) return false;
+    if (c.scope === "collector" && !ctx.isAuthenticated) return false;
+    if (c.scope === "admin" && !ctx.isAdmin) return false;
+    return true;
+  });
+}
+
 const NORMALIZE = (s: string) => s.toLowerCase().trim();
 
-export function searchCommands(query: string): Command[] {
+export function searchCommands(query: string, ctx: CommandVisibilityContext): Command[] {
   const q = NORMALIZE(query);
-  if (!q) return COMMAND_REGISTRY;
-  return COMMAND_REGISTRY.filter((c) => {
+  const visible = visibleCommands(COMMAND_REGISTRY, ctx);
+  if (!q) return visible;
+  return visible.filter((c) => {
     const haystack = `${c.label} ${c.description} ${c.keywords.join(" ")}`.toLowerCase();
     return haystack.includes(q);
   });
