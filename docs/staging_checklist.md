@@ -381,3 +381,40 @@ password or hash was ever pasted into or displayed by an AI agent session.
       only the operator can create - deferred at the operator's own choice rather than asked to
       paste a password into this session. Recommended as a manual follow-up: sign in at
       `/admin/login` in a real browser and spot-check the items above.
+
+## 2026-07-27 - Market Index + image-led /cards catalogue deployed and verified live
+
+Two commits pushed to `staging`: `fbec067` (Market Index calculation + `/cards/catalogue` API,
+backend) and `429b642` (image-led `/cards` browse page, card-detail Market Index panel, and
+redirecting every "browse cards" entry point - dashboard, sign-in, sidebar nav, command palette,
+submitted `/search?q=...` - to `/cards`).
+
+- [x] Pre-push validation: full backend suite 1309/1309 passed, frontend 244/244 passed, `tsc
+      --noEmit` clean, `next build` clean (`/cards` and `/cards/[id]` both compiled), `git diff
+      --check` clean, no `.env*`/build output/throwaway infra staged.
+- [x] Pushed to `origin/staging`; local `HEAD` confirmed equal to `origin/staging` at `429b642`.
+- [x] Railway (`optcg-price-tracker`, environment `staging`) auto-deployed commit `429b642`
+      (confirmed via `railway deployment list --json` `meta.commitHash`) - status `SUCCESS`.
+      `/health` -> `status=ok`, `app_env=staging`, `database_connected=true`,
+      `redis_connected=true`. `GET /cards/catalogue` live and schema-valid with real seeded data.
+- [x] Vercel (`optcg-price-tracker-staging`) auto-deployed the same commit (build log confirmed
+      `Cloning ... Branch: staging, Commit: 429b642`) - `readyState: READY`, stable alias
+      `https://optcg-price-tracker-staging.vercel.app` repointed to it automatically; no manual
+      `vercel --prod` deploy was needed this time.
+- [x] Live verification against the stable URL (not local dev): `/cards` renders the image grid
+      (real card art where `image_url` is set, a clean rarity/card-code placeholder tile where
+      it's null) with Market Index values and coverage badges (`2 sources`, `limited coverage`,
+      `no sources`/"Index unavailable"); `sort=index_desc` correctly places every no-index card
+      last; a card tile opens `/cards/{id}`, which shows the Market Index panel plus individual
+      source prices; submitted `/search?q=luffy` client-redirects to `/cards?q=luffy`; Discover
+      links to `/cards`; `/admin` still redirects signed-out visitors to `/admin/login`.
+- [x] Console-error sweep on the live site: the only errors seen are expected 401s from
+      collection/wishlist/notes/activity calls made while signed out (pre-existing behavior,
+      unrelated to this diff) and Next.js RSC prefetch `net::ERR_ABORTED` cancellations from rapid
+      test-script navigation (confirmed harmless by isolating a single `fetch("/api/auth/session")`
+      call, which returned a clean `200`). No errors originating from the new catalogue/Market
+      Index code.
+- [x] Confirmed `AUTH_SECRET` (and the rest of the admin-login env vars from the entry above) are
+      still present on the real Vercel Production environment before deploying - the NextAuth
+      "Failed to fetch"-style error seen earlier in a local throwaway dev container was that
+      container's missing secret, not a staging config gap.
