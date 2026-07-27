@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -18,7 +19,6 @@ import {
   fetchAnalyticsDigestReport,
   fetchAnalyticsDigestReports,
   fetchLatestAnalyticsDigest,
-  getAdminToken,
   triggerGenerateAnalyticsDigest,
   type AnalyticsDigest,
   type AnalyticsDigestPriorityItem,
@@ -59,7 +59,8 @@ export default function AnalyticsDigestPage() {
   const [history, setHistory] = useState<AnalyticsDigestReportListResponse | null>(null);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("loading");
 
-  const [hasAdminToken, setHasAdminToken] = useState(false);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
@@ -98,10 +99,6 @@ export default function AnalyticsDigestPage() {
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
-
-  useEffect(() => {
-    setHasAdminToken(!!getAdminToken());
-  }, []);
 
   function handleGenerate() {
     setGenerating(true);
@@ -205,7 +202,7 @@ export default function AnalyticsDigestPage() {
             </div>
           </div>
 
-          {hasAdminToken && (
+          {isAdmin && (
             <ActionButton variant="primary" onClick={handleGenerate} disabled={generating}>
               {generating ? "Generating…" : "Generate new digest"}
             </ActionButton>

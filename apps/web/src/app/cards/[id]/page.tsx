@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -26,7 +27,6 @@ import { StockStatusBadge } from "@/components/StockStatusBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
   WISHLIST_PRIORITIES,
-  getAdminToken,
   type Card,
   type CollectionItem,
   type CollectionItemInput,
@@ -247,21 +247,18 @@ export default function CardDetailPage() {
   }, [cardId]);
 
   // Admin-only source mappings mini panel - only fetched (and only ever
-  // shown) when an admin token is already present, same gate as every
-  // other admin-only UI element in this app.
-  const [hasAdminToken, setHasAdminToken] = useState(false);
+  // shown) for a role="admin" session, same gate as every other admin-only
+  // UI element in this app (see src/lib/adminSession.ts).
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [adminMappings, setAdminMappings] = useState<SourceCardMapping[]>([]);
 
   useEffect(() => {
-    setHasAdminToken(!!getAdminToken());
-  }, []);
-
-  useEffect(() => {
-    if (!hasAdminToken || !card) return;
+    if (!isAdmin || !card) return;
     fetchAdminSourceMappings({ card_code: card.card_code })
       .then((data) => setAdminMappings(data.items))
       .catch(() => setAdminMappings([]));
-  }, [hasAdminToken, card?.card_code]);
+  }, [isAdmin, card?.card_code]);
 
   const gradingSubmissions = collectionItems.flatMap((item) => item.grading_submissions);
 
@@ -406,7 +403,7 @@ export default function CardDetailPage() {
             {/* 6. Admin mini-panel - only rendered for admin-token holders;
                 lowest-priority panel on mobile (design brief - "admin mini
                 panel should be collapsed or lower priority"). */}
-            {hasAdminToken && (
+            {isAdmin && (
               <div className="order-6 lg:order-none">
                 <AdminSourceMappingsMiniPanel mappings={adminMappings} />
               </div>
@@ -906,9 +903,10 @@ function CardEffectText({ card }: { card: Card }) {
 }
 
 /** Admin-only source-mappings mini panel - compact, clearly admin-styled,
- * only ever rendered when an admin token is present (see hasAdminToken in
- * the page component). Uses the existing admin-token-gated GET /admin/
- * source-mappings?card_code= list, not the /quality review endpoint. */
+ * only ever rendered for a role="admin" session (see isAdmin in the page
+ * component). Uses the existing GET /admin/source-mappings?card_code= list
+ * (server-side-authorized via the Next.js proxy - see
+ * src/lib/adminProxy.ts), not the /quality review endpoint. */
 function AdminSourceMappingsMiniPanel({ mappings }: { mappings: SourceCardMapping[] }) {
   return (
     <div className="admin-preview rounded-panel p-4">

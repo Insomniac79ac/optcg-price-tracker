@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { buildSignInRedirect } from "@/lib/proxyGuard";
+import { buildAdminLoginRedirect, buildSignInRedirect } from "@/lib/proxyGuard";
 
 // Next.js 16 renamed the middleware.ts convention to proxy.ts (middleware.ts
 // is now deprecated - https://nextjs.org/docs/app/api-reference/file-conventions/proxy).
@@ -27,24 +27,42 @@ import { buildSignInRedirect } from "@/lib/proxyGuard";
 // src/lib/proxyGuard.ts for the redirect construction and
 // src/app/sign-in/page.tsx for how callbackUrl is validated before use.
 //
-// /admin/* is intentionally NOT handled here. Per Auth.js's own guidance,
-// Proxy must never be the only authorization boundary for a protected
-// resource - the real, server-side boundary for the whole admin route group
-// is app/admin/layout.tsx. Keeping admin logic out of proxy avoids two
-// divergent gates for the same routes.
+// /admin/* gets the same *optimistic* treatment (redirect to /admin/login
+// instead of /sign-in), with /admin/login itself carved back out below so
+// it stays reachable while signed out. This is explicitly not the real
+// admin authorization boundary - it only checks "is there any session at
+// all", never role="admin" - and per Auth.js's own guidance, Proxy must
+// never be the *only* authorization boundary for a protected resource. The
+// real, server-side boundary for the whole admin route group is
+// app/admin/(protected)/layout.tsx (requireAdminSession()), which also
+// rejects a signed-in-but-non-admin (collector) session that this check
+// alone would let through. Route Handlers get their own independent check
+// too (see src/lib/adminProxy.ts) - proxy is purely a fast, optimistic
+// UX redirect layered on top of both.
 export default auth((req) => {
+  const { pathname, search, origin } = req.nextUrl;
+
+  if (pathname.startsWith("/admin")) {
+    if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
+      return NextResponse.next();
+    }
+    if (!req.auth) {
+      return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search));
+    }
+    return NextResponse.next();
+  }
+
   if (!req.auth) {
-    return NextResponse.redirect(
-      buildSignInRedirect(req.nextUrl.origin, req.nextUrl.pathname, req.nextUrl.search),
-    );
+    return NextResponse.redirect(buildSignInRedirect(origin, pathname, search));
   }
 });
 
 // Next.js statically parses `config.matcher` at build time - it must be a
 // literal array in this file and can't be an imported constant (Turbopack
 // build fails otherwise: "can't recognize the exported `config` field").
-// This MUST stay identical to src/lib/proxyGuard.ts's PROTECTED_MATCHER -
-// proxy.test.ts asserts that equality so the two can't silently drift.
+// This MUST stay identical to src/lib/proxyGuard.ts's FULL_MATCHER (the
+// concatenation of PROTECTED_MATCHER and ADMIN_MATCHER) - proxy.test.ts
+// asserts that equality so the two can't silently drift.
 export const config = {
   matcher: [
     "/collection/:path*",
@@ -53,5 +71,6 @@ export const config = {
     "/dashboard/:path*",
     "/activity/:path*",
     "/analytics/:path*",
+    "/admin/:path*",
   ],
 };

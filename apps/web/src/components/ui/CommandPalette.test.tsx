@@ -124,6 +124,21 @@ describe("CommandPalette", () => {
     expect(screen.queryByText("Catalog Ops")).not.toBeInTheDocument();
   });
 
+  it("renders admin commands for a role=admin session", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "admin@example.com", role: "admin" } },
+      status: "authenticated",
+    });
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+      target: { value: "Catalog Ops" },
+    });
+
+    await waitFor(() => expect(screen.getByText("Catalog Ops")).toBeInTheDocument());
+  });
+
   it("hides collector-scoped commands when signed out", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());

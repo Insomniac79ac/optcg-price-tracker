@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
@@ -9,24 +10,25 @@ import { auth } from "@/lib/auth";
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
 
-// GET /file-jobs accepts EITHER a signed-in user's session (forwarded as a
-// bearer token, same as /api/collection/export) OR an X-Admin-Token header
-// (forwarded as-is, same as /api/admin/cache/status) - see
+// GET /file-jobs accepts EITHER a signed-in collector's session (forwarded
+// as a bearer token, same as /api/collection/export) OR a role="admin"
+// Auth.js session (server-side-injected X-Admin-Token, same as every
+// /api/admin/** route - see src/lib/adminProxy.ts) - see
 // app.auth.file_job_access on the backend. Both are attached here whenever
 // present so this one route works for the collection/wishlist background
-// import/export UI (session only) and the /admin/file-jobs page (admin
-// token only, typically no session) alike.
-async function buildHeaders(request: NextRequest): Promise<Record<string, string>> {
+// import/export UI (collector session) and the /admin/file-jobs page
+// (admin session) alike. A caller can never supply either credential
+// itself - both come only from the validated Auth.js session.
+async function buildHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   const session = await auth();
   if (session?.apiToken) headers["Authorization"] = `Bearer ${session.apiToken}`;
-  const adminToken = request.headers.get("x-admin-token");
-  if (adminToken) headers["X-Admin-Token"] = adminToken;
+  if (session?.user?.role === "admin") Object.assign(headers, adminAuthHeaders());
   return headers;
 }
 
 export async function GET(request: NextRequest) {
-  const headers = await buildHeaders(request);
+  const headers = await buildHeaders();
   const backendUrl = `${API_INTERNAL_URL}/file-jobs${request.nextUrl.search}`;
 
   const controller = new AbortController();

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { adminAuthHeaders, requireAdminOrResponse } from "@/lib/adminProxy";
+
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Defaults to the docker-compose service DNS name so this route works from
 // inside the web container without needing the host-forwarded port that
@@ -12,9 +14,9 @@ export async function POST(
   { params }: { params: Promise<{ type: string }> },
 ) {
   const { type } = await params;
-  const adminToken = request.headers.get("x-admin-token");
-  const headers: Record<string, string> = {};
-  if (adminToken) headers["X-Admin-Token"] = adminToken;
+  const auth = await requireAdminOrResponse();
+  if ("response" in auth) return auth.response;
+  const headers: Record<string, string> = { ...adminAuthHeaders() };
 
   // Re-parse the incoming multipart body as FormData and hand it straight to
   // fetch as the outgoing body - fetch sets the correct

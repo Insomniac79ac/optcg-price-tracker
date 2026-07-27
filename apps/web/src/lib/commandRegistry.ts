@@ -9,10 +9,9 @@
 // so the two surfaces never drift apart:
 //   - scope "public": always visible.
 //   - scope "collector": visible only once a session exists.
-//   - requires_admin: never visible today - no admin session concept exists
-//     yet (see the dedicated admin-login task). Left enforced-but-always-
-//     false rather than deleted so that task only has to change the check,
-//     not rebuild it.
+//   - requires_admin: visible only for a role="admin" session (see
+//     CommandPalette.tsx's isAdmin, sourced from src/lib/auth.ts's session
+//     callback - never trust a role from anywhere else).
 //
 // Trading/internal commands (market opportunities/signals/signal-events,
 // the old Analytics group, Dashboard) have been removed from this registry
@@ -122,9 +121,8 @@ export const COMMAND_REGISTRY: Command[] = [
   }),
 
   // --- Admin ---------------------------------------------------------
-  // Kept as data (not deleted) for the dedicated admin-login task - see the
-  // module comment above. `requires_admin: true` is enforced in
-  // CommandPalette.tsx and today evaluates to "hidden for everyone."
+  // `requires_admin: true` is enforced in CommandPalette.tsx via
+  // visibleCommands() above - visible only for a role="admin" session.
   cmd({
     id: "admin-catalog-ops",
     label: "Catalog Ops",

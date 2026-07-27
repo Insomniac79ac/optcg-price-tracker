@@ -46,46 +46,21 @@ const COLLECTOR_ITEMS: NavItem[] = [
   { href: "/activity", label: "Activity" },
 ];
 
-// Kept as data (not deleted, per the audit's "do not delete admin pages"
-// instruction) for the dedicated admin-login task to reintroduce once a real
-// `session.user.role === "admin"` exists. Deliberately NOT referenced by
-// `buildGroups` below - no session concept for "admin" exists yet, so these
-// two groups must render for nobody, full stop, until that task lands.
-const ADMIN_ITEMS: NavItem[] = [
-  { href: "/admin/catalog-ops", label: "Catalog Ops" },
-  { href: "/admin/cards", label: "Cards" },
-  { href: "/admin/import-validation", label: "Import Validation" },
-  { href: "/admin/card-audit", label: "Card Audit" },
-  { href: "/admin/card-duplicates", label: "Duplicates" },
-  { href: "/admin/snkrdunk-candidates", label: "SNKRDUNK Candidates" },
-  { href: "/admin/source-mapping-quality", label: "Source Mapping Quality" },
-  { href: "/admin/catalog-coverage", label: "Catalog Coverage" },
-  { href: "/admin/price-source-health", label: "Price Source Health" },
-  { href: "/admin/system-check", label: "System Check" },
-  { href: "/admin/actions", label: "Actions" },
-  { href: "/admin/backup", label: "Backup" },
-  { href: "/admin/logs", label: "Logs" },
-  { href: "/admin/performance", label: "Performance" },
-];
-const ADMIN_MORE_ITEMS: NavItem[] = [
-  { href: "/admin/alerts", label: "Alerts" },
-  { href: "/admin/cache", label: "Cache" },
-  { href: "/admin/data-retention", label: "Data Retention" },
-  { href: "/admin/file-jobs", label: "File Jobs" },
-  { href: "/admin/job-locks", label: "Job Locks" },
-  { href: "/admin/market-workflow-runs", label: "Workflow Runs" },
-  { href: "/admin/refresh-runs", label: "Refresh Runs" },
-  { href: "/admin/release-status", label: "Release Status" },
-];
-// Referenced only to satisfy lint's no-unused-vars until the admin-login
-// task wires these back in behind a real role check.
-void ADMIN_ITEMS;
-void ADMIN_MORE_ITEMS;
+// A role="admin" session gets exactly one entry here, not the full
+// operational route list - the detailed admin sub-navigation (Catalog Ops,
+// Cache, Job Locks, etc.) lives inside the admin area itself (see
+// app/admin/(protected)/layout.tsx's AdminSubNav), not the main
+// collector-facing sidebar. This keeps infrastructure-heavy navigation out
+// of the surface every visitor sees.
+const ADMIN_ITEMS: NavItem[] = [{ href: "/admin", label: "Admin" }];
 
-function buildGroups(isAuthenticated: boolean): NavGroup[] {
+function buildGroups(isAuthenticated: boolean, isAdmin: boolean): NavGroup[] {
   const groups: NavGroup[] = [{ key: "public", label: "Browse", items: PUBLIC_ITEMS }];
   if (isAuthenticated) {
     groups.push({ key: "collector", label: "Collector", items: COLLECTOR_ITEMS });
+  }
+  if (isAdmin) {
+    groups.push({ key: "admin", label: "Admin", items: ADMIN_ITEMS });
   }
   return groups;
 }
@@ -185,9 +160,10 @@ function GroupBlock({ group, pathname }: { group: NavGroup; pathname: string }) 
 
 export function SidebarNav({ className = "" }: { className?: string }) {
   const pathname = usePathname() ?? "";
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const groups = useMemo(() => buildGroups(isAuthenticated), [isAuthenticated]);
+  const isAdmin = session?.user?.role === "admin";
+  const groups = useMemo(() => buildGroups(isAuthenticated, isAdmin), [isAuthenticated, isAdmin]);
 
   return (
     <div className={`overflow-y-auto py-3 ${className}`}>

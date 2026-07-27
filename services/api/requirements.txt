@@ -10,3 +10,4 @@ psycopg[binary]
 redis
 celery
 pyjwt
+argon2-cffi

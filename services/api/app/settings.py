@@ -88,6 +88,27 @@ class Settings(BaseSettings):
     FILE_JOB_MAX_UPLOAD_MB: int = 50
     FILE_JOBS_SYNC_FALLBACK: bool | None = None
 
+    # Temporary single-admin Credentials login (app.api.admin_login, POST
+    # /auth/admin/verify) - a staging-only prototype until Google OAuth plus
+    # an admin-email allowlist replaces it. Deliberately NOT a user-table
+    # row: ADMIN_LOGIN_EMAIL/ADMIN_LOGIN_PASSWORD_HASH are the entire
+    # "account". ADMIN_LOGIN_ENABLED defaults to false, and the endpoint
+    # additionally treats a missing email/hash as disabled regardless of
+    # this flag (see app.api.admin_login) - there is no default identity or
+    # password. ADMIN_LOGIN_PASSWORD_HASH is a standard Argon2id encoded
+    # hash string (see app.core.admin_password) - never the plaintext
+    # password, and never ADMIN_TOKEN itself. Suggested staging values for
+    # the throttle settings: 5 attempts / 15 minutes, 30-minute lockout -
+    # see app.core.admin_login_throttle for the Redis-backed enforcement
+    # (deliberately not app.core.rate_limit, which is in-memory/per-process
+    # and unsuitable for a public login endpoint).
+    ADMIN_LOGIN_ENABLED: bool = False
+    ADMIN_LOGIN_EMAIL: str | None = None
+    ADMIN_LOGIN_PASSWORD_HASH: str | None = None
+    ADMIN_LOGIN_MAX_ATTEMPTS: int = 5
+    ADMIN_LOGIN_WINDOW_SECONDS: int = 900
+    ADMIN_LOGIN_LOCKOUT_SECONDS: int = 1800
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

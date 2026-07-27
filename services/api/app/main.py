@@ -18,6 +18,7 @@ from app.api.admin_db_index_audit import router as admin_db_index_audit_router
 from app.api.admin_file_jobs import router as admin_file_jobs_router
 from app.api.admin_import_validation import router as admin_import_validation_router
 from app.api.admin_job_locks import router as admin_job_locks_router
+from app.api.admin_login import router as admin_login_router
 from app.api.admin_logs import router as admin_logs_router
 from app.api.admin_observability import router as admin_observability_router
 from app.api.admin_performance import router as admin_performance_router
@@ -200,6 +201,7 @@ app.include_router(admin_db_index_audit_router)
 app.include_router(admin_file_jobs_router)
 app.include_router(admin_import_validation_router)
 app.include_router(admin_job_locks_router)
+app.include_router(admin_login_router)
 app.include_router(admin_logs_router)
 app.include_router(admin_observability_router)
 app.include_router(admin_performance_router)

@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Card, CollectionItemList, PriceObservation, WishlistItem } from "@/lib/api";
 
+const useSessionMock = vi.fn(() => ({
+  data: null as { user: { email: string; role?: string } } | null,
+  status: "unauthenticated",
+}));
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => useSessionMock(),
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -25,7 +29,6 @@ const fetchMarketOpportunities = vi.fn();
 const fetchCollectorNotes = vi.fn();
 const fetchCollectorActivity = vi.fn();
 const fetchAdminSourceMappings = vi.fn();
-const getAdminToken = vi.fn();
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -42,7 +45,6 @@ vi.mock("@/lib/api", async () => {
     fetchCollectorNotes: (...args: unknown[]) => fetchCollectorNotes(...args),
     fetchCollectorActivity: (...args: unknown[]) => fetchCollectorActivity(...args),
     fetchAdminSourceMappings: (...args: unknown[]) => fetchAdminSourceMappings(...args),
-    getAdminToken: () => getAdminToken(),
   };
 });
 
@@ -98,7 +100,7 @@ function setupDefaultMocks() {
   fetchCollectorNotes.mockReset();
   fetchCollectorActivity.mockReset();
   fetchAdminSourceMappings.mockReset();
-  getAdminToken.mockReset();
+  useSessionMock.mockReset();
 
   fetchCard.mockResolvedValue(BASE_CARD);
   fetchCardPrices.mockResolvedValue(EMPTY_PRICES);
@@ -117,7 +119,7 @@ function setupDefaultMocks() {
     pagination: {},
   });
   fetchAdminSourceMappings.mockResolvedValue({ items: [], total: 0, limit: 100, offset: 0, pagination: {} });
-  getAdminToken.mockReturnValue(null);
+  useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
 }
 
 describe("CardDetailPage", () => {
@@ -201,14 +203,17 @@ describe("CardDetailPage", () => {
     expect(screen.getAllByText("not available").length).toBeGreaterThan(0);
   });
 
-  it("does not render the admin source-mappings panel without an admin token", async () => {
+  it("does not render the admin source-mappings panel without a role=admin session", async () => {
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Monkey D. Luffy" })).toBeInTheDocument());
     expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
   });
 
-  it("renders the admin source-mappings panel when an admin token is present", async () => {
-    getAdminToken.mockReturnValue("test-token");
+  it("renders the admin source-mappings panel for a role=admin session", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "admin@example.com", role: "admin" } },
+      status: "authenticated",
+    });
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument());
   });

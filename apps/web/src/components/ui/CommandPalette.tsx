@@ -24,12 +24,9 @@ type PaletteItem =
  * component can't safely trigger a specific page's dry-run handlers. */
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
-  // No admin session concept exists yet (see the dedicated admin-login
-  // task in collector-blueprint.pdf Phase 10) - every visitor is non-admin
-  // until that lands a real session.user.role value.
-  const isAdmin = false;
+  const isAdmin = session?.user?.role === "admin";
   const [query, setQuery] = useState("");
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [recent, setRecent] = useState<RecentWorkflowEntry[]>([]);

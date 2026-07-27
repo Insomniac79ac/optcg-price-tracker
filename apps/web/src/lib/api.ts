@@ -408,21 +408,6 @@ export interface CollectionItemInput {
   status?: string;
 }
 
-const ADMIN_TOKEN_STORAGE_KEY = "admin_token";
-
-export function getAdminToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
-}
-
-export function setAdminToken(token: string): void {
-  window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-}
-
-export function clearAdminToken(): void {
-  window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-}
-
 export class AdminAuthRequiredError extends Error {
   constructor() {
     super("Admin token required");
@@ -478,18 +463,24 @@ export class AdminProxyError extends Error {
   }
 }
 
+// No longer attaches anything - admin auth for every /api/admin/** proxy
+// route is now the browser's Auth.js session cookie (sent automatically on
+// same-origin fetch) plus a server-side-injected ADMIN_TOKEN the browser
+// never sees (see src/lib/adminProxy.ts). Kept as a no-op rather than
+// removed at each of its call sites below so a 401 still surfaces as
+// AdminAuthRequiredError exactly as before, distinguishing "not an admin
+// session" from other failures.
 function adminHeaders(): Record<string, string> {
-  const token = getAdminToken();
-  return token ? { "X-Admin-Token": token } : {};
+  return {};
 }
 
 const ADMIN_FETCH_TIMEOUT_MS = 15_000;
 
 /** Fetches a relative (same-origin) admin path - e.g. a Next.js API proxy
- * route - attaching the stored admin token if one exists, but still trying
- * the request without it otherwise (some admin endpoints allow unauthenticated
- * access in development). Distinguishes 401/404/timeout/network failures so
- * callers can render a state more specific than a generic error.
+ * route - relying on the browser's Auth.js session cookie for auth (sent
+ * automatically on a same-origin fetch; see adminHeaders() above).
+ * Distinguishes 401/404/timeout/network failures so callers can render a
+ * state more specific than a generic error.
  *
  * Defaults to GET; pass `options.method`/`options.body` for mutations
  * (POST/PATCH) through the same proxy-aware error handling. */
@@ -819,8 +810,10 @@ export function fetchSnkrdunkCandidates(params?: {
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return apiGet<SnkrdunkCandidateList>(
-    `/snkrdunk/candidates${qs ? `?${qs}` : ""}`,
+  // Via the Next.js proxy, not apiGet direct-to-backend - see
+  // fetchRefreshRuns above for why.
+  return fetchAdminJson<SnkrdunkCandidateList>(
+    `/api/admin/snkrdunk-candidates${qs ? `?${qs}` : ""}`,
   );
 }
 
@@ -1577,13 +1570,17 @@ export function fetchRefreshRuns(params?: {
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return apiGet<PriceRefreshRunList>(
-    `/admin/refresh-runs${qs ? `?${qs}` : ""}`,
+  // Via the Next.js proxy (session-authorized, server-side ADMIN_TOKEN
+  // injection - see src/lib/adminProxy.ts), not apiGet direct-to-backend:
+  // this is an /admin/* route requiring X-Admin-Token, which the browser
+  // no longer holds (see the removal of the client-side admin token flow).
+  return fetchAdminJson<PriceRefreshRunList>(
+    `/api/admin/refresh-runs${qs ? `?${qs}` : ""}`,
   );
 }
 
 export function fetchRefreshRun(runId: number): Promise<PriceRefreshRun> {
-  return apiGet<PriceRefreshRun>(`/admin/refresh-runs/${runId}`);
+  return fetchAdminJson<PriceRefreshRun>(`/api/admin/refresh-runs/${runId}`);
 }
 
 export function fetchAlertEvents(params?: {
@@ -1598,22 +1595,25 @@ export function fetchAlertEvents(params?: {
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   if (params?.offset !== undefined) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return apiGet<AlertEventList>(`/admin/alert-events${qs ? `?${qs}` : ""}`);
+  return fetchAdminJson<AlertEventList>(`/api/admin/alert-events${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchAlertEvent(eventId: number): Promise<AlertEvent> {
-  return apiGet<AlertEvent>(`/admin/alert-events/${eventId}`);
+  return fetchAdminJson<AlertEvent>(`/api/admin/alert-events/${eventId}`);
 }
 
 export function fetchAlertRules(): Promise<AlertRule[]> {
-  return apiGet<AlertRule[]>("/admin/alert-rules");
+  return fetchAdminJson<AlertRule[]>("/api/admin/alert-rules");
 }
 
 export function updateAlertRule(
   ruleId: number,
   body: { is_active?: boolean; threshold_pct?: number },
 ): Promise<AlertRule> {
-  return apiPatch<AlertRule>(`/admin/alert-rules/${ruleId}`, body);
+  return fetchAdminJson<AlertRule>(`/api/admin/alert-rules/${ruleId}`, {
+    method: "PATCH",
+    body,
+  });
 }
 
 export function fetchCollectionItems(params?: {

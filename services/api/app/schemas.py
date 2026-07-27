@@ -3427,3 +3427,23 @@ class SavedViewUpdateIn(BaseModel):
 class ClearDefaultSavedViewIn(BaseModel):
     route_path: str
     view_type: str
+
+
+class AdminLoginVerifyIn(BaseModel):
+    """POST /auth/admin/verify request body - see app.api.admin_login.
+    Length caps are a safety measure, not a UX validation: Argon2 hashing
+    cost scales with input size, so an unbounded password is a cheap DoS
+    vector against the verify call itself."""
+
+    email: str = Field(min_length=1, max_length=320)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class AdminLoginVerifyOut(BaseModel):
+    """Deliberately minimal - see app.api.admin_login's module docstring
+    for the full list of what this must never include (ADMIN_TOKEN,
+    password hash, API_JWT_SECRET, session/DB/Redis internals)."""
+
+    id: str
+    email: str
+    role: Literal["admin"]

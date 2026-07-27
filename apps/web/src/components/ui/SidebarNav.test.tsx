@@ -95,3 +95,19 @@ describe("SidebarNav - signed in (collector session)", () => {
     }
   });
 });
+
+describe("SidebarNav - signed in (admin session)", () => {
+  beforeEach(() => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "admin@example.com", role: "admin" } },
+      status: "authenticated",
+    });
+  });
+
+  it("shows exactly one Admin entry, not the detailed admin route list", () => {
+    render(<SidebarNav />);
+    expect(screen.getByRole("link", { name: "Admin" })).toHaveAttribute("href", "/admin");
+    expect(screen.queryByText("Catalog Ops")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cache")).not.toBeInTheDocument();
+  });
+});

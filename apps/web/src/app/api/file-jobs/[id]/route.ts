@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { adminAuthHeaders } from "@/lib/adminProxy";
 import { auth } from "@/lib/auth";
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 15_000;
 
-async function buildHeaders(request: NextRequest): Promise<Record<string, string>> {
+// Accepts EITHER a signed-in collector session (bearer token) OR a
+// role="admin" Auth.js session (server-side-injected X-Admin-Token) - see
+// src/app/api/file-jobs/route.ts for the full rationale.
+async function buildHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   const session = await auth();
   if (session?.apiToken) headers["Authorization"] = `Bearer ${session.apiToken}`;
-  const adminToken = request.headers.get("x-admin-token");
-  if (adminToken) headers["X-Admin-Token"] = adminToken;
+  if (session?.user?.role === "admin") Object.assign(headers, adminAuthHeaders());
   return headers;
 }
 
@@ -19,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const headers = await buildHeaders(request);
+  const headers = await buildHeaders();
   const backendUrl = `${API_INTERNAL_URL}/file-jobs/${id}`;
 
   const controller = new AbortController();

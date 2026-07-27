@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AnalyticsDigest, AnalyticsDigestReportListResponse } from "@/lib/api";
 
+const useSessionMock = vi.fn(() => ({
+  data: null as { user: { email: string; role?: string } } | null,
+  status: "unauthenticated",
+}));
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => useSessionMock(),
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -197,7 +201,8 @@ describe("AnalyticsDigestPage", () => {
     fetchAnalyticsDigestReport.mockReset();
     triggerGenerateAnalyticsDigest.mockReset();
     fetchAnalyticsDigestReports.mockResolvedValue(EMPTY_HISTORY);
-    window.localStorage.clear();
+    useSessionMock.mockReset();
+    useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
   });
 
   it("renders an empty digest without crashing", async () => {
@@ -265,7 +270,7 @@ describe("AnalyticsDigestPage", () => {
     expect(screen.getAllByText("raw_market").length).toBe(2);
   });
 
-  it("hides the generate action when no admin token is present", async () => {
+  it("hides the generate action for a non-admin session", async () => {
     fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
     render(<AnalyticsDigestPage />);
 
@@ -274,7 +279,10 @@ describe("AnalyticsDigestPage", () => {
   });
 
   it("renders the generate action and calls the admin endpoint when clicked", async () => {
-    window.localStorage.setItem("admin_token", "test-token");
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "admin@example.com", role: "admin" } },
+      status: "authenticated",
+    });
     fetchAnalyticsDigest.mockResolvedValue(EMPTY_DIGEST);
     triggerGenerateAnalyticsDigest.mockResolvedValue({
       report_id: 1,
