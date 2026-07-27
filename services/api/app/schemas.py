@@ -1390,6 +1390,35 @@ class CardCatalogImportResponseOut(BaseModel):
     preview: list[CardCatalogImportPreviewItemOut]
 
 
+class CardImageImportRowErrorOut(BaseModel):
+    row_number: int
+    card_code: str | None
+    error: str
+
+
+class CardImageImportPreviewItemOut(BaseModel):
+    row_number: int
+    card_code: str
+    card_id: int
+    action: str
+    image_url: str
+    image_source: str
+
+
+class CardImageImportSummaryOut(BaseModel):
+    total_rows: int
+    valid_rows: int
+    error_rows: int
+    applied: int
+
+
+class CardImageImportResponseOut(BaseModel):
+    dry_run: bool
+    summary: CardImageImportSummaryOut
+    errors: list[CardImageImportRowErrorOut]
+    preview: list[CardImageImportPreviewItemOut]
+
+
 class AdminCardOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -1402,6 +1431,10 @@ class AdminCardOut(BaseModel):
     variant: str | None
     language: str
     image_url: str | None
+    image_source: str | None
+    image_source_url: str | None
+    image_last_verified_at: datetime | None
+    image_status: str | None
     release_date: date | None
     artist: str | None
     character: str | None

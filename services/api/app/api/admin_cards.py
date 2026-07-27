@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -7,10 +7,17 @@ from app.auth import require_admin_token
 from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card
-from app.schemas import AdminCardListResponseOut, AdminCardListSummaryOut, AdminCardOut, CardCatalogImportResponseOut
+from app.schemas import (
+    AdminCardListResponseOut,
+    AdminCardListSummaryOut,
+    AdminCardOut,
+    CardCatalogImportResponseOut,
+    CardImageImportResponseOut,
+)
 from app.services.app_logging import record_app_log
 from app.services.cache import delete_cache_prefix
 from app.services.card_catalog_import import export_filename, import_cards_csv, iter_cards_csv_rows
+from app.services.card_image_import import image_import_template_csv, import_card_images_csv
 
 router = APIRouter(prefix="/admin/cards", tags=["admin"], dependencies=[Depends(require_admin_token)])
 
@@ -167,6 +174,57 @@ async def import_cards_csv_endpoint(
             )
 
     return CardCatalogImportResponseOut.model_validate(result.to_dict())
+
+
+@router.get("/import-images-template.csv")
+def get_card_image_import_template():
+    """The CSV template for POST /import-images.csv - see
+    app.services.card_image_import module docstring for why this is a
+    separate, narrower workflow from /import.csv."""
+    return PlainTextResponse(
+        image_import_template_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=card_image_import_template.csv"},
+    )
+
+
+@router.post("/import-images.csv", response_model=CardImageImportResponseOut)
+async def import_card_images_csv_endpoint(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(default=True),
+    db: Session = Depends(get_db),
+):
+    raw = await file.read()
+    try:
+        csv_text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"File is not valid UTF-8: {exc}") from exc
+
+    try:
+        result = import_card_images_csv(db, csv_text, dry_run=dry_run)
+    except ValueError as exc:
+        record_app_log(
+            "error",
+            "api",
+            "card_image_import",
+            f"Card image CSV import failed: {exc}",
+            context={"dry_run": dry_run},
+        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not dry_run:
+        for prefix in _CARD_CATALOG_CACHE_INVALIDATES:
+            delete_cache_prefix(prefix)
+        if result.error_rows > 0:
+            record_app_log(
+                "warning",
+                "api",
+                "card_image_import",
+                f"Card image CSV import completed with {result.error_rows} row error(s).",
+                context={"applied": result.applied, "error_rows": result.error_rows},
+            )
+
+    return CardImageImportResponseOut.model_validate(result.to_dict())
 
 
 @router.get("/export.csv")

@@ -25,6 +25,18 @@ class Card(Base):
     language: Mapped[str] = mapped_column(String(8), index=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
+    # Image provenance (see app.services.card_image_import) - who/where this
+    # image_url came from and whether it's been checked to actually return
+    # image content. All nullable: rows with an image_url set before this
+    # workflow existed (e.g. earlier mock/staging seeding) simply have no
+    # provenance until backfilled through the same import path.
+    image_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    image_source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    image_last_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    image_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+
     # Catalog-enrichment fields (see app.services.card_catalog_import) - all
     # nullable, since the vast majority of existing rows were created before
     # any of this metadata was ever collected.
