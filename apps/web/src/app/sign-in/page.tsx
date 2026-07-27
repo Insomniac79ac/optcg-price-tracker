@@ -61,7 +61,7 @@ export default async function SignInPage({
             <Link href="/" className="text-sky-400 hover:underline">
               ← Back to Discover
             </Link>
-            <Link href="/search" className="text-sky-400 hover:underline">
+            <Link href="/cards" className="text-sky-400 hover:underline">
               Browse Cards
             </Link>
           </div>

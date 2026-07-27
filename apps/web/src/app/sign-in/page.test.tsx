@@ -71,7 +71,7 @@ describe("SignInPage (neutral sign-in-required route)", () => {
     const ui = await SignInPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(screen.getByRole("link", { name: /back to discover/i })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/cards");
   });
 
   it("never renders a raw environment-variable value into the page", async () => {

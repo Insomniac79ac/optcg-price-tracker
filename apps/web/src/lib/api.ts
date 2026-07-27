@@ -91,6 +91,62 @@ export interface PriceObservation {
   raw_snapshot_id: number | null;
 }
 
+/** One normalized Market Index source reference - see
+ * services/api/app/services/market_index.py. Deliberately not a fixed
+ * yuyutei_price/snkrdunk_price pair: `source`/`reference_type` name what
+ * kind of value this is, so a future Cardrush/Mercado resolver needs no
+ * frontend contract change. */
+export interface MarketIndexSourceValue {
+  source: string;
+  reference_type: string;
+  evidence_type: "listing" | "transaction";
+  value_jpy: number | null;
+  observed_at: string | null;
+  sample_size: number | null;
+  stale: boolean;
+  eligible: boolean;
+  fallback_used: boolean;
+  ineligible_reason: string | null;
+}
+
+export interface MarketIndex {
+  card_id: number;
+  index_version: number;
+  index_value_jpy: number | null;
+  calculation_method: string;
+  source_count: number;
+  coverage_status: "full" | "limited" | "none";
+  confidence: "high" | "medium" | "low";
+  source_values: MarketIndexSourceValue[];
+  auxiliary_values: MarketIndexSourceValue[];
+  freshest_observation_at: string | null;
+  stalest_eligible_source_at: string | null;
+  stale_sources: string[];
+  calculated_at: string;
+}
+
+export interface CardCatalogueItem extends Card {
+  market_index: MarketIndex;
+}
+
+export interface CardCatalogueFacets {
+  set_codes: string[];
+  rarities: string[];
+  languages: string[];
+  variants: string[];
+}
+
+export interface CardCatalogueList {
+  items: CardCatalogueItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+  facets: CardCatalogueFacets;
+}
+
+export type CardCatalogueSort = "card_code" | "name" | "index_desc" | "index_asc" | "updated";
+
 export interface MarketPrice {
   source: string;
   price_type: string;
@@ -779,6 +835,28 @@ export function fetchCardPrices(
   id: string | number,
 ): Promise<PriceObservation[]> {
   return apiGet<PriceObservation[]>(`/cards/${id}/prices`);
+}
+
+export function fetchCardMarketIndex(id: string | number): Promise<MarketIndex> {
+  return apiGet<MarketIndex>(`/cards/${id}/market-index`);
+}
+
+/** The batch-compatible mechanism the public /cards catalogue grid uses -
+ * one request for a whole page of cards, each already carrying its Market
+ * Index, rather than one request per card (see
+ * services/api/app/services/market_index.py's "Batch-safe by
+ * construction"). */
+export function fetchCardsCatalogue(params?: {
+  q?: string;
+  set_code?: string;
+  rarity?: string;
+  language?: string;
+  variant?: string;
+  sort?: CardCatalogueSort;
+  limit?: number;
+  offset?: number;
+}): Promise<CardCatalogueList> {
+  return apiGet<CardCatalogueList>("/cards/catalogue", { params });
 }
 
 export function fetchMarketMovers(params?: {

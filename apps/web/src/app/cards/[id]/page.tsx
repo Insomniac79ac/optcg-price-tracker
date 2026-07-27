@@ -20,7 +20,9 @@ import { CardPricePanel, type PriceLine } from "@/components/ui/CardPricePanel";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { GradingSummaryPanel } from "@/components/ui/GradingSummaryPanel";
 import { MarketContextPanel } from "@/components/ui/MarketContextPanel";
+import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { OwnershipSummaryPanel } from "@/components/ui/OwnershipSummaryPanel";
+import { SourceEvidenceBadge } from "@/components/ui/SourceEvidenceBadge";
 import { accentForVariant } from "@/components/ui/VariantBadge";
 import { WishlistSummaryPanel } from "@/components/ui/WishlistSummaryPanel";
 import { StockStatusBadge } from "@/components/StockStatusBadge";
@@ -50,12 +52,14 @@ import {
   fetchCollectionItems,
   fetchCollectionValuation,
   fetchCollectorActivity,
+  fetchCardMarketIndex,
   fetchCollectorNotes,
   fetchCollectorTags,
   fetchMarketOpportunities,
   fetchMarketSignalEvents,
   fetchWishlistItems,
   unassignCardTag,
+  type MarketIndex,
 } from "@/lib/api";
 import { cardDisplayName, formatDate, formatDateTime, formatJpy } from "@/lib/format";
 
@@ -76,22 +80,56 @@ interface KeyPriceLine {
   priceType: string;
 }
 
-const KEY_PRICE_LINES: KeyPriceLine[] = [
-  { label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell" },
-  { label: "Yuyu-Tei buy", source: "yuyutei", priceType: "buy" },
-  { label: "SNKRDUNK floor", source: "snkrdunk", priceType: "floor" },
-  { label: "SNKRDUNK sold", source: "snkrdunk", priceType: "sold" },
+// Labels spell out what each source price actually is (design brief Phase
+// 9 - "do not present Yuyu-Tei buy as the card's primary value" / "do not
+// present SNKRDUNK floor as a completed sale"): these are supporting detail
+// beneath the Market Index, not the Market Index's own inputs restated.
+// referenceType matches app.services.market_index's reference_type strings,
+// used to look up the matching MarketIndexSourceValue for its evidence
+// badge (see keyPriceLines below).
+const KEY_PRICE_LINES: (KeyPriceLine & { referenceType: string; auxiliary?: boolean })[] = [
+  { label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell", referenceType: "retail_sell" },
+  {
+    label: "Yuyu-Tei buy (dealer buy / liquidity)",
+    source: "yuyutei",
+    priceType: "buy",
+    referenceType: "dealer_buy",
+    auxiliary: true,
+  },
+  {
+    label: "SNKRDUNK sold (reference)",
+    source: "snkrdunk",
+    priceType: "sold",
+    referenceType: "transaction_median",
+  },
+  {
+    label: "SNKRDUNK floor (listing, not a sale)",
+    source: "snkrdunk",
+    priceType: "floor",
+    referenceType: "listing_floor",
+  },
 ];
 
-function keyPriceLines(prices: PriceObservation[]): PriceLine[] {
+function keyPriceLines(
+  prices: PriceObservation[],
+  marketIndex: MarketIndex | null,
+): PriceLine[] {
   return KEY_PRICE_LINES.map((line) => {
     const observation = latestFor(prices, line.source, line.priceType);
+    const sourceValues = line.auxiliary
+      ? marketIndex?.auxiliary_values
+      : marketIndex?.source_values;
+    const sourceValue = sourceValues?.find(
+      (v) => v.source === line.source && v.reference_type === line.referenceType,
+    );
+
     return {
       label: line.label,
       source: line.source,
       priceType: line.priceType,
       valueJpy: observation?.price_jpy ?? null,
       observedAt: observation?.observed_at ?? null,
+      note: sourceValue ? <SourceEvidenceBadge value={sourceValue} /> : undefined,
     };
   });
 }
@@ -120,6 +158,9 @@ export default function CardDetailPage() {
   const [prices, setPrices] = useState<PriceObservation[]>([]);
   const [status, setStatus] = useState<Status>("loading");
 
+  const [marketIndex, setMarketIndex] = useState<MarketIndex | null>(null);
+  const [marketIndexStatus, setMarketIndexStatus] = useState<Status>("loading");
+
   const [collectionItems, setCollectionItems] = useState<CollectionItem[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<Status>("loading");
 
@@ -144,6 +185,23 @@ export default function CardDetailPage() {
         setStatus("error");
       });
 
+    return () => {
+      cancelled = true;
+    };
+  }, [cardId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMarketIndexStatus("loading");
+    fetchCardMarketIndex(cardId)
+      .then((data) => {
+        if (cancelled) return;
+        setMarketIndex(data);
+        setMarketIndexStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setMarketIndexStatus("error");
+      });
     return () => {
       cancelled = true;
     };
@@ -315,6 +373,7 @@ export default function CardDetailPage() {
                   setCode={card.set_code}
                   asHeading
                 />
+                <MarketIndexSection status={marketIndexStatus} index={marketIndex} />
                 <CardMetadataGrid card={card} />
                 <CardEffectText card={card} />
               </div>
@@ -382,7 +441,7 @@ export default function CardDetailPage() {
                 right after the hero (design brief - "price source panel
                 next"), same position as always on desktop. */}
             <div className="order-1 lg:order-none">
-              <CardPricePanel lines={keyPriceLines(prices)} />
+              <CardPricePanel lines={keyPriceLines(prices, marketIndex)} />
             </div>
 
             {/* 4. Market context */}
@@ -852,6 +911,38 @@ const META_FIELDS: { key: keyof Card; label: string }[] = [
   { key: "artist", label: "Artist" },
   { key: "character", label: "Character" },
 ];
+
+/** Market Index as the card's primary collector-facing value (design brief
+ * Phase 9), placed inside the hero panel right after identity - loading and
+ * error states are quiet/inline (a whole-panel LoadingState/ErrorState here
+ * would compete with the image for attention on first paint). The staging
+ * note is restrained (small, muted text) since SCRAPING_MODE stays "mock"
+ * for this task - never claims these are live market prices. */
+function MarketIndexSection({
+  status,
+  index,
+}: {
+  status: Status;
+  index: MarketIndex | null;
+}) {
+  if (status === "loading") {
+    return <div className="h-12 w-40 animate-pulse rounded-control bg-bg-elevated" />;
+  }
+  if (status === "error" || !index) {
+    return <p className="text-xs text-text-muted">Market Index unavailable right now.</p>;
+  }
+  return (
+    <div>
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">
+        Market Index
+      </div>
+      <MarketIndexValue index={index} size="lg" />
+      <p className="mt-1 text-[10px] text-text-faint">
+        Staging data - prices are from the mock price source (SCRAPING_MODE=mock), not live.
+      </p>
+    </div>
+  );
+}
 
 /** Compact metadata grid (cost/power/counter/attribute/color/type/artist/
  * character/release date) - only rendered fields the card actually has

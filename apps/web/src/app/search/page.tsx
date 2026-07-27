@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -17,6 +18,43 @@ import {
   fetchSearch,
   fetchSearchSuggestions,
 } from "@/lib/api";
+
+const MAX_REDIRECT_QUERY_LENGTH = 128;
+
+/** /cards is now the primary public catalogue (design brief Phase 8) -
+ * "/search?q=<query> redirects to /cards?q=<query>", so a *submitted*
+ * search (a non-empty `q`) whose type scope includes cards (no `types`
+ * param, or `types` naming only "cards") redirects there instead of
+ * rendering this page's old table-style results. A bare /search visit with
+ * no `q` yet (e.g. the dashboard's "Search cards, collection, wishlist,
+ * notes, signals…" shortcut, opened before the visitor has typed anything)
+ * is deliberately NOT redirected - it still shows this page's suggestion
+ * list and type chips, since that multi-type command-center capability
+ * (collection/wishlist/grading/notes/activity/signals/opportunities/reports
+ * - none of which /cards can serve) has no other entry point once a query
+ * is actually about one of those types. `types` naming any non-"cards" type
+ * also skips the redirect for the same reason. Only `q` is translated onward
+ * - `types`/`limit`/`offset` aren't part of /cards' contract, so they're
+ * safely dropped rather than passed through. This can never loop: the
+ * target is a different route (/cards), which never redirects back to
+ * /search. */
+function shouldRedirectToCards(searchParams: URLSearchParams): boolean {
+  const q = (searchParams.get("q") ?? "").trim();
+  if (!q) return false;
+
+  const types = searchParams.get("types");
+  if (!types) return true;
+  const requested = types
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return requested.length === 0 || requested.every((t) => t === "cards");
+}
+
+function buildCardsRedirectPath(searchParams: URLSearchParams): string {
+  const q = (searchParams.get("q") ?? "").trim().slice(0, MAX_REDIRECT_QUERY_LENGTH);
+  return q ? `/cards?q=${encodeURIComponent(q)}` : "/cards";
+}
 
 const TYPE_LABELS: Record<SearchType, string> = {
   cards: "Cards",
@@ -50,6 +88,31 @@ function groupByType(results: SearchResult[]): Partial<Record<SearchType, Search
 }
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageRedirectGate />
+    </Suspense>
+  );
+}
+
+/** Reads the query string once to decide redirect-vs-render - split out from
+ * SearchPageInner so a redirect never mounts (and never fetches suggestions
+ * for) the full command-center UI below it. */
+function SearchPageRedirectGate() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = shouldRedirectToCards(searchParams);
+
+  useEffect(() => {
+    if (redirect) router.replace(buildCardsRedirectPath(searchParams));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redirect, searchParams.toString()]);
+
+  if (redirect) return null;
+  return <SearchPageInner />;
+}
+
+function SearchPageInner() {
   const [input, setInput] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [activeType, setActiveType] = useState<SearchType | null>(null);

@@ -19,12 +19,14 @@ interface NavGroup {
 }
 
 // Public tier - visible to every visitor, signed in or not (collector-first
-// redesign audit, Phase 3). /cards and /sets don't exist yet, so "Cards"
-// temporarily points at /search and there is no "Sets" entry - see
-// collector-blueprint.pdf.
+// redesign audit, Phase 3). "Cards" now points at the real /cards catalogue
+// (image-led grid + Market Index) - /search still exists for the multi-type
+// command-center search, but is no longer the primary card-browsing surface
+// (see src/app/search/page.tsx's redirect). There is still no "Sets" entry -
+// see collector-blueprint.pdf.
 const PUBLIC_ITEMS: NavItem[] = [
   { href: "/", label: "Discover" },
-  { href: "/search", label: "Cards" },
+  { href: "/cards", label: "Cards" },
   { href: "/market/movers", label: "Market Index" },
 ];
 

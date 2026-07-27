@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import { RarityBadge } from "@/components/RarityBadge";
 
 export type FrameAccent = "gold" | "purple" | null;
@@ -5,9 +9,20 @@ export type FrameAccent = "gold" | "purple" | null;
 /** Vault/slab-style frame for a card image (design brief §4) - inner
  * border + dark sleeve background so a card image never reads as a random
  * thumbnail. Falls back to a clean placeholder (card_code/rarity/set_code)
- * when `imageUrl` is missing, rather than a broken image or blank box.
- * `accent` adds a restrained (non-flashing) gold/purple edge glow for rare
- * variants - callers decide which cards qualify (see VariantBadge). */
+ * when `imageUrl` is missing *or* fails to load, rather than a broken image
+ * or blank box. `accent` adds a restrained (non-flashing) gold/purple edge
+ * glow for rare variants - callers decide which cards qualify (see
+ * VariantBadge).
+ *
+ * Uses a plain <img>, not next/image, deliberately for now - see
+ * docs/market_index.md "Image hosting" for why: Next's image optimizer
+ * fetches, resizes and caches the source image through this app's own
+ * server before ever serving it, which is a meaningfully bigger claim on a
+ * third-party host's content (card.yuyu-tei.jp, the one real host currently
+ * seeded) than a browser hotlinking it directly. Revisit once that host is
+ * explicitly approved and added to next.config.ts's remotePatterns - and
+ * the `object-contain`/lazy/async/referrer attributes below already match
+ * what next/image would need, so that swap is additive when it happens. */
 export function CardImageFrame({
   imageUrl,
   alt,
@@ -23,18 +38,32 @@ export function CardImageFrame({
   rarity?: string | null;
   setCode?: string | null;
   accent?: FrameAccent;
-  size?: "sm" | "md" | "lg";
+  /** "full" fills its container's width (the catalogue grid tile, where the
+   * image is the dominant element) instead of a fixed px width. */
+  size?: "sm" | "md" | "lg" | "full";
 }) {
-  const widthClass = size === "sm" ? "w-20" : size === "lg" ? "w-40" : "w-28";
+  const [broken, setBroken] = useState(false);
+  const widthClass =
+    size === "full" ? "w-full" : size === "sm" ? "w-20" : size === "lg" ? "w-40" : "w-28";
+  const shrinkClass = size === "full" ? "" : "shrink-0";
   const accentClass = accent === "gold" ? "glow-gold" : accent === "purple" ? "glow-purple" : "";
+  const showImage = Boolean(imageUrl) && !broken;
 
   return (
     <div
-      className={`vault-frame ${widthClass} aspect-[63/88] shrink-0 overflow-hidden ${accentClass}`}
+      className={`vault-frame ${widthClass} ${shrinkClass} aspect-[63/88] overflow-hidden ${accentClass}`}
     >
-      {imageUrl ? (
+      {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+        <img
+          src={imageUrl!}
+          alt={alt}
+          className="h-full w-full object-contain"
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+        />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-bg-card p-2 text-center">
           <div className="mono text-[11px] text-text-secondary">{cardCode}</div>

@@ -11,15 +11,23 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
-const { fetchSavedViews } = vi.hoisted(() => ({
+const { fetchSavedViews, fetchCardsCatalogue } = vi.hoisted(() => ({
   fetchSavedViews: vi.fn().mockResolvedValue({
     items: [],
     pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
   }),
+  fetchCardsCatalogue: vi.fn().mockResolvedValue({
+    items: [],
+    total: 0,
+    limit: 6,
+    offset: 0,
+    pagination: { total: 0, limit: 6, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
+    facets: { set_codes: [], rarities: [], languages: [], variants: [] },
+  }),
 }));
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, fetchSavedViews };
+  return { ...actual, fetchSavedViews, fetchCardsCatalogue };
 });
 
 import DiscoverPage from "./page";
@@ -30,9 +38,9 @@ describe("DiscoverPage (public /)", () => {
     expect(screen.getByText(/track your one piece tcg collection/i)).toBeInTheDocument();
   });
 
-  it("links to /search as the primary Browse Cards action", () => {
+  it("links to /cards as the primary Browse Cards action", () => {
     render(<DiscoverPage />);
-    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/cards");
   });
 
   it("links to /market/movers as the Market Index action", () => {

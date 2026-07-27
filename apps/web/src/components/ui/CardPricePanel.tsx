@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { PriceCell } from "./PriceCell";
 
 export interface PriceLine {
@@ -7,6 +9,10 @@ export interface PriceLine {
   mode?: "raw_market" | "graded_adjusted" | null;
   valueJpy: number | null | undefined;
   observedAt?: string | null;
+  /** Optional evidence/fallback note rendered under the price (e.g.
+   * SourceEvidenceBadge) - callers that don't pass one see the tile exactly
+   * as before. */
+  note?: ReactNode;
 }
 
 /** The 3-up key-price panel from cards/[id] (Yuyu-Tei sell/buy, SNKRDUNK
@@ -27,6 +33,7 @@ export function CardPricePanel({ lines }: { lines: PriceLine[] }) {
             mode={line.mode}
             observedAt={line.observedAt}
           />
+          {line.note && <div className="mt-1">{line.note}</div>}
         </div>
       ))}
     </div>
