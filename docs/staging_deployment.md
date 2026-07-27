@@ -79,17 +79,16 @@ Environment variables (Production scope on the dedicated staging project):
 | `API_JWT_SECRET` | shared secret, same value as the Railway `api` service | Required for per-user auth (`/collection`, `/grading`, `/collector`) - see `docs/deployment.md` section 10. Copy it byte-for-byte (e.g. `railway variables --kv | grep ^API_JWT_SECRET= | cut -d= -f2- | vercel env add API_JWT_SECRET production --sensitive`) rather than retyping it. |
 | `AUTH_SECRET` | random value (`openssl rand -base64 33`) | Auth.js session-encryption secret. |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | staging OAuth client credentials | Use a separate Google OAuth client from production, with `<vercel-staging-domain>/api/auth/callback/google` as an authorized redirect URI. **Not yet set** - no real credentials exist for staging as of 2026-07-26; Google sign-in is untested until these are created and added. |
+| `ADMIN_TOKEN` | same value as the Railway `api` service's `ADMIN_TOKEN` | **Server-only, Production scope, Sensitive.** Added 2026-07-27 as part of the temporary admin-login task (section 13) - read only by `src/lib/adminProxy.ts` inside `/api/admin/**` Route Handlers, server-side, to authenticate to the Railway backend. The browser never receives this value; see section 13 for why this is now safe to set here at all (it wasn't, before that task - see the superseded note this replaces). |
 
 `API_BASE_URL` and bare `APP_ENV` (listed in earlier drafts of this doc) were deliberately **not**
 set: neither is read anywhere in `apps/web`'s application code (confirmed by search), so adding
 them would just be inert configuration.
 
-**Do not** set `ADMIN_TOKEN` (or any `NEXT_PUBLIC_ADMIN_TOKEN`) as a Vercel environment variable -
-the admin token is entered by the operator in the browser and stored in `localStorage`
-(`getAdminToken`/`setAdminToken` in `apps/web/src/lib/api.ts`), then forwarded as `X-Admin-Token`
-by server-side route handlers. It is never baked into the frontend build or deployment config, and
-`apps/web/scripts/check-env.js` fails the build/start if a `NEXT_PUBLIC_*` variable name looks like
-a secret.
+**Do not** set any `NEXT_PUBLIC_ADMIN_TOKEN` (or any other `NEXT_PUBLIC_*` variable that looks like
+a secret) - `apps/web/scripts/check-env.js` fails the build/start if it finds one. `ADMIN_TOKEN`
+itself (no `NEXT_PUBLIC_` prefix) is now intentionally set here - see the table row above and
+section 13.
 
 ## 3. Railway services
 
@@ -132,13 +131,21 @@ this staging pass (risk of regressions outweighs the benefit for a first staging
 listed here so staging config accounts for them, and so a future pass can migrate them
 incrementally:
 
-**Public/general reads** (`apiGet`/`apiPost`, admin-token header attached if present, but usable
-unauthenticated too):
+**Public reads** (`apiGet`, no auth header, genuinely unauthenticated backend routes):
 - `fetchCards`, `fetchCard`, `fetchCardPrices` - card catalog/detail/prices (`/cards/*`)
 - `fetchMarketMovers` - `/market/movers` (used by `/market/movers`, a public page)
-- `fetchAlertEvents`, `fetchAlertEvent`, `fetchAlertRules`, `updateAlertRule` - `/admin/alert-events`, `/admin/alert-rules`
-- `fetchRefreshRuns`, `fetchRefreshRun` - `/admin/refresh-runs`
-- `fetchSnkrdunkCandidates`, `matchSnkrdunkCandidate`, `rejectSnkrdunkCandidate` - `/snkrdunk/candidates`
+
+`fetchAlertEvents`/`fetchAlertEvent`/`fetchAlertRules`/`updateAlertRule`,
+`fetchRefreshRuns`/`fetchRefreshRun`, and `fetchSnkrdunkCandidates` **used to** be in this
+direct-from-browser bucket too (`/admin/alert-events`, `/admin/alert-rules`, `/admin/refresh-runs`,
+`/snkrdunk/candidates` - all `require_admin_token` on the backend), relying on the same
+browser-held admin token as every other admin page. The admin-login task (section 13) removed that
+token entirely, so as of 2026-07-27 these seven now go through a same-origin Next.js proxy route
+(`/api/admin/alert-events`, `/api/admin/alert-rules`, `/api/admin/refresh-runs`,
+`/api/admin/snkrdunk-candidates` - `src/lib/adminProxy.ts`) like every other admin page, authorized
+by the Auth.js session cookie instead. `matchSnkrdunkCandidate`/`rejectSnkrdunkCandidate` remain
+direct-to-backend but are dead code - no page currently calls them (the live snkrdunk-candidates
+page uses the newer `/admin/snkrdunk-candidates/*` proxy routes for match/reject actions instead).
 
 **Per-user pages** (`authedGet`/`authedPost`/`authedPatch`/`authedDelete`, bearer token from the
 NextAuth session attached): every read/write behind `/collection`, `/wishlist`, `/grading`, and
@@ -149,8 +156,9 @@ their corresponding update/delete functions.
 
 **What this means for staging**:
 - `NEXT_PUBLIC_API_URL` **must** be set to the Railway `api` service's public HTTPS URL, or
-  `/dashboard`, `/collection`, `/wishlist`, `/grading`, `/collector`, `/market/movers`, card detail
-  pages, and the admin alert/refresh-run pages will fail with network errors in the browser.
+  `/dashboard`, `/collection`, `/wishlist`, `/grading`, `/collector`, `/market/movers`, and card
+  detail pages will fail with network errors in the browser. (The admin alert/refresh-run/snkrdunk
+  pages no longer need this - see the `fetchAlertEvents` note above.)
 - Because the browser calls a different origin (`*.up.railway.app`) than the page is served from
   (`*.vercel.app`), Railway's `api` service **must** set `CORS_ALLOWED_ORIGINS`/
   `CORS_ALLOW_ORIGIN_REGEX` to the Vercel staging domain (see `services/api/app/main.py`), or every
@@ -369,3 +377,132 @@ correctly shows "collector accounts are not enabled" rather than a broken sign-i
 no admin session/login yet, so `/admin/*` is unconditionally unreachable from the browser - use
 direct backend tooling (`curl -H "X-Admin-Token: ..."`, per `docs/operations.md`) until the
 dedicated admin-login task lands.
+
+## 13. Temporary admin login (2026-07-27)
+
+**Staging/prototype only.** This entire mechanism - the Credentials provider, the backend
+verify endpoint, the Redis-backed throttle - exists solely to unblock admin access on staging
+before Google OAuth is configured, and is designed to be deleted wholesale once section 13's
+[migration path](#migration-path-to-google-oauth) lands. It is not a general-purpose auth system
+and should not be extended (no password reset, no registration, no second admin account, no
+role other than `"admin"`).
+
+**Why this was needed**: the frontend-containment task (section 12) closed `/admin/*` to the
+browser entirely - a safe default, but with no way back in short of direct backend `curl` calls.
+Google OAuth (the eventual real answer) has no staging credentials yet. This bridges that gap.
+
+### Architecture
+
+```
+Browser
+  -> Auth.js Credentials login (email + password, /admin/login)
+  -> src/lib/auth.ts's adminAuthorize() (server-side)
+  -> POST https://<railway-api>/auth/admin/verify
+     -> Redis-backed throttle check (app.core.admin_login_throttle)
+     -> Argon2id verify against ADMIN_LOGIN_PASSWORD_HASH (app.core.admin_password)
+     -> { id, email, role: "admin" }  (nothing else - no ADMIN_TOKEN, no hash, no secret)
+  -> Auth.js JWT session, role="admin" claim, 4h expiry (independent of the
+     underlying session cookie's own lifetime)
+
+Authenticated admin browser request
+  -> Next.js /admin/* page or /api/admin/** Route Handler
+  -> requireAdminSession() / requireAdminOrResponse() (src/lib/adminSession.ts, src/lib/adminProxy.ts)
+     - calls Auth.js auth() server-side; never trusts a client-supplied role/header
+  -> server-side ADMIN_TOKEN read from process.env, injected as X-Admin-Token
+  -> Railway api service (app.auth.require_admin_token - unchanged)
+```
+
+The browser never receives `ADMIN_TOKEN`, `API_JWT_SECRET`, or `ADMIN_LOGIN_PASSWORD_HASH` at any
+point in this flow.
+
+### Admin login password vs. `ADMIN_TOKEN` - deliberately two different secrets
+
+- `ADMIN_TOKEN` is the pre-existing backend bearer token (`app.auth.require_admin_token`),
+  completely unchanged by this task. It now lives **server-side only** - Railway (`api` service)
+  and Vercel (server-only, Production scope, Sensitive - see section 2) - and is injected into
+  every outbound `/admin/*` backend request by `src/lib/adminProxy.ts`. The browser never sees it.
+- The admin login password is a **separate** credential, known only to the human operator and
+  never derived from or comparable to `ADMIN_TOKEN`. Its Argon2id hash
+  (`ADMIN_LOGIN_PASSWORD_HASH`) is the only form of it that ever touches disk or an environment
+  variable - see `app.core.admin_password` and the provisioning procedure below.
+
+### Environment variables (names only - see each service's dashboard for current values)
+
+**Railway `api` service:**
+- `ADMIN_LOGIN_ENABLED` - defaults to `false`; the login endpoint also independently requires
+  both of the next two variables to be set regardless of this flag.
+- `ADMIN_LOGIN_EMAIL`
+- `ADMIN_LOGIN_PASSWORD_HASH` - a standard encoded Argon2id hash string, never the plaintext.
+- `ADMIN_LOGIN_MAX_ATTEMPTS` (default `5`), `ADMIN_LOGIN_WINDOW_SECONDS` (default `900`),
+  `ADMIN_LOGIN_LOCKOUT_SECONDS` (default `1800`) - throttle policy, optional overrides.
+- `ADMIN_TOKEN` - pre-existing, unchanged.
+- `REDIS_URL` - pre-existing, now also backs the login throttle (`app.core.admin_login_throttle`,
+  deliberately separate from `app.core.rate_limit`'s in-memory limiter).
+
+**Vercel (web) - server-only, no `NEXT_PUBLIC_` prefix on any of these:**
+- `ADMIN_TOKEN` - new as of this task (section 2's table).
+- `API_INTERNAL_URL`, `AUTH_SECRET` - pre-existing, unchanged; also used by the admin Credentials
+  provider (`src/lib/auth.ts`).
+
+### Rate-limit / lockout behaviour
+
+Two independent Redis-backed counters per attempt (`app.core.admin_login_throttle`): the
+normalized submitted email, and the caller's IP where available. Either one reaching
+`ADMIN_LOGIN_MAX_ATTEMPTS` failures within `ADMIN_LOGIN_WINDOW_SECONDS` locks that counter for
+`ADMIN_LOGIN_LOCKOUT_SECONDS`. A successful login clears only the account-level counter (never the
+IP one - see the function's own docstring for why). Every failure path - wrong password, unknown
+email, throttled, disabled, Redis unavailable - returns one of exactly two generic response shapes;
+none of them reveal which case applies.
+
+### Session duration
+
+4 hours, enforced as a `roleExpiresAt` claim inside the JWT itself (`ADMIN_SESSION_MAX_AGE_MS` in
+`src/lib/auth.ts`) rather than via Auth.js's global `session.maxAge` - kept independent of whatever
+session lifetime is eventually appropriate for collector Google sign-in.
+
+### Provisioning the admin credential
+
+Never run interactively through an AI coding agent's tool output. See
+`services/api/scripts/generate_admin_password_hash.py`'s own docstring for the full procedure; the
+short version:
+
+```
+cd services/api
+python3 scripts/generate_admin_password_hash.py
+```
+
+Prompts for email + password (hidden input, min 16 chars), hashes it with Argon2id, and writes only
+the email and hash to Railway (`staging`/`optcg-price-tracker`) - refuses to run against anything
+with "prod" in the environment name. Enables `ADMIN_LOGIN_ENABLED` last, only after both values are
+confirmed present. The plaintext password is never written anywhere; store it in a password
+manager.
+
+### `ADMIN_TOKEN` rotation status
+
+Not yet rotated as of this task. The prior client-side flow (`AdminAuthGate`, localStorage
+`admin_token`) meant a tester's browser could hold the raw backend `ADMIN_TOKEN` value, so it
+should be treated as potentially exposed and rotated once this new server-only flow is deployed
+and verified live - generate a new value, update it on both Railway (`api`) and Vercel (`web`)
+together, verify both sides before removing the old one, and never display the new value in any
+terminal, log, or commit (same transfer method as section 2's `ADMIN_TOKEN` row - pipe directly
+between `railway variable list --kv` and `vercel env add`, never through an intermediate `echo` or
+file). This is a live-infrastructure action tracked separately from the code change in this task -
+see the task's own final report for current status.
+
+### Rollback procedure
+
+Setting `ADMIN_LOGIN_ENABLED=false` on Railway immediately disables new logins (existing sessions
+remain valid until their 4h expiry) without touching any code. To remove the mechanism entirely:
+revert the commit(s) for this task, then remove `ADMIN_LOGIN_*` variables from Railway and
+`ADMIN_TOKEN` from Vercel. The backend's `require_admin_token` dependency and direct
+`X-Admin-Token` curl-based access (`docs/operations.md`) are unaffected either way.
+
+### Migration path to Google OAuth
+
+Once Google OAuth has real staging credentials and an admin-email allowlist is implemented:
+1. Add the allowlist check (e.g. a `role` derived from `token.email` matching a configured list)
+   to `src/lib/auth.ts`'s `jwt`/`session` callbacks, replacing the Credentials-provider branch.
+2. Remove the admin Credentials provider, `/admin/login`, `POST /auth/admin/verify`,
+   `app.core.admin_login_throttle`, `app.core.admin_password`, and all `ADMIN_LOGIN_*` variables.
+3. `src/lib/adminSession.ts`/`src/lib/adminProxy.ts` (the `role === "admin"` check itself) do not
+   need to change - they already only care about the session's `role` claim, not how it got there.

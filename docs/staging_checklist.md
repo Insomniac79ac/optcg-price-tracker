@@ -285,3 +285,48 @@ entry is the checklist-level summary.
 - No live SNKRDUNK collection occurred; `SNKRDUNK` candidate table remains empty (0 rows) by
   design. `SCRAPING_MODE` remains `mock`. Google OAuth remains unconfigured. Beat remains blocked
   by the Railway plan limit.
+
+## 2026-07-27 - Temporary admin login implemented (staging/prototype only)
+
+Full architecture, env vars, and rollback in `docs/staging_deployment.md` section 13 - this entry
+is the checklist-level summary. Supersedes the "`ADMIN_TOKEN` was **not** added to Vercel, per
+policy" line in the 2026-07-26 entry above (that was correct policy *then*, under the
+browser-holds-a-token model this task replaced - the codebase and this doc entry are the current
+source of truth, the historical entry above is left as-is rather than edited).
+
+- [x] `ADMIN_TOKEN` added to Vercel (`optcg-price-tracker-staging`, Production scope, Sensitive,
+      server-only) - piped directly from `railway variable list --kv` into `vercel env add
+      --sensitive`, value never displayed. Confirmed present via `vercel env ls` (value shown as
+      `Encrypted`, never printed).
+- [x] Backend: `POST /auth/admin/verify` + `GET /auth/admin/status` (`app.api.admin_login`),
+      Argon2id hashing (`app.core.admin_password`), Redis-backed throttle
+      (`app.core.admin_login_throttle`) - not the in-memory `app.core.rate_limit`. 41 new backend
+      tests, all passing; full backend suite (1279 tests) passing.
+- [x] Frontend: admin Credentials provider alongside Google (`src/lib/auth.ts`), `/admin/login`
+      page, `requireAdminSession()`/`requireAdminOrResponse()` boundaries
+      (`src/lib/adminSession.ts`/`src/lib/adminProxy.ts`), all ~58 `/api/admin/**` Route Handlers
+      plus the 4 dual-auth `/api/file-jobs/**` routes migrated off caller-supplied
+      `X-Admin-Token` to server-side injection, `proxy.ts` optimistic `/admin/login`-excluded
+      redirect, client-side token flow (`AdminAuthGate`, localStorage `admin_token`) removed.
+      Full frontend suite (244 tests across 42 files) passing; `tsc --noEmit` clean; `next build`
+      succeeds.
+- [x] Fixed a regression this task's own removal of the client-side token would otherwise have
+      caused: `fetchAlertEvents`/`fetchAlertRules`/`updateAlertRule`, `fetchRefreshRuns`/
+      `fetchRefreshRun`, and `fetchSnkrdunkCandidates` previously called the Railway backend
+      **directly from the browser** with an admin-token header attached if present (see the old
+      "Known direct backend calls" list in `docs/staging_deployment.md` section 4) - removing that
+      token would have silently broken the Alerts, Refresh Runs, and SNKRDUNK Candidates admin
+      pages. Added same-origin proxy routes for all of them (`/api/admin/alert-events`,
+      `/api/admin/alert-rules`, `/api/admin/refresh-runs`, `/api/admin/snkrdunk-candidates`) and
+      repointed those six functions at them.
+- [ ] `ADMIN_LOGIN_EMAIL`/`ADMIN_LOGIN_PASSWORD_HASH`/`ADMIN_LOGIN_ENABLED` **not yet set** -
+      requires the operator to run `services/api/scripts/generate_admin_password_hash.py`
+      interactively in their own terminal (never through an AI agent's tool output - the script
+      prompts for and hashes the real password). See section 13's provisioning procedure.
+- [ ] `ADMIN_TOKEN` rotation - not yet done. The prior client-side flow means the current value
+      should be treated as potentially exposed; rotate once the new flow is verified live end to
+      end (login works, admin pages load via the proxy, no `X-Admin-Token` in any browser
+      request/localStorage) - see section 13's rotation note.
+- [ ] Live browser verification of `/admin/login` (valid/invalid credentials, throttling, session
+      persistence, sign-out) - blocked on the provisioning step above; cannot be verified until a
+      real admin credential exists on staging.

@@ -47,9 +47,13 @@ instead (see "Navigation audit findings" below).
 
 ## Admin routes (frontend pages)
 
-All gated client-side by `AdminAuthGate`/`getAdminToken()` (an `X-Admin-Token` stored in
-`localStorage`, entered once via the token-prompt form) and server-side by every underlying
-`/admin/*` API call requiring the same token - see "Admin auth audit findings" below.
+**Stale as of 2026-07-27 - see "Update (2026-07-27)" below.** The "Auth required: Admin token"
+column below describes the pre-admin-login model (a browser-held `X-Admin-Token` in
+`localStorage`). Every row now requires a role="admin" Auth.js session instead (`/admin/login`) -
+the backend's own `X-Admin-Token` requirement is unchanged, but the browser no longer holds that
+token itself; a server-side proxy injects it. Left as originally written rather than rewritten
+row-by-row, consistent with this doc's existing convention for a superseded table (see the
+2026-07-26 update's own "stale" note above for `Nav-linked`).
 
 | Route | Purpose | Auth required | Expected status (healthy) | Nav-linked |
 |---|---|---|---|---|
@@ -200,3 +204,42 @@ follow-up implementation task, `collector-blueprint.pdf`. That task changed:
   still the real enforcement point - this task did not touch it.
 - Not done in this task (tracked as the next one): a real admin login. Until then, admin access is
   direct backend tooling (`curl -H "X-Admin-Token: ..."`, per `docs/operations.md`) only.
+
+## Update (2026-07-27) - temporary admin login (staging/prototype only)
+
+Closes the previous update's "tracked as the next one" gap. Full architecture in
+`docs/staging_deployment.md` section 13. Changes relevant to this inventory:
+
+- **New public route**: `/admin/login` - email/password form, generic error, outside the
+  `(protected)` route group so it stays reachable without a session. Auth required: none (that's
+  the point - it's where a session is established). Links back to Discover; no Google button (see
+  `src/app/sign-in/page.tsx` for that, unchanged).
+- **New route group**: every existing `/admin/*` page moved under `app/admin/(protected)/*`
+  (Next.js route groups don't affect the URL - `/admin/cache` is still `/admin/cache`). "Auth
+  required" for the entire "Admin routes" table above is now **admin session** (`role="admin"` on
+  the Auth.js session, established via `/admin/login`), not a raw token - the previous
+  `AdminAuthGate`/localStorage flow is deleted (`getAdminToken`/`setAdminToken`/`clearAdminToken`
+  no longer exist in `apps/web/src/lib/api.ts`).
+- **New index page**: `/admin` - the default post-login destination and `SidebarNav`'s single
+  "Admin" entry target. Not present before this task.
+- **Backend**: one new unauthenticated endpoint, `POST /auth/admin/verify` (+ `GET
+  /auth/admin/status`), deliberately outside `require_admin_token` - it's what *establishes* an
+  admin session, not a consumer of one. Grants no access to any other `/admin/*` route by itself.
+  Every other backend `/admin/*`/`/snkrdunk/*` route's `require_admin_token` dependency is
+  completely unchanged.
+- **Six frontend data-fetch functions stopped calling the backend directly from the browser**:
+  `fetchAlertEvents`/`fetchAlertRules`(+`fetchAlertEvent`/`updateAlertRule`),
+  `fetchRefreshRuns`/`fetchRefreshRun`, and `fetchSnkrdunkCandidates` used to call
+  `NEXT_PUBLIC_API_URL` directly with an admin-token header attached if present (see the
+  now-superseded "Known direct backend calls" list this replaces in `docs/staging_deployment.md`
+  section 4) - removing the browser-held token would have silently broken them. They now go
+  through same-origin Next.js proxy routes (`/api/admin/alert-events`, `/api/admin/alert-rules`,
+  `/api/admin/refresh-runs`, `/api/admin/snkrdunk-candidates`) like every other admin page.
+- **"Admin auth audit findings" above is otherwise still accurate** for the backend: every
+  `/admin/*`/`/snkrdunk/*` router still applies `Depends(require_admin_token)` at the router
+  level, unchanged. What changed is *who supplies that header* - every Next.js
+  `/api/admin/**` Route Handler now reads `ADMIN_TOKEN` from its own server-side `process.env`
+  (`src/lib/adminProxy.ts`) and ignores any caller-supplied `X-Admin-Token`, rather than
+  forwarding whatever the browser sent.
+- Google OAuth remains unconfigured, unchanged. This mechanism is explicitly temporary - see
+  `docs/staging_deployment.md` section 13's migration path for its planned removal.
