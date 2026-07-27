@@ -479,15 +479,16 @@ manager.
 
 ### `ADMIN_TOKEN` rotation status
 
-Not yet rotated as of this task. The prior client-side flow (`AdminAuthGate`, localStorage
-`admin_token`) meant a tester's browser could hold the raw backend `ADMIN_TOKEN` value, so it
-should be treated as potentially exposed and rotated once this new server-only flow is deployed
-and verified live - generate a new value, update it on both Railway (`api`) and Vercel (`web`)
-together, verify both sides before removing the old one, and never display the new value in any
-terminal, log, or commit (same transfer method as section 2's `ADMIN_TOKEN` row - pipe directly
-between `railway variable list --kv` and `vercel env add`, never through an intermediate `echo` or
-file). This is a live-infrastructure action tracked separately from the code change in this task -
-see the task's own final report for current status.
+**Rotated, 2026-07-27.** The prior client-side flow (`AdminAuthGate`, localStorage `admin_token`)
+meant a tester's browser could have held the raw backend `ADMIN_TOKEN` value, so it was treated as
+potentially exposed. A new value was generated with `openssl rand -hex 32` inside a single
+non-interactive shell invocation, held only in an unprinted shell variable, and piped directly via
+stdin to `railway variable set ADMIN_TOKEN --stdin` (Railway staging `api`) and
+`vercel env add ADMIN_TOKEN production --sensitive --force` (Vercel) before being unset - never
+echoed, logged, or written to a file. Both services were redeployed afterward and confirmed
+healthy. The old value was fully overwritten (not dual-lived), so it stopped authenticating the
+moment the new one was set - not independently re-tested against the literal old string, which was
+never known to begin with.
 
 ### Rollback procedure
 

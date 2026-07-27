@@ -330,3 +330,54 @@ source of truth, the historical entry above is left as-is rather than edited).
 - [ ] Live browser verification of `/admin/login` (valid/invalid credentials, throttling, session
       persistence, sign-out) - blocked on the provisioning step above; cannot be verified until a
       real admin credential exists on staging.
+
+## 2026-07-27 (continued) - Admin login provisioned, ADMIN_TOKEN rotated, both services deployed
+
+Closes every `[ ]` item in the entry directly above. The operator ran
+`services/api/scripts/generate_admin_password_hash.py` themselves, in their own terminal - no
+password or hash was ever pasted into or displayed by an AI agent session.
+
+- [x] `ADMIN_LOGIN_EMAIL`, `ADMIN_LOGIN_PASSWORD_HASH`, `ADMIN_LOGIN_ENABLED` set on Railway
+      staging (`optcg-price-tracker`) by the operator's own run of the provisioning script.
+      `ADMIN_LOGIN_MAX_ATTEMPTS=5`, `ADMIN_LOGIN_WINDOW_SECONDS=900`,
+      `ADMIN_LOGIN_LOCKOUT_SECONDS=1800` set explicitly afterward (non-secret policy values,
+      matching the code's own defaults) for dashboard auditability. Confirmed live via
+      `GET /auth/admin/status` -> `{"enabled":true}` and via `railway variable list --json` key
+      presence - values never inspected or displayed at any point.
+- [x] `ADMIN_TOKEN` rotated: a new value was generated with `openssl rand -hex 32` inside a single
+      non-interactive shell invocation, held only in an unprinted shell variable, piped directly
+      via stdin to `railway variable set ADMIN_TOKEN --stdin` (Railway staging `api`) and
+      `vercel env add ADMIN_TOKEN production --sensitive --force` (Vercel), then unset - never
+      echoed, logged, or written to a file at any point. The old value was fully overwritten, not
+      dual-lived, so it stopped authenticating the instant the new one was set; this wasn't (and
+      couldn't safely be) verified by testing the literal old string, which was never known to
+      begin with.
+- [x] Railway staging `api` redeployed (picked up the rotated token and the throttle-policy vars);
+      `/health` green (`status=ok`, `database_connected=true`, `redis_connected=true`) throughout.
+- [x] Vercel deployed from the `staging` branch checkout (`vercel --prod --yes` from the repo
+      root - running it from `apps/web` double-applies the project's own Root Directory setting
+      and fails; run from repo root instead) - `readyState: READY`, aliased to the stable domain
+      `https://optcg-price-tracker-staging.vercel.app`, picked up the rotated `ADMIN_TOKEN` and
+      every admin-login code path from this task.
+- [x] Live verification (signed-out only - see the blocker below for what still needs the real
+      credential): `/admin` and `/admin/system-check` 307 to `/admin/login?callbackUrl=...`
+      (relative, safe); `/admin/login` renders "Admin sign-in" (login enabled); an absolute
+      (`https://evil.example.com`) or protocol-relative (`//evil.example.com`) `callbackUrl` is
+      never reflected into the actual sign-in-form prop (confirmed in the page's own RSC payload:
+      the component prop is `"callbackUrl":"/admin"`, the sanitized fallback - the raw query string
+      elsewhere in that payload is just Next.js's own inert routing metadata, not a redirect
+      target); throttle probe against a disposable non-real test email hit `429` with
+      `Retry-After: 1787` on the 6th attempt, matching the 5-attempt policy exactly - the real
+      admin account's counter was never touched; downloaded and grepped every JS chunk the login
+      page loads (9 files, ~700KB) for `ADMIN_TOKEN`/`NEXT_PUBLIC_ADMIN` - no matches.
+      Repo-wide grep sweep (`admin_token`, `X-Admin-Token`, `getAdminToken`/`setAdminToken`/
+      `clearAdminToken`, `AdminAuthGate`, `NEXT_PUBLIC_ADMIN`, `process.env.ADMIN_TOKEN`) - every
+      remaining hit is server-only code, a router-level `require_admin_token` dependency
+      (unchanged), or a comment/test explaining the above.
+- [x] Full test suites re-run against this state: backend 1279 passed, frontend 244/42 passed.
+- [ ] **Still open**: the signed-in half of live verification (session role/expiry, admin nav,
+      `/admin/system-check` loading, a real admin API call succeeding, no `X-Admin-Token` in any
+      browser request, sign-out invalidation) requires an authenticated browser session, which
+      only the operator can create - deferred at the operator's own choice rather than asked to
+      paste a password into this session. Recommended as a manual follow-up: sign in at
+      `/admin/login` in a real browser and spot-check the items above.
