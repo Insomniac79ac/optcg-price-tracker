@@ -253,9 +253,13 @@ sections. Order, top to bottom:
 3. **Price source panel** (`CardPricePanel`, 4 lines: Yuyu-Tei sell/buy,
    SNKRDUNK floor, SNKRDUNK sold - the last one is genuinely new to this
    panel and follows the same "not available" fallback as the other three).
-4. **Market context** (`MarketContextPanel`) - signal events + opportunities
-   for this one card, deterministic labels straight from the existing APIs,
-   never an invented recommendation.
+4. ~~Market context (`MarketContextPanel`)~~ - **removed from this page** in
+   the collector-first redesign audit (see `docs/market_index.md` "Market
+   Index wording") - opportunity scores + buy/sell-decision links are exactly
+   the trading-signal framing that audit's Phase 8 rules out for a page every
+   anonymous visitor reaches. `MarketContextPanel` itself, and the signal-
+   events/opportunities APIs/pages it linked to, are unchanged and still
+   directly reachable - just no longer rendered here.
 5. **Notes/activity** (`CardActivityPanel`).
 6. **Admin mini-panel** (source mappings) - only rendered for admin-token
    holders, styled with `.admin-preview` (the gold-outline admin treatment,

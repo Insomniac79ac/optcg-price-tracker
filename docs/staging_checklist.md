@@ -418,3 +418,68 @@ submitted `/search?q=...` - to `/cards`).
       still present on the real Vercel Production environment before deploying - the NextAuth
       "Failed to fetch"-style error seen earlier in a local throwaway dev container was that
       container's missing secret, not a staging config gap.
+
+## 2026-07-27 (continued) - Collector-first redesign: card images, Discover/Cards/detail/Market Index restyle
+
+Full record (visual audit, image data audit, provenance schema, import workflow, and every
+wording/styling decision) lives in `docs/market_index.md` - this entry is the deploy/verification
+log only.
+
+- [x] Visual audit of `/`, `/cards`, `/cards/{id}`, `/market/movers`, `/sign-in` (desktop + mobile,
+      live staging) plus the shared shell/component code. Found `/market/movers` (the "Market
+      Index" nav target) was a dense per-source price table with plain-text links straight to
+      admin routes (`/admin/refresh-runs`, `/admin/snkrdunk-candidates`, `/admin/alerts`,
+      `/admin/card-audit`) reachable by any anonymous visitor, and `/cards/{id}`'s "Market context"
+      panel linked to `/analytics/buy-decisions`/`/analytics/sell-decisions` - trading-signal
+      framing on a public page. `/`, `/cards`, `SidebarNav`, `TopBar` were already close to the
+      collector-first bar from earlier phases and needed no structural change.
+- [x] Image data audit against the live staging Postgres (12 cards): only 2 had a usable
+      `image_url` (both verified real `image/jpeg` content); 4 have any source mapping at all; the
+      other 10 have none. Attempted to resolve the 2 mapped-but-imageless cards' numbered product
+      slug via their Yuyu-Tei mapping - blocked by the site's own bot protection (HTTP 403), not
+      bypassed. Full table and reasoning in `docs/market_index.md`.
+- [x] Migration `f35ff2f33090_add_card_image_provenance` (four nullable columns:
+      `image_source`/`image_source_url`/`image_status`/`image_last_verified_at`) applied directly
+      to the staging database via `railway connect postgres --tunnel-only` (this session holds no
+      staging `ADMIN_TOKEN` - see the admin-login entries above - so the real HTTP admin endpoint
+      couldn't be exercised with real auth for either the migration or the backfill below).
+- [x] New admin CSV image-import workflow (`POST /admin/cards/import-images.csv`, template at
+      `GET /admin/cards/import-images-template.csv`, `app.services.card_image_import`) -
+      exact-identity matching only (never creates a card, never guesses a variant), server-side
+      `content-type` validation of every `image_url` before it's ever applied. 10 new backend
+      tests, including one asserting a Parallel printing can never receive a base printing's image.
+- [x] The two already-image-having cards (11, 12) had their new provenance fields backfilled by
+      calling the real `import_card_images_csv` service function (not an ad hoc `UPDATE`) against
+      the staging DB - see `docs/market_index.md` for why the service function rather than the
+      HTTP endpoint. The other 10 cards remain on the branded placeholder - documented blocker,
+      not fabricated.
+- [x] `next.config.ts`'s CSP `img-src` tightened from a blanket `https:` to
+      `'self' data: https://card.yuyu-tei.jp` - the one host this audit verified serves real image
+      content. `next/image` deliberately not adopted (reasoning in `docs/market_index.md` "Image
+      hosting") - existing plain-`<img>` fallback already prevents layout shift and handles broken
+      images.
+- [x] `/market/movers` rewritten: explainer (what the Market Index is, sources, full/limited
+      coverage, listing fallback, freshness) + the same `/cards/catalogue` grid sorted by index
+      value - no admin links, no "movers"/trending framing, never a buy/sell recommendation.
+      `/cards/[id]`'s "Market context" panel (opportunity scores + buy/sell-decision links) removed
+      for the same reason; `/cards/[id]`'s "Back to dashboard" link (pointing at a signed-in-only
+      route from a page every anonymous visitor reaches) fixed to "Back to Cards" → `/cards`.
+      `/` (Discover) rebuilt with a real-artwork hero showcase, a new "Full Market Index coverage"
+      section, and the existing "Recently updated" strip - all from one `GET /cards/catalogue`
+      call, no invented popularity/trending data. `/cards` itself needed no change - already met
+      the tile-hierarchy bar from the earlier phase.
+- [x] Full test suites re-run against this state: backend 1319 passed (1309 + 10 new), frontend
+      244/42 passed, `tsc --noEmit` clean, `next build` clean.
+- [x] Live verification against a local build pointed at the real staging database (via the same
+      tunnel): real artwork renders for cards 11/12, every placeholder card still shows cleanly,
+      `/cards` sort/filter/pagination unchanged, Market Index values unchanged, card detail's price
+      source breakdown intact, no "admin" text anywhere on `/`, `/cards`, `/cards/{id}`, or
+      `/market/movers`, mobile layouts reflow correctly. Remaining console noise (NextAuth
+      "Failed to fetch" from this throwaway dev container's missing `AUTH_SECRET`, and expected
+      401s from collection/wishlist calls made while signed out) is pre-existing, not from this
+      change - confirmed the same way as the prior entry above.
+- [ ] **Still open**: 10 of 12 staging cards remain without real artwork - needs an operator with
+      verified Yuyu-Tei/SNKRDUNK image URLs to submit the CSV template, or a future task to
+      re-approach image sourcing through a sanctioned method. Recommended next task (per the
+      redesign brief): controlled AI-assisted ingestion design and threat modelling, once the
+      collector interface and image data are verified - which this entry closes out.
