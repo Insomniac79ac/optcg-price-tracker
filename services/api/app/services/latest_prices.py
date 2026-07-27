@@ -45,7 +45,14 @@ def get_latest_prices_for_cards(
                 PriceObservation.source_id,
                 PriceObservation.price_type,
             ),
-            order_by=PriceObservation.observed_at.desc(),
+            # id.desc() as a tiebreaker makes "the latest row" deterministic
+            # even when two observations in the same series share an exact
+            # observed_at (e.g. a batch mock/import run that stamps every row
+            # with the same fetch timestamp) - otherwise ROW_NUMBER's order
+            # among tied rows is unspecified and callers (e.g. Market Index)
+            # could get a different "latest" observation from one call to
+            # the next with no underlying data change.
+            order_by=(PriceObservation.observed_at.desc(), PriceObservation.id.desc()),
         )
         .label("rn")
     )

@@ -261,6 +261,72 @@ class PriceObservationOut(BaseModel):
     raw_snapshot_id: int | None
 
 
+class MarketIndexSourceValueOut(BaseModel):
+    """One normalized source reference (see app.services.market_index) -
+    either a candidate for the Market Index itself (source_values) or an
+    auxiliary value never eligible for it, e.g. Yuyu-Tei buy
+    (auxiliary_values). Never a fixed 'yuyutei_price'/'snkrdunk_price' pair -
+    this shape is what lets a future Cardrush/Mercado resolver slot in
+    without a frontend contract change."""
+
+    source: str
+    reference_type: str
+    evidence_type: Literal["listing", "transaction"]
+    value_jpy: int | None
+    observed_at: datetime | None
+    sample_size: int | None
+    stale: bool
+    eligible: bool
+    fallback_used: bool
+    ineligible_reason: str | None = None
+
+
+class MarketIndexOut(BaseModel):
+    card_id: int
+    index_version: int
+    index_value_jpy: int | None
+    calculation_method: str
+    source_count: int
+    coverage_status: Literal["full", "limited", "none"]
+    confidence: Literal["high", "medium", "low"]
+    source_values: list[MarketIndexSourceValueOut]
+    auxiliary_values: list[MarketIndexSourceValueOut]
+    freshest_observation_at: datetime | None
+    stalest_eligible_source_at: datetime | None
+    stale_sources: list[str]
+    calculated_at: datetime
+
+
+class CardCatalogueItemOut(CardOut):
+    """CardOut plus its Market Index summary, batch-computed - see GET
+    /cards/catalogue. Extends CardOut (rather than duplicating its fields)
+    so a catalogue tile and a card-detail page can share one card shape."""
+
+    market_index: MarketIndexOut
+
+
+class CardCatalogueFacetsOut(BaseModel):
+    """Distinct values actually present in the (active) card catalog, for
+    building filter dropdowns that can never offer an option with zero
+    matching cards - see app.services.card_catalogue.get_catalogue_facets.
+    Unaffected by the current q/set_code/rarity/... filters so narrowing one
+    filter never hides the others' remaining valid options."""
+
+    set_codes: list[str]
+    rarities: list[str]
+    languages: list[str]
+    variants: list[str]
+
+
+class CardCatalogueListOut(BaseModel):
+    items: list[CardCatalogueItemOut]
+    total: int
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+    facets: CardCatalogueFacetsOut
+
+
 class SnkrdunkCandidateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

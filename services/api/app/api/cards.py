@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import require_current_user, require_current_user_optional
+from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, CardTag, CollectorTag, PriceObservation, Source, User
-from app.schemas import CardOut, PriceObservationOut
+from app.schemas import CardCatalogueListOut, CardOut, MarketIndexOut, PriceObservationOut
+from app.services.card_catalogue import SORT_KEYS, SortKey, get_catalogue_facets, list_catalogue
 from app.services.collector import get_tags_for_cards
+from app.services.market_index import get_market_index_for_card
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
@@ -53,6 +56,52 @@ def _get_tag_or_404(db: Session, tag_id: int, user: User) -> CollectorTag:
     return tag
 
 
+@router.get("/catalogue", response_model=CardCatalogueListOut)
+def get_cards_catalogue(
+    q: str | None = Query(default=None, min_length=1, max_length=128),
+    set_code: str | None = Query(default=None),
+    rarity: str | None = Query(default=None),
+    language: str | None = Query(default=None),
+    variant: str | None = Query(default=None),
+    sort: str = Query(default="card_code"),
+    limit: int = Query(default=24, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """The public, paginated, image-catalogue-ready card list - each item
+    carries its Market Index summary already attached (see
+    app.services.card_catalogue), so the frontend grid renders in one
+    request instead of one request per card. Declared before GET
+    /cards/{card_id} - both are single path-segment routes under /cards, and
+    FastAPI/Starlette resolves them in declaration order, so this one must
+    come first or "/cards/catalogue" would be swallowed by {card_id} (and
+    fail int conversion) instead of ever reaching this handler."""
+    if sort not in SORT_KEYS:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid sort. Must be one of {list(SORT_KEYS)}"
+        )
+
+    items, total = list_catalogue(
+        db,
+        q=q,
+        set_code=set_code,
+        rarity=rarity,
+        language=language,
+        variant=variant,
+        sort=sort,  # type: ignore[arg-type]
+        limit=limit,
+        offset=offset,
+    )
+    return CardCatalogueListOut(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        pagination=pagination_response(items, total, limit, offset),
+        facets=get_catalogue_facets(db),
+    )
+
+
 @router.get("", response_model=list[CardOut])
 def list_cards(
     db: Session = Depends(get_db),
@@ -74,6 +123,12 @@ def get_card(
     card = _get_card_or_404(db, card_id)
     tags_by_card = get_tags_for_cards(db, {card_id}, user_id=user.id) if user else {}
     return _to_card_out(card, tags_by_card.get(card_id, []))
+
+
+@router.get("/{card_id}/market-index", response_model=MarketIndexOut)
+def get_card_market_index(card_id: int, db: Session = Depends(get_db)):
+    _get_card_or_404(db, card_id)
+    return get_market_index_for_card(db, card_id)
 
 
 @router.get("/{card_id}/prices", response_model=list[PriceObservationOut])
