@@ -1,306 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { PriceTypeBadge } from "@/components/PriceTypeBadge";
-import { RarityBadge } from "@/components/RarityBadge";
-import { SourceBadge } from "@/components/SourceBadge";
-import { ErrorState, LoadingState } from "@/components/StateBlocks";
-import { DataTableShell } from "@/components/ui/DataTableShell";
+import { CardGrid } from "@/components/ui/CardGrid";
+import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
+import { CollectorCardTile } from "@/components/ui/CollectorCardTile";
+import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import {
-  type Card,
-  type MarketMover,
-  fetchCards,
-  fetchMarketMovers,
-} from "@/lib/api";
-import { cardDisplayName, formatJpy } from "@/lib/format";
+import { ErrorState } from "@/components/StateBlocks";
+import { type CardCatalogueItem, fetchCardsCatalogue } from "@/lib/api";
 
-const SOURCE_OPTIONS = [
-  { value: "", label: "All sources" },
-  { value: "yuyutei", label: "Yuyu-Tei" },
-  { value: "snkrdunk", label: "SNKRDUNK" },
-];
+const DISPLAY_LIMIT = 60;
 
-const PRICE_TYPE_OPTIONS = [
-  { value: "", label: "All price types" },
-  { value: "sell", label: "Sell" },
-  { value: "buy", label: "Buy" },
-  { value: "floor", label: "Floor" },
-  { value: "sold", label: "Sold" },
-];
-
-export default function MarketMoversPage() {
-  const [movers, setMovers] = useState<MarketMover[]>([]);
-  const [allCards, setAllCards] = useState<Card[]>([]);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">(
-    "loading",
-  );
-
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [priceTypeFilter, setPriceTypeFilter] = useState("");
-  const [rarityFilter, setRarityFilter] = useState("");
-  const [variantFilter, setVariantFilter] = useState("");
-
-  useEffect(() => {
-    fetchCards()
-      .then(setAllCards)
-      .catch(() => setAllCards([]));
-  }, []);
+/** The public Market Index page (collector-first redesign audit, Phase 8) -
+ * replaces the old "Market movers" page, which was a dense per-source price
+ * table with a row of plain-text links straight to internal/admin tooling
+ * (Dashboard, Refresh runs, SNKRDUNK candidates, Card audit, ...) sitting on
+ * a page every anonymous visitor could reach. That page's data (per-source
+ * price + `GET /market/movers`) still exists and is unchanged - this page
+ * just no longer uses it, in favor of the same `GET /cards/catalogue` (and
+ * therefore the same computed Market Index) the /cards page and Discover
+ * already use, sorted by index value so the cards with a real number lead.
+ *
+ * This page explains the Market Index (what it is, its sources, what full
+ * vs. limited coverage and a listing-fallback mean, and that staging prices
+ * are mock data) and then shows it applied to real cards - deliberately
+ * never framed as a buy/sell recommendation or trading signal (see
+ * docs/market_index.md "Market Index wording"). The actual calculation
+ * (app.services.market_index) is unchanged by this page. */
+export default function MarketIndexPage() {
+  const [items, setItems] = useState<CardCatalogueItem[]>([]);
+  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
 
   useEffect(() => {
     let cancelled = false;
-
-    fetchMarketMovers({
-      source: sourceFilter || undefined,
-      price_type: priceTypeFilter || undefined,
-      rarity: rarityFilter || undefined,
-      variant: variantFilter || undefined,
-      limit: 200,
-    })
+    setStatus("loading");
+    fetchCardsCatalogue({ sort: "index_desc", limit: DISPLAY_LIMIT })
       .then((data) => {
         if (cancelled) return;
-        setMovers(data);
+        setItems(data.items);
         setStatus("ready");
       })
       .catch(() => {
-        if (cancelled) return;
-        setStatus("error");
+        if (!cancelled) setStatus("error");
       });
-
     return () => {
       cancelled = true;
     };
-  }, [sourceFilter, priceTypeFilter, rarityFilter, variantFilter]);
-
-  const rarityOptions = useMemo(() => {
-    const values = Array.from(new Set(allCards.map((c) => c.rarity))).sort();
-    return [{ value: "", label: "All rarities" }, ...values.map((v) => ({ value: v, label: v }))];
-  }, [allCards]);
-
-  const variantOptions = useMemo(() => {
-    const values = Array.from(
-      new Set(allCards.map((c) => c.variant).filter((v): v is string => !!v)),
-    ).sort();
-    return [
-      { value: "", label: "All variants" },
-      ...values.map((v) => ({ value: v, label: v })),
-    ];
-  }, [allCards]);
+  }, []);
 
   return (
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
-          title="Market movers"
-          actions={
-            status === "ready" && (
-              <span className="text-sm text-neutral-500">
-                {movers.length} card{movers.length === 1 ? "" : "s"}
-              </span>
-            )
-          }
+          title="Market Index"
+          description="A reference price per card, drawn from Yuyu-Tei and SNKRDUNK - not a buy or sell recommendation."
         />
 
-        <div className="mb-4 flex gap-3 text-xs text-neutral-500">
-          <Link
-            href="/dashboard"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/collection"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Collection
-          </Link>
-          <Link
-            href="/wishlist"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Wishlist
-          </Link>
-          <Link
-            href="/market/signals"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Market signals
-          </Link>
-          <Link
-            href="/market/signal-events"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Signal events
-          </Link>
-          <Link
-            href="/market/opportunities"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Opportunities
-          </Link>
-          <Link
-            href="/market/report"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Market report
-          </Link>
-          <Link
-            href="/admin/refresh-runs"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Refresh runs
-          </Link>
-          <Link
-            href="/admin/snkrdunk-candidates"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            SNKRDUNK candidates
-          </Link>
-          <Link
-            href="/admin/alerts"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Alerts
-          </Link>
-          <Link
-            href="/admin/card-audit"
-            className="underline decoration-neutral-700 underline-offset-2 hover:text-neutral-100"
-          >
-            Card audit
-          </Link>
+        <div className="panel mb-6 grid gap-4 p-4 text-sm text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-faint">
+              What it is
+            </div>
+            <p>
+              The median of eligible prices across every contributing source - one JPY figure per
+              card, not a single source's price.
+            </p>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Contributing sources
+            </div>
+            <p>Yuyu-Tei (sell, dealer-buy) and SNKRDUNK (sold, floor listing) - see each card's own breakdown.</p>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Coverage &amp; fallback
+            </div>
+            <p>
+              <span className="font-medium text-text-primary">Full</span> means both sources have
+              an eligible price right now. <span className="font-medium text-text-primary">Limited</span>{" "}
+              means only one does, or a listing price is standing in for a missing sale/sell price.
+            </p>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-faint">
+              Freshness
+            </div>
+            <p>
+              Each card shows when its most recent source observation landed - a{" "}
+              <span className="text-signal-warning">stale</span> badge means over 48 hours old.
+            </p>
+          </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Select
-            value={sourceFilter}
-            onChange={setSourceFilter}
-            options={SOURCE_OPTIONS}
-          />
-          <Select
-            value={priceTypeFilter}
-            onChange={setPriceTypeFilter}
-            options={PRICE_TYPE_OPTIONS}
-          />
-          <Select
-            value={rarityFilter}
-            onChange={setRarityFilter}
-            options={rarityOptions}
-          />
-          <Select
-            value={variantFilter}
-            onChange={setVariantFilter}
-            options={variantOptions}
-          />
-        </div>
+        <p className="mb-6 text-xs text-text-faint">
+          Staging data - prices are from the mock price source (SCRAPING_MODE=mock), not live.
+        </p>
 
-        {status === "loading" && <LoadingState>Loading market data…</LoadingState>}
+        {status === "loading" && <CardGridSkeleton />}
 
         {status === "error" && (
-          <ErrorState>Failed to load market data from the API. Is the backend running?</ErrorState>
+          <ErrorState
+            action={
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus("loading");
+                  fetchCardsCatalogue({ sort: "index_desc", limit: DISPLAY_LIMIT })
+                    .then((data) => {
+                      setItems(data.items);
+                      setStatus("ready");
+                    })
+                    .catch(() => setStatus("error"));
+                }}
+                className="rounded-control border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary"
+              >
+                Retry
+              </button>
+            }
+          >
+            Failed to load the Market Index.
+          </ErrorState>
         )}
 
-        {status === "ready" && (
-          <DataTableShell isEmpty={movers.length === 0} emptyLabel="No cards match these filters.">
-            <table className="w-full border-collapse text-sm">
-              <thead className="sticky-thead">
-                <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-xs uppercase tracking-wide text-neutral-500">
-                  <th className="px-3 py-2 font-medium">Card</th>
-                  <th className="px-3 py-2 font-medium">Code</th>
-                  <th className="px-3 py-2 font-medium">Rarity</th>
-                  <th className="px-3 py-2 font-medium">Variant</th>
-                  <th className="px-3 py-2 font-medium">Prices</th>
-                </tr>
-              </thead>
-              <tbody>
-                {movers.map((mover) => (
-                  <tr
-                    key={mover.card_id}
-                    className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60"
-                  >
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/cards/${mover.card_id}`}
-                        className="font-medium text-neutral-100 hover:text-sky-400"
-                      >
-                        {cardDisplayName(mover)}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs text-neutral-400">
-                      {mover.card_code}
-                    </td>
-                    <td className="px-3 py-2">
-                      <RarityBadge rarity={mover.rarity} />
-                    </td>
-                    <td className="px-3 py-2 text-neutral-400">
-                      {mover.variant ?? "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      {mover.latest_prices.length === 0 ? (
-                        <span className="text-neutral-600">
-                          No price data
-                        </span>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {mover.latest_prices.map((price) => (
-                            <div
-                              key={`${price.source}-${price.price_type}-${price.condition_label ?? ""}`}
-                              className="flex items-center gap-1.5 rounded border border-neutral-800 bg-neutral-900 px-2 py-1"
-                            >
-                              <SourceBadge source={price.source} />
-                              <PriceTypeBadge priceType={price.price_type} />
-                              <span className="font-medium text-neutral-200">
-                                {formatJpy(price.price_jpy)}
-                              </span>
-                              {price.condition_label && (
-                                <span className="text-xs text-neutral-500">
-                                  {price.condition_label}
-                                </span>
-                              )}
-                              {price.listing_count !== null && (
-                                <span className="text-xs text-neutral-500">
-                                  ×{price.listing_count}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DataTableShell>
+        {status === "ready" && items.length === 0 && (
+          <CollectorEmptyState title="No cards yet">
+            The catalogue is empty right now.
+          </CollectorEmptyState>
+        )}
+
+        {status === "ready" && items.length > 0 && (
+          <>
+            <CardGrid>
+              {items.map((card) => (
+                <CollectorCardTile key={card.id} card={card} />
+              ))}
+            </CardGrid>
+            <p className="mt-6 text-xs text-text-muted">
+              Looking for a specific card?{" "}
+              <Link href="/cards" className="text-sky-400 hover:underline">
+                Browse the full catalogue →
+              </Link>
+            </p>
+          </>
         )}
       </main>
     </div>
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
   );
 }

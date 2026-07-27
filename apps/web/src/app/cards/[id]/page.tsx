@@ -19,7 +19,6 @@ import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { CardPricePanel, type PriceLine } from "@/components/ui/CardPricePanel";
 import { DataTableShell } from "@/components/ui/DataTableShell";
 import { GradingSummaryPanel } from "@/components/ui/GradingSummaryPanel";
-import { MarketContextPanel } from "@/components/ui/MarketContextPanel";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { OwnershipSummaryPanel } from "@/components/ui/OwnershipSummaryPanel";
 import { SourceEvidenceBadge } from "@/components/ui/SourceEvidenceBadge";
@@ -35,8 +34,6 @@ import {
   type CollectorActivityEvent,
   type CollectorNote,
   type CollectorTag,
-  type MarketOpportunity,
-  type MarketSignalEvent,
   type PortfolioValuationItem,
   type PriceObservation,
   type SourceCardMapping,
@@ -55,8 +52,6 @@ import {
   fetchCardMarketIndex,
   fetchCollectorNotes,
   fetchCollectorTags,
-  fetchMarketOpportunities,
-  fetchMarketSignalEvents,
   fetchWishlistItems,
   unassignCardTag,
   type MarketIndex,
@@ -272,20 +267,6 @@ export default function CardDetailPage() {
       .catch(() => setValuationItems([]));
   }, [cardId, valuationMode]);
 
-  // Market context - both endpoints already support a card_code filter.
-  const [signalEvents, setSignalEvents] = useState<MarketSignalEvent[]>([]);
-  const [opportunities, setOpportunities] = useState<MarketOpportunity[]>([]);
-
-  useEffect(() => {
-    if (!card) return;
-    fetchMarketSignalEvents({ card_code: card.card_code })
-      .then((data) => setSignalEvents(data.events))
-      .catch(() => setSignalEvents([]));
-    fetchMarketOpportunities({ card_code: card.card_code })
-      .then((data) => setOpportunities(data.opportunities))
-      .catch(() => setOpportunities([]));
-  }, [card?.card_code]);
-
   // Notes/activity for this card.
   const [notes, setNotes] = useState<CollectorNote[]>([]);
   const [activity, setActivity] = useState<CollectorActivityEvent[]>([]);
@@ -331,11 +312,16 @@ export default function CardDetailPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
+        {/* /dashboard is a signed-in-only route (see proxyGuard.ts) - linking
+            there from a page every anonymous visitor can reach would bounce
+            them straight to /sign-in. /cards is this app's actual public
+            "came from browsing the catalogue" entry point (collector-first
+            redesign audit, Phase 7). */}
         <Link
-          href="/dashboard"
+          href="/cards"
           className="mb-4 inline-block text-sm text-text-secondary hover:text-text-primary"
         >
-          ← Back to dashboard
+          ← Back to Cards
         </Link>
 
         {status === "loading" && <LoadingState>Loading card…</LoadingState>}
@@ -442,11 +428,6 @@ export default function CardDetailPage() {
                 next"), same position as always on desktop. */}
             <div className="order-1 lg:order-none">
               <CardPricePanel lines={keyPriceLines(prices, marketIndex)} />
-            </div>
-
-            {/* 4. Market context */}
-            <div className="order-4 lg:order-none">
-              <MarketContextPanel signalEvents={signalEvents} opportunities={opportunities} />
             </div>
 
             {/* 5. Notes/activity */}

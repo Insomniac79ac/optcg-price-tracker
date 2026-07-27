@@ -40,11 +40,20 @@ function buildConnectSrc(): string {
 // tradeoff) - so dropping 'unsafe-inline' here would break every page.
 const scriptSrc = isProd ? "'self' 'unsafe-inline'" : "'self' 'unsafe-inline' 'unsafe-eval'";
 
+// Card artwork is hotlinked directly from approved price-source CDNs (see
+// components/ui/CardImageFrame.tsx's docstring and docs/market_index.md
+// "Image hosting") - only the specific hosts we've actually verified serve
+// real image content are allowlisted here, not a blanket `https:` (collector-
+// first redesign audit, Phase 9 - "no unrestricted arbitrary image host
+// configuration"). Add a new host here only after verifying it the same way
+// (see docs/market_index.md).
+const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp"];
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
+  `img-src 'self' data: ${APPROVED_IMAGE_HOSTS.join(" ")}`,
   `connect-src ${buildConnectSrc()}`,
   "frame-ancestors 'none'",
 ].join("; ");
