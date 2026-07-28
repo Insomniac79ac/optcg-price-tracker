@@ -219,7 +219,7 @@ export default function CollectionVaultPage() {
         <PageHeader
           title="Collection Vault"
           description={
-            <Link href="/collection" className="text-sky-400 hover:text-sky-300">
+            <Link href="/collection" className="text-accent-teal hover:text-accent-teal-hover">
               Table View →
             </Link>
           }

@@ -335,23 +335,24 @@ export default function WishlistPage() {
           title="Wishlist"
           description={
             <span className="flex flex-wrap items-baseline gap-3">
-              <Link href="/collection" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+              <span className="w-full text-text-secondary">On your radar - the cards you&rsquo;re still chasing.</span>
+              <Link href="/collection" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Collection →
               </Link>
-              <Link href="/analytics/wishlist" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+              <Link href="/analytics/wishlist" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Analytics →
               </Link>
-              <Link href="/analytics/buy-decisions" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+              <Link href="/analytics/buy-decisions" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Buy decisions →
               </Link>
-              <Link href="/market/opportunities" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
+              <Link href="/market/opportunities" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Opportunities →
               </Link>
             </span>
           }
           actions={
             listStatus === "ready" && (
-              <span className="text-sm text-neutral-500">
+              <span className="text-sm text-text-muted">
                 {total} item{total === 1 ? "" : "s"}
               </span>
             )
@@ -391,13 +392,13 @@ export default function WishlistPage() {
           </div>
         )}
 
-        <section ref={addFormRef} className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-200">
+        <section ref={addFormRef} className="mb-6 rounded-lg border border-border-default bg-bg-surface p-4">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
             {editingId !== null ? "Edit wishlist item" : "Add to wishlist"}
           </h2>
 
           {formError && (
-            <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+            <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
               {formError}
             </div>
           )}
@@ -411,13 +412,13 @@ export default function WishlistPage() {
                   onChange={(e) => setCardSearch(e.target.value)}
                   placeholder="Search card code or name…"
                   disabled={editingId !== null}
-                  className="mb-1 w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 disabled:opacity-50"
+                  className="mb-1 w-full rounded border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary placeholder:text-text-faint disabled:opacity-50"
                 />
                 <select
                   value={form.card_id}
                   onChange={(e) => updateField("card_id", e.target.value)}
                   disabled={editingId !== null}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 disabled:opacity-50"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary disabled:opacity-50"
                 >
                   <option value="">Select a card…</option>
                   {filteredCardOptions.map((c) => (
@@ -432,7 +433,7 @@ export default function WishlistPage() {
                 <select
                   value={form.priority}
                   onChange={(e) => updateField("priority", e.target.value as WishlistPriority)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 >
                   {WISHLIST_PRIORITIES.map((p) => (
                     <option key={p} value={p}>
@@ -448,7 +449,7 @@ export default function WishlistPage() {
                   min={0}
                   value={form.target_buy_price_jpy}
                   onChange={(e) => updateField("target_buy_price_jpy", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -458,7 +459,7 @@ export default function WishlistPage() {
                   min={0}
                   value={form.max_buy_price_jpy}
                   onChange={(e) => updateField("max_buy_price_jpy", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -468,7 +469,7 @@ export default function WishlistPage() {
                   value={form.preferred_condition}
                   onChange={(e) => updateField("preferred_condition", e.target.value)}
                   placeholder="raw, PSA 10, …"
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                 />
               </FormField>
 
@@ -478,7 +479,7 @@ export default function WishlistPage() {
                   value={form.preferred_source}
                   onChange={(e) => updateField("preferred_source", e.target.value)}
                   placeholder="yuyutei, snkrdunk, local_shop, …"
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-600"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary placeholder:text-text-faint"
                 />
               </FormField>
 
@@ -488,7 +489,7 @@ export default function WishlistPage() {
                   min={1}
                   value={form.desired_quantity}
                   onChange={(e) => updateField("desired_quantity", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
 
@@ -497,7 +498,7 @@ export default function WishlistPage() {
                   type="text"
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
-                  className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+                  className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
                 />
               </FormField>
             </div>
@@ -511,7 +512,7 @@ export default function WishlistPage() {
                   type="button"
                   onClick={cancelEdit}
                   disabled={saving}
-                  className="rounded border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
+                  className="rounded border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -542,7 +543,7 @@ export default function WishlistPage() {
               value={cardCodeInput}
               onChange={(e) => setCardCodeInput(e.target.value)}
               placeholder="Filter by card code…"
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 placeholder:text-neutral-600"
+              className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary placeholder:text-text-faint"
             />
           </div>
         </div>
@@ -576,7 +577,7 @@ export default function WishlistPage() {
         />
 
         {actionError && (
-          <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
             {actionError}
           </div>
         )}
@@ -588,14 +589,14 @@ export default function WishlistPage() {
         )}
 
         {listStatus === "ready" && items.length === 0 && (
-          <EmptyState>No wishlist items yet</EmptyState>
+          <EmptyState>Nothing on your radar yet. Add a card you&rsquo;re chasing.</EmptyState>
         )}
 
         {listStatus === "ready" && items.length > 0 && (
           <TableScrollContainer minWidth={1100}>
             <table className="w-full border-collapse text-xs">
               <thead className="sticky-thead">
-                <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+                <tr className="border-b border-border-default bg-bg-surface text-left text-[11px] uppercase tracking-wide text-text-muted">
                   <th className="sticky-col-first px-2 py-1.5 font-medium">Priority</th>
                   <th className="px-2 py-1.5 font-medium">Status</th>
                   <th className="px-2 py-1.5 font-medium">Code</th>
@@ -618,35 +619,35 @@ export default function WishlistPage() {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
+                  <tr key={item.id} className="border-b border-border-muted last:border-0 hover:bg-bg-elevated">
                     <td className="sticky-col-first px-2 py-1.5">
                       <WishlistPriorityBadge priority={item.priority} />
                     </td>
                     <td className="px-2 py-1.5">
                       <WishlistStatusBadge status={item.status} />
                     </td>
-                    <td className="px-2 py-1.5 font-mono text-neutral-400">
-                      <Link href={`/cards/${item.card_id}`} className="hover:text-sky-400">
+                    <td className="px-2 py-1.5 font-mono text-text-secondary">
+                      <Link href={`/cards/${item.card_id}`} className="hover:text-accent-teal">
                         {item.card_code}
                       </Link>
                     </td>
-                    <td className="px-2 py-1.5 font-medium text-neutral-100">{cardDisplayName(item)}</td>
-                    <td className="px-2 py-1.5 text-neutral-400">{item.set_code}</td>
+                    <td className="px-2 py-1.5 font-medium text-text-primary">{cardDisplayName(item)}</td>
+                    <td className="px-2 py-1.5 text-text-secondary">{item.set_code}</td>
                     <td className="px-2 py-1.5">
                       <RarityBadge rarity={item.rarity} />
                     </td>
-                    <td className="px-2 py-1.5 text-neutral-200">{item.desired_quantity}</td>
-                    <td className="px-2 py-1.5 text-neutral-200">{item.owned_quantity}</td>
-                    <td className="px-2 py-1.5 text-neutral-200">{formatJpy(item.target_buy_price_jpy)}</td>
-                    <td className="px-2 py-1.5 text-neutral-200">{formatJpy(item.max_buy_price_jpy)}</td>
-                    <td className="px-2 py-1.5 text-neutral-200">
+                    <td className="px-2 py-1.5 text-text-primary">{item.desired_quantity}</td>
+                    <td className="px-2 py-1.5 text-text-primary">{item.owned_quantity}</td>
+                    <td className="px-2 py-1.5 text-text-primary">{formatJpy(item.target_buy_price_jpy)}</td>
+                    <td className="px-2 py-1.5 text-text-primary">{formatJpy(item.max_buy_price_jpy)}</td>
+                    <td className="px-2 py-1.5 text-text-primary">
                       {item.preferred_current_price_jpy === null ? (
                         <MissingValue label="no price data" italic />
                       ) : (
                         formatJpy(item.preferred_current_price_jpy)
                       )}
                     </td>
-                    <td className="px-2 py-1.5 text-neutral-400">
+                    <td className="px-2 py-1.5 text-text-secondary">
                       {item.preferred_current_price_source === "snkrdunk_floor"
                         ? "SNKRDUNK floor"
                         : item.preferred_current_price_source === "yuyutei_sell"
@@ -657,9 +658,9 @@ export default function WishlistPage() {
                       {item.gap_to_target_jpy === null ? (
                         <MissingValue />
                       ) : (
-                        <span className={item.gap_to_target_jpy <= 0 ? "text-emerald-400" : "text-neutral-300"}>
+                        <span className={item.gap_to_target_jpy <= 0 ? "text-emerald-400" : "text-text-secondary"}>
                           {formatSignedJpy(item.gap_to_target_jpy)}{" "}
-                          <span className="text-neutral-500">({formatSignedPct(item.gap_to_target_pct)})</span>
+                          <span className="text-text-muted">({formatSignedPct(item.gap_to_target_pct)})</span>
                         </span>
                       )}
                     </td>
@@ -670,14 +671,14 @@ export default function WishlistPage() {
                         <MissingValue />
                       )}
                     </td>
-                    <td className="px-2 py-1.5 text-neutral-400">{item.preferred_condition ?? "—"}</td>
-                    <td className="px-2 py-1.5 text-neutral-400">{item.preferred_source ?? "—"}</td>
-                    <td className="max-w-[10rem] px-2 py-1.5 text-neutral-400">{item.notes ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-text-secondary">{item.preferred_condition ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-text-secondary">{item.preferred_source ?? "—"}</td>
+                    <td className="max-w-[10rem] px-2 py-1.5 text-text-secondary">{item.notes ?? "—"}</td>
                     <td className="px-2 py-1.5">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => startEdit(item)}
-                          className="text-xs font-medium text-sky-400 hover:text-sky-300"
+                          className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover"
                         >
                           Edit
                         </button>
@@ -685,7 +686,7 @@ export default function WishlistPage() {
                           <button
                             onClick={() => handleRemove(item)}
                             disabled={pendingActionId === item.id}
-                            className="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50"
+                            className="text-xs font-medium text-signal-red hover:text-signal-red disabled:opacity-50"
                           >
                             Remove
                           </button>
@@ -694,7 +695,7 @@ export default function WishlistPage() {
                           <button
                             onClick={() => handleMarkPassed(item)}
                             disabled={pendingActionId === item.id}
-                            className="text-xs font-medium text-neutral-400 hover:text-neutral-200 disabled:opacity-50"
+                            className="text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-50"
                           >
                             Mark passed
                           </button>
@@ -777,12 +778,12 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+    <label className="flex items-center gap-1.5 text-xs text-text-muted">
       {label}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+        className="rounded border border-border-default bg-bg-surface px-2 py-1 text-xs text-text-primary"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -805,10 +806,10 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 p-4 shadow-xl">
+      <div className="w-full max-w-md rounded-lg border border-border-default bg-bg-surface p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-neutral-100">{title}</h3>
-          <button onClick={onClose} className="text-xs text-neutral-500 hover:text-neutral-200">
+          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+          <button onClick={onClose} className="text-xs text-text-muted hover:text-text-primary">
             ✕
           </button>
         </div>
@@ -865,12 +866,12 @@ function MarkPurchasedModal({
 
   return (
     <ModalShell title={`Mark purchased — ${item.card_code}`} onClose={onClose}>
-      <p className="mb-3 text-xs text-neutral-500">
+      <p className="mb-3 text-xs text-text-muted">
         Links this wishlist item to a collection item you already added. This does not create a
         new collection item — use &quot;Convert to collection&quot; for that.
       </p>
       {error && (
-        <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
@@ -879,7 +880,7 @@ function MarkPurchasedModal({
           <select
             value={collectionItemId}
             onChange={(e) => setCollectionItemId(e.target.value)}
-            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+            className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
           >
             <option value="">Select…</option>
             {candidates.map((c) => (
@@ -889,7 +890,7 @@ function MarkPurchasedModal({
             ))}
           </select>
           {candidates.length === 0 && (
-            <p className="mt-1 text-[11px] text-neutral-600">
+            <p className="mt-1 text-[11px] text-text-faint">
               No existing collection items found for this card yet.
             </p>
           )}
@@ -900,7 +901,7 @@ function MarkPurchasedModal({
             min={1}
             value={acquiredQuantity}
             onChange={(e) => setAcquiredQuantity(e.target.value)}
-            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+            className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
           />
         </FormField>
         <div className="flex gap-2">
@@ -975,7 +976,7 @@ function ConvertToCollectionModal({
   return (
     <ModalShell title={`Convert to collection — ${item.card_code}`} onClose={onClose}>
       {error && (
-        <div className="mb-3 rounded border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+        <div className="mb-3 rounded border border-signal-red/40 bg-signal-red/10 px-3 py-2 text-xs text-signal-red">
           {error}
         </div>
       )}
@@ -987,7 +988,7 @@ function ConvertToCollectionModal({
               min={1}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
           <FormField label="Condition">
@@ -995,7 +996,7 @@ function ConvertToCollectionModal({
               type="text"
               value={conditionLabel}
               onChange={(e) => setConditionLabel(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
           <FormField label="Purchase price (JPY)">
@@ -1004,7 +1005,7 @@ function ConvertToCollectionModal({
               min={0}
               value={purchasePrice}
               onChange={(e) => setPurchasePrice(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
           <FormField label="Purchase date">
@@ -1012,7 +1013,7 @@ function ConvertToCollectionModal({
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
           <FormField label="Purchase source">
@@ -1020,7 +1021,7 @@ function ConvertToCollectionModal({
               type="text"
               value={purchaseSource}
               onChange={(e) => setPurchaseSource(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
           <FormField label="Notes">
@@ -1028,7 +1029,7 @@ function ConvertToCollectionModal({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-sm text-neutral-100"
+              className="w-full rounded border border-border-default bg-bg-page px-2 py-1 text-sm text-text-primary"
             />
           </FormField>
         </div>

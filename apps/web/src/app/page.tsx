@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CollectorCardTile } from "@/components/ui/CollectorCardTile";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { type CardCatalogueItem, fetchCardsCatalogue } from "@/lib/api";
 
 const PRIMARY_LINK_CLASS =
@@ -33,6 +33,7 @@ const ARTWORK_PREVIEW_LIMIT = 3;
  * supply it - the primary Browse Cards/Market Index links in the intro are
  * the real fallback either way. */
 export default function DiscoverPage() {
+  const { data: session } = useSession();
   const [catalogue, setCatalogue] = useState<CardCatalogueItem[]>([]);
 
   useEffect(() => {
@@ -64,28 +65,40 @@ export default function DiscoverPage() {
       <main className="mx-auto max-w-6xl px-4 py-10">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
           <div>
-            <PageHeader
-              title="Track your One Piece TCG collection"
-              description="Browse the card catalogue and follow the Market Index across Yuyu-Tei and SNKRDUNK - then keep your own collection, wishlist and grading progress alongside it."
-            />
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-text-primary sm:text-4xl">
+              Your collection has a story.
+            </h1>
+            <p className="mt-3 max-w-prose text-sm text-text-secondary sm:text-base">
+              Map the cards you own, keep track of the ones you&rsquo;re chasing, and understand
+              where they stand through a transparent Market Index.
+            </p>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/cards" className={PRIMARY_LINK_CLASS}>
-                Browse Cards
+                Explore the Atlas
               </Link>
               <Link href="/market/movers" className={SECONDARY_LINK_CLASS}>
                 View Market Index
               </Link>
             </div>
 
-            <p className="mt-6 max-w-prose text-sm text-text-muted">
-              Collection tracking, wishlist and grading are available once you have a collector
-              account.{" "}
-              <Link href="/sign-in" className="text-sky-400 hover:underline">
-                Learn more
-              </Link>
-              .
-            </p>
+            {session ? (
+              <p className="mt-6 max-w-prose text-sm text-text-muted">
+                Add to your collection, track your wishlist, and keep your grading progress right
+                here.{" "}
+                <Link href="/collection" className="text-accent-teal hover:underline">
+                  My Collection →
+                </Link>
+              </p>
+            ) : (
+              <p className="mt-6 max-w-prose text-sm text-text-muted">
+                Keep the cards that matter to you in one place.{" "}
+                <Link href="/sign-in" className="text-accent-teal hover:underline">
+                  Learn more
+                </Link>
+                .
+              </p>
+            )}
           </div>
 
           {/* Visual card preview using real artwork where available (Phase 5,
@@ -113,7 +126,7 @@ export default function DiscoverPage() {
                   Cards with a Yuyu-Tei and SNKRDUNK price both eligible right now.
                 </p>
               </div>
-              <Link href="/market/movers" className="text-xs font-medium text-sky-400 hover:text-sky-300">
+              <Link href="/market/movers" className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover">
                 About the Market Index →
               </Link>
             </div>
@@ -128,8 +141,8 @@ export default function DiscoverPage() {
         {recentlyUpdated.length > 0 && (
           <section className="mt-12">
             <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-sm font-semibold text-text-primary">Recently updated cards</h2>
-              <Link href="/cards" className="text-xs font-medium text-sky-400 hover:text-sky-300">
+              <h2 className="text-sm font-semibold text-text-primary">Recent Finds</h2>
+              <Link href="/cards" className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover">
                 View full catalogue →
               </Link>
             </div>

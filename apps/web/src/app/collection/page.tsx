@@ -545,6 +545,7 @@ export default function CollectionPage() {
           title="Collection"
           description={
             <span className="flex flex-wrap gap-3">
+              <span className="w-full text-text-secondary">Your trove, kept together.</span>
               <Link href="/analytics/collection" className="text-sky-400 hover:text-sky-300">
                 Analytics →
               </Link>
@@ -936,7 +937,7 @@ export default function CollectionPage() {
         )}
 
         {listStatus === "ready" && items.length === 0 && (
-          <EmptyState>No collection items yet</EmptyState>
+          <EmptyState>Your collection starts here. Add the first card that matters to you.</EmptyState>
         )}
 
         {listStatus === "ready" && items.length > 0 && filteredItems.length === 0 && (

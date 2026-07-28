@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
+import { AtlasCompactMark } from "@/components/brand/AtlasLogo";
+
 export function TopBar({
   onToggleMobileNav,
   onOpenPalette,
@@ -25,15 +27,11 @@ export function TopBar({
           ☰
         </button>
 
-        {/* Compact on mobile (icon-ish wordmark), full "OPTCG Vault" from sm+ -
-            keeps the topbar from crowding the palette trigger + auth control
-            at 360px. */}
-        <Link
-          href="/"
-          className="shrink-0 text-sm font-semibold tracking-tight text-text-primary"
-        >
-          <span className="text-accent-gold">OPTCG</span>
-          <span className="hidden sm:inline"> Vault</span>
+        {/* AtlasCompactMark carries the full "CardPirate Atlas" name for
+            assistive tech even though only the short "Atlas" wordmark shows
+            here - see components/brand/AtlasLogo.tsx. */}
+        <Link href="/" className="shrink-0">
+          <AtlasCompactMark />
         </Link>
 
         {/* Full search bar from sm+ */}
@@ -43,7 +41,7 @@ export function TopBar({
           title="Search (Ctrl/Cmd+K)"
           className="hidden flex-1 items-center justify-between rounded-control border border-border-default bg-bg-surface px-3 py-1.5 text-xs text-text-muted hover:border-border-default hover:text-text-secondary sm:flex sm:max-w-sm"
         >
-          <span>Search cards, collection, signals…</span>
+          <span>Search cards, collection, wishlist…</span>
           <span className="mono rounded border border-border-default px-1 py-0.5 text-[10px] text-text-faint">
             ⌘K
           </span>
