@@ -1,21 +1,22 @@
-# Interface design system — "TCG Vault"
+# Interface design system — CardPirate Atlas
 
 This document describes the frontend visual identity and shared component
 system introduced for the collector/admin dashboard (`apps/web`). It exists
 so future work extends the same system instead of re-inventing ad hoc
-styling per page.
+styling per page. For naming, voice, and legal constraints (as opposed to
+CSS tokens and component conventions), see `docs/brand.md`.
 
 ## Visual identity summary
 
-Dark collector terminal + TCG vault + market dashboard. The product is a
-serious, dense, data-first tool for collectors and traders who watch prices,
-P/L, spreads, source gaps, stale data, and buy/sell decisions — plus an
-admin surface for catalog imports, matching, source mappings, duplicates,
-and price source health.
+An original maritime-cartography collector identity, warm-dark rather than
+cold-terminal: a collector maps and tends a real collection first, with
+Market Index and dense operational data as supporting context. The admin
+surface stays dense/data-first (catalog imports, matching, source mappings,
+duplicates, price source health) - see `docs/brand.md` "Public vs. admin".
 
-Core feeling: serious, dense, premium, collector-focused, slightly
-underground. Explicitly **not**: generic SaaS, Web3 gradient UI, gacha/casino,
-or childish anime UI.
+Core feeling on collector/public pages: warm, premium, collector-led,
+artwork-forward. Explicitly **not**: generic SaaS, Web3 gradient UI,
+gacha/casino, childish anime UI, or a crypto trading terminal.
 
 ## Tokens
 
@@ -26,23 +27,34 @@ generated Tailwind utilities (`bg-bg-page`, `text-text-primary`, ...).
 
 | Token | Value | Tailwind utility |
 |---|---|---|
-| `--bg-page` | `#0B0B0D` | `bg-bg-page` |
-| `--bg-surface` | `#141416` | `bg-bg-surface` |
-| `--bg-elevated` | `#1B1B1F` | `bg-bg-elevated` |
-| `--bg-card` | `#202024` | `bg-bg-card` |
-| `--border-default` | `#2C2C32` | `border-border-default` |
-| `--border-muted` | `rgba(255,255,255,0.08)` | `border-border-muted` |
-| `--text-primary` | `#F4F4F5` | `text-text-primary` |
-| `--text-secondary` | `#A1A1AA` | `text-text-secondary` |
-| `--text-muted` | `#71717A` | `text-text-muted` |
-| `--text-faint` | `#52525A` | `text-text-faint` |
-| `--accent-gold` | `#D6A84F` | `bg-/text-accent-gold` |
-| `--accent-gold-hover` | `#E6BD6A` | `bg-/text-accent-gold-hover` |
+| `--bg-page` | `#171717` | `bg-bg-page` |
+| `--bg-surface` | `#1D1E1F` | `bg-bg-surface` |
+| `--bg-elevated` | `#242528` | `bg-bg-elevated` |
+| `--bg-card` | `#363638` | `bg-bg-card` |
+| `--border-default` | `#3A3B3D` | `border-border-default` |
+| `--border-muted` | `rgba(244,240,232,0.08)` | `border-border-muted` |
+| `--text-primary` | `#F4F0E8` | `text-text-primary` |
+| `--text-secondary` | `#A9A395` | `text-text-secondary` |
+| `--text-muted` | `#8B8672` | `text-text-muted` |
+| `--text-faint` | `#6B6656` | `text-text-faint` |
+| `--parchment` | `#E8DEC7` | `bg-/text-parchment` |
+| `--accent-gold` | `#C79A4B` | `bg-/text-accent-gold` |
+| `--accent-gold-hover` | `#D9AE66` | `bg-/text-accent-gold-hover` |
+| `--accent-teal` | `#4F8D86` | `bg-/text-accent-teal` |
+| `--accent-teal-hover` | `#5FA39B` | `bg-/text-accent-teal-hover` |
+| `--accent-coral` | `#C8624D` | `bg-/text-accent-coral` |
 | `--signal-green` | `#22C55E` | `bg-/text-signal-green` |
 | `--signal-red` | `#EF4444` | `bg-/text-signal-red` |
 | `--signal-blue` | `#38BDF8` | `bg-/text-signal-blue` |
 | `--signal-purple` | `#A78BFA` | `bg-/text-signal-purple` |
 | `--signal-warning` | `#F59E0B` | `bg-/text-signal-warning` |
+
+Colour rules (full rationale in `docs/brand.md`): gold = rarity/milestones,
+teal = navigation/discovery/trusted info, coral = a limited warning/emphasis
+accent. Collector-facing price movement deliberately does not get a
+dominant red/green treatment - `--signal-green`/`--signal-red` stay reserved
+for the admin/operational surface (risk levels, match confidence, dense
+tables), unchanged by the rebrand.
 
 Radii: `rounded-control` (6px, inputs/small controls), `rounded-panel` (8px,
 cards/panels), `rounded-panel-lg` (10px, larger elevated panels),
@@ -58,10 +70,16 @@ New shared badges (`RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`,
 
 ## Typography
 
-- `next/font/google` self-hosts IBM Plex Sans (`--font-ibm-plex-sans`) and
-  IBM Plex Mono (`--font-ibm-plex-mono`), wired in `app/layout.tsx` and
-  consumed by the `--font-sans`/`--font-mono` theme tokens (with system-font
-  fallback chains, so a slow/missing weight degrades gracefully).
+- `next/font/google` self-hosts Manrope (`--font-manrope`, UI/body) and
+  Fraunces (`--font-fraunces`, editorial display/headings), plus IBM Plex
+  Mono (`--font-ibm-plex-mono`, unchanged) - all wired in `app/layout.tsx`
+  and consumed by the `--font-sans`/`--font-display`/`--font-mono` theme
+  tokens, each with a system-font (and CJK) fallback chain via `display:
+  "swap"`, so a slow/missing weight degrades gracefully with no layout
+  shift and `name_jp` still renders correctly.
+- Use `font-display` (the Tailwind utility generated from `--font-display`)
+  sparingly - headings, hero copy, the wordmark - never body text or dense
+  tables, which stay on `font-sans`.
 - Use `.mono` (mono font + tabular numerals) for prices, IDs, card codes,
   timestamps, and compact metadata. Use `.tabular` alone when the font
   should stay sans but numerals must still align.
@@ -70,7 +88,7 @@ New shared badges (`RiskBadge`, `ConfidenceBadge`, `SourceHealthBadge`,
   is only acceptable for genuinely decorative micro-labels (a chevron, a
   keyboard-shortcut hint) — never for scannable metadata like a set code,
   score, or date.
-- `text-text-secondary` (`#A1A1AA`) for metadata users need to scan.
+- `text-text-secondary` (`#A9A395`) for metadata users need to scan.
   `text-text-muted`/`text-text-faint` only for low-priority supporting text.
 
 ## Spacing / density

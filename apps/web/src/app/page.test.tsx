@@ -35,12 +35,12 @@ import DiscoverPage from "./page";
 describe("DiscoverPage (public /)", () => {
   it("renders a real page instead of redirecting to /dashboard", () => {
     render(<DiscoverPage />);
-    expect(screen.getByText(/track your one piece tcg collection/i)).toBeInTheDocument();
+    expect(screen.getByText(/your collection has a story/i)).toBeInTheDocument();
   });
 
-  it("links to /cards as the primary Browse Cards action", () => {
+  it("links to /cards as the primary Explore the Atlas action", () => {
     render(<DiscoverPage />);
-    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/cards");
+    expect(screen.getByRole("link", { name: /explore the atlas/i })).toHaveAttribute("href", "/cards");
   });
 
   it("links to /market/movers as the Market Index action", () => {
@@ -51,9 +51,9 @@ describe("DiscoverPage (public /)", () => {
     );
   });
 
-  it("mentions an account is needed for collection/wishlist/grading, without promising a working sign-in", () => {
+  it("invites a signed-out visitor to keep track of their cards, without promising a working sign-in", () => {
     render(<DiscoverPage />);
-    expect(screen.getByText(/collection tracking, wishlist and grading/i)).toBeInTheDocument();
+    expect(screen.getByText(/keep the cards that matter to you in one place/i)).toBeInTheDocument();
   });
 
   it("renders no admin controls or admin navigation", () => {
