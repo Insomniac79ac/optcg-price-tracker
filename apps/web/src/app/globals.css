@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
- * TCG Vault design tokens
+ * CardPirate Atlas design tokens (see docs/brand.md for the rationale and
+ * WCAG contrast decisions behind these exact values).
  *
  * Single source of truth: plain CSS variables (exact names from
  * docs/interface_design_system.md) in :root, aliased into Tailwind's v4
@@ -10,27 +11,35 @@
  * ------------------------------------------------------------------------- */
 
 :root {
-  /* Surfaces */
-  --bg-page: #0b0b0d;
-  --bg-surface: #141416;
-  --bg-elevated: #1b1b1f;
-  --bg-card: #202024;
+  /* Surfaces - deep background -> raised -> secondary, warm neutral rather
+   * than blue-black, per the maritime-cartography brand direction. */
+  --bg-page: #171717;
+  --bg-surface: #1d1e1f;
+  --bg-elevated: #242528;
+  --bg-card: #363638;
 
   /* Borders */
-  --border-default: #2c2c32;
-  --border-muted: rgba(255, 255, 255, 0.08);
+  --border-default: #3a3b3d;
+  --border-muted: rgba(244, 240, 232, 0.08);
 
-  /* Text */
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-faint: #52525a;
+  /* Text - soft foreground (warm off-white) down to a faint decorative tier;
+   * see docs/brand.md "Contrast decisions" for the ratio behind each. */
+  --text-primary: #f4f0e8;
+  --text-secondary: #a9a395;
+  --text-muted: #8b8672;
+  --text-faint: #6b6656;
 
-  /* Accent */
-  --accent-gold: #d6a84f;
-  --accent-gold-hover: #e6bd6a;
+  /* Brand accents */
+  --parchment: #e8dec7;
+  --accent-gold: #c79a4b;
+  --accent-gold-hover: #d9ae66;
+  --accent-teal: #4f8d86;
+  --accent-teal-hover: #5fa39b;
+  --accent-coral: #c8624d;
 
-  /* Signals */
+  /* Signals - admin/operational vocabulary only (risk levels, match
+   * confidence, dense tables). Not used for collector-facing price
+   * movement, which never gets a dominant red/green treatment. */
   --signal-green: #22c55e;
   --signal-red: #ef4444;
   --signal-blue: #38bdf8;
@@ -58,8 +67,12 @@
   --color-text-muted: var(--text-muted);
   --color-text-faint: var(--text-faint);
 
+  --color-parchment: var(--parchment);
   --color-accent-gold: var(--accent-gold);
   --color-accent-gold-hover: var(--accent-gold-hover);
+  --color-accent-teal: var(--accent-teal);
+  --color-accent-teal-hover: var(--accent-teal-hover);
+  --color-accent-coral: var(--accent-coral);
 
   --color-signal-green: var(--signal-green);
   --color-signal-red: var(--signal-red);
@@ -72,7 +85,16 @@
   --radius-panel-lg: var(--radius-panel-lg);
   --radius-modal: var(--radius-modal);
 
-  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Manrope (UI/body) and Fraunces (editorial display) are self-hosted at
+   * build time via next/font/google in app/layout.tsx - display: "swap"
+   * with next/font's automatic fallback-metric matching avoids layout
+   * shift. System CJK faces are appended (not a self-hosted CJK webfont -
+   * see docs/brand.md "Typography") so name_jp renders correctly without
+   * megabytes of extra font weight. */
+  --font-sans: var(--font-manrope), "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic",
+    "Noto Sans JP", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-fraunces), "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP",
+    Georgia, serif;
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
