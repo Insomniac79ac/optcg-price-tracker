@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
 import { AtlasCompactMark } from "@/components/brand/AtlasLogo";
+import { brand } from "@/lib/brand";
 
 export function TopBar({
   onToggleMobileNav,
@@ -27,11 +28,13 @@ export function TopBar({
           ☰
         </button>
 
-        {/* AtlasCompactMark carries the full "CardPirate Atlas" name for
-            assistive tech even though only the short "Atlas" wordmark shows
-            here - see components/brand/AtlasLogo.tsx. */}
-        <Link href="/" className="shrink-0">
-          <AtlasCompactMark />
+        {/* Single explicit aria-label on the link itself - AtlasCompactMark's
+            own sr-only "CardPirate Atlas" span is decorative content here
+            (aria-hidden below) so the link's accessible name is exactly this
+            one string, never a concatenation of the mark's internal text
+            nodes with the link's own name. */}
+        <Link href="/" className="shrink-0" aria-label={`${brand.productName} — Home`}>
+          <AtlasCompactMark aria-hidden />
         </Link>
 
         {/* Full search bar from sm+ */}

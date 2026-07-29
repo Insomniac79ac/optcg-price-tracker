@@ -34,4 +34,9 @@ describe("AtlasCompactMark", () => {
     expect(screen.queryByText("Atlas")).not.toBeInTheDocument();
     expect(screen.getByText("CardPirate Atlas")).toBeInTheDocument();
   });
+
+  it("suppresses its own sr-only name when aria-hidden (ancestor supplies the accessible name)", () => {
+    render(<AtlasCompactMark aria-hidden />);
+    expect(screen.queryByText("CardPirate Atlas")).not.toBeInTheDocument();
+  });
 });

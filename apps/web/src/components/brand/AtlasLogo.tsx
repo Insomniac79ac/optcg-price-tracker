@@ -34,15 +34,21 @@ export function AtlasCompactMark({
   tone = "onDark",
   className = "",
   showShortName = true,
+  "aria-hidden": ariaHidden,
 }: {
   tone?: AtlasMarkTone;
   className?: string;
   showShortName?: boolean;
+  /** Pass when an ancestor already supplies the accessible name (e.g. a
+   * <Link> with its own aria-label) - suppresses the sr-only "CardPirate
+   * Atlas" span so it doesn't concatenate onto the ancestor's name instead
+   * of being redundant-but-harmless inside it. */
+  "aria-hidden"?: boolean;
 }) {
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1.5 ${className}`}>
+    <span aria-hidden={ariaHidden} className={`inline-flex shrink-0 items-center gap-1.5 ${className}`}>
       <AtlasMark tone={tone} title={null} aria-hidden className="h-6 w-[18px] shrink-0" />
-      <span className="sr-only">{brand.productName}</span>
+      {!ariaHidden && <span className="sr-only">{brand.productName}</span>}
       {showShortName && (
         <span aria-hidden className="font-display text-sm font-semibold tracking-tight text-text-primary">
           {brand.shortName}
