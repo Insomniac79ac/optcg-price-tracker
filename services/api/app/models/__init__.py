@@ -3,8 +3,10 @@ from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
 from app.models.analytics_digest_report import AnalyticsDigestReport
 from app.models.app_log_event import AppLogEvent
+from app.models.canonical_card import CanonicalCard
 from app.models.card import Card
 from app.models.card_alias import CardAlias
+from app.models.card_print import CardPrint
 from app.models.card_tag import CardTag
 from app.models.collection_item import CollectionItem
 from app.models.collection_item_group import CollectionItemGroup
@@ -41,8 +43,10 @@ __all__ = [
     "DashboardPreference",
     "Base",
     "AppLogEvent",
+    "CanonicalCard",
     "Card",
     "CardAlias",
+    "CardPrint",
     "CollectionItem",
     "Source",
     "SourceCardMapping",
