@@ -13,7 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
@@ -29,6 +29,21 @@ class SourceCardMapping(Base):
             "review_status IN ('approved', 'needs_review', 'rejected')",
             name="ck_source_card_mappings_review_status",
         ),
+        # Exists only so price_observations can carry a composite
+        # ForeignKeyConstraint(source_card_mapping_id, card_print_id,
+        # card_id, source_id) -> (id, card_print_id, card_id, source_id) -
+        # see PriceObservation - which pins each priced observation to the
+        # exact print, legacy card, and source its mapping was made
+        # against, not just the mapping/print pair. Not a uniqueness rule
+        # on any of these columns individually (a print, card, or source
+        # can still be reachable via many mappings).
+        UniqueConstraint(
+            "id",
+            "card_print_id",
+            "card_id",
+            "source_id",
+            name="uq_source_card_mappings_lineage_identity",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -37,6 +52,12 @@ class SourceCardMapping(Base):
     )
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
+    )
+    # Additive print-lineage pointer alongside the legacy card_id above -
+    # nothing switches reads/writes to this yet. Nullable so every existing
+    # mapping row stays valid as legacy (card_id-only) lineage.
+    card_print_id: Mapped[int | None] = mapped_column(
+        ForeignKey("card_prints.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True, index=True)
@@ -69,4 +90,13 @@ class SourceCardMapping(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Not eagerly loaded (default lazy="select") and not accessed by any
+    # existing code path, so adding it does not change current loading or
+    # write behaviour. No delete cascade: card_print_id is ON DELETE
+    # RESTRICT, so a referenced CardPrint can never disappear out from
+    # under a mapping.
+    card_print: Mapped["CardPrint | None"] = relationship(
+        "CardPrint", back_populates="source_card_mappings", foreign_keys=[card_print_id]
     )

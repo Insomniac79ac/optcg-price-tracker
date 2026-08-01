@@ -10,7 +10,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
@@ -89,4 +89,14 @@ class CardPrint(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Reverse side of SourceCardMapping.card_print - not eagerly loaded and
+    # not accessed by any existing code path. No delete cascade: deleting a
+    # CardPrint with mappings attached is rejected outright by the
+    # ON DELETE RESTRICT on source_card_mappings.card_print_id.
+    source_card_mappings: Mapped[list["SourceCardMapping"]] = relationship(
+        "SourceCardMapping",
+        back_populates="card_print",
+        foreign_keys="SourceCardMapping.card_print_id",
     )
