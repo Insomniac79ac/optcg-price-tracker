@@ -322,6 +322,98 @@ def test_market_report_failure_does_not_crash_refresh_job(db_session, monkeypatc
     assert db_session.query(PriceRefreshRun).filter_by(id=summary.id).one().status == "completed"
 
 
+# --- print lineage ------------------------------------------------------
+
+
+def test_legacy_mapping_creates_observation_with_null_lineage(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001")
+    assert mapping.card_print_id is None
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.status == "completed"
+    observation = db_session.query(PriceObservation).one()
+    assert observation.source_card_mapping_id is None
+    assert observation.card_print_id is None
+    assert observation.card_id == card.id
+    assert observation.source_id == source.id
+
+
+def test_print_linked_mapping_creates_observation_with_lineage(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001", card_print_id=42)
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.status == "completed"
+    observation = db_session.query(PriceObservation).one()
+    assert observation.source_card_mapping_id == mapping.id
+    assert observation.card_print_id == 42
+    # card_id/source_id assignment is unchanged by lineage - still the
+    # legacy mapping's own card/source, not derived from the print.
+    assert observation.card_id == card.id
+    assert observation.source_id == source.id
+
+
+def test_mock_adapter_and_live_style_adapter_apply_the_same_lineage_logic(db_session):
+    """Lineage is set once per mapping in the shared refresh_prices loop, not
+    per-adapter - proven here by running a real mock adapter (MockYuyuTeiAdapter,
+    reads worker/fixtures/yuyutei_sample.json) and a live-shaped StubAdapter
+    against equivalent print-linked mappings and asserting identical lineage
+    propagation from both."""
+    from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
+
+    mock_source, mock_card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mock_mapping = make_source_card_mapping(
+        db_session, mock_source, mock_card, "OP01-001", card_print_id=7
+    )
+    mock_summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": MockYuyuTeiAdapter()}, source="yuyutei"
+    )
+    assert mock_summary.status == "completed"
+    mock_observations = db_session.query(PriceObservation).filter_by(card_id=mock_card.id).all()
+    assert len(mock_observations) > 0
+    for mock_observation in mock_observations:
+        assert mock_observation.source_card_mapping_id == mock_mapping.id
+        assert mock_observation.card_print_id == 7
+
+    live_source, live_card = seed_source_and_card(db_session, "yuyutei-live", "OP01-099")
+    live_mapping = make_source_card_mapping(
+        db_session, live_source, live_card, "OP01-099", card_print_id=8
+    )
+    live_summary = refresh_prices(
+        limit=10,
+        db=db_session,
+        adapters={"yuyutei-live": StubAdapter("yuyutei-live")},
+        source="yuyutei-live",
+    )
+    assert live_summary.status == "completed"
+    live_observation = (
+        db_session.query(PriceObservation).filter_by(card_id=live_card.id).one()
+    )
+    assert live_observation.source_card_mapping_id == live_mapping.id
+    assert live_observation.card_print_id == 8
+
+
+def test_repeated_refreshes_still_create_separate_historical_observations(db_session):
+    """No deduplication behaviour changes: refreshing the same print-linked
+    mapping twice must still insert two distinct observation rows."""
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001", card_print_id=42)
+
+    refresh_prices(limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")})
+    refresh_prices(limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")})
+
+    observations = db_session.query(PriceObservation).order_by(PriceObservation.id).all()
+    assert len(observations) == 2
+    for observation in observations:
+        assert observation.source_card_mapping_id == mapping.id
+        assert observation.card_print_id == 42
+
+
 def test_dry_run_creates_no_database_rows(db_session):
     source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
     make_source_card_mapping(db_session, source, card, "OP01-001")

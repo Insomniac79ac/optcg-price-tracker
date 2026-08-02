@@ -73,6 +73,11 @@ class SourceCardMapping(Base):
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
     )
+    # Additive print-lineage pointer alongside the legacy card_id above - the
+    # api's b858237e3706 migration owns the card_prints FK and the composite
+    # lineage constraints, so this mirrors it as a plain nullable column
+    # rather than redeclaring them here.
+    card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     match_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -132,6 +137,13 @@ class PriceObservation(Base):
     candidate_id: Mapped[int | None] = mapped_column(
         ForeignKey("snkrdunk_candidates.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Additive print lineage alongside the legacy card_id/source_id above -
+    # the api's b858237e3706 migration owns the composite
+    # (source_card_mapping_id, card_print_id, card_id, source_id) FK and the
+    # paired-lineage check constraint, so these mirror it as plain nullable
+    # columns rather than redeclaring them here.
+    source_card_mapping_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
 
 class SnkrdunkDiscoveryRun(Base):

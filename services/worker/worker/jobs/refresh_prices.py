@@ -256,6 +256,16 @@ def _refresh_prices_locked(
 
                 observations_parsed += len(observations)
 
+                # Lineage is copied straight from the mapping, never derived:
+                # a print-linked mapping stamps both fields together, a
+                # legacy (card_print_id is None) mapping stamps neither.
+                if mapping.card_print_id is not None:
+                    source_card_mapping_id = mapping.id
+                    observation_card_print_id = mapping.card_print_id
+                else:
+                    source_card_mapping_id = None
+                    observation_card_print_id = None
+
                 for observation in observations:
                     db.add(
                         PriceObservation(
@@ -268,6 +278,8 @@ def _refresh_prices_locked(
                             stock_status=observation.stock_status,
                             listing_count=observation.listing_count,
                             raw_snapshot_id=raw_snapshot.id,
+                            source_card_mapping_id=source_card_mapping_id,
+                            card_print_id=observation_card_print_id,
                         )
                     )
                     observations_inserted += 1
