@@ -5,11 +5,13 @@
 #
 # Deployed to its own temporary, isolated Railway project: no Postgres, no
 # Redis, no shared service, no application secrets. This build runs the
-# validated, fail-closed OP01-001 Zoro parallel extraction three times (see
-# spike.py's "railway_extract" mode / run_extraction()) - a single deploy
-# covering both selector inspection (--dump-dom logs DOM candidates) and the
-# three validation runs, to keep total live requests against Yuyu-Tei
-# conservative (3, not 4+ across separate inspect/validate deploys).
+# Static Outbound IP reliability pipeline (see spike.py's
+# "static_ip_reliability" mode / run_static_ip_reliability_pipeline()) in a
+# single process/deploy: 12 homepage checks (60s apart, one fresh browser
+# context per check), then - only if every one of those 12 was a genuine
+# normal HTTP 200 - 3 product-page checks (120s apart) with fail-closed
+# extraction. The process holds itself open for 10 minutes after writing
+# artifacts to the attached volume so they can be retrieved before exit.
 #
 # Base image pins the exact browser build that matches requirements.txt's
 # `playwright==1.61.0` (confirmed via `docker manifest inspect
@@ -22,7 +24,7 @@
 #
 # Local verification (run from this directory):
 #   docker build -f Dockerfile.railway -t yuyutei-railway-spike-test .
-#   docker run --rm yuyutei-railway-spike-test python spike.py --mode railway_extract --repeat 1
+#   docker run --rm yuyutei-railway-spike-test python spike.py --mode static_ip_reliability
 
 FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
 
@@ -33,4 +35,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY spike.py .
 
-CMD ["python", "spike.py", "--mode", "railway_extract", "--repeat", "3", "--delay-s", "8", "--dump-dom"]
+CMD ["python", "spike.py", "--mode", "static_ip_reliability"]

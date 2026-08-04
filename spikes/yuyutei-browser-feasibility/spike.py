@@ -219,11 +219,20 @@ def classify_page(
     return f"other_status_{status}", evidence
 
 
-SELECTOR_VERSION = "v1"
+SELECTOR_VERSION = "v2"  # v2: product-scoped DOM-container extraction attempted before the whole-page regex fallback
 EXPECTED_CARD_CODE = "OP01-001"
 PRODUCT_EXPECTED_MARKERS = ["ロロノア・ゾロ", "パラレル"]
 CATEGORY_EXPECTED_MARKERS = ["ROMANCE DAWN"]
 HOMEPAGE_EXPECTED_MARKERS = ["遊々亭"]
+
+# What a per-check diagnostic_egress_ip field does and does not prove -
+# reused verbatim in reliability-run output so it travels with the data.
+EGRESS_IP_DISCLAIMER = (
+    "diagnostic_egress_ip is the IP observed by a separate outbound HTTPS "
+    "lookup (ipinfo.io) made from the same process around the same time as "
+    "the page request. It is NOT technically proven to be the exact IP that "
+    "served the Yuyu-Tei request for this check."
+)
 
 
 def _meta_content(page: Page, prop: str) -> str | None:
@@ -239,19 +248,11 @@ def _external_product_id(url: str) -> str | None:
     return f"{m.group(1)}-{m.group(2)}".lower() if m else None
 
 
-def extract_and_validate_product(page: Page, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
-    """Deterministic (non-AI) extraction over stable selectors: OGP meta tags
-    for title/image (standard, markup-independent), regex over rendered body
-    text for the semi-structured Japanese fields. Fails closed - see
-    `validation` - rather than returning a plausible-looking but wrong value.
-    Dealer buy-price is intentionally not extracted in this tranche."""
-    html = page.content()
-    text = page.inner_text("body") if page.query_selector("body") else ""
-
-    product_title = _meta_content(page, "og:title") or page.title() or None
-    image_url = _meta_content(page, "og:image")
-
-    card_code_match = re.search(r"\bOP\d{2}-\d{3}\b", text) or re.search(r"\bOP\d{2}-\d{3}\b", html)
+def _extract_fields_from_text(text: str) -> dict:
+    """Pure regex extraction over a single text blob - no Page, no I/O, so
+    this is directly unit-testable offline. Used for both the product-scoped
+    DOM-container text (preferred) and the whole-page fallback text."""
+    card_code_match = re.search(r"\bOP\d{2}-\d{3}\b", text)
     card_code = card_code_match.group(0) if card_code_match else None
 
     treatment = None
@@ -275,6 +276,101 @@ def extract_and_validate_product(page: Page, source_url: str, requested_card_cod
         stock_status = "out_of_stock"
     elif "在庫" in text:
         stock_status = "unknown_present_marker"
+
+    return {
+        "card_code": card_code,
+        "treatment": treatment,
+        "sell_price_jpy": sell_price_jpy,
+        "stock_status": stock_status,
+    }
+
+
+# Finds the text node containing the card code, then climbs up to at most 8
+# ancestors looking for one whose id/class hints this is a product/detail/
+# item region. Diagnostic-only DOM narrowing - the actual field values still
+# come from the same deterministic regexes as the fallback path, just scoped
+# to this container's own text instead of the whole page.
+_SCOPED_CONTAINER_JS = r"""
+(cardCodePattern) => {
+  const codeRe = new RegExp(cardCodePattern);
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  let match = null;
+  while ((node = walker.nextNode())) {
+    if (codeRe.test(node.textContent)) { match = node; break; }
+  }
+  if (!match) return null;
+  const productKeywordRe = /product|detail|item|goods|card/i;
+  let el = match.parentElement;
+  let candidate = null;
+  let depth = 0;
+  while (el && depth < 8) {
+    const idClass = `${el.id || ''} ${el.className || ''}`;
+    if (productKeywordRe.test(idClass)) { candidate = el; break; }
+    el = el.parentElement;
+    depth++;
+  }
+  const scopeEl = candidate || match.parentElement;
+  if (!scopeEl) return null;
+  return {
+    scoped_by_keyword: !!candidate,
+    tag: scopeEl.tagName.toLowerCase(),
+    id: scopeEl.id || null,
+    class: scopeEl.className || null,
+    text: scopeEl.innerText || '',
+    text_length: (scopeEl.innerText || '').length,
+  };
+}
+"""
+
+
+def _scoped_product_container(page: Page, card_code_pattern: str) -> dict | None:
+    """Best-effort product-scoped DOM container around the card-code text.
+    Never raises - returns None (triggering the whole-page fallback) if no
+    card-code text node is found or evaluation fails for any reason."""
+    try:
+        return page.evaluate(_SCOPED_CONTAINER_JS, card_code_pattern)
+    except Exception:
+        return None
+
+
+def extract_and_validate_product(page: Page, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
+    """Deterministic (non-AI) extraction. OGP meta tags (title/image) are
+    structured page metadata and are always read the same way. For the
+    semi-structured Japanese fields (price/stock/treatment/card code), a
+    product-scoped DOM container is tried first (see
+    `_scoped_product_container`); the whole-page body text is used only as an
+    explicit fallback when no scoped container is found or the scoped
+    container doesn't yield both a price and a card code. Which path won is
+    always recorded as `extraction_path` for audit. Fails closed - see
+    `validation` - rather than returning a plausible-looking but wrong value.
+    Dealer buy-price is intentionally not extracted in this tranche."""
+    html = page.content()
+    body_text = page.inner_text("body") if page.query_selector("body") else ""
+
+    product_title = _meta_content(page, "og:title") or page.title() or None
+    image_url = _meta_content(page, "og:image")
+
+    fields = _extract_fields_from_text(body_text)
+    extraction_path = "whole_page_regex_fallback"
+    if fields["card_code"] is None:
+        # Last resort: the code can legitimately live outside visible text
+        # (e.g. an image alt attribute). Still whole-page, not scoped.
+        html_code_match = re.search(r"\bOP\d{2}-\d{3}\b", html)
+        if html_code_match:
+            fields = {**fields, "card_code": html_code_match.group(0)}
+
+    scoped = _scoped_product_container(page, r"OP\d{2}-\d{3}")
+    if scoped and scoped.get("text"):
+        scoped_fields = _extract_fields_from_text(scoped["text"])
+        if scoped_fields["sell_price_jpy"] is not None and scoped_fields["card_code"] is not None:
+            fields = scoped_fields
+            extraction_path = "dom_selector_scoped"
+
+    card_code = fields["card_code"]
+    treatment = fields["treatment"]
+    sell_price_jpy = fields["sell_price_jpy"]
+    stock_status = fields["stock_status"]
 
     extracted = {
         "source_url": source_url,
@@ -310,6 +406,8 @@ def extract_and_validate_product(page: Page, source_url: str, requested_card_cod
         "extraction_status": "extracted" if not fail_reasons else "fail_closed",
         "fail_reasons": fail_reasons,
         "selector_version": SELECTOR_VERSION,
+        "extraction_path": extraction_path,
+        "selector_diagnostics": scoped,
         "extracted": extracted,
         "validation": validation,
     }
@@ -737,12 +835,347 @@ def run_extraction(repeat: int = 3, delay_s: float = 8.0, dump_dom: bool = False
     return overall
 
 
+def summarize_checks_by_egress_ip(checks: list[dict]) -> list[dict]:
+    """Pure aggregation over already-recorded check dicts - no I/O, directly
+    unit-testable. Groups by the diagnostic egress IP observed for each check
+    (see EGRESS_IP_DISCLAIMER for what that IP does and doesn't prove).
+    Preserves first-seen IP order."""
+    groups: dict[str, dict] = {}
+    order: list[str] = []
+    for c in checks:
+        ip = c.get("diagnostic_egress_ip") or "unknown"
+        if ip not in groups:
+            groups[ip] = {
+                "egress_ip": ip,
+                "checks_observed": 0,
+                "http_200_count": 0,
+                "http_403_count": 0,
+                "http_429_count": 0,
+                "challenge_count": 0,
+                "other_status_count": 0,
+                "_elapsed_s_values": [],
+            }
+            order.append(ip)
+        g = groups[ip]
+        g["checks_observed"] += 1
+        status = c.get("http_status")
+        if status == 200:
+            g["http_200_count"] += 1
+        elif status == 403:
+            g["http_403_count"] += 1
+        elif status == 429:
+            g["http_429_count"] += 1
+        else:
+            g["other_status_count"] += 1
+        if c.get("classification") == "challenge_or_captcha":
+            g["challenge_count"] += 1
+        if c.get("elapsed_s") is not None:
+            g["_elapsed_s_values"].append(c["elapsed_s"])
+
+    summary = []
+    for ip in order:
+        g = groups[ip]
+        values = g.pop("_elapsed_s_values")
+        g["average_elapsed_s"] = round(sum(values) / len(values), 3) if values else None
+        summary.append(g)
+    return summary
+
+
+def run_static_ip_reliability(
+    url: str,
+    out_name: str,
+    checks: int,
+    delay_s: float,
+    expected_markers: list[str] | None,
+    extract: bool = False,
+    requested_card_code: str | None = None,
+    dump_dom: bool = False,
+) -> dict:
+    """Static Outbound IP reliability check for one URL: ordinary bundled
+    Playwright Chromium (no channel override), one brand-new browser context
+    per check (no cookies/session carried over between checks), the optional
+    fixed-proxy configuration is never applied regardless of environment
+    variables (this mode specifically tests Railway's own static outbound IP
+    egress, not a third-party proxy). Does not retry a failed check and does
+    not stop on 403/429 - only on a genuine CAPTCHA/interactive-challenge
+    classification - so distinct assigned static IPs can be compared across
+    the full run."""
+    out_dir = OUTPUT_ROOT / out_name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    overall: dict = {
+        "spike": "static_outbound_ip_reliability",
+        "target_url": url,
+        "checks_requested": checks,
+        "delay_s": delay_s,
+        "proxy_configured": False,
+        "egress_ip_disclaimer": EGRESS_IP_DISCLAIMER,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "playwright_version": None,
+        "browser_version": None,
+        "extractor_version": SELECTOR_VERSION,
+        "checks": [],
+        "stopped_early": False,
+        "stop_reason": None,
+    }
+
+    with sync_playwright() as p:
+        overall["playwright_version"] = pkg_version("playwright")
+        browser = p.chromium.launch(headless=True)
+        overall["browser_version"] = browser.version
+
+        for i in range(1, checks + 1):
+            check_timestamp = datetime.now(timezone.utc).isoformat()
+            egress = capture_egress_ip()
+            context = browser.new_context()
+            trace_path = out_dir / f"check{i:02d}_trace.zip" if extract else None
+            if trace_path:
+                context.tracing.start(screenshots=True, snapshots=True, sources=True)
+            page = context.new_page()
+            out_prefix = out_dir / f"check{i:02d}"
+
+            start = time.monotonic()
+            try:
+                resp = page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(1500)
+                elapsed = time.monotonic() - start
+                step = capture(page, resp, out_prefix, elapsed, expected_markers)
+            except Exception as exc:
+                elapsed = time.monotonic() - start
+                step = {
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "elapsed_s": round(elapsed, 3),
+                    "final_url": None,
+                    "http_status": None,
+                    "page_title": None,
+                    "html_bytes": None,
+                    "classification": "navigation_error",
+                    "classification_evidence": [],
+                }
+
+            extraction = None
+            dom_candidates = None
+            if extract:
+                dom_candidates = dump_dom_candidates(page) if dump_dom else None
+                if step.get("classification") == "normal_product" and "error" not in step:
+                    try:
+                        extraction = extract_and_validate_product(
+                            page, url, requested_card_code or EXPECTED_CARD_CODE
+                        )
+                    except Exception as exc:
+                        extraction = {
+                            "extraction_status": "fail_closed",
+                            "fail_reasons": [f"extraction_exception:{type(exc).__name__}: {exc}"],
+                            "selector_version": SELECTOR_VERSION,
+                            "extraction_path": None,
+                            "selector_diagnostics": None,
+                            "extracted": {},
+                            "validation": {},
+                        }
+                else:
+                    reason = (
+                        "navigation_error"
+                        if "error" in step
+                        else f"page_classification_not_normal_product:{step.get('classification')}"
+                    )
+                    extraction = {
+                        "extraction_status": "fail_closed",
+                        "fail_reasons": [reason],
+                        "selector_version": SELECTOR_VERSION,
+                        "extraction_path": None,
+                        "selector_diagnostics": None,
+                        "extracted": {},
+                        "validation": {},
+                    }
+
+            if trace_path:
+                context.tracing.stop(path=str(trace_path))
+            context.close()
+
+            check_record = {
+                "check_number": i,
+                "timestamp_utc": check_timestamp,
+                "diagnostic_egress_ip": egress.get("ip"),
+                "diagnostic_egress_lookup": egress,
+                "http_status": step.get("http_status"),
+                "final_url": step.get("final_url"),
+                "page_title": step.get("page_title"),
+                "response_body_length": step.get("html_bytes"),
+                "classification": step.get("classification"),
+                "classification_evidence": step.get("classification_evidence", []),
+                "elapsed_s": step.get("elapsed_s"),
+                "browser_version": overall["browser_version"],
+                "extractor_version": SELECTOR_VERSION,
+                "error": step.get("error"),
+                "html_path": str(out_prefix.with_suffix(".html")) if out_prefix.with_suffix(".html").exists() else None,
+                "screenshot_path": str(out_prefix.with_suffix(".png")) if out_prefix.with_suffix(".png").exists() else None,
+                "trace_path": str(trace_path) if trace_path and trace_path.exists() else None,
+            }
+            if extract:
+                check_record["extraction"] = extraction
+                if dom_candidates is not None:
+                    check_record["dom_candidates"] = dom_candidates
+            overall["checks"].append(check_record)
+
+            if step.get("classification") == "challenge_or_captcha":
+                overall["stopped_early"] = True
+                overall["stop_reason"] = f"challenge_or_captcha_at_check_{i}"
+                break
+
+            if i < checks:
+                time.sleep(delay_s)
+
+        browser.close()
+
+    overall["summary_by_egress_ip"] = summarize_checks_by_egress_ip(overall["checks"])
+    (out_dir / "result.json").write_text(json.dumps(overall, indent=2, ensure_ascii=False), encoding="utf-8")
+    return overall
+
+
+def run_static_ip_reliability_pipeline() -> dict:
+    """Orchestrates the full Static Outbound IP reliability test in one
+    process/deployment run: 12 homepage checks (60s apart), then - only if
+    every one of those 12 was a genuine normal HTTP 200 - 3 product-page
+    checks (120s apart). Saves the first successful ("extracted") product
+    extraction's artifacts to the Railway volume (RAILWAY_VOLUME_MOUNT_PATH)
+    if attached, then holds the process open for 10 minutes so the artifacts
+    can be retrieved before it exits."""
+    out_dir = OUTPUT_ROOT / "static_ip_reliability_pipeline"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    overall: dict = {
+        "spike": "static_outbound_ip_reliability_pipeline",
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "homepage": None,
+        "homepage_gate_passed": False,
+        "homepage_gate_reason": None,
+        "product": None,
+        "artifact_retention": None,
+    }
+
+    homepage = run_static_ip_reliability(
+        url=HOMEPAGE_URL,
+        out_name="static_ip_reliability_homepage",
+        checks=12,
+        delay_s=60.0,
+        expected_markers=HOMEPAGE_EXPECTED_MARKERS,
+        extract=False,
+    )
+    overall["homepage"] = homepage
+
+    all_normal_200 = (
+        not homepage["stopped_early"]
+        and len(homepage["checks"]) == 12
+        and all(
+            c["http_status"] == 200 and c["classification"] == "normal_product"
+            for c in homepage["checks"]
+        )
+    )
+    overall["homepage_gate_passed"] = all_normal_200
+    if not all_normal_200:
+        overall["homepage_gate_reason"] = (
+            homepage["stop_reason"]
+            if homepage["stopped_early"]
+            else "not_all_12_homepage_checks_were_genuine_normal_200"
+        )
+        (out_dir / "result.json").write_text(json.dumps(overall, indent=2, ensure_ascii=False), encoding="utf-8")
+        return overall
+
+    product = run_static_ip_reliability(
+        url=PRODUCT_URL,
+        out_name="static_ip_reliability_product",
+        checks=3,
+        delay_s=120.0,
+        expected_markers=PRODUCT_EXPECTED_MARKERS,
+        extract=True,
+        requested_card_code=EXPECTED_CARD_CODE,
+        dump_dom=True,
+    )
+    overall["product"] = product
+
+    first_success = next(
+        (c for c in product["checks"] if (c.get("extraction") or {}).get("extraction_status") == "extracted"),
+        None,
+    )
+    volume_root = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+    retention: dict = {"volume_attached": bool(volume_root), "first_success_check": None, "files": []}
+
+    if first_success and volume_root:
+        retention["first_success_check"] = first_success["check_number"]
+        target_dir = Path(volume_root) / "yuyutei_extract_latest"
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        product_out_dir = OUTPUT_ROOT / "static_ip_reliability_product"
+        check_prefix = product_out_dir / f"check{first_success['check_number']:02d}"
+        copy_map = {
+            check_prefix.with_suffix(".html"): "rendered.html",
+            check_prefix.with_suffix(".png"): "screenshot.png",
+            product_out_dir / f"check{first_success['check_number']:02d}_trace.zip": "trace.zip",
+        }
+        for src, dest_name in copy_map.items():
+            if src.exists():
+                dest = target_dir / dest_name
+                dest.write_bytes(src.read_bytes())
+                retention["files"].append(
+                    {"name": dest_name, "path": str(dest), "size_bytes": dest.stat().st_size}
+                )
+
+        result_json_path = target_dir / "result.json"
+        result_json_path.write_text(json.dumps(product, indent=2, ensure_ascii=False), encoding="utf-8")
+        retention["files"].append(
+            {"name": "result.json", "path": str(result_json_path), "size_bytes": result_json_path.stat().st_size}
+        )
+
+        extraction_json_path = target_dir / "extraction.json"
+        extraction_json_path.write_text(
+            json.dumps(first_success["extraction"], indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        retention["files"].append(
+            {
+                "name": "extraction.json",
+                "path": str(extraction_json_path),
+                "size_bytes": extraction_json_path.stat().st_size,
+            }
+        )
+
+        selector_diag_path = target_dir / "selector_diagnostics.json"
+        selector_diag_payload = {
+            "extraction_selector_diagnostics": first_success["extraction"].get("selector_diagnostics"),
+            "dom_candidates": first_success.get("dom_candidates"),
+        }
+        selector_diag_path.write_text(
+            json.dumps(selector_diag_payload, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        retention["files"].append(
+            {
+                "name": "selector_diagnostics.json",
+                "path": str(selector_diag_path),
+                "size_bytes": selector_diag_path.stat().st_size,
+            }
+        )
+
+        for f in retention["files"]:
+            print(f"artifact name={f['name']} path={f['path']} size_bytes={f['size_bytes']}")
+
+    overall["artifact_retention"] = retention
+    (out_dir / "result.json").write_text(json.dumps(overall, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    if first_success and volume_root:
+        print("holding process alive for 600s so artifacts under /data/yuyutei_extract_latest/ can be retrieved...")
+        time.sleep(600)
+
+    return overall
+
+
 EXTRACT_MODE = "railway_extract"
+RELIABILITY_MODE = "static_ip_reliability"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=sorted(MODES.keys()) + [EXTRACT_MODE], required=True)
+    parser.add_argument(
+        "--mode", choices=sorted(MODES.keys()) + [EXTRACT_MODE, RELIABILITY_MODE], required=True
+    )
     parser.add_argument("--repeat", type=int, default=3, help=f"{EXTRACT_MODE} only: number of runs")
     parser.add_argument("--delay-s", type=float, default=8.0, help=f"{EXTRACT_MODE} only: delay between runs")
     parser.add_argument("--dump-dom", action="store_true", help=f"{EXTRACT_MODE} only: log DOM selector candidates")
@@ -750,6 +1183,38 @@ def main() -> None:
 
     print(f"python={sys.version.split()[0]} platform={platform.platform()}")
     print(f"proxy_configured={get_proxy_config() is not None}")  # never logs the endpoint or credentials
+
+    if args.mode == RELIABILITY_MODE:
+        result = run_static_ip_reliability_pipeline()
+        homepage = result["homepage"]
+        for c in homepage["checks"]:
+            print(
+                f"[homepage] check={c['check_number']} ts={c['timestamp_utc']} "
+                f"egress_ip={c['diagnostic_egress_ip']} status={c['http_status']} "
+                f"classification={c['classification']} elapsed_s={c['elapsed_s']} "
+                f"final_url={c['final_url']}"
+            )
+        print(f"homepage_gate_passed={result['homepage_gate_passed']} reason={result['homepage_gate_reason']}")
+        for g in homepage["summary_by_egress_ip"]:
+            print(f"[homepage summary] {g}")
+
+        if result["product"]:
+            for c in result["product"]["checks"]:
+                ext = c.get("extraction") or {}
+                print(
+                    f"[product] check={c['check_number']} ts={c['timestamp_utc']} "
+                    f"egress_ip={c['diagnostic_egress_ip']} status={c['http_status']} "
+                    f"classification={c['classification']} "
+                    f"extraction_status={ext.get('extraction_status')} "
+                    f"extraction_path={ext.get('extraction_path')} "
+                    f"sell_price_jpy={ext.get('extracted', {}).get('sell_price_jpy')} "
+                    f"elapsed_s={c['elapsed_s']}"
+                )
+            for g in result["product"]["summary_by_egress_ip"]:
+                print(f"[product summary] {g}")
+
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return
 
     if args.mode == EXTRACT_MODE:
         result = run_extraction(repeat=args.repeat, delay_s=args.delay_s, dump_dom=args.dump_dom)
