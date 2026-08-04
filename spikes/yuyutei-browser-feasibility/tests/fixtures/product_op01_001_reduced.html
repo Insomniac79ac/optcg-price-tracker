@@ -1,0 +1,80 @@
+<!--
+Reduced, hand-trimmed stand-in for the genuine OP01-001 (P-L Roronoa Zoro,
+parallel) product page retrieved from the yuyutei-spike Railway volume on
+2026-08-04 (spikes/yuyutei-browser-feasibility/retrieved-artifacts/rendered.html,
+not committed - see .gitignore). This file preserves only the real tag
+hierarchy, id/class names, and text needed to exercise the extractor's
+selectors: the JSON-LD Product block, the breadcrumb heading that contains
+"販売" next to "[OP01]" (the exact text that produced the old "1 JPY" bug),
+the #power product-title heading, the real #product-detail /
+.product-detailing container (card code, price, both stock labels, a
+trimmed stats table), and one unrelated recommendation tile with its own
+price. All scripts, trackers, cookies, session data, images, and unrelated
+page content have been removed.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<title>P-L ロロノア・ゾロ(パラレル) 販売 | [OP01]ROMANCE DAWN | ONE PIECEカードゲーム通販ならカードショップ -遊々亭-</title>
+<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product","name":"P-L ロロノア・ゾロ(パラレル)","image":"https://card.yuyu-tei.jp/opc/front/op01/10002.jpg","description":"OP01-001","offers":{"@type":"Offer","price":"34800","priceCurrency":"JPY","availability":"OutOfStock"}}</script>
+</head>
+<body>
+
+<div class="brackets game-text position-relative mt-3">
+<h1 class="position-absolute fs-12 fw-bolder text-primary mt-1 ms-4 me-4 top-0 start-0">
+P-L ロロノア・ゾロ(パラレル) | 販売 | [OP01]ROMANCE DAWN | ONE PIECEカードゲーム</h1>
+</div>
+
+<div class="power mt-4" id="power">
+<h3 class="fw-bold ps-3 pt-3 pe-3 pb-3 pb-md-3">  P-L ロロノア・ゾロ(パラレル)</h3>
+</div>
+
+<section class="product-detail" id="product-detail">
+<div class="row my-3">
+<div class="col-lg-5 col-md-4 ps-md-0 mt-4 text-center zo position-relative" style="width: 260px;">
+<div class="position-relative"></div>
+<a href="javascript:;" class="btn btn-sm btn-primary radius1 float-end mt-2 fs-12 fw-bold px-3" data-bs-toggle="modal" data-bs-target="#imageZoom"> ZOOM </a>
+</div>
+<div class="col-lg-7 col-md-8 mt-4 zo1">
+<div class="product-detailing">
+<div class="d-flex justify-content-between">
+<span class="border border-dark py-1 fw-bold px-4 text-center my-2 fs-11 pote">OP01-001</span>
+</div>
+<hr class="mt-2 mb-3 hidden-mobile">
+<div class="d-flex justify-content-between flex-flow-column">
+<div class="lhs mt-0">
+<h4 class="fw-bold  d-inline-block"> 34,800 円</h4>
+</div>
+<div class="hidden-desktop">
+<label class="form-check-label fw-bold float-start" id="cart_sell_zaiko_mobile" for="flexRadioDefault5n"> 在庫 :   ×   </label>
+</div>
+<div class="rhs d-flex justify-content-between align-items-end">
+<div class="hidden-mobile">
+<label class="form-check-label fw-bold float-start" id="cart_sell_zaiko_pc" for="flexRadioDefault5"> 在庫 :   ×   </label>
+</div>
+</div>
+</div>
+<div class="table-responsive mt-3 hidden-mobile">
+<table class="table table-bordered fw-bold fs-normal w-100 text-center detail-under-li">
+<tbody>
+<tr><th colspan="2">種類</th><td colspan="2">リーダー</td></tr>
+<tr><th colspan="2">パワー</th><td colspan="2">5000</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<div class="row recommendations">
+<div class="col-md-4" style="height: 240px">
+<a href="https://yuyu-tei.jp/sell/opc/card/op01/10004">
+<p class="pt-1" style="overflow: hidden; height: 38px;">トラファルガー・ロー(パラレル)</p>
+</a>
+<b><strong class="d-block text-end "> 12,800 円 </strong></b>
+</div>
+</div>
+
+</body>
+</html>

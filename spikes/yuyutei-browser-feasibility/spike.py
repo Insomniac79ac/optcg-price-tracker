@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 
+from bs4 import BeautifulSoup
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 HOMEPAGE_URL = "https://yuyu-tei.jp/"
@@ -219,7 +220,11 @@ def classify_page(
     return f"other_status_{status}", evidence
 
 
-SELECTOR_VERSION = "v2"  # v2: product-scoped DOM-container extraction attempted before the whole-page regex fallback
+SELECTOR_VERSION = "v3"  # v3: structured JSON-LD Product data first, then
+# product-scoped DOM element selectors confined to the real main-product
+# container, then a text parser still confined to that same container -
+# whole-page regex is kept only as a diagnostic that can never be accepted
+# as the extracted price. See PRICE_EXTRACTION_NOTE.
 EXPECTED_CARD_CODE = "OP01-001"
 PRODUCT_EXPECTED_MARKERS = ["ロロノア・ゾロ", "パラレル"]
 CATEGORY_EXPECTED_MARKERS = ["ROMANCE DAWN"]
@@ -232,6 +237,20 @@ EGRESS_IP_DISCLAIMER = (
     "lookup (ipinfo.io) made from the same process around the same time as "
     "the page request. It is NOT technically proven to be the exact IP that "
     "served the Yuyu-Tei request for this check."
+)
+
+# v2 anchored price extraction on the literal word 販売 ("for sale") appearing
+# near the price. On a real captured OP01-001 page, that word appears exactly
+# once - inside a decorative, position-absolute SEO breadcrumb heading
+# ("...(パラレル) | 販売 | [OP01]ROMANCE DAWN...") that has nothing to do with
+# the price element. The v2 regex, run over the whole page, matched 販売 in
+# that breadcrumb and then captured the first digits within 20 characters of
+# it: "OP01" -> "01" -> int("01") == 1. The real price ("34,800円") sits in a
+# plain, unlabelled element inside the actual product-detail container, which
+# contains no occurrence of 販売 at all. v3 never anchors on that word.
+PRICE_EXTRACTION_NOTE = (
+    "v3 does not anchor price extraction on the word 販売 - see the OP01 -> "
+    "1 JPY bug this replaced."
 )
 
 
@@ -248,158 +267,409 @@ def _external_product_id(url: str) -> str | None:
     return f"{m.group(1)}-{m.group(2)}".lower() if m else None
 
 
-def _extract_fields_from_text(text: str) -> dict:
-    """Pure regex extraction over a single text blob - no Page, no I/O, so
-    this is directly unit-testable offline. Used for both the product-scoped
-    DOM-container text (preferred) and the whole-page fallback text."""
-    card_code_match = re.search(r"\bOP\d{2}-\d{3}\b", text)
+CARD_CODE_RE = re.compile(r"\bOP\d{2}-\d{3}\b")
+PRICE_LEAF_RE = re.compile(r"^[¥￥]?\s*([\d,]+)\s*円$")
+PRICE_ANYWHERE_RE = re.compile(r"[¥￥]?[\d,]+\s*円")
+MAIN_CONTAINER_KEYWORD_RE = re.compile(r"product|detail|item|goods", re.IGNORECASE)
+
+
+def _normalize_price_text(raw: str) -> int | None:
+    """'34,800 円' / '¥34,800' -> 34800. None if no digits are present."""
+    m = re.search(r"[\d,]+", raw)
+    if not m:
+        return None
+    digits = m.group(0).replace(",", "")
+    return int(digits) if digits else None
+
+
+def _price_matches_code_digits(price: int, *codes: str | None) -> bool:
+    """True if `price` numerically equals a digit-group found inside a card
+    code or external product id, e.g. "OP01-001" contains digit-groups
+    {1 (from "01"), 1 (from "001")}. This is exactly the shape of the OP01 ->
+    1 JPY bug, kept as a standing guard regardless of which extraction tier
+    produced the price."""
+    for code in codes:
+        if not code:
+            continue
+        for group in re.findall(r"\d+", code):
+            if int(group) == price:
+                return True
+    return False
+
+
+def _describe_element(el) -> str:
+    tag = el.name
+    el_id = el.get("id")
+    classes = el.get("class") or []
+    if el_id:
+        return f"{tag}#{el_id}"
+    if classes:
+        return f"{tag}.{'.'.join(classes)}"
+    return tag
+
+
+def _find_jsonld_product(soup: BeautifulSoup) -> dict | None:
+    """First schema.org Product block found in a
+    <script type="application/ld+json"> tag, if any - page-author-supplied
+    structured data, priority 1 for extraction."""
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text() or ""
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("@type") == "Product":
+                return item
+    return None
+
+
+def _fields_from_jsonld(product: dict) -> dict | None:
+    """Returns a complete fields dict only when name/price/currency/card_code
+    are all present and self-consistent; otherwise None so extraction falls
+    through to DOM selectors rather than accepting a partial record."""
+    offers = product.get("offers")
+    if isinstance(offers, list):
+        offers = offers[0] if offers else {}
+    offers = offers or {}
+
+    name = product.get("name")
+    price = _normalize_price_text(str(offers.get("price", "")))
+    currency = offers.get("priceCurrency")
+    availability = str(offers.get("availability") or "")
+    description = str(product.get("description") or "")
+
+    card_code_match = CARD_CODE_RE.search(description) or CARD_CODE_RE.search(name or "")
     card_code = card_code_match.group(0) if card_code_match else None
 
-    treatment = None
-    if "パラレル" in text:
-        treatment = "parallel"
-    elif "ノーマル" in text:
-        treatment = "normal"
+    if not (name and price is not None and currency == "JPY" and card_code):
+        return None
 
-    sell_price_jpy = None
-    sell_match = re.search(r"販売[^\d¥￥]{0,20}[¥￥]?([\d,]+)\s*円?", text)
-    if sell_match:
-        try:
-            sell_price_jpy = int(sell_match.group(1).replace(",", ""))
-        except ValueError:
-            sell_price_jpy = None
-
-    stock_status = None
-    if "在庫あり" in text:
-        stock_status = "in_stock"
-    elif "在庫切れ" in text or "品切れ" in text:
+    availability_lower = availability.lower()
+    if "outofstock" in availability_lower:
         stock_status = "out_of_stock"
-    elif "在庫" in text:
+    elif "instock" in availability_lower:
+        stock_status = "in_stock"
+    elif availability:
         stock_status = "unknown_present_marker"
+    else:
+        stock_status = None
+
+    if "パラレル" in name:
+        treatment = "parallel"
+    elif "ノーマル" in name:
+        treatment = "normal"
+    else:
+        treatment = None
 
     return {
+        "product_title": name,
         "card_code": card_code,
         "treatment": treatment,
-        "sell_price_jpy": sell_price_jpy,
+        "sell_price_jpy": price,
         "stock_status": stock_status,
+        "product_image_url": product.get("image") or None,
+        "price_evidence": {
+            "accepted_selector": "script[type=application/ld+json] Product.offers.price",
+            "raw_price_text": str(offers.get("price")),
+            "normalized_price": price,
+            "surrounding_label_text": f"priceCurrency={currency}",
+            "extraction_method": "jsonld_structured_data",
+            "rejected_candidates": [],
+        },
     }
 
 
-# Finds the text node containing the card code, then climbs up to at most 8
-# ancestors looking for one whose id/class hints this is a product/detail/
-# item region. Diagnostic-only DOM narrowing - the actual field values still
-# come from the same deterministic regexes as the fallback path, just scoped
-# to this container's own text instead of the whole page.
-_SCOPED_CONTAINER_JS = r"""
-(cardCodePattern) => {
-  const codeRe = new RegExp(cardCodePattern);
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  let node;
-  let match = null;
-  while ((node = walker.nextNode())) {
-    if (codeRe.test(node.textContent)) { match = node; break; }
-  }
-  if (!match) return null;
-  const productKeywordRe = /product|detail|item|goods|card/i;
-  let el = match.parentElement;
-  let candidate = null;
-  let depth = 0;
-  while (el && depth < 8) {
-    const idClass = `${el.id || ''} ${el.className || ''}`;
-    if (productKeywordRe.test(idClass)) { candidate = el; break; }
-    el = el.parentElement;
-    depth++;
-  }
-  const scopeEl = candidate || match.parentElement;
-  if (!scopeEl) return null;
-  return {
-    scoped_by_keyword: !!candidate,
-    tag: scopeEl.tagName.toLowerCase(),
-    id: scopeEl.id || null,
-    class: scopeEl.className || null,
-    text: scopeEl.innerText || '',
-    text_length: (scopeEl.innerText || '').length,
-  };
-}
-"""
+def _find_main_detail_container(soup: BeautifulSoup):
+    """Smallest element that both (a) has an id/class hinting
+    product/detail/item/goods AND (b) actually contains a card-code-shaped
+    string and a 円-suffixed price - not just any element with a matching
+    class name. On a real captured OP01-001 page this resolves to
+    <div class="product-detailing"> inside <section id="product-detail">,
+    correctly excluding the surrounding image column and the recommendation
+    grid further down the page (neither is inside this container at all)."""
+    best = None
+    best_len = None
+    for el in soup.find_all(True):
+        idclass = f"{el.get('id') or ''} {' '.join(el.get('class') or [])}"
+        if not MAIN_CONTAINER_KEYWORD_RE.search(idclass):
+            continue
+        text = el.get_text(" ", strip=True)
+        if not (CARD_CODE_RE.search(text) and PRICE_ANYWHERE_RE.search(text)):
+            continue
+        if best is None or len(text) < best_len:
+            best = el
+            best_len = len(text)
+    return best
 
 
-def _scoped_product_container(page: Page, card_code_pattern: str) -> dict | None:
-    """Best-effort product-scoped DOM container around the card-code text.
-    Never raises - returns None (triggering the whole-page fallback) if no
-    card-code text node is found or evaluation fails for any reason."""
-    try:
-        return page.evaluate(_SCOPED_CONTAINER_JS, card_code_pattern)
-    except Exception:
-        return None
+def _find_title_container(soup: BeautifulSoup):
+    """The single on-page product-title heading (`#power h3` on a real
+    captured page) - deliberately NOT the decorative, position-absolute
+    breadcrumb h1 elsewhere on the page (mixes in unrelated breadcrumb
+    segments, e.g. "... | 販売 | [OP01]...", and isn't scoped to this
+    product), and not a recommendation tile's <p> title."""
+    power = soup.find(id="power") or soup.find(class_="power")
+    if power:
+        heading = power.find(["h2", "h3"])
+        if heading and heading.get_text(strip=True):
+            return heading
+    return None
 
 
-def extract_and_validate_product(page: Page, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
-    """Deterministic (non-AI) extraction. OGP meta tags (title/image) are
-    structured page metadata and are always read the same way. For the
-    semi-structured Japanese fields (price/stock/treatment/card code), a
-    product-scoped DOM container is tried first (see
-    `_scoped_product_container`); the whole-page body text is used only as an
-    explicit fallback when no scoped container is found or the scoped
-    container doesn't yield both a price and a card code. Which path won is
-    always recorded as `extraction_path` for audit. Fails closed - see
-    `validation` - rather than returning a plausible-looking but wrong value.
-    Dealer buy-price is intentionally not extracted in this tranche."""
-    html = page.content()
-    body_text = page.inner_text("body") if page.query_selector("body") else ""
+def _leaf_price_candidates(container) -> list[dict]:
+    """Every leaf (no element children) descendant of `container` whose own
+    text is *only* a 円-suffixed price - not the container's full flattened
+    text. Recommendation-tile and breadcrumb prices are excluded structurally
+    (they simply aren't inside `container`), not by keyword guessing."""
+    candidates = []
+    for el in container.find_all(True):
+        if el.find(True) is not None:
+            continue  # has element children - not a leaf
+        text = el.get_text(strip=True)
+        m = PRICE_LEAF_RE.match(text)
+        if not m:
+            continue
+        normalized = _normalize_price_text(m.group(1))
+        if normalized is None:
+            continue
+        candidates.append({
+            "selector": _describe_element(el),
+            "raw_text": text,
+            "normalized_price": normalized,
+        })
+    return candidates
 
-    product_title = _meta_content(page, "og:title") or page.title() or None
-    image_url = _meta_content(page, "og:image")
 
-    fields = _extract_fields_from_text(body_text)
-    extraction_path = "whole_page_regex_fallback"
-    if fields["card_code"] is None:
-        # Last resort: the code can legitimately live outside visible text
-        # (e.g. an image alt attribute). Still whole-page, not scoped.
-        html_code_match = re.search(r"\bOP\d{2}-\d{3}\b", html)
-        if html_code_match:
-            fields = {**fields, "card_code": html_code_match.group(0)}
+def _find_card_code_element(container) -> dict | None:
+    for el in container.find_all(True):
+        if el.find(True) is not None:
+            continue
+        text = el.get_text(strip=True)
+        if CARD_CODE_RE.fullmatch(text):
+            return {"selector": _describe_element(el), "text": text}
+    return None
 
-    scoped = _scoped_product_container(page, r"OP\d{2}-\d{3}")
-    if scoped and scoped.get("text"):
-        scoped_fields = _extract_fields_from_text(scoped["text"])
-        if scoped_fields["sell_price_jpy"] is not None and scoped_fields["card_code"] is not None:
-            fields = scoped_fields
-            extraction_path = "dom_selector_scoped"
 
-    card_code = fields["card_code"]
-    treatment = fields["treatment"]
-    sell_price_jpy = fields["sell_price_jpy"]
-    stock_status = fields["stock_status"]
+def _find_stock_element(container) -> dict | None:
+    for el in container.find_all(True):
+        if el.find(True) is not None:
+            continue
+        text = el.get_text(strip=True)
+        if "在庫" not in text:
+            continue
+        if "在庫あり" in text:
+            status = "in_stock"
+        elif "在庫切れ" in text or "品切れ" in text:
+            status = "out_of_stock"
+        elif "×" in text:
+            status = "out_of_stock"
+        elif "○" in text or "◯" in text:
+            status = "in_stock"
+        else:
+            status = "unknown_present_marker"
+        return {"selector": _describe_element(el), "text": text, "stock_status": status}
+    return None
 
-    extracted = {
-        "source_url": source_url,
-        "final_url": page.url,
+
+def _dom_scoped_fields(soup: BeautifulSoup) -> tuple[dict | None, dict]:
+    """Priority 2/3: product-scoped DOM element selectors, then (only if
+    that finds no leaf-level price element) a text-regex scan still confined
+    to the same container. Never looks outside the main detail container.
+    Returns (fields_or_None, diagnostics) - diagnostics always records what
+    was tried, including rejection reasons, for audit."""
+    diagnostics: dict = {"main_container": None, "price_candidates": [], "rejected": []}
+
+    container = _find_main_detail_container(soup)
+    if container is None:
+        diagnostics["rejected"].append({"reason": "no_product_container_found"})
+        return None, diagnostics
+
+    diagnostics["main_container"] = _describe_element(container)
+
+    title_el = _find_title_container(soup)
+    product_title = title_el.get_text(strip=True) if title_el else None
+
+    card_code_el = _find_card_code_element(container)
+    card_code = card_code_el["text"] if card_code_el else None
+
+    stock_el = _find_stock_element(container)
+    stock_status = stock_el["stock_status"] if stock_el else None
+
+    title_text_for_treatment = product_title or ""
+    if "パラレル" in title_text_for_treatment:
+        treatment = "parallel"
+    elif "ノーマル" in title_text_for_treatment:
+        treatment = "normal"
+    else:
+        treatment = None
+
+    price_candidates = _leaf_price_candidates(container)
+    extraction_method = "dom_selector_scoped"
+
+    if not price_candidates:
+        # Priority 3: tightly scoped text parser - still confined to this
+        # same container, still requires the 円 marker, but doesn't need a
+        # single leaf element to hold only the price. Never looks outside
+        # `container`, so it still can't see the breadcrumb or recommendations.
+        container_text = container.get_text(" ", strip=True)
+        m = PRICE_ANYWHERE_RE.search(container_text)
+        if m:
+            normalized = _normalize_price_text(m.group(0))
+            if normalized is not None:
+                price_candidates = [{
+                    "selector": f"{_describe_element(container)} (container text scan)",
+                    "raw_text": m.group(0),
+                    "normalized_price": normalized,
+                }]
+                extraction_method = "container_text_scoped_fallback"
+
+    diagnostics["price_candidates"] = price_candidates
+
+    if not price_candidates:
+        diagnostics["rejected"].append({"reason": "price_missing_in_container"})
+        return None, diagnostics
+
+    distinct_prices = {c["normalized_price"] for c in price_candidates}
+    if len(distinct_prices) > 1:
+        diagnostics["rejected"].append({
+            "reason": "ambiguous_price_multiple_candidates",
+            "candidates": price_candidates,
+        })
+        return None, diagnostics
+
+    accepted = price_candidates[0]
+    diagnostics["accepted_price_candidate"] = accepted
+
+    fields = {
         "product_title": product_title,
         "card_code": card_code,
         "treatment": treatment,
-        "sell_price_jpy": sell_price_jpy,
+        "sell_price_jpy": accepted["normalized_price"],
         "stock_status": stock_status,
-        "product_image_url": image_url,
-        "external_product_id": _external_product_id(page.url) or _external_product_id(source_url),
-        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "product_image_url": None,
+        "price_evidence": {
+            "accepted_selector": accepted["selector"],
+            "raw_price_text": accepted["raw_text"],
+            "normalized_price": accepted["normalized_price"],
+            "surrounding_label_text": (stock_el or {}).get("text"),
+            "extraction_method": extraction_method,
+            "rejected_candidates": [c for c in price_candidates if c is not accepted],
+        },
     }
+    return fields, diagnostics
 
-    fail_reasons = []
+
+def _whole_page_diagnostic_price(html: str) -> dict | None:
+    """Priority 4: diagnostic-only whole-page scan, kept only so a run still
+    logs *something* when neither JSON-LD nor a product container can be
+    found. Structurally cannot become the accepted price - see
+    extract_product_from_html, which never promotes this result. Not
+    anchored on 販売 (see PRICE_EXTRACTION_NOTE)."""
+    m = PRICE_ANYWHERE_RE.search(html)
+    if not m:
+        return None
+    return {"raw_text": m.group(0), "normalized_price": _normalize_price_text(m.group(0))}
+
+
+def extract_product_from_html(html: str, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
+    """Pure, offline-testable extraction core - no Page, no I/O, no network.
+    Priority: 1) structured JSON-LD Product data, 2) product-scoped DOM
+    element selectors, 3) a text parser confined to that same container,
+    4) a whole-page regex kept diagnostic-only and never eligible to be
+    accepted as the extracted price."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    jsonld_product = _find_jsonld_product(soup)
+    jsonld_fields = _fields_from_jsonld(jsonld_product) if jsonld_product else None
+
+    dom_fields = None
+    dom_diagnostics: dict = {}
+    if jsonld_fields is None:
+        dom_fields, dom_diagnostics = _dom_scoped_fields(soup)
+
+    diagnostic_fallback = _whole_page_diagnostic_price(html)
+
+    if jsonld_fields is not None:
+        fields = jsonld_fields
+        extraction_path = "jsonld_structured_data"
+    elif dom_fields is not None:
+        fields = dom_fields
+        extraction_path = dom_fields["price_evidence"]["extraction_method"]
+    else:
+        fields = None
+        extraction_path = "whole_page_diagnostic_only_not_accepted"
+
+    fail_reasons: list[str] = []
+
+    if fields is None:
+        rejected_reasons = [r.get("reason") for r in (dom_diagnostics.get("rejected") or [])]
+        fail_reasons.extend(rejected_reasons or ["no_trustworthy_price_source_found"])
+        if diagnostic_fallback:
+            fail_reasons.append(
+                f"whole_page_diagnostic_only_candidate_rejected:{diagnostic_fallback['raw_text']}"
+            )
+        product_title = None
+        card_code = None
+        treatment = None
+        sell_price_jpy = None
+        stock_status = None
+        image_url = None
+        price_evidence = None
+    else:
+        product_title = fields["product_title"]
+        card_code = fields["card_code"]
+        treatment = fields["treatment"]
+        sell_price_jpy = fields["sell_price_jpy"]
+        stock_status = fields["stock_status"]
+        image_url = fields.get("product_image_url")
+        price_evidence = fields["price_evidence"]
+
+        external_id = _external_product_id(source_url)
+        if sell_price_jpy is not None and _price_matches_code_digits(sell_price_jpy, card_code, external_id):
+            fail_reasons.append(f"price_matches_card_code_or_id_digits:{sell_price_jpy}")
+            sell_price_jpy = None
+        elif sell_price_jpy is not None and sell_price_jpy < 10:
+            fail_reasons.append(f"implausible_price_too_low:{sell_price_jpy}")
+            sell_price_jpy = None
+
     if not product_title:
         fail_reasons.append("product_title_missing")
-    if sell_price_jpy is None:
+    if sell_price_jpy is None and "sell_price_missing_or_not_numeric" not in fail_reasons:
         fail_reasons.append("sell_price_missing_or_not_numeric")
     if card_code is not None and card_code != requested_card_code:
         fail_reasons.append(f"card_code_conflict:displayed={card_code},expected={requested_card_code}")
     if treatment is not None and treatment != "parallel":
         fail_reasons.append(f"treatment_conflict:displayed={treatment},expected=parallel")
 
+    extracted = {
+        "source_url": source_url,
+        "final_url": source_url,
+        "product_title": product_title,
+        "card_code": card_code,
+        "treatment": treatment,
+        "sell_price_jpy": sell_price_jpy,
+        "stock_status": stock_status,
+        "product_image_url": image_url,
+        "external_product_id": _external_product_id(source_url),
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+    }
+
     validation = {
         "title_present": product_title is not None,
         "price_numeric": sell_price_jpy is not None,
         "card_code_matches_expected": card_code is None or card_code == requested_card_code,
         "treatment_matches_expected": treatment is None or treatment == "parallel",
+        "accepted_selector": (price_evidence or {}).get("accepted_selector"),
+        "raw_price_text": (price_evidence or {}).get("raw_price_text"),
+        "normalized_price": (price_evidence or {}).get("normalized_price"),
+        "surrounding_label_text": (price_evidence or {}).get("surrounding_label_text"),
+        "extraction_method": (price_evidence or {}).get("extraction_method"),
+        "rejected_candidates": (
+            (price_evidence or {}).get("rejected_candidates")
+            or dom_diagnostics.get("rejected")
+            or []
+        ),
     }
 
     return {
@@ -407,10 +677,25 @@ def extract_and_validate_product(page: Page, source_url: str, requested_card_cod
         "fail_reasons": fail_reasons,
         "selector_version": SELECTOR_VERSION,
         "extraction_path": extraction_path,
-        "selector_diagnostics": scoped,
+        "selector_diagnostics": dom_diagnostics or None,
         "extracted": extracted,
         "validation": validation,
     }
+
+
+def extract_and_validate_product(page: Page, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
+    """Thin Playwright wrapper around extract_product_from_html - all real
+    extraction logic is pure/offline-testable (see extract_product_from_html
+    and test_reliability.py). Only final_url and a page.title() fallback come
+    from the live Page (final_url isn't present in the HTML itself)."""
+    html = page.content()
+    result = extract_product_from_html(html, source_url, requested_card_code)
+    result["extracted"]["final_url"] = page.url
+    if result["extracted"]["product_title"] is None:
+        fallback_title = page.title() or None
+        result["extracted"]["product_title"] = fallback_title
+        result["validation"]["title_present"] = fallback_title is not None
+    return result
 
 
 def dump_dom_candidates(page: Page, limit: int = 40) -> list[dict]:
@@ -881,6 +1166,38 @@ def summarize_checks_by_egress_ip(checks: list[dict]) -> list[dict]:
     return summary
 
 
+def _volume_root() -> Path | None:
+    root = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+    return Path(root) if root else None
+
+
+def append_check_result(run_name: str, check_record: dict) -> str | None:
+    """Appends one completed check as a single minified JSON line to a
+    per-run NDJSON file on the attached Railway volume - so a partial run
+    (killed deploy, OOM, crash) still preserves every check that finished
+    before it, not just whatever made it into the final in-memory result.
+    No-op (never raises) when no volume is attached, e.g. running locally."""
+    volume_root = _volume_root()
+    if volume_root is None:
+        return None
+    runs_dir = volume_root / "reliability_runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    path = runs_dir / f"{run_name}.ndjson"
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(check_record, separators=(",", ":"), ensure_ascii=False))
+        f.write("\n")
+    return str(path)
+
+
+def log_event(event: str, **fields) -> None:
+    """Every reliability-run stdout line is exactly one minified JSON object
+    - never a pretty-printed multi-line dump. A single indent=2
+    print(json.dumps(...)) of a full run's result previously exceeded
+    Railway's 500 logs/sec ingestion cap and silently dropped most of a
+    completed run's detail from the logs."""
+    print(json.dumps({"event": event, **fields}, separators=(",", ":"), ensure_ascii=False))
+
+
 def run_static_ip_reliability(
     url: str,
     out_name: str,
@@ -1016,6 +1333,18 @@ def run_static_ip_reliability(
                 if dom_candidates is not None:
                     check_record["dom_candidates"] = dom_candidates
             overall["checks"].append(check_record)
+            volume_path = append_check_result(out_name, check_record)
+            log_event(
+                "check_complete",
+                run=out_name,
+                check_number=i,
+                diagnostic_egress_ip=check_record["diagnostic_egress_ip"],
+                http_status=check_record["http_status"],
+                classification=check_record["classification"],
+                elapsed_s=check_record["elapsed_s"],
+                extraction_status=(extraction or {}).get("extraction_status") if extract else None,
+                volume_path=volume_path,
+            )
 
             if step.get("classification") == "challenge_or_captcha":
                 overall["stopped_early"] = True
@@ -1079,7 +1408,20 @@ def run_static_ip_reliability_pipeline() -> dict:
             else "not_all_12_homepage_checks_were_genuine_normal_200"
         )
         (out_dir / "result.json").write_text(json.dumps(overall, indent=2, ensure_ascii=False), encoding="utf-8")
+        log_event(
+            "homepage_gate",
+            passed=False,
+            reason=overall["homepage_gate_reason"],
+            summary_by_egress_ip=homepage["summary_by_egress_ip"],
+        )
         return overall
+
+    log_event(
+        "homepage_gate",
+        passed=True,
+        reason=None,
+        summary_by_egress_ip=homepage["summary_by_egress_ip"],
+    )
 
     product = run_static_ip_reliability(
         url=PRODUCT_URL,
@@ -1092,6 +1434,7 @@ def run_static_ip_reliability_pipeline() -> dict:
         dump_dom=True,
     )
     overall["product"] = product
+    log_event("product_summary", summary_by_egress_ip=product["summary_by_egress_ip"])
 
     first_success = next(
         (c for c in product["checks"] if (c.get("extraction") or {}).get("extraction_status") == "extracted"),
@@ -1155,13 +1498,13 @@ def run_static_ip_reliability_pipeline() -> dict:
         )
 
         for f in retention["files"]:
-            print(f"artifact name={f['name']} path={f['path']} size_bytes={f['size_bytes']}")
+            log_event("artifact_retained", name=f["name"], path=f["path"], size_bytes=f["size_bytes"])
 
     overall["artifact_retention"] = retention
     (out_dir / "result.json").write_text(json.dumps(overall, indent=2, ensure_ascii=False), encoding="utf-8")
 
     if first_success and volume_root:
-        print("holding process alive for 600s so artifacts under /data/yuyutei_extract_latest/ can be retrieved...")
+        log_event("holding_process_alive_s", seconds=600, path="/data/yuyutei_extract_latest/")
         time.sleep(600)
 
     return overall
@@ -1185,35 +1528,21 @@ def main() -> None:
     print(f"proxy_configured={get_proxy_config() is not None}")  # never logs the endpoint or credentials
 
     if args.mode == RELIABILITY_MODE:
+        # Per-check and per-stage detail is already streamed live as compact
+        # single-line events by run_static_ip_reliability /
+        # run_static_ip_reliability_pipeline (see log_event) and written in
+        # full to the attached volume (see append_check_result) - this is
+        # deliberately just a small closing summary, not a re-dump of
+        # `result`, to avoid ever again exceeding Railway's log-rate cap.
         result = run_static_ip_reliability_pipeline()
-        homepage = result["homepage"]
-        for c in homepage["checks"]:
-            print(
-                f"[homepage] check={c['check_number']} ts={c['timestamp_utc']} "
-                f"egress_ip={c['diagnostic_egress_ip']} status={c['http_status']} "
-                f"classification={c['classification']} elapsed_s={c['elapsed_s']} "
-                f"final_url={c['final_url']}"
-            )
-        print(f"homepage_gate_passed={result['homepage_gate_passed']} reason={result['homepage_gate_reason']}")
-        for g in homepage["summary_by_egress_ip"]:
-            print(f"[homepage summary] {g}")
-
-        if result["product"]:
-            for c in result["product"]["checks"]:
-                ext = c.get("extraction") or {}
-                print(
-                    f"[product] check={c['check_number']} ts={c['timestamp_utc']} "
-                    f"egress_ip={c['diagnostic_egress_ip']} status={c['http_status']} "
-                    f"classification={c['classification']} "
-                    f"extraction_status={ext.get('extraction_status')} "
-                    f"extraction_path={ext.get('extraction_path')} "
-                    f"sell_price_jpy={ext.get('extracted', {}).get('sell_price_jpy')} "
-                    f"elapsed_s={c['elapsed_s']}"
-                )
-            for g in result["product"]["summary_by_egress_ip"]:
-                print(f"[product summary] {g}")
-
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        log_event(
+            "reliability_run_complete",
+            homepage_gate_passed=result["homepage_gate_passed"],
+            homepage_gate_reason=result["homepage_gate_reason"],
+            homepage_checks=len(result["homepage"]["checks"]),
+            product_checks=len(result["product"]["checks"]) if result["product"] else 0,
+            artifact_retention=result.get("artifact_retention"),
+        )
         return
 
     if args.mode == EXTRACT_MODE:
