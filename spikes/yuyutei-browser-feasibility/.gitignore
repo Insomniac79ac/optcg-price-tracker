@@ -1,0 +1,8 @@
+output/
+.chrome-profile/
+.venv/
+__pycache__/
+*.pyc
+cleanup-before.txt
+cleanup-after.txt
+dist/

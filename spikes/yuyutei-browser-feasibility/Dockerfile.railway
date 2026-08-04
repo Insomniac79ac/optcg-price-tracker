@@ -1,0 +1,36 @@
+# Railway-only build for the isolated Yuyu-Tei feasibility spike. Not used by
+# local Docker Compose, not referenced by any application service, and not
+# part of the app's own deploy path (see docs/railway_staging.md, which
+# governs the api/worker/beat services - this file is unrelated to that).
+#
+# Deployed to its own temporary, isolated Railway project: no Postgres, no
+# Redis, no shared service, no application secrets. This build runs the
+# validated, fail-closed OP01-001 Zoro parallel extraction three times (see
+# spike.py's "railway_extract" mode / run_extraction()) - a single deploy
+# covering both selector inspection (--dump-dom logs DOM candidates) and the
+# three validation runs, to keep total live requests against Yuyu-Tei
+# conservative (3, not 4+ across separate inspect/validate deploys).
+#
+# Base image pins the exact browser build that matches requirements.txt's
+# `playwright==1.61.0` (confirmed via `docker manifest inspect
+# mcr.microsoft.com/playwright/python:v1.61.0-jammy`), so no browser
+# download happens at container start - only `pip install` at build time.
+#
+# Built with this file's own directory as build context (Root Directory =
+# spikes/yuyutei-browser-feasibility on the Railway service), so COPY paths
+# below are relative to this spike directory, not the repo root.
+#
+# Local verification (run from this directory):
+#   docker build -f Dockerfile.railway -t yuyutei-railway-spike-test .
+#   docker run --rm yuyutei-railway-spike-test python spike.py --mode railway_extract --repeat 1
+
+FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY spike.py .
+
+CMD ["python", "spike.py", "--mode", "railway_extract", "--repeat", "3", "--delay-s", "8", "--dump-dom"]
