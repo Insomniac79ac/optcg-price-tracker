@@ -1,0 +1,18 @@
+<!--
+Synthetic Cloudflare-style JS-challenge interstitial ("Just a moment..."),
+served with HTTP 200 (typical for this interstitial in the wild). Hand-written
+generic Cloudflare challenge markup, not captured from Yuyu-Tei or any other
+live site, and not tied to any specific domain. Used to exercise the
+denial-title and challenge-DOM-marker evidence paths in classify_page().
+-->
+<!DOCTYPE html>
+<html>
+<head><title>Just a moment...</title></head>
+<body>
+<div id="cf-challenge-running">Checking your browser before accessing example.com.</div>
+<form id="challenge-form" action="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1" method="POST">
+<input type="hidden" name="cf_captcha_kind" value="managed">
+</form>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+</body>
+</html>
