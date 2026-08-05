@@ -25,6 +25,7 @@ from spike import (
     _price_matches_code_digits,
     append_check_result,
     extract_product_from_html,
+    extract_with_agreement,
     log_event,
     summarize_checks_by_egress_ip,
 )
@@ -364,6 +365,107 @@ class EgressIpDisclaimerTests(unittest.TestCase):
         # The disclaimer text is load-bearing for step-3's "do not claim
         # certainty" rule - guard against it being edited away silently.
         self.assertIn("NOT technically proven", EGRESS_IP_DISCLAIMER)
+
+
+class AgreementExtractionTests(unittest.TestCase):
+    """extract_with_agreement (used by the single live validation mode)
+    extracts JSON-LD and DOM independently and only accepts a value when
+    both sides agree - unlike extract_product_from_html's JSON-LD-first
+    priority fallback. No test here hardcodes an expectation about what a
+    live page currently displays beyond what the fixture itself encodes."""
+
+    # Isolates a price disagreement: JSON-LD offers.price (34800) differs
+    # from the DOM leaf price (39800); stock agrees on both sides
+    # (JSON-LD InStock, DOM "○") so only the price check can fail.
+    DISAGREEING_PRICE_HTML = (
+        "<html><head>"
+        '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+        '"name":"P-L ロロノア・ゾロ(パラレル)",'
+        '"description":"OP01-001",'
+        '"offers":{"@type":"Offer","price":"34800","priceCurrency":"JPY","availability":"InStock"}}'
+        "</script></head><body>"
+        '<div class="power" id="power"><h3>P-L ロロノア・ゾロ(パラレル)</h3></div>'
+        '<section id="product-detail">'
+        '<span class="pote">OP01-001</span>'
+        "<h4> 39,800 円</h4>"
+        "<label> 在庫 :   ○   </label>"
+        "</section></body></html>"
+    )
+
+    # Isolates a stock disagreement: JSON-LD availability (InStock) conflicts
+    # with the visible DOM stock label ("×" -> out_of_stock); price
+    # agrees on both sides (34800) so only the stock check can fail.
+    DISAGREEING_STOCK_HTML = (
+        "<html><head>"
+        '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+        '"name":"P-L ロロノア・ゾロ(パラレル)",'
+        '"description":"OP01-001",'
+        '"offers":{"@type":"Offer","price":"34800","priceCurrency":"JPY","availability":"InStock"}}'
+        "</script></head><body>"
+        '<div class="power" id="power"><h3>P-L ロロノア・ゾロ(パラレル)</h3></div>'
+        '<section id="product-detail">'
+        '<span class="pote">OP01-001</span>'
+        "<h4> 34,800 円</h4>"
+        "<label> 在庫 :   ×   </label>"
+        "</section></body></html>"
+    )
+
+    def setUp(self):
+        # The real captured OP01-001 page: JSON-LD price 34800/OutOfStock and
+        # DOM price "34,800 円"/"×" independently agree with each
+        # other - not asserted here as a hardcoded expectation, just read
+        # from what the fixture (a reduction of a genuine retrieved page)
+        # actually contains.
+        self.agreeing_html = load_fixture("product_op01_001_reduced.html")
+
+    def test_jsonld_and_dom_price_agreement_passes(self):
+        result = extract_with_agreement(self.agreeing_html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertTrue(result["agreement"]["price"]["agree"])
+        self.assertEqual(
+            result["agreement"]["price"]["jsonld_price"],
+            result["agreement"]["price"]["dom_price"],
+        )
+        self.assertEqual(result["extracted"]["sell_price_jpy"], result["agreement"]["price"]["jsonld_price"])
+
+    def test_jsonld_and_dom_price_disagreement_fails_closed(self):
+        result = extract_with_agreement(self.DISAGREEING_PRICE_HTML, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "fail_closed")
+        self.assertFalse(result["agreement"]["price"]["agree"])
+        self.assertIsNone(result["extracted"]["sell_price_jpy"])
+        self.assertTrue(any(r.startswith("price_disagreement:") for r in result["fail_reasons"]))
+        # Stock agreed independently, so the failure is isolated to price.
+        self.assertTrue(result["agreement"]["stock"]["agree"])
+
+    def test_structured_and_visible_stock_agreement_passes(self):
+        result = extract_with_agreement(self.agreeing_html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertTrue(result["agreement"]["stock"]["agree"])
+        self.assertEqual(
+            result["agreement"]["stock"]["jsonld_availability"],
+            result["agreement"]["stock"]["dom_stock"],
+        )
+        self.assertEqual(result["extracted"]["stock_status"], result["agreement"]["stock"]["jsonld_availability"])
+
+    def test_stock_disagreement_fails_closed(self):
+        result = extract_with_agreement(self.DISAGREEING_STOCK_HTML, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "fail_closed")
+        self.assertFalse(result["agreement"]["stock"]["agree"])
+        self.assertIsNone(result["extracted"]["stock_status"])
+        self.assertTrue(any(r.startswith("stock_disagreement:") for r in result["fail_reasons"]))
+        # Price agreed independently, so the failure is isolated to stock.
+        self.assertTrue(result["agreement"]["price"]["agree"])
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 34800)
+
+    def test_jsonld_cannot_override_a_conflicting_visible_stock_value(self):
+        # JSON-LD claims InStock; the visible DOM label says out of stock.
+        # The accepted stock_status must be neither silently trusted from
+        # JSON-LD nor from the DOM alone - it must be None (fail closed).
+        result = extract_with_agreement(self.DISAGREEING_STOCK_HTML, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["agreement"]["stock"]["jsonld_availability"], "in_stock")
+        self.assertEqual(result["agreement"]["stock"]["dom_stock"], "out_of_stock")
+        self.assertIsNone(result["extracted"]["stock_status"])
+        self.assertNotEqual(result["extracted"]["stock_status"], "in_stock")
 
 
 if __name__ == "__main__":

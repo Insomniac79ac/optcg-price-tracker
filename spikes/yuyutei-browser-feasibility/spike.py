@@ -324,6 +324,21 @@ def _find_jsonld_product(soup: BeautifulSoup) -> dict | None:
     return None
 
 
+def _normalize_availability(raw: str) -> str | None:
+    """schema.org `offers.availability` (e.g. "https://schema.org/InStock")
+    -> internal stock state, or None if empty/unrecognized. Shared by the
+    priority-fallback extractor and the independent JSON-LD/DOM agreement
+    extractor so both normalize availability identically."""
+    availability_lower = raw.lower()
+    if "outofstock" in availability_lower:
+        return "out_of_stock"
+    if "instock" in availability_lower:
+        return "in_stock"
+    if availability_lower:
+        return "unknown_present_marker"
+    return None
+
+
 def _fields_from_jsonld(product: dict) -> dict | None:
     """Returns a complete fields dict only when name/price/currency/card_code
     are all present and self-consistent; otherwise None so extraction falls
@@ -345,15 +360,7 @@ def _fields_from_jsonld(product: dict) -> dict | None:
     if not (name and price is not None and currency == "JPY" and card_code):
         return None
 
-    availability_lower = availability.lower()
-    if "outofstock" in availability_lower:
-        stock_status = "out_of_stock"
-    elif "instock" in availability_lower:
-        stock_status = "in_stock"
-    elif availability:
-        stock_status = "unknown_present_marker"
-    else:
-        stock_status = None
+    stock_status = _normalize_availability(availability)
 
     if "パラレル" in name:
         treatment = "parallel"
@@ -696,6 +703,197 @@ def extract_and_validate_product(page: Page, source_url: str, requested_card_cod
         result["extracted"]["product_title"] = fallback_title
         result["validation"]["title_present"] = fallback_title is not None
     return result
+
+
+def extract_with_agreement(html: str, source_url: str, requested_card_code: str = EXPECTED_CARD_CODE) -> dict:
+    """Independent-agreement extractor for the single live validation mode.
+    Unlike extract_product_from_html (JSON-LD *or* DOM, in priority order),
+    this extracts JSON-LD and DOM values independently, normalizes each
+    side on its own, and only accepts a price/stock value when both sides
+    agree - failing closed (accepted value = None) on disagreement or when
+    either side is indeterminate. Never hardcodes an expected price; the
+    only accepted price is whatever the live page's two independent sources
+    agree on. Returns raw values, normalized values, agreement checks,
+    accepted selector paths, and rejected candidates/reasons so a human can
+    audit exactly what was compared."""
+    soup = BeautifulSoup(html, "html.parser")
+    fail_reasons: list[str] = []
+    rejected: list[dict] = []
+    accepted_selectors: dict = {
+        "main_container": None,
+        "price_selector": None,
+        "stock_selector": None,
+        "card_code_selector": None,
+        "title_selector": None,
+        "jsonld_present": False,
+    }
+
+    # ---- JSON-LD side (independent of DOM) ----
+    jsonld_product = _find_jsonld_product(soup)
+    jsonld_raw: dict = {}
+    jsonld_norm: dict = {
+        "price": None, "currency": None, "availability_raw": None,
+        "availability": None, "title": None, "card_code": None, "image_url": None,
+    }
+    if jsonld_product:
+        accepted_selectors["jsonld_present"] = True
+        offers = jsonld_product.get("offers")
+        if isinstance(offers, list):
+            offers = offers[0] if offers else {}
+        offers = offers or {}
+        jsonld_raw = {
+            "name": jsonld_product.get("name"),
+            "offers_price": offers.get("price"),
+            "offers_priceCurrency": offers.get("priceCurrency"),
+            "offers_availability": offers.get("availability"),
+            "description": jsonld_product.get("description"),
+            "image": jsonld_product.get("image"),
+        }
+        jsonld_norm["price"] = _normalize_price_text(str(offers.get("price", "")))
+        jsonld_norm["currency"] = offers.get("priceCurrency")
+        jsonld_norm["availability_raw"] = offers.get("availability")
+        jsonld_norm["availability"] = _normalize_availability(str(offers.get("availability") or ""))
+        jsonld_norm["title"] = jsonld_product.get("name")
+        description = str(jsonld_product.get("description") or "")
+        code_match = CARD_CODE_RE.search(description) or CARD_CODE_RE.search(str(jsonld_product.get("name") or ""))
+        jsonld_norm["card_code"] = code_match.group(0) if code_match else None
+        jsonld_norm["image_url"] = jsonld_product.get("image") or None
+    else:
+        rejected.append({"reason": "no_jsonld_product_block_found"})
+
+    # ---- DOM side (independent of JSON-LD), scoped to the real product container ----
+    container = _find_main_detail_container(soup)
+    dom_raw: dict = {"container": None, "price_candidates": [], "stock_element": None, "card_code_element": None}
+    dom_norm: dict = {"price": None, "stock": None, "title": None, "card_code": None}
+
+    if container is not None:
+        dom_raw["container"] = _describe_element(container)
+        accepted_selectors["main_container"] = dom_raw["container"]
+
+        price_candidates = _leaf_price_candidates(container)
+        dom_raw["price_candidates"] = price_candidates
+        distinct_prices = {c["normalized_price"] for c in price_candidates}
+        if len(price_candidates) == 1:
+            dom_norm["price"] = price_candidates[0]["normalized_price"]
+            accepted_selectors["price_selector"] = price_candidates[0]["selector"]
+        elif len(distinct_prices) > 1:
+            rejected.append({"reason": "ambiguous_dom_price_candidates", "candidates": price_candidates})
+        else:
+            rejected.append({"reason": "dom_price_not_found_in_container"})
+
+        stock_el = _find_stock_element(container)
+        dom_raw["stock_element"] = stock_el
+        if stock_el:
+            dom_norm["stock"] = stock_el["stock_status"]
+            accepted_selectors["stock_selector"] = stock_el["selector"]
+        else:
+            rejected.append({"reason": "dom_stock_label_not_found_in_container"})
+
+        card_code_el = _find_card_code_element(container)
+        dom_raw["card_code_element"] = card_code_el
+        if card_code_el:
+            dom_norm["card_code"] = card_code_el["text"]
+            accepted_selectors["card_code_selector"] = card_code_el["selector"]
+    else:
+        rejected.append({"reason": "no_product_container_found"})
+
+    title_el = _find_title_container(soup)
+    dom_norm["title"] = title_el.get_text(strip=True) if title_el else None
+    if title_el is not None:
+        accepted_selectors["title_selector"] = _describe_element(title_el)
+
+    # ---- Price: require independent agreement, fail closed otherwise ----
+    price_agreement = {"jsonld_price": jsonld_norm["price"], "dom_price": dom_norm["price"], "agree": False}
+    accepted_price = None
+    if jsonld_norm["price"] is not None and dom_norm["price"] is not None:
+        if jsonld_norm["price"] == dom_norm["price"]:
+            price_agreement["agree"] = True
+            accepted_price = jsonld_norm["price"]
+        else:
+            fail_reasons.append(
+                f"price_disagreement:jsonld={jsonld_norm['price']},dom={dom_norm['price']}"
+            )
+    else:
+        fail_reasons.append("price_agreement_indeterminate:missing_jsonld_or_dom_value")
+
+    external_id = _external_product_id(source_url)
+    if accepted_price is not None and _price_matches_code_digits(accepted_price, requested_card_code, external_id):
+        fail_reasons.append(f"price_matches_card_code_or_id_digits:{accepted_price}")
+        price_agreement["agree"] = False
+        accepted_price = None
+
+    # ---- Stock: require semantic agreement, fail closed otherwise ----
+    stock_agreement = {
+        "jsonld_availability": jsonld_norm["availability"],
+        "dom_stock": dom_norm["stock"],
+        "agree": False,
+    }
+    accepted_stock = None
+    if jsonld_norm["availability"] is not None and dom_norm["stock"] is not None:
+        if jsonld_norm["availability"] == dom_norm["stock"]:
+            stock_agreement["agree"] = True
+            accepted_stock = jsonld_norm["availability"]
+        else:
+            fail_reasons.append(
+                f"stock_disagreement:jsonld={jsonld_norm['availability']},dom={dom_norm['stock']}"
+            )
+    elif jsonld_norm["availability"] is None and dom_norm["stock"] is None:
+        fail_reasons.append("stock_agreement_indeterminate:missing_both_sides")
+    else:
+        # Exactly one side present: JSON-LD is never allowed to override a
+        # conflicting (or simply present) visible DOM value, and a lone DOM
+        # value with no JSON-LD to corroborate it is likewise not enough -
+        # both must be readable and must agree.
+        fail_reasons.append("stock_agreement_indeterminate:only_one_side_present")
+
+    # ---- Identity checks ----
+    resolved_card_code = dom_norm["card_code"] or jsonld_norm["card_code"]
+    if dom_norm["card_code"] and jsonld_norm["card_code"] and dom_norm["card_code"] != jsonld_norm["card_code"]:
+        fail_reasons.append(
+            f"card_code_source_disagreement:jsonld={jsonld_norm['card_code']},dom={dom_norm['card_code']}"
+        )
+    if resolved_card_code != requested_card_code:
+        fail_reasons.append(f"card_code_conflict:displayed={resolved_card_code},expected={requested_card_code}")
+
+    title_text = dom_norm["title"] or jsonld_norm["title"] or ""
+    if not title_text:
+        fail_reasons.append("product_title_missing")
+
+    if "パラレル" in title_text:
+        treatment = "parallel"
+    elif "ノーマル" in title_text:
+        treatment = "normal"
+    else:
+        treatment = None
+    if treatment != "parallel":
+        fail_reasons.append(f"treatment_conflict:displayed={treatment},expected=parallel")
+
+    extraction_status = "extracted" if not fail_reasons else "fail_closed"
+
+    return {
+        "extraction_status": extraction_status,
+        "fail_reasons": fail_reasons,
+        "selector_version": SELECTOR_VERSION,
+        "raw": {"jsonld": jsonld_raw, "dom": dom_raw},
+        "normalized": {"jsonld": jsonld_norm, "dom": dom_norm},
+        "agreement": {"price": price_agreement, "stock": stock_agreement},
+        "accepted_selectors": accepted_selectors,
+        "rejected_candidates": rejected,
+        "extracted": {
+            "source_url": source_url,
+            "final_url": source_url,
+            "product_title": title_text or None,
+            "card_code": resolved_card_code,
+            "treatment": treatment,
+            "sell_price_jpy": accepted_price,
+            "stock_status": accepted_stock,
+            # Original product image URL only - never downloaded, resized,
+            # cropped, or otherwise transformed by this spike.
+            "product_image_url": jsonld_norm["image_url"],
+            "external_product_id": external_id,
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+        },
+    }
 
 
 def dump_dom_candidates(page: Page, limit: int = 40) -> list[dict]:
@@ -1510,14 +1708,201 @@ def run_static_ip_reliability_pipeline() -> dict:
     return overall
 
 
+V3_VOLUME_SUBDIR = "yuyutei_extract_latest_v3"
+
+
+def _write_json_artifact(path: Path, data: dict) -> dict:
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {"name": path.name, "path": str(path), "size_bytes": path.stat().st_size}
+
+
+def _copy_artifact(src: Path, dest: Path) -> dict | None:
+    if not src.exists():
+        return None
+    dest.write_bytes(src.read_bytes())
+    return {"name": dest.name, "path": str(dest), "size_bytes": dest.stat().st_size}
+
+
+def run_single_live_validation() -> dict:
+    """Single live validation of selector_version v3 against one fresh
+    Yuyu-Tei product response. Exactly: one homepage request; if and only if
+    that homepage is a genuine normal HTTP 200, exactly one product request;
+    extract once with extract_with_agreement; save evidence; exit. No
+    repeated product requests, no 12-check pipeline, no parallel requests,
+    no retry after a 403/429/challenge/CAPTCHA at either step. Artifacts are
+    written incrementally to the attached Railway volume at
+    /data/yuyutei_extract_latest_v3/ (falling back to a local output/
+    directory when no volume is attached, e.g. running locally)."""
+    scratch_dir = OUTPUT_ROOT / "single_live_validation"
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+
+    volume_root = _volume_root()
+    target_dir = (volume_root / V3_VOLUME_SUBDIR) if volume_root else scratch_dir
+    target_dir.mkdir(parents=True, exist_ok=True)
+    trace_path = target_dir / "trace.zip"
+
+    diagnostic_egress = capture_egress_ip()
+    log_event(
+        "diagnostic_egress_captured",
+        ip=diagnostic_egress.get("ip"),
+        note="not proven to be the IP that served the Yuyu-Tei request - see EGRESS_IP_DISCLAIMER",
+    )
+
+    overall: dict = {
+        "spike": "single_live_validation",
+        "selector_version": SELECTOR_VERSION,
+        "product_url": PRODUCT_URL,
+        "requested_card_code": EXPECTED_CARD_CODE,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "diagnostic_egress_ip_lookup": diagnostic_egress,
+        "diagnostic_egress_disclaimer": EGRESS_IP_DISCLAIMER,
+        "playwright_version": None,
+        "browser_version": None,
+        "homepage": None,
+        "homepage_gate_passed": False,
+        "stop_reason": None,
+        "product": None,
+        "extraction": None,
+        "extractor_v3_live_validated": False,
+        "artifacts": [],
+    }
+
+    with sync_playwright() as p:
+        overall["playwright_version"] = pkg_version("playwright")
+        browser = p.chromium.launch(headless=True)
+        overall["browser_version"] = browser.version
+        context = browser.new_context()
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
+
+        homepage_step = goto_and_capture(
+            page, HOMEPAGE_URL, scratch_dir / "homepage", HOMEPAGE_EXPECTED_MARKERS
+        )
+        overall["homepage"] = homepage_step
+        log_event(
+            "homepage_result",
+            http_status=homepage_step.get("http_status"),
+            classification=homepage_step.get("classification"),
+            error=homepage_step.get("error"),
+        )
+
+        homepage_ok = (
+            "error" not in homepage_step
+            and homepage_step.get("http_status") == 200
+            and homepage_step.get("classification") == "normal_product"
+        )
+        overall["homepage_gate_passed"] = homepage_ok
+
+        if not homepage_ok:
+            overall["stop_reason"] = (
+                f"homepage_not_genuine_normal_200:{homepage_step.get('classification', 'navigation_error')}"
+            )
+            log_event("homepage_gate_failed", reason=overall["stop_reason"])
+
+            context.tracing.stop(path=str(trace_path))
+            context.close()
+            browser.close()
+
+            artifacts = []
+            html_artifact = _copy_artifact(scratch_dir / "homepage.html", target_dir / "rendered.html")
+            png_artifact = _copy_artifact(scratch_dir / "homepage.png", target_dir / "screenshot.png")
+            for a in (html_artifact, png_artifact):
+                if a:
+                    artifacts.append(a)
+            if trace_path.exists():
+                artifacts.append({"name": "trace.zip", "path": str(trace_path), "size_bytes": trace_path.stat().st_size})
+            artifacts.append(_write_json_artifact(target_dir / "result.json", overall))
+            overall["artifacts"] = artifacts
+            for a in artifacts:
+                log_event("artifact_saved", name=a["name"], path=a["path"], size_bytes=a["size_bytes"])
+            log_event("run_complete", extractor_v3_live_validated=False, stop_reason=overall["stop_reason"])
+            return overall
+
+        log_event("homepage_gate_passed", http_status=homepage_step.get("http_status"))
+
+        product_step = goto_and_capture(
+            page, PRODUCT_URL, scratch_dir / "product", PRODUCT_EXPECTED_MARKERS
+        )
+        overall["product"] = product_step
+        log_event(
+            "product_result",
+            http_status=product_step.get("http_status"),
+            classification=product_step.get("classification"),
+            error=product_step.get("error"),
+        )
+
+        if product_step.get("classification") == "normal_product" and "error" not in product_step:
+            html = page.content()
+            extraction = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+            extraction["extracted"]["final_url"] = page.url
+        else:
+            reason = (
+                "navigation_error"
+                if "error" in product_step
+                else f"product_page_not_normal:{product_step.get('classification')}"
+            )
+            extraction = {
+                "extraction_status": "fail_closed",
+                "fail_reasons": [reason],
+                "selector_version": SELECTOR_VERSION,
+                "raw": {}, "normalized": {}, "agreement": {}, "accepted_selectors": {},
+                "rejected_candidates": [],
+                "extracted": {},
+            }
+        overall["extraction"] = extraction
+        overall["extractor_v3_live_validated"] = extraction["extraction_status"] == "extracted"
+        log_event(
+            "extraction_result",
+            extraction_status=extraction["extraction_status"],
+            fail_reasons=extraction["fail_reasons"],
+            sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+            stock_status=(extraction.get("extracted") or {}).get("stock_status"),
+        )
+
+        context.tracing.stop(path=str(trace_path))
+        context.close()
+        browser.close()
+
+    artifacts = []
+    html_artifact = _copy_artifact(scratch_dir / "product.html", target_dir / "rendered.html")
+    png_artifact = _copy_artifact(scratch_dir / "product.png", target_dir / "screenshot.png")
+    for a in (html_artifact, png_artifact):
+        if a:
+            artifacts.append(a)
+    if trace_path.exists():
+        artifacts.append({"name": "trace.zip", "path": str(trace_path), "size_bytes": trace_path.stat().st_size})
+    artifacts.append(_write_json_artifact(target_dir / "extraction.json", extraction))
+    artifacts.append(_write_json_artifact(target_dir / "selector_diagnostics.json", {
+        "raw": extraction.get("raw"),
+        "normalized": extraction.get("normalized"),
+        "agreement": extraction.get("agreement"),
+        "accepted_selectors": extraction.get("accepted_selectors"),
+        "rejected_candidates": extraction.get("rejected_candidates"),
+    }))
+    artifacts.append(_write_json_artifact(target_dir / "result.json", overall))
+    overall["artifacts"] = artifacts
+
+    for a in artifacts:
+        log_event("artifact_saved", name=a["name"], path=a["path"], size_bytes=a["size_bytes"])
+    log_event(
+        "run_complete",
+        extractor_v3_live_validated=overall["extractor_v3_live_validated"],
+        stop_reason=overall["stop_reason"],
+    )
+    return overall
+
+
 EXTRACT_MODE = "railway_extract"
 RELIABILITY_MODE = "static_ip_reliability"
+SINGLE_VALIDATION_MODE = "single_validation"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--mode", choices=sorted(MODES.keys()) + [EXTRACT_MODE, RELIABILITY_MODE], required=True
+        "--mode",
+        choices=sorted(MODES.keys()) + [EXTRACT_MODE, RELIABILITY_MODE, SINGLE_VALIDATION_MODE],
+        required=True,
     )
     parser.add_argument("--repeat", type=int, default=3, help=f"{EXTRACT_MODE} only: number of runs")
     parser.add_argument("--delay-s", type=float, default=8.0, help=f"{EXTRACT_MODE} only: delay between runs")
@@ -1526,6 +1911,19 @@ def main() -> None:
 
     print(f"python={sys.version.split()[0]} platform={platform.platform()}")
     print(f"proxy_configured={get_proxy_config() is not None}")  # never logs the endpoint or credentials
+
+    if args.mode == SINGLE_VALIDATION_MODE:
+        result = run_single_live_validation()
+        log_event(
+            "single_validation_complete",
+            homepage_gate_passed=result["homepage_gate_passed"],
+            stop_reason=result["stop_reason"],
+            extraction_status=(result.get("extraction") or {}).get("extraction_status"),
+            extractor_v3_live_validated=result["extractor_v3_live_validated"],
+            sell_price_jpy=(result.get("extraction") or {}).get("extracted", {}).get("sell_price_jpy"),
+            stock_status=(result.get("extraction") or {}).get("extracted", {}).get("stock_status"),
+        )
+        return
 
     if args.mode == RELIABILITY_MODE:
         # Per-check and per-stage detail is already streamed live as compact

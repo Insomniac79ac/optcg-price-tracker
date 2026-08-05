@@ -5,13 +5,13 @@
 #
 # Deployed to its own temporary, isolated Railway project: no Postgres, no
 # Redis, no shared service, no application secrets. This build runs the
-# Static Outbound IP reliability pipeline (see spike.py's
-# "static_ip_reliability" mode / run_static_ip_reliability_pipeline()) in a
-# single process/deploy: 12 homepage checks (60s apart, one fresh browser
-# context per check), then - only if every one of those 12 was a genuine
-# normal HTTP 200 - 3 product-page checks (120s apart) with fail-closed
-# extraction. The process holds itself open for 10 minutes after writing
-# artifacts to the attached volume so they can be retrieved before exit.
+# single live validation of extractor v3 (see spike.py's
+# "single_validation" mode / run_single_live_validation()): one homepage
+# request, then - only if that homepage is a genuine normal HTTP 200 - one
+# product request, one extraction, evidence saved, exit. No repeated
+# product requests, no 12-check reliability loop (that mode - "
+# static_ip_reliability" / run_static_ip_reliability_pipeline() - still
+# exists in spike.py for manual use but is not what this image runs).
 #
 # Base image pins the exact browser build that matches requirements.txt's
 # `playwright==1.61.0` (confirmed via `docker manifest inspect
@@ -24,7 +24,7 @@
 #
 # Local verification (run from this directory):
 #   docker build -f Dockerfile.railway -t yuyutei-railway-spike-test .
-#   docker run --rm yuyutei-railway-spike-test python spike.py --mode static_ip_reliability
+#   docker run --rm yuyutei-railway-spike-test python spike.py --mode single_validation
 
 FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
 
@@ -35,4 +35,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY spike.py .
 
-CMD ["python", "spike.py", "--mode", "static_ip_reliability"]
+CMD ["python", "spike.py", "--mode", "single_validation"]
