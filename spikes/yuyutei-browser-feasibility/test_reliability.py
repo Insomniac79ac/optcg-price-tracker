@@ -11,6 +11,7 @@ Run with: python3 -m pytest test_reliability.py -v
 import io
 import json
 import os
+import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -18,12 +19,17 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from spike import (
+    DeadlineExceeded,
     EGRESS_IP_DISCLAIMER,
+    EGRESS_IP_LOOKUP_URL,
     EXPECTED_CARD_CODE,
     PRODUCT_URL,
     _normalize_price_text,
     _price_matches_code_digits,
+    _run_in_deadline_process,
     append_check_result,
+    capture_egress_ip,
+    deadline,
     extract_product_from_html,
     extract_with_agreement,
     log_event,
@@ -31,6 +37,19 @@ from spike import (
 )
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "tests" / "fixtures"
+
+
+# Module-level (not a closure/lambda) so multiprocessing's spawn context can
+# pickle it by reference into the child process - see DeadlineProcessTests.
+# Deliberately blocks far longer than any deadline used against it below, to
+# prove the deadline - not the worker choosing to finish - is what bounds
+# the wait. Never touches the network.
+def _fake_blocking_worker(result_queue) -> None:
+    time.sleep(30)
+
+
+def _fake_fast_worker(result_queue) -> None:
+    result_queue.put({"ok": True})
 
 
 def load_fixture(filename: str) -> str:
@@ -466,6 +485,109 @@ class AgreementExtractionTests(unittest.TestCase):
         self.assertEqual(result["agreement"]["stock"]["dom_stock"], "out_of_stock")
         self.assertIsNone(result["extracted"]["stock_status"])
         self.assertNotEqual(result["extracted"]["stock_status"], "in_stock")
+
+
+class DeadlineContextManagerTests(unittest.TestCase):
+    """deadline() is the general-purpose watchdog used to bound the whole
+    single-validation run (and browser launch / nav / artifact writes
+    within it) - it must interrupt a stuck block even though the block
+    itself has no timeout parameter of its own (that's the whole point:
+    the same property the diagnostic-lookup fix below relies on)."""
+
+    def test_raises_deadline_exceeded_when_block_runs_too_long(self):
+        with self.assertRaises(DeadlineExceeded):
+            with deadline(1, "test_block"):
+                time.sleep(5)
+
+    def test_does_not_raise_when_block_finishes_in_time(self):
+        with deadline(2, "test_block"):
+            time.sleep(0.1)
+        # No exception -> the block completing before its deadline is a
+        # silent success, nothing further to assert.
+
+    def test_nested_deadlines_report_the_inner_label(self):
+        with self.assertRaises(DeadlineExceeded) as ctx:
+            with deadline(10, "outer"):
+                with deadline(1, "inner"):
+                    time.sleep(5)
+        self.assertEqual(str(ctx.exception), "inner")
+
+
+class DeadlineProcessTests(unittest.TestCase):
+    """_run_in_deadline_process is what capture_egress_ip uses to survive a
+    stuck DNS resolution (see its docstring): urllib's timeout= bounds
+    socket connect/read but not the getaddrinfo() call that happens first,
+    so a hanging resolver has nothing to interrupt it at the Python level -
+    only reclaiming the whole OS process does. These tests use a fake
+    worker that deliberately sleeps, never touching the network, so they
+    prove the deadline mechanism itself without depending on any real DNS
+    behavior being reproducible in CI."""
+
+    def test_returns_within_hard_deadline_when_worker_hangs(self):
+        start = time.monotonic()
+        completed, result, child_alive_after = _run_in_deadline_process(_fake_blocking_worker, timeout_s=1)
+        elapsed = time.monotonic() - start
+        self.assertFalse(completed)
+        self.assertIsNone(result)
+        # Well under the 30s the fake worker sleeps - proves the deadline,
+        # not the worker's own sleep, is what bounds the wait.
+        self.assertLess(elapsed, 10)
+
+    def test_child_process_is_no_longer_alive_after_deadline(self):
+        _completed, _result, child_alive_after = _run_in_deadline_process(_fake_blocking_worker, timeout_s=1)
+        self.assertFalse(child_alive_after)
+
+    def test_successful_worker_result_is_returned_and_child_reclaimed(self):
+        completed, result, child_alive_after = _run_in_deadline_process(_fake_fast_worker, timeout_s=5)
+        self.assertTrue(completed)
+        self.assertEqual(result, {"ok": True})
+        self.assertFalse(child_alive_after)
+
+
+class CaptureEgressIpTimeoutMappingTests(unittest.TestCase):
+    """capture_egress_ip's own glue logic (mapping the bounded process
+    helper's outcome to a result dict) - mocked at the
+    _run_in_deadline_process seam so these run instantly with no real
+    subprocess spawn or network access."""
+
+    def test_timeout_produces_null_ip_and_timeout_status(self):
+        with patch("spike._run_in_deadline_process", return_value=(False, None, False)):
+            result = capture_egress_ip(timeout_s=5)
+        self.assertIsNone(result["ip"])
+        self.assertEqual(result["status"], "timeout")
+        self.assertIsNotNone(result["error"])
+
+    def test_successful_result_is_passed_through_unchanged(self):
+        fake = {
+            "source": EGRESS_IP_LOOKUP_URL, "ip": "203.0.113.5", "country": "JP",
+            "region": "Tokyo", "city": "Tokyo", "org": "Example",
+            "error": None, "status": "ok",
+        }
+        with patch("spike._run_in_deadline_process", return_value=(True, fake, False)):
+            result = capture_egress_ip(timeout_s=5)
+        self.assertEqual(result, fake)
+
+
+class DiagnosticHelperNeverTouchesYuyuTeiTests(unittest.TestCase):
+    def test_egress_lookup_url_is_not_a_yuyu_tei_host(self):
+        self.assertNotIn("yuyu-tei", EGRESS_IP_LOOKUP_URL)
+
+
+class ExtractionIndependentOfDiagnosticOutcomeTests(unittest.TestCase):
+    """The diagnostic egress-IP lookup and the extractor are fully
+    decoupled - extract_with_agreement takes no egress data as input at
+    all, so a diagnostic timeout can never change extraction validity.
+    Exercised here by actually driving both through the same mocked-timeout
+    path a live run would take."""
+
+    def test_extraction_succeeds_regardless_of_diagnostic_egress_outcome(self):
+        html = load_fixture("product_op01_001_reduced.html")
+        with patch("spike._run_in_deadline_process", return_value=(False, None, False)):
+            egress = capture_egress_ip(timeout_s=1)
+            result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(egress["status"], "timeout")
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 34800)
 
 
 if __name__ == "__main__":

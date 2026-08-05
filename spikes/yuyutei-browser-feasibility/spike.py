@@ -16,13 +16,16 @@ per mode.
 
 import argparse
 import json
+import multiprocessing as mp
 import os
 import platform
 import re
+import signal
 import sys
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from importlib.metadata import version as pkg_version
@@ -127,17 +130,106 @@ def get_proxy_config() -> dict | None:
     return proxy
 
 
-def capture_egress_ip() -> dict:
-    """Best-effort outbound public IP/country lookup via a public service (no
-    credentials involved). Failures are recorded, not raised - this is
-    diagnostic context for the test, not something the test depends on."""
+class DeadlineExceeded(Exception):
+    """Raised by deadline() when its wall-clock budget elapses. Unix-only
+    (uses signal.alarm, main-thread only) - correct for this spike's single
+    Railway Linux container target; not intended to be portable."""
+
+
+_deadline_stack: list[tuple[float, str]] = []
+
+
+def _deadline_signal_handler(signum, frame) -> None:
+    label = _deadline_stack[-1][1] if _deadline_stack else "deadline"
+    raise DeadlineExceeded(label)
+
+
+def _rearm_alarm() -> None:
+    if not _deadline_stack:
+        signal.alarm(0)
+        return
+    nearest_at = min(at for at, _ in _deadline_stack)
+    remaining = max(1, int(round(nearest_at - time.monotonic())))
+    signal.alarm(remaining)
+
+
+@contextmanager
+def deadline(seconds: float, label: str):
+    """Wall-clock deadline for the enclosed block. Nestable with other
+    deadline() blocks - the nearest deadline always wins. Raises
+    DeadlineExceeded(label) if the block does not finish in time, even if
+    it is stuck inside a call with no timeout parameter of its own (e.g.
+    DNS resolution): signal.alarm interrupts the process at the OS level
+    rather than relying on the blocked call to cooperate."""
+    old_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _deadline_signal_handler)
+    _deadline_stack.append((time.monotonic() + seconds, label))
+    _rearm_alarm()
+    try:
+        yield
+    finally:
+        _deadline_stack.pop()
+        _rearm_alarm()
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+def _run_in_deadline_process(target, timeout_s: float) -> tuple[bool, object | None, bool]:
+    """Runs `target(result_queue)` in an isolated spawned child process with
+    a hard wall-clock deadline, for calls with no reliable Python-level
+    timeout of their own (see capture_egress_ip: urllib's `timeout=` bounds
+    socket connect/read but NOT the DNS resolution that happens first, so a
+    stuck/slow resolver can hang forever with nothing to interrupt it - a
+    thread-based timeout doesn't fix this either, since a thread blocked in
+    a C-level blocking call keeps running regardless of how long
+    `.result(timeout=...)` waits on it). Joining a *process* with a timeout
+    and then terminating/killing it always reclaims control, regardless of
+    what the child is stuck doing.
+
+    Returns (completed, result, child_alive_after):
+    - completed=True, result=whatever the child put on its queue, if it
+      finished within timeout_s.
+    - completed=False, result=None if the deadline was exceeded (the child
+      is terminated, then killed if it doesn't exit promptly).
+    child_alive_after is exposed for tests to assert the child was actually
+    reclaimed, not merely detached."""
+    ctx = mp.get_context("spawn")
+    result_queue = ctx.Queue()
+    proc = ctx.Process(target=target, args=(result_queue,), daemon=True)
+    proc.start()
+    proc.join(timeout_s)
+
+    completed = not proc.is_alive()
+    result = None
+    if completed:
+        try:
+            result = result_queue.get_nowait()
+        except Exception:
+            result = None
+    else:
+        proc.terminate()
+        proc.join(2)
+        if proc.is_alive():
+            proc.kill()
+            proc.join(2)
+
+    child_alive_after = proc.is_alive()
+    if not child_alive_after:
+        proc.close()
+    return completed, result, child_alive_after
+
+
+def _egress_lookup_worker(result_queue) -> None:
+    """Runs in an isolated child process only - never receives Railway
+    credentials or any secret, never requests a Yuyu-Tei URL, never writes
+    to a shared file or holds the volume write lock. Its only job is one
+    outbound HTTPS request to a public, no-auth IP/geo lookup service."""
     try:
         req = urllib.request.Request(
             EGRESS_IP_LOOKUP_URL, headers={"Accept": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        return {
+        result_queue.put({
             "source": EGRESS_IP_LOOKUP_URL,
             "ip": data.get("ip"),
             "country": data.get("country"),
@@ -145,9 +237,10 @@ def capture_egress_ip() -> dict:
             "city": data.get("city"),
             "org": data.get("org"),
             "error": None,
-        }
+            "status": "ok",
+        })
     except Exception as exc:
-        return {
+        result_queue.put({
             "source": EGRESS_IP_LOOKUP_URL,
             "ip": None,
             "country": None,
@@ -155,7 +248,38 @@ def capture_egress_ip() -> dict:
             "city": None,
             "org": None,
             "error": f"{type(exc).__name__}: {exc}",
-        }
+            "status": "error",
+        })
+
+
+DIAGNOSTIC_EGRESS_TIMEOUT_S = 5
+
+
+def capture_egress_ip(timeout_s: float = DIAGNOSTIC_EGRESS_TIMEOUT_S) -> dict:
+    """Best-effort outbound public IP/country lookup via a public service (no
+    credentials involved), hard-bounded to timeout_s via an isolated child
+    process (see _run_in_deadline_process). This is diagnostic context for
+    the test, not something the test depends on - never raises, and can
+    never hang the calling process, regardless of what the underlying
+    lookup is stuck doing (a slow/blocked DNS resolution in particular -
+    see _run_in_deadline_process's docstring)."""
+    completed, result, _child_alive_after = _run_in_deadline_process(
+        _egress_lookup_worker, timeout_s
+    )
+    if completed and isinstance(result, dict):
+        return result
+    return {
+        "source": EGRESS_IP_LOOKUP_URL,
+        "ip": None,
+        "country": None,
+        "region": None,
+        "city": None,
+        "org": None,
+        "error": (
+            f"timeout_after_{timeout_s}s" if not completed else "no_result_returned_by_child_process"
+        ),
+        "status": "timeout" if not completed else "error",
+    }
 
 
 def classify_page(
@@ -1723,16 +1847,32 @@ def _copy_artifact(src: Path, dest: Path) -> dict | None:
     return {"name": dest.name, "path": str(dest), "size_bytes": dest.stat().st_size}
 
 
+BROWSER_LAUNCH_TIMEOUT_S = 30
+HOMEPAGE_NAV_TIMEOUT_S = 35
+PRODUCT_NAV_TIMEOUT_S = 35
+ARTIFACT_WRITE_TIMEOUT_S = 15
+TOTAL_RUN_TIMEOUT_S = 180
+
+
 def run_single_live_validation() -> dict:
     """Single live validation of selector_version v3 against one fresh
     Yuyu-Tei product response. Exactly: one homepage request; if and only if
     that homepage is a genuine normal HTTP 200, exactly one product request;
     extract once with extract_with_agreement; save evidence; exit. No
     repeated product requests, no 12-check pipeline, no parallel requests,
-    no retry after a 403/429/challenge/CAPTCHA at either step. Artifacts are
-    written incrementally to the attached Railway volume at
-    /data/yuyutei_extract_latest_v3/ (falling back to a local output/
-    directory when no volume is attached, e.g. running locally)."""
+    no retry after a 403/429/challenge/CAPTCHA at either step.
+
+    Every step that can block is wall-clock bounded (browser launch,
+    homepage nav, product nav, artifact writes, the whole run - see
+    deadline()). The diagnostic egress-IP lookup - the one call in this
+    module with no reliable built-in timeout of its own (see
+    capture_egress_ip) - runs in an isolated child process and is
+    deliberately performed *after* all Yuyu-Tei work and browser teardown
+    are done, so it can never delay or block reaching Yuyu-Tei and can
+    never affect whether extraction is accepted. If the overall deadline is
+    hit anyway, whatever partial `overall` state exists is still written to
+    result.json on a best-effort basis before returning with
+    watchdog_triggered=True (main() exits non-zero on that)."""
     scratch_dir = OUTPUT_ROOT / "single_live_validation"
     scratch_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1741,20 +1881,13 @@ def run_single_live_validation() -> dict:
     target_dir.mkdir(parents=True, exist_ok=True)
     trace_path = target_dir / "trace.zip"
 
-    diagnostic_egress = capture_egress_ip()
-    log_event(
-        "diagnostic_egress_captured",
-        ip=diagnostic_egress.get("ip"),
-        note="not proven to be the IP that served the Yuyu-Tei request - see EGRESS_IP_DISCLAIMER",
-    )
-
     overall: dict = {
         "spike": "single_live_validation",
         "selector_version": SELECTOR_VERSION,
         "product_url": PRODUCT_URL,
         "requested_card_code": EXPECTED_CARD_CODE,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "diagnostic_egress_ip_lookup": diagnostic_egress,
+        "diagnostic_egress_ip_lookup": None,
         "diagnostic_egress_disclaimer": EGRESS_IP_DISCLAIMER,
         "playwright_version": None,
         "browser_version": None,
@@ -1765,130 +1898,154 @@ def run_single_live_validation() -> dict:
         "extraction": None,
         "extractor_v3_live_validated": False,
         "artifacts": [],
+        "watchdog_triggered": False,
     }
 
-    with sync_playwright() as p:
-        overall["playwright_version"] = pkg_version("playwright")
-        browser = p.chromium.launch(headless=True)
-        overall["browser_version"] = browser.version
-        context = browser.new_context()
-        context.tracing.start(screenshots=True, snapshots=True, sources=True)
-        page = context.new_page()
+    def _best_effort_write_partial(reason: str) -> None:
+        overall["stop_reason"] = reason
+        overall["watchdog_triggered"] = True
+        try:
+            _write_json_artifact(target_dir / "result.json", overall)
+        except Exception as exc:
+            log_event("partial_result_write_failed", error=f"{type(exc).__name__}: {exc}")
 
-        homepage_step = goto_and_capture(
-            page, HOMEPAGE_URL, scratch_dir / "homepage", HOMEPAGE_EXPECTED_MARKERS
-        )
-        overall["homepage"] = homepage_step
-        log_event(
-            "homepage_result",
-            http_status=homepage_step.get("http_status"),
-            classification=homepage_step.get("classification"),
-            error=homepage_step.get("error"),
-        )
+    try:
+        with deadline(TOTAL_RUN_TIMEOUT_S, "total_run"):
+            extraction = None
 
-        homepage_ok = (
-            "error" not in homepage_step
-            and homepage_step.get("http_status") == 200
-            and homepage_step.get("classification") == "normal_product"
-        )
-        overall["homepage_gate_passed"] = homepage_ok
+            with sync_playwright() as p:
+                overall["playwright_version"] = pkg_version("playwright")
 
-        if not homepage_ok:
-            overall["stop_reason"] = (
-                f"homepage_not_genuine_normal_200:{homepage_step.get('classification', 'navigation_error')}"
+                with deadline(BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+                    browser = p.chromium.launch(headless=True, timeout=BROWSER_LAUNCH_TIMEOUT_S * 1000)
+                    overall["browser_version"] = browser.version
+                    context = browser.new_context()
+                    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+                    page = context.new_page()
+
+                with deadline(HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
+                    homepage_step = goto_and_capture(
+                        page, HOMEPAGE_URL, scratch_dir / "homepage", HOMEPAGE_EXPECTED_MARKERS
+                    )
+                overall["homepage"] = homepage_step
+                log_event(
+                    "homepage_result",
+                    http_status=homepage_step.get("http_status"),
+                    classification=homepage_step.get("classification"),
+                    error=homepage_step.get("error"),
+                )
+
+                homepage_ok = (
+                    "error" not in homepage_step
+                    and homepage_step.get("http_status") == 200
+                    and homepage_step.get("classification") == "normal_product"
+                )
+                overall["homepage_gate_passed"] = homepage_ok
+
+                if not homepage_ok:
+                    overall["stop_reason"] = (
+                        f"homepage_not_genuine_normal_200:{homepage_step.get('classification', 'navigation_error')}"
+                    )
+                    log_event("homepage_gate_failed", reason=overall["stop_reason"])
+
+                    context.tracing.stop(path=str(trace_path))
+                    context.close()
+                    browser.close()
+                else:
+                    log_event("homepage_gate_passed", http_status=homepage_step.get("http_status"))
+
+                    with deadline(PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
+                        product_step = goto_and_capture(
+                            page, PRODUCT_URL, scratch_dir / "product", PRODUCT_EXPECTED_MARKERS
+                        )
+                    overall["product"] = product_step
+                    log_event(
+                        "product_result",
+                        http_status=product_step.get("http_status"),
+                        classification=product_step.get("classification"),
+                        error=product_step.get("error"),
+                    )
+
+                    if product_step.get("classification") == "normal_product" and "error" not in product_step:
+                        html = page.content()
+                        extraction = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+                        extraction["extracted"]["final_url"] = page.url
+                    else:
+                        reason = (
+                            "navigation_error"
+                            if "error" in product_step
+                            else f"product_page_not_normal:{product_step.get('classification')}"
+                        )
+                        extraction = {
+                            "extraction_status": "fail_closed",
+                            "fail_reasons": [reason],
+                            "selector_version": SELECTOR_VERSION,
+                            "raw": {}, "normalized": {}, "agreement": {}, "accepted_selectors": {},
+                            "rejected_candidates": [],
+                            "extracted": {},
+                        }
+                    overall["extraction"] = extraction
+                    overall["extractor_v3_live_validated"] = extraction["extraction_status"] == "extracted"
+                    log_event(
+                        "extraction_result",
+                        extraction_status=extraction["extraction_status"],
+                        fail_reasons=extraction["fail_reasons"],
+                        sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                        stock_status=(extraction.get("extracted") or {}).get("stock_status"),
+                    )
+
+                    context.tracing.stop(path=str(trace_path))
+                    context.close()
+                    browser.close()
+
+            # Deliberately last: after all Yuyu-Tei work and browser
+            # teardown, bounded by its own isolated-process deadline (see
+            # capture_egress_ip) - can no longer delay/block reaching
+            # Yuyu-Tei and cannot affect extraction validity either way.
+            diagnostic_egress = capture_egress_ip()
+            overall["diagnostic_egress_ip_lookup"] = diagnostic_egress
+            log_event(
+                "diagnostic_egress_captured",
+                ip=diagnostic_egress.get("ip"),
+                status=diagnostic_egress.get("status"),
+                note="not proven to be the IP that served the Yuyu-Tei request - see EGRESS_IP_DISCLAIMER",
             )
-            log_event("homepage_gate_failed", reason=overall["stop_reason"])
 
-            context.tracing.stop(path=str(trace_path))
-            context.close()
-            browser.close()
+            with deadline(ARTIFACT_WRITE_TIMEOUT_S, "artifact_write"):
+                artifacts = []
+                page_prefix = "product" if overall["homepage_gate_passed"] else "homepage"
+                html_artifact = _copy_artifact(scratch_dir / f"{page_prefix}.html", target_dir / "rendered.html")
+                png_artifact = _copy_artifact(scratch_dir / f"{page_prefix}.png", target_dir / "screenshot.png")
+                for a in (html_artifact, png_artifact):
+                    if a:
+                        artifacts.append(a)
+                if trace_path.exists():
+                    artifacts.append(
+                        {"name": "trace.zip", "path": str(trace_path), "size_bytes": trace_path.stat().st_size}
+                    )
+                if extraction is not None:
+                    artifacts.append(_write_json_artifact(target_dir / "extraction.json", extraction))
+                    artifacts.append(_write_json_artifact(target_dir / "selector_diagnostics.json", {
+                        "raw": extraction.get("raw"),
+                        "normalized": extraction.get("normalized"),
+                        "agreement": extraction.get("agreement"),
+                        "accepted_selectors": extraction.get("accepted_selectors"),
+                        "rejected_candidates": extraction.get("rejected_candidates"),
+                    }))
+                artifacts.append(_write_json_artifact(target_dir / "result.json", overall))
+                overall["artifacts"] = artifacts
 
-            artifacts = []
-            html_artifact = _copy_artifact(scratch_dir / "homepage.html", target_dir / "rendered.html")
-            png_artifact = _copy_artifact(scratch_dir / "homepage.png", target_dir / "screenshot.png")
-            for a in (html_artifact, png_artifact):
-                if a:
-                    artifacts.append(a)
-            if trace_path.exists():
-                artifacts.append({"name": "trace.zip", "path": str(trace_path), "size_bytes": trace_path.stat().st_size})
-            artifacts.append(_write_json_artifact(target_dir / "result.json", overall))
-            overall["artifacts"] = artifacts
-            for a in artifacts:
+            for a in overall["artifacts"]:
                 log_event("artifact_saved", name=a["name"], path=a["path"], size_bytes=a["size_bytes"])
-            log_event("run_complete", extractor_v3_live_validated=False, stop_reason=overall["stop_reason"])
-            return overall
-
-        log_event("homepage_gate_passed", http_status=homepage_step.get("http_status"))
-
-        product_step = goto_and_capture(
-            page, PRODUCT_URL, scratch_dir / "product", PRODUCT_EXPECTED_MARKERS
-        )
-        overall["product"] = product_step
-        log_event(
-            "product_result",
-            http_status=product_step.get("http_status"),
-            classification=product_step.get("classification"),
-            error=product_step.get("error"),
-        )
-
-        if product_step.get("classification") == "normal_product" and "error" not in product_step:
-            html = page.content()
-            extraction = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
-            extraction["extracted"]["final_url"] = page.url
-        else:
-            reason = (
-                "navigation_error"
-                if "error" in product_step
-                else f"product_page_not_normal:{product_step.get('classification')}"
+            log_event(
+                "run_complete",
+                extractor_v3_live_validated=overall["extractor_v3_live_validated"],
+                stop_reason=overall["stop_reason"],
             )
-            extraction = {
-                "extraction_status": "fail_closed",
-                "fail_reasons": [reason],
-                "selector_version": SELECTOR_VERSION,
-                "raw": {}, "normalized": {}, "agreement": {}, "accepted_selectors": {},
-                "rejected_candidates": [],
-                "extracted": {},
-            }
-        overall["extraction"] = extraction
-        overall["extractor_v3_live_validated"] = extraction["extraction_status"] == "extracted"
-        log_event(
-            "extraction_result",
-            extraction_status=extraction["extraction_status"],
-            fail_reasons=extraction["fail_reasons"],
-            sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
-            stock_status=(extraction.get("extracted") or {}).get("stock_status"),
-        )
+    except DeadlineExceeded as exc:
+        log_event("watchdog_triggered", label=str(exc))
+        _best_effort_write_partial(f"deadline_exceeded:{exc}")
 
-        context.tracing.stop(path=str(trace_path))
-        context.close()
-        browser.close()
-
-    artifacts = []
-    html_artifact = _copy_artifact(scratch_dir / "product.html", target_dir / "rendered.html")
-    png_artifact = _copy_artifact(scratch_dir / "product.png", target_dir / "screenshot.png")
-    for a in (html_artifact, png_artifact):
-        if a:
-            artifacts.append(a)
-    if trace_path.exists():
-        artifacts.append({"name": "trace.zip", "path": str(trace_path), "size_bytes": trace_path.stat().st_size})
-    artifacts.append(_write_json_artifact(target_dir / "extraction.json", extraction))
-    artifacts.append(_write_json_artifact(target_dir / "selector_diagnostics.json", {
-        "raw": extraction.get("raw"),
-        "normalized": extraction.get("normalized"),
-        "agreement": extraction.get("agreement"),
-        "accepted_selectors": extraction.get("accepted_selectors"),
-        "rejected_candidates": extraction.get("rejected_candidates"),
-    }))
-    artifacts.append(_write_json_artifact(target_dir / "result.json", overall))
-    overall["artifacts"] = artifacts
-
-    for a in artifacts:
-        log_event("artifact_saved", name=a["name"], path=a["path"], size_bytes=a["size_bytes"])
-    log_event(
-        "run_complete",
-        extractor_v3_live_validated=overall["extractor_v3_live_validated"],
-        stop_reason=overall["stop_reason"],
-    )
     return overall
 
 
@@ -1922,7 +2079,13 @@ def main() -> None:
             extractor_v3_live_validated=result["extractor_v3_live_validated"],
             sell_price_jpy=(result.get("extraction") or {}).get("extracted", {}).get("sell_price_jpy"),
             stock_status=(result.get("extraction") or {}).get("extracted", {}).get("stock_status"),
+            watchdog_triggered=result.get("watchdog_triggered", False),
         )
+        # The overall run watchdog (see deadline()/TOTAL_RUN_TIMEOUT_S) must
+        # never leave the process alive indefinitely - a triggered watchdog
+        # is a failed run, not a successful exit.
+        if result.get("watchdog_triggered"):
+            sys.exit(1)
         return
 
     if args.mode == RELIABILITY_MODE:
