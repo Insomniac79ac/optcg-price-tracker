@@ -2,6 +2,25 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def normalize_database_url(url: str) -> str:
+    """Normalize a Postgres DATABASE_URL to the psycopg 3 driver scheme.
+
+    Railway's standard Postgres.DATABASE_URL (and the postgres:// alias) use
+    a bare postgresql:// scheme, which makes SQLAlchemy default to psycopg2 -
+    not installed here (psycopg 3 is). This rewrites only the scheme prefix;
+    everything after it (credentials, host, port, database, query string) is
+    left byte-for-byte untouched. Already-normalized and unrecognized URLs
+    pass through unchanged.
+    """
+    if url.startswith("postgresql+psycopg://"):
+        return url
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -114,7 +133,7 @@ class Settings(BaseSettings):
     def _validate_database_url(cls, value: str) -> str:
         if not value or not value.strip():
             raise ValueError("DATABASE_URL must not be empty.")
-        return value
+        return normalize_database_url(value)
 
     @field_validator("REDIS_URL")
     @classmethod

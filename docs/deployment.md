@@ -387,9 +387,14 @@ Render/Fly.io - the same shape applies).
 - Use Railway's managed Postgres and Redis plugins rather than self-hosting those two containers.
 - Deploy `api`, `worker`, and `beat` from their existing Dockerfiles (`services/api/Dockerfile`,
   `services/worker/Dockerfile`), with the same commands as `docker-compose.prod.yml` uses.
-- Railway's Postgres plugin injects `DATABASE_URL` as a bare `postgresql://` string - rewrite the
-  scheme to `postgresql+psycopg://` when setting it as the `api`/`worker`/`beat` env var (this app
-  uses sync SQLAlchemy via `psycopg`, not an async driver).
+- Railway's Postgres plugin injects `DATABASE_URL` as a bare `postgresql://` string
+  (`${{Postgres.DATABASE_URL}}`). This app uses sync SQLAlchemy via `psycopg` (v3), not an async
+  driver, and normalizes the scheme itself at startup (`normalize_database_url()` in
+  `app/settings.py`/`worker/settings.py`) - set `DATABASE_URL=${{Postgres.DATABASE_URL}}` directly
+  on `api`/`worker`/`beat`, no manual scheme rewriting needed. (Staging is currently on a
+  temporary manually-corrected reference predating this normalization - see
+  `docs/railway_staging.md` section 1 for why, and don't simplify it until that code is deployed
+  and verified there.)
 - Set the same env vars as section 1 above (`ADMIN_TOKEN`, `API_JWT_SECRET`, etc.) on the `api`
   service; `worker`/`beat` don't need `API_JWT_SECRET` (they never verify bearer tokens).
 - Run `alembic upgrade head` once against Railway's Postgres before serving traffic (a one-off

@@ -37,12 +37,11 @@ order - later sections assume earlier ones are done.
       service crash-loops with no traceback, this is almost certainly it - see
       `docs/railway_staging.md` "Worker concurrency". Do not deploy `beat` until `worker` is
       confirmed stable (no crash loop) with this set - `--concurrency` doesn't apply to `beat`.
-- [x] Confirm which Railway environment you're actually deploying into - it may be named
-      `production` in the dashboard even when it's the intended staging deployment (`APP_ENV`
-      still `staging`). See `docs/railway_staging.md` "Operational warning: Railway environment
-      named production" - don't rename/switch environments as an incidental fix. Confirmed as of
-      2026-07-25: this deployment targets the dashboard environment actually named `staging`
-      (`05d1eac2-...`), distinct from the `production`-named environment, which is left untouched.
+- [x] Confirm which Railway environment you're actually deploying into - the canonical one is
+      named `staging` in the dashboard. See `docs/railway_staging.md` "Canonical environment:
+      staging". Confirmed as of 2026-07-25: this deployment targets the dashboard environment
+      actually named `staging` (`05d1eac2-...`); a separate `production`-named environment exists
+      but is legacy/degraded, pending cleanup - do not deploy to it.
 - [x] All env vars set on every service (see [.env.staging.example](../.env.staging.example) and
       `docs/staging_deployment.md` section 5) - double check none are left as the literal
       `change-me`/`<...>` placeholder. Done for `api`/`worker`/Vercel `web`; not yet applicable to

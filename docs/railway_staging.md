@@ -14,25 +14,28 @@ separate Dockerfile per Railway service" below for why. Nothing here changes loc
 exactly as before; the `deploy/railway/*.Dockerfile` files are additive, Railway-only build
 definitions that `COPY` from the same `services/api`/`services/worker` source.
 
-## Operational warning: Railway environment named "production"
+## Canonical environment: `staging`
 
-The Railway project's environment currently in use for this staging deployment is named
-**`production`** in the Railway dashboard - not `staging` - even though `APP_ENV=staging` is set
-on the services in it and it's functionally the staging deployment described in this doc. A
-separate environment actually named `staging` exists in the same Railway project but has no
-worker service instance provisioned in it (only `api`, Postgres, and Redis) - it is not the
-environment these docs' worker/beat instructions apply to.
+The canonical Railway environment for this deployment is the one actually named **`staging`** in
+the dashboard (`05d1eac2-...`) - it is fully provisioned (`api`, `worker`, `beat`, Postgres, Redis)
+and is what every instruction in this doc applies to. Confirmed as of 2026-07-25 - see
+`docs/staging_checklist.md`.
 
-Do not rename or switch the Railway environment as a "fix" for this without first confirming with
-whoever owns the Railway project - environment renames/switches touch the connected domains,
-variable set, and deployment history, and are not something to do casually while debugging an
-unrelated issue. Prefer creating/using a Railway environment actually named `staging` going
-forward for clarity, but treat that as a deliberate follow-up, not an incidental change.
+A separate environment named **`production`** exists in the same Railway project. It predates the
+`staging` environment being fully provisioned and is **legacy/degraded, pending cleanup** - do not
+deploy to it, and do not treat anything it currently has running as authoritative. Earlier
+revisions of this doc described `production` as the one actually in use (with `staging` lacking a
+worker); that is no longer the case and any documentation still saying so is stale.
 
-If you're continuing work in the `production`-named environment: confirm `APP_ENV=staging` is
-still set on every service before assuming anything about behavior, and use staging-only URLs,
-tokens, and secrets throughout - never production credentials - regardless of what the Railway
-dashboard calls the environment.
+Do not rename, delete, or repurpose the `production`-named environment as an incidental fix while
+working on something else - environment renames/deletes touch connected domains, variable sets,
+and deployment history. Retiring it is a deliberate follow-up, tracked separately, not something to
+do casually mid-task.
+
+If you ever find yourself pointed at the `production`-named environment: stop and confirm you
+actually mean to be there - it should not be receiving new deploys - and regardless of which
+environment you're in, always use staging-only URLs, tokens, and secrets, never anything that could
+be a real production credential.
 
 ## Why a separate Dockerfile per Railway service
 
@@ -81,14 +84,26 @@ exact name depends on the plugin version - check the plugin's "Variables" tab).
 - Prefer the **private networking** URL for the `api`/`worker`/`beat` services' `DATABASE_URL` -
   it's service-to-service traffic within Railway's network, not billed as external egress, and
   isn't reachable from the public internet.
-- Railway's Postgres plugin injects a bare `postgresql://...` URL. This app uses SQLAlchemy with
-  the `psycopg` (v3) driver, not `psycopg2` - a bare `postgresql://` URL makes SQLAlchemy default
-  to the `psycopg2` dialect, which isn't installed (`services/api/requirements.txt`/
-  `services/worker/requirements.txt` only install `psycopg[binary]`), and the app fails at import
-  time with `ModuleNotFoundError: No module named 'psycopg2'` (confirmed locally - see "Local
-  build verification" below). **Always rewrite the scheme to `postgresql+psycopg://...`** when
-  setting `DATABASE_URL` on the code services - see `docs/deployment.md` section 11, same note for
-  the production split.
+- Railway's Postgres plugin injects a bare `postgresql://...` URL (`${{Postgres.DATABASE_URL}}`).
+  This app uses SQLAlchemy with the `psycopg` (v3) driver, not `psycopg2`, which isn't installed
+  (`services/api/requirements.txt`/`services/worker/requirements.txt` only install
+  `psycopg[binary]`) - a bare `postgresql://` URL used to make SQLAlchemy default to the `psycopg2`
+  dialect and crash at import time with `ModuleNotFoundError: No module named 'psycopg2'`.
+  **As of the `fix: normalize railway postgres urls for psycopg` change, the application code
+  normalizes this itself** (`normalize_database_url()` in `app/settings.py` /
+  `worker/settings.py`, applied at Settings construction, so it covers the API engine, the worker
+  engine, and Alembic - all three read `settings.DATABASE_URL`): both `postgresql://...` and
+  `postgres://...` are rewritten to `postgresql+psycopg://...` automatically; an already-
+  `postgresql+psycopg://...` URL passes through unchanged. Consumers should therefore set
+  `DATABASE_URL=${{Postgres.DATABASE_URL}}` directly - Railway's standard reference, no manual
+  scheme rewriting needed.
+- **Staging is currently still on a temporary, manually scheme-corrected reference** (built from
+  Postgres's individual component variables with `postgresql+psycopg://` hardcoded in) rather than
+  the standard `${{Postgres.DATABASE_URL}}`, because that fix predates the code-level
+  normalization above. **Do not simplify staging back to `${{Postgres.DATABASE_URL}}` until the
+  normalization code has been deployed to `api`/`worker`/`beat` and verified healthy** - cutting
+  over first would reintroduce the `ModuleNotFoundError` crash. Once deployed and verified, the
+  custom reference can be replaced with the standard one and this note removed.
 
 ### 2. Redis (managed plugin)
 
@@ -213,15 +228,14 @@ docker run --rm \
 
 The app starts and serves `GET /health` even without a reachable database/Redis - it reports
 `{"status": "degraded", "database_connected": false, "redis_connected": false, ...}` rather than
-crashing, so the image itself is verifiable without real Railway DB/Redis vars in hand. Two
-scheme-related gotchas confirmed while testing this locally:
+crashing, so the image itself is verifiable without real Railway DB/Redis vars in hand.
 
-- A **bare** `DATABASE_URL=postgresql://...` (exactly what Railway's Postgres plugin injects,
-  unmodified) makes the app crash at import time with `ModuleNotFoundError: No module named
-  'psycopg2'` - always rewrite the scheme to `postgresql+psycopg://` (see section 1 above).
-- With the scheme corrected, the app starts fine and only reports `database_connected: false` at
-  runtime (an actually-unreachable host, expected with a placeholder) - it does not fail the
-  build or crash at startup.
+With the `normalize_database_url()` change (see section 1 above), a **bare**
+`DATABASE_URL=postgresql://...` (exactly what Railway's Postgres plugin injects, unmodified) no
+longer crashes the app - it's rewritten to `postgresql+psycopg://...` at Settings construction
+time before any engine is created. `database_connected: false` at runtime for an
+actually-unreachable placeholder host is expected either way; it does not fail the build or crash
+at startup.
 
 ## Deploy command reference (Railway CLI)
 
