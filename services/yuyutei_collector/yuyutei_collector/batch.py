@@ -38,6 +38,13 @@ Sequencing and safety (see run_batch):
   (e.g. the same id appearing twice in the selected set) cannot produce two
   observations for one mapping in one run. A future day's batch still
   creates new observations as normal; nothing here deduplicates across runs.
+
+`--mapping-ids` (see collect.main) narrows the eligible set to specific ids -
+a runtime argument for one-off operational batches (e.g. validating or
+writing a freshly-approved group of mappings without also touching every
+other already-collected mapping), never a hardcoded id list in this module.
+`--validate-only` runs the identical navigation/extraction/lineage checks
+without writing anything, same as the single-mapping CLI.
 """
 
 from __future__ import annotations
@@ -59,11 +66,20 @@ from yuyutei_collector.models import CardPrint, Source, SourceCardMapping
 YUYUTEI_SOURCE_NAME = "yuyutei"
 
 
-def select_eligible_mappings(session: Session, limit: int | None = None) -> list[SourceCardMapping]:
+def select_eligible_mappings(
+    session: Session, limit: int | None = None, mapping_ids: list[int] | None = None
+) -> list[SourceCardMapping]:
     """Every approved, active, verified-print Yuyu-Tei mapping - discovered
     from current database state, never a hardcoded id list. Deterministic
     order (mapping id ascending) so repeated calls against unchanged state
-    always select mappings in the same sequence."""
+    always select mappings in the same sequence.
+
+    `mapping_ids`, when given, narrows the result to just those ids - it
+    never widens or bypasses eligibility (an id outside the eligible set is
+    silently excluded, not force-included). Meant for one-off operational
+    batches (e.g. a filtered manual run right after approving a batch of new
+    mappings) - a runtime argument the caller supplies, never a hardcoded id
+    list in this function itself."""
     stmt = (
         select(SourceCardMapping)
         .join(Source, Source.id == SourceCardMapping.source_id)
@@ -78,6 +94,8 @@ def select_eligible_mappings(session: Session, limit: int | None = None) -> list
         )
         .order_by(SourceCardMapping.id.asc())
     )
+    if mapping_ids is not None:
+        stmt = stmt.where(SourceCardMapping.id.in_(mapping_ids))
     mappings = list(session.scalars(stmt).all())
     if limit is not None:
         mappings = mappings[:limit]
@@ -102,14 +120,18 @@ def _mapping_delay_s() -> float:
 
 def run_batch(
     limit: int | None = None,
+    mapping_ids: list[int] | None = None,
+    validate_only: bool = False,
     session_factory=SessionLocal,
     mapping_runner=run_one_mapping_detailed,
     mapping_selector=select_eligible_mappings,
 ) -> BatchResult:
-    """Runs one bounded batch over every eligible mapping. `session_factory`/
-    `mapping_runner`/`mapping_selector` are overridable purely for offline
-    testing (see tests/test_batch.py) - production callers (collect.main())
-    never pass them."""
+    """Runs one bounded batch over every eligible mapping (or, if
+    `mapping_ids` is given, the subset of the eligible set matching those
+    ids - see select_eligible_mappings). `session_factory`/`mapping_runner`/
+    `mapping_selector` are overridable purely for offline testing (see
+    tests/test_batch.py) - production callers (collect.main()) never pass
+    them."""
     batch_run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
@@ -120,7 +142,7 @@ def run_batch(
     selected_ids: list[int] = []
 
     try:
-        eligible = mapping_selector(session, limit=limit)
+        eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids)
         # Dedupe defensively, preserving order - a single mapping id must
         # never be handed to mapping_runner twice within one batch_run_id,
         # regardless of what the selector returns.
@@ -152,7 +174,9 @@ def run_batch(
                 )
                 break
 
-            outcome = mapping_runner(session, mapping.id, batch_run_id=batch_run_id)
+            outcome = mapping_runner(
+                session, mapping.id, validate_only=validate_only, batch_run_id=batch_run_id
+            )
             results.append(outcome)
             log_event(
                 "batch_mapping_result",

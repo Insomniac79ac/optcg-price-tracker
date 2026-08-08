@@ -393,14 +393,29 @@ def main() -> None:
         default=None,
         help="--approved-mappings only: cap how many eligible mappings this run processes.",
     )
+    parser.add_argument(
+        "--mapping-ids",
+        type=str,
+        default=None,
+        help=(
+            "--approved-mappings only: comma-separated mapping ids to narrow the "
+            "eligible set to (e.g. for a one-off batch over a just-approved group). "
+            "Ids outside the eligible set are silently excluded, never force-included."
+        ),
+    )
     args = parser.parse_args()
 
     if args.approved_mappings:
-        if args.validate_only:
-            parser.error("--validate-only is not supported with --approved-mappings")
         from yuyutei_collector.batch import run_batch  # local import avoids a top-level cycle
 
-        result = run_batch(limit=args.limit)
+        mapping_ids = None
+        if args.mapping_ids:
+            try:
+                mapping_ids = [int(x) for x in args.mapping_ids.split(",") if x.strip()]
+            except ValueError:
+                parser.error("--mapping-ids must be a comma-separated list of integers")
+
+        result = run_batch(limit=args.limit, mapping_ids=mapping_ids, validate_only=args.validate_only)
         sys.exit(result.exit_code)
 
     sys.exit(run_one_mapping(args.mapping_id, validate_only=args.validate_only))

@@ -34,9 +34,11 @@ class FakeMappingRunner:
         self.outcomes = outcomes
         self.sleep_s = sleep_s
         self.calls: list[tuple[int, str | None]] = []
+        self.validate_only_calls: list[bool] = []
 
     def __call__(self, session, mapping_id, validate_only=False, batch_run_id=None):
         self.calls.append((mapping_id, batch_run_id))
+        self.validate_only_calls.append(validate_only)
         if self.sleep_s:
             time.sleep(self.sleep_s)
         return self.outcomes[mapping_id]
@@ -189,6 +191,21 @@ class SelectionTestCase(unittest.TestCase):
         mapping = self._mapping(id=777, card_print_id=99, source_card_id="OP99-999")
         selected = select_eligible_mappings(self.session)
         self.assertEqual([m.id for m in selected], [mapping.id])
+
+    def test_mapping_ids_narrows_without_widening_eligibility(self):
+        eligible = self._mapping(id=20)
+        ineligible_print = CardPrint(
+            id=4, canonical_card_id=1, treatment="normal", verification_status="unverified", is_active=True
+        )
+        self.session.add(ineligible_print)
+        self.session.flush()
+        ineligible = self._mapping(id=21, card_print_id=4, source_card_id="OP01-002")
+
+        # Asking for both an eligible and an ineligible id must only ever
+        # return the eligible one - mapping_ids narrows, never bypasses
+        # eligibility.
+        selected = select_eligible_mappings(self.session, mapping_ids=[eligible.id, ineligible.id])
+        self.assertEqual([m.id for m in selected], [eligible.id])
 
     def test_limit_bounds_selection(self):
         first = self._mapping(id=20)
@@ -356,7 +373,7 @@ class RunBatchTestCase(unittest.TestCase):
         real_mappings = select_eligible_mappings(session)
         doubled = real_mappings + [real_mappings[0]]
 
-        def doubling_selector(_session, limit=None):
+        def doubling_selector(_session, limit=None, mapping_ids=None):
             return doubled
 
         outcomes = {mid: written_outcome(mid) for mid in self.mapping_ids}
@@ -383,6 +400,23 @@ class RunBatchTestCase(unittest.TestCase):
         result, runner = self._run(outcomes, limit=1)
         self.assertEqual(len(runner.calls), 1)
         self.assertEqual(result.mappings_selected, [self.mapping_ids[0]])
+
+    def test_mapping_ids_narrows_batch_to_just_those_ids(self):
+        """A one-off operational batch (e.g. right after approving a new
+        group of mappings) can target exactly that group without touching
+        any other already-eligible mapping."""
+        target = [self.mapping_ids[1]]
+        outcomes = {mid: written_outcome(mid) for mid in self.mapping_ids}
+        result, runner = self._run(outcomes, mapping_ids=target)
+        self.assertEqual([c[0] for c in runner.calls], target)
+        self.assertEqual(result.mappings_selected, target)
+        self.assertEqual(result.status, "success")
+
+    def test_validate_only_is_threaded_through_to_mapping_runner(self):
+        outcomes = {mid: written_outcome(mid) for mid in self.mapping_ids}
+        _result, runner = self._run(outcomes, validate_only=True)
+        self.assertTrue(runner.validate_only_calls)
+        self.assertTrue(all(runner.validate_only_calls))
 
     def test_batch_total_timeout_stops_remaining_mappings(self):
         session = self.Session()
