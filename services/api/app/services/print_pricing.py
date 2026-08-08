@@ -156,7 +156,6 @@ def compute_print_price_series_trends(
                 "price_type": price_type,
                 "latest_price_jpy": latest.price_jpy,
                 "latest_observed_at": latest.observed_at,
-                "latest_stock_status": latest.stock_status,
                 "sufficient_history": sufficient,
                 **changes,
             }

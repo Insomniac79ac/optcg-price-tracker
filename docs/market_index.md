@@ -21,6 +21,36 @@ Yuyu-Tei and SNKRDUNK only, per every prior staging doc
 other source. `app.services.card_image_import.APPROVED_IMAGE_SOURCES` enforces
 the same two-source allowlist for card images specifically.
 
+## Source eligibility
+
+Implemented in `app.services.market_index._resolve_yuyutei_sell`/
+`_resolve_snkrdunk` - shared by both the legacy card-keyed Market Index
+(`GET /cards/{id}/market-index`) and the print-centric one
+(`GET /prints/{print_id}/market-index`, see `app.services.print_market_index`
+and `docs/print_centric_pricing.md`).
+
+**Yuyu-Tei retail sell** (product decision - see
+`docs/yuyutei_collector_operations.md` "Stock is not required"):
+
+> latest verified Yuyu-Tei sell observation <= 7 days old
+
+Stock/availability has no effect on eligibility. A Yuyu-Tei displayed sell
+price is useful market evidence whether or not the retailer currently
+reports the item in stock - an out-of-stock observation is exactly as
+eligible as an in-stock one of the same age. Only freshness (and the
+collector's own identity/price validation - see the collector doc) govern
+whether a sell observation counts. Yuyu-Tei dealer buy remains auxiliary-only
+(never eligible for the index itself, unchanged).
+
+**SNKRDUNK** - unchanged by this task: >=3 sold observations in the trailing
+30 days resolves to their median (`transaction_median`); otherwise falls back
+to the latest listing floor if it's <=7 days old (`listing_floor`,
+`fallback_used=true`).
+
+**Combination** - unchanged: 2+ eligible sources → median, `coverage_status
+="full"`; exactly 1 eligible source → that value, `coverage_status="limited"`;
+0 eligible sources → no index value, `coverage_status="none"`.
+
 ## Image data audit (as of 2026-07-27)
 
 Queried directly against the staging Postgres database (12 cards total):

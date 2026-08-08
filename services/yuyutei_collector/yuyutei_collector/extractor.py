@@ -13,10 +13,16 @@ Extraction hierarchy per field, in priority order:
 4. whole-page regex - diagnostic-only, logged for audit, never eligible to
    become an accepted value
 
-A price or stock value is only accepted when the JSON-LD side and the DOM
-side (tiers 1-3 collapsed into one "DOM" side) independently agree - see
+A price value is only accepted when the JSON-LD side and the DOM side
+(tiers 1-3 collapsed into one "DOM" side) independently agree - see
 extract_with_agreement. Disagreement, or either side being indeterminate,
-fails closed.
+fails closed for price.
+
+Stock/availability is extracted and reported the same way but is diagnostic
+only (product decision - see docs/yuyutei_collector_operations.md "Stock is
+not required"): a displayed sell price is useful market evidence whether or
+not Yuyu-Tei currently reports the item in stock, so stock disagreement or
+indeterminacy never fails extraction and is never part of `fail_reasons`.
 """
 
 import json
@@ -451,28 +457,23 @@ def extract_with_agreement(
         price_agreement["agree"] = False
         accepted_price = None
 
-    # ---- Stock: require semantic agreement, fail closed otherwise ----
+    # ---- Stock: diagnostic only, never gates extraction (product decision -
+    # see docs/yuyutei_collector_operations.md "Stock is not required").
+    # accepted_stock is still only set when JSON-LD and DOM agree (same
+    # "don't guess" conservatism as price), but missing, disagreeing, or
+    # indeterminate stock leaves accepted_stock at None without adding
+    # anything to fail_reasons - it can never fail an otherwise-valid price
+    # extraction.
     stock_agreement = {
         "jsonld_availability": jsonld_norm["availability"],
         "dom_stock": dom_norm["stock"],
-        "agree": False,
+        "agree": (
+            jsonld_norm["availability"] is not None
+            and dom_norm["stock"] is not None
+            and jsonld_norm["availability"] == dom_norm["stock"]
+        ),
     }
-    accepted_stock = None
-    if jsonld_norm["availability"] is not None and dom_norm["stock"] is not None:
-        if jsonld_norm["availability"] == dom_norm["stock"]:
-            stock_agreement["agree"] = True
-            accepted_stock = jsonld_norm["availability"]
-        else:
-            fail_reasons.append(
-                f"stock_disagreement:jsonld={jsonld_norm['availability']},dom={dom_norm['stock']}"
-            )
-    elif jsonld_norm["availability"] is None and dom_norm["stock"] is None:
-        fail_reasons.append("stock_agreement_indeterminate:missing_both_sides")
-    else:
-        # Exactly one side present: JSON-LD is never allowed to override a
-        # conflicting (or simply present) visible DOM value, and a lone DOM
-        # value with no JSON-LD to corroborate it is likewise not enough.
-        fail_reasons.append("stock_agreement_indeterminate:only_one_side_present")
+    accepted_stock = jsonld_norm["availability"] if stock_agreement["agree"] else None
 
     # ---- Identity checks ----
     resolved_card_code = dom_norm["card_code"] or jsonld_norm["card_code"]

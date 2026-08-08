@@ -98,7 +98,10 @@ def test_fresh_in_stock_sell_is_eligible(db_session):
     assert sell.stale is False
 
 
-def test_out_of_stock_sell_is_excluded(db_session):
+def test_out_of_stock_sell_is_eligible(db_session):
+    """Product decision: stock has no effect on Yuyu-Tei eligibility - only
+    freshness (see test_stale_sell_is_excluded) and identity/price
+    validation upstream govern whether a sell observation counts."""
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
     yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, stock_status="out_of_stock")
@@ -106,8 +109,25 @@ def test_out_of_stock_sell_is_excluded(db_session):
     index = get_market_index_for_card(db_session, card.id)
 
     sell = find(index.source_values, "yuyutei", "retail_sell")
-    assert sell.eligible is False
-    assert sell.ineligible_reason == "out_of_stock"
+    assert sell.eligible is True
+    assert sell.value_jpy == 1200
+    assert sell.ineligible_reason is None
+
+
+def test_in_stock_and_out_of_stock_are_identically_eligible(db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, stock_status="out_of_stock")
+    index_out_of_stock = get_market_index_for_card(db_session, card.id)
+
+    other_card = make_card(db_session, card_code="OP01-002")
+    yuyutei_sell(db_session, other_card, yuyutei, price_jpy=1200, stock_status="in_stock")
+    index_in_stock = get_market_index_for_card(db_session, other_card.id)
+
+    sell_out = find(index_out_of_stock.source_values, "yuyutei", "retail_sell")
+    sell_in = find(index_in_stock.source_values, "yuyutei", "retail_sell")
+    assert sell_out.eligible == sell_in.eligible is True
+    assert index_out_of_stock.coverage_status == index_in_stock.coverage_status == "limited"
 
 
 def test_stale_sell_is_excluded(db_session):

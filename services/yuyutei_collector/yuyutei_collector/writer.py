@@ -11,8 +11,14 @@ Fail-closed gates (mirrors the tranche's Section 6 requirements):
 - extraction_status must be "extracted" (i.e. extractor.py's own JSON-LD/DOM
   agreement, card-code, and treatment checks all passed)
 - the resolved card code must equal the mapping's own source_card_id
-- price and stock must both be present (already enforced by
-  extraction_status, restated here as a direct guard)
+- price must be present (already enforced by extraction_status, restated
+  here as a direct guard)
+
+Stock/availability is never a fail-closed gate (product decision - see
+docs/yuyutei_collector_operations.md "Stock is not required"): a verified
+sell price is written whether or not stock is present, missing, unknown, or
+disagrees between JSON-LD and DOM. stock_status is still persisted on the
+written observation as incidental metadata when the extractor resolved one.
 """
 
 import hashlib
@@ -96,11 +102,11 @@ def validate_and_write_observation(
             )
 
     price_jpy = extracted.get("sell_price_jpy")
+    # Incidental metadata only (see module docstring) - a missing/ambiguous
+    # stock_status never gates the write.
     stock_status = extracted.get("stock_status")
     if price_jpy is None:
         reasons.append("price_missing_or_ambiguous")
-    if stock_status is None:
-        reasons.append("stock_status_missing_or_ambiguous")
 
     # De-duplicate while preserving order for stable, readable logs.
     reasons = list(dict.fromkeys(reasons))

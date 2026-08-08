@@ -111,6 +111,16 @@ class SuccessfulWriteTests(WriterTestCase):
         self.assertIsNotNone(still_there)
         self.assertEqual(still_there.price_jpy, 34800)
 
+    def test_missing_stock_does_not_invalidate_an_otherwise_valid_write(self):
+        """Product decision: stock is not required market evidence - a
+        verified price with no stock_status at all must still write."""
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTION["extracted"], stock_status=None))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(result.written)
+        self.assertIsNone(result.stock_status)
+        self.session.commit()
+        self.assertEqual(self.session.query(PriceObservation).count(), 1)
+
 
 class FailClosedWriteTests(WriterTestCase):
     def test_failed_extraction_writes_zero_observation_rows(self):

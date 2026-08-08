@@ -128,6 +128,12 @@ def _naive_utc(dt: datetime) -> datetime:
 def _resolve_yuyutei_sell(
     observation: PriceObservation | None, now: datetime
 ) -> _SourceValue:
+    """Eligibility rule (product decision - see docs/market_index.md
+    "Source eligibility"): latest verified Yuyu-Tei sell observation <= 7
+    days old. Stock state has no effect - a displayed sell price is useful
+    market evidence whether or not Yuyu-Tei currently reports the item in
+    stock, so an out-of-stock observation is exactly as eligible as an
+    in-stock one of the same age."""
     if observation is None:
         return _SourceValue(
             source=YUYUTEI,
@@ -144,13 +150,6 @@ def _resolve_yuyutei_sell(
 
     age = now - _naive_utc(observation.observed_at)
     stale = age > timedelta(days=YUYUTEI_SELL_MAX_AGE_DAYS)
-    in_stock = observation.stock_status == "in_stock"
-
-    ineligible_reason = None
-    if not in_stock:
-        ineligible_reason = "out_of_stock"
-    elif stale:
-        ineligible_reason = "stale"
 
     return _SourceValue(
         source=YUYUTEI,
@@ -160,9 +159,9 @@ def _resolve_yuyutei_sell(
         observed_at=observation.observed_at,
         sample_size=None,
         stale=stale,
-        eligible=in_stock and not stale,
+        eligible=not stale,
         fallback_used=False,
-        ineligible_reason=ineligible_reason,
+        ineligible_reason="stale" if stale else None,
     )
 
 

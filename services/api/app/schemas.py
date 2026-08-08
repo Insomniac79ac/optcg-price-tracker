@@ -372,7 +372,12 @@ class PrintMarketIndexOut(BaseModel):
 
 class PrintPriceObservationOut(BaseModel):
     """Print-scoped counterpart to PriceObservationOut - same fields, keyed
-    by card_print_id instead of card_id."""
+    by card_print_id instead of card_id. Deliberately has no stock/inventory
+    field: the print-centric public product model does not depend on
+    Yuyu-Tei stock (product decision - see docs/market_index.md "Source
+    eligibility" and docs/yuyutei_collector_operations.md "Stock is not
+    required"). It never had any consumer to keep backwards-compatible, so
+    it is omitted outright rather than deprecated-and-nulled."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -384,7 +389,6 @@ class PrintPriceObservationOut(BaseModel):
     price_type: str
     price_jpy: int
     condition_label: str | None
-    stock_status: str | None
     listing_count: int | None
     raw_snapshot_id: int | None
 
@@ -394,13 +398,14 @@ class PrintPriceSeriesTrendOut(BaseModel):
     history - see app.services.print_pricing.compute_print_price_series_trends.
     sufficient_history is false with only one observation in the series;
     change_*_pct stays null (never fabricated) unless a real observation
-    exists at or before that window's cutoff."""
+    exists at or before that window's cutoff. No stock field - see
+    PrintPriceObservationOut's docstring; a trend is price/time based only,
+    never a stock transition."""
 
     source: str
     price_type: str
     latest_price_jpy: int
     latest_observed_at: datetime
-    latest_stock_status: str | None
     sufficient_history: bool
     change_24h_pct: float | None
     change_7d_pct: float | None

@@ -207,8 +207,11 @@ def test_sanji_parallel_market_index_sees_only_its_own_observation(client, five_
     assert body["card_print_id"] == print_id
     yuyutei_sell = next(sv for sv in body["source_values"] if sv["source"] == "yuyutei")
     assert yuyutei_sell["value_jpy"] == 1980
-    assert yuyutei_sell["eligible"] is False
-    assert yuyutei_sell["ineligible_reason"] == "out_of_stock"
+    # Stock has no effect on eligibility (product decision) - the parallel's
+    # out-of-stock observation is exactly as eligible as any in-stock one.
+    assert yuyutei_sell["eligible"] is True
+    assert yuyutei_sell["ineligible_reason"] is None
+    assert body["index_value_jpy"] == 1980
     # The base print's 120 JPY must never appear anywhere in the parallel's
     # response.
     assert 120 not in [sv["value_jpy"] for sv in body["source_values"]]
@@ -258,8 +261,10 @@ def test_sanji_prints_share_legacy_card_but_stay_independent(client, five_prints
     base_index = client.get(f"/prints/{five_prints['sanji_base'].id}/market-index").json()
 
     assert parallel_index["index_value_jpy"] != base_index["index_value_jpy"]
-    assert parallel_index["coverage_status"] == "none"  # only source is ineligible (out of stock)
-    assert base_index["coverage_status"] == "limited"  # single eligible source
+    # Both eligible under one-source evidence - stock state has no bearing
+    # on coverage/eligibility (product decision).
+    assert parallel_index["coverage_status"] == "limited"
+    assert base_index["coverage_status"] == "limited"
 
 
 def test_sanji_prints_are_separate_catalogue_items(client, five_prints):
@@ -309,7 +314,9 @@ def test_all_five_prints_appear_independently(client, five_prints):
     assert by_print_id[five_prints["law_parallel"].id]["market_index"]["index_value_jpy"] == 2500
     assert by_print_id[five_prints["ace_base"].id]["market_index"]["index_value_jpy"] == 800
     assert by_print_id[five_prints["sanji_base"].id]["market_index"]["index_value_jpy"] == 120
-    assert by_print_id[five_prints["sanji_parallel"].id]["market_index"]["index_value_jpy"] is None
+    # Out-of-stock but fresh - still eligible (stock has no bearing on
+    # eligibility).
+    assert by_print_id[five_prints["sanji_parallel"].id]["market_index"]["index_value_jpy"] == 1980
 
 
 # --- lineage-less legacy observations must never enter print pricing ------
@@ -409,6 +416,35 @@ def test_trend_never_fabricates_change_without_a_real_baseline(client, db_sessio
     assert trend["change_30d_pct"] is None
 
 
+def test_stock_transition_alone_never_creates_a_price_trend(client, db_session, five_prints):
+    """Two observations 8 days apart with the IDENTICAL price but opposite
+    stock_status - a stale->fresh in_stock/out_of_stock flip must never be
+    read as a market movement. change_7d_pct must be exactly 0.0 (real,
+    price-based "no change"), never null/fabricated by the stock flip."""
+    print_row = five_prints["sanji_base"]
+    legacy = five_prints["sanji_legacy"]
+    source = five_prints["source"]
+    mapping = make_mapping(
+        db_session, legacy, source, print_row, source_card_id="ext-sanji-base-3"
+    )
+    make_observation(
+        db_session, legacy, source, mapping, print_row,
+        price_jpy=120, stock_status="out_of_stock",
+        observed_at=NOW - timedelta(days=8),
+    )
+
+    response = client.get(f"/prints/{print_row.id}/prices")
+    body = response.json()
+    prices = [o["price_jpy"] for o in body["observations"]]
+    assert prices == [120, 120]  # same price both times, only stock differs
+
+    trend = next(s for s in body["series"] if s["price_type"] == "sell")
+    assert trend["change_7d_pct"] == 0.0
+    # No observation old enough for a real 30d baseline (8 days < 30) - must
+    # stay null, never fabricated as 0.0 just because 7d resolved cleanly.
+    assert trend["change_30d_pct"] is None
+
+
 def test_parallel_and_base_history_are_never_equal(client, five_prints):
     parallel_prices = client.get(f"/prints/{five_prints['sanji_parallel'].id}/prices").json()
     base_prices = client.get(f"/prints/{five_prints['sanji_base'].id}/prices").json()
@@ -424,12 +460,54 @@ def test_parallel_and_base_history_are_never_equal(client, five_prints):
 # --- stock state / evidence visibility -------------------------------------
 
 
-def test_out_of_stock_observation_is_visible_evidence_but_ineligible(client, five_prints):
+def test_out_of_stock_observation_is_visible_and_eligible(client, five_prints):
+    """Product decision: Yuyu-Tei stock has no effect on Market Index
+    eligibility - an out-of-stock sell observation is both visible evidence
+    and a fully eligible index input, identically to an in-stock one."""
     body = client.get(f"/prints/{five_prints['sanji_parallel'].id}/market-index").json()
     sv = next(v for v in body["source_values"] if v["source"] == "yuyutei")
     assert sv["value_jpy"] == 1980
-    assert sv["eligible"] is False
-    assert sv["ineligible_reason"] == "out_of_stock"
+    assert sv["eligible"] is True
+    assert sv["ineligible_reason"] is None
+
+
+def test_in_stock_and_out_of_stock_are_identically_eligible(client, five_prints):
+    """Sanji base (in_stock) and Sanji parallel (out_of_stock) - same
+    freshness, different stock - both eligible, both coverage=limited."""
+    parallel = client.get(f"/prints/{five_prints['sanji_parallel'].id}/market-index").json()
+    base = client.get(f"/prints/{five_prints['sanji_base'].id}/market-index").json()
+
+    parallel_sv = next(v for v in parallel["source_values"] if v["source"] == "yuyutei")
+    base_sv = next(v for v in base["source_values"] if v["source"] == "yuyutei")
+
+    assert parallel_sv["eligible"] is True
+    assert base_sv["eligible"] is True
+    assert parallel["coverage_status"] == base["coverage_status"] == "limited"
+
+
+def test_print_apis_no_longer_expose_stock(client, five_prints):
+    """The print-centric public product model does not depend on Yuyu-Tei
+    inventory - no response here should carry a stock/inventory field at
+    any level (see PrintPriceObservationOut/PrintPriceSeriesTrendOut)."""
+    print_id = five_prints["sanji_base"].id
+
+    detail = client.get(f"/prints/{print_id}").json()
+    assert "stock_status" not in detail
+    assert "stock_status" not in detail["market_index"]
+    for sv in detail["market_index"]["source_values"] + detail["market_index"]["auxiliary_values"]:
+        assert "stock_status" not in sv
+
+    prices = client.get(f"/prints/{print_id}/prices").json()
+    for obs in prices["observations"]:
+        assert "stock_status" not in obs
+    for series in prices["series"]:
+        assert "latest_stock_status" not in series
+        assert "stock_status" not in series
+
+    catalogue = client.get("/prints", params={"limit": 100}).json()
+    for item in catalogue["items"]:
+        assert "stock_status" not in item
+        assert "stock_status" not in item["market_index"]
 
 
 def test_404_for_unknown_print(client, db_session):

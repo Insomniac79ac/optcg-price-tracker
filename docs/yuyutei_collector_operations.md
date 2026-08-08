@@ -76,16 +76,38 @@ mapping run (`--mapping-id`, see `yuyutei_collector/writer.py`):
 - the mapping must still be active, approved, and linked to a verified
   `card_print`
 - the fetched page must classify as a normal product page
-- price and stock must independently agree between the page's JSON-LD and
-  DOM content (see `yuyutei_collector/extractor.py`) - disagreement or either
-  side being indeterminate fails closed, writing nothing
+- price must independently agree between the page's JSON-LD and DOM content
+  (see `yuyutei_collector/extractor.py`) - disagreement or either side being
+  indeterminate fails closed, writing nothing
 - the page's own displayed card code and treatment must match the mapping's
   expected identity
 
-A validation failure (identity mismatch, price/stock disagreement, missing
+A validation failure (identity mismatch, price disagreement, missing price
 data) writes **zero observations for that mapping**, is recorded in the run's
 structured result, and the batch continues to the next mapping - it never
 stops the whole run.
+
+## Stock is not required
+
+Product decision: Yuyu-Tei stock/availability is not required market
+evidence. A Yuyu-Tei displayed sell price remains useful market evidence
+whether or not the retailer currently reports the item in stock.
+
+- Stock is **not** part of fail-closed validation. Missing, unknown,
+  disagreeing-between-JSON-LD-and-DOM, or entirely absent (a future Yuyu-Tei
+  layout) stock never invalidates an otherwise-verified price - see
+  `yuyutei_collector/extractor.py`'s stock-agreement block and
+  `yuyutei_collector/writer.py`'s write gates, both diagnostic-only for stock.
+- Stock is **not** used for Market Index eligibility (see
+  `docs/market_index.md` "Source eligibility") - an out-of-stock observation
+  is exactly as eligible as an in-stock one of the same age.
+- Stock is **not** a launch product field - the print-centric public API
+  (`GET /prints/...`, see `docs/print_centric_pricing.md`) carries no
+  stock/inventory field at all.
+- Stock is still persisted internally as incidental metadata
+  (`price_observations.stock_status`) when the extractor could resolve it,
+  and the collector makes no extra request and adds no new stock-specific
+  parsing to obtain it - it is opportunistic, never required.
 
 ## Source-wide denial behaviour
 

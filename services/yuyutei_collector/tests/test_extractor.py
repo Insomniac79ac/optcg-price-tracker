@@ -71,6 +71,41 @@ class ExtractWithAgreementSuccessTests(unittest.TestCase):
         self.assertTrue(result["agreement"]["stock"]["agree"])
         self.assertEqual(result["extracted"]["stock_status"], "out_of_stock")
 
+    def test_stock_disagreement_does_not_fail_closed(self):
+        """Stock is diagnostic only (product decision) - a JSON-LD/DOM stock
+        disagreement must never invalidate an otherwise-agreeing price."""
+        html = _html_with("34,800", "34800", "InStock", "×")
+        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 34800)
+        self.assertFalse(result["agreement"]["stock"]["agree"])
+        self.assertIsNone(result["extracted"]["stock_status"])
+        # JSON-LD must never override a conflicting visible DOM value.
+        self.assertNotEqual(result["extracted"]["stock_status"], "in_stock")
+        self.assertFalse(any("stock" in r for r in result["fail_reasons"]))
+
+    def test_missing_stock_both_sides_does_not_fail_closed(self):
+        """Missing stock (neither JSON-LD nor DOM had a value) must not
+        invalidate an otherwise-valid price extraction either."""
+        html = (
+            "<html><head>"
+            '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+            '"name":"P-L ロロノア・ゾロ(パラレル)",'
+            '"description":"OP01-001",'
+            '"offers":{"@type":"Offer","price":"34800","priceCurrency":"JPY"}}'
+            "</script></head><body>"
+            '<div class="power" id="power"><h3>P-L ロロノア・ゾロ(パラレル)</h3></div>'
+            '<section id="product-detail">'
+            '<span class="pote">OP01-001</span>'
+            "<h4> 34,800 円</h4>"
+            "</section></body></html>"
+        )
+        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 34800)
+        self.assertIsNone(result["extracted"]["stock_status"])
+        self.assertFalse(any("stock" in r for r in result["fail_reasons"]))
+
     def test_card_code_and_treatment_match(self):
         result = extract_with_agreement(self.html, PRODUCT_URL, EXPECTED_CARD_CODE)
         self.assertEqual(result["extracted"]["card_code"], "OP01-001")
@@ -110,15 +145,6 @@ class ExtractWithAgreementFailClosedTests(unittest.TestCase):
         self.assertFalse(result["agreement"]["price"]["agree"])
         self.assertIsNone(result["extracted"]["sell_price_jpy"])
         self.assertTrue(any(r.startswith("price_disagreement:") for r in result["fail_reasons"]))
-
-    def test_stock_disagreement_fails_closed(self):
-        html = _html_with("34,800", "34800", "InStock", "×")
-        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
-        self.assertEqual(result["extraction_status"], "fail_closed")
-        self.assertFalse(result["agreement"]["stock"]["agree"])
-        self.assertIsNone(result["extracted"]["stock_status"])
-        # JSON-LD must never override a conflicting visible DOM value.
-        self.assertNotEqual(result["extracted"]["stock_status"], "in_stock")
 
     def test_card_code_mismatch_fails_closed(self):
         html = load_fixture("product_op01_001_reduced.html")
@@ -202,12 +228,13 @@ class QuantityStockNormalizationTests(unittest.TestCase):
         self.assertTrue(result["agreement"]["stock"]["agree"])
         self.assertEqual(result["extraction_status"], "extracted")
 
-    def test_zero_quantity_resolves_out_of_stock_and_disagrees_with_jsonld_in_stock(self):
+    def test_zero_quantity_disagrees_with_jsonld_but_does_not_fail_closed(self):
         html = _quantity_stock_html(qty=0)
         result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="parallel")
         self.assertEqual(result["agreement"]["stock"]["dom_stock"], "out_of_stock")
         self.assertFalse(result["agreement"]["stock"]["agree"])
-        self.assertEqual(result["extraction_status"], "fail_closed")
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 12800)
 
 
 def _discounted_price_html(list_price: str = "220", sale_price: str = "120", card_code: str = "OP01-013") -> str:

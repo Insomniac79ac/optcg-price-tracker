@@ -125,7 +125,6 @@ def get_print_prices(print_id: int, db: Session = Depends(get_db)):
             price_type=obs.price_type,
             price_jpy=obs.price_jpy,
             condition_label=obs.condition_label,
-            stock_status=obs.stock_status,
             listing_count=obs.listing_count,
             raw_snapshot_id=obs.raw_snapshot_id,
         )
