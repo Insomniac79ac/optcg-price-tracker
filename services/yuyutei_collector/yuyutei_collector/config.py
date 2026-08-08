@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     PRODUCT_NAV_TIMEOUT_S: int = 35
     ARTIFACT_WRITE_TIMEOUT_S: int = 15
     TOTAL_RUN_TIMEOUT_S: int = 180
+    # Wall-clock budget for an entire --approved-mappings batch (see
+    # yuyutei_collector.batch) - independent of, and larger than, a single
+    # mapping's own TOTAL_RUN_TIMEOUT_S above. Five mappings at up to 180s
+    # each plus inter-mapping delays comfortably fits well under this;
+    # sized generously so a batch is never cut off by this watchdog under
+    # normal conditions, only as a true worst-case backstop.
+    BATCH_TOTAL_TIMEOUT_S: int = 1200
 
     @field_validator("DATABASE_URL")
     @classmethod

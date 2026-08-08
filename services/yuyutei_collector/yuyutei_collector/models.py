@@ -50,6 +50,12 @@ class CardPrint(Base):
     canonical_card_id: Mapped[int] = mapped_column(Integer)
     treatment: Mapped[str] = mapped_column(String(64))
     verification_status: Mapped[str] = mapped_column(String(16))
+    # Default matches the real table's server_default="true" (see
+    # services/api/app/models/card_print.py) - existing fixtures across this
+    # service's tests that construct a CardPrint without passing is_active
+    # explicitly (predating this column's addition here) keep working
+    # unchanged, exactly as they would against the real schema.
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class SourceCardMapping(Base):
