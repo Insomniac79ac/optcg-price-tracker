@@ -210,6 +210,45 @@ class QuantityStockNormalizationTests(unittest.TestCase):
         self.assertEqual(result["extraction_status"], "fail_closed")
 
 
+def _discounted_price_html(list_price: str = "220", sale_price: str = "120", card_code: str = "OP01-013") -> str:
+    """A struck-through former/list price alongside the current highlighted
+    sale price - seen live on OP01-013's base product page."""
+    return (
+        "<html><head>"
+        '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+        '"name":"サンジ",'
+        f'"description":"{card_code}",'
+        f'"offers":{{"@type":"Offer","price":"{sale_price}","priceCurrency":"JPY","availability":"InStock"}}}}'
+        "</script></head><body>"
+        '<div class="power" id="power"><h3>サンジ</h3></div>'
+        '<section id="product-detail">'
+        f'<span class="pote">{card_code}</span>'
+        f"<del> {list_price} 円</del>"
+        f'<h4 class="text-danger"> {sale_price} 円</h4>'
+        "<label> 在庫 :   ○   </label>"
+        "</section></body></html>"
+    )
+
+
+class StrikethroughPriceExclusionTests(unittest.TestCase):
+    """Source-wide generalization: a struck-through former/list price must
+    never compete with the current sale price as a DOM candidate."""
+
+    def test_struck_through_list_price_is_excluded_from_candidates(self):
+        html = _discounted_price_html()
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-013", expected_treatment="normal")
+        self.assertEqual(result["normalized"]["dom"]["price"], 120)
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 120)
+        self.assertEqual(result["extraction_status"], "extracted")
+
+    def test_only_the_sale_price_appears_in_dom_candidates(self):
+        html = _discounted_price_html()
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-013", expected_treatment="normal")
+        candidates = result["raw"]["dom"]["price_candidates"]
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["normalized_price"], 120)
+
+
 class ExpectedTreatmentParameterTests(unittest.TestCase):
     """extract_with_agreement must validate against whichever treatment the
     caller passes (its mapping/print's own treatment) - not a module-wide

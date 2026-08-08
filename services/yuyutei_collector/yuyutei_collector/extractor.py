@@ -140,14 +140,22 @@ def _find_title_container(soup: BeautifulSoup):
     return None
 
 
+STRIKETHROUGH_TAGS = ("del", "s", "strike")
+
+
 def _leaf_price_candidates(container) -> list[dict]:
     """Tier 2: every leaf (no element children) descendant of `container`
     whose own text is *only* a 円-suffixed price. Recommendation-tile and
     breadcrumb prices are excluded structurally (they simply aren't inside
-    `container`), not by keyword guessing."""
+    `container`), not by keyword guessing. A struck-through former/list
+    price (<del>/<s>/<strike>, or nested inside one) is excluded the same
+    way - it is never the current sell price, on any product that shows a
+    discount this way, not just one card."""
     candidates = []
     for el in container.find_all(True):
         if el.find(True) is not None:
+            continue
+        if el.name in STRIKETHROUGH_TAGS or el.find_parent(STRIKETHROUGH_TAGS) is not None:
             continue
         text = el.get_text(strip=True)
         m = PRICE_LEAF_RE.match(text)
