@@ -171,6 +171,45 @@ def _base_treatment_html(card_code: str = "OP01-002", price: str = "500") -> str
     )
 
 
+def _quantity_stock_html(qty: int, price: str = "12800", card_code: str = "OP01-002") -> str:
+    """Yuyu-Tei's alternate stock display: an explicit remaining-quantity
+    count ("在庫 : N 点") instead of a presence/absence symbol - seen live on
+    OP01-002's parallel product page."""
+    return (
+        "<html><head>"
+        '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+        '"name":"P-L トラファルガー・ロー(パラレル)",'
+        f'"description":"{card_code}",'
+        f'"offers":{{"@type":"Offer","price":"{price}","priceCurrency":"JPY","availability":"InStock"}}}}'
+        "</script></head><body>"
+        '<div class="power" id="power"><h3>P-L トラファルガー・ロー(パラレル)</h3></div>'
+        '<section id="product-detail">'
+        f'<span class="pote">{card_code}</span>'
+        f"<h4> {price} 円</h4>"
+        f'<label id="cart_sell_zaiko_mobile"> 在庫 :   {qty} 点   </label>'
+        "</section></body></html>"
+    )
+
+
+class QuantityStockNormalizationTests(unittest.TestCase):
+    """Source-wide generalization: some Yuyu-Tei product pages show an
+    explicit remaining-quantity count rather than an x/o presence symbol."""
+
+    def test_positive_quantity_resolves_in_stock_and_agrees_with_jsonld(self):
+        html = _quantity_stock_html(qty=3)
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="parallel")
+        self.assertEqual(result["extracted"]["stock_status"], "in_stock")
+        self.assertTrue(result["agreement"]["stock"]["agree"])
+        self.assertEqual(result["extraction_status"], "extracted")
+
+    def test_zero_quantity_resolves_out_of_stock_and_disagrees_with_jsonld_in_stock(self):
+        html = _quantity_stock_html(qty=0)
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="parallel")
+        self.assertEqual(result["agreement"]["stock"]["dom_stock"], "out_of_stock")
+        self.assertFalse(result["agreement"]["stock"]["agree"])
+        self.assertEqual(result["extraction_status"], "fail_closed")
+
+
 class ExpectedTreatmentParameterTests(unittest.TestCase):
     """extract_with_agreement must validate against whichever treatment the
     caller passes (its mapping/print's own treatment) - not a module-wide

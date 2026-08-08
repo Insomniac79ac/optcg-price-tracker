@@ -201,6 +201,9 @@ def _find_card_code_element(container) -> dict | None:
     return None
 
 
+STOCK_QUANTITY_RE = re.compile(r"(\d+)\s*点")
+
+
 def _find_stock_element(container) -> dict | None:
     for el in container.find_all(True):
         if el.find(True) is not None:
@@ -217,7 +220,15 @@ def _find_stock_element(container) -> dict | None:
         elif "○" in text or "◯" in text:
             status = "in_stock"
         else:
-            status = "unknown_present_marker"
+            # Source-wide alternate stock display: an explicit remaining-
+            # quantity count (e.g. "在庫 : 3 点") rather than a presence/
+            # absence symbol. Generic across any product using this format,
+            # not specific to one card.
+            qty_match = STOCK_QUANTITY_RE.search(text)
+            if qty_match:
+                status = "in_stock" if int(qty_match.group(1)) > 0 else "out_of_stock"
+            else:
+                status = "unknown_present_marker"
         return {"selector": _describe_element(el), "text": text, "stock_status": status}
     return None
 
