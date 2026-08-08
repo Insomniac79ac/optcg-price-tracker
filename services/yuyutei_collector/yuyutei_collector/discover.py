@@ -31,7 +31,16 @@ def list_category_products(set_slug: str, timeout_s: int = 60) -> list[dict]:
 
         items = page.eval_on_selector_all(
             "a[href*='/sell/opc/card/']",
-            """els => els.map(el => ({href: el.href, text: (el.textContent || '').trim()}))""",
+            """els => els.map(el => {
+                const card = el.closest('li') || el.closest('.card') || el.parentElement;
+                const img = el.querySelector('img') || (card ? card.querySelector('img') : null);
+                return {
+                    href: el.href,
+                    text: (el.textContent || '').trim(),
+                    card_text: card ? (card.textContent || '').trim().replace(/\\s+/g, ' ') : '',
+                    img_alt: img ? (img.getAttribute('alt') || '') : '',
+                };
+            })""",
         )
         context.close()
         browser.close()
@@ -39,10 +48,15 @@ def list_category_products(set_slug: str, timeout_s: int = 60) -> list[dict]:
     seen = {}
     for it in items:
         href = it["href"]
-        text = it["text"]
-        code_match = CARD_CODE_RE.search(text)
+        label = it["text"] or it["img_alt"] or it["card_text"]
+        code_match = CARD_CODE_RE.search(label) or CARD_CODE_RE.search(it["card_text"])
         if href not in seen:
-            seen[href] = {"href": href, "text": text[:200], "card_code": code_match.group(0) if code_match else None}
+            seen[href] = {
+                "href": href,
+                "label": label[:200],
+                "card_text": it["card_text"][:200],
+                "card_code": code_match.group(0) if code_match else None,
+            }
     return list(seen.values())
 
 
@@ -51,7 +65,9 @@ def main() -> None:
     parser.add_argument("--set", required=True, help="e.g. op01, op02")
     args = parser.parse_args()
     results = list_category_products(args.set)
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    # One compact line - Railway ships each stdout line as a separate log
+    # entry, so a pretty-printed multi-line dump arrives jumbled/reordered.
+    print(json.dumps(results, ensure_ascii=False, separators=(",", ":")))
 
 
 if __name__ == "__main__":
