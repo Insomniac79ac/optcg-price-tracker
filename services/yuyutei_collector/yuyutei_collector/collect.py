@@ -149,6 +149,20 @@ def run_one_mapping(mapping_id: int, validate_only: bool = False) -> int:
                                 sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
                                 stock_status=(extraction.get("extracted") or {}).get("stock_status"),
                             )
+                            if extraction["extraction_status"] != "extracted":
+                                # Diagnostic-only detail (never used to accept a
+                                # value) - the raw stock/price element text so a
+                                # fail-closed disagreement can be root-caused
+                                # without re-fetching the page.
+                                dom = (extraction.get("raw") or {}).get("dom") or {}
+                                jsonld = (extraction.get("raw") or {}).get("jsonld") or {}
+                                log_event(
+                                    "extraction_fail_diagnostics",
+                                    dom_stock_element=dom.get("stock_element"),
+                                    dom_price_candidates=dom.get("price_candidates"),
+                                    jsonld_availability=jsonld.get("offers_availability"),
+                                    jsonld_price=jsonld.get("offers_price"),
+                                )
 
                         context.close()
                         browser.close()
