@@ -152,5 +152,56 @@ class ExtractWithAgreementFailClosedTests(unittest.TestCase):
         self.assertIsNone(result["extracted"]["sell_price_jpy"])
 
 
+def _base_treatment_html(card_code: str = "OP01-002", price: str = "500") -> str:
+    """A title with neither パラレル nor ノーマル - the base/default printing,
+    exactly as Yuyu-Tei renders an unmarked (non-parallel) product title."""
+    return (
+        "<html><head>"
+        '<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product",'
+        '"name":"トラファルガー・ロー",'
+        f'"description":"{card_code}",'
+        f'"offers":{{"@type":"Offer","price":"{price}","priceCurrency":"JPY","availability":"InStock"}}}}'
+        "</script></head><body>"
+        '<div class="power" id="power"><h3>トラファルガー・ロー</h3></div>'
+        '<section id="product-detail">'
+        f'<span class="pote">{card_code}</span>'
+        f"<h4> {price} 円</h4>"
+        "<label> 在庫 :   ○   </label>"
+        "</section></body></html>"
+    )
+
+
+class ExpectedTreatmentParameterTests(unittest.TestCase):
+    """extract_with_agreement must validate against whichever treatment the
+    caller passes (its mapping/print's own treatment) - not a module-wide
+    hardcoded expectation. Generalizes the collector beyond the single
+    parallel-only vertical slice it started from."""
+
+    def test_unmarked_title_resolves_to_normal_treatment(self):
+        html = _base_treatment_html()
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="normal")
+        self.assertEqual(result["extracted"]["treatment"], "normal")
+        self.assertEqual(result["extraction_status"], "extracted")
+
+    def test_base_product_does_not_fail_closed_when_normal_is_expected(self):
+        html = _base_treatment_html()
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="normal")
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertFalse(any(r.startswith("treatment_conflict") for r in result["fail_reasons"]))
+
+    def test_base_product_fails_closed_when_parallel_is_expected(self):
+        html = _base_treatment_html()
+        result = extract_with_agreement(html, PRODUCT_URL, "OP01-002", expected_treatment="parallel")
+        self.assertEqual(result["extraction_status"], "fail_closed")
+        self.assertTrue(any(r.startswith("treatment_conflict:displayed=normal,expected=parallel") for r in result["fail_reasons"]))
+
+    def test_default_expected_treatment_remains_parallel_for_existing_callers(self):
+        html = load_fixture("product_op01_001_reduced.html")
+        # No expected_treatment argument passed - must behave exactly as
+        # before this generalization for any caller that doesn't pass one.
+        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extraction_status"], "extracted")
+
+
 if __name__ == "__main__":
     unittest.main()

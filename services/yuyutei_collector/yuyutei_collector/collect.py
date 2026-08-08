@@ -33,7 +33,6 @@ from yuyutei_collector.models import CardPrint, Source, SourceCardMapping
 from yuyutei_collector.writer import validate_and_write_observation
 
 PARSER_VERSION = "yuyutei-collector-v3"
-PRODUCT_EXPECTED_MARKERS = ["ロロノア・ゾロ", "パラレル"]
 
 
 def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, Source | None, list[str]]:
@@ -49,9 +48,16 @@ def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, S
     return mapping, source, reasons
 
 
-def run_one_mapping(mapping_id: int) -> int:
-    """Returns a process exit code (0 success-and-written or clean no-write
-    fail-closed outcome, 1 on an unexpected/operational error)."""
+def run_one_mapping(mapping_id: int, validate_only: bool = False) -> int:
+    """Returns a process exit code (0 success-and-written, or a clean
+    validated/no-write outcome, 1 on an unexpected/operational error).
+
+    validate_only=True runs the identical navigation/classification/
+    extraction/lineage-validation path but never writes to the database -
+    used to test a mapping before it's trusted with a real write (see
+    writer.validate_mapping_for_write, reused here so validate-only and
+    write-enabled runs can never disagree about whether a mapping/print is
+    eligible)."""
     session = SessionLocal()
     try:
         mapping, source, load_reasons = _load_mapping(session, mapping_id)
@@ -66,6 +72,12 @@ def run_one_mapping(mapping_id: int) -> int:
             if card_print is not None:
                 expected_treatment = card_print.treatment
 
+        # Every Yuyu-Tei product page displays its own card code somewhere
+        # in the visible text (see extractor._find_card_code_element) - using
+        # the mapping's own source_card_id as the "expected content present"
+        # marker is generic across every card, unlike a hardcoded name/word.
+        product_expected_markers = [expected_card_code]
+
         log_event(
             "collection_start",
             mapping_id=mapping.id,
@@ -74,6 +86,7 @@ def run_one_mapping(mapping_id: int) -> int:
             expected_card_code=expected_card_code,
             expected_treatment=expected_treatment,
             card_print_id=mapping.card_print_id,
+            validate_only=validate_only,
         )
 
         result_holder: dict = {"extraction": None, "classification": None, "http_status": None, "html": None}
@@ -111,7 +124,7 @@ def run_one_mapping(mapping_id: int) -> int:
                         browser.close()
                     else:
                         with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                            product_step = goto_and_capture(page, mapping.source_url, PRODUCT_EXPECTED_MARKERS)
+                            product_step = goto_and_capture(page, mapping.source_url, product_expected_markers)
                         log_event(
                             "product_result",
                             http_status=product_step.get("http_status"),
@@ -125,7 +138,9 @@ def run_one_mapping(mapping_id: int) -> int:
                         if product_step.get("classification") == "normal_product" and "error" not in product_step:
                             html = product_step["html"]
                             result_holder["html"] = html
-                            extraction = extract_with_agreement(html, mapping.source_url, expected_card_code)
+                            extraction = extract_with_agreement(
+                                html, mapping.source_url, expected_card_code, expected_treatment
+                            )
                             result_holder["extraction"] = extraction
                             log_event(
                                 "extraction_result",
@@ -160,6 +175,22 @@ def run_one_mapping(mapping_id: int) -> int:
             parser_version=PARSER_VERSION,
         )
 
+        # validate_and_write_observation already flushed (not committed) any
+        # would-be insert to compute IDs - roll back unconditionally in
+        # validate-only mode so a passing validation never leaves a row
+        # behind, regardless of whether it would have written.
+        if validate_only:
+            session.rollback()
+            log_event(
+                "validation_result",
+                mapping_id=mapping.id,
+                would_write=write_result.written,
+                reasons=write_result.reasons,
+                price_jpy=write_result.price_jpy,
+                stock_status=write_result.stock_status,
+            )
+            return 0
+
         if not write_result.written:
             session.rollback()
             log_event("collection_no_write", mapping_id=mapping.id, reasons=write_result.reasons)
@@ -191,8 +222,13 @@ def run_one_mapping(mapping_id: int) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mapping-id", type=int, required=True)
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Run the full navigation/classification/extraction/lineage check but never write to the database.",
+    )
     args = parser.parse_args()
-    sys.exit(run_one_mapping(args.mapping_id))
+    sys.exit(run_one_mapping(args.mapping_id, validate_only=args.validate_only))
 
 
 if __name__ == "__main__":

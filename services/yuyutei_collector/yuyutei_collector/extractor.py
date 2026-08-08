@@ -26,6 +26,10 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 
 SELECTOR_VERSION = "v3"
+# Historical default for the original single-print vertical slice. Callers
+# should pass their mapping/print's own treatment explicitly (see
+# extract_with_agreement's expected_treatment parameter) rather than rely on
+# this - kept only so existing call sites without that argument still work.
 EXPECTED_TREATMENT = "parallel"
 
 CARD_CODE_RE = re.compile(r"\bOP\d{2}-\d{3}\b")
@@ -295,7 +299,12 @@ def classify_page(
     return f"other_status_{status}", evidence
 
 
-def extract_with_agreement(html: str, source_url: str, requested_card_code: str) -> dict:
+def extract_with_agreement(
+    html: str,
+    source_url: str,
+    requested_card_code: str,
+    expected_treatment: str = EXPECTED_TREATMENT,
+) -> dict:
     """Independent-agreement extractor (selector_version v3). Extracts
     JSON-LD and DOM values independently and only accepts a price/stock
     value when both sides agree - failing closed (accepted value = None) on
@@ -463,10 +472,16 @@ def extract_with_agreement(html: str, source_url: str, requested_card_code: str)
         treatment = "parallel"
     elif "ノーマル" in title_text:
         treatment = "normal"
+    elif title_text:
+        # Yuyu-Tei only marks a title with a special-treatment word
+        # (parallel/normal) when the product needs disambiguating from a
+        # sibling print; an otherwise-valid title with neither marker is the
+        # base/default printing - source-wide convention, not a per-card rule.
+        treatment = "normal"
     else:
         treatment = None
-    if treatment != EXPECTED_TREATMENT:
-        fail_reasons.append(f"treatment_conflict:displayed={treatment},expected={EXPECTED_TREATMENT}")
+    if treatment != expected_treatment:
+        fail_reasons.append(f"treatment_conflict:displayed={treatment},expected={expected_treatment}")
 
     extraction_status = "extracted" if not fail_reasons else "fail_closed"
 
