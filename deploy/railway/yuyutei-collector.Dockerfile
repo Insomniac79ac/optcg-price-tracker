@@ -37,4 +37,13 @@ COPY services/yuyutei_collector/. .
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
 
+# Every collector log line is one print()'d JSON object (see
+# yuyutei_collector/browser.py's log_event) - without this, Python
+# block-buffers stdout/stderr whenever they're not a TTY (always true under
+# Railway), so a batch run's log lines only surface once the buffer fills or
+# the process exits, defeating live log tailing during a scheduled cron run.
+# Global, not per-print(flush=True) - covers every current and future
+# print() call in this service with one setting.
+ENV PYTHONUNBUFFERED=1
+
 CMD ["python", "-c", "print('yuyutei-collector image ready; invoke via python -m yuyutei_collector.collect --mapping-id <id>')"]
