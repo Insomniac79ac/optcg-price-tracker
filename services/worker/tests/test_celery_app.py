@@ -30,10 +30,12 @@ def test_celery_task_can_be_imported():
 
 
 def test_beat_schedule_runs_every_price_refresh_interval_hours():
-    entry = app.conf.beat_schedule["refresh-yuyutei-prices"]
+    enabled = Settings(_env_file=None, LEGACY_PRICE_REFRESH_ENABLED=True, PRICE_REFRESH_INTERVAL_HOURS=6)
+
+    entry = _build_beat_schedule(enabled)["refresh-yuyutei-prices"]
 
     assert entry["task"] == "worker.celery_app.refresh_yuyutei_prices"
-    assert entry["schedule"] == timedelta(hours=settings.PRICE_REFRESH_INTERVAL_HOURS)
+    assert entry["schedule"] == timedelta(hours=6)
 
 
 def seed_yuyutei_mapping(db_session) -> tuple[Source, Card, SourceCardMapping]:
@@ -163,7 +165,7 @@ def test_run_market_workflow_task_delegates_to_job(db_session, monkeypatch):
 
 
 def test_beat_schedule_excludes_market_workflow_when_disabled():
-    disabled = Settings(_env_file=None, MARKET_WORKFLOW_ENABLED=False)
+    disabled = Settings(_env_file=None, MARKET_WORKFLOW_ENABLED=False, LEGACY_PRICE_REFRESH_ENABLED=True)
 
     schedule = _build_beat_schedule(disabled)
 
@@ -203,6 +205,66 @@ def test_module_level_beat_schedule_disabled_by_default():
     assert "run-market-workflow" not in app.conf.beat_schedule
 
 
+# --- refresh-yuyutei-prices / LEGACY_PRICE_REFRESH_ENABLED ------------------
+
+
+def test_beat_schedule_excludes_legacy_refresh_when_disabled():
+    disabled = Settings(_env_file=None, LEGACY_PRICE_REFRESH_ENABLED=False)
+
+    schedule = _build_beat_schedule(disabled)
+
+    assert "refresh-yuyutei-prices" not in schedule
+
+
+def test_beat_schedule_includes_legacy_refresh_when_enabled():
+    enabled = Settings(_env_file=None, LEGACY_PRICE_REFRESH_ENABLED=True, PRICE_REFRESH_INTERVAL_HOURS=6)
+
+    schedule = _build_beat_schedule(enabled)
+
+    entry = schedule["refresh-yuyutei-prices"]
+    assert entry["task"] == "worker.celery_app.refresh_yuyutei_prices"
+    assert entry["schedule"] == timedelta(hours=6)
+
+
+def test_legacy_refresh_flag_does_not_affect_other_schedules():
+    settings_with_others_enabled = Settings(
+        _env_file=None,
+        LEGACY_PRICE_REFRESH_ENABLED=False,
+        MARKET_WORKFLOW_ENABLED=True,
+        DATA_RETENTION_ENABLED=True,
+    )
+
+    schedule = _build_beat_schedule(settings_with_others_enabled)
+
+    assert "refresh-yuyutei-prices" not in schedule
+    assert "run-market-workflow" in schedule
+    assert "prune-data-retention" in schedule
+
+
+def test_module_level_beat_schedule_excludes_legacy_refresh_by_default():
+    # LEGACY_PRICE_REFRESH_ENABLED defaults to False and no test in this
+    # session sets it in the real environment, so the schedule actually
+    # built at import time must not include the legacy refresh entry.
+    assert settings.LEGACY_PRICE_REFRESH_ENABLED is False
+    assert "refresh-yuyutei-prices" not in app.conf.beat_schedule
+
+
+def test_importing_celery_app_performs_no_source_requests(monkeypatch):
+    import importlib
+
+    import httpx
+
+    def _forbidden_get(self, *args, **kwargs):
+        raise AssertionError("worker.celery_app import must not perform any HTTP request")
+
+    monkeypatch.setattr(httpx.Client, "get", _forbidden_get)
+
+    # Reload rather than just re-check the already-imported module, so this
+    # test actually exercises module-level execution (imports, settings
+    # validation, Celery app/schedule construction) under the patched client.
+    importlib.reload(celery_app_module)
+
+
 # --- prune_data_retention_task / beat schedule ------------------------------
 
 
@@ -212,7 +274,7 @@ def test_prune_data_retention_task_can_be_imported():
 
 
 def test_beat_schedule_excludes_data_retention_when_disabled():
-    disabled = Settings(_env_file=None, DATA_RETENTION_ENABLED=False)
+    disabled = Settings(_env_file=None, DATA_RETENTION_ENABLED=False, LEGACY_PRICE_REFRESH_ENABLED=True)
 
     schedule = _build_beat_schedule(disabled)
 

@@ -60,12 +60,13 @@ def _build_beat_schedule(current_settings: Settings) -> dict:
     """Split out from module-level construction so tests can exercise the
     MARKET_WORKFLOW_ENABLED on/off branch directly, without needing to
     reimport this module under different environment variables."""
-    schedule: dict = {
-        "refresh-yuyutei-prices": {
+    schedule: dict = {}
+
+    if current_settings.LEGACY_PRICE_REFRESH_ENABLED:
+        schedule["refresh-yuyutei-prices"] = {
             "task": "worker.celery_app.refresh_yuyutei_prices",
             "schedule": timedelta(hours=current_settings.PRICE_REFRESH_INTERVAL_HOURS),
-        },
-    }
+        }
 
     if current_settings.MARKET_WORKFLOW_ENABLED:
         schedule["run-market-workflow"] = {

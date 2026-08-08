@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     SNKRDUNK_SEED_FILE: str | None = None
     # How often Celery Beat schedules the automatic Yuyu-Tei price refresh.
     PRICE_REFRESH_INTERVAL_HOURS: int = 6
+    # Gates the "refresh-yuyutei-prices" Beat schedule entry itself (see
+    # worker.celery_app._build_beat_schedule) - false by default so a
+    # deployed environment never runs the legacy scheduled refresh (which,
+    # under SCRAPING_MODE=mock, only ever produces synthetic
+    # mock-yuyutei-v1 price_observations) unless explicitly opted into.
+    # Independent of the permanent yuyutei-collector service, which this
+    # flag does not affect at all.
+    LEGACY_PRICE_REFRESH_ENABLED: bool = False
     # Telegram alerting - if either is unset, alert sends are logged and
     # skipped rather than attempted (see worker.alerts.telegram).
     TELEGRAM_BOT_TOKEN: str | None = None
