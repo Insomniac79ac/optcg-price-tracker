@@ -40,6 +40,7 @@ from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
 from app.api.market_workflow_runs import router as market_workflow_runs_router
+from app.api.prints import router as prints_router
 from app.api.refresh_runs import router as refresh_runs_router
 from app.api.saved_views import router as saved_views_router
 from app.api.search import router as search_router
@@ -165,6 +166,7 @@ app.add_middleware(ResponseSizeMiddleware)
 
 app.include_router(health_router)
 app.include_router(cards_router)
+app.include_router(prints_router)
 app.include_router(market_router)
 app.include_router(snkrdunk_candidates_router)
 app.include_router(refresh_runs_router)

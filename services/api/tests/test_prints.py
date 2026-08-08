@@ -1,0 +1,438 @@
+"""Print-centric public read model (see app.api.prints, app.services.
+print_pricing/print_market_index/print_catalogue) - proves that two
+card_prints bridging through the same legacy card_id (the OP01-013 Sanji
+base/parallel case described in the tranche brief) can never contaminate
+each other's prices, Market Index, or history, and that the print catalogue
+represents each collectible print as its own item.
+
+Five real-shaped prints (Zoro parallel, Law parallel, Sanji parallel, Sanji
+base, Ace base) are built here as the test dataset, matching the staging
+verified-print set - Sanji base and Sanji parallel deliberately share one
+legacy `cards` row (legacy card_id=13-equivalent), exactly like the real
+data, so any test passing here only because the fixtures don't collide would
+also fail to catch the real contamination bug.
+"""
+
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from app.models import CanonicalCard, Card, CardPrint, PriceObservation, Source, SourceCardMapping
+
+NOW = datetime.now(timezone.utc)
+
+
+def make_source(db_session, name: str = "yuyutei") -> Source:
+    source = db_session.query(Source).filter_by(name=name).one_or_none()
+    if source is not None:
+        return source
+    source = Source(name=name, base_url=f"https://{name}.example.com")
+    db_session.add(source)
+    db_session.commit()
+    db_session.refresh(source)
+    return source
+
+
+def make_canonical(db_session, **overrides) -> CanonicalCard:
+    fields = dict(
+        card_code="OP01-013",
+        name_en="Sanji",
+        original_set_code="OP01",
+        rarity="R",
+        card_type="Character",
+        colors=["red"],
+    )
+    fields.update(overrides)
+    canonical = CanonicalCard(**fields)
+    db_session.add(canonical)
+    db_session.commit()
+    db_session.refresh(canonical)
+    return canonical
+
+
+def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
+    fields = dict(
+        canonical_card_id=canonical.id,
+        language="jp",
+        treatment="base",
+        verification_status="verified",
+        release_product_code="OP-01",
+        artwork_key="art-1",
+        image_url="https://images.example.com/print.jpg",
+    )
+    fields.update(overrides)
+    print_row = CardPrint(**fields)
+    db_session.add(print_row)
+    db_session.commit()
+    db_session.refresh(print_row)
+    return print_row
+
+
+def make_legacy_card(db_session, **overrides) -> Card:
+    fields = dict(card_code="OP01-013", set_code="OP01", rarity="R", language="jp")
+    fields.update(overrides)
+    card = Card(**fields)
+    db_session.add(card)
+    db_session.commit()
+    db_session.refresh(card)
+    return card
+
+
+def make_mapping(db_session, legacy_card: Card, source: Source, card_print: CardPrint, **overrides):
+    fields = dict(
+        card_id=legacy_card.id,
+        source_id=source.id,
+        card_print_id=card_print.id,
+        source_card_id=f"ext-{card_print.id}",
+    )
+    fields.update(overrides)
+    mapping = SourceCardMapping(**fields)
+    db_session.add(mapping)
+    db_session.commit()
+    db_session.refresh(mapping)
+    return mapping
+
+
+def make_observation(
+    db_session,
+    legacy_card: Card,
+    source: Source,
+    mapping: SourceCardMapping | None,
+    card_print: CardPrint | None,
+    **overrides,
+) -> PriceObservation:
+    fields = dict(
+        card_id=legacy_card.id,
+        source_id=source.id,
+        price_type="sell",
+        price_jpy=1000,
+        stock_status="in_stock",
+        source_card_mapping_id=mapping.id if mapping is not None else None,
+        card_print_id=card_print.id if card_print is not None else None,
+    )
+    fields.update(overrides)
+    obs = PriceObservation(**fields)
+    db_session.add(obs)
+    db_session.commit()
+    db_session.refresh(obs)
+    return obs
+
+
+@pytest.fixture()
+def five_prints(db_session):
+    """Builds the five-print staging-shaped dataset. Returns a dict of
+    everything callers need: prints, their canonical cards, the shared
+    legacy card the two Sanji prints bridge through, and the source."""
+    source = make_source(db_session)
+
+    zoro_canonical = make_canonical(
+        db_session, card_code="OP01-025", name_en="Roronoa Zoro", rarity="SR"
+    )
+    zoro_legacy = make_legacy_card(db_session, card_code="OP01-025", rarity="SR")
+    zoro_parallel = make_print(
+        db_session, zoro_canonical, treatment="parallel", artwork_key="zoro-parallel"
+    )
+    zoro_mapping = make_mapping(db_session, zoro_legacy, source, zoro_parallel)
+    make_observation(
+        db_session, zoro_legacy, source, zoro_mapping, zoro_parallel,
+        price_jpy=3000, stock_status="in_stock", observed_at=NOW,
+    )
+
+    law_canonical = make_canonical(
+        db_session, card_code="OP01-060", name_en="Trafalgar Law", rarity="SR"
+    )
+    law_legacy = make_legacy_card(db_session, card_code="OP01-060", rarity="SR")
+    law_parallel = make_print(
+        db_session, law_canonical, treatment="parallel", artwork_key="law-parallel"
+    )
+    law_mapping = make_mapping(db_session, law_legacy, source, law_parallel)
+    make_observation(
+        db_session, law_legacy, source, law_mapping, law_parallel,
+        price_jpy=2500, stock_status="in_stock", observed_at=NOW,
+    )
+
+    # The critical case: Sanji base and Sanji parallel bridge through the
+    # SAME legacy card row, exactly like the real OP01-013 data.
+    sanji_canonical = make_canonical(db_session, card_code="OP01-013", name_en="Sanji", rarity="R")
+    sanji_legacy = make_legacy_card(db_session, card_code="OP01-013", rarity="R")
+    sanji_parallel = make_print(
+        db_session, sanji_canonical, treatment="parallel", artwork_key="sanji-parallel"
+    )
+    sanji_base = make_print(
+        db_session, sanji_canonical, treatment="base", artwork_key="sanji-base"
+    )
+    sanji_parallel_mapping = make_mapping(db_session, sanji_legacy, source, sanji_parallel)
+    sanji_base_mapping = make_mapping(db_session, sanji_legacy, source, sanji_base)
+    sanji_parallel_obs = make_observation(
+        db_session, sanji_legacy, source, sanji_parallel_mapping, sanji_parallel,
+        price_jpy=1980, stock_status="out_of_stock", observed_at=NOW,
+    )
+    sanji_base_obs = make_observation(
+        db_session, sanji_legacy, source, sanji_base_mapping, sanji_base,
+        price_jpy=120, stock_status="in_stock", observed_at=NOW,
+    )
+
+    ace_canonical = make_canonical(db_session, card_code="OP01-002", name_en="Portgas D. Ace", rarity="SR")
+    ace_legacy = make_legacy_card(db_session, card_code="OP01-002", rarity="SR")
+    ace_base = make_print(db_session, ace_canonical, treatment="base", artwork_key="ace-base")
+    ace_mapping = make_mapping(db_session, ace_legacy, source, ace_base)
+    make_observation(
+        db_session, ace_legacy, source, ace_mapping, ace_base,
+        price_jpy=800, stock_status="in_stock", observed_at=NOW,
+    )
+
+    return {
+        "source": source,
+        "sanji_legacy": sanji_legacy,
+        "sanji_canonical": sanji_canonical,
+        "sanji_parallel": sanji_parallel,
+        "sanji_base": sanji_base,
+        "sanji_parallel_obs": sanji_parallel_obs,
+        "sanji_base_obs": sanji_base_obs,
+        "zoro_parallel": zoro_parallel,
+        "law_parallel": law_parallel,
+        "ace_base": ace_base,
+    }
+
+
+# --- Sanji separation: the core contamination-proof scenario --------------
+
+
+def test_sanji_parallel_market_index_sees_only_its_own_observation(client, five_prints):
+    print_id = five_prints["sanji_parallel"].id
+    response = client.get(f"/prints/{print_id}/market-index")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["card_print_id"] == print_id
+    yuyutei_sell = next(sv for sv in body["source_values"] if sv["source"] == "yuyutei")
+    assert yuyutei_sell["value_jpy"] == 1980
+    assert yuyutei_sell["eligible"] is False
+    assert yuyutei_sell["ineligible_reason"] == "out_of_stock"
+    # The base print's 120 JPY must never appear anywhere in the parallel's
+    # response.
+    assert 120 not in [sv["value_jpy"] for sv in body["source_values"]]
+
+
+def test_sanji_base_market_index_sees_only_its_own_observation(client, five_prints):
+    print_id = five_prints["sanji_base"].id
+    response = client.get(f"/prints/{print_id}/market-index")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["card_print_id"] == print_id
+    yuyutei_sell = next(sv for sv in body["source_values"] if sv["source"] == "yuyutei")
+    assert yuyutei_sell["value_jpy"] == 120
+    assert yuyutei_sell["eligible"] is True
+    assert body["index_value_jpy"] == 120
+    # The parallel's 1,980 JPY must never appear anywhere in the base's
+    # response.
+    assert 1980 not in [sv["value_jpy"] for sv in body["source_values"]]
+
+
+def test_sanji_prices_endpoints_are_disjoint(client, five_prints):
+    parallel_id = five_prints["sanji_parallel"].id
+    base_id = five_prints["sanji_base"].id
+
+    parallel_resp = client.get(f"/prints/{parallel_id}/prices").json()
+    base_resp = client.get(f"/prints/{base_id}/prices").json()
+
+    parallel_obs_ids = {o["id"] for o in parallel_resp["observations"]}
+    base_obs_ids = {o["id"] for o in base_resp["observations"]}
+
+    assert five_prints["sanji_parallel_obs"].id in parallel_obs_ids
+    assert five_prints["sanji_base_obs"].id not in parallel_obs_ids
+
+    assert five_prints["sanji_base_obs"].id in base_obs_ids
+    assert five_prints["sanji_parallel_obs"].id not in base_obs_ids
+
+    assert parallel_obs_ids.isdisjoint(base_obs_ids)
+
+
+def test_sanji_prints_share_legacy_card_but_stay_independent(client, five_prints):
+    """Both prints bridge through the exact same legacy card_id - the read
+    path must still keep them fully separate."""
+    assert five_prints["sanji_parallel_obs"].card_id == five_prints["sanji_base_obs"].card_id
+
+    parallel_index = client.get(f"/prints/{five_prints['sanji_parallel'].id}/market-index").json()
+    base_index = client.get(f"/prints/{five_prints['sanji_base'].id}/market-index").json()
+
+    assert parallel_index["index_value_jpy"] != base_index["index_value_jpy"]
+    assert parallel_index["coverage_status"] == "none"  # only source is ineligible (out of stock)
+    assert base_index["coverage_status"] == "limited"  # single eligible source
+
+
+def test_sanji_prints_are_separate_catalogue_items(client, five_prints):
+    response = client.get("/prints", params={"limit": 100})
+    assert response.status_code == 200
+    items = response.json()["items"]
+
+    sanji_items = [i for i in items if i["card_code"] == "OP01-013"]
+    assert len(sanji_items) == 2
+    treatments = {i["treatment"] for i in sanji_items}
+    assert treatments == {"base", "parallel"}
+
+    parallel_item = next(i for i in sanji_items if i["treatment"] == "parallel")
+    base_item = next(i for i in sanji_items if i["treatment"] == "base")
+    assert parallel_item["market_index"]["index_value_jpy"] != base_item["market_index"]["index_value_jpy"]
+
+
+def test_sanji_siblings_resolve_to_each_other(client, five_prints):
+    parallel_detail = client.get(f"/prints/{five_prints['sanji_parallel'].id}").json()
+    base_detail = client.get(f"/prints/{five_prints['sanji_base'].id}").json()
+
+    assert [s["card_print_id"] for s in parallel_detail["siblings"]] == [five_prints["sanji_base"].id]
+    assert [s["card_print_id"] for s in base_detail["siblings"]] == [five_prints["sanji_parallel"].id]
+
+
+def test_sanji_uses_verified_canonical_metadata_not_legacy(client, five_prints):
+    """The legacy Card rows in this fixture were built with rarity="R" too,
+    so this specifically checks the response is sourced from CanonicalCard
+    (card_code/rarity/card_type), not from the legacy cards table."""
+    detail = client.get(f"/prints/{five_prints['sanji_base'].id}").json()
+    assert detail["card_code"] == "OP01-013"
+    assert detail["rarity"] == "R"
+    assert detail["card_type"] == "Character"
+    assert detail["name_en"] == "Sanji"
+
+
+# --- all five prints appear independently ----------------------------------
+
+
+def test_all_five_prints_appear_independently(client, five_prints):
+    response = client.get("/prints", params={"limit": 100})
+    items = response.json()["items"]
+    assert len(items) == 5
+
+    by_print_id = {i["card_print_id"]: i for i in items}
+    assert by_print_id[five_prints["zoro_parallel"].id]["market_index"]["index_value_jpy"] == 3000
+    assert by_print_id[five_prints["law_parallel"].id]["market_index"]["index_value_jpy"] == 2500
+    assert by_print_id[five_prints["ace_base"].id]["market_index"]["index_value_jpy"] == 800
+    assert by_print_id[five_prints["sanji_base"].id]["market_index"]["index_value_jpy"] == 120
+    assert by_print_id[five_prints["sanji_parallel"].id]["market_index"]["index_value_jpy"] is None
+
+
+# --- lineage-less legacy observations must never enter print pricing ------
+
+
+def test_lineageless_observation_never_enters_print_pricing(client, db_session, five_prints):
+    legacy = five_prints["sanji_legacy"]
+    source = five_prints["source"]
+    # A legacy, lineage-less observation sharing the same card_id/source as
+    # both Sanji prints - card_print_id/source_card_mapping_id both null.
+    stale_mock = PriceObservation(
+        card_id=legacy.id,
+        source_id=source.id,
+        price_type="sell",
+        price_jpy=99999,
+        stock_status="in_stock",
+        observed_at=NOW,
+    )
+    db_session.add(stale_mock)
+    db_session.commit()
+
+    base_index = client.get(f"/prints/{five_prints['sanji_base'].id}/market-index").json()
+    parallel_index = client.get(f"/prints/{five_prints['sanji_parallel'].id}/market-index").json()
+
+    values = [sv["value_jpy"] for sv in base_index["source_values"] + parallel_index["source_values"]]
+    assert 99999 not in values
+
+
+# --- sibling print with no observations shows no market data --------------
+
+
+def test_print_without_observations_shows_no_market_data(client, db_session):
+    canonical = make_canonical(
+        db_session, card_code="OP01-999", name_en="Test Card Two Prints", rarity="C"
+    )
+    priced_print = make_print(db_session, canonical, treatment="base", artwork_key="priced")
+    unpriced_print = make_print(db_session, canonical, treatment="parallel", artwork_key="unpriced")
+
+    legacy = make_legacy_card(db_session, card_code="OP01-999", rarity="C")
+    source = make_source(db_session)
+    mapping = make_mapping(db_session, legacy, source, priced_print)
+    make_observation(
+        db_session, legacy, source, mapping, priced_print,
+        price_jpy=500, stock_status="in_stock", observed_at=NOW,
+    )
+
+    priced_index = client.get(f"/prints/{priced_print.id}/market-index").json()
+    unpriced_index = client.get(f"/prints/{unpriced_print.id}/market-index").json()
+
+    assert priced_index["index_value_jpy"] == 500
+    assert unpriced_index["index_value_jpy"] is None
+    assert unpriced_index["coverage_status"] == "none"
+    assert unpriced_index["source_values"][0]["ineligible_reason"] == "no_observation"
+
+    unpriced_prices = client.get(f"/prints/{unpriced_print.id}/prices").json()
+    assert unpriced_prices["observations"] == []
+    assert unpriced_prices["series"] == []
+
+
+# --- price history / trend -------------------------------------------------
+
+
+def test_single_observation_is_insufficient_history(client, five_prints):
+    response = client.get(f"/prints/{five_prints['sanji_base'].id}/prices")
+    body = response.json()
+    assert len(body["observations"]) == 1
+
+    series = body["series"]
+    assert len(series) == 1
+    assert series[0]["sufficient_history"] is False
+    assert series[0]["change_24h_pct"] is None
+    assert series[0]["change_7d_pct"] is None
+    assert series[0]["change_30d_pct"] is None
+
+
+def test_trend_never_fabricates_change_without_a_real_baseline(client, db_session, five_prints):
+    print_row = five_prints["sanji_base"]
+    legacy = five_prints["sanji_legacy"]
+    source = five_prints["source"]
+    mapping = make_mapping(
+        db_session, legacy, source, print_row, source_card_id="ext-sanji-base-2"
+    )
+    # A second observation only six hours old - no observation exists at or
+    # before any of the 24h/7d/30d cutoffs, so every change must stay null.
+    make_observation(
+        db_session, legacy, source, mapping, print_row,
+        price_jpy=130, stock_status="in_stock",
+        observed_at=NOW - timedelta(hours=6),
+    )
+
+    response = client.get(f"/prints/{print_row.id}/prices")
+    series = response.json()["series"]
+    trend = next(s for s in series if s["price_type"] == "sell")
+    assert trend["sufficient_history"] is True
+    assert trend["change_24h_pct"] is None
+    assert trend["change_7d_pct"] is None
+    assert trend["change_30d_pct"] is None
+
+
+def test_parallel_and_base_history_are_never_equal(client, five_prints):
+    parallel_prices = client.get(f"/prints/{five_prints['sanji_parallel'].id}/prices").json()
+    base_prices = client.get(f"/prints/{five_prints['sanji_base'].id}/prices").json()
+
+    parallel_prices_jpy = [o["price_jpy"] for o in parallel_prices["observations"]]
+    base_prices_jpy = [o["price_jpy"] for o in base_prices["observations"]]
+
+    assert parallel_prices_jpy != base_prices_jpy
+    assert parallel_prices_jpy == [1980]
+    assert base_prices_jpy == [120]
+
+
+# --- stock state / evidence visibility -------------------------------------
+
+
+def test_out_of_stock_observation_is_visible_evidence_but_ineligible(client, five_prints):
+    body = client.get(f"/prints/{five_prints['sanji_parallel'].id}/market-index").json()
+    sv = next(v for v in body["source_values"] if v["source"] == "yuyutei")
+    assert sv["value_jpy"] == 1980
+    assert sv["eligible"] is False
+    assert sv["ineligible_reason"] == "out_of_stock"
+
+
+def test_404_for_unknown_print(client, db_session):
+    assert client.get("/prints/999999").status_code == 404
+    assert client.get("/prints/999999/market-index").status_code == 404
+    assert client.get("/prints/999999/prices").status_code == 404

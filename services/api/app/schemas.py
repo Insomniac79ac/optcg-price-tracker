@@ -327,6 +327,154 @@ class CardCatalogueListOut(BaseModel):
     facets: CardCatalogueFacetsOut
 
 
+# --- Print-centric public read model (see app.services.print_market_index,
+# app.services.print_pricing, app.services.print_catalogue) - every shape
+# below is keyed by card_print_id/canonical_card_id, never legacy card_id,
+# so two prints sharing a legacy card bridge (e.g. a base and a parallel of
+# the same canonical card) can never contaminate each other's market data.
+# CardOut/MarketIndexOut/PriceObservationOut above remain the legacy,
+# card_id-keyed shapes and are unaffected by any of this. ---------------
+
+
+class CardPrintSiblingOut(BaseModel):
+    """A lightweight reference to another CardPrint sharing the same
+    canonical_card_id - no market data, just enough to link to it (see
+    CardPrintOut.siblings)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    card_print_id: int
+    treatment: str
+    language: str
+    verification_status: str
+    image_url: str | None
+
+
+class PrintMarketIndexOut(BaseModel):
+    """Print-scoped counterpart to MarketIndexOut - identical fields and
+    methodology (see app.services.market_index), keyed by card_print_id
+    instead of card_id."""
+
+    card_print_id: int
+    index_version: int
+    index_value_jpy: int | None
+    calculation_method: str
+    source_count: int
+    coverage_status: Literal["full", "limited", "none"]
+    confidence: Literal["high", "medium", "low"]
+    source_values: list[MarketIndexSourceValueOut]
+    auxiliary_values: list[MarketIndexSourceValueOut]
+    freshest_observation_at: datetime | None
+    stalest_eligible_source_at: datetime | None
+    stale_sources: list[str]
+    calculated_at: datetime
+
+
+class PrintPriceObservationOut(BaseModel):
+    """Print-scoped counterpart to PriceObservationOut - same fields, keyed
+    by card_print_id instead of card_id."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    card_print_id: int
+    source_id: int
+    source: str
+    observed_at: datetime
+    price_type: str
+    price_jpy: int
+    condition_label: str | None
+    stock_status: str | None
+    listing_count: int | None
+    raw_snapshot_id: int | None
+
+
+class PrintPriceSeriesTrendOut(BaseModel):
+    """One (source, price_type) series' trend within a print's price
+    history - see app.services.print_pricing.compute_print_price_series_trends.
+    sufficient_history is false with only one observation in the series;
+    change_*_pct stays null (never fabricated) unless a real observation
+    exists at or before that window's cutoff."""
+
+    source: str
+    price_type: str
+    latest_price_jpy: int
+    latest_observed_at: datetime
+    latest_stock_status: str | None
+    sufficient_history: bool
+    change_24h_pct: float | None
+    change_7d_pct: float | None
+    change_30d_pct: float | None
+
+
+class PrintPriceHistoryOut(BaseModel):
+    card_print_id: int
+    observations: list[PrintPriceObservationOut]
+    series: list[PrintPriceSeriesTrendOut]
+
+
+class CardPrintOut(BaseModel):
+    """Public print detail response - see GET /prints/{print_id}. Identity
+    fields (card_code/name/rarity/card_type/colors) come from the print's
+    CanonicalCard, never from the legacy Card table's rarity/variant
+    columns."""
+
+    card_print_id: int
+    canonical_card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    rarity: str
+    card_type: str
+    colors: list[str] | None
+    language: str
+    treatment: str
+    release_product_code: str | None
+    artwork_key: str | None
+    image_url: str | None
+    verification_status: str
+    market_index: PrintMarketIndexOut
+    siblings: list[CardPrintSiblingOut]
+
+
+class PrintCatalogueItemOut(BaseModel):
+    """One collector-facing catalogue tile - see GET /prints. Sibling prints
+    of the same canonical card (e.g. Sanji base and Sanji parallel) each
+    appear as their own separate item here, never merged."""
+
+    card_print_id: int
+    canonical_card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    rarity: str
+    card_type: str
+    treatment: str
+    language: str
+    release_product_code: str | None
+    image_url: str | None
+    verification_status: str
+    market_index: PrintMarketIndexOut
+    source_coverage: list[str]
+    latest_observation_at: datetime | None
+
+
+class PrintCatalogueFacetsOut(BaseModel):
+    treatments: list[str]
+    rarities: list[str]
+    languages: list[str]
+    verification_statuses: list[str]
+
+
+class PrintCatalogueListOut(BaseModel):
+    items: list[PrintCatalogueItemOut]
+    total: int
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+    facets: PrintCatalogueFacetsOut
+
+
 class SnkrdunkCandidateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

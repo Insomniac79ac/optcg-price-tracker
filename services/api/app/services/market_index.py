@@ -239,12 +239,18 @@ def _resolve_snkrdunk(
     )
 
 
-def _combine(
-    card_id: int,
+def _compute_index_fields(
     source_values: list[_SourceValue],
     auxiliary_values: list[_SourceValue],
     now: datetime,
-) -> MarketIndexOut:
+) -> dict:
+    """The combination step, independent of what entity (legacy card or
+    card_print) the result will be attached to - see this module's
+    docstring "Source-resolver design". Returns a plain dict of every
+    MarketIndexOut field except card_id, so both this module's _combine
+    (card-keyed) and app.services.print_market_index (print-keyed) can build
+    their own schema instance from the exact same computation without
+    duplicating it."""
     eligible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
 
     if len(eligible) >= 2:
@@ -266,20 +272,31 @@ def _combine(
     stalest_eligible = min(eligible_observed_ats) if eligible_observed_ats else None
     stale_sources = [sv.source for sv in source_values if sv.stale]
 
+    return {
+        "index_version": INDEX_VERSION,
+        "index_value_jpy": index_value,
+        "calculation_method": CALCULATION_METHOD,
+        "source_count": len(eligible),
+        "coverage_status": coverage_status,
+        "confidence": confidence,
+        "source_values": [sv.to_schema() for sv in source_values],
+        "auxiliary_values": [sv.to_schema() for sv in auxiliary_values],
+        "freshest_observation_at": freshest,
+        "stalest_eligible_source_at": stalest_eligible,
+        "stale_sources": stale_sources,
+        "calculated_at": now.replace(tzinfo=timezone.utc),
+    }
+
+
+def _combine(
+    card_id: int,
+    source_values: list[_SourceValue],
+    auxiliary_values: list[_SourceValue],
+    now: datetime,
+) -> MarketIndexOut:
     return MarketIndexOut(
         card_id=card_id,
-        index_version=INDEX_VERSION,
-        index_value_jpy=index_value,
-        calculation_method=CALCULATION_METHOD,
-        source_count=len(eligible),
-        coverage_status=coverage_status,
-        confidence=confidence,
-        source_values=[sv.to_schema() for sv in source_values],
-        auxiliary_values=[sv.to_schema() for sv in auxiliary_values],
-        freshest_observation_at=freshest,
-        stalest_eligible_source_at=stalest_eligible,
-        stale_sources=stale_sources,
-        calculated_at=now.replace(tzinfo=timezone.utc),
+        **_compute_index_fields(source_values, auxiliary_values, now),
     )
 
 

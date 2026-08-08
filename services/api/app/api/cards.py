@@ -127,12 +127,26 @@ def get_card(
 
 @router.get("/{card_id}/market-index", response_model=MarketIndexOut)
 def get_card_market_index(card_id: int, db: Session = Depends(get_db)):
+    """LEGACY, card_id-keyed market semantics - kept for backward
+    compatibility with existing frontend routes only. When two card_prints
+    (e.g. a base and a parallel treatment of the same canonical card) bridge
+    through this same legacy card_id, their observations are NOT kept
+    separate here - see app.services.market_index's card_id-partitioned
+    latest-price lookup. New callers that need a single collectible print's
+    Market Index must use GET /prints/{print_id}/market-index instead (see
+    app.api.prints), which is card_print_id-scoped and never calls through
+    this card-keyed implementation."""
     _get_card_or_404(db, card_id)
     return get_market_index_for_card(db, card_id)
 
 
 @router.get("/{card_id}/prices", response_model=list[PriceObservationOut])
 def get_card_prices(card_id: int, db: Session = Depends(get_db)):
+    """LEGACY, card_id-keyed price history - kept for backward compatibility
+    only. Returns every observation for this legacy card_id merged together,
+    including observations belonging to different card_prints that happen to
+    bridge through the same legacy row. New callers must use
+    GET /prints/{print_id}/prices instead (see app.api.prints)."""
     card = db.get(Card, card_id)
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found")
