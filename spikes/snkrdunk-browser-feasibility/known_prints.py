@@ -1,14 +1,29 @@
 """Offline reference identity data for the exact-print verification step
-(section 7 of the feasibility spec). Sourced by a read-only query against the
-staging database's 20 verified `card_prints` rows - this spike never
-connects to Postgres itself; these are frozen, hand-copied field values used
-only for offline comparison against a discovered SNKRDUNK product.
+(section 3 of the current feasibility spec, formerly section 7). Sourced by a
+read-only query against the staging database's verified `card_prints` rows -
+this spike never connects to Postgres itself; these are frozen, hand-copied
+field values used only for offline comparison against a discovered SNKRDUNK
+product.
 
 image_url is Bandai's own official public card-list artwork URL for the
-print (not a SNKRDUNK asset) - used to compare art direction/treatment by
-eye, not pixel-diffed.
+print (not a SNKRDUNK asset) - used for perceptual-hash/aspect-ratio
+comparison (see spike.compare_artwork), not pixel-diffed.
 
-Ordered by spec section 6 preference.
+Corrected 2026-08-09: the previous revision of this file (card_print_id
+15/16/17) held IDs and artwork_key/image_url values that did not match their
+stated card_code in the live database - id=15's artwork_key/image_url
+actually belonged to an unrelated OP04 Sabo SR print, not OP01-001 Zoro
+parallel. Re-verified directly against the 3 relevant rows:
+
+    SELECT cp.id, cp.treatment, cp.release_product_code, cp.artwork_key,
+           cp.image_url, cc.card_code, cc.rarity, cc.name_jp
+    FROM card_prints cp JOIN canonical_cards cc ON cc.id = cp.canonical_card_id
+    WHERE cp.id IN (1, 2, 4);
+
+card_print.id=1 (OP01-001, rarity L, treatment parallel) is the print
+required by the current spec for product https://snkrdunk.com/apparels/104428.
+
+Ordered by spec preference: primary target first, then next-best fallbacks.
 """
 
 from dataclasses import dataclass
@@ -21,9 +36,9 @@ class KnownPrint:
     name_en: str
     name_jp: str
     set_code: str
-    rarity: str
-    variant: str | None
-    treatment: str
+    release_name: str  # human-readable booster/release name (not stored in DB)
+    rarity: str  # canonical_cards.rarity, e.g. "L", "R"
+    treatment: str  # card_prints.treatment, e.g. "parallel", "normal"
     language: str
     release_product_code: str | None
     artwork_key: str
@@ -32,45 +47,45 @@ class KnownPrint:
 
 KNOWN_PRINTS: list[KnownPrint] = [
     KnownPrint(
-        card_print_id=15,
+        card_print_id=1,
         card_code="OP01-001",
-        name_en="Roronoa Zoro (Parallel)",
-        name_jp="ロロノア・ゾロ(パラレル)",
+        name_en="Roronoa Zoro",
+        name_jp="ロロノア・ゾロ",
         set_code="OP01",
-        rarity="Parallel",
-        variant="Leader",
-        treatment="normal",
+        release_name="ROMANCE DAWN",
+        rarity="L",
+        treatment="parallel",
         language="jp",
-        release_product_code="OP-04",
-        artwork_key="b7873d3cb2e8e46e1d126f7e3fd2ca6205e3ed44828b00a8c409417bbb2c6512",
-        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP04-083.png?260630",
+        release_product_code="OP-01",
+        artwork_key="4b2462f2b042a02070f134b319c73ddbf09f340c3b903fc8242b63ab7791ec79",
+        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png?260630",
     ),
     KnownPrint(
-        card_print_id=16,
+        card_print_id=2,
         card_code="OP01-002",
-        name_en="Trafalgar Law (Parallel)",
-        name_jp="トラファルガー・ロー(パラレル)",
+        name_en="Trafalgar Law",
+        name_jp="トラファルガー・ロー",
         set_code="OP01",
-        rarity="Parallel",
-        variant="Leader",
-        treatment="normal",
+        release_name="ROMANCE DAWN",
+        rarity="L",
+        treatment="parallel",
         language="jp",
-        release_product_code="OP-04",
-        artwork_key="1f0ebe0a0dc80e60fab681e52db9a37be5185dbbabfe8b7401c73dfe04cda013",
-        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP04-007.png?260630",
+        release_product_code="OP-01",
+        artwork_key="94004dbdb4e9786a15c0fd8abb4ea1ae12d5c2c498e357e0addd22060646122c",
+        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-002_p1.png?260630",
     ),
     KnownPrint(
-        card_print_id=17,
+        card_print_id=4,
         card_code="OP01-013",
         name_en="Sanji",
         name_jp="サンジ",
         set_code="OP01",
+        release_name="ROMANCE DAWN",
         rarity="R",
-        variant=None,
         treatment="normal",
         language="jp",
-        release_product_code="OP-04",
-        artwork_key="681513323c03e179935b7d8ce2833d411f96031d34f2b55786042e4145e30129",
-        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP04-090.png?260630",
+        release_product_code="OP-01",
+        artwork_key="ef20a8a51391e53f4a3fe71251d20a9dfe3d59dc65a4217a6c9b2eefaff2db2b",
+        image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013.png?260630",
     ),
 ]
