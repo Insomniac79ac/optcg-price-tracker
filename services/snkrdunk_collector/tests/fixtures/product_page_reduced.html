@@ -1,0 +1,119 @@
+<!--
+Reduced, hand-trimmed fixture derived from the real rendered structure of
+https://snkrdunk.com/apparels/104428 (fetched 2026-08-09, HTTP 200, static
+Playwright-rendered HTML). Not the full page - only the DOM fragments the
+spike extractor actually reads: <title>/<h1>, the JSON-LD block (real
+@graph shape, Organization/WebSite only - this product page carries no
+Product node), the condition-chip price picker (all 16 real condition
+buttons: A/B/C/D raw + 12 graded), one unrelated recommendation-carousel
+card (to prove its price never leaks into raw_market), the primary product
+image, and the "state-scoped market list" link that leads to the public
+sales-history page.
+
+CSS module class hash prefixes (e.g. "css1") are fabricated/simplified -
+the real site's build-tool hash changes per deploy. Only the stable suffix
+part of each class name (__chip, __variant, __price, __priceUnit,
+__awaiting, __disabled, __container, __mainImage) is real and is what the
+extractor matches on.
+-->
+<html lang="ja">
+<head>
+<title>ロロノア・ゾロ L-P [OP01-001] (ブースターパックロマンスドーン)通販・買取・相場｜スニダン</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"Organization","name":"SNKRDUNK","url":"https://snkrdunk.com/","logo":"https://cdn.snkrdunk.com/images/index/favicon.png"},
+  {"@type":"WebSite","name":"SNKRDUNK","url":"https://snkrdunk.com/"}
+]}
+</script>
+</head>
+<body>
+<h1>ロロノア・ゾロ L-P [OP01-001] (ブースターパックロマンスドーン)</h1>
+
+<div class="css1__container">
+  <ul class="css1__track">
+    <li class="css1__slide">
+      <button class="css1__slideButton">
+        <img alt="" class="css1__mainImage" src="https://cdn.snkrdunk.com/upload_bg_removed/20221121015111-0.webp?size=l" width="390" height="285">
+      </button>
+    </li>
+  </ul>
+</div>
+
+<div class="reco-carousel">
+  <a href="https://snkrdunk.com/apparels/854159">1 ロロノア・ゾロ R [PRB02-006](プロモーションカード「ラウンドワン プロモーションパック」) ¥ 3,450</a>
+</div>
+
+<div class="css2__container">
+  <div class="css2__button">商品状態 を選択してください</div>
+  <div class="css3__container">
+    <button class="css3__chip">
+      <p class="css3__variant">A</p>
+      <p class="css3__price"><span class="css3__priceUnit">¥</span>29,000<!-- -->~</p>
+    </button>
+    <button class="css3__chip">
+      <p class="css3__variant">B</p>
+      <p class="css3__price"><span class="css3__priceUnit">¥</span>24,500<!-- -->~</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">C</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">D</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip">
+      <p class="css3__variant">PSA10</p>
+      <p class="css3__price"><span class="css3__priceUnit">¥</span>50,000<!-- -->~</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">PSA9</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">PSA8以下</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">BGS10 BL</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">BGS10 GL</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">BGS9.5</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">BGS9以下</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip">
+      <p class="css3__variant">ARS10+</p>
+      <p class="css3__price"><span class="css3__priceUnit">¥</span>198,000<!-- -->~</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">ARS10</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">ARS9</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">ARS8以下</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+    <button class="css3__chip css3__disabled" disabled="">
+      <p class="css3__variant">他鑑定品</p>
+      <p class="css3__awaiting">出品待ち</p>
+    </button>
+  </div>
+</div>
+
+<a class="css4__marketListLink" href="/apparels/104428/sales-histories">状態ごとの相場一覧を見る</a>
+
+</body>
+</html>
