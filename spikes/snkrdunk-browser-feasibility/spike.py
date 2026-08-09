@@ -49,6 +49,16 @@ HOMEPAGE_URL = "https://snkrdunk.com/"
 BRAND_URL = "https://snkrdunk.com/brands/onepiece"
 CATEGORY_URL = "https://snkrdunk.com/brands/onepiece/categories/33"
 
+# Discovered from a real category-page "see more" link (run 20260809T091742Z):
+# https://snkrdunk.com/search?brandIds=onepiece&searchCategoryIds=6%2F33&keywords=...&sort=popular
+# The category page's own default "popular" feed does not reliably surface
+# any specific older common-set print, so discovery searches by card code
+# directly against this endpoint instead of only harvesting category links.
+SEARCH_URL_TEMPLATE = (
+    "https://snkrdunk.com/search?brandIds=onepiece&searchCategoryIds=6%2F33"
+    "&keywords={query}&sort=new"
+)
+
 DESKTOP_CHROME_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
@@ -265,23 +275,62 @@ def score_link_against_print(link: dict[str, str], kp: KnownPrint) -> tuple[int,
     return len(matched), matched
 
 
+APPAREL_ID_RE = re.compile(r"/apparels/(\d+)")
+
+
+def _apparel_id(href: str) -> str | None:
+    match = APPAREL_ID_RE.search(href)
+    return match.group(1) if match else None
+
+
+def dedupe_by_product(scored: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Multiple /apparels/{id}/used/{usedId} listings are separate current
+    listings of the *same* card, not separate cards - collapse them to one
+    candidate per apparel id (preferring the bare /apparels/{id} product
+    page, which is the canonical detail page, over an individual /used/
+    listing) so ambiguity is judged per distinct card, not per listing."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    unkeyed: list[dict[str, Any]] = []
+    for entry in scored:
+        pid = _apparel_id(entry["link"]["href"])
+        if pid is None:
+            unkeyed.append(entry)
+            continue
+        groups.setdefault(pid, []).append(entry)
+
+    deduped: list[dict[str, Any]] = []
+    for pid, entries in groups.items():
+        bare = [e for e in entries if "/used/" not in e["link"]["href"]]
+        chosen = bare[0] if bare else entries[0]
+        deduped.append(chosen)
+    deduped.extend(unkeyed)
+    deduped.sort(key=lambda x: -x["score"])
+    return deduped
+
+
+def scored_links_for_print(links: list[dict[str, str]], kp: KnownPrint) -> list[dict[str, Any]]:
+    """Links matching >=2 distinct terms for kp (card code alone is too weak
+    - SNKRDUNK card codes may not appear verbatim in link text/href), deduped
+    per distinct product (see dedupe_by_product), sorted by descending
+    score."""
+    scored = []
+    for link in links:
+        score, matched = score_link_against_print(link, kp)
+        if score >= 2:
+            scored.append({"link": link, "score": score, "matched_terms": matched})
+    return dedupe_by_product(scored)
+
+
 def find_best_match(
     links: list[dict[str, str]],
 ) -> tuple[KnownPrint | None, dict | None, dict[str, Any]]:
-    """Iterate KNOWN_PRINTS in spec section-6 preference order. For each,
-    score every harvested link and keep only links matching >=2 distinct
-    terms (card code alone is too weak - SNKRDUNK card codes may not appear
-    verbatim in link text/href). Returns the first print with exactly one
-    such link (unambiguous match) plus full diagnostics for every print
-    attempted, so a failure to match is still fully explained."""
+    """Iterate KNOWN_PRINTS in spec section-6 preference order against one
+    fixed link set (e.g. the category page). Returns the first print with
+    exactly one matching link (unambiguous) plus full diagnostics for every
+    print attempted, so a failure to match is still fully explained."""
     diagnostics: dict[str, Any] = {"attempts": []}
     for kp in KNOWN_PRINTS:
-        scored = []
-        for link in links:
-            score, matched = score_link_against_print(link, kp)
-            if score >= 2:
-                scored.append({"link": link, "score": score, "matched_terms": matched})
-        scored.sort(key=lambda x: -x["score"])
+        scored = scored_links_for_print(links, kp)
         diagnostics["attempts"].append(
             {
                 "card_print_id": kp.card_print_id,
@@ -296,6 +345,12 @@ def find_best_match(
         # Ambiguous (>1) or none: fail closed for this print, try the next
         # preference per spec section 6/7.
     return None, None, diagnostics
+
+
+def build_search_url(query: str) -> str:
+    from urllib.parse import quote
+
+    return SEARCH_URL_TEMPLATE.format(query=quote(query))
 
 
 def find_embedded_json_blocks(html: str) -> dict[str, Any]:
@@ -463,8 +518,13 @@ def run_access_stage(page: Page, out_dir: Path) -> list[NavResult]:
 def run_discover_extract_stage(page: Page, out_dir: Path) -> dict[str, Any]:
     """Section 6-12: given the category page is already loaded, harvest its
     link surface, find an unambiguous match against KNOWN_PRINTS (spec
-    preference order), and if found, navigate to it once and run the
-    deterministic offline extractor against the rendered page."""
+    preference order). The category page's default "popular" feed may not
+    surface an older common-set print at all, so if no unambiguous category
+    match exists, fall back to SNKRDUNK's own /search endpoint (discovered
+    from a real "see more" link), querying by each known print's card code
+    in preference order until an unambiguous match is found. Once matched,
+    navigate to the product once and run the deterministic offline
+    extractor against the rendered page."""
     result: dict[str, Any] = {}
 
     links = extract_links(page)
@@ -473,6 +533,37 @@ def run_discover_extract_stage(page: Page, out_dir: Path) -> dict[str, Any]:
 
     matched_print, matched_link, diagnostics = find_best_match(links)
     result["match_diagnostics"] = diagnostics
+    result["match_source"] = "category_page" if matched_print else None
+
+    if matched_print is None:
+        result["search_attempts"] = []
+        for kp in KNOWN_PRINTS:
+            search_url = build_search_url(kp.card_code)
+            nav = navigate_and_capture(page, search_url, f"03_search_{kp.card_code}", out_dir)
+            log(
+                "search_navigate_result",
+                card_code=kp.card_code,
+                search_url=search_url,
+                classification=nav.classification,
+                http_status=nav.http_status,
+            )
+            attempt: dict[str, Any] = {
+                "card_code": kp.card_code,
+                "search_url": search_url,
+                "nav_classification": nav.classification,
+            }
+            if nav.classification == "normal_page":
+                search_links = extract_links(page)
+                scored = scored_links_for_print(search_links, kp)
+                attempt["candidate_count"] = len(scored)
+                attempt["candidates"] = scored[:5]
+                if len(scored) == 1:
+                    matched_print = kp
+                    matched_link = scored[0]["link"]
+                    result["match_source"] = f"search:{kp.card_code}"
+                    result["search_attempts"].append(attempt)
+                    break
+            result["search_attempts"].append(attempt)
 
     if matched_print is None or matched_link is None:
         result["matched"] = False

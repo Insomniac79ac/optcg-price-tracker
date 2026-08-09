@@ -7,7 +7,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from spike import extract_product_page, find_best_match  # noqa: E402
+from spike import extract_product_page, find_best_match, scored_links_for_print  # noqa: E402
+from known_prints import KNOWN_PRINTS  # noqa: E402
 
 
 def test_unambiguous_match_finds_op01_001_zoro_parallel():
@@ -53,6 +54,31 @@ def test_falls_back_to_second_preference_when_first_is_ambiguous():
     matched_print, matched_link, diagnostics = find_best_match(links)
     assert matched_print is not None
     assert matched_print.card_code == "OP01-002"
+
+
+def test_multiple_used_listings_of_same_card_are_not_ambiguous():
+    # Same apparel id, three different /used/ listings (different conditions
+    # and prices) plus the bare product page - all one card, must collapse
+    # to a single candidate, not three.
+    zoro = KNOWN_PRINTS[0]
+    links = [
+        {"href": "/apparels/12345", "text": "ロロノア・ゾロ(パラレル) OP01-001"},
+        {"href": "/apparels/12345/used/1", "text": "A ロロノア・ゾロ(パラレル) OP01-001 ¥1,000"},
+        {"href": "/apparels/12345/used/2", "text": "S ロロノア・ゾロ(パラレル) OP01-001 ¥1,500"},
+    ]
+    scored = scored_links_for_print(links, zoro)
+    assert len(scored) == 1
+    assert scored[0]["link"]["href"] == "/apparels/12345"  # prefers the bare product page
+
+
+def test_two_distinct_cards_both_matching_stay_ambiguous():
+    zoro = KNOWN_PRINTS[0]
+    links = [
+        {"href": "/apparels/111", "text": "ロロノア・ゾロ(パラレル) OP01-001"},
+        {"href": "/apparels/222", "text": "ロロノア・ゾロ(パラレル) OP01-001"},
+    ]
+    scored = scored_links_for_print(links, zoro)
+    assert len(scored) == 2
 
 
 def test_extract_normal_raw_product_page():
