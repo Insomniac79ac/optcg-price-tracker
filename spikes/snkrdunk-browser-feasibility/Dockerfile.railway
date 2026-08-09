@@ -1,0 +1,34 @@
+# Railway-only build for the isolated SNKRDUNK browser-access feasibility
+# spike. Not used by local Docker Compose, not referenced by any application
+# service, and not part of the app's own deploy path (see
+# docs/railway_staging.md, which governs the api/worker/beat services - this
+# file is unrelated to that).
+#
+# Deployed to its own temporary, isolated Railway service: no Postgres, no
+# Redis, no shared service, no application secrets, no cron, no public
+# domain. Runs one bounded browser session (spike.py --stage access, or
+# --stage full once discover/extract are added) and exits.
+#
+# Base image pins the exact browser build matching requirements.txt's
+# `playwright==1.61.0`, so no browser download happens at container start -
+# only `pip install` at build time.
+#
+# Built with this file's own directory as build context (Root Directory =
+# spikes/snkrdunk-browser-feasibility on the Railway service).
+#
+# Local verification (run from this directory):
+#   docker build -f Dockerfile.railway -t snkrdunk-feasibility-test .
+#   docker run --rm snkrdunk-feasibility-test python spike.py --stage access
+
+FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY spike.py known_prints.py ./
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "spike.py", "--stage", "access"]
