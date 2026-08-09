@@ -581,10 +581,22 @@ def run_discover_extract_stage(page: Page, out_dir: Path) -> dict[str, Any]:
     }
     result["matched_link"] = matched_link
     result["product_url"] = product_url
+
+    result.update(navigate_and_extract(page, out_dir, product_url, matched_print))
+    return result
+
+
+def navigate_and_extract(
+    page: Page, out_dir: Path, product_url: str, known_print: KnownPrint
+) -> dict[str, Any]:
+    """Navigate to product_url once and run the deterministic offline
+    extractor + section-7 offline verification against known_print. Shared
+    by both the search-discovered path and a direct --product-url run."""
+    result: dict[str, Any] = {}
     log(
-        "discover_matched",
-        card_print_id=matched_print.card_print_id,
-        card_code=matched_print.card_code,
+        "product_target",
+        card_print_id=known_print.card_print_id,
+        card_code=known_print.card_code,
         product_url=product_url,
     )
 
@@ -611,11 +623,11 @@ def run_discover_extract_stage(page: Page, out_dir: Path) -> dict[str, Any]:
     # term); a true pixel/artwork comparison is a human/manual step noted in
     # the final report, not automated by this spike.
     identity_text = f"{extraction['identity']['title']} {extraction['identity']['h1']}"
-    verification_terms = candidate_terms(matched_print)
+    verification_terms = candidate_terms(known_print)
     verification_hits = [t for t in verification_terms if t in identity_text]
     extraction["verification"] = {
-        "known_print_card_code": matched_print.card_code,
-        "known_print_name_jp": matched_print.name_jp,
+        "known_print_card_code": known_print.card_code,
+        "known_print_name_jp": known_print.name_jp,
         "terms_checked": verification_terms,
         "terms_confirmed_on_product_page": verification_hits,
         "all_terms_confirmed": len(verification_hits) == len(verification_terms),
@@ -656,6 +668,17 @@ def main() -> int:
         "then (if the category page loaded normally) discover + extract "
         "against a KNOWN_PRINTS match, all in one bounded session.",
     )
+    parser.add_argument(
+        "--product-url",
+        default=None,
+        help="If set with --stage full, skip category-link/search discovery "
+        "entirely and extract directly from this product URL. Used once a "
+        "prior discover run's diagnostics already identified a specific "
+        "well-reasoned candidate (e.g. distinguishing the original-booster "
+        "Japanese listing from same-card-code anniversary/promo/English "
+        "reprints that also matched by card code alone) - avoids repeating "
+        "the same search requests.",
+    )
     args = parser.parse_args()
 
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -685,7 +708,24 @@ def main() -> int:
                     summary["access_results"] = [asdict(r) for r in access_results]
 
                     category_ok = bool(access_results) and access_results[-1].classification == "normal_page" and access_results[-1].url == CATEGORY_URL
-                    if args.stage == "full" and category_ok:
+                    if args.stage == "full" and category_ok and args.product_url:
+                        # A prior discover run's diagnostics already
+                        # identified this well-reasoned candidate - skip
+                        # repeating the category/search requests.
+                        known_print = KNOWN_PRINTS[0]
+                        de: dict[str, Any] = {
+                            "matched": True,
+                            "match_source": "direct_product_url_from_prior_run_diagnostics",
+                            "matched_print": {
+                                "card_print_id": known_print.card_print_id,
+                                "card_code": known_print.card_code,
+                                "name_jp": known_print.name_jp,
+                            },
+                            "product_url": args.product_url,
+                        }
+                        de.update(navigate_and_extract(page, out_dir, args.product_url, known_print))
+                        summary["discover_extract"] = de
+                    elif args.stage == "full" and category_ok:
                         summary["discover_extract"] = run_discover_extract_stage(page, out_dir)
                 finally:
                     context.tracing.stop(path=str(out_dir / "trace.zip"))

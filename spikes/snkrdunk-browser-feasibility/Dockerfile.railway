@@ -31,4 +31,4 @@ COPY spike.py known_prints.py ./
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "spike.py", "--stage", "full"]
+CMD ["python", "spike.py", "--stage", "full", "--product-url", "https://snkrdunk.com/apparels/104428"]
