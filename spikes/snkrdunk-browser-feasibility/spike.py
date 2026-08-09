@@ -43,6 +43,8 @@ from typing import Any
 from bs4 import BeautifulSoup
 from playwright.sync_api import Page, sync_playwright
 
+from known_prints import KNOWN_PRINTS, KnownPrint
+
 HOMEPAGE_URL = "https://snkrdunk.com/"
 BRAND_URL = "https://snkrdunk.com/brands/onepiece"
 CATEGORY_URL = "https://snkrdunk.com/brands/onepiece/categories/33"
@@ -90,6 +92,16 @@ CHALLENGE_DOM_MARKERS = [
 ]
 
 WEAK_MARKERS = ["cloudflare", "captcha", "cf-error", "ray id"]
+
+# Section 9/10 fail-closed exclusions. Graded-slab and sealed-product
+# mentions on a candidate/product page mean it is not an eligible raw-print
+# floor/sale source. Kept as plain Japanese/English substrings, not a
+# hardcoded schema - this spike does not yet know SNKRDUNK's exact condition
+# taxonomy.
+GRADED_KEYWORDS = ["psa", "bgs", "cgc", "ars", "鑑定"]
+SEALED_KEYWORDS = ["box", "パック", "未開封", "シュリンク", "カートン"]
+SOLD_HISTORY_LINK_KEYWORDS = ["取引履歴", "売却履歴", "販売実績", "取引実績", "sold", "history"]
+LOGIN_REQUIRED_MARKERS = ["ログイン", "login", "sign in", "signin"]
 
 TOTAL_RUN_BUDGET_SECONDS = 300
 PER_STEP_BUDGET_SECONDS = 45
@@ -232,6 +244,180 @@ def extract_links(page: Page) -> list[dict[str, str]]:
     return links
 
 
+def candidate_terms(kp: KnownPrint) -> list[str]:
+    """Strong deterministic match terms for a known print: its card code,
+    the JP name with any parenthetical suffix split off, and the
+    parenthetical suffix itself (typically the treatment/rarity word, e.g.
+    "パラレル" = parallel)."""
+    terms = [kp.card_code]
+    base = re.sub(r"[（(].*?[）)]", "", kp.name_jp).strip()
+    if base:
+        terms.append(base)
+    paren_match = re.search(r"[（(](.*?)[）)]", kp.name_jp)
+    if paren_match:
+        terms.append(paren_match.group(1).strip())
+    return [t for t in terms if t]
+
+
+def score_link_against_print(link: dict[str, str], kp: KnownPrint) -> tuple[int, list[str]]:
+    haystack = f"{link.get('text', '')} {link.get('href', '')}"
+    matched = [t for t in candidate_terms(kp) if t and t in haystack]
+    return len(matched), matched
+
+
+def find_best_match(
+    links: list[dict[str, str]],
+) -> tuple[KnownPrint | None, dict | None, dict[str, Any]]:
+    """Iterate KNOWN_PRINTS in spec section-6 preference order. For each,
+    score every harvested link and keep only links matching >=2 distinct
+    terms (card code alone is too weak - SNKRDUNK card codes may not appear
+    verbatim in link text/href). Returns the first print with exactly one
+    such link (unambiguous match) plus full diagnostics for every print
+    attempted, so a failure to match is still fully explained."""
+    diagnostics: dict[str, Any] = {"attempts": []}
+    for kp in KNOWN_PRINTS:
+        scored = []
+        for link in links:
+            score, matched = score_link_against_print(link, kp)
+            if score >= 2:
+                scored.append({"link": link, "score": score, "matched_terms": matched})
+        scored.sort(key=lambda x: -x["score"])
+        diagnostics["attempts"].append(
+            {
+                "card_print_id": kp.card_print_id,
+                "card_code": kp.card_code,
+                "terms": candidate_terms(kp),
+                "candidate_count": len(scored),
+                "candidates": scored[:5],
+            }
+        )
+        if len(scored) == 1:
+            return kp, scored[0]["link"], diagnostics
+        # Ambiguous (>1) or none: fail closed for this print, try the next
+        # preference per spec section 6/7.
+    return None, None, diagnostics
+
+
+def find_embedded_json_blocks(html: str) -> dict[str, Any]:
+    """Deterministic scan for common SPA/framework data-embedding patterns.
+    Section 8: determine current SNKRDUNK data model without assuming older
+    implementation details. Returns presence flags and, where safely
+    parseable, the parsed JSON - never executes any script content."""
+    soup = BeautifulSoup(html, "html.parser")
+    result: dict[str, Any] = {
+        "next_data_present": False,
+        "next_data_top_level_keys": [],
+        "ld_json_blocks": [],
+        "other_json_script_ids": [],
+    }
+
+    next_data_tag = soup.find("script", id="__NEXT_DATA__")
+    if next_data_tag and next_data_tag.string:
+        result["next_data_present"] = True
+        try:
+            parsed = json.loads(next_data_tag.string)
+            if isinstance(parsed, dict):
+                result["next_data_top_level_keys"] = list(parsed.keys())
+        except json.JSONDecodeError:
+            result["next_data_top_level_keys"] = ["<unparseable>"]
+
+    for tag in soup.find_all("script", type="application/ld+json"):
+        if not tag.string:
+            continue
+        try:
+            parsed = json.loads(tag.string)
+            block_type = parsed.get("@type") if isinstance(parsed, dict) else None
+            result["ld_json_blocks"].append({"type": block_type, "raw": parsed})
+        except json.JSONDecodeError:
+            result["ld_json_blocks"].append({"type": None, "raw": None, "parse_error": True})
+
+    for tag in soup.find_all("script", id=True, type="application/json"):
+        if tag.get("id") != "__NEXT_DATA__":
+            result["other_json_script_ids"].append(tag["id"])
+
+    return result
+
+
+PRICE_RE = re.compile(r"¥\s?([\d,]{2,})")
+
+
+def extract_price_mentions(html: str) -> list[int]:
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(" ", strip=True)
+    values = []
+    for match in PRICE_RE.finditer(text):
+        try:
+            values.append(int(match.group(1).replace(",", "")))
+        except ValueError:
+            continue
+    return values
+
+
+def extract_product_page(html: str, url: str) -> dict[str, Any]:
+    """Deterministic, offline-testable extractor for a single already-fetched
+    product page. Structure mirrors spec section 12: identity / floor /
+    sales / evidence. Never guesses - fields are None/empty when not found,
+    and diagnostics record what was/wasn't detected so a feasibility
+    decision can be made from real evidence, not assumption."""
+    soup = BeautifulSoup(html, "html.parser")
+    text_lower = soup.get_text(" ", strip=True).lower()
+
+    title = soup.title.get_text(strip=True) if soup.title else ""
+    h1 = soup.find("h1")
+    h1_text = h1.get_text(" ", strip=True) if h1 else ""
+    og_image = soup.find("meta", property="og:image")
+    image_url = og_image["content"] if og_image and og_image.has_attr("content") else None
+
+    embedded = find_embedded_json_blocks(html)
+    prices = extract_price_mentions(html)
+
+    is_graded = any(kw in text_lower for kw in GRADED_KEYWORDS)
+    is_sealed = any(kw in text_lower for kw in SEALED_KEYWORDS)
+    login_required_markers_present = any(kw in text_lower for kw in LOGIN_REQUIRED_MARKERS)
+
+    sold_history_links = []
+    for a in soup.find_all("a", href=True):
+        link_text = a.get_text(" ", strip=True)
+        if any(kw in link_text or kw in a["href"] for kw in SOLD_HISTORY_LINK_KEYWORDS):
+            sold_history_links.append({"href": a["href"], "text": link_text[:120]})
+
+    return {
+        "identity": {
+            "title": title,
+            "h1": h1_text,
+            "image_url": image_url,
+            "product_url": url,
+        },
+        "floor": {
+            "raw_floor_jpy": None,  # not populated in this offline pass -
+            # requires knowing which of `price_mentions` (if any) is the
+            # authoritative current listing price vs. a reference/MSRP/other
+            "price_mentions_jpy": sorted(set(prices)),
+            "listing_count": None,
+            "conditions_represented": [],
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+        },
+        "sales": {
+            "sold_history_publicly_visible": bool(sold_history_links),
+            "sold_history_candidate_links": sold_history_links[:10],
+            "observations": [],
+        },
+        "evidence": {
+            "final_url": url,
+            "next_data_present": embedded["next_data_present"],
+            "next_data_top_level_keys": embedded["next_data_top_level_keys"],
+            "ld_json_block_types": [b.get("type") for b in embedded["ld_json_blocks"]],
+            "other_json_script_ids": embedded["other_json_script_ids"],
+            "parser_version": "snkrdunk-spike-extractor-v1",
+        },
+        "flags": {
+            "is_graded": is_graded,
+            "is_sealed": is_sealed,
+            "login_required_markers_present": login_required_markers_present,
+        },
+    }
+
+
 def run_access_stage(page: Page, out_dir: Path) -> list[NavResult]:
     urls = [
         (HOMEPAGE_URL, "00_homepage"),
@@ -274,15 +460,110 @@ def run_access_stage(page: Page, out_dir: Path) -> list[NavResult]:
     return results
 
 
+def run_discover_extract_stage(page: Page, out_dir: Path) -> dict[str, Any]:
+    """Section 6-12: given the category page is already loaded, harvest its
+    link surface, find an unambiguous match against KNOWN_PRINTS (spec
+    preference order), and if found, navigate to it once and run the
+    deterministic offline extractor against the rendered page."""
+    result: dict[str, Any] = {}
+
+    links = extract_links(page)
+    result["category_links_count"] = len(links)
+    result["category_links"] = links  # small enough (~100s) to log in full
+
+    matched_print, matched_link, diagnostics = find_best_match(links)
+    result["match_diagnostics"] = diagnostics
+
+    if matched_print is None or matched_link is None:
+        result["matched"] = False
+        log("discover_no_unambiguous_match")
+        return result
+
+    from urllib.parse import urljoin
+
+    product_url = urljoin(page.url, matched_link["href"])
+    result["matched"] = True
+    result["matched_print"] = {
+        "card_print_id": matched_print.card_print_id,
+        "card_code": matched_print.card_code,
+        "name_jp": matched_print.name_jp,
+    }
+    result["matched_link"] = matched_link
+    result["product_url"] = product_url
+    log(
+        "discover_matched",
+        card_print_id=matched_print.card_print_id,
+        card_code=matched_print.card_code,
+        product_url=product_url,
+    )
+
+    nav_result = navigate_and_capture(page, product_url, "03_product", out_dir)
+    result["product_nav"] = asdict(nav_result)
+    log(
+        "product_navigate_result",
+        classification=nav_result.classification,
+        http_status=nav_result.http_status,
+        evidence=nav_result.evidence,
+    )
+
+    if nav_result.classification != "normal_page":
+        result["extraction"] = None
+        return result
+
+    html = page.content()
+    extraction = extract_product_page(html, nav_result.final_url)
+
+    # Offline exact-print verification (section 7): fail closed on any
+    # artwork/language/treatment mismatch signal we can check without a
+    # human eye on the two images. We can only check what's programmatically
+    # available here (title/h1 text against the known JP name and treatment
+    # term); a true pixel/artwork comparison is a human/manual step noted in
+    # the final report, not automated by this spike.
+    identity_text = f"{extraction['identity']['title']} {extraction['identity']['h1']}"
+    verification_terms = candidate_terms(matched_print)
+    verification_hits = [t for t in verification_terms if t in identity_text]
+    extraction["verification"] = {
+        "known_print_card_code": matched_print.card_code,
+        "known_print_name_jp": matched_print.name_jp,
+        "terms_checked": verification_terms,
+        "terms_confirmed_on_product_page": verification_hits,
+        "all_terms_confirmed": len(verification_hits) == len(verification_terms),
+        "fail_closed_reasons": []
+        + (["graded_slab_markers_present"] if extraction["flags"]["is_graded"] else [])
+        + (["sealed_product_markers_present"] if extraction["flags"]["is_sealed"] else [])
+        + (
+            ["not_all_identity_terms_confirmed"]
+            if len(verification_hits) != len(verification_terms)
+            else []
+        ),
+    }
+
+    result["extraction"] = extraction
+
+    (out_dir / "extracted.json").write_text(
+        json.dumps(extraction, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    log(
+        "extraction_complete",
+        raw_floor_jpy=extraction["floor"]["raw_floor_jpy"],
+        price_mentions_count=len(extraction["floor"]["price_mentions_jpy"]),
+        sold_history_publicly_visible=extraction["sales"]["sold_history_publicly_visible"],
+        verification_all_confirmed=extraction["verification"]["all_terms_confirmed"],
+        fail_closed_reasons=extraction["verification"]["fail_closed_reasons"],
+    )
+
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--stage",
         choices=["access", "full"],
         default="access",
-        help="access = the section-5 3-URL access test only. full = access "
-        "stage today; discover/extract stages are added once real site "
-        "structure is known from an access-stage run.",
+        help="access = the section-5 3-URL access test only. full = access, "
+        "then (if the category page loaded normally) discover + extract "
+        "against a KNOWN_PRINTS match, all in one bounded session.",
     )
     args = parser.parse_args()
 
@@ -311,6 +592,10 @@ def main() -> int:
                 try:
                     access_results = run_access_stage(page, out_dir)
                     summary["access_results"] = [asdict(r) for r in access_results]
+
+                    category_ok = bool(access_results) and access_results[-1].classification == "normal_page" and access_results[-1].url == CATEGORY_URL
+                    if args.stage == "full" and category_ok:
+                        summary["discover_extract"] = run_discover_extract_stage(page, out_dir)
                 finally:
                     context.tracing.stop(path=str(out_dir / "trace.zip"))
                     context.close()

@@ -31,4 +31,4 @@ COPY spike.py known_prints.py ./
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "spike.py", "--stage", "access"]
+CMD ["python", "spike.py", "--stage", "full"]
