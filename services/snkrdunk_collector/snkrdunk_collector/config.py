@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     SALES_HISTORY_NAV_TIMEOUT_S: int = 35
     IMAGE_FETCH_TIMEOUT_S: int = 20
     TOTAL_RUN_TIMEOUT_S: int = 180
+    # Conservative fixed delay between mappings in an --approved-mappings
+    # batch (see batch.py) - mirrors YUYUTEI_REQUEST_DELAY_MS's reasoning.
+    SNKRDUNK_REQUEST_DELAY_MS: int = 1000
+    # Wall-clock budget for an entire --approved-mappings batch, independent
+    # of (and larger than) a single mapping's own TOTAL_RUN_TIMEOUT_S. 20
+    # mappings at up to 180s each plus inter-mapping delays comfortably fits
+    # well under this.
+    BATCH_TOTAL_TIMEOUT_S: int = 1800
 
     @field_validator("DATABASE_URL")
     @classmethod

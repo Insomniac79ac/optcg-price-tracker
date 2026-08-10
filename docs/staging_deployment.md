@@ -314,10 +314,14 @@ web app's `/`, `/dashboard`, `/collection`, `/collection/vault`, `/analytics/dig
 - `MARKET_WORKFLOW_ENABLED=false` and `DATA_RETENTION_ENABLED=false` by default on the `beat`
   service for the first staging deploy - enable them explicitly, and only after confirming
   `api`/`worker`/`beat` are stable, per `docs/staging_checklist.md`.
-- Never attempt a SNKRDUNK live-scrape or any bypass of Yuyu-Tei/SNKRDUNK site protections, in
-  staging or production. SNKRDUNK data only ever enters this app through the existing manual
-  candidate-import workflow (`/admin/snkrdunk-candidates` uploading manually-collected listings),
-  regardless of environment.
+- Never bypass Yuyu-Tei/SNKRDUNK site protections, in staging or production, regardless of
+  environment: no login, no CAPTCHA solving, no proxy rotation, no stealth/fingerprint spoofing.
+  The permanent `snkrdunk-collector` service (see `services/snkrdunk_collector`) supersedes the
+  earlier manual-import-only rule - it makes conservative, sequential, ordinary-browser-navigation
+  requests to public SNKRDUNK pages, fails closed (stops, no retry) on a source-wide 403/429/
+  challenge signal, and requires exact-print verification before any mapping is approved or any
+  price is written. The manual candidate-import workflow (`/admin/snkrdunk-candidates` uploading
+  manually-collected listings) remains available as a fallback/administrative path.
 - Never commit `.env.staging` (only `.env.staging.example`, with placeholders, is tracked - see
   `.gitignore` and `scripts/check_secrets.sh`).
 

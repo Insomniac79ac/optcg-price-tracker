@@ -1,23 +1,25 @@
-"""CLI entrypoint:
+"""CLI entrypoints:
 
     python -m snkrdunk_collector.collect --mapping-id <id> [--validate-only]
+    python -m snkrdunk_collector.collect --approved-mappings [--validate-only]
 
-Runs, collects, and exits - no server, no scheduling (Railway Cron is not
-configured yet for this service - see the tranche this was built for).
-Exactly one homepage request as a source-wide-denial canary, and only if
-that is a genuine normal HTTP 200, exactly one product request, one image
-fetch each for the official and candidate artwork, and (best-effort, never
-gating) one sales-history request. No retries after 403/429/challenge/CAPTCHA
-or an extraction/artwork/lineage validation failure. Writes at most one new
+Runs, collects, and exits - no server, no scheduling (Railway Cron
+configuration is a separate tranche step). Exactly one homepage request as a
+source-wide-denial canary, and only if that is a genuine normal HTTP 200,
+exactly one product request, one image fetch each for the official and
+candidate artwork, and (best-effort, never gating) one sales-history
+request - per mapping. No retries after 403/429/challenge/CAPTCHA or an
+extraction/artwork/lineage validation failure. Writes at most one new
 price_observations row per mapping per invocation, and only on full success
 - see writer.py. Sold-history rows are never written as price_observations
 (see sales_history.py's module docstring) - retained only as a standalone
 RawSnapshot and in this run's own structured log/result output.
 
-Batch mode (--approved-mappings, scaling to the full 20-print catalogue) is
-deliberately not implemented in this tranche - see
-services/yuyutei_collector/yuyutei_collector/batch.py for the pattern this
-will mirror once SNKRDUNK is scaled beyond this one verified print.
+`--approved-mappings` (see snkrdunk_collector.batch) discovers every
+eligible approved SNKRDUNK mapping from the database and processes them one
+at a time, sequentially, stopping the whole batch immediately on a
+source-wide denial signal (403/429/CAPTCHA/challenge) - mirrors
+services/yuyutei_collector/yuyutei_collector/batch.py's contract.
 """
 
 import argparse
@@ -99,10 +101,12 @@ def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, S
     return mapping, source, card_print, reasons
 
 
-def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = False) -> MappingOutcome:
+def run_one_mapping_detailed(
+    session, mapping_id: int, validate_only: bool = False, batch_run_id: str | None = None
+) -> MappingOutcome:
     mapping, source, card_print, load_reasons = _load_mapping(session, mapping_id)
     if load_reasons:
-        log_event("mapping_load_failed", mapping_id=mapping_id, reasons=load_reasons)
+        log_event("mapping_load_failed", mapping_id=mapping_id, reasons=load_reasons, batch_run_id=batch_run_id)
         return MappingOutcome(mapping_id=mapping_id, stage="mapping_load_failed", reasons=load_reasons)
 
     expected_card_code = mapping.source_card_id
@@ -117,6 +121,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
         expected_treatment=expected_treatment,
         card_print_id=mapping.card_print_id,
         validate_only=validate_only,
+        batch_run_id=batch_run_id,
     )
 
     holder: dict = {
@@ -154,6 +159,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                     http_status=homepage_step.get("http_status"),
                     classification=homepage_step.get("classification"),
                     error=homepage_step.get("error"),
+                    batch_run_id=batch_run_id,
                 )
 
                 homepage_ok = (
@@ -168,6 +174,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                         "homepage_gate_failed",
                         mapping_id=mapping.id,
                         reason=holder["product_classification"],
+                        batch_run_id=batch_run_id,
                     )
                     context.close()
                     browser.close()
@@ -180,6 +187,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                         http_status=product_step.get("http_status"),
                         classification=product_step.get("classification"),
                         error=product_step.get("error"),
+                        batch_run_id=batch_run_id,
                     )
                     holder["product_classification"] = product_step.get("classification")
                     holder["product_http_status"] = product_step.get("http_status")
@@ -200,6 +208,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                             fail_reasons=extraction["fail_reasons"],
                             raw_floor_jpy=extraction["extracted"].get("raw_floor_jpy"),
                             conditions=list(extraction["extracted"].get("conditions") or {}),
+                            batch_run_id=batch_run_id,
                         )
 
                         candidate_image_url = extraction["extracted"].get("product_image_url")
@@ -225,6 +234,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                             match=holder["artwork_comparison"].get("match"),
                             hash_distances=holder["artwork_comparison"].get("hash_distances"),
                             aspect_ratio_relative_diff=holder["artwork_comparison"].get("aspect_ratio_relative_diff"),
+                            batch_run_id=batch_run_id,
                         )
 
                         # Sold history: best-effort, evidence-only, never
@@ -240,6 +250,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                                 mapping_id=mapping.id,
                                 http_status=history_step.get("http_status"),
                                 classification=history_step.get("classification"),
+                                batch_run_id=batch_run_id,
                             )
                             if history_step.get("classification") == "normal_page" and "error" not in history_step:
                                 pid_match = re.search(r"/apparels/(\d+)", mapping.source_url)
@@ -257,6 +268,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                                     availability_status=sold_history["availability_status"],
                                     raw_sales_count=len(sold_history["raw_sales"]),
                                     stable_identifier_available=sold_history["stable_identifier_available"],
+                                    batch_run_id=batch_run_id,
                                 )
                         else:
                             holder["sold_history"] = {
@@ -269,11 +281,11 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
                     context.close()
                     browser.close()
     except DeadlineExceeded as exc:
-        log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc))
+        log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
         return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"watchdog_triggered:{exc}"])
     except Exception as exc:  # never leave a half-written row
         session.rollback()
-        log_event("collection_error", mapping_id=mapping_id, error=f"{type(exc).__name__}: {exc}")
+        log_event("collection_error", mapping_id=mapping_id, error=f"{type(exc).__name__}: {exc}", batch_run_id=batch_run_id)
         return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"{type(exc).__name__}: {exc}"])
 
     classification = holder["product_classification"]
@@ -281,7 +293,13 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
 
     if holder["extraction"] is None:
         reasons = [f"no_extraction_attempted:classification={classification}"]
-        log_event("collection_no_write", mapping_id=mapping.id, reasons=reasons, source_denied=source_denied)
+        log_event(
+            "collection_no_write",
+            mapping_id=mapping.id,
+            reasons=reasons,
+            source_denied=source_denied,
+            batch_run_id=batch_run_id,
+        )
         return MappingOutcome(
             mapping_id=mapping.id,
             stage="no_extraction_attempted",
@@ -310,6 +328,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
             would_write=write_result.written,
             reasons=write_result.reasons,
             price_jpy=write_result.price_jpy,
+            batch_run_id=batch_run_id,
         )
         return MappingOutcome(
             mapping_id=mapping.id,
@@ -326,7 +345,13 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
 
     if not write_result.written:
         session.rollback()
-        log_event("collection_no_write", mapping_id=mapping.id, reasons=write_result.reasons, source_denied=False)
+        log_event(
+            "collection_no_write",
+            mapping_id=mapping.id,
+            reasons=write_result.reasons,
+            source_denied=False,
+            batch_run_id=batch_run_id,
+        )
         return MappingOutcome(
             mapping_id=mapping.id,
             stage="validation_failed",
@@ -364,6 +389,7 @@ def run_one_mapping_detailed(session, mapping_id: int, validate_only: bool = Fal
         observed_at=write_result.observed_at,
         sold_history_status=(holder["sold_history"] or {}).get("availability_status"),
         sold_history_raw_sales_count=len((holder["sold_history"] or {}).get("raw_sales") or []),
+        batch_run_id=batch_run_id,
     )
     return MappingOutcome(
         mapping_id=mapping.id,
@@ -395,13 +421,51 @@ def run_one_mapping(mapping_id: int, validate_only: bool = False) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mapping-id", type=int, required=True, help="Collect exactly one mapping by id.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--mapping-id", type=int, help="Collect exactly one mapping by id.")
+    group.add_argument(
+        "--approved-mappings",
+        action="store_true",
+        help=(
+            "Discover every approved, verified-print SNKRDUNK mapping from the "
+            "database and process them sequentially in one bounded batch."
+        ),
+    )
     parser.add_argument(
         "--validate-only",
         action="store_true",
         help="Run the full navigation/classification/extraction/artwork/lineage check but never write to the database.",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="--approved-mappings only: cap how many eligible mappings this run processes.",
+    )
+    parser.add_argument(
+        "--mapping-ids",
+        type=str,
+        default=None,
+        help=(
+            "--approved-mappings only: comma-separated mapping ids to narrow the "
+            "eligible set to. Ids outside the eligible set are silently excluded, "
+            "never force-included."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.approved_mappings:
+        from snkrdunk_collector.batch import run_batch  # local import avoids a top-level cycle
+
+        mapping_ids = None
+        if args.mapping_ids:
+            try:
+                mapping_ids = [int(x) for x in args.mapping_ids.split(",") if x.strip()]
+            except ValueError:
+                parser.error("--mapping-ids must be a comma-separated list of integers")
+
+        result = run_batch(limit=args.limit, mapping_ids=mapping_ids, validate_only=args.validate_only)
+        sys.exit(result.exit_code)
 
     run_id_ts = datetime.now(timezone.utc).isoformat()
     log_event("run_start", run_at=run_id_ts, mapping_id=args.mapping_id, validate_only=args.validate_only)

@@ -73,6 +73,7 @@ class SourceCardMapping(Base):
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean)
     review_status: Mapped[str] = mapped_column(String(32))
+    manual_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class RawSnapshot(Base):
