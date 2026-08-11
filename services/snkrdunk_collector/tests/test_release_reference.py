@@ -11,8 +11,11 @@ import pytest
 
 from snkrdunk_collector.identity import normalize_release_text, release_names_match
 from snkrdunk_collector.release_reference import (
+    MATCH_BANDAI_OFFICIAL,
+    MATCH_SOURCE_RENDERING,
     RELEASE_NAME_AUTHORITY,
     RELEASE_REFERENCES,
+    classify_release_name_match,
     get_release_reference,
 )
 
@@ -45,11 +48,14 @@ class TestAuthoritativeTable:
         for ref in RELEASE_REFERENCES.values():
             assert ref.source_url.startswith("https://www.onepiece-cardgame.com/")
 
-    def test_no_reference_carries_an_unattested_marketplace_rendering(self):
-        """additional_official_names is not an alias list. If this ever grows,
-        each entry must have arrived with its own Bandai source URL."""
+    def test_no_marketplace_rendering_is_recorded_as_a_bandai_name(self):
+        """additional_official_names is for Bandai's own alternate renderings
+        only. A storefront spelling belongs in snkrdunk_renderings, which is
+        reported separately - never as a Bandai name."""
         for ref in RELEASE_REFERENCES.values():
             assert ref.additional_official_names == ()
+            for rendering in ref.snkrdunk_renderings:
+                assert rendering not in ref.bandai_names()
 
     def test_lookup_is_case_and_whitespace_insensitive(self):
         assert get_release_reference(" op-03 ").bandai_official_name == "強大な敵"
@@ -126,16 +132,55 @@ class TestObservedSnkrdunkTextAgainstBandai:
         ref = get_release_reference(code)
         assert release_names_match(OBSERVED[code], ref.bandai_official_name)
 
-    def test_op01_observed_katakana_does_not_match_bandai_latin_name(self):
-        """DOCUMENTS A REAL, EXPECTED FAILURE - not a bug in the normalizer.
-
-        Bandai titles OP-01 "ROMANCE DAWN" in Latin letters. SNKRDUNK (like
-        Amazon.co.jp) transliterates it to "ロマンスドーン". No Bandai source
-        attests the katakana rendering, so the gate fails closed and OP-01
-        mappings cannot pass release-name validation until a human adds an
-        attested rendering. Making this pass by adding the katakana from
-        SNKRDUNK would be deriving the authority from the page under test.
-        """
+    def test_op01_observed_katakana_is_not_a_bandai_name_match(self):
+        """Bandai titles OP-01 "ROMANCE DAWN" in Latin letters; SNKRDUNK (like
+        Amazon.co.jp) transliterates it. The katakana must never satisfy the
+        BANDAI side of the check - it is accepted only via the declared
+        source rendering, and reported as such."""
         ref = get_release_reference("OP-01")
         assert ref.bandai_official_name == "ROMANCE DAWN"
-        assert not release_names_match(OBSERVED["OP-01"], ref.bandai_official_name)
+        assert not any(release_names_match(OBSERVED["OP-01"], n) for n in ref.bandai_names())
+
+
+class TestSourceSpecificRenderings:
+    """SNKRDUNK's own spelling of a release is recorded as storefront
+    nomenclature - accepted for matching, never presented as a Bandai name."""
+
+    def test_op01_katakana_is_declared_as_a_snkrdunk_rendering_not_a_bandai_name(self):
+        ref = get_release_reference("OP-01")
+        assert ref.snkrdunk_renderings == ("ロマンスドーン",)
+        assert "ロマンスドーン" not in ref.bandai_names()
+        assert ref.bandai_official_name == "ROMANCE DAWN"
+
+    def test_observed_op01_katakana_now_matches_via_the_source_rendering(self):
+        ref = get_release_reference("OP-01")
+        assert any(release_names_match(OBSERVED["OP-01"], n) for n in ref.accepted_names())
+
+    def test_match_against_katakana_is_classified_as_a_source_rendering(self):
+        ref = get_release_reference("OP-01")
+        assert (
+            classify_release_name_match(ref, OBSERVED["OP-01"], release_names_match)
+            == MATCH_SOURCE_RENDERING
+        )
+
+    def test_match_against_the_latin_name_is_classified_as_bandai(self):
+        ref = get_release_reference("OP-01")
+        assert (
+            classify_release_name_match(ref, "ブースターパック ROMANCE DAWN", release_names_match)
+            == MATCH_BANDAI_OFFICIAL
+        )
+
+    def test_the_other_releases_declare_no_source_rendering(self):
+        for code in ("OP-02", "OP-03", "OP-04"):
+            assert get_release_reference(code).snkrdunk_renderings == ()
+
+    def test_a_source_rendering_is_scoped_to_its_own_release(self):
+        """Not a global alias pool: OP-01's rendering must not satisfy OP-04."""
+        assert classify_release_name_match(
+            get_release_reference("OP-04"), OBSERVED["OP-01"], release_names_match
+        ) is None
+
+    def test_unmatched_name_classifies_as_neither(self):
+        assert classify_release_name_match(
+            get_release_reference("OP-03"), "ブースターパック 二つの伝説", release_names_match
+        ) is None

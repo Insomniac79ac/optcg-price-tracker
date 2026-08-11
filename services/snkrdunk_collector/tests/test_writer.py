@@ -18,6 +18,7 @@ from snkrdunk_collector.models import (
     Source,
     SourceCardMapping,
 )
+from snkrdunk_collector.release_reference import MATCH_BANDAI_OFFICIAL, MATCH_SOURCE_RENDERING
 from snkrdunk_collector.writer import validate_and_write_observation
 
 PRODUCT_URL = "https://snkrdunk.com/apparels/104428"
@@ -255,12 +256,36 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertTrue(any(r.startswith("release_product_mismatch:") for r in result.reasons))
         self.assertFalse(any(r.startswith("release_name_mismatch:") for r in result.reasons))
 
-    def test_snkrdunk_katakana_op01_rendering_fails_closed(self):
-        """The real observed OP-01 text. Fails until a Bandai-attested
-        rendering is added - never by aliasing it here."""
+    def test_snkrdunk_katakana_op01_rendering_passes_as_source_nomenclature(self):
+        """The real observed OP-01 text. Accepted via the declared SNKRDUNK
+        rendering - but the record must say it matched storefront
+        nomenclature, NOT a Bandai official name."""
         extraction = dict(
             GOOD_EXTRACTION,
             extracted=dict(GOOD_EXTRACTED, release_text="ブースターパック ロマンスドーン"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(result.identity_verified, result.identity_reasons)
+        self.assertEqual(result.release_name_match_authority, MATCH_SOURCE_RENDERING)
+        self.assertNotEqual(result.release_name_match_authority, MATCH_BANDAI_OFFICIAL)
+
+    def test_bandai_latin_op01_rendering_is_reported_as_bandai(self):
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+        self.assertTrue(result.identity_verified)
+        self.assertEqual(result.release_name_match_authority, MATCH_BANDAI_OFFICIAL)
+
+    def test_a_source_rendering_never_widens_to_another_release(self):
+        """snkrdunk_renderings is scoped to its own release, not a global
+        alias pool - OP-01's rendering must not satisfy OP-04."""
+        self.verified_print.release_product_code = "OP-04"
+        self.session.flush()
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(
+                GOOD_EXTRACTED,
+                release_product_code="OP-04",
+                release_text="ブースターパック ロマンスドーン",
+            ),
         )
         result = self._write(self.approved_mapping, extraction)
         self.assertFalse(result.identity_verified)

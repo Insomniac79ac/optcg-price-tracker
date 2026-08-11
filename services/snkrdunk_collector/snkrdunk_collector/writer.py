@@ -34,9 +34,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from snkrdunk_collector.card_code_authority import CardCodeAuthority, resolve_expected_card_code
 from snkrdunk_collector.identity import normalize_card_name, release_names_match
 from snkrdunk_collector.release_reference import (
     RELEASE_NAME_AUTHORITY,
+    classify_release_name_match,
     get_release_reference,
 )
 from snkrdunk_collector.models import (
@@ -73,6 +75,11 @@ class WriteResult:
     reasons: list[str] = field(default_factory=list)
     identity_verified: bool = False
     identity_reasons: list[str] = field(default_factory=list)
+    # Provenance of the two identity fields that have a hierarchy behind
+    # them, so a verification record can state which authority backed it.
+    card_code_authority: str | None = None
+    card_code_evidence: str | None = None
+    release_name_match_authority: str | None = None
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
     card_id: int | None = None
@@ -109,6 +116,7 @@ def validate_identity(
     classification: str,
     extraction: dict,
     artwork_comparison: dict | None,
+    card_code_authority: CardCodeAuthority | None = None,
 ) -> list[str]:
     """Every check that answers "is the stored product actually the intended
     verified print?" - and nothing that answers "is there a price on it?".
@@ -130,9 +138,21 @@ def validate_identity(
         if reason.split(":", 1)[0] not in PRICE_ONLY_FAIL_REASONS:
             reasons.append(reason)
 
+    # The expected card code must come from an authority independent of the
+    # page being validated - Bandai card-level evidence, or a verified
+    # Yuyu-Tei product for the same print. The mapping's own source_card_id
+    # is deliberately NOT used: it is a SNKRDUNK-scoped field, and letting it
+    # stand as "expected" would have SNKRDUNK supplying both sides of its own
+    # check. See card_code_authority.py.
     displayed_code = extracted.get("card_code")
-    if displayed_code != mapping.source_card_id:
-        reasons.append(f"card_code_mismatch:displayed={displayed_code},expected={mapping.source_card_id}")
+    if card_code_authority is None:
+        reasons.append("card_code_authority_missing:no_bandai_or_verified_yuyutei_evidence")
+    elif displayed_code != card_code_authority.card_code:
+        reasons.append(
+            f"card_code_mismatch:displayed={displayed_code},"
+            f"expected={card_code_authority.card_code},"
+            f"authority={card_code_authority.authority}"
+        )
 
     if card_print is None:
         reasons.append("card_print_missing_for_identity_check")
@@ -179,8 +199,8 @@ def validate_identity(
         else:
             observed_release_text = extracted.get("release_text")
             if not any(
-                release_names_match(observed_release_text, official)
-                for official in reference.accepted_names()
+                release_names_match(observed_release_text, name)
+                for name in reference.accepted_names()
             ):
                 reasons.append(
                     f"release_name_mismatch:displayed={observed_release_text},"
@@ -238,6 +258,14 @@ def validate_and_write_observation(
     if card_print is not None:
         canonical = session.get(CanonicalCard, card_print.canonical_card_id)
 
+    card_code_authority = resolve_expected_card_code(session, card_print)
+    release_reference = get_release_reference(
+        card_print.release_product_code if card_print else None
+    )
+    release_name_match = classify_release_name_match(
+        release_reference, extracted.get("release_text"), release_names_match
+    )
+
     identity_reasons = validate_identity(
         mapping=mapping,
         card_print=card_print,
@@ -245,6 +273,7 @@ def validate_and_write_observation(
         classification=classification,
         extraction=extraction,
         artwork_comparison=artwork_comparison,
+        card_code_authority=card_code_authority,
     )
 
     # A write additionally needs approval state and an actual listed price;
@@ -270,6 +299,9 @@ def validate_and_write_observation(
             reasons=reasons,
             identity_verified=identity_verified,
             identity_reasons=identity_reasons,
+            card_code_authority=card_code_authority.authority if card_code_authority else None,
+            card_code_evidence=card_code_authority.evidence_url if card_code_authority else None,
+            release_name_match_authority=release_name_match,
             price_jpy=price_jpy,
             condition_label=condition_label,
             card_id=mapping.card_id,
@@ -310,6 +342,9 @@ def validate_and_write_observation(
         written=True,
         identity_verified=True,
         identity_reasons=[],
+        card_code_authority=card_code_authority.authority if card_code_authority else None,
+        card_code_evidence=card_code_authority.evidence_url if card_code_authority else None,
+        release_name_match_authority=release_name_match,
         observation_id=observation.id,
         raw_snapshot_id=raw_snapshot.id,
         card_id=observation.card_id,

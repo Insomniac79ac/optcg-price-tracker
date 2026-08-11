@@ -143,13 +143,12 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
         whose official name agrees with the fixture page.
 
         The fixture is a real OP-01 page, and SNKRDUNK renders OP-01's name as
-        the katakana "ロマンスドーン" while Bandai titles it "ROMANCE DAWN" -
-        so against the real table it fails the name gate (see
-        test_release_reference.py). That naming question is not what this file
-        is about: these tests are about whether validate-only persists rows.
-        The double keeps the two concerns independent, and
-        test_real_op01_release_name_fails_closed below exercises the real
-        table deliberately.
+        the katakana "ロマンスドーン" while Bandai titles it "ROMANCE DAWN"
+        (see test_release_reference.py). That naming question is not what this
+        file is about: these tests are about whether validate-only persists
+        rows. The double keeps the two concerns independent, and
+        test_real_op01_release_name_resolves_via_source_rendering below
+        exercises the real table deliberately.
         """
         double = ReleaseReference(
             release_product_code="OP-01",
@@ -231,10 +230,11 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
         self.assertEqual(sorted(outcome.raw_a_to_d), ["A", "B", "C", "D"])
         self.assertEqual(outcome.raw_a_to_d["B"]["price_jpy"], 24500)
 
-    def test_real_op01_release_name_fails_closed_against_the_bandai_table(self):
+    def test_real_op01_release_name_resolves_via_source_rendering(self):
         """No test double: the genuine reference table against the genuine
-        fixture. Proves the gate is live end to end, and that it writes
-        nothing when it fails."""
+        fixture. The fixture shows SNKRDUNK's katakana "ロマンスドーン", which
+        is accepted as declared storefront nomenclature - and the result must
+        report that it matched a source rendering, not a Bandai name."""
         session = self.Session()
         try:
             with (
@@ -256,13 +256,13 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
 
         check = self.Session()
         try:
-            self.assertFalse(outcome.identity_verified)
-            self.assertTrue(
+            self.assertTrue(outcome.identity_verified, outcome.identity_reasons)
+            self.assertFalse(
                 any(r.startswith("release_name_mismatch:") for r in outcome.identity_reasons),
                 outcome.identity_reasons,
             )
-            self.assertFalse(outcome.written)
-            self.assertEqual(check.query(PriceObservation).count(), 0)
+            self.assertTrue(outcome.written)
+            self.assertEqual(check.query(PriceObservation).count(), 1)
         finally:
             check.close()
 

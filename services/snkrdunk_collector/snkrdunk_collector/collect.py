@@ -95,6 +95,9 @@ class MappingOutcome:
     identity_verified: bool = False
     identity_reasons: list[str] = field(default_factory=list)
     identity_classification: str | None = None
+    card_code_authority: str | None = None
+    card_code_evidence: str | None = None
+    release_name_match_authority: str | None = None
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
     card_id: int | None = None
@@ -374,6 +377,9 @@ def run_one_mapping_detailed(
             identity_verified=write_result.identity_verified,
             identity_reasons=write_result.identity_reasons,
             identity_classification=_identity_classification(write_result),
+            card_code_authority=write_result.card_code_authority,
+            card_code_evidence=write_result.card_code_evidence,
+            release_name_match_authority=write_result.release_name_match_authority,
             price_jpy=write_result.price_jpy,
             batch_run_id=batch_run_id,
         )
@@ -387,6 +393,9 @@ def run_one_mapping_detailed(
             identity_verified=write_result.identity_verified,
             identity_reasons=write_result.identity_reasons,
             identity_classification=_identity_classification(write_result),
+            card_code_authority=write_result.card_code_authority,
+            card_code_evidence=write_result.card_code_evidence,
+            release_name_match_authority=write_result.release_name_match_authority,
             price_jpy=write_result.price_jpy,
             condition_label=write_result.condition_label,
             artwork_match=(holder["artwork_comparison"] or {}).get("match"),
@@ -414,6 +423,9 @@ def run_one_mapping_detailed(
             identity_verified=write_result.identity_verified,
             identity_reasons=write_result.identity_reasons,
             identity_classification=_identity_classification(write_result),
+            card_code_authority=write_result.card_code_authority,
+            card_code_evidence=write_result.card_code_evidence,
+            release_name_match_authority=write_result.release_name_match_authority,
             price_jpy=write_result.price_jpy,
             condition_label=write_result.condition_label,
             artwork_match=(holder["artwork_comparison"] or {}).get("match"),
@@ -454,6 +466,13 @@ def run_one_mapping_detailed(
         mapping_id=mapping.id,
         stage="written",
         written=True,
+        would_write=True,
+        identity_verified=write_result.identity_verified,
+        identity_reasons=write_result.identity_reasons,
+        identity_classification=_identity_classification(write_result),
+        card_code_authority=write_result.card_code_authority,
+        card_code_evidence=write_result.card_code_evidence,
+        release_name_match_authority=write_result.release_name_match_authority,
         classification=classification,
         observation_id=write_result.observation_id,
         raw_snapshot_id=write_result.raw_snapshot_id,

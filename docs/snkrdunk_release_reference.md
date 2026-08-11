@@ -1,7 +1,11 @@
 # SNKRDUNK release-name validation
 
 How the collector proves that a SNKRDUNK product belongs to the release its
-linked `card_print` says it does, and why one release currently fails closed.
+linked `card_print` says it does, and how a storefront's own spelling of a
+release name is handled without ever being mistaken for a Bandai name.
+
+For the wider question of which source may establish each identity field, see
+[snkrdunk_identity_authority.md](snkrdunk_identity_authority.md).
 
 ## Why two checks, not one
 
@@ -52,43 +56,38 @@ become `ROMANCE DAWN`. `RELEASE_TEXT_PREFIXES` is a category-word list and must
 never be extended with an individual product name — that would silently alias
 one release to another.
 
-## OP-01 currently fails closed — this is intended
+## OP-01 — resolved via a declared source rendering
 
 Bandai titles OP-01 in **Latin letters**: `ブースターパック ROMANCE DAWN【OP-01】`.
 
 SNKRDUNK transliterates it into katakana: `ブースターパック ロマンスドーン`.
 Amazon.co.jp does the same. That is a **retailer rendering with no Bandai
-attestation**, so it is deliberately absent from the table, and every OP-01
-product fails check B.
+attestation**, so it is not recorded as a Bandai name.
 
-Confirmed by the offline cross-check of validation deployment `906a8b60`
-(2026-08-11): 12 of 15 re-approved mappings pass; mappings **36, 37 and 38**
-(all OP-01) fail.
-
-This is a **false negative on three known-good mappings**, not a wrong-product
-detection. Failing closed on a naming difference that cannot be substantiated
-is the correct default, but it does block those mappings from production
-writes.
-
-### To resolve it
-
-Add the katakana form to OP-01's `additional_official_names` **only** once a
-Bandai-published source attests it, and record that source URL beside the
-entry:
+It is instead declared under `snkrdunk_renderings` — storefront nomenclature,
+kept separate from `bandai_official_name` and from
+`additional_official_names` (which is reserved for renderings Bandai itself
+publishes, and is empty):
 
 ```python
 "OP-01": ReleaseReference(
     release_product_code="OP-01",
     bandai_official_name="ROMANCE DAWN",
     source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
-    additional_official_names=("ロマンスドーン",),  # requires its own Bandai source URL
+    additional_official_names=(),
+    snkrdunk_renderings=("ロマンスドーン",),
 ),
 ```
 
-`additional_official_names` exists for products Bandai itself renders more than
-one way. It is not an alias list. If no Bandai source attests the katakana, the
-right resolution is a documented decision to accept the marketplace rendering —
-recorded as such, not disguised as a Bandai name.
+An OP-01 product therefore passes check B, and the verification record reports
+`release_name_match_authority = "SNKRDUNK source-specific rendering"` rather
+than claiming a Bandai match. Renderings are scoped to their own release —
+OP-01's does not satisfy OP-04.
+
+Before this was declared, the offline cross-check of validation deployment
+`906a8b60` (2026-08-11) put 12 of 15 re-approved mappings at pass and mappings
+**36, 37 and 38** (all OP-01) at fail — a false negative on known-good
+mappings, not a wrong-product detection.
 
 ## Unknown releases
 

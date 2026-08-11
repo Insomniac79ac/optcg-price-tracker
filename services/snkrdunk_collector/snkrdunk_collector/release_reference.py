@@ -21,34 +21,51 @@ Verified 2026-08-11 against the official product pages:
 
 NOTE ON OP-01. Bandai titles this set in Latin letters - "ROMANCE DAWN" - not
 in katakana. Marketplaces commonly transliterate it (Amazon.co.jp and SNKRDUNK
-both list "ロマンスドーン"). That transliteration is a RETAILER rendering with
-no Bandai attestation, so it is deliberately NOT present in this table. A
-SNKRDUNK OP-01 product will therefore fail the release-name check until a
-human adds an attested rendering via `additional_official_names` with its own
-source URL. Failing closed on a naming difference we cannot substantiate is
-the intended behaviour - see docs/snkrdunk_release_reference.md.
+both list "ロマンスドーン"). That transliteration has no Bandai attestation, so
+it is NOT recorded as a Bandai name; it lives in `snkrdunk_renderings` as
+declared source-specific nomenclature. A match against it is reported as
+MATCH_SOURCE_RENDERING so an audit record always shows which authority the
+name agreed with. See docs/snkrdunk_release_reference.md.
 """
 
 from dataclasses import dataclass
+
+
+MATCH_BANDAI_OFFICIAL = "Bandai official name"
+MATCH_SOURCE_RENDERING = "SNKRDUNK source-specific rendering"
 
 
 @dataclass(frozen=True)
 class ReleaseReference:
     """One release product's authoritative naming.
 
-    `additional_official_names` exists for the case where Bandai itself
-    publishes more than one rendering of the same product name. It is NOT an
-    alias list: never add a name observed on a marketplace, however plausible
-    - each entry needs its own Bandai source URL recorded beside it.
+    Three deliberately separate fields, because they carry different weight
+    and a verification record must be able to say which one matched:
+
+    `bandai_official_name` - what Bandai publishes. The authority.
+
+    `additional_official_names` - for when Bandai ITSELF publishes more than
+    one rendering. Not an alias list: never add a name observed on a
+    marketplace, and record a Bandai source URL beside every entry.
+
+    `snkrdunk_renderings` - how SNKRDUNK writes this release. Explicitly
+    SOURCE-SPECIFIC NOMENCLATURE, not a Bandai name and never presented as
+    one. It exists so a known storefront spelling does not fail a mapping
+    whose identity is otherwise fully proven, while keeping the provenance
+    of the match visible in the audit record.
     """
 
     release_product_code: str
     bandai_official_name: str
     source_url: str
     additional_official_names: tuple[str, ...] = ()
+    snkrdunk_renderings: tuple[str, ...] = ()
+
+    def bandai_names(self) -> tuple[str, ...]:
+        return (self.bandai_official_name, *self.additional_official_names)
 
     def accepted_names(self) -> tuple[str, ...]:
-        return (self.bandai_official_name, *self.additional_official_names)
+        return (*self.bandai_names(), *self.snkrdunk_renderings)
 
 
 RELEASE_REFERENCES: dict[str, ReleaseReference] = {
@@ -56,8 +73,13 @@ RELEASE_REFERENCES: dict[str, ReleaseReference] = {
         release_product_code="OP-01",
         bandai_official_name="ROMANCE DAWN",
         source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
-        # Intentionally empty - see the module docstring's OP-01 note.
+        # Bandai publishes exactly one rendering: the Latin "ROMANCE DAWN".
         additional_official_names=(),
+        # SNKRDUNK transliterates it (Amazon.co.jp does too). Recorded here as
+        # storefront nomenclature so OP-01 products are not failed for a
+        # spelling difference - NOT as a Bandai name. A match against this
+        # value is reported as MATCH_SOURCE_RENDERING, never as Bandai.
+        snkrdunk_renderings=("ロマンスドーン",),
     ),
     "OP-02": ReleaseReference(
         release_product_code="OP-02",
@@ -77,6 +99,27 @@ RELEASE_REFERENCES: dict[str, ReleaseReference] = {
 }
 
 RELEASE_NAME_AUTHORITY = "Bandai official Japanese product page"
+
+
+def classify_release_name_match(
+    reference: ReleaseReference | None,
+    observed_release_text: str | None,
+    matcher,
+) -> str | None:
+    """Which authority the observed release name agreed with, so an audit
+    record can distinguish "matched Bandai" from "matched a known storefront
+    spelling". None means it matched neither.
+
+    `matcher` is injected (identity.release_names_match) to keep this module
+    free of a normalization dependency.
+    """
+    if reference is None:
+        return None
+    if any(matcher(observed_release_text, name) for name in reference.bandai_names()):
+        return MATCH_BANDAI_OFFICIAL
+    if any(matcher(observed_release_text, name) for name in reference.snkrdunk_renderings):
+        return MATCH_SOURCE_RENDERING
+    return None
 
 
 def get_release_reference(release_product_code: str | None) -> ReleaseReference | None:
