@@ -56,6 +56,63 @@ def normalize_card_name(name: str | None) -> str | None:
     return "".join(folded.split()) or None
 
 
+# Generic product-category prefixes a storefront puts in front of the real
+# release name. These are SOURCE FORMATTING, not part of any product's
+# identity - Bandai's own page prints "ブースターパック 強大な敵【OP-03】" too.
+# Strictly a category-word list: never extend it with an individual product
+# name, which would silently alias one release to another.
+RELEASE_TEXT_PREFIXES = (
+    "ブースターパック",
+    "スタートデッキ",
+    "プロモーションカード",
+    "エクストラブースター",
+    "BOOSTER PACK",
+    "START DECK",
+)
+
+# A trailing "【OP-01】"-style product-code bracket, in either bracket style.
+RELEASE_CODE_BRACKET_RE = re.compile(r"[【\[(（][^】\])）]*[】\])）]")
+
+# Punctuation/separators a storefront may put between the prefix and the name.
+RELEASE_EDGE_CHARS = " \t　-–—­:：・/|,、。«»\"'「」『』"
+
+
+def normalize_release_text(text: str | None) -> str | None:
+    """Compare-ready form of a release name.
+
+    Normalizes only generic source formatting: NFKC folding (fullwidth vs
+    halfwidth), product-code brackets, a leading product-category prefix,
+    surrounding punctuation, all whitespace, and letter case. It does NOT
+    translate, transliterate or alias product names - "ロマンスドーン" does
+    not become "ROMANCE DAWN", because those are different strings and only
+    Bandai can attest that a rendering is official (see release_reference.py).
+    """
+    if text is None:
+        return None
+
+    folded = unicodedata.normalize("NFKC", text)
+    folded = RELEASE_CODE_BRACKET_RE.sub(" ", folded)
+    folded = folded.strip(RELEASE_EDGE_CHARS)
+
+    # Strip at most one leading category prefix, longest first so that a
+    # prefix which is itself a prefix of another can't shadow it.
+    for prefix in sorted(RELEASE_TEXT_PREFIXES, key=len, reverse=True):
+        normalized_prefix = unicodedata.normalize("NFKC", prefix).casefold()
+        if folded.casefold().startswith(normalized_prefix):
+            folded = folded[len(normalized_prefix):]
+            break
+
+    collapsed = "".join(folded.split()).strip(RELEASE_EDGE_CHARS)
+    return collapsed.casefold() or None
+
+
+def release_names_match(observed: str | None, official: str | None) -> bool:
+    """True only when both normalize to the same non-empty string."""
+    left = normalize_release_text(observed)
+    right = normalize_release_text(official)
+    return bool(left) and left == right
+
+
 def set_token_from_card_code(card_code: str | None) -> str | None:
     """"OP01-001" -> "OP01". Returns None for anything not shaped like a card
     code, so a caller can never silently compare against a partial parse."""

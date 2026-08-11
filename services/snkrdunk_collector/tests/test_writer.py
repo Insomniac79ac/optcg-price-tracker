@@ -29,7 +29,10 @@ GOOD_EXTRACTED = {
     "rarity": "L",
     "treatment": "parallel",
     "page_language": "ja",
-    "release_text": "ブースターパックロマンスドーン",
+    # Bandai titles OP-01 in Latin letters; see release_reference.py. A page
+    # showing the katakana transliteration fails the name gate on purpose -
+    # covered by test_release_reference.py and the mismatch test below.
+    "release_text": "ブースターパック ROMANCE DAWN",
     "release_product_code": "OP-01",
     "raw_floor_jpy": 24500,
     "raw_floor_condition": "B",
@@ -220,6 +223,88 @@ class FailClosedWriteTests(WriterTestCase):
         result = self._write(self.approved_mapping, extraction)
         reason = next(r for r in result.reasons if r.startswith("release_product_mismatch:"))
         self.assertIn("release_text=別のブースター", reason)
+
+    def test_release_name_mismatch_is_its_own_reason(self):
+        """A product whose card code says OP-01 but whose release name is a
+        different Bandai product - a reprint or alternate product carrying an
+        unchanged code. release_product_mismatch alone cannot see this."""
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_text="ブースターパック 強大な敵"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.written)
+        self.assertTrue(any(r.startswith("release_name_mismatch:") for r in result.reasons))
+        # The code-level check still agrees, proving the two are independent.
+        self.assertFalse(any(r.startswith("release_product_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
+
+    def test_release_name_mismatch_reason_names_its_authority(self):
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_text="ブースターパック 謀略の王国"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        reason = next(r for r in result.reasons if r.startswith("release_name_mismatch:"))
+        self.assertIn("expected=ROMANCE DAWN", reason)
+        self.assertIn("authority=Bandai official Japanese product page", reason)
+
+    def test_correct_release_name_with_wrong_code_is_a_code_mismatch(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04"))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(any(r.startswith("release_product_mismatch:") for r in result.reasons))
+        self.assertFalse(any(r.startswith("release_name_mismatch:") for r in result.reasons))
+
+    def test_snkrdunk_katakana_op01_rendering_fails_closed(self):
+        """The real observed OP-01 text. Fails until a Bandai-attested
+        rendering is added - never by aliasing it here."""
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_text="ブースターパック ロマンスドーン"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.identity_verified)
+        self.assertTrue(any(r.startswith("release_name_mismatch:") for r in result.reasons))
+
+    def test_missing_release_text_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, release_text=None))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.identity_verified)
+        self.assertTrue(any(r.startswith("release_name_mismatch:") for r in result.reasons))
+
+    def test_unknown_release_fails_closed_rather_than_skipping_the_check(self):
+        """An OP05+ expansion must not bypass the gate by simply having no
+        reference entry."""
+        future_print = CardPrint(
+            id=5, canonical_card_id=2, language="jp", treatment="parallel",
+            release_product_code="OP-99", verification_status="verified",
+            image_url="https://example.invalid/x.png",
+        )
+        self.session.add(future_print)
+        self.session.flush()
+        future_mapping = SourceCardMapping(
+            id=95, card_id=11, source_id=2, card_print_id=5,
+            source_card_id="OP99-001", source_url=PRODUCT_URL + "-future",
+            is_active=True, review_status="approved",
+        )
+        self.session.add(future_mapping)
+        self.session.flush()
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(
+                GOOD_EXTRACTED,
+                card_code="OP99-001",
+                release_product_code="OP-99",
+                release_text="ブースターパック 未知の製品",
+            ),
+        )
+        result = self._write(future_mapping, extraction)
+        self.assertFalse(result.written)
+        self.assertFalse(result.identity_verified)
+        self.assertTrue(
+            any(r.startswith("authoritative_release_name_missing:") for r in result.identity_reasons)
+        )
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
 
     def test_rarity_mismatch_fails_closed(self):
         extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, rarity="SR"))

@@ -22,8 +22,9 @@ from unittest.mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from snkrdunk_collector import collect
+from snkrdunk_collector import collect, writer
 from snkrdunk_collector.db import Base
+from snkrdunk_collector.release_reference import ReleaseReference
 from snkrdunk_collector.models import (
     CanonicalCard,
     Card,
@@ -137,13 +138,32 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
             "final_url": url,
         }
 
-    def _run(self, validate_only: bool):
+    def _run(self, validate_only: bool, release_name_matches: bool = True):
+        """`release_name_matches` swaps in a test-double release reference
+        whose official name agrees with the fixture page.
+
+        The fixture is a real OP-01 page, and SNKRDUNK renders OP-01's name as
+        the katakana "ロマンスドーン" while Bandai titles it "ROMANCE DAWN" -
+        so against the real table it fails the name gate (see
+        test_release_reference.py). That naming question is not what this file
+        is about: these tests are about whether validate-only persists rows.
+        The double keeps the two concerns independent, and
+        test_real_op01_release_name_fails_closed below exercises the real
+        table deliberately.
+        """
+        double = ReleaseReference(
+            release_product_code="OP-01",
+            bandai_official_name="ロマンスドーン" if release_name_matches else "強大な敵",
+            source_url="https://example.invalid/test-double",
+        )
+
         session = self.Session()
         try:
             with (
                 patch.object(collect, "sync_playwright", _fake_sync_playwright),
                 patch.object(collect, "goto_and_capture", self._capture),
                 patch.object(collect, "fetch_bytes", lambda page, url: b"image-bytes"),
+                patch.object(writer, "get_release_reference", lambda code: double),
                 patch.object(
                     collect,
                     "compare_artwork",
@@ -210,6 +230,41 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
         outcome, _, _ = self._run(validate_only=True)
         self.assertEqual(sorted(outcome.raw_a_to_d), ["A", "B", "C", "D"])
         self.assertEqual(outcome.raw_a_to_d["B"]["price_jpy"], 24500)
+
+    def test_real_op01_release_name_fails_closed_against_the_bandai_table(self):
+        """No test double: the genuine reference table against the genuine
+        fixture. Proves the gate is live end to end, and that it writes
+        nothing when it fails."""
+        session = self.Session()
+        try:
+            with (
+                patch.object(collect, "sync_playwright", _fake_sync_playwright),
+                patch.object(collect, "goto_and_capture", self._capture),
+                patch.object(collect, "fetch_bytes", lambda page, url: b"image-bytes"),
+                patch.object(
+                    collect,
+                    "compare_artwork",
+                    lambda official, candidate: {"match": True, "hash_distances": {}},
+                ),
+            ):
+                outcome = collect.run_one_mapping_detailed(
+                    session, 35, validate_only=False, batch_run_id="test-real-table"
+                )
+            session.commit()
+        finally:
+            session.close()
+
+        check = self.Session()
+        try:
+            self.assertFalse(outcome.identity_verified)
+            self.assertTrue(
+                any(r.startswith("release_name_mismatch:") for r in outcome.identity_reasons),
+                outcome.identity_reasons,
+            )
+            self.assertFalse(outcome.written)
+            self.assertEqual(check.query(PriceObservation).count(), 0)
+        finally:
+            check.close()
 
     def test_validate_only_on_an_unapproved_mapping_writes_nothing(self):
         session = self.Session()

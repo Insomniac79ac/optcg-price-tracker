@@ -34,7 +34,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from snkrdunk_collector.identity import normalize_card_name
+from snkrdunk_collector.identity import normalize_card_name, release_names_match
+from snkrdunk_collector.release_reference import (
+    RELEASE_NAME_AUTHORITY,
+    get_release_reference,
+)
 from snkrdunk_collector.models import (
     CanonicalCard,
     CardPrint,
@@ -146,6 +150,16 @@ def validate_identity(
                 f"language_mismatch:displayed={page_language},expected={card_print.language}"
             )
 
+        # Release validation is two INDEPENDENT checks, and both must pass.
+        #
+        # (A) the set token in the page's own card code vs the print's
+        #     release_product_code, and
+        # (B) the page's own release NAME vs Bandai's authoritative name for
+        #     that release code.
+        #
+        # (A) alone cannot catch a reprint or alternate product carrying an
+        # unchanged card code but belonging to a different release, which is
+        # exactly what (B) exists to detect - so they stay separate reasons.
         displayed_release = extracted.get("release_product_code")
         if displayed_release != card_print.release_product_code:
             reasons.append(
@@ -153,6 +167,26 @@ def validate_identity(
                 f"expected={card_print.release_product_code},"
                 f"release_text={extracted.get('release_text')}"
             )
+
+        reference = get_release_reference(card_print.release_product_code)
+        if reference is None:
+            # A release with no authoritative reference must never be waved
+            # through - that is how an OP05+ expansion would silently bypass
+            # this gate entirely.
+            reasons.append(
+                f"authoritative_release_name_missing:release={card_print.release_product_code}"
+            )
+        else:
+            observed_release_text = extracted.get("release_text")
+            if not any(
+                release_names_match(observed_release_text, official)
+                for official in reference.accepted_names()
+            ):
+                reasons.append(
+                    f"release_name_mismatch:displayed={observed_release_text},"
+                    f"expected={reference.bandai_official_name},"
+                    f"authority={RELEASE_NAME_AUTHORITY}"
+                )
 
     if canonical is None:
         reasons.append("canonical_card_missing_for_identity_check")
