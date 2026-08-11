@@ -46,6 +46,24 @@ class Source(Base):
     base_url: Mapped[str] = mapped_column(String(512))
 
 
+class CanonicalCard(Base):
+    """The print's own canonical identity - the authority for the name,
+    rarity and set a verified card_print represents. Deliberately preferred
+    over cards.* for verification: cards.rarity carries display variants
+    (e.g. "Parallel" on the OP01-002 row) rather than the true rarity token
+    a SNKRDUNK title shows, whereas canonical_cards.rarity is the real one
+    ("L"). Read-only here - services/api/app/models owns these rows."""
+
+    __tablename__ = "canonical_cards"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    card_code: Mapped[str] = mapped_column(String(64))
+    name_en: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    name_jp: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    rarity: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    original_set_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
 class CardPrint(Base):
     """Read-only lookup - this service never creates or verifies prints
     (see services/api/app/models/card_print.py, which owns that)."""
@@ -56,6 +74,7 @@ class CardPrint(Base):
     canonical_card_id: Mapped[int] = mapped_column(Integer)
     language: Mapped[str] = mapped_column(String(8))
     treatment: Mapped[str] = mapped_column(String(64))
+    release_product_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(16))

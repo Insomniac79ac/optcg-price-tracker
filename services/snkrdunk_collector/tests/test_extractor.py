@@ -146,3 +146,61 @@ class TestExtractProductIntegration:
         result = extract_product(html, PRODUCT_URL, expected_card_code="OP01-001", expected_treatment="parallel")
         assert result["extraction_status"] == "fail_closed"
         assert "no_raw_condition_price_available" in result["fail_reasons"]
+
+
+class TestObservedEvidenceRetention:
+    """Every observed identity value a verification record needs must survive
+    extraction - the 2026-08-11 audit found title/rarity/set/per-condition
+    prices were computed and then discarded, leaving PASS unauditable."""
+
+    def _extracted(self):
+        return extract_product(
+            _load_html(), PRODUCT_URL, expected_card_code="OP01-001", expected_treatment="parallel"
+        )["extracted"]
+
+    def test_observed_title_retained(self):
+        assert "ロロノア・ゾロ" in self._extracted()["title"]
+
+    def test_observed_card_name_retained_without_rarity_or_code(self):
+        assert self._extracted()["card_name"] == "ロロノア・ゾロ"
+
+    def test_observed_card_code_retained(self):
+        assert self._extracted()["card_code"] == "OP01-001"
+
+    def test_observed_rarity_retained(self):
+        assert self._extracted()["rarity"] == "L"
+
+    def test_observed_treatment_retained(self):
+        assert self._extracted()["treatment"] == "parallel"
+
+    def test_observed_page_language_retained(self):
+        assert self._extracted()["page_language"] == "ja"
+
+    def test_observed_release_text_retained(self):
+        assert self._extracted()["release_text"] == "ブースターパックロマンスドーン"
+
+    def test_observed_release_product_code_normalized_to_repo_convention(self):
+        assert self._extracted()["release_product_code"] == "OP-01"
+
+    def test_observed_primary_image_url_retained(self):
+        image_url = self._extracted()["product_image_url"]
+        assert image_url and image_url.startswith("https://")
+
+    def test_complete_a_to_d_condition_values_retained_not_just_labels(self):
+        """The regression that motivated this: logging list(conditions) kept
+        only the keys, discarding every price and raw_text."""
+        conditions = self._extracted()["conditions"]
+        assert sorted(conditions) == ["A", "B", "C", "D"]
+        for label, entry in conditions.items():
+            assert entry["condition"] == label
+            assert "price_jpy" in entry
+            assert "raw_text" in entry
+
+    def test_retained_conditions_carry_real_prices_and_awaiting_nulls(self):
+        conditions = self._extracted()["conditions"]
+        assert conditions["B"]["price_jpy"] == 24500
+        # 出品待ち chips keep their source text but carry no numeric price.
+        awaiting = [c for c in conditions.values() if c["price_jpy"] is None]
+        assert awaiting, "fixture is expected to contain at least one 出品待ち chip"
+        for entry in awaiting:
+            assert entry["raw_text"] is not None

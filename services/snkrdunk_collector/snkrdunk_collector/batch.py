@@ -190,8 +190,12 @@ def run_batch(
                 mapping_id=mapping.id,
                 stage=outcome.stage,
                 written=outcome.written,
+                would_write=outcome.would_write,
                 source_denied=outcome.source_denied,
                 reasons=outcome.reasons,
+                identity_verified=outcome.identity_verified,
+                identity_reasons=outcome.identity_reasons,
+                identity_classification=outcome.identity_classification,
             )
 
             if outcome.source_denied:
@@ -214,9 +218,15 @@ def run_batch(
             reason=stopped_reason,
         )
 
+    # A validate-only run's success criterion is identity verification, not
+    # writes: it deliberately persists nothing, so judging it by r.written
+    # would report every clean run as a partial failure.
+    def _resolved_ok(result) -> bool:
+        return result.identity_verified if validate_only else result.written
+
     if any(r.source_denied for r in results):
         status, exit_code = "source_wide_failure", 1
-    elif stopped_reason is not None or any(not r.written for r in results):
+    elif stopped_reason is not None or any(not _resolved_ok(r) for r in results):
         status, exit_code = "partial_failure", 2
     else:
         status, exit_code = "success", 0
@@ -230,7 +240,10 @@ def run_batch(
         mappings_selected=len(selected_ids),
         mappings_attempted=len(results),
         mappings_written=sum(1 for r in results if r.written),
+        mappings_would_write=sum(1 for r in results if r.would_write),
+        mappings_identity_verified=sum(1 for r in results if r.identity_verified),
         mappings_skipped=len(skipped_ids),
+        validate_only=validate_only,
         stopped_reason=stopped_reason,
         finished_at=finished_at.isoformat(),
     )

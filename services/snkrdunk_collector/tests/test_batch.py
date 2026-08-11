@@ -222,6 +222,69 @@ class BatchExecutionTests(BaseBatchTestCase):
         run_batch(session_factory=self.Session, mapping_runner=runner, validate_only=True)
         self.assertTrue(all(runner.validate_only_calls))
 
+    def test_validate_only_run_reports_zero_writes_despite_passing_gates(self):
+        """collect.py reports validated_only outcomes as written=False /
+        would_write=True. batch_complete.mappings_written is the number a
+        zero-write audit trusts, so it must follow `written`, never
+        `would_write`."""
+        outcomes = {
+            mid: MappingOutcome(
+                mapping_id=mid,
+                stage="validated_only",
+                written=False,
+                would_write=True,
+                identity_verified=True,
+            )
+            for mid in (101, 102, 103)
+        }
+        result = run_batch(
+            session_factory=self.Session,
+            mapping_runner=FakeMappingRunner(outcomes),
+            validate_only=True,
+        )
+        self.assertEqual(sum(1 for r in result.results if r.written), 0)
+        self.assertEqual(sum(1 for r in result.results if r.would_write), 3)
+
+    def test_clean_validate_only_run_is_a_success_not_a_partial_failure(self):
+        """A validate-only run persists nothing by design, so judging it by
+        `written` would report every clean run as a partial failure."""
+        outcomes = {
+            mid: MappingOutcome(
+                mapping_id=mid,
+                stage="validated_only",
+                written=False,
+                would_write=True,
+                identity_verified=True,
+            )
+            for mid in (101, 102, 103)
+        }
+        result = run_batch(
+            session_factory=self.Session,
+            mapping_runner=FakeMappingRunner(outcomes),
+            validate_only=True,
+        )
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.exit_code, 0)
+
+    def test_validate_only_run_with_a_failed_identity_is_a_partial_failure(self):
+        outcomes = {
+            101: MappingOutcome(mapping_id=101, stage="validated_only", identity_verified=True),
+            102: MappingOutcome(
+                mapping_id=102,
+                stage="validated_only",
+                identity_verified=False,
+                identity_reasons=["artwork_not_confirmed_match:no_match"],
+            ),
+            103: MappingOutcome(mapping_id=103, stage="validated_only", identity_verified=True),
+        }
+        result = run_batch(
+            session_factory=self.Session,
+            mapping_runner=FakeMappingRunner(outcomes),
+            validate_only=True,
+        )
+        self.assertEqual(result.status, "partial_failure")
+        self.assertEqual(result.exit_code, 2)
+
     def test_delay_between_mappings_applied(self):
         runner = FakeMappingRunner({101: written_outcome(101), 102: written_outcome(102), 103: written_outcome(103)})
         with patch("snkrdunk_collector.batch.settings") as mock_settings:

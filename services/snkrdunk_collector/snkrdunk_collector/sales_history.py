@@ -35,6 +35,13 @@ SOLD_HISTORY_LINK_KEYWORDS = [
 ]
 LOGIN_REQUIRED_MARKERS = ["ログイン", "login", "sign in", "signin"]
 
+# Site-wide chrome that carries a "ログイン" link on EVERY page, signed in or
+# not. A login marker found inside these says nothing about whether the
+# sales-history UI itself is gated, so it must never be read as evidence -
+# doing so previously produced false login_required verdicts on products
+# that simply had no sold history yet.
+GLOBAL_CHROME_TAGS = {"header", "nav", "footer"}
+
 SALES_HISTORY_CONDITION_HEADING_RE = re.compile(r"状態(.+?)の売買履歴")
 
 
@@ -47,12 +54,31 @@ def find_sales_history_link(soup: BeautifulSoup) -> tuple[str | None, dict[str, 
     return None, {"reason": "no_sales_history_link_found"}
 
 
+def find_content_login_marker(soup: BeautifulSoup) -> str | None:
+    """The first login marker that sits OUTSIDE the site-wide header/nav/
+    footer chrome, or None. SNKRDUNK renders a "ログイン" link in its global
+    header on every page, so a page-wide text search can never distinguish
+    "this history is gated" from "this site has a login button"."""
+    for text_node in soup.find_all(string=True):
+        text = str(text_node).strip().lower()
+        if not text or not any(kw in text for kw in LOGIN_REQUIRED_MARKERS):
+            continue
+        if any(
+            parent.name in GLOBAL_CHROME_TAGS
+            for parent in text_node.parents
+            if getattr(parent, "name", None)
+        ):
+            continue
+        return str(text_node).strip()
+    return None
+
+
 def parse_sales_history_page(html: str, product_id: str | None) -> dict[str, Any]:
     """Parse a sales-history page into per-condition raw/graded transaction
     lists, for logging/evidence purposes only - see module docstring. No
     stable per-sale ID is invented."""
     soup = BeautifulSoup(html, "html.parser")
-    login_markers_present = any(kw in soup.get_text(" ", strip=True) for kw in LOGIN_REQUIRED_MARKERS)
+    content_login_marker = find_content_login_marker(soup)
 
     all_sales: list[dict[str, Any]] = []
     conditions_found: list[str] = []
@@ -96,10 +122,15 @@ def parse_sales_history_page(html: str, product_id: str | None) -> dict[str, Any
 
     all_sales.sort(key=lambda s: s["date"], reverse=True)
 
-    if login_markers_present and not all_sales:
-        availability_status = "login_required"
-    elif all_sales or conditions_found:
+    # Order matters. Any real sales-history UI (its per-condition headings)
+    # being present proves the page is NOT access-gated, even when the
+    # product happens to have zero sales so far - so structure is checked
+    # before any login marker. Only a login marker outside the site-wide
+    # chrome, on a page with no sales-history UI at all, means gated.
+    if all_sales or conditions_found:
         availability_status = "public_sold_history_available"
+    elif content_login_marker is not None:
+        availability_status = "login_required"
     else:
         availability_status = "not_exposed_on_current_product"
 
@@ -108,4 +139,5 @@ def parse_sales_history_page(html: str, product_id: str | None) -> dict[str, Any
         "raw_sales": all_sales[:10],
         "stable_identifier_available": False,
         "conditions_found": conditions_found,
+        "content_login_marker": content_login_marker,
     }

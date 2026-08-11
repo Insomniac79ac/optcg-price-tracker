@@ -6,18 +6,21 @@ services/yuyutei_collector/yuyutei_collector/writer.py's structure and
 fail-closed philosophy, extended with the two checks SNKRDUNK's collector
 needs that Yuyu-Tei's doesn't: exact-artwork match and page-language match.
 
-Fail-closed gates:
-- page classification must be exactly "normal_page"
-- the source_card_mapping must be active, approved, and linked to an exact
-  (existing, verified) card_print - not just a legacy card_id
-- extraction_status must be "extracted" (extractor.py's own card-code and
-  treatment checks passed)
-- the resolved card code must equal the mapping's own source_card_id
-- the mapping's linked card_print's treatment must match what was extracted
-- the mapping's linked card_print's language must match the fetched page's
-  own <html lang> attribute (rejects a foreign-language variant page)
-- the artwork comparison (see artwork.compare_artwork) must report match=True
-- a numeric raw A-D floor price must be present
+Two distinct verdicts are produced, because they answer different questions:
+
+- validate_identity() answers "is the stored product actually the intended
+  verified print?" - card code, name, rarity, treatment, language,
+  release/set and exact artwork, each with its own named fail reason. A
+  missing listed price never invalidates identity (see
+  PRICE_ONLY_FAIL_REASONS), so a product whose A-D chips are all 出品待ち is
+  still fully identifiable.
+- validate_and_write_observation() answers "may a row be written?" - every
+  identity gate above, plus mapping approval state and an actual numeric
+  raw A-D floor price.
+
+That split is what lets a pre-approval re-verification pass establish
+mapping trust from identity alone (PASS_FLOOR_UNAVAILABLE) while keeping the
+write path exactly as fail-closed as before.
 
 price_type="floor" (existing repository convention - see
 app.services.market_index._resolve_snkrdunk, which already reads
@@ -31,7 +34,14 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from snkrdunk_collector.models import CardPrint, PriceObservation, RawSnapshot, SourceCardMapping
+from snkrdunk_collector.identity import normalize_card_name
+from snkrdunk_collector.models import (
+    CanonicalCard,
+    CardPrint,
+    PriceObservation,
+    RawSnapshot,
+    SourceCardMapping,
+)
 
 # card_prints.language uses this app's own short locale codes (e.g. "jp"),
 # not the ISO 639-1 codes a page's own <html lang="..."> attribute uses
@@ -45,10 +55,20 @@ def _expected_html_lang(card_print_language: str) -> str:
     return CARD_PRINT_LANGUAGE_TO_HTML_LANG.get(card_print_language, card_print_language)
 
 
+# Fail reasons that speak only to whether a *price* is currently listed, not
+# to whether the stored product is the intended print. Identity verification
+# deliberately ignores these: a print whose A-D chips are all 出品待ち is
+# still fully identifiable (see PASS_FLOOR_UNAVAILABLE), it just has nothing
+# to observe a floor from yet.
+PRICE_ONLY_FAIL_REASONS = frozenset({"no_raw_condition_price_available"})
+
+
 @dataclass
 class WriteResult:
     written: bool
     reasons: list[str] = field(default_factory=list)
+    identity_verified: bool = False
+    identity_reasons: list[str] = field(default_factory=list)
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
     card_id: int | None = None
@@ -78,6 +98,90 @@ def validate_mapping_for_write(session: Session, mapping: SourceCardMapping) -> 
     return reasons
 
 
+def validate_identity(
+    mapping: SourceCardMapping,
+    card_print: CardPrint | None,
+    canonical: CanonicalCard | None,
+    classification: str,
+    extraction: dict,
+    artwork_comparison: dict | None,
+) -> list[str]:
+    """Every check that answers "is the stored product actually the intended
+    verified print?" - and nothing that answers "is there a price on it?".
+
+    Each dimension emits its own distinct reason so an audit record can name
+    exactly which one failed. Comparison targets are the print's *canonical*
+    identity (name/rarity/set) plus the print row itself (treatment/language/
+    release), never the mapping's free-text fields.
+    """
+    reasons: list[str] = []
+    extracted = extraction.get("extracted") or {}
+
+    if classification != "normal_page":
+        reasons.append(f"page_classification_not_normal_page:{classification}")
+
+    # extractor.py's own fail-closed reasons, minus the purely price-related
+    # ones (a missing floor never invalidates identity).
+    for reason in extraction.get("fail_reasons") or []:
+        if reason.split(":", 1)[0] not in PRICE_ONLY_FAIL_REASONS:
+            reasons.append(reason)
+
+    displayed_code = extracted.get("card_code")
+    if displayed_code != mapping.source_card_id:
+        reasons.append(f"card_code_mismatch:displayed={displayed_code},expected={mapping.source_card_id}")
+
+    if card_print is None:
+        reasons.append("card_print_missing_for_identity_check")
+    else:
+        displayed_treatment = extracted.get("treatment")
+        if displayed_treatment != card_print.treatment:
+            reasons.append(
+                f"treatment_mismatch:displayed={displayed_treatment},expected={card_print.treatment}"
+            )
+
+        page_language = extracted.get("page_language")
+        expected_html_lang = _expected_html_lang(card_print.language)
+        if page_language != expected_html_lang:
+            reasons.append(
+                f"language_mismatch:displayed={page_language},expected={card_print.language}"
+            )
+
+        displayed_release = extracted.get("release_product_code")
+        if displayed_release != card_print.release_product_code:
+            reasons.append(
+                f"release_product_mismatch:displayed={displayed_release},"
+                f"expected={card_print.release_product_code},"
+                f"release_text={extracted.get('release_text')}"
+            )
+
+    if canonical is None:
+        reasons.append("canonical_card_missing_for_identity_check")
+    else:
+        displayed_name = normalize_card_name(extracted.get("card_name"))
+        expected_name = normalize_card_name(canonical.name_jp)
+        # Tolerant of legitimate extra formatting SNKRDUNK may append to a
+        # name, but never of a different card: the expected name must appear
+        # whole. Generic containment only - no per-card aliasing.
+        if not expected_name or not displayed_name or expected_name not in displayed_name:
+            reasons.append(
+                f"title_mismatch:displayed={extracted.get('card_name')},expected={canonical.name_jp}"
+            )
+
+        displayed_rarity = (extracted.get("rarity") or "").strip().upper() or None
+        expected_rarity = (canonical.rarity or "").strip().upper() or None
+        if not expected_rarity or displayed_rarity != expected_rarity:
+            reasons.append(
+                f"rarity_mismatch:displayed={extracted.get('rarity')},expected={canonical.rarity}"
+            )
+
+    if artwork_comparison is None or not artwork_comparison.get("match"):
+        reasons.append(
+            "artwork_not_confirmed_match:" + str((artwork_comparison or {}).get("error") or "no_match")
+        )
+
+    return list(dict.fromkeys(reasons))
+
+
 def validate_and_write_observation(
     session: Session,
     mapping: SourceCardMapping,
@@ -90,43 +194,29 @@ def validate_and_write_observation(
     parser_version: str,
     price_type: str = "floor",
 ) -> WriteResult:
-    reasons: list[str] = []
-
-    reasons.extend(validate_mapping_for_write(session, mapping))
-
-    if classification != "normal_page":
-        reasons.append(f"page_classification_not_normal_page:{classification}")
-
-    if extraction.get("extraction_status") != "extracted":
-        reasons.extend(extraction.get("fail_reasons") or ["extraction_fail_closed"])
-
     extracted = extraction.get("extracted") or {}
-    resolved_card_code = extracted.get("card_code")
-    if resolved_card_code != mapping.source_card_id:
-        reasons.append(
-            f"card_code_mismatch_vs_mapping:displayed={resolved_card_code},mapping={mapping.source_card_id}"
-        )
 
     card_print: CardPrint | None = None
     if mapping.card_print_id is not None:
         card_print = session.get(CardPrint, mapping.card_print_id)
 
+    canonical: CanonicalCard | None = None
     if card_print is not None:
-        if extracted.get("treatment") not in (None, card_print.treatment):
-            reasons.append(
-                f"treatment_mismatch_vs_print:displayed={extracted.get('treatment')},print={card_print.treatment}"
-            )
-        page_language = extracted.get("page_language")
-        expected_html_lang = _expected_html_lang(card_print.language)
-        if page_language not in (None, expected_html_lang):
-            reasons.append(
-                f"language_mismatch_vs_print:displayed={page_language},print={card_print.language}"
-            )
+        canonical = session.get(CanonicalCard, card_print.canonical_card_id)
 
-    if artwork_comparison is None or not artwork_comparison.get("match"):
-        reasons.append(
-            "artwork_not_confirmed_match:" + str((artwork_comparison or {}).get("error") or "no_match")
-        )
+    identity_reasons = validate_identity(
+        mapping=mapping,
+        card_print=card_print,
+        canonical=canonical,
+        classification=classification,
+        extraction=extraction,
+        artwork_comparison=artwork_comparison,
+    )
+
+    # A write additionally needs approval state and an actual listed price;
+    # neither bears on whether the product *is* the intended print.
+    reasons = list(identity_reasons)
+    reasons.extend(validate_mapping_for_write(session, mapping))
 
     price_jpy = extracted.get("raw_floor_jpy")
     condition_label = extracted.get("raw_floor_condition")
@@ -135,9 +225,23 @@ def validate_and_write_observation(
 
     # De-duplicate while preserving order for stable, readable logs.
     reasons = list(dict.fromkeys(reasons))
+    identity_verified = not identity_reasons
 
     if reasons:
-        return WriteResult(written=False, reasons=reasons)
+        # price_jpy/condition_label are reported even when nothing is
+        # written: they are what the page actually showed, and a validate-
+        # only run needs them to tell PASS from PASS_FLOOR_UNAVAILABLE.
+        return WriteResult(
+            written=False,
+            reasons=reasons,
+            identity_verified=identity_verified,
+            identity_reasons=identity_reasons,
+            price_jpy=price_jpy,
+            condition_label=condition_label,
+            card_id=mapping.card_id,
+            card_print_id=mapping.card_print_id,
+            source_card_mapping_id=mapping.id,
+        )
 
     content_hash = hashlib.sha256(raw_html.encode("utf-8")).hexdigest()
     observed_at = datetime.now(timezone.utc)
@@ -170,6 +274,8 @@ def validate_and_write_observation(
 
     return WriteResult(
         written=True,
+        identity_verified=True,
+        identity_reasons=[],
         observation_id=observation.id,
         raw_snapshot_id=raw_snapshot.id,
         card_id=observation.card_id,

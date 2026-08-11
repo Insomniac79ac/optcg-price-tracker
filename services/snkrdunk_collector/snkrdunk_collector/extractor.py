@@ -16,7 +16,12 @@ from typing import Any
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
-from snkrdunk_collector.identity import parse_card_identity, parse_page_language
+from snkrdunk_collector.identity import (
+    normalize_set_token_to_release_product_code,
+    parse_card_identity,
+    parse_page_language,
+    set_token_from_card_code,
+)
 
 SELECTOR_VERSION = "v1"
 
@@ -213,6 +218,15 @@ def extract_product(html: str, url: str, expected_card_code: str, expected_treat
     resolved_card_code = parsed_identity.get("card_code")
     resolved_treatment = parsed_identity.get("treatment")
 
+    # The set the *page itself* claims, rendered in the repository's
+    # release_product_code convention. Derived from the card code the page
+    # displays (not from the mapping's expected code), so it still catches a
+    # product whose own code belongs to a different set than the linked
+    # print. The title's release parenthetical is retained alongside it as
+    # independent human-readable evidence - see writer.py.
+    observed_set_token = set_token_from_card_code(resolved_card_code)
+    observed_release_product_code = normalize_set_token_to_release_product_code(observed_set_token)
+
     if resolved_card_code != expected_card_code:
         fail_reasons.append(
             f"card_code_conflict:displayed={resolved_card_code},expected={expected_card_code}"
@@ -235,10 +249,14 @@ def extract_product(html: str, url: str, expected_card_code: str, expected_treat
         "extracted": {
             "title": title,
             "h1": h1_text,
+            "card_name": parsed_identity.get("name"),
             "card_code": resolved_card_code,
             "rarity": parsed_identity.get("rarity"),
             "treatment": resolved_treatment,
             "page_language": page_language,
+            "release_text": parsed_identity.get("release_text"),
+            "release_product_code": observed_release_product_code,
+            "set_token": observed_set_token,
             "product_image_url": image_url,
             "raw_floor_jpy": raw_conditions["raw_floor_jpy"],
             "raw_floor_condition": raw_conditions["raw_floor_condition"],

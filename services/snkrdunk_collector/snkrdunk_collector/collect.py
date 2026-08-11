@@ -53,7 +53,23 @@ from snkrdunk_collector.models import CardPrint, Source, SourceCardMapping
 from snkrdunk_collector.sales_history import find_sales_history_link, parse_sales_history_page
 from snkrdunk_collector.writer import validate_and_write_observation, write_evidence_snapshot
 
-PARSER_VERSION = "snkrdunk-collector-v1"
+PARSER_VERSION = "snkrdunk-collector-v2"
+
+# The parser version bumps to v2 with the identity-evidence expansion:
+# observed name/rarity/release/set and complete per-condition A-D prices are
+# now retained, and release/set is verified rather than ignored. A record
+# tagged v1 was produced by a parser that could not have checked those.
+
+
+def _identity_classification(write_result) -> str:
+    """The verification verdict for one mapping, derived only from what this
+    run observed. Identity is judged independently of price availability -
+    see writer.PRICE_ONLY_FAIL_REASONS."""
+    if not write_result.identity_verified:
+        return "IDENTITY_FAILED"
+    if write_result.price_jpy is None:
+        return "PASS_FLOOR_UNAVAILABLE"
+    return "PASS"
 
 # A page classified as one of these is a source-wide denial signal, not a
 # per-mapping data problem - see browser.classify_page.
@@ -66,10 +82,19 @@ _NONZERO_EXIT_STAGES = frozenset({"mapping_load_failed", "operational_error"})
 class MappingOutcome:
     mapping_id: int
     stage: str
+    # `written` means a row was actually persisted. In a validate-only run it
+    # is ALWAYS False - use `would_write` for "every write gate passed".
+    # Conflating the two previously let batch_complete.mappings_written count
+    # writes that never happened, which is exactly the number a zero-write
+    # audit relies on.
     written: bool = False
+    would_write: bool = False
     source_denied: bool = False
     classification: str | None = None
     reasons: list[str] = field(default_factory=list)
+    identity_verified: bool = False
+    identity_reasons: list[str] = field(default_factory=list)
+    identity_classification: str | None = None
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
     card_id: int | None = None
@@ -201,13 +226,32 @@ def run_one_mapping_detailed(
                             html, product_step["final_url"], expected_card_code, expected_treatment or ""
                         )
                         holder["extraction"] = extraction
+                        # Every observed identity field is logged verbatim so
+                        # a verification record can be reconstructed from the
+                        # run's own evidence alone, without re-deriving
+                        # anything from database metadata. `conditions` is
+                        # the complete per-condition object (price_jpy +
+                        # raw_text), NOT list(keys) - reducing it to its keys
+                        # previously discarded every A-D price.
+                        extracted_fields = extraction["extracted"]
                         log_event(
                             "extraction_result",
                             mapping_id=mapping.id,
                             extraction_status=extraction["extraction_status"],
                             fail_reasons=extraction["fail_reasons"],
-                            raw_floor_jpy=extraction["extracted"].get("raw_floor_jpy"),
-                            conditions=list(extraction["extracted"].get("conditions") or {}),
+                            observed_title=extracted_fields.get("title"),
+                            observed_card_name=extracted_fields.get("card_name"),
+                            observed_card_code=extracted_fields.get("card_code"),
+                            observed_rarity=extracted_fields.get("rarity"),
+                            observed_treatment=extracted_fields.get("treatment"),
+                            observed_page_language=extracted_fields.get("page_language"),
+                            observed_release_text=extracted_fields.get("release_text"),
+                            observed_release_product_code=extracted_fields.get("release_product_code"),
+                            observed_product_image_url=extracted_fields.get("product_image_url"),
+                            raw_floor_jpy=extracted_fields.get("raw_floor_jpy"),
+                            raw_floor_condition=extracted_fields.get("raw_floor_condition"),
+                            conditions=extracted_fields.get("conditions") or {},
+                            selector_version=extraction.get("selector_version"),
                             batch_run_id=batch_run_id,
                         )
 
@@ -327,15 +371,22 @@ def run_one_mapping_detailed(
             mapping_id=mapping.id,
             would_write=write_result.written,
             reasons=write_result.reasons,
+            identity_verified=write_result.identity_verified,
+            identity_reasons=write_result.identity_reasons,
+            identity_classification=_identity_classification(write_result),
             price_jpy=write_result.price_jpy,
             batch_run_id=batch_run_id,
         )
         return MappingOutcome(
             mapping_id=mapping.id,
             stage="validated_only",
-            written=write_result.written,
+            written=False,  # the session was just rolled back - nothing persisted
+            would_write=write_result.written,
             classification=classification,
             reasons=write_result.reasons,
+            identity_verified=write_result.identity_verified,
+            identity_reasons=write_result.identity_reasons,
+            identity_classification=_identity_classification(write_result),
             price_jpy=write_result.price_jpy,
             condition_label=write_result.condition_label,
             artwork_match=(holder["artwork_comparison"] or {}).get("match"),

@@ -10,34 +10,41 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from snkrdunk_collector.db import Base
-from snkrdunk_collector.models import Card, CardPrint, PriceObservation, Source, SourceCardMapping
+from snkrdunk_collector.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    PriceObservation,
+    Source,
+    SourceCardMapping,
+)
 from snkrdunk_collector.writer import validate_and_write_observation
 
 PRODUCT_URL = "https://snkrdunk.com/apparels/104428"
-PARSER_VERSION = "snkrdunk-collector-v1"
+PARSER_VERSION = "snkrdunk-collector-v2"
+
+GOOD_EXTRACTED = {
+    "card_name": "ロロノア・ゾロ",
+    "card_code": "OP01-001",
+    "rarity": "L",
+    "treatment": "parallel",
+    "page_language": "ja",
+    "release_text": "ブースターパックロマンスドーン",
+    "release_product_code": "OP-01",
+    "raw_floor_jpy": 24500,
+    "raw_floor_condition": "B",
+}
 
 GOOD_EXTRACTION = {
     "extraction_status": "extracted",
     "fail_reasons": [],
-    "extracted": {
-        "card_code": "OP01-001",
-        "treatment": "parallel",
-        "page_language": "ja",
-        "raw_floor_jpy": 24500,
-        "raw_floor_condition": "B",
-    },
+    "extracted": GOOD_EXTRACTED,
 }
 
 FAIL_CLOSED_EXTRACTION = {
     "extraction_status": "fail_closed",
     "fail_reasons": ["no_raw_condition_price_available"],
-    "extracted": {
-        "card_code": "OP01-001",
-        "treatment": "parallel",
-        "page_language": "ja",
-        "raw_floor_jpy": None,
-        "raw_floor_condition": None,
-    },
+    "extracted": dict(GOOD_EXTRACTED, raw_floor_jpy=None, raw_floor_condition=None),
 }
 
 MATCHING_ARTWORK = {"match": True, "hash_distances": {"average_hash": 3}}
@@ -53,7 +60,18 @@ class WriterTestCase(unittest.TestCase):
 
         card = Card(id=11, card_code="OP01-001", name_en="Roronoa Zoro (Parallel)")
         source = Source(id=2, name="snkrdunk", base_url="https://snkrdunk.com")
-        self.session.add_all([card, source])
+        # The print's canonical identity is the verification authority for
+        # name/rarity/set - deliberately NOT cards.*, whose rarity column
+        # carries display variants rather than the real rarity token.
+        canonical = CanonicalCard(
+            id=2,
+            card_code="OP01-001",
+            name_en="Roronoa Zoro",
+            name_jp="ロロノア・ゾロ",
+            rarity="L",
+            original_set_code="OP-01",
+        )
+        self.session.add_all([card, source, canonical])
         self.session.flush()
 
         self.verified_print = CardPrint(
@@ -61,6 +79,7 @@ class WriterTestCase(unittest.TestCase):
             canonical_card_id=2,
             language="jp",
             treatment="parallel",
+            release_product_code="OP-01",
             artwork_key="abc",
             image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
             verification_status="verified",
@@ -70,6 +89,7 @@ class WriterTestCase(unittest.TestCase):
             canonical_card_id=2,
             language="jp",
             treatment="parallel",
+            release_product_code="OP-01",
             verification_status="unverified",
         )
         self.session.add_all([self.verified_print, self.unverified_print])
@@ -156,26 +176,78 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertFalse(result.written)
         self.assertTrue(any(r.startswith("artwork_not_confirmed_match") for r in result.reasons))
 
-    def test_card_code_mismatch_vs_mapping_fails_closed(self):
-        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTION["extracted"], card_code="OP01-099"))
+    def test_card_code_mismatch_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, card_code="OP01-099"))
         result = self._write(self.approved_mapping, extraction)
         self.assertFalse(result.written)
-        self.assertTrue(any(r.startswith("card_code_mismatch_vs_mapping:") for r in result.reasons))
+        self.assertTrue(any(r.startswith("card_code_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
         self.assertEqual(self.session.query(PriceObservation).count(), 0)
 
-    def test_treatment_mismatch_vs_print_fails_closed(self):
-        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTION["extracted"], treatment="normal"))
+    def test_treatment_mismatch_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, treatment="normal"))
         result = self._write(self.approved_mapping, extraction)
         self.assertFalse(result.written)
-        self.assertTrue(any(r.startswith("treatment_mismatch_vs_print:") for r in result.reasons))
+        self.assertTrue(any(r.startswith("treatment_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
 
-    def test_language_mismatch_vs_print_fails_closed(self):
+    def test_language_mismatch_fails_closed(self):
         """A foreign-language (e.g. /en/) variant page must never be
         accepted as evidence for a jp-language card_print."""
-        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTION["extracted"], page_language="en"))
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, page_language="en"))
         result = self._write(self.approved_mapping, extraction)
         self.assertFalse(result.written)
-        self.assertTrue(any(r.startswith("language_mismatch_vs_print:") for r in result.reasons))
+        self.assertTrue(any(r.startswith("language_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
+
+    def test_release_product_mismatch_fails_closed(self):
+        """A product whose own card code belongs to a different set than the
+        linked print must never be accepted."""
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04", card_code="OP01-001"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.written)
+        self.assertTrue(any(r.startswith("release_product_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
+
+    def test_release_product_mismatch_reason_retains_observed_release_text(self):
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04", release_text="別のブースター"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        reason = next(r for r in result.reasons if r.startswith("release_product_mismatch:"))
+        self.assertIn("release_text=別のブースター", reason)
+
+    def test_rarity_mismatch_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, rarity="SR"))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.written)
+        self.assertTrue(any(r.startswith("rarity_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
+
+    def test_title_mismatch_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, card_name="ナミ"))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.written)
+        self.assertTrue(any(r.startswith("title_mismatch:") for r in result.reasons))
+        self.assertFalse(result.identity_verified)
+
+    def test_title_tolerates_extra_source_formatting_around_the_name(self):
+        """SNKRDUNK appending legitimate formatting must not fail identity -
+        the expected name still appears whole."""
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, card_name="ロロノア・ゾロ 【美品】"))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(result.identity_verified, result.reasons)
+        self.assertTrue(result.written)
+
+    def test_title_missing_name_fails_closed(self):
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, card_name=None))
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.identity_verified)
+        self.assertTrue(any(r.startswith("title_mismatch:") for r in result.reasons))
 
     def test_mapping_not_linked_to_exact_print_is_rejected(self):
         unlinked = SourceCardMapping(
@@ -221,6 +293,69 @@ class FailClosedWriteTests(WriterTestCase):
         result = self._write(self.approved_mapping, GOOD_EXTRACTION)
         self.assertFalse(result.written)
         self.assertTrue(any(r.startswith("mapping_not_approved:") for r in result.reasons))
+
+
+class IdentityVersusPriceTests(WriterTestCase):
+    """Identity and price availability are separate verdicts - a print with
+    no listed A-D price is still fully identifiable (PASS_FLOOR_UNAVAILABLE)."""
+
+    def test_floor_unavailable_does_not_fail_identity(self):
+        result = self._write(self.approved_mapping, FAIL_CLOSED_EXTRACTION)
+        self.assertTrue(result.identity_verified, result.identity_reasons)
+        self.assertEqual(result.identity_reasons, [])
+        # It still blocks the write, because a write needs a price.
+        self.assertFalse(result.written)
+        self.assertIn("no_raw_condition_price_available", result.reasons)
+
+    def test_floor_unavailable_still_reports_observed_price_as_none(self):
+        result = self._write(self.approved_mapping, FAIL_CLOSED_EXTRACTION)
+        self.assertIsNone(result.price_jpy)
+
+    def test_unwritten_result_still_reports_the_observed_floor(self):
+        """A validate-only run needs the real observed floor to tell PASS
+        from PASS_FLOOR_UNAVAILABLE, even though nothing is written."""
+        self.approved_mapping.review_status = "needs_review"
+        self.session.flush()
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+        self.assertFalse(result.written)
+        self.assertTrue(result.identity_verified, result.identity_reasons)
+        self.assertEqual(result.price_jpy, 24500)
+        self.assertEqual(result.condition_label, "B")
+
+    def test_unapproved_mapping_does_not_taint_identity_verdict(self):
+        """review_status is an approval gate, never an identity signal."""
+        self.approved_mapping.review_status = "needs_review"
+        self.session.flush()
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+        self.assertTrue(result.identity_verified)
+        self.assertNotIn(
+            "mapping_not_approved:review_status=needs_review", result.identity_reasons
+        )
+        self.assertIn("mapping_not_approved:review_status=needs_review", result.reasons)
+
+    def test_identity_fails_when_canonical_card_is_missing(self):
+        orphan_print = CardPrint(
+            id=9, canonical_card_id=999, language="jp", treatment="parallel",
+            release_product_code="OP-01", verification_status="verified",
+        )
+        self.session.add(orphan_print)
+        self.session.flush()
+        orphan_mapping = SourceCardMapping(
+            id=90, card_id=11, source_id=2, card_print_id=9,
+            source_card_id="OP01-001", source_url=PRODUCT_URL + "-orphan",
+            is_active=True, review_status="approved",
+        )
+        self.session.add(orphan_mapping)
+        self.session.flush()
+        result = self._write(orphan_mapping, GOOD_EXTRACTION)
+        self.assertFalse(result.identity_verified)
+        self.assertIn("canonical_card_missing_for_identity_check", result.identity_reasons)
+
+    def test_all_identity_dimensions_pass_on_a_genuine_match(self):
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+        self.assertTrue(result.identity_verified)
+        self.assertEqual(result.identity_reasons, [])
+        self.assertTrue(result.written)
 
 
 if __name__ == "__main__":
