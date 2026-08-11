@@ -449,10 +449,28 @@ def main() -> None:
         help=(
             "--approved-mappings only: comma-separated mapping ids to narrow the "
             "eligible set to. Ids outside the eligible set are silently excluded, "
-            "never force-included."
+            "never force-included (unless --allow-unapproved is also given)."
+        ),
+    )
+    parser.add_argument(
+        "--allow-unapproved",
+        action="store_true",
+        help=(
+            "--approved-mappings only, and only together with --validate-only and "
+            "--mapping-ids: bypass the review_status=approved/manual_verified=True/"
+            "print-verification_status=verified eligibility gate so an explicit, "
+            "caller-given list of not-yet-approved mapping ids can be identity/"
+            "artwork re-verified in one bounded, sequential, safety-identical batch. "
+            "Never widens what --mapping-ids targets beyond the ids given - it only "
+            "relaxes which review states are eligible. Mechanically cannot write "
+            "(validate_only is required), so it can never move an unapproved "
+            "mapping into production on its own."
         ),
     )
     args = parser.parse_args()
+
+    if args.allow_unapproved and not (args.approved_mappings and args.validate_only and args.mapping_ids):
+        parser.error("--allow-unapproved requires --approved-mappings, --validate-only, and --mapping-ids together.")
 
     if args.approved_mappings:
         from snkrdunk_collector.batch import run_batch  # local import avoids a top-level cycle
@@ -464,7 +482,12 @@ def main() -> None:
             except ValueError:
                 parser.error("--mapping-ids must be a comma-separated list of integers")
 
-        result = run_batch(limit=args.limit, mapping_ids=mapping_ids, validate_only=args.validate_only)
+        result = run_batch(
+            limit=args.limit,
+            mapping_ids=mapping_ids,
+            validate_only=args.validate_only,
+            require_approved=not args.allow_unapproved,
+        )
         sys.exit(result.exit_code)
 
     run_id_ts = datetime.now(timezone.utc).isoformat()

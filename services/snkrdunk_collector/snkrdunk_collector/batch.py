@@ -57,7 +57,10 @@ SNKRDUNK_SOURCE_NAME = "snkrdunk"
 
 
 def select_eligible_mappings(
-    session: Session, limit: int | None = None, mapping_ids: list[int] | None = None
+    session: Session,
+    limit: int | None = None,
+    mapping_ids: list[int] | None = None,
+    require_approved: bool = True,
 ) -> list[SourceCardMapping]:
     """Every approved, manually-verified, active, verified-print SNKRDUNK
     mapping - discovered from current database state, never a hardcoded id
@@ -67,7 +70,15 @@ def select_eligible_mappings(
     manual_verified=True is required in addition to review_status="approved"
     as defense-in-depth: a mapping must never enter production collection on
     review_status alone (see the 2026-08-10 incident where mappings were
-    marked approved without going through real verification)."""
+    marked approved without going through real verification).
+
+    require_approved=False drops the review_status/manual_verified/print-
+    verification_status gate so an explicit `mapping_ids` list can target
+    not-yet-approved mappings for a pre-approval identity/artwork
+    re-verification pass - see run_batch's own require_approved docstring
+    for the validate_only-only restriction this must always be paired with.
+    Still requires an active mapping linked to an active exact print; never
+    a legacy card-only mapping."""
     stmt = (
         select(SourceCardMapping)
         .join(Source, Source.id == SourceCardMapping.source_id)
@@ -75,14 +86,17 @@ def select_eligible_mappings(
         .where(
             Source.name == SNKRDUNK_SOURCE_NAME,
             SourceCardMapping.is_active.is_(True),
-            SourceCardMapping.review_status == "approved",
-            SourceCardMapping.manual_verified.is_(True),
             SourceCardMapping.card_print_id.is_not(None),
             CardPrint.is_active.is_(True),
-            CardPrint.verification_status == "verified",
         )
         .order_by(SourceCardMapping.id.asc())
     )
+    if require_approved:
+        stmt = stmt.where(
+            SourceCardMapping.review_status == "approved",
+            SourceCardMapping.manual_verified.is_(True),
+            CardPrint.verification_status == "verified",
+        )
     if mapping_ids is not None:
         stmt = stmt.where(SourceCardMapping.id.in_(mapping_ids))
     mappings = list(session.scalars(stmt).all())
@@ -111,6 +125,7 @@ def run_batch(
     limit: int | None = None,
     mapping_ids: list[int] | None = None,
     validate_only: bool = False,
+    require_approved: bool = True,
     session_factory=SessionLocal,
     mapping_runner=run_one_mapping_detailed,
     mapping_selector=select_eligible_mappings,
@@ -119,7 +134,15 @@ def run_batch(
     `mapping_ids` is given, the subset of the eligible set matching those
     ids). `session_factory`/`mapping_runner`/`mapping_selector` are
     overridable purely for offline testing - production callers
-    (collect.main()) never pass them."""
+    (collect.main()) never pass them.
+
+    require_approved=False (only ever paired with validate_only=True - see
+    collect.main()'s --allow-unapproved) targets not-yet-approved mappings
+    for identity/artwork re-verification without ever writing a row; this
+    combination is enforced here too, independent of the CLI, because
+    run_batch is a public function other callers could reach directly."""
+    if not require_approved and not validate_only:
+        raise ValueError("require_approved=False must always be paired with validate_only=True.")
     batch_run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
@@ -130,7 +153,7 @@ def run_batch(
     selected_ids: list[int] = []
 
     try:
-        eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids)
+        eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids, require_approved=require_approved)
         seen: set[int] = set()
         selected: list[SourceCardMapping] = []
         for mapping in eligible:

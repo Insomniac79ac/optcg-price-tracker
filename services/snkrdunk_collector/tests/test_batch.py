@@ -163,6 +163,21 @@ class SelectionTests(BaseBatchTestCase):
         self.assertEqual(len(selected), 2)
         session.close()
 
+    def test_require_approved_false_includes_not_yet_approved_mapping(self):
+        session = self.Session()
+        # 203 is approved but never manually verified - excluded by default.
+        selected = select_eligible_mappings(session, mapping_ids=[203], require_approved=False)
+        self.assertEqual([m.id for m in selected], [203])
+        session.close()
+
+    def test_require_approved_false_still_excludes_legacy_and_inactive(self):
+        session = self.Session()
+        # 200 (no card_print_id) and 202 (inactive) stay excluded even with
+        # the approval gate off - those are structural gates, not approval.
+        selected = select_eligible_mappings(session, mapping_ids=[200, 202, 203], require_approved=False)
+        self.assertEqual([m.id for m in selected], [203])
+        session.close()
+
 
 class BatchExecutionTests(BaseBatchTestCase):
     def test_all_success_batch(self):
@@ -222,6 +237,30 @@ class BatchExecutionTests(BaseBatchTestCase):
         run_batch(session_factory=self.Session, mapping_runner=runner, mapping_ids=[101, 101, 102])
         mapping_ids_called = [mid for mid, _ in runner.calls]
         self.assertEqual(len(mapping_ids_called), len(set(mapping_ids_called)))
+
+    def test_require_approved_false_without_validate_only_raises(self):
+        runner = FakeMappingRunner({})
+        with self.assertRaises(ValueError):
+            run_batch(
+                session_factory=self.Session,
+                mapping_runner=runner,
+                mapping_ids=[203],
+                require_approved=False,
+                validate_only=False,
+            )
+
+    def test_require_approved_false_with_validate_only_reaches_unapproved_mapping(self):
+        runner = FakeMappingRunner({203: failed_outcome(203, ["no_raw_condition_price_available"])})
+        result = run_batch(
+            session_factory=self.Session,
+            mapping_runner=runner,
+            mapping_ids=[203],
+            require_approved=False,
+            validate_only=True,
+        )
+        self.assertEqual([mid for mid, _ in runner.calls], [203])
+        self.assertTrue(all(runner.validate_only_calls))
+        self.assertEqual(result.mappings_selected, [203])
 
 
 if __name__ == "__main__":
