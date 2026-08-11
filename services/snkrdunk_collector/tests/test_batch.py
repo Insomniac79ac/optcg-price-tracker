@@ -266,6 +266,72 @@ class BatchExecutionTests(BaseBatchTestCase):
         self.assertEqual(result.status, "success")
         self.assertEqual(result.exit_code, 0)
 
+    def _production_outcomes(self, written_ids=(), floor_ids=(), failed_ids=()):
+        outcomes = {}
+        for mid in written_ids:
+            outcomes[mid] = MappingOutcome(
+                mapping_id=mid, stage="written", written=True, would_write=True,
+                identity_verified=True,
+            )
+        for mid in floor_ids:
+            outcomes[mid] = MappingOutcome(
+                mapping_id=mid, stage="floor_unavailable", written=False,
+                floor_unavailable=True, identity_verified=True,
+                reasons=["no_raw_condition_price_available"],
+            )
+        for mid in failed_ids:
+            outcomes[mid] = MappingOutcome(
+                mapping_id=mid, stage="validation_failed", written=False,
+                floor_unavailable=False, identity_verified=False,
+                reasons=["artwork_not_confirmed_match:no_match"],
+            )
+        return outcomes
+
+    def test_written_plus_floor_unavailable_is_a_successful_batch(self):
+        """The production shape that previously exited 2: every mapping
+        verified, most wrote, the rest simply had nothing listed."""
+        outcomes = self._production_outcomes(written_ids=(101, 102), floor_ids=(103,))
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.exit_code, 0)
+
+    def test_a_batch_of_only_floor_unavailable_still_exits_zero(self):
+        outcomes = self._production_outcomes(floor_ids=(101, 102, 103))
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.exit_code, 0)
+
+    def test_floor_unavailable_is_never_counted_as_written(self):
+        outcomes = self._production_outcomes(written_ids=(101,), floor_ids=(102, 103))
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(sum(1 for r in result.results if r.written), 1)
+        self.assertEqual(sum(1 for r in result.results if r.floor_unavailable), 2)
+
+    def test_identity_failure_still_exits_non_zero(self):
+        """Real failures must never be hidden by the new success rule."""
+        outcomes = self._production_outcomes(written_ids=(101,), floor_ids=(102,), failed_ids=(103,))
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(result.status, "partial_failure")
+        self.assertEqual(result.exit_code, 2)
+
+    def test_operational_error_exits_non_zero(self):
+        outcomes = self._production_outcomes(written_ids=(101, 102))
+        outcomes[103] = MappingOutcome(
+            mapping_id=103, stage="operational_error", written=False,
+            floor_unavailable=False, identity_verified=False,
+            reasons=["RuntimeError: db write failed"],
+        )
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(result.exit_code, 2)
+
+    def test_source_wide_denial_still_exits_one_even_with_floor_unavailable(self):
+        outcomes = self._production_outcomes(floor_ids=(101,))
+        outcomes[102] = denied_outcome(102)
+        outcomes[103] = failed_outcome(103)
+        result = run_batch(session_factory=self.Session, mapping_runner=FakeMappingRunner(outcomes))
+        self.assertEqual(result.status, "source_wide_failure")
+        self.assertEqual(result.exit_code, 1)
+
     def test_validate_only_run_with_a_failed_identity_is_a_partial_failure(self):
         outcomes = {
             101: MappingOutcome(mapping_id=101, stage="validated_only", identity_verified=True),

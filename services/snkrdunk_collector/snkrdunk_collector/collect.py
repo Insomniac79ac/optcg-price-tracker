@@ -51,7 +51,11 @@ from snkrdunk_collector.db import SessionLocal
 from snkrdunk_collector.extractor import extract_product
 from snkrdunk_collector.models import CardPrint, Source, SourceCardMapping
 from snkrdunk_collector.sales_history import find_sales_history_link, parse_sales_history_page
-from snkrdunk_collector.writer import validate_and_write_observation, write_evidence_snapshot
+from snkrdunk_collector.writer import (
+    PRICE_ONLY_FAIL_REASONS,
+    validate_and_write_observation,
+    write_evidence_snapshot,
+)
 
 PARSER_VERSION = "snkrdunk-collector-v2"
 
@@ -59,6 +63,25 @@ PARSER_VERSION = "snkrdunk-collector-v2"
 # observed name/rarity/release/set and complete per-condition A-D prices are
 # now retained, and release/set is verified rather than ignored. A record
 # tagged v1 was produced by a parser that could not have checked those.
+
+
+def _is_floor_unavailable(write_result) -> bool:
+    """A verified print that simply has nothing listed right now.
+
+    Page loaded normally, identity/artwork/release all verified, and the ONLY
+    thing standing between it and a row is that every A-D chip is 出品待ち.
+    That is a successful outcome with nothing to record - not a failure - so
+    it must not colour the batch's exit code. Any other blocking reason
+    (approval state, identity mismatch, denial) disqualifies it.
+    """
+    if not write_result.identity_verified or write_result.price_jpy is not None:
+        return False
+    blocking = [
+        reason
+        for reason in write_result.reasons
+        if reason.split(":", 1)[0] not in PRICE_ONLY_FAIL_REASONS
+    ]
+    return not blocking
 
 
 def _identity_classification(write_result) -> str:
@@ -89,6 +112,9 @@ class MappingOutcome:
     # audit relies on.
     written: bool = False
     would_write: bool = False
+    # A verified print with no current listing - a SUCCESSFUL no-write
+    # outcome, never counted as a batch failure. See _is_floor_unavailable.
+    floor_unavailable: bool = False
     source_denied: bool = False
     classification: str | None = None
     reasons: list[str] = field(default_factory=list)
@@ -97,6 +123,7 @@ class MappingOutcome:
     identity_classification: str | None = None
     card_code_authority: str | None = None
     card_code_evidence: str | None = None
+    card_code_evidence_type: str | None = None
     release_name_match_authority: str | None = None
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
@@ -388,6 +415,7 @@ def run_one_mapping_detailed(
             stage="validated_only",
             written=False,  # the session was just rolled back - nothing persisted
             would_write=write_result.written,
+            floor_unavailable=_is_floor_unavailable(write_result),
             classification=classification,
             reasons=write_result.reasons,
             identity_verified=write_result.identity_verified,
@@ -395,6 +423,7 @@ def run_one_mapping_detailed(
             identity_classification=_identity_classification(write_result),
             card_code_authority=write_result.card_code_authority,
             card_code_evidence=write_result.card_code_evidence,
+            card_code_evidence_type=write_result.card_code_evidence_type,
             release_name_match_authority=write_result.release_name_match_authority,
             price_jpy=write_result.price_jpy,
             condition_label=write_result.condition_label,
@@ -405,6 +434,7 @@ def run_one_mapping_detailed(
 
     if not write_result.written:
         session.rollback()
+        floor_unavailable = _is_floor_unavailable(write_result)
         log_event(
             "collection_no_write",
             mapping_id=mapping.id,
@@ -412,12 +442,17 @@ def run_one_mapping_detailed(
             identity_verified=write_result.identity_verified,
             identity_reasons=write_result.identity_reasons,
             identity_classification=_identity_classification(write_result),
+            floor_unavailable=floor_unavailable,
+            card_code_authority=write_result.card_code_authority,
+            card_code_evidence_type=write_result.card_code_evidence_type,
+            release_name_matched_via=write_result.release_name_match_authority,
             source_denied=False,
             batch_run_id=batch_run_id,
         )
         return MappingOutcome(
             mapping_id=mapping.id,
-            stage="validation_failed",
+            stage="floor_unavailable" if floor_unavailable else "validation_failed",
+            floor_unavailable=floor_unavailable,
             classification=classification,
             reasons=write_result.reasons,
             identity_verified=write_result.identity_verified,
@@ -425,6 +460,7 @@ def run_one_mapping_detailed(
             identity_classification=_identity_classification(write_result),
             card_code_authority=write_result.card_code_authority,
             card_code_evidence=write_result.card_code_evidence,
+            card_code_evidence_type=write_result.card_code_evidence_type,
             release_name_match_authority=write_result.release_name_match_authority,
             price_jpy=write_result.price_jpy,
             condition_label=write_result.condition_label,
@@ -460,6 +496,9 @@ def run_one_mapping_detailed(
         observed_at=write_result.observed_at,
         sold_history_status=(holder["sold_history"] or {}).get("availability_status"),
         sold_history_raw_sales_count=len((holder["sold_history"] or {}).get("raw_sales") or []),
+        card_code_authority=write_result.card_code_authority,
+        card_code_evidence_type=write_result.card_code_evidence_type,
+        release_name_matched_via=write_result.release_name_match_authority,
         batch_run_id=batch_run_id,
     )
     return MappingOutcome(
@@ -472,6 +511,7 @@ def run_one_mapping_detailed(
         identity_classification=_identity_classification(write_result),
         card_code_authority=write_result.card_code_authority,
         card_code_evidence=write_result.card_code_evidence,
+        card_code_evidence_type=write_result.card_code_evidence_type,
         release_name_match_authority=write_result.release_name_match_authority,
         classification=classification,
         observation_id=write_result.observation_id,

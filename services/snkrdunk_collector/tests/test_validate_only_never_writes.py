@@ -283,3 +283,134 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+NO_FLOOR_PRODUCT = """
+<html lang="ja"><head><title>ロロノア・ゾロ L-P [OP01-001] (ブースターパック ロマンスドーン)</title></head>
+<body><h1>ロロノア・ゾロ L-P [OP01-001] (ブースターパック ロマンスドーン)</h1>
+<img class="css__mainImage" src="https://cdn.snkrdunk.com/x.webp">
+<div class="c__container">
+  <button class="c__chip"><p class="c__variant">A</p><p class="c__awaiting">出品待ち</p></button>
+  <button class="c__chip"><p class="c__variant">B</p><p class="c__awaiting">出品待ち</p></button>
+  <button class="c__chip"><p class="c__variant">C</p><p class="c__awaiting">出品待ち</p></button>
+  <button class="c__chip"><p class="c__variant">D</p><p class="c__awaiting">出品待ち</p></button>
+</div>
+</body></html>
+"""
+
+
+class FloorUnavailableOutcomeTests(ValidateOnlyNeverWritesTests):
+    """A verified print with every A-D chip 出品待ち is a SUCCESSFUL no-write
+    outcome, not a failure - it must not colour the batch exit code."""
+
+    def _capture_no_floor(self, page, url, **kwargs):
+        html = self.history_html if "sales-histories" in url else NO_FLOOR_PRODUCT
+        return {"html": html, "http_status": 200, "classification": "normal_page", "final_url": url}
+
+    def _run_no_floor(self):
+        session = self.Session()
+        try:
+            with (
+                patch.object(collect, "sync_playwright", _fake_sync_playwright),
+                patch.object(collect, "goto_and_capture", self._capture_no_floor),
+                patch.object(collect, "fetch_bytes", lambda page, url: b"image-bytes"),
+                patch.object(
+                    collect, "compare_artwork",
+                    lambda official, candidate: {"match": True, "hash_distances": {"average_hash": 3}},
+                ),
+            ):
+                outcome = collect.run_one_mapping_detailed(
+                    session, 35, validate_only=False, batch_run_id="test-no-floor"
+                )
+            session.commit()
+        finally:
+            session.close()
+        return outcome
+
+    def test_no_listing_is_reported_as_floor_unavailable_not_a_failure(self):
+        outcome = self._run_no_floor()
+        self.assertEqual(outcome.stage, "floor_unavailable")
+        self.assertTrue(outcome.floor_unavailable)
+        self.assertTrue(outcome.identity_verified, outcome.identity_reasons)
+        self.assertEqual(outcome.identity_classification, "PASS_FLOOR_UNAVAILABLE")
+
+    def test_floor_unavailable_writes_nothing(self):
+        self._run_no_floor()
+        check = self.Session()
+        try:
+            self.assertEqual(check.query(PriceObservation).count(), 0)
+        finally:
+            check.close()
+
+    def test_a_genuine_identity_failure_is_not_floor_unavailable(self):
+        """Guards the new rule from swallowing real failures."""
+        session = self.Session()
+        try:
+            with (
+                patch.object(collect, "sync_playwright", _fake_sync_playwright),
+                patch.object(collect, "goto_and_capture", self._capture_no_floor),
+                patch.object(collect, "fetch_bytes", lambda page, url: b"image-bytes"),
+                patch.object(
+                    collect, "compare_artwork",
+                    lambda official, candidate: {"match": False, "error": "no_match"},
+                ),
+            ):
+                outcome = collect.run_one_mapping_detailed(
+                    session, 35, validate_only=False, batch_run_id="test-fail"
+                )
+        finally:
+            session.close()
+        self.assertEqual(outcome.stage, "validation_failed")
+        self.assertFalse(outcome.floor_unavailable)
+        self.assertFalse(outcome.identity_verified)
+
+
+class ProvenanceLoggingTests(ValidateOnlyNeverWritesTests):
+    def _events(self, validate_only=False):
+        import io, json
+        from contextlib import redirect_stdout
+
+        buf = io.StringIO()
+        session = self.Session()
+        try:
+            with redirect_stdout(buf), (
+                patch.object(collect, "sync_playwright", _fake_sync_playwright)
+            ), patch.object(collect, "goto_and_capture", self._capture), patch.object(
+                collect, "fetch_bytes", lambda page, url: b"image-bytes"
+            ), patch.object(
+                collect, "compare_artwork",
+                lambda official, candidate: {"match": True, "hash_distances": {"average_hash": 3}},
+            ):
+                collect.run_one_mapping_detailed(
+                    session, 35, validate_only=validate_only, batch_run_id="test-log"
+                )
+            session.commit()
+        finally:
+            session.close()
+        events = []
+        for line in buf.getvalue().splitlines():
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+        return buf.getvalue(), {e.get("event"): e for e in events}
+
+    def test_collection_written_emits_provenance(self):
+        _, by_event = self._events()
+        written = by_event["collection_written"]
+        self.assertEqual(written["card_code_authority"], "Bandai")
+        self.assertEqual(written["card_code_evidence_type"], "bandai_cardlist_image_url")
+        self.assertIn("release_name_matched_via", written)
+
+    def test_provenance_logs_the_evidence_TYPE_not_a_long_url(self):
+        raw, by_event = self._events()
+        written = by_event["collection_written"]
+        self.assertNotIn("card_code_evidence", written)
+        self.assertNotIn("onepiece-cardgame.com/images", raw)
+
+    def test_logs_never_contain_credentials(self):
+        raw, _ = self._events()
+        for secret in ("postgresql://", "password", "PGPASSWORD", "Bearer ", "railway.internal"):
+            self.assertNotIn(secret, raw)

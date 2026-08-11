@@ -514,3 +514,120 @@ def test_404_for_unknown_print(client, db_session):
     assert client.get("/prints/999999").status_code == 404
     assert client.get("/prints/999999/market-index").status_code == 404
     assert client.get("/prints/999999/prices").status_code == 404
+
+
+# --- two-source (Yuyu-Tei + SNKRDUNK) print scoping ------------------------
+#
+# Regression cover for the 2026-08-11 production-report error. The verification
+# script used the LEGACY card-keyed helper, which merged Sanji base's Yuyu-Tei
+# price with Sanji parallel's SNKRDUNK floor and reported one contaminated
+# "card" row. The print endpoints were correct all along, but nothing here
+# exercised SNKRDUNK at all - these tests close that gap.
+
+
+@pytest.fixture
+def sanji_two_source(db_session, five_prints):
+    """Sanji parallel gets a SNKRDUNK floor; Sanji base deliberately gets
+    none - exactly the real production shape (mapping 37 vs mapping 38)."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    legacy = five_prints["sanji_legacy"]
+    parallel = five_prints["sanji_parallel"]
+    mapping = make_mapping(
+        db_session, legacy, snkrdunk, parallel, source_card_id="OP01-013"
+    )
+    make_observation(
+        db_session, legacy, snkrdunk, mapping, parallel,
+        price_type="floor", price_jpy=1500, condition_label="D",
+        stock_status=None, observed_at=NOW,
+    )
+    return five_prints
+
+
+def _sources(client, print_id):
+    body = client.get(f"/prints/{print_id}/market-index").json()
+    return body, {sv["source"]: sv for sv in body["source_values"]}
+
+
+def test_snkrdunk_floor_lands_only_on_the_print_it_was_observed_for(
+    client, sanji_two_source
+):
+    _, parallel = _sources(client, sanji_two_source["sanji_parallel"].id)
+    _, base = _sources(client, sanji_two_source["sanji_base"].id)
+
+    assert parallel["snkrdunk"]["value_jpy"] == 1500
+    assert parallel["snkrdunk"]["eligible"] is True
+    # The sibling must not inherit it, despite sharing one legacy card row.
+    assert base.get("snkrdunk", {}).get("value_jpy") is None
+
+
+def test_sibling_prints_report_different_source_counts(client, sanji_two_source):
+    parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
+
+    assert parallel_body["source_count"] == 2
+    assert parallel_body["coverage_status"] == "full"
+    assert base_body["source_count"] == 1
+    assert base_body["coverage_status"] == "limited"
+
+
+def test_the_contaminated_legacy_pairing_never_appears_on_a_print(
+    client, sanji_two_source
+):
+    """The exact bad row from the production report: the base print's
+    Yuyu-Tei value paired with the parallel print's SNKRDUNK floor."""
+    base_body, base = _sources(client, sanji_two_source["sanji_base"].id)
+    base_yuyutei = base["yuyutei"]["value_jpy"]
+
+    values = {sv["source"]: sv["value_jpy"] for sv in base_body["source_values"]}
+    assert not (values.get("yuyutei") == base_yuyutei and values.get("snkrdunk") == 1500)
+
+
+def test_print_index_is_keyed_by_card_print_id_not_card_id(client, sanji_two_source):
+    """Both Sanji prints bridge through one legacy card_id. If the index were
+    card-keyed, these two responses would be identical."""
+    parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
+
+    assert parallel_body["card_print_id"] != base_body["card_print_id"]
+    assert parallel_body["index_value_jpy"] != base_body["index_value_jpy"]
+
+
+def test_snkrdunk_floor_is_reported_as_a_listing_not_a_sale(client, sanji_two_source):
+    _, parallel = _sources(client, sanji_two_source["sanji_parallel"].id)
+    assert parallel["snkrdunk"]["reference_type"] == "listing_floor"
+    assert parallel["snkrdunk"]["evidence_type"] == "listing"
+
+
+def test_legacy_card_endpoint_does_merge_siblings_which_is_why_prints_exist(
+    client, sanji_two_source
+):
+    """Documents the LEGACY behaviour deliberately kept for backward
+    compatibility (see app.api.cards.get_card_market_index's docstring), and
+    proves the fixture above is a genuine contamination trap rather than a
+    dataset that could never collide.
+
+    The legacy card row bridges both Sanji prints, so its card-keyed index
+    pairs the BASE print's Yuyu-Tei price with the PARALLEL print's SNKRDUNK
+    floor - the exact merged row that appeared in the 2026-08-11 production
+    report. Nothing here asserts that merging is desirable; it asserts that
+    it happens, so any future change that silently "fixes" the legacy path
+    surfaces here instead of in a production report.
+    """
+    legacy_id = sanji_two_source["sanji_legacy"].id
+    body = client.get(f"/cards/{legacy_id}/market-index").json()
+    values = {sv["source"]: sv["value_jpy"] for sv in body["source_values"]}
+
+    assert values.get("snkrdunk") == 1500  # came from the PARALLEL print
+
+    parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
+    parallel_yuyutei = next(
+        sv["value_jpy"] for sv in parallel_body["source_values"] if sv["source"] == "yuyutei"
+    )
+    base_yuyutei = next(
+        sv["value_jpy"] for sv in base_body["source_values"] if sv["source"] == "yuyutei"
+    )
+    # The merged row cannot equal both siblings at once - it is one print's
+    # Yuyu-Tei value beside the other print's SNKRDUNK floor.
+    assert base_yuyutei != parallel_yuyutei
+    assert values.get("yuyutei") in {base_yuyutei, parallel_yuyutei}

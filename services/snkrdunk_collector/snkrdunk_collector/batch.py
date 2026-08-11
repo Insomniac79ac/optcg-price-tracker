@@ -191,11 +191,15 @@ def run_batch(
                 stage=outcome.stage,
                 written=outcome.written,
                 would_write=outcome.would_write,
+                floor_unavailable=outcome.floor_unavailable,
                 source_denied=outcome.source_denied,
                 reasons=outcome.reasons,
                 identity_verified=outcome.identity_verified,
                 identity_reasons=outcome.identity_reasons,
                 identity_classification=outcome.identity_classification,
+                card_code_authority=outcome.card_code_authority,
+                card_code_evidence_type=outcome.card_code_evidence_type,
+                release_name_matched_via=outcome.release_name_match_authority,
             )
 
             if outcome.source_denied:
@@ -218,15 +222,30 @@ def run_batch(
             reason=stopped_reason,
         )
 
-    # A validate-only run's success criterion is identity verification, not
-    # writes: it deliberately persists nothing, so judging it by r.written
-    # would report every clean run as a partial failure.
+    # What counts as a mapping having succeeded.
+    #
+    # A validate-only run persists nothing by design, so it is judged by
+    # identity verification. A production run is judged by "did this mapping
+    # reach a legitimate resting state?" - which means EITHER a row was
+    # written, OR the print was fully verified and simply has no listing
+    # right now (floor_unavailable). A verified print whose A-D chips are all
+    # 出品待ち is not a failure: there is nothing to record, and reporting it
+    # as one would make a healthy batch look broken and train operators to
+    # ignore a non-zero exit.
+    #
+    # Non-zero stays reserved for genuine failures: source-wide denial,
+    # identity/artwork/release mismatch, operational errors and write
+    # failures. Those all leave written=False AND floor_unavailable=False.
     def _resolved_ok(result) -> bool:
-        return result.identity_verified if validate_only else result.written
+        if validate_only:
+            return result.identity_verified
+        return result.written or result.floor_unavailable
+
+    failures = [r for r in results if not _resolved_ok(r)]
 
     if any(r.source_denied for r in results):
         status, exit_code = "source_wide_failure", 1
-    elif stopped_reason is not None or any(not _resolved_ok(r) for r in results):
+    elif stopped_reason is not None or failures:
         status, exit_code = "partial_failure", 2
     else:
         status, exit_code = "success", 0
@@ -242,6 +261,9 @@ def run_batch(
         mappings_written=sum(1 for r in results if r.written),
         mappings_would_write=sum(1 for r in results if r.would_write),
         mappings_identity_verified=sum(1 for r in results if r.identity_verified),
+        mappings_floor_unavailable=sum(1 for r in results if r.floor_unavailable),
+        mappings_failed=len(failures),
+        failed_mapping_ids=[r.mapping_id for r in failures],
         mappings_skipped=len(skipped_ids),
         validate_only=validate_only,
         stopped_reason=stopped_reason,

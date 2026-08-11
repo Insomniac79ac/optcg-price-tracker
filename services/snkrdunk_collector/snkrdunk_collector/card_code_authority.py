@@ -51,6 +51,13 @@ YUYUTEI_SOURCE_NAME = "yuyutei"
 AUTHORITY_BANDAI = "Bandai"
 AUTHORITY_YUYUTEI = "Yuyu-Tei"
 
+# Compact, log-safe descriptions of WHAT KIND of evidence backed the code.
+# Logs carry these rather than the full evidence URL: the kind is what a
+# reader needs at a glance, and the URL itself is already persisted in the
+# mapping's verification metadata.
+EVIDENCE_BANDAI_CARDLIST_IMAGE = "bandai_cardlist_image_url"
+EVIDENCE_YUYUTEI_VERIFIED_PRODUCT = "yuyutei_verified_product"
+
 
 @dataclass(frozen=True)
 class CardCodeAuthority:
@@ -59,6 +66,7 @@ class CardCodeAuthority:
     card_code: str
     authority: str
     evidence_url: str
+    evidence_type: str
 
 
 def card_code_from_bandai_image_url(image_url: str | None) -> str | None:
@@ -110,6 +118,7 @@ def resolve_expected_card_code(
             card_code=bandai_code,
             authority=AUTHORITY_BANDAI,
             evidence_url=card_print.image_url,
+            evidence_type=EVIDENCE_BANDAI_CARDLIST_IMAGE,
         )
 
     yuyutei = _verified_yuyutei_mapping(session, card_print.id)
@@ -118,6 +127,7 @@ def resolve_expected_card_code(
             card_code=yuyutei.source_card_id.strip().upper(),
             authority=AUTHORITY_YUYUTEI,
             evidence_url=yuyutei.source_url,
+            evidence_type=EVIDENCE_YUYUTEI_VERIFIED_PRODUCT,
         )
 
     return None

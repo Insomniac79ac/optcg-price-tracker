@@ -79,6 +79,7 @@ class WriteResult:
     # them, so a verification record can state which authority backed it.
     card_code_authority: str | None = None
     card_code_evidence: str | None = None
+    card_code_evidence_type: str | None = None
     release_name_match_authority: str | None = None
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
@@ -301,6 +302,7 @@ def validate_and_write_observation(
             identity_reasons=identity_reasons,
             card_code_authority=card_code_authority.authority if card_code_authority else None,
             card_code_evidence=card_code_authority.evidence_url if card_code_authority else None,
+            card_code_evidence_type=card_code_authority.evidence_type if card_code_authority else None,
             release_name_match_authority=release_name_match,
             price_jpy=price_jpy,
             condition_label=condition_label,
@@ -344,6 +346,7 @@ def validate_and_write_observation(
         identity_reasons=[],
         card_code_authority=card_code_authority.authority if card_code_authority else None,
         card_code_evidence=card_code_authority.evidence_url if card_code_authority else None,
+        card_code_evidence_type=card_code_authority.evidence_type if card_code_authority else None,
         release_name_match_authority=release_name_match,
         observation_id=observation.id,
         raw_snapshot_id=raw_snapshot.id,
