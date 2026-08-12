@@ -31,6 +31,7 @@ export function CardImageFrame({
   setCode,
   accent = null,
   size = "md",
+  padded = false,
 }: {
   imageUrl?: string | null;
   alt: string;
@@ -41,6 +42,12 @@ export function CardImageFrame({
   /** "full" fills its container's width (the catalogue grid tile, where the
    * image is the dominant element) instead of a fixed px width. */
   size?: "sm" | "md" | "lg" | "full";
+  /** Insets the artwork by a hair inside the frame. The frame is rounded and
+   * clips its overflow, and a real card scan has the same 63:88 ratio as the
+   * frame - so without this the rounding shaves the card's own corners off.
+   * The inset is neutral empty space, never a crop or a zoom: the whole card
+   * stays visible at every width. */
+  padded?: boolean;
 }) {
   const [broken, setBroken] = useState(false);
   const widthClass =
@@ -58,7 +65,7 @@ export function CardImageFrame({
         <img
           src={imageUrl!}
           alt={alt}
-          className="h-full w-full object-contain"
+          className={`h-full w-full object-contain ${padded ? "p-1.5" : ""}`}
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"

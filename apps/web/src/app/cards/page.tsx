@@ -1,47 +1,44 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
 import { ErrorState } from "@/components/StateBlocks";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
-import {
-  CatalogueToolbar,
-  EMPTY_CATALOGUE_FILTERS,
-  hasActiveFilters,
-  type CatalogueFilters,
-} from "@/components/ui/CatalogueToolbar";
-import { CollectorCardTile } from "@/components/ui/CollectorCardTile";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import {
-  type CardCatalogueList,
-  type CardCatalogueSort,
-  fetchCardsCatalogue,
-} from "@/lib/api";
+  EMPTY_PRINT_FILTERS,
+  hasActivePrintFilters,
+  PrintCatalogueToolbar,
+  type PrintCatalogueFilters,
+} from "@/components/ui/PrintCatalogueToolbar";
+import {
+  fetchPrintCatalogue,
+  PRINT_SORT_VALUES,
+  type PrintCatalogueList,
+  type PrintCatalogueSort,
+  toPrintUiModel,
+} from "@/lib/prints";
 
 const PAGE_SIZE = 24;
-const SORT_VALUES: CardCatalogueSort[] = ["card_code", "name", "index_desc", "index_asc", "updated"];
 const MAX_QUERY_LENGTH = 128;
 
-function isSortValue(value: string): value is CardCatalogueSort {
-  return (SORT_VALUES as string[]).includes(value);
+function isSortValue(value: string): value is PrintCatalogueSort {
+  return (PRINT_SORT_VALUES as string[]).includes(value);
 }
 
 /** Reads catalogue state (search/filters/sort/page) directly from the URL's
- * query string rather than component state (design brief Phase 7 - "shared
- * URLs must reproduce the same view", "browser back/forward must restore
- * state") - every value here is re-derived on each render from whatever
- * `searchParams` currently is, so a back/forward navigation or a pasted URL
- * naturally re-renders with the right filters with no extra sync code.
+ * query string rather than component state, so a shared URL reproduces the
+ * same view and browser back/forward restores it with no extra sync code.
  * Unrecognized/out-of-range values (a bad `sort`, a negative `offset`) are
- * discarded rather than passed through, so a hand-edited or stale URL never
- * reaches the API as-is. */
+ * discarded rather than passed through. */
 function parseCatalogueState(searchParams: URLSearchParams): {
-  filters: CatalogueFilters;
+  filters: PrintCatalogueFilters;
   offset: number;
 } {
   const rawSort = searchParams.get("sort") ?? "";
@@ -50,56 +47,63 @@ function parseCatalogueState(searchParams: URLSearchParams): {
   return {
     filters: {
       q: (searchParams.get("q") ?? "").slice(0, MAX_QUERY_LENGTH),
-      set_code: searchParams.get("set_code") ?? "",
+      treatment: searchParams.get("treatment") ?? "",
       rarity: searchParams.get("rarity") ?? "",
-      language: searchParams.get("language") ?? "",
-      variant: searchParams.get("variant") ?? "",
-      sort: isSortValue(rawSort) ? rawSort : EMPTY_CATALOGUE_FILTERS.sort,
+      sort: isSortValue(rawSort) ? rawSort : EMPTY_PRINT_FILTERS.sort,
     },
     offset: Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0,
   };
 }
 
-function buildQueryString(filters: CatalogueFilters, offset: number): string {
+function buildQueryString(filters: PrintCatalogueFilters, offset: number): string {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
-  if (filters.set_code) params.set("set_code", filters.set_code);
+  if (filters.treatment) params.set("treatment", filters.treatment);
   if (filters.rarity) params.set("rarity", filters.rarity);
-  if (filters.language) params.set("language", filters.language);
-  if (filters.variant) params.set("variant", filters.variant);
-  if (filters.sort !== EMPTY_CATALOGUE_FILTERS.sort) params.set("sort", filters.sort);
+  if (filters.sort !== EMPTY_PRINT_FILTERS.sort) params.set("sort", filters.sort);
   if (offset > 0) params.set("offset", String(offset));
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
 
-export default function CardsCataloguePage() {
+const PAGE_DESCRIPTION =
+  "Every printing is its own card here — base and parallel are collected separately.";
+
+export default function PrintsCataloguePage() {
   return (
-    <Suspense fallback={<CardsCataloguePageFallback />}>
-      <CardsCataloguePageInner />
+    <Suspense fallback={<PrintsCataloguePageFallback />}>
+      <PrintsCataloguePageInner />
     </Suspense>
   );
 }
 
-function CardsCataloguePageFallback() {
+function PrintsCataloguePageFallback() {
   return (
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader title="Cards" description="Browse the card catalogue and Market Index." />
+        <PageHeader title="Cards" description={PAGE_DESCRIPTION} />
         <CardGridSkeleton />
       </main>
     </div>
   );
 }
 
-function CardsCataloguePageInner() {
+/** The public card catalogue, print-centric end to end.
+ *
+ * Backed by `GET /prints` (see src/lib/prints.ts), never the legacy
+ * card_id-keyed `/cards/catalogue`: each tile is exactly one `card_print`, so
+ * sibling prints that bridge through the same legacy `cards` row - Sanji
+ * OP01-013 base and parallel, for instance - are shown and priced separately
+ * rather than merged into one row.
+ */
+function PrintsCataloguePageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { filters, offset } = parseCatalogueState(searchParams);
 
-  const [data, setData] = useState<CardCatalogueList | null>(null);
+  const [data, setData] = useState<PrintCatalogueList | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
 
   const paramsKey = searchParams.toString();
@@ -107,12 +111,10 @@ function CardsCataloguePageInner() {
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
-    fetchCardsCatalogue({
+    fetchPrintCatalogue({
       q: filters.q || undefined,
-      set_code: filters.set_code || undefined,
+      treatment: filters.treatment || undefined,
       rarity: filters.rarity || undefined,
-      language: filters.language || undefined,
-      variant: filters.variant || undefined,
       sort: filters.sort,
       limit: PAGE_SIZE,
       offset,
@@ -131,38 +133,30 @@ function CardsCataloguePageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramsKey]);
 
-  function navigate(nextFilters: CatalogueFilters, nextOffset: number) {
+  const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
+
+  function navigate(nextFilters: PrintCatalogueFilters, nextOffset: number) {
     router.push(`${pathname}${buildQueryString(nextFilters, nextOffset)}`);
   }
 
-  function handleFiltersChange(nextFilters: CatalogueFilters) {
-    navigate(nextFilters, 0);
-  }
-
-  function handleClear() {
-    navigate(EMPTY_CATALOGUE_FILTERS, 0);
-  }
-
-  function handleOffsetChange(nextOffset: number) {
-    navigate(filters, nextOffset);
-  }
-
-  const emptyFacets = { set_codes: [], rarities: [], languages: [], variants: [] };
+  const emptyFacets = {
+    treatments: [],
+    rarities: [],
+    languages: [],
+    verification_statuses: [],
+  };
 
   return (
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader
-          title="Cards"
-          description="Browse the card catalogue - Market Index shown alongside each card."
-        />
+        <PageHeader title="Cards" description={PAGE_DESCRIPTION} />
 
-        <CatalogueToolbar
+        <PrintCatalogueToolbar
           filters={filters}
           facets={data?.facets ?? emptyFacets}
-          onChange={handleFiltersChange}
-          onClear={handleClear}
+          onChange={(next) => navigate(next, 0)}
+          onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
         />
 
         {status === "loading" && <CardGridSkeleton />}
@@ -183,14 +177,16 @@ function CardsCataloguePageInner() {
           </ErrorState>
         )}
 
-        {status === "ready" && data && data.items.length === 0 && (
+        {status === "ready" && prints.length === 0 && (
           <CollectorEmptyState
-            title={hasActiveFilters(filters) ? "No cards match these filters" : "No cards yet"}
+            title={
+              hasActivePrintFilters(filters) ? "No cards match these filters" : "No cards yet"
+            }
             action={
-              hasActiveFilters(filters) && (
+              hasActivePrintFilters(filters) && (
                 <button
                   type="button"
-                  onClick={handleClear}
+                  onClick={() => navigate(EMPTY_PRINT_FILTERS, 0)}
                   className="rounded-control border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary"
                 >
                   Clear filters
@@ -198,17 +194,17 @@ function CardsCataloguePageInner() {
               )
             }
           >
-            {hasActiveFilters(filters)
+            {hasActivePrintFilters(filters)
               ? "Try a different search term or clear filters to see the full catalogue."
               : "The catalogue is empty right now."}
           </CollectorEmptyState>
         )}
 
-        {status === "ready" && data && data.items.length > 0 && (
+        {status === "ready" && data && prints.length > 0 && (
           <>
             <CardGrid>
-              {data.items.map((card) => (
-                <CollectorCardTile key={card.id} card={card} />
+              {prints.map((print) => (
+                <PrintCardTile key={print.cardPrintId} print={print} />
               ))}
             </CardGrid>
             <div className="mt-4">
@@ -216,7 +212,7 @@ function CardsCataloguePageInner() {
                 offset={offset}
                 limit={PAGE_SIZE}
                 total={data.total}
-                onOffsetChange={handleOffsetChange}
+                onOffsetChange={(nextOffset) => navigate(filters, nextOffset)}
               />
             </div>
           </>
