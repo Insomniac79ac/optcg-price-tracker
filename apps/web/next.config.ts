@@ -48,16 +48,13 @@ const scriptSrc = isProd ? "'self' 'unsafe-inline'" : "'self' 'unsafe-inline' 'u
 // configuration"). Add a new host here only after verifying it the same way
 // (see docs/market_index.md).
 //
-// www.onepiece-cardgame.com is Bandai's official card list, the host every
-// card_print.image_url points at (all 20 prints served by GET /prints).
-// Verified 2026-08-12 before being added here: each URL returns HTTP 200,
-// Content-Type image/png, a real 600x838 card scan, with no Referer sent -
-// which is what the browser will do, since both this app's Referrer-Policy
-// header and CardImageFrame's referrerPolicy are no-referrer.
-const APPROVED_IMAGE_HOSTS = [
-  "https://card.yuyu-tei.jp",
-  "https://www.onepiece-cardgame.com",
-];
+// Bandai's card list (www.onepiece-cardgame.com), the host every
+// card_print.image_url points at, is deliberately NOT here: it serves
+// `Cross-Origin-Resource-Policy: same-site`, so a browser refuses to embed it
+// cross-origin whatever CSP says. Those images are re-served same-origin
+// through /api/card-image instead (already covered by 'self'), so this list
+// stays limited to hosts we genuinely hotlink - see src/lib/cardImage.ts.
+const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp"];
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",

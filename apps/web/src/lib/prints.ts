@@ -16,6 +16,7 @@
  */
 
 import { apiGet, type PaginationMeta } from "./api";
+import { resolveCardImageUrl } from "./cardImage";
 
 /** Print-scoped Market Index - the same shape as the legacy card-keyed
  * `MarketIndex` except keyed by `card_print_id`. Computed by
@@ -161,7 +162,13 @@ export interface PrintUiModel {
   isDistinctTreatment: boolean;
   language: string;
   releaseCode: string | null;
+  /** Ready to put straight into an <img src>: the original URL for hosts that
+   * embed cross-origin, a same-origin proxy path for hosts that refuse to
+   * (see src/lib/cardImage.ts). */
   imageUrl: string | null;
+  /** The unrewritten `card_print.image_url` exactly as the API returned it,
+   * so provenance stays inspectable and nothing has to un-proxy a URL. */
+  sourceImageUrl: string | null;
   marketIndexJpy: number | null;
   yuyuteiJpy: number | null;
   snkrdunkJpy: number | null;
@@ -208,7 +215,8 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     isDistinctTreatment: isDistinctTreatment(item.treatment),
     language: item.language,
     releaseCode: item.release_product_code,
-    imageUrl: item.image_url,
+    imageUrl: resolveCardImageUrl(item.image_url),
+    sourceImageUrl: item.image_url,
     marketIndexJpy: index.index_value_jpy,
     yuyuteiJpy: valueForSource(index, YUYUTEI),
     snkrdunkJpy: valueForSource(index, SNKRDUNK),

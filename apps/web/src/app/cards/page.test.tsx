@@ -211,7 +211,11 @@ describe("print catalogue page", () => {
     expect(img).not.toBeNull();
     expect(img!.className).toContain("object-contain");
     expect(img!.className).not.toContain("object-cover");
-    expect(img!.getAttribute("src")).toBe(SANJI_PARALLEL.image_url);
+    // Bandai's host refuses cross-site embedding (CORP: same-site), so the
+    // artwork is re-served same-origin - still this print's exact image.
+    expect(img!.getAttribute("src")).toBe(
+      `/api/card-image?u=${encodeURIComponent(SANJI_PARALLEL.image_url!)}`,
+    );
   });
 
   it("passes a card-code search to the server", async () => {
