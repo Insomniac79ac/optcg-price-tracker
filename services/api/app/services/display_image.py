@@ -34,7 +34,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CardPrint, Source, SourceCardMapping
-from app.schemas import DisplayImageOut
+from app.schemas import (
+    DisplayImageCanvasOut,
+    DisplayImageCardBoxOut,
+    DisplayImageGeometryOut,
+    DisplayImageOut,
+)
 
 BANDAI = "bandai"
 
@@ -65,6 +70,60 @@ def _qualifies(payload: object, card_print_id: int) -> bool:
         return False
     url = payload.get("url")
     return isinstance(url, str) and url.startswith("https://")
+
+
+def _ints(value: object, count: int) -> list[int] | None:
+    """A list of exactly `count` real integers, or None. Bools are rejected -
+    in Python they are ints, and a bool here means malformed evidence."""
+    if not isinstance(value, (list, tuple)) or len(value) != count:
+        return None
+    out: list[int] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int):
+            return None
+        out.append(item)
+    return out
+
+
+def _geometry(payload: dict) -> DisplayImageGeometryOut | None:
+    """Convert retained evidence geometry into the public contract, or None.
+
+    The stored `card_bbox_px` is `[left, top, right, bottom]` with *inclusive*
+    corners; the public contract is x/y/width/height, so the conversion adds
+    one pixel to each span. Returning None is always safe: it just means the
+    client presents the image with plain contain rendering, which is the
+    behaviour that shipped before this geometry existed.
+    """
+    geometry = payload.get("geometry")
+    if not isinstance(geometry, dict):
+        return None
+
+    canvas = _ints(geometry.get("canvas_px"), 2)
+    bbox = _ints(geometry.get("card_bbox_px"), 4)
+    if canvas is None or bbox is None:
+        return None
+
+    canvas_w, canvas_h = canvas
+    left, top, right, bottom = bbox
+    width, height = right - left + 1, bottom - top + 1
+
+    if canvas_w <= 0 or canvas_h <= 0 or width <= 0 or height <= 0:
+        return None
+    if left < 0 or top < 0:
+        return None
+    if left + width > canvas_w or top + height > canvas_h:
+        return None
+
+    # The evidence records the card's size separately; if the two disagree the
+    # record is internally inconsistent and must not drive presentation.
+    card_px = _ints(geometry.get("card_px"), 2)
+    if card_px is not None and card_px != [width, height]:
+        return None
+
+    return DisplayImageGeometryOut(
+        canvas_px=DisplayImageCanvasOut(width=canvas_w, height=canvas_h),
+        card_bbox_px=DisplayImageCardBoxOut(x=left, y=top, width=width, height=height),
+    )
 
 
 def get_display_images_for_prints(
@@ -105,7 +164,10 @@ def get_display_images_for_prints(
         best[card_print_id] = (
             rank,
             DisplayImageOut(
-                url=payload["url"], source=source_name, exact_print_verified=True
+                url=payload["url"],
+                source=source_name,
+                exact_print_verified=True,
+                geometry=_geometry(payload),
             ),
         )
 

@@ -174,7 +174,7 @@ describe("toPrintUiModel display image selection", () => {
   it("renders the verified SNKRDUNK display image, hotlinked not proxied", () => {
     const model = toPrintUiModel(
       catalogueItem({
-        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true, geometry: null },
       }),
     );
 
@@ -185,7 +185,7 @@ describe("toPrintUiModel display image selection", () => {
   it("keeps canonical image_url as identity evidence, not as what is rendered", () => {
     const model = toPrintUiModel(
       catalogueItem({
-        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true, geometry: null },
       }),
     );
 
@@ -196,7 +196,7 @@ describe("toPrintUiModel display image selection", () => {
   it("falls back to the proxied canonical Bandai image when the source is bandai", () => {
     const model = toPrintUiModel(
       catalogueItem({
-        display_image: { url: BANDAI, source: "bandai", exact_print_verified: true },
+        display_image: { url: BANDAI, source: "bandai", exact_print_verified: true, geometry: null },
       }),
     );
 
@@ -216,7 +216,7 @@ describe("toPrintUiModel display image selection", () => {
     const parallel = toPrintUiModel(
       catalogueItem({
         card_print_id: 3,
-        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true, geometry: null },
       }),
     );
     const base = toPrintUiModel(
@@ -226,5 +226,65 @@ describe("toPrintUiModel display image selection", () => {
     expect(parallel.imageUrl).toBe(SNKR);
     expect(base.imageUrl).not.toBe(SNKR);
     expect(base.imageUrl).toContain("/api/card-image?u=");
+  });
+});
+
+describe("toPrintUiModel display geometry", () => {
+  const SNKR = "https://cdn.snkrdunk.com/upload_bg_removed/TCG-OPC-OP01-0001.webp?size=l";
+  const GEOMETRY = {
+    canvas_px: { width: 856, height: 625 },
+    card_bbox_px: { x: 241, y: 51, width: 374, height: 523 },
+  };
+
+  it("passes verified geometry through to the UI model", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: SNKR,
+          source: "snkrdunk",
+          exact_print_verified: true,
+          geometry: GEOMETRY,
+        },
+      }),
+    );
+
+    expect(model.imageGeometry).toEqual(GEOMETRY);
+  });
+
+  it("carries no geometry for a Bandai fallback", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013_p2.png",
+          source: "bandai",
+          exact_print_verified: true,
+          geometry: null,
+        },
+      }),
+    );
+
+    expect(model.imageGeometry).toBeNull();
+  });
+
+  it("carries no geometry when the API omits display_image entirely", () => {
+    expect(toPrintUiModel(catalogueItem({ display_image: null })).imageGeometry).toBeNull();
+  });
+
+  it("never attaches geometry to a canonical URL it did not describe", () => {
+    // A display_image with geometry but no url must not leak its box onto the
+    // canonical image we fall back to.
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: "",
+          source: "snkrdunk",
+          exact_print_verified: true,
+          geometry: GEOMETRY,
+        },
+      }),
+    );
+
+    expect(model.imageUrl).toContain("/api/card-image?u=");
+    expect(model.imageGeometry).toBeNull();
   });
 });

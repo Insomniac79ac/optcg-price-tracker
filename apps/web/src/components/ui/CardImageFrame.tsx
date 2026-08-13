@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { RarityBadge } from "@/components/RarityBadge";
+import {
+  isValidGeometry,
+  matchesNaturalSize,
+  placeCardBox,
+  type CardBoxGeometry,
+} from "@/lib/cardGeometry";
+
+/** The frame's portrait ratio, and the ratio the card box is fitted into. */
+const FRAME_ASPECT = 63 / 88;
 
 export type FrameAccent = "gold" | "purple" | null;
 
@@ -32,6 +41,7 @@ export function CardImageFrame({
   accent = null,
   size = "md",
   padded = false,
+  geometry = null,
 }: {
   imageUrl?: string | null;
   alt: string;
@@ -39,6 +49,11 @@ export function CardImageFrame({
   rarity?: string | null;
   setCode?: string | null;
   accent?: FrameAccent;
+  /** Verified position of the card inside `imageUrl`, when the API supplied
+   * it. Given valid geometry whose canvas matches the image that actually
+   * loads, the card is scaled to fill the frame instead of the canvas it was
+   * composited onto; anything else falls back to plain contain rendering. */
+  geometry?: CardBoxGeometry | null;
   /** "full" fills its container's width (the catalogue grid tile, where the
    * image is the dominant element) instead of a fixed px width. */
   size?: "sm" | "md" | "lg" | "full";
@@ -50,27 +65,88 @@ export function CardImageFrame({
   padded?: boolean;
 }) {
   const [broken, setBroken] = useState(false);
+  // Only set once an image has loaded at exactly the size the geometry was
+  // measured against. Until then - and forever, if it never matches - the
+  // plain contain path below renders instead.
+  const [bounded, setBounded] = useState(false);
+
+  const usableGeometry = isValidGeometry(geometry) ? geometry! : null;
+
+  /** The mandatory guard: geometry is honoured only for the exact asset it
+   * describes. A host that silently reshapes its image makes the card render
+   * small (today's behaviour) rather than cropped. */
+  const onLoad = useCallback(
+    (event: React.SyntheticEvent<HTMLImageElement>) => {
+      if (!usableGeometry) return;
+      const img = event.currentTarget;
+      setBounded(matchesNaturalSize(usableGeometry, img.naturalWidth, img.naturalHeight));
+    },
+    [usableGeometry],
+  );
+
+  /** A cached image can finish loading before React attaches onLoad, which
+   * would leave it stuck in the fallback path. Re-check on mount. */
+  const measureOnMount = useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node || !usableGeometry) return;
+      if (node.complete && node.naturalWidth > 0) {
+        setBounded(matchesNaturalSize(usableGeometry, node.naturalWidth, node.naturalHeight));
+      }
+    },
+    [usableGeometry],
+  );
+
   const widthClass =
     size === "full" ? "w-full" : size === "sm" ? "w-20" : size === "lg" ? "w-40" : "w-28";
   const shrinkClass = size === "full" ? "" : "shrink-0";
   const accentClass = accent === "gold" ? "glow-gold" : accent === "purple" ? "glow-purple" : "";
   const showImage = Boolean(imageUrl) && !broken;
+  const useBounded = showImage && bounded && usableGeometry !== null;
+  const placement = useBounded ? placeCardBox(usableGeometry!, FRAME_ASPECT) : null;
 
   return (
     <div
-      className={`vault-frame ${widthClass} ${shrinkClass} aspect-[63/88] overflow-hidden ${accentClass}`}
+      className={`vault-frame ${widthClass} ${shrinkClass} aspect-[63/88] ${
+        // In bounded mode an inner element does the clipping, squarely, so the
+        // frame's own 8px rounding can never shave the card's corners - at
+        // small sizes that radius exceeds the card's own.
+        useBounded ? "" : "overflow-hidden"
+      } ${accentClass}`}
     >
       {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl!}
-          alt={alt}
-          className={`h-full w-full object-contain ${padded ? "p-1.5" : ""}`}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          onError={() => setBroken(true)}
-        />
+        useBounded ? (
+          <div className="absolute inset-0 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl!}
+              alt={alt}
+              className="absolute max-w-none"
+              style={{
+                width: `${placement!.widthPct}%`,
+                left: `${placement!.leftPct}%`,
+                top: `${placement!.topPct}%`,
+              }}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onLoad={onLoad}
+              onError={() => setBroken(true)}
+            />
+          </div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl!}
+            alt={alt}
+            className={`h-full w-full object-contain ${padded ? "p-1.5" : ""}`}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            ref={measureOnMount}
+            onLoad={onLoad}
+            onError={() => setBroken(true)}
+          />
+        )
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-bg-card p-2 text-center">
           <div className="mono text-[11px] text-text-secondary">{cardCode}</div>

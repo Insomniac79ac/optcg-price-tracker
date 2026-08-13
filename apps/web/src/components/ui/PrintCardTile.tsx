@@ -46,6 +46,7 @@ export function PrintCardTile({ print }: { print: PrintUiModel }) {
         setCode={print.releaseCode}
         size="full"
         padded
+        geometry={print.imageGeometry}
       />
 
       <div className="flex flex-1 flex-col gap-1.5 p-2.5">

@@ -72,6 +72,7 @@ export default function PrintDetailPage() {
                 setCode={print.releaseCode}
                 size="full"
                 padded
+                geometry={print.imageGeometry}
               />
             </div>
 

@@ -106,6 +106,20 @@ export interface PrintDisplayImage {
   url: string;
   source: string;
   exact_print_verified: boolean;
+  /** Present only when the API has verified geometry for this image. Lets a
+   * client present the *card* rather than the canvas it sits on. Null for
+   * canonical Bandai images (whose card already fills the asset) and whenever
+   * the recorded geometry failed server-side validation. */
+  geometry: PrintDisplayImageGeometry | null;
+}
+
+/** Where the card sits inside its source image, in source pixels. `x`/`y` are
+ * a top-left origin and `width`/`height` span every card pixel inclusive of
+ * both edges - the transparent rounded corners included, since those are part
+ * of the card's shape. Everything outside this box was verified transparent. */
+export interface PrintDisplayImageGeometry {
+  canvas_px: { width: number; height: number };
+  card_bbox_px: { x: number; y: number; width: number; height: number };
 }
 
 /** Raw `GET /prints/{id}` - see schemas.py CardPrintOut. */
@@ -188,6 +202,11 @@ export interface PrintUiModel {
   /** Which source `imageUrl` came from - "bandai" means no cleaner image is
    * verified for this print, so it still carries the SAMPLE watermark. */
   imageSource: string | null;
+  /** Verified geometry for `imageUrl`, when the API supplied it. Consumers
+   * pass this straight to CardImageFrame, which uses it to fill the frame with
+   * the card instead of the whole canvas - and ignores it unless the loaded
+   * image's intrinsic size matches `canvas_px` exactly. */
+  imageGeometry: PrintDisplayImageGeometry | null;
   marketIndexJpy: number | null;
   yuyuteiJpy: number | null;
   snkrdunkJpy: number | null;
@@ -237,9 +256,13 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     // Presentation prefers the verified display image; identity stays with
     // image_url below. Falls back to the canonical URL when the API is older
     // than this field or no display image was resolved.
-    imageUrl: resolveCardImageUrl(item.display_image?.url ?? item.image_url),
+    // `||` not `??`: an empty display URL must fall back to the canonical
+    // image rather than blank the tile. Geometry describes display_image.url
+    // specifically, so it must not ride along when we did fall back.
+    imageUrl: resolveCardImageUrl(item.display_image?.url || item.image_url),
     sourceImageUrl: item.image_url,
-    imageSource: item.display_image?.source ?? null,
+    imageSource: item.display_image?.url ? item.display_image.source : null,
+    imageGeometry: item.display_image?.url ? (item.display_image.geometry ?? null) : null,
     marketIndexJpy: index.index_value_jpy,
     yuyuteiJpy: valueForSource(index, YUYUTEI),
     snkrdunkJpy: valueForSource(index, SNKRDUNK),

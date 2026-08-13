@@ -418,6 +418,44 @@ class PrintPriceHistoryOut(BaseModel):
     series: list[PrintPriceSeriesTrendOut]
 
 
+class DisplayImageCanvasOut(BaseModel):
+    """Intrinsic pixel size of the display image as published by its host."""
+
+    width: int
+    height: int
+
+
+class DisplayImageCardBoxOut(BaseModel):
+    """Where the card actually sits inside the canvas, in canvas pixels.
+
+    Top-left origin, width/height inclusive of both edge columns/rows. Every
+    pixel of the card - including the transparent rounded corners, which are
+    part of the card's shape - lies inside this box, and everything outside it
+    was verified to be fully transparent.
+    """
+
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+class DisplayImageGeometryOut(BaseModel):
+    """Enough geometry for a client to present the *card* rather than the
+    canvas it was composited onto.
+
+    Only emitted for a verified display image whose retained evidence records
+    a canvas and card box that pass validation (see
+    app.services.display_image._geometry). Null for canonical Bandai
+    fallbacks, whose card already fills the asset, and null whenever the
+    recorded geometry is missing or inconsistent - in which case a client
+    must fall back to plain contain rendering.
+    """
+
+    canvas_px: DisplayImageCanvasOut
+    card_bbox_px: DisplayImageCardBoxOut
+
+
 class DisplayImageOut(BaseModel):
     """Which image to *show* for a print, which is not necessarily the image
     that proves its identity.
@@ -433,6 +471,7 @@ class DisplayImageOut(BaseModel):
     url: str
     source: str
     exact_print_verified: bool
+    geometry: DisplayImageGeometryOut | None = None
 
 
 class CardPrintOut(BaseModel):

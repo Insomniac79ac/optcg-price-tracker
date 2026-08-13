@@ -102,6 +102,7 @@ def test_bandai_canonical_is_the_fallback_when_nothing_is_verified(client, sanji
         "url": BANDAI_URL,
         "source": "bandai",
         "exact_print_verified": True,
+        "geometry": None,
     }
 
 
@@ -145,6 +146,7 @@ def test_verified_snkrdunk_image_is_preferred_over_bandai(client, sanji_pair):
         "url": SNKRDUNK_URL,
         "source": "snkrdunk",
         "exact_print_verified": True,
+        "geometry": None,
     }
 
 
@@ -337,3 +339,123 @@ def test_catalogue_never_reads_raw_snapshots(client, sanji_pair):
         if "from raw_snapshots" in s.lower() or "join raw_snapshots" in s.lower()
     ]
     assert not touched, touched
+
+
+# --- additive geometry contract ---------------------------------------------
+
+
+GEOMETRY = {
+    "canvas_px": [856, 625],
+    "card_bbox_px": [241, 51, 614, 573],   # inclusive corners -> 374 x 523
+    "card_px": [374, 523],
+}
+
+
+def _with_geometry(card_print_id: int, geometry) -> dict:
+    payload = _payload(card_print_id)
+    if geometry is not None:
+        payload["geometry"] = geometry
+    return {"display_image": payload}
+
+
+def _attach(fixture, explanation, print_key="base", **overrides):
+    return make_mapping(
+        db_session_of(fixture),
+        fixture["legacy"],
+        fixture["snkrdunk"],
+        fixture[print_key],
+        review_status=overrides.pop("review_status", "approved"),
+        match_explanation_json=explanation,
+        **overrides,
+    )
+
+
+def test_geometry_is_exposed_as_xywh_from_inclusive_corner_evidence(client, sanji_pair):
+    """The stored bbox is [left, top, right, bottom] with inclusive corners;
+    the public contract is x/y/width/height, so each span gains one pixel."""
+    _attach(sanji_pair, _with_geometry(sanji_pair["base"].id, GEOMETRY))
+
+    geometry = _detail(client, sanji_pair["base"].id)["display_image"]["geometry"]
+    assert geometry == {
+        "canvas_px": {"width": 856, "height": 625},
+        "card_bbox_px": {"x": 241, "y": 51, "width": 374, "height": 523},
+    }
+
+
+def test_bandai_fallback_has_no_geometry(client, sanji_pair):
+    """The canonical artwork's card already fills its asset - there is nothing
+    to bound it to, and a client must render it plainly."""
+    display = _detail(client, sanji_pair["base"].id)["display_image"]
+
+    assert display["source"] == "bandai"
+    assert display["geometry"] is None
+
+
+def test_display_image_without_geometry_still_serves_the_image(client, sanji_pair):
+    """Geometry is additive: evidence predating it must still supply its URL."""
+    _attach(sanji_pair, _with_geometry(sanji_pair["base"].id, None))
+
+    display = _detail(client, sanji_pair["base"].id)["display_image"]
+    assert display["url"] == SNKRDUNK_URL
+    assert display["geometry"] is None
+
+
+@pytest.mark.parametrize(
+    "geometry, reason",
+    [
+        ({"canvas_px": [0, 625], "card_bbox_px": [241, 51, 614, 573]}, "zero canvas width"),
+        ({"canvas_px": [856, 0], "card_bbox_px": [241, 51, 614, 573]}, "zero canvas height"),
+        ({"canvas_px": [-856, 625], "card_bbox_px": [241, 51, 614, 573]}, "negative canvas"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 240, 573]}, "zero-width bbox"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 614, 50]}, "zero-height bbox"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [-1, 51, 614, 573]}, "negative x"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, -1, 614, 573]}, "negative y"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 900, 573]}, "bbox past right edge"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 614, 900]}, "bbox past bottom edge"),
+        ({"canvas_px": [856], "card_bbox_px": [241, 51, 614, 573]}, "canvas wrong arity"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 614]}, "bbox wrong arity"),
+        ({"canvas_px": ["856", 625], "card_bbox_px": [241, 51, 614, 573]}, "canvas not numeric"),
+        ({"canvas_px": [856, 625], "card_bbox_px": [241, 51, 614, 573],
+          "card_px": [999, 523]}, "card_px contradicts the bbox"),
+        ({"canvas_px": [856, 625]}, "bbox missing"),
+        ("not-an-object", "geometry is not an object"),
+    ],
+)
+def test_malformed_geometry_is_rejected_but_the_image_is_kept(
+    client, sanji_pair, geometry, reason
+):
+    """Rejecting geometry must degrade to plain presentation, never drop a
+    verified image or emit a box a client could scale by."""
+    _attach(sanji_pair, _with_geometry(sanji_pair["base"].id, geometry))
+
+    display = _detail(client, sanji_pair["base"].id)["display_image"]
+    assert display["url"] == SNKRDUNK_URL, reason
+    assert display["geometry"] is None, reason
+
+
+def test_geometry_appears_on_the_catalogue_too(client, sanji_pair):
+    _attach(sanji_pair, _with_geometry(sanji_pair["base"].id, GEOMETRY))
+    item = _catalogue_item(client, sanji_pair["base"].id)
+
+    assert item["display_image"]["geometry"]["card_bbox_px"]["width"] == 374
+
+
+def test_quarantined_mapping_supplies_neither_image_nor_geometry(client, sanji_pair):
+    _attach(
+        sanji_pair,
+        _with_geometry(sanji_pair["base"].id, GEOMETRY),
+        review_status="needs_review",
+    )
+    display = _detail(client, sanji_pair["base"].id)["display_image"]
+
+    assert display["source"] == "bandai"
+    assert display["geometry"] is None
+
+
+def test_canonical_identity_fields_survive_geometry(client, sanji_pair):
+    _attach(sanji_pair, _with_geometry(sanji_pair["base"].id, GEOMETRY))
+    detail = _detail(client, sanji_pair["base"].id)
+
+    assert detail["image_url"] == BANDAI_URL
+    assert detail["artwork_key"] == "art-1"
+    assert detail["card_code"] == "OP01-013"
