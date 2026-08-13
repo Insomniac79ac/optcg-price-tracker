@@ -65,6 +65,7 @@ export interface PrintCatalogueItem {
   language: string;
   release_product_code: string | null;
   image_url: string | null;
+  display_image: PrintDisplayImage | null;
   verification_status: string;
   market_index: PrintMarketIndex;
   source_coverage: string[];
@@ -95,6 +96,18 @@ export interface PrintSibling {
   verification_status: string;
 }
 
+/** Which image to *show* for a print - see schemas.py DisplayImageOut.
+ *
+ * Additive and purely presentational. `source` is "bandai" when no cleaner
+ * image has been verified for the print, in which case `url` repeats the
+ * canonical `image_url` (SAMPLE watermark included). Identity always stays
+ * with `image_url`/`artwork_key`. */
+export interface PrintDisplayImage {
+  url: string;
+  source: string;
+  exact_print_verified: boolean;
+}
+
 /** Raw `GET /prints/{id}` - see schemas.py CardPrintOut. */
 export interface PrintDetail {
   card_print_id: number;
@@ -110,6 +123,7 @@ export interface PrintDetail {
   release_product_code: string | null;
   artwork_key: string | null;
   image_url: string | null;
+  display_image: PrintDisplayImage | null;
   verification_status: string;
   market_index: PrintMarketIndex;
   siblings: PrintSibling[];
@@ -162,13 +176,18 @@ export interface PrintUiModel {
   isDistinctTreatment: boolean;
   language: string;
   releaseCode: string | null;
-  /** Ready to put straight into an <img src>: the original URL for hosts that
-   * embed cross-origin, a same-origin proxy path for hosts that refuse to
+  /** Ready to put straight into an <img src>: the print's verified display
+   * image where one exists, the canonical Bandai artwork otherwise, rewritten
+   * to a same-origin proxy path for hosts that refuse cross-origin embedding
    * (see src/lib/cardImage.ts). */
   imageUrl: string | null;
-  /** The unrewritten `card_print.image_url` exactly as the API returned it,
-   * so provenance stays inspectable and nothing has to un-proxy a URL. */
+  /** The unrewritten canonical `card_print.image_url` exactly as the API
+   * returned it, so identity provenance stays inspectable and nothing has to
+   * un-proxy a URL. NOT necessarily what `imageUrl` renders. */
   sourceImageUrl: string | null;
+  /** Which source `imageUrl` came from - "bandai" means no cleaner image is
+   * verified for this print, so it still carries the SAMPLE watermark. */
+  imageSource: string | null;
   marketIndexJpy: number | null;
   yuyuteiJpy: number | null;
   snkrdunkJpy: number | null;
@@ -215,8 +234,12 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     isDistinctTreatment: isDistinctTreatment(item.treatment),
     language: item.language,
     releaseCode: item.release_product_code,
-    imageUrl: resolveCardImageUrl(item.image_url),
+    // Presentation prefers the verified display image; identity stays with
+    // image_url below. Falls back to the canonical URL when the API is older
+    // than this field or no display image was resolved.
+    imageUrl: resolveCardImageUrl(item.display_image?.url ?? item.image_url),
     sourceImageUrl: item.image_url,
+    imageSource: item.display_image?.source ?? null,
     marketIndexJpy: index.index_value_jpy,
     yuyuteiJpy: valueForSource(index, YUYUTEI),
     snkrdunkJpy: valueForSource(index, SNKRDUNK),

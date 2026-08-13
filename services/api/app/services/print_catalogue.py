@@ -18,10 +18,12 @@ from app.models import CanonicalCard, CardPrint
 from app.schemas import (
     CardPrintOut,
     CardPrintSiblingOut,
+    DisplayImageOut,
     PrintCatalogueFacetsOut,
     PrintCatalogueItemOut,
     PrintMarketIndexOut,
 )
+from app.services.display_image import get_display_images_for_prints
 from app.services.print_market_index import get_market_index_for_prints
 
 SortKey = Literal["card_code", "name", "index_desc", "index_asc", "updated"]
@@ -63,6 +65,7 @@ def to_print_out(
     canonical: CanonicalCard,
     market_index: PrintMarketIndexOut,
     siblings: list[CardPrintSiblingOut],
+    display_image: DisplayImageOut | None = None,
 ) -> CardPrintOut:
     return CardPrintOut(
         card_print_id=print_row.id,
@@ -78,6 +81,7 @@ def to_print_out(
         release_product_code=print_row.release_product_code,
         artwork_key=print_row.artwork_key,
         image_url=print_row.image_url,
+        display_image=display_image,
         verification_status=print_row.verification_status,
         market_index=market_index,
         siblings=siblings,
@@ -94,7 +98,10 @@ def _source_coverage(market_index: PrintMarketIndexOut) -> list[str]:
 
 
 def _to_catalogue_item(
-    print_row: CardPrint, canonical: CanonicalCard, market_index: PrintMarketIndexOut
+    print_row: CardPrint,
+    canonical: CanonicalCard,
+    market_index: PrintMarketIndexOut,
+    display_image: DisplayImageOut | None = None,
 ) -> PrintCatalogueItemOut:
     return PrintCatalogueItemOut(
         card_print_id=print_row.id,
@@ -108,6 +115,7 @@ def _to_catalogue_item(
         language=print_row.language,
         release_product_code=print_row.release_product_code,
         image_url=print_row.image_url,
+        display_image=display_image,
         verification_status=print_row.verification_status,
         market_index=market_index,
         source_coverage=_source_coverage(market_index),
@@ -214,8 +222,16 @@ def list_print_catalogue(
         page_index_by_print = get_market_index_for_prints(db, [p.id for p in page_prints])
 
     canonical_by_id = _canonical_map(db, {p.canonical_card_id for p in page_prints})
+    # One extra mapping query for the whole page - never per item, and never
+    # a raw_snapshots read (see app.services.display_image).
+    display_by_print = get_display_images_for_prints(db, list(page_prints))
     items = [
-        _to_catalogue_item(p, canonical_by_id[p.canonical_card_id], page_index_by_print[p.id])
+        _to_catalogue_item(
+            p,
+            canonical_by_id[p.canonical_card_id],
+            page_index_by_print[p.id],
+            display_by_print.get(p.id),
+        )
         for p in page_prints
     ]
     return items, total

@@ -418,6 +418,23 @@ class PrintPriceHistoryOut(BaseModel):
     series: list[PrintPriceSeriesTrendOut]
 
 
+class DisplayImageOut(BaseModel):
+    """Which image to *show* for a print, which is not necessarily the image
+    that proves its identity.
+
+    Additive and purely presentational: `image_url`/`artwork_key` on the
+    print remain the canonical Bandai identity fields and are unaffected by
+    anything here. `source` is "bandai" when no cleaner image has been
+    verified for this print, in which case `url` repeats the canonical
+    `image_url` (SAMPLE watermark and all). See
+    app.services.display_image for the selection rule.
+    """
+
+    url: str
+    source: str
+    exact_print_verified: bool
+
+
 class CardPrintOut(BaseModel):
     """Public print detail response - see GET /prints/{print_id}. Identity
     fields (card_code/name/rarity/card_type/colors) come from the print's
@@ -437,6 +454,7 @@ class CardPrintOut(BaseModel):
     release_product_code: str | None
     artwork_key: str | None
     image_url: str | None
+    display_image: DisplayImageOut | None
     verification_status: str
     market_index: PrintMarketIndexOut
     siblings: list[CardPrintSiblingOut]
@@ -458,6 +476,7 @@ class PrintCatalogueItemOut(BaseModel):
     language: str
     release_product_code: str | None
     image_url: str | None
+    display_image: DisplayImageOut | None
     verification_status: str
     market_index: PrintMarketIndexOut
     source_coverage: list[str]

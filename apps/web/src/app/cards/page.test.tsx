@@ -93,6 +93,7 @@ function makePrint(
     language: "jp",
     release_product_code: "OP-01",
     image_url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013_p2.png",
+    display_image: null,
     verification_status: "verified",
     source_coverage: ["snkrdunk", "yuyutei"],
     latest_observation_at: "2026-08-11T19:21:25.989165Z",

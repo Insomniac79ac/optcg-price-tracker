@@ -62,6 +62,7 @@ function catalogueItem(
     language: "jp",
     release_product_code: "OP-01",
     image_url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013_p2.png",
+    display_image: null,
     verification_status: "verified",
     market_index: marketIndex(),
     source_coverage: ["snkrdunk", "yuyutei"],
@@ -163,5 +164,67 @@ describe("sourceDisplayName", () => {
 
   it("passes an unknown source through rather than inventing a label", () => {
     expect(sourceDisplayName("cardrush")).toBe("cardrush");
+  });
+});
+
+describe("toPrintUiModel display image selection", () => {
+  const BANDAI = "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013_p2.png";
+  const SNKR = "https://cdn.snkrdunk.com/upload_bg_removed/TCG-OPC-OP01-0001.webp?size=l";
+
+  it("renders the verified SNKRDUNK display image, hotlinked not proxied", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+      }),
+    );
+
+    expect(model.imageUrl).toBe(SNKR);
+    expect(model.imageSource).toBe("snkrdunk");
+  });
+
+  it("keeps canonical image_url as identity evidence, not as what is rendered", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+      }),
+    );
+
+    expect(model.sourceImageUrl).toBe(BANDAI);
+    expect(model.sourceImageUrl).not.toBe(model.imageUrl);
+  });
+
+  it("falls back to the proxied canonical Bandai image when the source is bandai", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: { url: BANDAI, source: "bandai", exact_print_verified: true },
+      }),
+    );
+
+    // Bandai sends CORP: same-site, so it must go through the same-origin proxy.
+    expect(model.imageUrl).toContain("/api/card-image?u=");
+    expect(model.imageSource).toBe("bandai");
+  });
+
+  it("falls back to the canonical image when the API omits display_image entirely", () => {
+    const model = toPrintUiModel(catalogueItem({ display_image: null }));
+
+    expect(model.imageUrl).toContain("/api/card-image?u=");
+    expect(model.imageSource).toBeNull();
+  });
+
+  it("never lets a sibling's display image reach this print", () => {
+    const parallel = toPrintUiModel(
+      catalogueItem({
+        card_print_id: 3,
+        display_image: { url: SNKR, source: "snkrdunk", exact_print_verified: true },
+      }),
+    );
+    const base = toPrintUiModel(
+      catalogueItem({ card_print_id: 4, treatment: "normal", display_image: null }),
+    );
+
+    expect(parallel.imageUrl).toBe(SNKR);
+    expect(base.imageUrl).not.toBe(SNKR);
+    expect(base.imageUrl).toContain("/api/card-image?u=");
   });
 });

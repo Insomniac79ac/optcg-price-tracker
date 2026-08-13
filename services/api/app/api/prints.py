@@ -23,6 +23,7 @@ from app.schemas import (
     PrintPriceObservationOut,
     PrintPriceSeriesTrendOut,
 )
+from app.services.display_image import get_display_image_for_print
 from app.services.print_catalogue import (
     SORT_KEYS,
     get_print_catalogue_facets,
@@ -101,7 +102,8 @@ def get_print(print_id: int, db: Session = Depends(get_db)):
     canonical = _get_canonical_or_404(db, print_row.canonical_card_id)
     market_index = get_market_index_for_print(db, print_id)
     siblings = get_siblings(db, print_row.canonical_card_id, print_id)
-    return to_print_out(print_row, canonical, market_index, siblings)
+    display_image = get_display_image_for_print(db, print_row)
+    return to_print_out(print_row, canonical, market_index, siblings, display_image)
 
 
 @router.get("/{print_id}/market-index", response_model=PrintMarketIndexOut)

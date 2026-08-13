@@ -54,7 +54,13 @@ const scriptSrc = isProd ? "'self' 'unsafe-inline'" : "'self' 'unsafe-inline' 'u
 // cross-origin whatever CSP says. Those images are re-served same-origin
 // through /api/card-image instead (already covered by 'self'), so this list
 // stays limited to hosts we genuinely hotlink - see src/lib/cardImage.ts.
-const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp"];
+//
+// cdn.snkrdunk.com serves the verified display images selected by
+// app.services.display_image. Checked 2026-08-13: it sends no
+// Cross-Origin-Resource-Policy and no CORS headers, so a plain <img> embeds it
+// cross-origin fine and it needs no proxy entry - the smaller claim, same call
+// as card.yuyu-tei.jp above.
+const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp", "https://cdn.snkrdunk.com"];
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
