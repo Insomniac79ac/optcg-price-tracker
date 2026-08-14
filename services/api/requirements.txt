@@ -11,3 +11,7 @@ redis
 celery
 pyjwt
 argon2-cffi
+# Inspection only - decoding, dimensions, format and alpha for the
+# display-image mirroring verifier (app.services.display_image_mirror). It
+# must never produce image bytes: no Image.save, re-encode, resize or crop.
+Pillow
