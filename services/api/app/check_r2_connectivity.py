@@ -27,6 +27,17 @@ absent: something has written to it, which means either the bucket is not the
 one intended or this repo's read-only guarantee has been broken somewhere.
 That deserves a non-zero exit and a human, not a green tick.
 
+Does a 404 really prove the *bucket*? A HEAD response carries no body, so R2
+has nowhere to put a NoSuchBucket code and a missing bucket could in
+principle arrive as a bare 404 too - see _is_not_found in
+app.services.object_storage. Measured against the real staging bucket on
+2026-08-15, it does not: the token is bucket-scoped, so HEAD against any
+other bucket name is refused with 403 AccessDenied, never 404. A 404 here
+therefore means the request was authorised for this bucket and the bucket
+answered - which is exactly the claim below. That reasoning depends on the
+token staying bucket-scoped; a broader token would blur 404 and
+wrong-bucket again.
+
 Credential safety: no value of R2_ACCESS_KEY_ID or R2_SECRET_ACCESS_KEY is
 ever printed. botocore's own error strings can quote the access key id back
 (S3's InvalidAccessKeyId response body contains it), so this module never
