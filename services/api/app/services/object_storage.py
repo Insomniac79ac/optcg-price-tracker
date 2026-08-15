@@ -192,15 +192,33 @@ class ObjectHead:
 # --- client -----------------------------------------------------------------
 
 
+# A missing *bucket* also answers 404, and must not be read as a missing
+# object: it means the configuration is wrong, not that there is nothing
+# stored yet. Checked by name, ahead of the status code.
+_BUCKET_MISSING_CODES = {"NoSuchBucket"}
+_OBJECT_MISSING_CODES = {"404", "NoSuchKey", "NotFound"}
+
+
 def _is_not_found(error: ClientError) -> bool:
     """True only for a genuine object-not-found. Auth failures, permission
-    failures, throttling and server errors must never land here - they
-    propagate, so a misconfigured token can't be mistaken for an empty
-    bucket and re-uploaded over."""
+    failures, a missing bucket, throttling and server errors must never land
+    here - they propagate, so a misconfigured token or bucket name can't be
+    mistaken for an empty bucket and re-uploaded over.
+
+    Caveat worth knowing: a HEAD response carries no body, so when the bucket
+    itself is missing S3/R2 has nowhere to put a ``NoSuchBucket`` code and
+    botocore synthesizes a bare ``404``. This function cannot then tell the
+    two apart, and answers "object not found". The named check below still
+    catches every operation that *does* return a body (GetObject), and a
+    caller that must distinguish the two on HEAD needs a separate bucket-level
+    check rather than a guess made here.
+    """
     response = error.response or {}
     code = str((response.get("Error") or {}).get("Code", ""))
     status = (response.get("ResponseMetadata") or {}).get("HTTPStatusCode")
-    return code in {"404", "NoSuchKey", "NotFound"} or status == 404
+    if code in _BUCKET_MISSING_CODES:
+        return False
+    return code in _OBJECT_MISSING_CODES or status == 404
 
 
 class R2ObjectStorage:

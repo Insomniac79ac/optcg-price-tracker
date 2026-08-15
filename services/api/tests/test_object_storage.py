@@ -513,6 +513,26 @@ def test_head_object_propagates_auth_permission_and_server_errors(code, status):
     assert exc_info.value.response["Error"]["Code"] == code
 
 
+def test_a_missing_bucket_is_not_reported_as_a_missing_object():
+    """NoSuchBucket answers 404 too, but it means the configuration is wrong,
+    not that the bucket is empty. Collapsing it to None would let a typo'd
+    R2_BUCKET_NAME read as "nothing stored yet" - and the mirroring layer
+    would then happily upload into a bucket that doesn't exist."""
+    client = FakeS3Client(head_error=client_error("NoSuchBucket", 404, "HeadObject"))
+    with pytest.raises(ClientError) as exc_info:
+        make_storage(client).head_object(CONTENT_KEY)
+    assert exc_info.value.response["Error"]["Code"] == "NoSuchBucket"
+
+
+def test_bare_404_is_still_treated_as_a_missing_object():
+    """A HEAD response has no body, so a missing bucket can arrive as a bare
+    404 with no code to inspect. That is indistinguishable from a missing
+    object here by design - documented in _is_not_found, and why the
+    connectivity probe reports what it can and cannot prove."""
+    client = FakeS3Client(head_error=client_error("404", 404, "HeadObject"))
+    assert make_storage(client).head_object(CONTENT_KEY) is None
+
+
 def test_etag_is_opaque_and_never_interpreted_as_a_digest():
     """ETag is a server-assigned token - not MD5, not SHA-256. It is carried
     through verbatim and nothing in the module compares it to anything."""
