@@ -15,3 +15,9 @@ argon2-cffi
 # display-image mirroring verifier (app.services.display_image_mirror). It
 # must never produce image bytes: no Image.save, re-encode, resize or crop.
 Pillow
+# Cloudflare R2 via its S3-compatible API (app.services.object_storage) - the
+# only S3 client in this service. botocore is pulled in transitively and is
+# deliberately not listed separately, matching the convention above. R2 is
+# never contacted unless an R2ObjectStorage is explicitly constructed, so the
+# API starts and every unrelated test runs with all R2_* settings unset.
+boto3

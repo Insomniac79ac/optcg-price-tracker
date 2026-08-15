@@ -128,6 +128,32 @@ class Settings(BaseSettings):
     ADMIN_LOGIN_WINDOW_SECONDS: int = 900
     ADMIN_LOGIN_LOCKOUT_SECONDS: int = 1800
 
+    # Cloudflare R2 object storage (app.services.object_storage) - the future
+    # home of mirrored, content-addressed display images. All five are
+    # optional and unset by default: nothing in normal API startup, GET
+    # /prints, the collectors, the worker or the test suite constructs R2
+    # storage, and none of them may be made to require these. They are
+    # validated together, and only when an R2ObjectStorage is explicitly
+    # constructed - a missing one raises R2ConfigurationError there rather
+    # than at import or startup. There is deliberately no fallback to AWS
+    # credential discovery (env/instance metadata/~/.aws): if these are not
+    # set, no client is built at all.
+    #
+    # R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY are secrets and must come from
+    # the runtime environment - never a committed file, log line, exception
+    # message or repr. R2_ACCOUNT_ID, R2_BUCKET_NAME and R2_PUBLIC_BASE_URL
+    # are not secrets.
+    #
+    # R2_PUBLIC_BASE_URL is the *public delivery origin* (the bucket's
+    # r2.dev URL or a custom domain), not the S3 API endpoint - the API
+    # endpoint is derived from R2_ACCOUNT_ID and is never used to build a
+    # public URL. See docs/deployment.md section 1f.
+    R2_ACCOUNT_ID: str | None = None
+    R2_ACCESS_KEY_ID: str | None = None
+    R2_SECRET_ACCESS_KEY: str | None = None
+    R2_BUCKET_NAME: str | None = None
+    R2_PUBLIC_BASE_URL: str | None = None
+
     @field_validator("DATABASE_URL")
     @classmethod
     def _validate_database_url(cls, value: str) -> str:

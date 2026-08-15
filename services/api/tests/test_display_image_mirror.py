@@ -614,14 +614,25 @@ def _module_source() -> str:
 
 
 def test_no_storage_call_exists_in_this_tranche():
-    """Guards the tranche boundary: verification only, no R2, no storage
-    client, no upload. Delete this test in the tranche that adds mirroring -
-    it is asserting the absence of work that has not been authorised yet."""
+    """Guards the tranche boundary: this module is verification only - no R2,
+    no storage client, no upload.
+
+    app.services.object_storage now exists (the R2 wrapper tranche built and
+    unit-tested it against fake clients), so its absence is no longer the
+    assertion; what still holds is that *this* module neither imports it nor
+    calls storage directly. Delete this test in the tranche that actually
+    wires mirroring up - it is asserting the absence of work that has not
+    been authorised yet."""
     source = _module_source()
-    for forbidden in ("boto3", "put_object", "upload_fileobj", "cloudflarestorage"):
+    for forbidden in (
+        "boto3",
+        "put_object",
+        "upload_fileobj",
+        "cloudflarestorage",
+        "object_storage",
+        "R2ObjectStorage",
+    ):
         assert forbidden not in source, forbidden
-    with pytest.raises(ImportError):
-        import app.services.object_storage  # noqa: F401
 
 
 def test_the_verifier_never_re_encodes_the_source_bytes():

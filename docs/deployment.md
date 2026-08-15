@@ -92,6 +92,7 @@ cp .env.production.example .env.production
 | `PRICE_REFRESH_INTERVAL_HOURS` | yes | Positive integer - how often Celery Beat schedules the Yuyu-Tei refresh. |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | optional | Both or neither - see [Telegram config](#1b-telegram-config). |
 | `MARKET_WORKFLOW_*` | optional | Disabled by default - see [Market workflow schedule config](#1c-market-workflow-schedule-config). |
+| `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_BASE_URL` | optional | Unset by default; required only by R2 storage/mirroring commands, never by normal API operation - see [Cloudflare R2 object storage config](#1f-cloudflare-r2-object-storage-config). |
 | `NEXT_PUBLIC_API_URL` | yes | Public URL the browser uses to reach the API. **Baked into the web image at build time** (Next.js inlines `NEXT_PUBLIC_*` vars at `next build`) - changing it requires rebuilding the `web` image, not just restarting the container. |
 | `API_INTERNAL_URL` | yes in production | Server-side-only URL the web app's Next.js API routes (`src/app/api/**`) use to reach `api` directly (e.g. `http://api:8000`), instead of `NEXT_PUBLIC_API_URL`. Never expose this as a `NEXT_PUBLIC_*` variable. |
 | `API_JWT_SECRET` | yes in production | Shared between `api` and `web` - verifies the per-user bearer token the web app mints on sign-in. See [Per-user auth](#10-per-user-auth-google-login). Generate with e.g. `openssl rand -hex 32`, distinct from `ADMIN_TOKEN`. |
@@ -189,6 +190,31 @@ build/start in production; only warns in development.
 Rotate immediately (not on a routine schedule) if the token was ever committed to git, logged, or
 otherwise exposed - see [Secret handling](#2-secret-handling) for why deleting/force-pushing
 afterward doesn't undo that exposure.
+
+### 1f. Cloudflare R2 object storage config
+
+Five optional variables, read by `app.services.object_storage` only:
+
+| Variable | Secret | Notes |
+|---|---|---|
+| `R2_ACCOUNT_ID` | no | Cloudflare account id. Interpolated into the S3 API endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`. |
+| `R2_ACCESS_KEY_ID` | **yes** | From a bucket-scoped R2 API token. |
+| `R2_SECRET_ACCESS_KEY` | **yes** | Same token's secret. |
+| `R2_BUCKET_NAME` | no | The single bucket this service reads and writes. |
+| `R2_PUBLIC_BASE_URL` | no | The **public delivery origin** (the bucket's `r2.dev` URL or a custom domain), e.g. `https://<host>/`. Not the S3 API endpoint above - public URLs are built from this value alone and never derived from the API endpoint. |
+
+- **All five are optional for normal API operation.** The API, the worker, the collectors, Celery
+  Beat, `GET /prints` and the test suite all run with every one unset, and nothing in normal
+  startup constructs R2 storage. They are required *only* by the R2 storage/mirroring commands.
+- They are validated as a group, at the moment an `R2ObjectStorage` is constructed - not at import
+  or at process startup. A missing or malformed one raises `R2ConfigurationError` naming the
+  setting, before any client exists. There is deliberately **no fallback** to boto3's AWS
+  credential chain (`AWS_*` env vars, instance metadata, `~/.aws/credentials`): unconfigured means
+  no client at all, never an unrelated AWS identity.
+- The two secrets must be supplied as **runtime environment variables** (the hosting provider's
+  variable store), never committed to any file in this repo - see
+  [Secret handling](#2-secret-handling). They are never logged, and never appear in an exception
+  message or in `repr()`: neither is stored on the instance at all.
 
 ## 2. Secret handling
 
