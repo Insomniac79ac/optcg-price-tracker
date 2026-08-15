@@ -118,6 +118,45 @@ def normalize_public_base_url(raw: str) -> str:
     return raw.strip().rstrip("/") + "/"
 
 
+def join_public_url(base_url: str, key: str) -> str:
+    """`base_url` + `key` with exactly one slash between them.
+
+    The single join implementation, shared by R2ObjectStorage.public_url()
+    (which has a client) and public_url_for_key() (which deliberately has
+    none). Both the base and the key are validated first, so a malformed
+    setting or key raises rather than producing a subtly broken URL.
+
+    Plain concatenation onto the single-trailing-slash base, rather than
+    urljoin: a validated key can never start with "/" or contain a
+    backslash, so it cannot replace the host or escape the base path, and
+    the key's own hierarchy survives intact. Percent-encoding is applied
+    with "/" kept safe, which is a no-op for the hex keys used here.
+    """
+    key = validate_object_key(key)
+    return normalize_public_base_url(base_url) + quote(key, safe="/")
+
+
+def public_url_for_key(key: str, settings: Settings | None = None) -> str:
+    """The public delivery URL for `key`, from configuration alone.
+
+    Pure string work: no boto3 client, no credentials, and no request to R2
+    or anywhere else. That is the whole point of it existing next to
+    R2ObjectStorage.public_url() - a read path that only needs to *name* an
+    object must not have to construct a write-capable client (and so must
+    not require the two secret settings) to do it.
+
+    Raises R2ConfigurationError when R2_PUBLIC_BASE_URL is unset or
+    malformed, and InvalidObjectKey for a key that fails validation.
+    """
+    cfg = settings if settings is not None else default_settings
+    raw = cfg.R2_PUBLIC_BASE_URL
+    if raw is None or not raw.strip():
+        raise R2ConfigurationError(
+            "R2_PUBLIC_BASE_URL is not configured; no public URL can be built."
+        )
+    return join_public_url(raw, key)
+
+
 # --- key safety -------------------------------------------------------------
 
 
@@ -375,11 +414,7 @@ class R2ObjectStorage:
         appended: an r2.dev URL or custom domain already resolves to one
         bucket.
 
-        Plain concatenation onto the single-trailing-slash base, rather than
-        urljoin: a validated key can never start with "/" or contain a
-        backslash, so it cannot replace the host or escape the base path, and
-        the key's own hierarchy survives intact. Percent-encoding is applied
-        with "/" kept safe, which is a no-op for the hex keys used here.
+        Joining is delegated to join_public_url() so this and the
+        client-free public_url_for_key() can never drift apart.
         """
-        key = validate_object_key(key)
-        return self.public_base_url + quote(key, safe="/")
+        return join_public_url(self.public_base_url, key)

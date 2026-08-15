@@ -59,6 +59,11 @@ from app.models import Source, SourceCardMapping
 # an asset the public API would refuse (or vice versa). display_image.py is
 # not modified by this tranche.
 from app.services.display_image import DISPLAY_SOURCE_PRIORITY
+from app.services.display_image_object_key import (  # re-exported: callers import these from here
+    OBJECT_KEY_MEDIA_TYPES,
+    OBJECT_KEY_PREFIX,
+    object_key,
+)
 from app.services.display_image import _qualifies as display_image_qualifies
 
 # The 16 approved SNKRDUNK display assets as of 2026-08-13. Used only to
@@ -80,9 +85,9 @@ EXPECTED_IMAGE_HOSTS: dict[str, str] = {"snkrdunk": "cdn.snkrdunk.com"}
 # The extension comes from the *decoded* format, never from the URL, because
 # SNKRDUNK URLs carry query parameters (".webp?size=l").
 SUPPORTED_FORMATS: dict[str, tuple[str, str]] = {
-    "WEBP": ("webp", "image/webp"),
-    "PNG": ("png", "image/png"),
-    "JPEG": ("jpg", "image/jpeg"),
+    "WEBP": ("webp", OBJECT_KEY_MEDIA_TYPES["webp"]),
+    "PNG": ("png", OBJECT_KEY_MEDIA_TYPES["png"]),
+    "JPEG": ("jpg", OBJECT_KEY_MEDIA_TYPES["jpg"]),
 }
 
 # Fixed and explicit so a future run cannot drift with httpx's defaults, and
@@ -92,7 +97,6 @@ USER_AGENT = "CardPirateAtlas-display-image-mirror/1.0 (+verification-dry-run)"
 FETCH_TIMEOUT_SECONDS = 20.0
 MAX_IMAGE_BYTES = 8 * 1024 * 1024  # same cap the frontend image proxy uses
 
-OBJECT_KEY_PREFIX = "display-images/sha256"
 
 # The three additive keys persistence writes into an existing `fetch` block,
 # and nothing else. `sha256_prefix`, `bytes` and `fetched_at` all stay exactly
@@ -474,12 +478,6 @@ def inclusive_bbox_to_pillow(bbox: tuple[int, int, int, int]) -> tuple[int, int,
     """
     left, top, right_inclusive, bottom_inclusive = bbox
     return (left, top, right_inclusive + 1, bottom_inclusive + 1)
-
-
-def object_key(sha256_hex: str, extension: str) -> str:
-    """The content-addressed key a later tranche would write to. Computed for
-    reporting only - this tranche creates no objects and contacts no storage."""
-    return f"{OBJECT_KEY_PREFIX}/{sha256_hex[:2]}/{sha256_hex}.{extension}"
 
 
 # --- verification -----------------------------------------------------------

@@ -13,6 +13,21 @@ Selection priority (first match wins):
    evidence classifies it VERIFIED_DISPLAY (see DISPLAY_SOURCE_PRIORITY)
 2. the canonical Bandai image
 
+Where a chosen marketplace image has also been mirrored into our own R2
+bucket and recorded as a verified ``owned_asset``, the *URL* we serve for it
+is the R2 one instead of the marketplace CDN's - same image, same evidence,
+same `source`, different origin (see _owned_asset_url, and note that it is
+currently gated to one print). The URL is composed from configuration at
+read time and no delivery hostname is ever read from the database.
+
+That substitution is only made when the ``owned_asset`` record is provably
+about *this* image: its digest, byte size and pixel dimensions must match the
+display evidence beside it, and its key must be the one the shared
+content-addressing rule produces for that digest. This read path cannot ask
+R2 whether the object exists - it makes no network call of any kind - so
+local consistency with already-verified evidence is the whole of what it can
+check, and anything less than all of it keeps the source URL.
+
 A mapping only qualifies when its ``match_explanation_json`` carries a
 ``display_image`` object that was written by the display-image verification
 tranche, asserting all four of: exact print verified, whole card preserved,
@@ -30,6 +45,8 @@ which is why Yuyu-Tei contributes no display images and is absent below).
 
 from __future__ import annotations
 
+import re
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -40,8 +57,59 @@ from app.schemas import (
     DisplayImageGeometryOut,
     DisplayImageOut,
 )
+from app.services.display_image_object_key import (
+    OBJECT_KEY_MEDIA_TYPES,
+    object_key as build_object_key,
+)
+from app.services.object_storage import (
+    InvalidObjectKey,
+    R2ConfigurationError,
+    public_url_for_key,
+    validate_object_key,
+)
 
 BANDAI = "bandai"
+
+# Prints served from our own R2 copy instead of the source marketplace CDN.
+#
+# Deliberately an explicit allow-list of one, not "every mapping that happens
+# to carry an owned_asset". Exactly one asset (card_print_id 1) has been
+# mirrored and verified end to end so far; the rest of the tranche is not
+# done, and a print silently switching origin the moment a record appears is
+# not something that should happen without a test asserting it. Widening this
+# set is the next tranche's job, and its whole content.
+OWNED_ASSET_PRINT_IDS: frozenset[int] = frozenset({1})
+
+# Only ever the provider this repository actually writes (see
+# app.services.display_image_asset_persist.PROVIDER). An owned_asset naming
+# anything else was not written by that module, so its object_key is not
+# addressable under R2_PUBLIC_BASE_URL.
+OWNED_ASSET_PROVIDER = "cloudflare_r2"
+
+# The only verification that licenses a switch of origin: the source bytes,
+# the authenticated R2 GET and the unauthenticated public GET all hashed and
+# agreeing (app.services.display_image_asset_persist.VERIFICATION_METHOD). A
+# record produced by anything weaker - or by a future method whose guarantees
+# this reader does not know - is not usable here.
+OWNED_ASSET_VERIFICATION_METHOD = "source_private_public_sha256"
+
+# Present, a string, and non-blank. Nothing is defaulted: a record missing any
+# of these was not written by the persistence module and is not trusted.
+OWNED_ASSET_REQUIRED_STR = (
+    "provider",
+    "object_key",
+    "sha256",
+    "content_type",
+    "cache_control",
+    "verified_at",
+    "verification_method",
+)
+
+# Present and a positive int. Bools are rejected - in Python they are ints,
+# and a bool in any of these means malformed evidence.
+OWNED_ASSET_REQUIRED_INT = ("byte_size", "width", "height")
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 # Marketplace sources trusted to supply a display image, best first. Yuyu-Tei
 # is deliberately absent: all 20 of its exact-product images were verified on
@@ -126,6 +194,115 @@ def _geometry(payload: dict) -> DisplayImageGeometryOut | None:
     )
 
 
+def _positive_int(value: object) -> int | None:
+    """A real positive int, or None. Bools are not ints for this purpose."""
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        return None
+    return value
+
+
+def _owned_asset_url(payload: dict, card_print_id: int) -> str | None:
+    """The public URL of our own mirrored copy, or None to keep the source URL.
+
+    Derived at read time and never stored: the record on the mapping holds a
+    provider and an object_key and deliberately no hostname (see
+    app.services.display_image_asset_persist), so the delivery origin comes
+    from R2_PUBLIC_BASE_URL - one source of truth, changeable per environment
+    and replaceable by a custom domain without rewriting any evidence.
+
+    Pure configuration + string work. No client is constructed, nothing is
+    read from the database beyond the payload already in hand, and R2 is
+    never contacted - a display URL must never cost a network round trip.
+    That is also why every check below is a *local consistency* check: this
+    function cannot ask R2 whether the object is really there, so what it can
+    do instead is refuse to trust a record that disagrees with the verified
+    display evidence sitting next to it in the same payload.
+
+    The question being answered is not "does this record look well-formed"
+    but "does this record describe *the very image this print was verified
+    to show*". So the digest, the byte size and the pixel dimensions must all
+    match the display evidence, and the key must be the one the shared
+    content-addressing rule produces for that digest. A record that fails any
+    of them is describing some other object - which is precisely when
+    swapping the URL would put the wrong picture, or no picture, on a
+    collector's screen.
+
+    Every failure returns None, which leaves the caller serving the verified
+    source URL exactly as before. A missing setting, a malformed base URL, a
+    record from another provider, an inconsistent record or a key that fails
+    validation are all reasons to keep a working image, never to emit a
+    broken one.
+    """
+    if card_print_id not in OWNED_ASSET_PRINT_IDS:
+        return None
+
+    owned = payload.get("owned_asset")
+    if not isinstance(owned, dict):
+        return None
+
+    # --- shape: every field present, with the right type --------------------
+    for name in OWNED_ASSET_REQUIRED_STR:
+        value = owned.get(name)
+        if not isinstance(value, str) or not value.strip():
+            return None
+    for name in OWNED_ASSET_REQUIRED_INT:
+        if _positive_int(owned.get(name)) is None:
+            return None
+
+    if owned["provider"] != OWNED_ASSET_PROVIDER:
+        return None
+    if owned["verification_method"] != OWNED_ASSET_VERIFICATION_METHOD:
+        return None
+
+    digest = owned["sha256"]
+    if not _SHA256_RE.match(digest):
+        return None
+
+    # --- identity: the same bytes the display evidence was verified against -
+    # display_image.fetch.sha256 is the digest of the image this print's
+    # display contract was signed off on. If the mirrored object's digest is
+    # not that digest, we mirrored something else.
+    fetch = payload.get("fetch")
+    if not isinstance(fetch, dict):
+        return None
+    if fetch.get("sha256") != digest:
+        return None
+    if owned["byte_size"] != _positive_int(fetch.get("bytes")):
+        return None
+
+    # --- identity: the same picture the geometry describes ------------------
+    # The client is told where the card sits inside canvas_px; serving an
+    # object of any other size would make that box point at the wrong pixels.
+    geometry = payload.get("geometry")
+    if not isinstance(geometry, dict):
+        return None
+    if _ints(geometry.get("canvas_px"), 2) != [owned["width"], owned["height"]]:
+        return None
+
+    # --- the key: what the shared rule produces for this digest -------------
+    key = owned["object_key"]
+    try:
+        validate_object_key(key)
+    except InvalidObjectKey:
+        return None
+    extension = key.rsplit("/", 1)[-1].rpartition(".")[2]
+    if extension not in OBJECT_KEY_MEDIA_TYPES:
+        return None
+    # Re-derived with the same function the mirror writes with, never by
+    # re-stating the prefix/fan-out/naming rules here - a reader and a writer
+    # that disagree about the key point at an object that does not exist.
+    if key != build_object_key(digest, extension):
+        return None
+    # Parameters stripped: "image/webp; charset=binary" is still image/webp.
+    if owned["content_type"].split(";", 1)[0].strip().lower() != OBJECT_KEY_MEDIA_TYPES[extension]:
+        return None
+
+    try:
+        return public_url_for_key(key)
+    except (R2ConfigurationError, InvalidObjectKey):
+        return None
+
+
 def get_display_images_for_prints(
     db: Session, prints: list[CardPrint]
 ) -> dict[int, DisplayImageOut]:
@@ -164,7 +341,11 @@ def get_display_images_for_prints(
         best[card_print_id] = (
             rank,
             DisplayImageOut(
-                url=payload["url"],
+                # Our own copy when we have one, else the verified source
+                # image. Only the URL can change here: source, geometry and
+                # exact_print_verified all still describe the same verified
+                # asset, because the mirrored bytes are that asset.
+                url=_owned_asset_url(payload, card_print_id) or payload["url"],
                 source=source_name,
                 exact_print_verified=True,
                 geometry=_geometry(payload),

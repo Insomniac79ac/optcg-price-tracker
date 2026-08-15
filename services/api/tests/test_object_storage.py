@@ -43,6 +43,7 @@ from app.services.object_storage import (
     R2ConfigurationError,
     R2ObjectStorage,
     normalize_public_base_url,
+    public_url_for_key,
     validate_object_key,
 )
 from app.settings import Settings
@@ -455,6 +456,52 @@ def test_key_cannot_replace_the_public_hostname():
     # The protocol-relative form never even gets that far - leading "/".
     with pytest.raises(InvalidObjectKey):
         store.public_url("//evil.example.com/x.webp")
+
+
+# --- public URL without a client --------------------------------------------
+#
+# public_url_for_key() exists so a read path can *name* an object without
+# constructing a write-capable client. GET /prints uses it to serve a
+# mirrored display image (see app.services.display_image); it must therefore
+# work from R2_PUBLIC_BASE_URL alone, never touch boto3, and agree exactly
+# with the method on the client that does exist.
+
+
+def test_public_url_for_key_matches_the_client_method():
+    settings = r2_settings()
+    assert public_url_for_key(CONTENT_KEY, settings) == make_storage(
+        FakeS3Client()
+    ).public_url(CONTENT_KEY)
+
+
+def test_public_url_for_key_builds_no_client(monkeypatch):
+    """No boto3 call, and the two secret settings are not even required."""
+
+    def boom(**kwargs):  # pragma: no cover - a call here fails the test
+        raise AssertionError("public_url_for_key must not construct a client")
+
+    monkeypatch.setattr(boto3, "client", boom)
+    settings = r2_settings(R2_ACCESS_KEY_ID=None, R2_SECRET_ACCESS_KEY=None, R2_ACCOUNT_ID=None)
+    assert public_url_for_key(CONTENT_KEY, settings) == f"{FAKE_PUBLIC_BASE_URL}/{CONTENT_KEY}"
+
+
+@pytest.mark.parametrize("configured", [None, "", "   "])
+def test_public_url_for_key_requires_the_base_url(configured):
+    with pytest.raises(R2ConfigurationError) as excinfo:
+        public_url_for_key(CONTENT_KEY, r2_settings(R2_PUBLIC_BASE_URL=configured))
+    assert "R2_PUBLIC_BASE_URL" in str(excinfo.value)
+
+
+def test_public_url_for_key_rejects_a_bad_key():
+    with pytest.raises(InvalidObjectKey):
+        public_url_for_key("../escape.webp", r2_settings())
+
+
+def test_public_url_for_key_normalizes_the_join():
+    settings = r2_settings(R2_PUBLIC_BASE_URL=FAKE_PUBLIC_BASE_URL + "///")
+    url = public_url_for_key(CONTENT_KEY, settings)
+    assert url == f"{FAKE_PUBLIC_BASE_URL}/{CONTENT_KEY}"
+    assert "//display-images" not in url
 
 
 # --- HEAD -------------------------------------------------------------------
