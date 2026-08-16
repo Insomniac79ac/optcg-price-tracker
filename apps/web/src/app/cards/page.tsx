@@ -8,8 +8,8 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { ErrorState } from "@/components/StateBlocks";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
+import { CatalogueIntro } from "@/components/ui/CatalogueIntro";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import {
   EMPTY_PRINT_FILTERS,
@@ -66,9 +66,6 @@ function buildQueryString(filters: PrintCatalogueFilters, offset: number): strin
   return qs ? `?${qs}` : "";
 }
 
-const PAGE_DESCRIPTION =
-  "Every printing is its own card here — base and parallel are collected separately.";
-
 export default function PrintsCataloguePage() {
   return (
     <Suspense fallback={<PrintsCataloguePageFallback />}>
@@ -81,9 +78,15 @@ function PrintsCataloguePageFallback() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader title="Cards" description={PAGE_DESCRIPTION} />
-        <CardGridSkeleton />
+      <main className="mx-auto max-w-7xl px-4 py-5">
+        {/* Same intro as the real page so the Suspense fallback doesn't
+            reflow the whole top of the catalogue once the URL is readable -
+            with no count and no card fan, because there is no response to
+            draw either from yet. */}
+        <CatalogueIntro query="" onSearch={() => {}} totalPrints={null} filtered={false} />
+        <div className="mt-5">
+          <CardGridSkeleton />
+        </div>
       </main>
     </div>
   );
@@ -149,15 +152,31 @@ function PrintsCataloguePageInner() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader title="Cards" description={PAGE_DESCRIPTION} />
-
-        <PrintCatalogueToolbar
-          filters={filters}
-          facets={data?.facets ?? emptyFacets}
-          onChange={(next) => navigate(next, 0)}
-          onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
+      <main className="mx-auto max-w-7xl px-4 py-5">
+        <CatalogueIntro
+          query={filters.q}
+          onSearch={(q) => navigate({ ...filters, q }, 0)}
+          // Only ever the live `total` for the query in the URL - null (and
+          // therefore nothing rendered) while loading or after a failure.
+          totalPrints={status === "ready" && data ? data.total : null}
+          filtered={hasActivePrintFilters(filters)}
+          // The same prints the grid below is about to render - the intro's
+          // fan is drawn from them rather than from a request of its own.
+          prints={prints}
         />
+
+        {/* Straight from the intro into the real controls. The compass
+            divider that used to sit here read as a standalone ornament and
+            cost ~60px before the first card; the intro panel's own edge is
+            transition enough. */}
+        <div className="mt-5">
+          <PrintCatalogueToolbar
+            filters={filters}
+            facets={data?.facets ?? emptyFacets}
+            onChange={(next) => navigate(next, 0)}
+            onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
+          />
+        </div>
 
         {status === "loading" && <CardGridSkeleton />}
 

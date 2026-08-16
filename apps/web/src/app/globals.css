@@ -46,6 +46,18 @@
   --signal-purple: #a78bfa;
   --signal-warning: #f59e0b;
 
+  /* Global shell - the public header's height. Declared once here (rather
+   * than as literal Tailwind heights in several places) because the admin
+   * navigation rail in components/ui/AppShell.tsx has to offset itself by
+   * exactly this value. 60px on mobile gives the 44px brand mark 8px of
+   * clearance top and bottom; desktop is taller so the supplied
+   * cardpirate-atlas-logo.png lockup can be rendered at real size. */
+  --header-h: 60px;
+
+  /* Width of the admin navigation rail. Only the admin surface has one -
+   * see the `data-app-rail` rules below. */
+  --rail-w: 14rem;
+
   /* Radius */
   --radius-control: 6px;
   --radius-panel: 8px;
@@ -98,8 +110,38 @@
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Matches Tailwind's `md` breakpoint, which is where TopBar swaps the compact
+ * mark for the full logo lockup. */
+@media (min-width: 48rem) {
+  :root {
+    --header-h: 76px;
+  }
+}
+
 body {
   background-color: var(--bg-page);
+}
+
+/* The persistent navigation rail is now admin-only: the public collector
+ * surface navigates from the header instead (see components/ui/AppShell.tsx).
+ *
+ * Rather than teach every page whether it is an admin page, the rail
+ * announces itself with `data-app-rail` and these two rules react to its
+ * presence, which keeps <body> free of any unconditional padding:
+ *   - the body gets matching left padding so page content clears the fixed
+ *     rail, exactly as the old `lg:pl-56` body class used to do;
+ *   - the sticky header cancels that padding again, so the brand lockup
+ *     stays in the page's true top-left corner, above the rail rather than
+ *     indented past it.
+ * Below `lg` the rail is a drawer overlay, so neither rule applies. */
+@media (min-width: 64rem) {
+  body:has([data-app-rail]) {
+    padding-left: var(--rail-w);
+  }
+
+  body:has([data-app-rail]) [data-app-header] {
+    margin-left: calc(-1 * var(--rail-w));
+  }
 }
 
 /* ---------------------------------------------------------------------------

@@ -30,12 +30,21 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Drop-in replacement for the old flat AppHeader nav bar. Renders a sticky
- * topbar (full width, in document flow - unchanged height/position from the
- * old AppHeader, so no page needs new top padding) plus a fixed-position
- * sidebar below it. The sidebar is `position: fixed`, not part of layout
- * flow, so it doesn't require any page to restructure its own wrapper - the
- * one bit of matching padding it needs (`md:pl-56`) lives once on
- * <body> in app/layout.tsx rather than on every page.
+ * topbar (full width, in document flow, so growing it to `--header-h` pushes
+ * every page's content down without any page needing new top padding), and -
+ * on the admin surface only - a fixed-position navigation rail below it.
+ *
+ * The rail used to be permanent on every page at `lg`+. It isn't any more:
+ * a persistent left nav made the *public* product read as an internal
+ * dashboard, so collector-facing pages now navigate from the header
+ * (TopBar's PublicNav) and get the full viewport width. The rail survives
+ * for /admin, where a dense operational route list genuinely needs one, and
+ * SidebarNav itself is untouched and still shared by both the rail and the
+ * mobile drawer.
+ *
+ * The rail is `position: fixed`, so it doesn't require any page to
+ * restructure its wrapper - the matching body padding is applied by
+ * globals.css off the `data-app-rail` attribute, only when a rail exists.
  *
  * Also owns the global command palette / keyboard-shortcuts modal mount
  * point and keyboard listener, so every page gets Cmd/Ctrl+K, "?", "/", and
@@ -43,6 +52,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function AppShell() {
   const pathname = usePathname();
   const router = useRouter();
+  // Route-based, not role-based, on purpose: the rail belongs to the admin
+  // *surface*, not to the person. An admin browsing /cards is a collector at
+  // that moment and gets the same header-led chrome as everybody else.
+  const isAdminRoute = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -122,17 +135,27 @@ export function AppShell() {
         onOpenShortcuts={() => setShortcutsOpen(true)}
       />
 
-      {/* Desktop sidebar - fixed, clears the topbar via top-12, own scroll
-          region. Only shown at `lg` (1024px)+ - tablet (down to 768px) keeps
-          the drawer below so a 768px-wide screen isn't left with a squeezed
-          <600px content column next to a permanently-open 224px rail. */}
-      <aside className="fixed left-0 top-12 z-20 hidden h-[calc(100vh-3rem)] w-56 border-r border-border-default bg-bg-surface lg:block">
-        <SidebarNav className="h-full" />
-      </aside>
+      {/* Admin-only navigation rail - fixed, clears the topbar via
+          --header-h (the one place that height is defined - globals.css),
+          own scroll region. Still only at `lg` (1024px)+: tablet keeps the
+          drawer so a 768px-wide screen isn't left with a squeezed <600px
+          content column next to a permanently-open 224px rail.
+
+          data-app-rail is what globals.css keys the body padding and the
+          header's negative margin off, so the attribute and the element have
+          to stay together. */}
+      {isAdminRoute && (
+        <aside
+          data-app-rail=""
+          className="fixed left-0 top-[var(--header-h)] z-20 hidden h-[calc(100vh-var(--header-h))] w-56 border-r border-border-default bg-bg-surface lg:block"
+        >
+          <SidebarNav className="h-full" />
+        </aside>
+      )}
 
       {/* Mobile/tablet nav - toggled overlay, covers everything below `lg` */}
       {mobileNavOpen && (
-        <div className="fixed inset-0 top-12 z-40 lg:hidden">
+        <div className="fixed inset-0 top-[var(--header-h)] z-40 lg:hidden">
           <button
             type="button"
             aria-label="Close navigation"

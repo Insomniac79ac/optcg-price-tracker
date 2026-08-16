@@ -208,7 +208,8 @@ describe("print catalogue page", () => {
     const { container } = render(<PrintsCataloguePage />);
 
     await screen.findByRole("link", { name: /Sanji/ });
-    const img = container.querySelector("img");
+    // Skip the shell/intro brand artwork - only the card image is under test.
+    const img = container.querySelector("img:not([data-brand-asset])");
     expect(img).not.toBeNull();
     expect(img!.className).toContain("object-contain");
     expect(img!.className).not.toContain("object-cover");
@@ -277,6 +278,21 @@ describe("print catalogue page", () => {
     expect(screen.queryByLabelText(/Variant/)).toBeNull();
   });
 
+  it("filters by rarity through the toolbar select, with no separate chip strip", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("link", { name: /Sanji/ });
+
+    // The rarity chip strip that briefly stood in for set navigation is gone:
+    // no "All cards" reset control, and no group of rarity buttons.
+    expect(screen.queryByRole("group", { name: "Rarity" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "All cards" })).toBeNull();
+
+    // The underlying filter still works, from the same real facets.
+    fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SEC" } });
+    expect(push).toHaveBeenCalledWith("/cards?rarity=SEC");
+  });
+
   it("sends the treatment filter to the server", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
     render(<PrintsCataloguePage />);
@@ -286,12 +302,48 @@ describe("print catalogue page", () => {
     expect(push).toHaveBeenCalledWith("/cards?treatment=parallel");
   });
 
+  it("draws the intro card fan from the first three loaded prints, with no extra request", async () => {
+    const three = [
+      SANJI_PARALLEL,
+      SANJI_BASE,
+      makePrint({ card_print_id: 9, card_code: "OP01-001", name_en: "Roronoa Zoro" }),
+    ];
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(three));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    // Atmosphere only: the fan is aria-hidden and holds no links, so the
+    // three real, labelled copies of these cards stay in the grid below.
+    const fan = container.querySelector("[data-hero-fan]");
+    expect(fan).not.toBeNull();
+    expect(fan!.getAttribute("aria-hidden")).toBe("true");
+    expect(fan!.querySelectorAll("a")).toHaveLength(0);
+    expect(fan!.querySelectorAll("img")).toHaveLength(3);
+    // No card names or prices in the composition.
+    expect(fan!.textContent).not.toMatch(/Sanji|Zoro|¥/);
+
+    // Decoration must never cost a request - the page fetched exactly once.
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the intro card fan rather than composing it from too few prints", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL, SANJI_BASE]));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    expect(container.querySelector("[data-hero-fan]")).toBeNull();
+  });
+
   it("uses no mock or demo dataset when the API returns nothing", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
     const { container } = render(<PrintsCataloguePage />);
 
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
     await screen.findByText(/No cards yet/);
-    expect(container.querySelectorAll("img")).toHaveLength(0);
+    // Brand chrome (header lockup, intro texture) is tagged
+    // data-brand-asset; any other <img> would have to be card artwork, and
+    // there is no card to draw - the intro fan needs three prints and gets
+    // none here.
+    expect(container.querySelectorAll("img:not([data-brand-asset])")).toHaveLength(0);
   });
 });

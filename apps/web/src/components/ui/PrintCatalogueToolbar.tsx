@@ -29,7 +29,8 @@ export function hasActivePrintFilters(filters: PrintCatalogueFilters): boolean {
   return Boolean(filters.q || filters.treatment || filters.rarity);
 }
 
-/** Search + filter + sort controls for the print catalogue.
+/** Filter + sort controls for the print catalogue, sitting directly under the
+ * catalogue intro (which owns the search box - see CatalogueIntro).
  *
  * Only treatment and rarity are offered, because those are the only two the
  * print API filters server-side (see GET /prints in
@@ -39,10 +40,12 @@ export function hasActivePrintFilters(filters: PrintCatalogueFilters): boolean {
  * the current page. Every option comes from `facets` - never a fabricated
  * value.
  *
- * Search is submitted to the server, which matches card code, English name
- * and Japanese name (`OP01-013`, `Sanji`, `サンジ` all work) and returns
- * individual prints - a base and a parallel that both match come back as two
- * results, never one collapsed row.
+ * Rarity briefly had a separate chip strip above this row, standing in for
+ * the set navigation the design sketched. That was the wrong trade: it read
+ * as set navigation without being it, and duplicated a filter that already
+ * lives here. Until the API has a trustworthy release facet, rarity stays a
+ * plain select alongside treatment and sort, and the page goes straight from
+ * the intro into these controls.
  */
 export function PrintCatalogueToolbar({
   filters,
@@ -62,37 +65,9 @@ export function PrintCatalogueToolbar({
     onChange({ ...filters, [key]: value });
   }
 
-  function submitSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const entered = new FormData(e.currentTarget).get("q");
-    set("q", typeof entered === "string" ? entered.trim() : "");
-  }
-
   return (
-    <div className="mb-4 flex flex-col gap-2">
-      <form onSubmit={submitSearch} className="flex gap-2">
-        {/* Uncontrolled, keyed on the committed term: the URL is the single
-            source of truth for `q`, and re-keying resets the box whenever a
-            back/forward navigation or "Clear all" changes it - no state to
-            keep in sync, so no sync effect. */}
-        <input
-          key={filters.q}
-          type="search"
-          name="q"
-          defaultValue={filters.q}
-          placeholder="Search by card code or name — OP01-013, Sanji, サンジ"
-          aria-label="Search prints by card code, English name, or Japanese name"
-          className={`${FILTER_INPUT_CLASS} flex-1`}
-        />
-        <button
-          type="submit"
-          className="rounded-control border border-border-default px-3 py-1 text-sm font-medium text-text-secondary hover:text-text-primary"
-        >
-          Search
-        </button>
-      </form>
-
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mb-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {facets.treatments.length > 0 && (
           <label className={FILTER_LABEL_CLASS}>
             Treatment
@@ -148,7 +123,7 @@ export function PrintCatalogueToolbar({
           <button
             type="button"
             onClick={onClear}
-            className="text-xs font-medium text-text-muted hover:text-text-secondary"
+            className="text-xs font-medium text-text-muted underline-offset-2 hover:text-text-secondary hover:underline"
           >
             Clear all
           </button>

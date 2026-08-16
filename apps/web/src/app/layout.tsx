@@ -53,12 +53,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`dark ${manrope.variable} ${fraunces.variable} ${ibmPlexMono.variable}`}>
-      {/* lg:pl-56 clears AppShell's fixed sidebar (see components/ui/AppShell.tsx) -
-          set here once rather than in every page so no page.tsx needs to change.
-          Sidebar only becomes a fixed, always-visible rail at the `lg` (1024px)
-          breakpoint - below that (including tablet/768px) it stays a drawer so
-          content gets the full viewport width. */}
-      <body className="flex min-h-screen flex-col bg-bg-page font-sans text-text-primary antialiased lg:pl-56">
+      {/* No unconditional sidebar padding here any more. The persistent rail
+          is admin-only (see components/ui/AppShell.tsx), and globals.css
+          applies the matching padding only when a rail is actually present,
+          keyed off its `data-app-rail` attribute - so the public collector
+          pages get the full viewport width at every breakpoint. */}
+      <body className="flex min-h-screen flex-col bg-bg-page font-sans text-text-primary antialiased">
         <AuthSessionProvider>
           <div className="flex-1">{children}</div>
           <Footer />

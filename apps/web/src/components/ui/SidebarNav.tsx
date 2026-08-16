@@ -24,7 +24,10 @@ interface NavGroup {
 // command-center search, but is no longer the primary card-browsing surface
 // (see src/app/search/page.tsx's redirect). There is still no "Sets" entry -
 // see collector-blueprint.pdf.
-const PUBLIC_ITEMS: NavItem[] = [
+// Exported so TopBar's desktop public nav renders exactly this list rather
+// than declaring a second one that could drift (or quietly gain an admin
+// entry) - see components/ui/TopBar.tsx.
+export const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Discover" },
   { href: "/cards", label: "Cards" },
   { href: "/market/movers", label: "Market Index" },
@@ -57,7 +60,7 @@ const COLLECTOR_ITEMS: NavItem[] = [
 const ADMIN_ITEMS: NavItem[] = [{ href: "/admin", label: "Admin" }];
 
 function buildGroups(isAuthenticated: boolean, isAdmin: boolean): NavGroup[] {
-  const groups: NavGroup[] = [{ key: "public", label: "Browse", items: PUBLIC_ITEMS }];
+  const groups: NavGroup[] = [{ key: "public", label: "Browse", items: PUBLIC_NAV_ITEMS }];
   if (isAuthenticated) {
     groups.push({ key: "collector", label: "Collector", items: COLLECTOR_ITEMS });
   }
