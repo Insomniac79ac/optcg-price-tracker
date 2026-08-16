@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
+
 const isProd = process.env.NODE_ENV === "production";
 
 // Browser-side code calls the API directly for per-user routes (see
@@ -62,11 +64,23 @@ const scriptSrc = isProd ? "'self' 'unsafe-inline'" : "'self' 'unsafe-inline' 'u
 // as card.yuyu-tei.jp above.
 const APPROVED_IMAGE_HOSTS = ["https://card.yuyu-tei.jp", "https://cdn.snkrdunk.com"];
 
+// Images we mirror into our own object storage are served from the origin
+// named by R2_PUBLIC_BASE_URL - the same setting the API builds
+// `display_image.url` from - so CSP has to permit that exact origin or the
+// browser blocks the request before it is sent (which is precisely what
+// happened to card_print_id=1 on staging: see
+// docs/display_image_print1_frontend_qa_2026-08-16.pdf). Configuration, not a
+// hardcoded host: staging's bucket is on *.r2.dev today and production will
+// use a custom asset domain. Unset is a supported state and leaves the list
+// above exactly as it was; an invalid value throws here and fails the build.
+// See src/lib/cspImageOrigin.ts.
+const IMAGE_HOSTS = buildImageSrcHosts(APPROVED_IMAGE_HOSTS, process.env.R2_PUBLIC_BASE_URL);
+
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: ${APPROVED_IMAGE_HOSTS.join(" ")}`,
+  `img-src 'self' data: ${IMAGE_HOSTS.join(" ")}`,
   `connect-src ${buildConnectSrc()}`,
   "frame-ancestors 'none'",
 ].join("; ");
