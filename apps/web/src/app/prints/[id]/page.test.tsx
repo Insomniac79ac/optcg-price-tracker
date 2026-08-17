@@ -1,0 +1,351 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next-auth/react", () => ({
+  useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/prints/1",
+  useSearchParams: () => new URLSearchParams(""),
+  useParams: () => ({ id: "1" }),
+}));
+
+const { fetchPrint } = vi.hoisted(() => ({ fetchPrint: vi.fn() }));
+vi.mock("@/lib/prints", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/prints")>("@/lib/prints");
+  return { ...actual, fetchPrint };
+});
+
+// Guard: the print detail page must never reach for a legacy card_id-keyed
+// endpoint, which merges sibling prints into one price.
+const { fetchCardMarketIndex, fetchCard } = vi.hoisted(() => ({
+  fetchCardMarketIndex: vi.fn(),
+  fetchCard: vi.fn(),
+}));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return { ...actual, fetchCardMarketIndex, fetchCard };
+});
+
+import type {
+  PrintDetail,
+  PrintMarketIndex,
+  PrintMarketIndexSourceValue,
+} from "@/lib/prints";
+
+import PrintDetailPage from "./page";
+
+function sourceValue(
+  overrides: Partial<PrintMarketIndexSourceValue> & { source: string },
+): PrintMarketIndexSourceValue {
+  return {
+    reference_type: overrides.source === "snkrdunk" ? "listing_floor" : "retail_sell",
+    evidence_type: "listing",
+    value_jpy: null,
+    observed_at: "2026-08-16T18:22:15.170718Z",
+    sample_size: null,
+    stale: false,
+    eligible: true,
+    fallback_used: false,
+    ineligible_reason: null,
+    ...overrides,
+  };
+}
+
+const DISPLAY_IMAGE_URL =
+  "https://pub-74ceb3c7e49b4c008c58bcfa36d4d38d.r2.dev/display-images/sha256/00/zoro.webp";
+
+/** Shaped on the real `GET /prints/1` staging payload. */
+function makeDetail(overrides: Partial<PrintDetail> = {}): PrintDetail {
+  const index: PrintMarketIndex = {
+    card_print_id: 1,
+    index_version: 1,
+    index_value_jpy: 26900,
+    calculation_method: "median_of_sources",
+    source_count: 2,
+    coverage_status: "full",
+    confidence: "high",
+    source_values: [
+      sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+      sourceValue({ source: "snkrdunk", value_jpy: 24000, fallback_used: true }),
+    ],
+    auxiliary_values: [],
+    freshest_observation_at: "2026-08-16T19:21:31.777842Z",
+    stalest_eligible_source_at: "2026-08-16T18:22:15.170718Z",
+    stale_sources: [],
+    calculated_at: "2026-08-17T13:59:14.526838Z",
+    ...overrides.market_index,
+  };
+
+  return {
+    card_print_id: 1,
+    canonical_card_id: 2,
+    card_code: "OP01-001",
+    name_en: "Roronoa Zoro",
+    name_jp: "ロロノア・ゾロ",
+    rarity: "L",
+    card_type: "Leader",
+    colors: ["Red"],
+    language: "jp",
+    treatment: "parallel",
+    release_product_code: "OP-01",
+    artwork_key: "4b2462f2b042a020",
+    image_url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
+    display_image: {
+      url: DISPLAY_IMAGE_URL,
+      source: "snkrdunk",
+      exact_print_verified: true,
+      geometry: {
+        canvas_px: { width: 856, height: 625 },
+        card_bbox_px: { x: 241, y: 51, width: 374, height: 523 },
+      },
+    },
+    verification_status: "verified",
+    siblings: [],
+    ...overrides,
+    market_index: index,
+  };
+}
+
+afterEach(() => vi.clearAllMocks());
+
+/** The card image specifically - the page's brand texture is tagged
+ * data-brand-asset. */
+function cardImage(container: HTMLElement): HTMLImageElement | null {
+  return container.querySelector("img:not([data-brand-asset])");
+}
+
+describe("print detail page", () => {
+  it("shows this print's own verified artwork, whole and uncropped", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    // Exactly the display image the API resolved for this print - never the
+    // canonical URL, never a sibling's artwork.
+    const img = cardImage(container)!;
+    expect(img.getAttribute("src")).toBe(DISPLAY_IMAGE_URL);
+    // Bounded-geometry presentation scales by width only, so the card keeps
+    // its aspect ratio and all four edges; nothing may cover or clip it.
+    expect(img.className).not.toContain("object-cover");
+    expect(img.style.height).toBe("");
+    // The decorative map texture behind the page is allowed to cover; no
+    // card image ever is.
+    expect(
+      container.querySelector("img:not([data-brand-asset])[class*='object-cover']"),
+    ).toBeNull();
+  });
+
+  it("never reaches for a legacy card_id-keyed endpoint", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+
+    await waitFor(() => expect(fetchPrint).toHaveBeenCalledWith("1"));
+    expect(fetchCardMarketIndex).not.toHaveBeenCalled();
+    expect(fetchCard).not.toHaveBeenCalled();
+  });
+
+  it("leads the money with the Market Index and no fabricated movement", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByRole("heading", { name: "Market Index" })).toBeTruthy();
+    expect(screen.getByText("￥26,900").className).toContain("text-accent-gold");
+    // The payload carries no history, so nothing may imply any.
+    expect(container.textContent).not.toMatch(/[+-]\d+(\.\d+)?%/);
+    expect(container.textContent).not.toMatch(/\b(24h|7d|30d|trend)\b/i);
+    expect(container.querySelector("svg.sparkline")).toBeNull();
+  });
+
+  it("says the index is unavailable rather than showing ¥0", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: null,
+          source_count: 0,
+          coverage_status: "none",
+          confidence: "low",
+          source_values: [
+            sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+            sourceValue({ source: "snkrdunk", value_jpy: null, observed_at: null }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Index unavailable")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/￥0\b/);
+    // No source reported, so there is no source panel to show either.
+    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+  });
+
+  it("names what each source price actually is, never reinterpreting one for another", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(sources).getByText("￥29,800")).toBeTruthy();
+    expect(within(sources).getByText(/Retail sell price/)).toBeTruthy();
+
+    expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
+    expect(within(sources).getByText("￥24,000")).toBeTruthy();
+    // A floor listing is never described as a completed sale.
+    expect(within(sources).getByText(/Lowest listing/)).toBeTruthy();
+    expect(sources.textContent).not.toMatch(/sold|sale/i);
+  });
+
+  it("shows a single source panel for a one-source print, with no empty second panel", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 120,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({ source: "yuyutei", value_jpy: 120 }),
+            sourceValue({ source: "snkrdunk", value_jpy: null, observed_at: null }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(sources).queryByText("SNKRDUNK")).toBeNull();
+    expect(sources.textContent).not.toMatch(/￥0\b/);
+    // One source, one panel - the layout must not reserve a second column.
+    expect(sources.querySelector(".sm\\:grid-cols-2")).toBeNull();
+  });
+
+  it("always states the treatment in the API's own word, including a plain printing", async () => {
+    fetchPrint.mockResolvedValue(makeDetail({ treatment: "normal" }));
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    // Two separate printings are two separate collectibles, so "normal" is
+    // shown as-is and never relabelled "base" or dropped.
+    expect(screen.getAllByText("normal").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/\bbase\b/i);
+  });
+
+  it("describes the print only with fields the payload actually carries", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const about = screen.getByRole("heading", { name: "About this print" }).parentElement!;
+    for (const term of ["Card code", "Set", "Rarity", "Treatment", "Card type", "Colour", "Language"]) {
+      expect(within(about).getByText(term)).toBeTruthy();
+    }
+    expect(within(about).getByText("OP01-001")).toBeTruthy();
+    expect(within(about).getByText("Leader")).toBeTruthy();
+    expect(within(about).getByText("Red")).toBeTruthy();
+    // GET /prints/{id} returns no cost, power, attribute or effect text.
+    expect(about.textContent).not.toMatch(/\b(Cost|Power|Attribute|Effect|Counter)\b/);
+  });
+
+  it("keeps the metadata in the identity column, after the prices", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        siblings: [
+          {
+            card_print_id: 4,
+            treatment: "normal",
+            artwork_key: null,
+            image_url: null,
+            verification_status: "verified",
+          },
+        ],
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" });
+    const sources = screen.getByRole("heading", { name: "Market sources" });
+    const about = screen.getByRole("heading", { name: "About this print" });
+    const others = screen.getByRole("heading", { name: "Other printings" });
+
+    // One reading order at every width: identity, money, sources, then the
+    // print's own attributes.
+    const order = (el: Element) => [...document.querySelectorAll("h1, h2")].indexOf(el);
+    expect(order(index)).toBeLessThan(order(sources));
+    expect(order(sources)).toBeLessThan(order(about));
+
+    // The attributes share the column the prices are in, so the column runs
+    // the height of the card beside it rather than stopping short.
+    const column = sources.closest("div.min-w-0")!;
+    expect(column.contains(about)).toBe(true);
+    // Other printings is about other prints, so it stays outside that column.
+    expect(column.contains(others)).toBe(false);
+    expect(order(about)).toBeLessThan(order(others));
+  });
+
+  it("dates the index with its real freshest observation", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    // Copy changed; the timestamp behind it did not.
+    expect(screen.getByText("Updated Aug 16, 2026")).toBeTruthy();
+  });
+
+  it("shows the Japanese name when the payload has one", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("ロロノア・ゾロ")).toBeTruthy();
+  });
+
+  it("links back to the catalogue", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByRole("link", { name: /Catalogue/ }).getAttribute("href")).toBe("/cards");
+  });
+
+  it("lists other printings only when the API sends them", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { unmount } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+    expect(screen.queryByRole("heading", { name: "Other printings" })).toBeNull();
+    unmount();
+
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        siblings: [
+          {
+            card_print_id: 4,
+            treatment: "normal",
+            artwork_key: null,
+            image_url: null,
+            verification_status: "verified",
+          },
+        ],
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Other printings" });
+    expect(screen.getByRole("link", { name: "normal" }).getAttribute("href")).toBe("/prints/4");
+  });
+
+  it("surfaces a failure rather than an empty page", async () => {
+    fetchPrint.mockRejectedValue(new Error("boom"));
+    render(<PrintDetailPage />);
+
+    expect(await screen.findByText("Failed to load this print.")).toBeTruthy();
+  });
+});
