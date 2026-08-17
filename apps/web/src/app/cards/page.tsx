@@ -22,6 +22,7 @@ import {
   PRINT_SORT_VALUES,
   type PrintCatalogueList,
   type PrintCatalogueSort,
+  type PrintUiModel,
   toPrintUiModel,
 } from "@/lib/prints";
 
@@ -78,13 +79,13 @@ function PrintsCataloguePageFallback() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-5">
+      <main className="mx-auto max-w-7xl px-4 py-4">
         {/* Same intro as the real page so the Suspense fallback doesn't
             reflow the whole top of the catalogue once the URL is readable -
             with no count and no card fan, because there is no response to
             draw either from yet. */}
         <CatalogueIntro query="" onSearch={() => {}} totalPrints={null} filtered={false} />
-        <div className="mt-5">
+        <div className="mt-4">
           <CardGridSkeleton />
         </div>
       </main>
@@ -108,6 +109,19 @@ function PrintsCataloguePageInner() {
 
   const [data, setData] = useState<PrintCatalogueList | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  /** The pool the intro's card fan draws from, latched to the first response
+   * that actually returned prints and never replaced.
+   *
+   * The fan is meant to represent the catalogue, not the visitor's current
+   * view, so it must not re-pick every time a treatment, rarity or sort
+   * changes the response - watching `data` would do exactly that. Latching
+   * costs no extra request: it keeps the first page of prints the page had
+   * already fetched for its own grid.
+   *
+   * An empty response is deliberately not latched. A visitor who lands on a
+   * search that matches nothing would otherwise pin the fan to "no cards" for
+   * the rest of the session. */
+  const [heroPool, setHeroPool] = useState<PrintUiModel[] | null>(null);
 
   const paramsKey = searchParams.toString();
 
@@ -124,6 +138,8 @@ function PrintsCataloguePageInner() {
     })
       .then((result) => {
         if (cancelled) return;
+        const loaded = result.items.map(toPrintUiModel);
+        setHeroPool((latched) => (latched && latched.length > 0 ? latched : loaded));
         setData(result);
         setStatus("ready");
       })
@@ -152,7 +168,7 @@ function PrintsCataloguePageInner() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-5">
+      <main className="mx-auto max-w-7xl px-4 py-4">
         <CatalogueIntro
           query={filters.q}
           onSearch={(q) => navigate({ ...filters, q }, 0)}
@@ -160,16 +176,17 @@ function PrintsCataloguePageInner() {
           // therefore nothing rendered) while loading or after a failure.
           totalPrints={status === "ready" && data ? data.total : null}
           filtered={hasActivePrintFilters(filters)}
-          // The same prints the grid below is about to render - the intro's
-          // fan is drawn from them rather than from a request of its own.
-          prints={prints}
+          // The latched catalogue pool, not the filtered grid below: the
+          // fan picks three of these for today and keeps them while the
+          // visitor searches, filters and sorts.
+          heroPrints={heroPool ?? []}
         />
 
         {/* Straight from the intro into the real controls. The compass
             divider that used to sit here read as a standalone ornament and
             cost ~60px before the first card; the intro panel's own edge is
             transition enough. */}
-        <div className="mt-5">
+        <div className="mt-4">
           <PrintCatalogueToolbar
             filters={filters}
             facets={data?.facets ?? emptyFacets}

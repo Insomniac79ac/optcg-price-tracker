@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
+import { selectHeroFanPrints, utcDayKey } from "@/lib/heroFan";
 import type { PrintUiModel } from "@/lib/prints";
 import { CardImageFrame } from "./CardImageFrame";
 
@@ -30,11 +31,6 @@ function useIsNarrow(): boolean {
   );
 }
 
-/** How many prints the hero fan shows, and the minimum needed to draw it. A
- * two-card fan reads as a rendering accident rather than a composition, so
- * below three the intro simply keeps its negative space. */
-const FAN_SIZE = 3;
-
 /** The discovery header for the public print catalogue.
  *
  * Deliberately a *section*, not a hero: it is short enough that real card
@@ -58,7 +54,7 @@ export function CatalogueIntro({
   onSearch,
   totalPrints,
   filtered,
-  prints = [],
+  heroPrints = [],
 }: {
   /** The committed search term from the URL - the single source of truth. */
   query: string;
@@ -67,12 +63,22 @@ export function CatalogueIntro({
   totalPrints: number | null;
   /** Whether any filter/search is narrowing that total right now. */
   filtered: boolean;
-  /** The prints the page has *already* loaded for this query. Used only as
-   * atmosphere in the desktop fan - this component never fetches. */
-  prints?: PrintUiModel[];
+  /** The catalogue pool the page has *already* loaded, latched so it does not
+   * track the current filter/sort (see cards/page.tsx). Used only as
+   * atmosphere in the desktop fan - this component never fetches, and it
+   * never receives a hand-picked list. */
+  heroPrints?: PrintUiModel[];
 }) {
   const narrow = useIsNarrow();
-  const fanPrints = prints.slice(0, FAN_SIZE);
+  // Read once per mount, so the fan cannot change under a visitor who is
+  // still on the page at midnight UTC. Empty on the server and on the first
+  // client render (there are no prints yet), so there is nothing to mismatch
+  // during hydration.
+  const dayKey = useMemo(() => utcDayKey(), []);
+  const fanPrints = useMemo(
+    () => selectHeroFanPrints(heroPrints, dayKey),
+    [heroPrints, dayKey],
+  );
 
   function submitSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -111,7 +117,7 @@ export function CatalogueIntro({
         <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(23,23,23,0.9)_0%,rgba(23,23,23,0.78)_38%,rgba(23,23,23,0.28)_100%)]" />
       </div>
 
-      <div className="flex items-center gap-10 px-5 py-5 sm:px-8 sm:py-7">
+      <div className="flex items-center gap-10 px-5 py-4 sm:px-8 sm:py-6">
         <div className="min-w-0 flex-1">
           <p className="mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent-teal sm:text-[11px]">
             Japanese One Piece card market
@@ -182,18 +188,27 @@ export function CatalogueIntro({
           </div>
         </div>
 
-        {fanPrints.length === FAN_SIZE && <HeroCardFan prints={fanPrints} />}
+        {fanPrints.length > 0 && <HeroCardFan prints={fanPrints} />}
       </div>
     </section>
   );
 }
 
-/** Three real prints from the page's own results, fanned as atmosphere.
+/** Up to three real prints, fanned as atmosphere.
  *
  * Everything here is deliberately constrained:
- * - The prints are the first three of whatever `GET /prints` returned for the
- *   current query - deterministic, never sampled or shuffled, and never a
- *   second request just to decorate a panel.
+ * - The prints are whichever three `selectHeroFanPrints` picked for today out
+ *   of the catalogue the page had already fetched - never a hand-picked list,
+ *   never a second request just to decorate a panel, and never sampled during
+ *   render.
+ * - The slots are fixed geometry, not fixed cards. Each position owns its
+ *   width, offset, rotation and stacking; the artwork rotates through them
+ *   daily and the composition never moves. Position 1 is the front card, 2 is
+ *   behind-left, 3 is behind-right - so a print's rank decides how prominent
+ *   it is, and nothing about a print decides where it sits.
+ * - The arrangement is chosen by how many prints there actually are, so one
+ *   or two drawable prints still get a balanced composition instead of an
+ *   empty slot or a duplicated card.
  * - Presentation goes through `CardImageFrame`, the same component the
  *   catalogue grid uses, so the fan inherits the bounded-geometry rules
  *   rather than re-implementing them. No card pixel is ever cropped: the
@@ -211,8 +226,55 @@ export function CatalogueIntro({
  * are not links, and the real, labelled, clickable versions of these same
  * cards are in the grid directly below. No names or prices here.
  */
+/** The fixed slots, in DOM order so the front card paints over the two
+ * behind it. Index into this by *position*, never by anything about a card. */
+/** One arrangement per possible fan size, listed back-to-front so the front
+ * card paints over the ones behind it.
+ *
+ * A catalogue with only one or two drawable prints is a real state - a narrow
+ * deep link, a young catalogue, or a day when everything else fails
+ * eligibility - and it gets a smaller composition rather than an empty panel
+ * or a card duplicated to fill a slot. Each arrangement is balanced about the
+ * container's centre line (the cards' combined span is centred on it, so the
+ * one- and two-card fans read as compositions rather than as a three-card fan
+ * with holes in it), and every card keeps the same widths and the same gentle
+ * rotations, so nothing is squeezed, cropped or stretched to fit a gap.
+ *
+ * Positions still describe geometry only. Which print lands in which position
+ * is `SLOT_ORDER`'s business, and no card's identity influences either. */
+const FAN_SLOTS: Record<number, readonly { position: string; className: string }[]> = {
+  3: [
+    { position: "back-left", className: "left-0 top-7 w-[132px] -rotate-[9deg] opacity-85" },
+    { position: "back-right", className: "right-0 top-5 w-[132px] rotate-[9deg] opacity-85" },
+    { position: "front", className: "left-1/2 top-0 w-[158px] -translate-x-1/2 -rotate-[2deg]" },
+  ],
+  2: [
+    {
+      position: "back-left",
+      className: "left-1/2 top-8 w-[132px] -translate-x-[118px] -rotate-[9deg] opacity-85",
+    },
+    {
+      position: "front",
+      className: "left-1/2 top-3 w-[158px] -translate-x-[40px] -rotate-[2deg]",
+    },
+  ],
+  1: [
+    {
+      position: "front",
+      className: "left-1/2 top-3.5 w-[158px] -translate-x-1/2 -rotate-[2deg]",
+    },
+  ],
+};
+
+/** Which selected print fills each slot: the first pick fronts the
+ * composition, the next two sit behind it. Unchanged by the fan's size - a
+ * two-card fan is the same front card with one supporter instead of two. */
+const SLOT_ORDER: Record<string, number> = { front: 0, "back-left": 1, "back-right": 2 };
+
 function HeroCardFan({ prints }: { prints: PrintUiModel[] }) {
-  const [backLeft, backRight, front] = prints;
+  const slots = FAN_SLOTS[prints.length];
+  // No prints, no panel - and never a shell, a placeholder or a repeat.
+  if (!slots) return null;
 
   return (
     <div
@@ -220,19 +282,30 @@ function HeroCardFan({ prints }: { prints: PrintUiModel[] }) {
       aria-hidden
       className="pointer-events-none relative hidden h-[248px] w-[336px] shrink-0 lg:block"
     >
-      <FanCard print={backLeft} className="left-0 top-7 w-[132px] -rotate-[9deg] opacity-85" />
-      <FanCard print={backRight} className="right-0 top-5 w-[132px] rotate-[9deg] opacity-85" />
-      <FanCard
-        print={front}
-        className="left-1/2 top-0 w-[158px] -translate-x-1/2 -rotate-[2deg]"
-      />
+      {slots.map((slot) => (
+        <FanCard
+          key={slot.position}
+          print={prints[SLOT_ORDER[slot.position]]}
+          position={slot.position}
+          className={slot.className}
+        />
+      ))}
     </div>
   );
 }
 
-function FanCard({ print, className }: { print: PrintUiModel; className: string }) {
+function FanCard({
+  print,
+  position,
+  className,
+}: {
+  print: PrintUiModel;
+  position: string;
+  className: string;
+}) {
   return (
     <div
+      data-hero-fan-position={position}
       className={`absolute drop-shadow-[0_10px_22px_rgba(0,0,0,0.5)] ${className}`}
     >
       <CardImageFrame

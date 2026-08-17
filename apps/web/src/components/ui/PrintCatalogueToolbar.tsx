@@ -1,7 +1,6 @@
 "use client";
 
 import type { PrintCatalogueFacets, PrintCatalogueSort } from "@/lib/prints";
-import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS } from "./FilterBar";
 
 const SORT_OPTIONS: { value: PrintCatalogueSort; label: string }[] = [
   { value: "card_code", label: "Card code" },
@@ -66,69 +65,100 @@ export function PrintCatalogueToolbar({
   }
 
   return (
-    <div className="mb-4 flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {facets.treatments.length > 0 && (
-          <label className={FILTER_LABEL_CLASS}>
-            Treatment
-            <select
-              value={filters.treatment}
-              onChange={(e) => set("treatment", e.target.value)}
-              className={FILTER_INPUT_CLASS}
-            >
-              <option value="">All treatments</option>
-              {facets.treatments.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+    // One bar, not a row of loose selects: a charcoal strip with a hairline
+    // border so the controls read as belonging to the catalogue below them
+    // rather than floating on the page. Filters sit left, sort is pushed
+    // right from `sm` up; below that everything wraps onto two short rows
+    // (treatment + rarity, then sort) instead of three tall stacked labels.
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-panel border border-border-muted bg-bg-elevated px-3 py-1.5">
+      <span className="mono hidden text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint sm:inline">
+        Filters
+      </span>
 
-        {facets.rarities.length > 0 && (
-          <label className={FILTER_LABEL_CLASS}>
-            Rarity
-            <select
-              value={filters.rarity}
-              onChange={(e) => set("rarity", e.target.value)}
-              className={FILTER_INPUT_CLASS}
-            >
-              <option value="">All rarities</option>
-              {facets.rarities.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+      {facets.treatments.length > 0 && (
+        <FilterSelect
+          label="Treatment"
+          value={filters.treatment}
+          onSelect={(value) => set("treatment", value)}
+          placeholder="All treatments"
+          options={facets.treatments.map((value) => ({ value, label: value }))}
+        />
+      )}
 
-        <label className={FILTER_LABEL_CLASS}>
-          Sort
-          <select
-            value={filters.sort}
-            onChange={(e) => set("sort", e.target.value as PrintCatalogueSort)}
-            className={FILTER_INPUT_CLASS}
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      {facets.rarities.length > 0 && (
+        <FilterSelect
+          label="Rarity"
+          value={filters.rarity}
+          onSelect={(value) => set("rarity", value)}
+          placeholder="All rarities"
+          options={facets.rarities.map((value) => ({ value, label: value }))}
+        />
+      )}
 
-        {hasActivePrintFilters(filters) && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="text-xs font-medium text-text-muted underline-offset-2 hover:text-text-secondary hover:underline"
-          >
-            Clear all
-          </button>
-        )}
+      {hasActivePrintFilters(filters) && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs font-medium text-text-muted underline-offset-2 transition-colors hover:text-accent-teal-hover hover:underline"
+        >
+          Clear all
+        </button>
+      )}
+
+      {/* Basis of the ordering, not a filter - so it sits apart from them. */}
+      <div className="ml-auto">
+        <FilterSelect
+          label="Sort"
+          value={filters.sort}
+          onSelect={(value) => set("sort", value as PrintCatalogueSort)}
+          options={SORT_OPTIONS}
+        />
       </div>
     </div>
+  );
+}
+
+const SELECT_CLASS =
+  "min-w-0 rounded-control border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary transition-colors hover:border-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal";
+
+/** One labelled control in the toolbar.
+ *
+ * The visible label is hidden below `sm`, where two controls have to share a
+ * 358px row and every "Treatment"/"Rarity" caption is width the select
+ * itself needs - the placeholder option ("All treatments") already says what
+ * the control is. `aria-label` carries the name at every width regardless, so
+ * hiding the caption never costs the accessible name. */
+function FilterSelect({
+  label,
+  value,
+  onSelect,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onSelect: (value: string) => void;
+  options: { value: string; label: string }[];
+  /** Rendered as the empty/"no filter" option. Omit for a control like sort
+   * that is always set to something. */
+  placeholder?: string;
+}) {
+  return (
+    <label className="flex min-w-0 items-center gap-1.5">
+      <span className="hidden text-[11px] text-text-muted sm:inline">{label}</span>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onSelect(e.target.value)}
+        className={SELECT_CLASS}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

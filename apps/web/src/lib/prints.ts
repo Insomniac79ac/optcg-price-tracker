@@ -202,6 +202,13 @@ export interface PrintUiModel {
   /** Which source `imageUrl` came from - "bandai" means no cleaner image is
    * verified for this print, so it still carries the SAMPLE watermark. */
   imageSource: string | null;
+  /** Whether the API has verified that `imageUrl` shows this exact print.
+   * `null` means no display image was resolved, so no such evidence exists
+   * either way and the canonical artwork is all there is. Consumers that
+   * choose *which* prints to show (the catalogue intro's card fan) use this
+   * to skip images known not to be the print; the tile itself shows whatever
+   * image the print has. */
+  imageExactPrintVerified: boolean | null;
   /** Verified geometry for `imageUrl`, when the API supplied it. Consumers
    * pass this straight to CardImageFrame, which uses it to fill the frame with
    * the card instead of the whole canvas - and ignores it unless the loaded
@@ -262,6 +269,9 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     imageUrl: resolveCardImageUrl(item.display_image?.url || item.image_url),
     sourceImageUrl: item.image_url,
     imageSource: item.display_image?.url ? item.display_image.source : null,
+    imageExactPrintVerified: item.display_image?.url
+      ? item.display_image.exact_print_verified
+      : null,
     imageGeometry: item.display_image?.url ? (item.display_image.geometry ?? null) : null,
     marketIndexJpy: index.index_value_jpy,
     yuyuteiJpy: valueForSource(index, YUYUTEI),

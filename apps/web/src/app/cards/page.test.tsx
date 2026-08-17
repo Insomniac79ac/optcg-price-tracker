@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
@@ -139,6 +141,37 @@ const SANJI_BASE = makePrint({
   } as PrintMarketIndex,
 });
 
+/** Six distinct prints - distinct ids, codes and artwork - so the intro fan
+ * has a real catalogue to rotate through rather than one card repeated. */
+const CATALOGUE: PrintCatalogueItem[] = Array.from({ length: 6 }, (_, i) =>
+  makePrint({
+    card_print_id: 40 + i,
+    card_code: `OP0${i + 1}-00${i + 1}`,
+    image_url: `https://www.onepiece-cardgame.com/images/cardlist/card/art-${i}.png`,
+  }),
+);
+
+/** The <img> sources actually drawn in the hero fan, in DOM order. */
+function fanImageSources(container: HTMLElement): string[] {
+  const fan = container.querySelector("[data-hero-fan]");
+  if (!fan) return [];
+  return [...fan.querySelectorAll("img")].map((img) => img.getAttribute("src") ?? "");
+}
+
+/** The slots actually drawn in the hero fan, in DOM order. */
+function fanPositions(container: HTMLElement): string[] {
+  const fan = container.querySelector("[data-hero-fan]");
+  if (!fan) return [];
+  return [...fan.querySelectorAll("[data-hero-fan-position]")].map(
+    (el) => el.getAttribute("data-hero-fan-position") ?? "",
+  );
+}
+
+/** Prose mentions a card code or a URL all the time; code must not. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
 afterEach(() => {
   vi.clearAllMocks();
   currentSearch = "";
@@ -173,24 +206,61 @@ describe("print catalogue page", () => {
     const base = screen.getByRole("link", { name: /Sanji, OP01-013, OP-01/ });
 
     expect(parallel).not.toBe(base);
+    // Each tile carries only its own print's money. The base tile shows ￥120
+    // twice on purpose (its index, and the single source that produced it),
+    // so distinctness is asserted as "neither tile shows the other's value".
     expect(within(parallel).getByText("￥1,740")).toBeTruthy();
-    expect(within(base).getByText("￥120")).toBeTruthy();
+    expect(within(parallel).queryByText("￥120")).toBeNull();
+    expect(within(base).getAllByText("￥120").length).toBeGreaterThan(0);
+    expect(within(base).queryByText("￥1,740")).toBeNull();
   });
 
-  it("renders the two-source coverage state", async () => {
+  it("renders the two-source coverage state as both real source prices", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getByText("2 sources")).toBeTruthy();
+    // The Market Index, then the two sources that actually produced it - the
+    // per-source rows are what state the coverage on the tile.
+    expect(within(tile).getByText("Market Index")).toBeTruthy();
+    expect(within(tile).getByText("￥1,740")).toBeTruthy();
+    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(tile).getByText("￥1,980")).toBeTruthy();
+    expect(within(tile).getByText("SNKRDUNK")).toBeTruthy();
+    expect(within(tile).getByText("￥1,500")).toBeTruthy();
   });
 
-  it("names the single source on a limited-coverage print", async () => {
+  it("never lets a one-source index read as a two-source consensus", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_BASE]));
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getByText("Yuyu-Tei only")).toBeTruthy();
+    // Only the source that reported gets a row. SNKRDUNK contributed no
+    // value for this print, so it must not appear at all - not as a row, not
+    // as a dash, and certainly not as ¥0.
+    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(tile).getAllByText("￥120").length).toBeGreaterThan(0);
+    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+    expect(tile.textContent).not.toMatch(/￥0\b/);
+  });
+
+  it("shows no price at all rather than ¥0 when the index is unavailable", async () => {
+    const noIndex = makePrint({
+      card_print_id: 11,
+      market_index: {
+        index_value_jpy: null,
+        source_count: 0,
+        coverage_status: "none",
+        confidence: "low",
+        source_values: [sourceValue("yuyutei", null), sourceValue("snkrdunk", null)],
+      } as PrintMarketIndex,
+    });
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([noIndex]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    expect(tile.textContent).not.toMatch(/￥/);
   });
 
   it("shows no fabricated trend, percentage, or sparkline", async () => {
@@ -208,8 +278,9 @@ describe("print catalogue page", () => {
     const { container } = render(<PrintsCataloguePage />);
 
     await screen.findByRole("link", { name: /Sanji/ });
-    // Skip the shell/intro brand artwork - only the card image is under test.
-    const img = container.querySelector("img:not([data-brand-asset])");
+    // The tile's own image specifically: the intro fan now draws real card
+    // artwork too, and it must not be what this assertion lands on.
+    const img = container.querySelector('a[href^="/prints/"] img');
     expect(img).not.toBeNull();
     expect(img!.className).toContain("object-contain");
     expect(img!.className).not.toContain("object-cover");
@@ -302,18 +373,13 @@ describe("print catalogue page", () => {
     expect(push).toHaveBeenCalledWith("/cards?treatment=parallel");
   });
 
-  it("draws the intro card fan from the first three loaded prints, with no extra request", async () => {
-    const three = [
-      SANJI_PARALLEL,
-      SANJI_BASE,
-      makePrint({ card_print_id: 9, card_code: "OP01-001", name_en: "Roronoa Zoro" }),
-    ];
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(three));
+  it("draws the intro card fan from prints the page already loaded, with no extra request", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
     const { container } = render(<PrintsCataloguePage />);
     await screen.findAllByRole("link", { name: /Sanji/ });
 
     // Atmosphere only: the fan is aria-hidden and holds no links, so the
-    // three real, labelled copies of these cards stay in the grid below.
+    // real, labelled copies of these cards stay in the grid below.
     const fan = container.querySelector("[data-hero-fan]");
     expect(fan).not.toBeNull();
     expect(fan!.getAttribute("aria-hidden")).toBe("true");
@@ -322,16 +388,136 @@ describe("print catalogue page", () => {
     // No card names or prices in the composition.
     expect(fan!.textContent).not.toMatch(/Sanji|Zoro|¥/);
 
+    // Every card in it is one of the prints the response actually carried -
+    // nothing invented, nothing fetched separately.
+    const loaded = new Set(CATALOGUE.map((item) => item.image_url));
+    for (const src of fanImageSources(container)) {
+      expect([...loaded].some((url) => src.includes(encodeURIComponent(url!)))).toBe(true);
+    }
+
     // Decoration must never cost a request - the page fetched exactly once.
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
   });
 
-  it("omits the intro card fan rather than composing it from too few prints", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL, SANJI_BASE]));
+  it("fills the fan by position: one front card over two behind it", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
     const { container } = render(<PrintsCataloguePage />);
     await screen.findAllByRole("link", { name: /Sanji/ });
 
+    const fan = container.querySelector("[data-hero-fan]")!;
+    const positions = [...fan.querySelectorAll("[data-hero-fan-position]")].map((el) =>
+      el.getAttribute("data-hero-fan-position"),
+    );
+    // The slots are fixed geometry; only the artwork in them rotates.
+    expect(positions).toEqual(["back-left", "back-right", "front"]);
+    const front = fan.querySelector('[data-hero-fan-position="front"]')!;
+    expect(front.className).toContain("-translate-x-1/2");
+    expect(front.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  it("keeps the same fan when the visitor changes treatment, rarity or sort", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    const { container, rerender } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+    const before = fanImageSources(container);
+    expect(before).toHaveLength(3);
+
+    // Now narrow the catalogue hard: a filtered response that shares no
+    // print with the fan at all. The fan represents the catalogue, not the
+    // current view, so it must not follow.
+    currentSearch = "rarity=SEC&treatment=parallel&sort=index_desc";
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([makePrint({ card_print_id: 99, card_code: "OP09-099" })]),
+    );
+    rerender(<PrintsCataloguePage />);
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(
+        expect.objectContaining({ rarity: "SEC", treatment: "parallel", sort: "index_desc" }),
+      ),
+    );
+
+    expect(fanImageSources(container)).toEqual(before);
+  });
+
+  it("hides the fan cleanly when no print has a usable image", async () => {
+    const imageless = CATALOGUE.map((item) =>
+      makePrint({ ...item, image_url: null, display_image: null }),
+    );
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(imageless));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    // No fan, and no placeholder or empty shell standing in for one.
     expect(container.querySelector("[data-hero-fan]")).toBeNull();
+    expect(container.querySelector("[data-hero-fan-position]")).toBeNull();
+    expect(fanImageSources(container)).toEqual([]);
+  });
+
+  it("draws a two-card fan when only two prints are eligible", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE.slice(0, 2)));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    // Both real prints, drawn once each - no third slot, no repeat to fill it.
+    const sources = fanImageSources(container);
+    expect(sources).toHaveLength(2);
+    expect(new Set(sources).size).toBe(2);
+    expect(fanPositions(container)).toEqual(["back-left", "front"]);
+  });
+
+  it("draws a single card when only one print is eligible", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE.slice(0, 1)));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    expect(fanImageSources(container)).toHaveLength(1);
+    // The one card fronts the composition and sits on the centre line.
+    expect(fanPositions(container)).toEqual(["front"]);
+    const front = container.querySelector('[data-hero-fan-position="front"]')!;
+    expect(front.className).toContain("left-1/2");
+    expect(front.className).toContain("-translate-x-1/2");
+  });
+
+  it("skips prints whose image is known not to be that exact print", async () => {
+    // Three prints, but one carries a display image the API has explicitly
+    // marked as not this print - so only the other two may be drawn.
+    const wrongImage = makePrint({
+      card_print_id: 30,
+      display_image: {
+        url: "https://cdn.example.test/wrong.webp",
+        source: "snkrdunk",
+        exact_print_verified: false,
+        geometry: null,
+      },
+    });
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([...CATALOGUE.slice(0, 2), wrongImage]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    const sources = fanImageSources(container);
+    expect(sources).toHaveLength(2);
+    expect(sources.join(" ")).not.toContain("wrong.webp");
+  });
+
+  it("hardcodes no card identity or image URL in the hero fan code", async () => {
+    // The composition has to stay a function of the API response. A literal
+    // print id, card code or image URL here would pin the fan to particular
+    // cards forever, which is the whole thing this rotation exists to undo.
+    const sources = [
+      readFileSync(resolve(process.cwd(), "src/lib/heroFan.ts"), "utf8"),
+      readFileSync(resolve(process.cwd(), "src/components/ui/CatalogueIntro.tsx"), "utf8"),
+    ].map(stripComments);
+
+    for (const source of sources) {
+      expect(source).not.toMatch(/https?:\/\//);
+      // Card codes look like OP01-013 / ST01-001 / EB01-001.
+      expect(source).not.toMatch(/\b[A-Z]{2,3}\d{2}-\d{3}\b/);
+      expect(source).not.toMatch(/card_?[Pp]rint_?[Ii]d\s*[=:]==?\s*\d/);
+      expect(source).not.toMatch(/\.(webp|png|jpe?g)\b/i);
+    }
   });
 
   it("uses no mock or demo dataset when the API returns nothing", async () => {
