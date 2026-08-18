@@ -106,6 +106,12 @@ export interface PrintDisplayImage {
   url: string;
   source: string;
   exact_print_verified: boolean;
+  /** Whether `url` came from a verified owned asset we mirrored, rather than
+   * the original source or canonical URL. Optional because older responses
+   * predate the field; absent reads as false. This is the only thing that
+   * separates a verified official Card List asset from the canonical Bandai
+   * fallback - both report `source: "bandai"`. */
+  owned_asset_selected?: boolean;
   /** Present only when the API has verified geometry for this image. Lets a
    * client present the *card* rather than the canvas it sits on. Null for
    * canonical Bandai images (whose card already fills the asset) and whenever
@@ -157,10 +163,14 @@ export const PRINT_SORT_VALUES: PrintCatalogueSort[] = [
  * `market_index.source_values[].source`. */
 export const YUYUTEI = "yuyutei";
 export const SNKRDUNK = "snkrdunk";
+/** onepiece-cardgame.com. The API has always reported this source as
+ * "bandai"; the collector-facing name for it is the official card list. */
+export const BANDAI = "bandai";
 
 const SOURCE_DISPLAY_NAME: Record<string, string> = {
   [YUYUTEI]: "Yuyu-Tei",
   [SNKRDUNK]: "SNKRDUNK",
+  [BANDAI]: "Official ONE PIECE Card List",
 };
 
 export function sourceDisplayName(source: string): string {
@@ -199,9 +209,16 @@ export interface PrintUiModel {
    * returned it, so identity provenance stays inspectable and nothing has to
    * un-proxy a URL. NOT necessarily what `imageUrl` renders. */
   sourceImageUrl: string | null;
-  /** Which source `imageUrl` came from - "bandai" means no cleaner image is
-   * verified for this print, so it still carries the SAMPLE watermark. */
+  /** Which source `imageUrl` came from. Not sufficient on its own to tell a
+   * verified image from the canonical fallback: "bandai" names both the
+   * official Card List asset we mirrored and the canonical fallback. Pair it
+   * with `imageOwnedAssetSelected`. */
   imageSource: string | null;
+  /** Whether `imageUrl` is a verified asset we own and mirrored, as opposed to
+   * an original source URL or the canonical fallback. Defaults to false when
+   * the API omits it, so an older response is never mistaken for an owned
+   * asset. Never inferred from the URL's hostname or shape. */
+  imageOwnedAssetSelected: boolean;
   /** Whether the API has verified that `imageUrl` shows this exact print.
    * `null` means no display image was resolved, so no such evidence exists
    * either way and the canonical artwork is all there is. Consumers that
@@ -269,6 +286,9 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     imageUrl: resolveCardImageUrl(item.display_image?.url || item.image_url),
     sourceImageUrl: item.image_url,
     imageSource: item.display_image?.url ? item.display_image.source : null,
+    imageOwnedAssetSelected: item.display_image?.url
+      ? item.display_image.owned_asset_selected === true
+      : false,
     imageExactPrintVerified: item.display_image?.url
       ? item.display_image.exact_print_verified
       : null,

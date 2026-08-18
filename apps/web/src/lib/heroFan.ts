@@ -33,11 +33,6 @@ import type { PrintUiModel } from "./prints";
 /** How many prints the composition holds: one front card and two behind. */
 export const HERO_FAN_SIZE = 3;
 
-/** The display-image source that means "no cleaner image is verified for this
- * print" - the canonical artwork, SAMPLE watermark and all. Eligible for the
- * fan, but only after every verified image has had its turn. */
-const FALLBACK_IMAGE_SOURCE = "bandai";
-
 /** `YYYY-MM-DD` in UTC - the rotation's seed.
  *
  * UTC, not local time, so every visitor sees the same fan at the same moment
@@ -77,12 +72,21 @@ export function isHeroFanEligible(print: PrintUiModel): boolean {
   return print.imageExactPrintVerified !== false;
 }
 
-/** True for an image we mirror and have verified as this exact print (today
- * that is the SNKRDUNK-sourced artwork served from our own R2 bucket) - the
- * clean, watermark-free asset the composition should prefer. */
+/** True for an image we mirror ourselves and have verified as this exact
+ * print - the asset the composition should prefer.
+ *
+ * Deliberately says nothing about *which* source it came from. The backend
+ * has already picked the best available source for each print
+ * (bandai -> yuyutei -> snkrdunk); re-ranking sources here would be a second,
+ * competing priority system that could disagree with it. What matters to the
+ * fan is only whether the chosen image is a verified asset we own, which the
+ * API states outright in `owned_asset_selected`.
+ *
+ * Testing the source name instead would be wrong as well as redundant:
+ * "bandai" names both a verified official Card List asset we mirrored and the
+ * canonical fallback that carries no such evidence. */
 export function prefersHeroFanImage(print: PrintUiModel): boolean {
-  const source = print.imageSource?.trim().toLowerCase() ?? "";
-  if (source === "" || source === FALLBACK_IMAGE_SOURCE) return false;
+  if (!print.imageOwnedAssetSelected) return false;
   return print.imageExactPrintVerified === true;
 }
 

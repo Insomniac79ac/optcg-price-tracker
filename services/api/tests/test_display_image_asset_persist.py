@@ -492,8 +492,12 @@ def test_get_prints_response_is_unchanged_by_the_new_evidence(db_session, client
 
 
 def test_the_public_schema_has_no_owned_asset_field():
-    """Structural, not incidental: DisplayImageOut cannot carry it even if
-    something tried to pass it."""
+    """Structural, not incidental: DisplayImageOut cannot carry the internal
+    record even if something tried to pass it.
+
+    `owned_asset_selected` is a derived boolean, not the record: it says which
+    read-path branch supplied `url` and carries no digest, key, byte size or
+    cache policy. The record itself must still be absent."""
     from app.schemas import DisplayImageOut
 
     assert OWNED_ASSET_KEY not in DisplayImageOut.model_fields
@@ -501,8 +505,10 @@ def test_the_public_schema_has_no_owned_asset_field():
         "url",
         "source",
         "exact_print_verified",
+        "owned_asset_selected",
         "geometry",
     }
+    assert DisplayImageOut.model_fields["owned_asset_selected"].annotation is bool
 
 
 def test_build_owned_asset_is_pure(db_session, asset):

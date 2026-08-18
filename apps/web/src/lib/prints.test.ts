@@ -288,3 +288,74 @@ describe("toPrintUiModel display geometry", () => {
     expect(model.imageGeometry).toBeNull();
   });
 });
+
+describe("toPrintUiModel - owned-asset provenance", () => {
+  const OFFICIAL = "https://pub-test.r2.dev/display-images/sha256/aa/aa.png";
+
+  it("carries owned_asset_selected through when true", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: OFFICIAL,
+          source: "bandai",
+          exact_print_verified: true,
+          owned_asset_selected: true,
+          geometry: null,
+        },
+      }),
+    );
+    expect(model.imageSource).toBe("bandai");
+    expect(model.imageOwnedAssetSelected).toBe(true);
+  });
+
+  it("carries it through when false - the canonical fallback", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001.png",
+          source: "bandai",
+          exact_print_verified: true,
+          owned_asset_selected: false,
+          geometry: null,
+        },
+      }),
+    );
+    expect(model.imageSource).toBe("bandai");
+    expect(model.imageOwnedAssetSelected).toBe(false);
+  });
+
+  it("defaults to false when an older response omits the field", () => {
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: OFFICIAL,
+          source: "bandai",
+          exact_print_verified: true,
+          geometry: null,
+        },
+      }),
+    );
+    expect(model.imageOwnedAssetSelected).toBe(false);
+  });
+
+  it("defaults to false when there is no display image at all", () => {
+    expect(toPrintUiModel(catalogueItem({ display_image: null })).imageOwnedAssetSelected).toBe(false);
+  });
+
+  it("is never inferred from the URL host", () => {
+    // An r2.dev URL with the flag absent must still read as not-owned: the
+    // backend states provenance, the frontend never guesses it.
+    const model = toPrintUiModel(
+      catalogueItem({
+        display_image: {
+          url: OFFICIAL,
+          source: "yuyutei",
+          exact_print_verified: true,
+          geometry: null,
+        },
+      }),
+    );
+    expect(model.imageUrl).toContain("r2.dev");
+    expect(model.imageOwnedAssetSelected).toBe(false);
+  });
+});

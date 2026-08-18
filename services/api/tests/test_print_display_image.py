@@ -102,6 +102,9 @@ def test_bandai_canonical_is_the_fallback_when_nothing_is_verified(client, sanji
         "url": BANDAI_URL,
         "source": "bandai",
         "exact_print_verified": True,
+        # The canonical fallback is not an asset we own - "bandai" alone
+        # cannot say that, which is exactly why this field exists.
+        "owned_asset_selected": False,
         "geometry": None,
     }
 
@@ -146,6 +149,8 @@ def test_verified_snkrdunk_image_is_preferred_over_bandai(client, sanji_pair):
         "url": SNKRDUNK_URL,
         "source": "snkrdunk",
         "exact_print_verified": True,
+        # A verified source URL, but no owned asset was recorded for it.
+        "owned_asset_selected": False,
         "geometry": None,
     }
 

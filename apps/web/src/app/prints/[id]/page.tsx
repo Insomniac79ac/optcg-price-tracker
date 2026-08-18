@@ -47,7 +47,9 @@ const REFERENCE_TYPE_LABEL: Record<string, string> = {
  * list's watermarked scan. Both facts come straight from `display_image`. */
 function imageProvenance(print: PrintUiModel): string | null {
   if (!print.imageSource) return null;
-  const source = print.imageSource === "bandai" ? "Bandai card list" : sourceDisplayName(print.imageSource);
+  // Every source name now resolves through the one shared mapping, including
+  // "bandai" - the API's identifier for the official ONE PIECE Card List.
+  const source = sourceDisplayName(print.imageSource);
   return print.imageExactPrintVerified
     ? `${source} image · verified for this printing`
     : `${source} image`;

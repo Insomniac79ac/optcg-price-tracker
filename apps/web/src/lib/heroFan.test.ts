@@ -45,6 +45,7 @@ function print(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel 
     sourceImageUrl: `https://example.test/art/${id}.png`,
     imageSource: "snkrdunk",
     imageExactPrintVerified: true,
+    imageOwnedAssetSelected: true,
     imageGeometry: null,
     marketIndexJpy: null,
     yuyuteiJpy: null,
@@ -62,7 +63,32 @@ function print(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel 
 /** A print whose only image is the canonical Bandai artwork - eligible, but
  * only after the verified ones. */
 function fallbackPrint(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel {
-  return print(id, { imageSource: null, imageExactPrintVerified: null, ...overrides });
+  return print(id, {
+    imageSource: null,
+    imageExactPrintVerified: null,
+    imageOwnedAssetSelected: false,
+    ...overrides,
+  });
+}
+
+/** The canonical ONE PIECE Card List fallback: same `imageSource` as an owned
+ * official asset, and no owned asset behind it. */
+function canonicalBandaiPrint(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel {
+  return print(id, {
+    imageSource: "bandai",
+    imageExactPrintVerified: true,
+    imageOwnedAssetSelected: false,
+    ...overrides,
+  });
+}
+
+/** A verified asset we mirrored ourselves, from any source. */
+function ownedPrint(id: number, source: string): PrintUiModel {
+  return print(id, {
+    imageSource: source,
+    imageExactPrintVerified: true,
+    imageOwnedAssetSelected: true,
+  });
 }
 
 const POOL = Array.from({ length: 12 }, (_, i) => print(i + 1));
@@ -201,5 +227,67 @@ describe("selectHeroFanPrints", () => {
     expect(selectHeroFanPrints([], TODAY)).toEqual([]);
     expect(selectHeroFanPrints([print(1, { imageUrl: null })], TODAY)).toEqual([]);
     expect(selectHeroFanPrints([print(1, { imageExactPrintVerified: false })], TODAY)).toEqual([]);
+  });
+});
+
+describe("prefersHeroFanImage - provenance, not source name", () => {
+  it("prefers an owned official Card List image", () => {
+    expect(prefersHeroFanImage(ownedPrint(1, "bandai"))).toBe(true);
+  });
+
+  it("does not prefer the canonical Bandai fallback, despite the same source", () => {
+    const canonical = canonicalBandaiPrint(1);
+    expect(canonical.imageSource).toBe("bandai");
+    expect(prefersHeroFanImage(canonical)).toBe(false);
+    // ...and the owned one differs only in provenance, not in source name.
+    expect(ownedPrint(2, "bandai").imageSource).toBe("bandai");
+    expect(prefersHeroFanImage(ownedPrint(2, "bandai"))).toBe(true);
+  });
+
+  it.each(["yuyutei", "snkrdunk"])("keeps owned %s images preferred", (source) => {
+    expect(prefersHeroFanImage(ownedPrint(1, source))).toBe(true);
+  });
+
+  it("does not prefer an owned image the API says is not this exact print", () => {
+    const wrong = print(1, { imageOwnedAssetSelected: true, imageExactPrintVerified: false });
+    expect(prefersHeroFanImage(wrong)).toBe(false);
+  });
+
+  it("does not rank sources against each other", () => {
+    // All three owned: none outranks another here, because the backend has
+    // already chosen the best source for each print.
+    const owned = ["bandai", "yuyutei", "snkrdunk"].map((s, i) => ownedPrint(i + 1, s));
+    expect(owned.every(prefersHeroFanImage)).toBe(true);
+  });
+
+  it("prefers owned images over canonical ones in the fan itself", () => {
+    const pool = [
+      ...Array.from({ length: 8 }, (_, i) => canonicalBandaiPrint(i + 1)),
+      ownedPrint(20, "bandai"),
+      ownedPrint(21, "yuyutei"),
+      ownedPrint(22, "snkrdunk"),
+    ];
+    expect(ids(selectHeroFanPrints(pool, TODAY)).sort((a, b) => a - b)).toEqual([20, 21, 22]);
+  });
+
+  it("still fills the fan when every print is canonical", () => {
+    const pool = Array.from({ length: 6 }, (_, i) => canonicalBandaiPrint(i + 1));
+    const picked = selectHeroFanPrints(pool, TODAY);
+    expect(picked).toHaveLength(HERO_FAN_SIZE);
+    expect(picked.filter(prefersHeroFanImage)).toHaveLength(0);
+  });
+
+  it("is deterministic for a day regardless of provenance mix", () => {
+    const pool = [
+      ownedPrint(1, "bandai"),
+      canonicalBandaiPrint(2),
+      ownedPrint(3, "yuyutei"),
+      canonicalBandaiPrint(4),
+      ownedPrint(5, "snkrdunk"),
+    ];
+    expect(ids(selectHeroFanPrints(pool, TODAY))).toEqual(ids(selectHeroFanPrints(pool, TODAY)));
+    expect(ids(selectHeroFanPrints([...pool].reverse(), TODAY))).toEqual(
+      ids(selectHeroFanPrints(pool, TODAY)),
+    );
   });
 });

@@ -19,7 +19,9 @@ is the R2 one instead of the marketplace CDN's - same image, same evidence,
 same `source`, different origin (see _owned_asset_url, and note that it is
 gated to an explicit allow-list of prints). The URL is composed from
 configuration at read time and no delivery hostname is ever read from the
-database.
+database, and the response reports which branch supplied it in
+``owned_asset_selected`` - "bandai" alone cannot say, because it names both a
+verified official asset and the canonical fallback.
 
 That substitution is only made when the ``owned_asset`` record is provably
 about *this* image: its digest, byte size and pixel dimensions must match the
@@ -37,13 +39,14 @@ no SAMPLE watermark, no overlay *obscuring* the card. Quarantined mappings
 and the key's own ``card_print_id`` is re-checked against the mapping's
 column so a sibling print's image can never cross over.
 
-Two evidence versions exist and both are honoured on their own terms. v1
+Three evidence versions exist and each is honoured on its own terms. v1
 (SNKRDUNK, 2026-08-13) describes an image with no overlay at all. v2
-(Yuyu-Tei, 2026-08-18) describes an image carrying a retailer watermark that
-the approved MVP display policy accepts because it does not materially
-obscure the card; such evidence must record ``retailer_overlay_present``
-explicitly, so a watermark is never implied to be absent by omission.
-Historical v1 evidence is never rewritten or reinterpreted.
+(Yuyu-Tei, 2026-08-18) describes an image carrying a retailer watermark. v3
+(official Card List, 2026-08-18) describes a first-party image carrying the
+official SAMPLE overlay. Each later version accepts one further *kind* of
+non-obscuring mark, and must record that mark explicitly - a watermark or a
+SAMPLE is never implied to be absent by omission, and never accepted
+implicitly. Earlier evidence is never rewritten or reinterpreted.
 
 Everything read here is structured JSON already stored on the mapping row.
 Nothing in this module parses raw_snapshots HTML: a source whose product
@@ -129,19 +132,39 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # SNKRDUNK on every measured axis (1.34x linear resolution, neutral tone, no
 # crushed blacks, no colour cast), so it now ranks first.
 #
-# SNKRDUNK stays as the fallback and is not weakened: this tuple only decides
-# *order between qualifying sources*. A Yuyu-Tei mapping whose evidence does
-# not qualify contributes nothing and the SNKRDUNK evidence is used instead,
-# exactly as before.
-DISPLAY_SOURCE_PRIORITY: tuple[str, ...] = ("yuyutei", "snkrdunk")
+# The official ONE PIECE Card List ranks first as of 2026-08-18: it is the
+# first-party source, its digest equals card_prints.artwork_key on all twenty
+# prints, and its SAMPLE overlay is accepted by the approved display policy.
+# It is spelled "bandai" because that is the identifier this codebase has
+# always used for onepiece-cardgame.com (see BANDAI above) - the audit proved
+# the Card List assets are byte-identical to our canonical images, so giving
+# the same source a second name would only oblige every reader to know both.
+#
+# Lower-priority sources are not weakened: this tuple only decides *order
+# between sources that already qualify*. An official mapping whose evidence
+# does not qualify contributes nothing, and Yuyu-Tei is used instead - then
+# SNKRDUNK - rather than the print failing.
+DISPLAY_SOURCE_PRIORITY: tuple[str, ...] = ("bandai", "yuyutei", "snkrdunk")
 
 # Evidence written by the Yuyu-Tei migration (2026-08-18). Its contract
 # differs from v1 in one way only: a retailer watermark may be present, and
 # must then be recorded as present rather than omitted.
 VERIFICATION_VERSION_V2 = "display-image-v2"
 
+# Evidence written by the official Card List migration (2026-08-18). It allows
+# the official SAMPLE overlay - and only that, only when the evidence names
+# the policy that accepts it.
+VERIFICATION_VERSION_V3 = "display-image-v3"
+
+# The one value of `overlay_policy` that licenses `sample_present: true`. A
+# payload that sets the flag without naming this policy is malformed, not
+# permitted: the SAMPLE can never be accepted implicitly.
+OFFICIAL_SAMPLE_ACCEPTED = "official_sample_accepted"
+
 _REQUIRED_TRUE = ("exact_print_verified", "full_card_preserved")
-_REQUIRED_FALSE = ("sample_present", "overlay_obscures_card")
+
+# An overlay that obscures the card fails in every version of the contract.
+_REQUIRED_FALSE = ("overlay_obscures_card",)
 
 # v2 evidence must state the retailer-overlay fact explicitly, as a real
 # boolean. Historical v1 evidence carries no such key and is not reinterpreted
@@ -155,11 +178,18 @@ def _qualifies(payload: object, card_print_id: int) -> bool:
     actually rendering.
 
     `overlay_obscures_card` must be false in every version of the contract.
-    What changed in v2 is only what that field *means alongside*: a retailer
-    watermark may be present, so v2 evidence has to say so explicitly. An
-    image whose overlay does obscure the card still fails, whatever it says
-    about a watermark, and evidence that omits the v2 assertion fails closed
-    rather than being read as "no watermark".
+    What each later version changed is only which *kind* of non-obscuring mark
+    may be present, and each has to say so explicitly:
+
+      v1  no overlay at all (SNKRDUNK)
+      v2  a retailer watermark may be present, recorded in
+          `retailer_overlay_present`
+      v3  the official SAMPLE overlay may be present, recorded in
+          `sample_present` and licensed by `overlay_policy`
+
+    Outside v3, `sample_present` must still be false: a SAMPLE is never
+    accepted implicitly, and evidence that omits a version's assertion fails
+    closed rather than being read as "no mark".
     """
     if not isinstance(payload, dict):
         return False
@@ -169,7 +199,19 @@ def _qualifies(payload: object, card_print_id: int) -> bool:
         return False
     if not all(payload.get(k) is False for k in _REQUIRED_FALSE):
         return False
-    if payload.get("verification_version") == VERIFICATION_VERSION_V2:
+
+    version = payload.get("verification_version")
+    if version == VERIFICATION_VERSION_V3:
+        # A true `sample_present` is only meaningful beside the policy that
+        # accepts it; the flag alone is malformed evidence.
+        if payload.get("overlay_policy") != OFFICIAL_SAMPLE_ACCEPTED:
+            return False
+        if not isinstance(payload.get("sample_present"), bool):
+            return False
+    elif payload.get("sample_present") is not False:
+        return False
+
+    if version == VERIFICATION_VERSION_V2:
         if not all(isinstance(payload.get(k), bool) for k in _REQUIRED_BOOL_V2):
             return False
     # Guards against a sibling print's evidence being read onto this print.
@@ -377,16 +419,20 @@ def get_display_images_for_prints(
         rank = DISPLAY_SOURCE_PRIORITY.index(source_name)
         if card_print_id in best and best[card_print_id][0] <= rank:
             continue
+        # Our own copy when we have one, else the verified source image. Only
+        # the URL can change here: source, geometry and exact_print_verified
+        # all still describe the same verified asset, because the mirrored
+        # bytes are that asset. Which of the two branches supplied the URL is
+        # reported as owned_asset_selected - the read path knows it, so no
+        # client has to infer it from a hostname.
+        owned_url = _owned_asset_url(payload, card_print_id)
         best[card_print_id] = (
             rank,
             DisplayImageOut(
-                # Our own copy when we have one, else the verified source
-                # image. Only the URL can change here: source, geometry and
-                # exact_print_verified all still describe the same verified
-                # asset, because the mirrored bytes are that asset.
-                url=_owned_asset_url(payload, card_print_id) or payload["url"],
+                url=owned_url or payload["url"],
                 source=source_name,
                 exact_print_verified=True,
+                owned_asset_selected=owned_url is not None,
                 geometry=_geometry(payload),
             ),
         )
@@ -396,8 +442,14 @@ def get_display_images_for_prints(
         if chosen is not None:
             by_print[print_row.id] = chosen[1]
         elif print_row.image_url:
+            # The canonical fallback: the print's own image_url, hotlinked.
+            # Same `source` string as a selected official asset, which is why
+            # owned_asset_selected has to be explicit here.
             by_print[print_row.id] = DisplayImageOut(
-                url=print_row.image_url, source=BANDAI, exact_print_verified=True
+                url=print_row.image_url,
+                source=BANDAI,
+                exact_print_verified=True,
+                owned_asset_selected=False,
             )
     return by_print
 

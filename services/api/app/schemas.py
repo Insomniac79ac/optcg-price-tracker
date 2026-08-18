@@ -462,15 +462,25 @@ class DisplayImageOut(BaseModel):
 
     Additive and purely presentational: `image_url`/`artwork_key` on the
     print remain the canonical Bandai identity fields and are unaffected by
-    anything here. `source` is "bandai" when no cleaner image has been
-    verified for this print, in which case `url` repeats the canonical
-    `image_url` (SAMPLE watermark and all). See
-    app.services.display_image for the selection rule.
+    anything here. See app.services.display_image for the selection rule.
+
+    `source` names *where the picture came from*, and "bandai" is now
+    ambiguous on its own: it is returned both for a verified official Card
+    List asset we mirrored and for the canonical fallback that repeats
+    `image_url` (SAMPLE watermark and all). `owned_asset_selected` is what
+    separates them - it says whether `url` came from the verified owned-asset
+    path or from the original/canonical source URL. It is delivery
+    provenance only and changes nothing about identity: `source`,
+    `exact_print_verified` and `geometry` all describe the same verified
+    asset either way.
     """
 
     url: str
     source: str
     exact_print_verified: bool
+    # False on every path that serves a source or canonical URL, so a client
+    # that does not know the field yet keeps the safe reading.
+    owned_asset_selected: bool = False
     geometry: DisplayImageGeometryOut | None = None
 
 

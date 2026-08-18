@@ -245,7 +245,10 @@ def test_a_disagreeing_owned_asset_keeps_the_source_url(
 
 
 def test_yuyutei_ranks_ahead_of_snkrdunk():
-    assert DISPLAY_SOURCE_PRIORITY == ("yuyutei", "snkrdunk")
+    """Yuyu-Tei is the fallback below the official card list as of 2026-08-18,
+    but still ranks ahead of SNKRDUNK."""
+    assert DISPLAY_SOURCE_PRIORITY == ("bandai", "yuyutei", "snkrdunk")
+    assert DISPLAY_SOURCE_PRIORITY.index("yuyutei") < DISPLAY_SOURCE_PRIORITY.index("snkrdunk")
 
 
 def test_yuyutei_wins_when_both_sources_qualify(db_session, client, public_base):

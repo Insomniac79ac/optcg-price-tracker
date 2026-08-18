@@ -322,6 +322,10 @@ def test_only_allow_listed_prints_change_their_display_url(client, catalogue, mo
     for print_id in sorted(switched):
         expected = copy.deepcopy(before[print_id])
         expected["display_image"]["url"] = EXPECTED_URL
+        # The provenance flag tracks the URL branch, so it flips with it -
+        # unconfigured R2 means the source URL was served, not an owned asset.
+        assert before[print_id]["display_image"]["owned_asset_selected"] is False
+        expected["display_image"]["owned_asset_selected"] = True
         assert after[print_id] == expected
 
 
@@ -352,6 +356,7 @@ def test_bandai_fallback_prints_are_untouched(client, catalogue, public_base):
         "url": BANDAI_URL,
         "source": "bandai",
         "exact_print_verified": True,
+        "owned_asset_selected": False,
         "geometry": None,
     }
 
@@ -391,6 +396,7 @@ def test_owned_asset_does_not_leak_into_the_response(client, catalogue, public_b
         "url",
         "source",
         "exact_print_verified",
+        "owned_asset_selected",
         "geometry",
     }
 
@@ -474,6 +480,7 @@ def test_unverified_evidence_is_still_rejected_even_with_an_owned_asset(
         "url": BANDAI_URL,
         "source": "bandai",
         "exact_print_verified": True,
+        "owned_asset_selected": False,
         "geometry": None,
     }
 
