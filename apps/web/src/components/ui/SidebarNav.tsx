@@ -74,14 +74,25 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** The active treatment is teal-on-elevated with a teal edge, not just a
+ * slightly lighter surface. `--bg-elevated` against the drawer's own
+ * `--bg-surface` is a 4-value shift that is legible on a colour-managed
+ * desktop panel and effectively invisible on a phone in daylight, which left
+ * the mobile drawer with no clear indication of the current destination.
+ * Teal is the design system's assigned navigation colour, so this reads the
+ * same way in the drawer and in the header's PublicNav.
+ *
+ * `aria-current="page"` matches what TopBar's PublicNav already sets, so the
+ * current destination is announced identically on both navigation surfaces. */
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
     <Link
       href={href}
-      className={`block truncate rounded-control px-2 py-1 text-[13px] transition-colors ${
+      aria-current={active ? "page" : undefined}
+      className={`block truncate rounded-control border-l-2 px-2 py-1 text-[13px] transition-colors ${
         active
-          ? "bg-bg-elevated text-text-primary"
-          : "text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
+          ? "border-accent-teal bg-accent-teal/12 font-medium text-accent-teal-hover"
+          : "border-transparent text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
       }`}
     >
       {label}
@@ -103,10 +114,11 @@ function NavItemBlock({ item, pathname }: { item: NavItem; pathname: string }) {
       <div className="flex items-center gap-1">
         <Link
           href={item.href}
-          className={`block flex-1 truncate rounded-control px-2 py-1 text-[13px] transition-colors ${
+          aria-current={active ? "page" : undefined}
+          className={`block flex-1 truncate rounded-control border-l-2 px-2 py-1 text-[13px] transition-colors ${
             active
-              ? "bg-bg-elevated text-text-primary"
-              : "text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
+              ? "border-accent-teal bg-accent-teal/12 font-medium text-accent-teal-hover"
+              : "border-transparent text-text-secondary hover:bg-bg-elevated/60 hover:text-text-primary"
           }`}
         >
           {item.label}

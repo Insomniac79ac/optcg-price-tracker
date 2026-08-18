@@ -209,6 +209,7 @@ function RecentFindsSection({
 
       {!loading && error && (
         <ErrorState
+          tone="collector"
           action={
             <button type="button" onClick={onRetry} className={SECONDARY_LINK_CLASS}>
               Try again

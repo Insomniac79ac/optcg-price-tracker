@@ -58,10 +58,16 @@ export default async function SignInPage({
           )}
 
           <div className="flex gap-4 border-t border-border-muted pt-4 text-xs">
-            <Link href="/" className="text-sky-400 hover:underline">
+            <Link
+              href="/"
+              className="font-medium text-accent-teal hover:text-accent-teal-hover"
+            >
               ← Back to Discover
             </Link>
-            <Link href="/cards" className="text-sky-400 hover:underline">
+            <Link
+              href="/cards"
+              className="font-medium text-accent-teal hover:text-accent-teal-hover"
+            >
               Browse Cards
             </Link>
           </div>

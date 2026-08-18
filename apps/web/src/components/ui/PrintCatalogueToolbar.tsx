@@ -105,8 +105,14 @@ export function PrintCatalogueToolbar({
         </button>
       )}
 
-      {/* Basis of the ordering, not a filter - so it sits apart from them. */}
-      <div className="ml-auto">
+      {/* Basis of the ordering, not a filter - so it sits apart from them,
+          pushed right from `sm` up. Not below that: at 390px the two filter
+          selects already fill the first row, and `ml-auto` then stranded the
+          sort control alone against the right edge of a second row while
+          everything else in the bar was left-aligned. Flowing normally, it
+          simply wraps under "All treatments" and the bar reads as one
+          left-aligned set of controls. */}
+      <div className="sm:ml-auto">
         <FilterSelect
           label="Sort"
           value={filters.sort}

@@ -1,9 +1,11 @@
 "use client";
 
+import { useSession } from "next-auth/react";
+
 const GENERAL_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "⌘K / Ctrl K", description: "Open the command palette" },
   { keys: "Esc", description: "Close the command palette or this dialog" },
-  { keys: "/", description: "Focus the topbar search (when nothing else is focused)" },
+  { keys: "/", description: "Open the card search (when nothing else is focused)" },
   { keys: "?", description: "Open this shortcuts reference" },
 ];
 
@@ -13,10 +15,20 @@ const GOTO_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: "g w", description: "Go to Wishlist" },
 ];
 
-/** Plain reference modal for keyboard shortcuts - opened from the palette
- * footer, the topbar "?" button, or the global "?" key. Same chrome as
- * ConfirmActionModal/CommandPalette. */
+/** Plain reference modal for keyboard shortcuts - opened from the topbar "?"
+ * button (`lg`+ only) or the global "?" key. Same chrome as
+ * ConfirmActionModal/CommandPalette.
+ *
+ * The goto sequences are listed only for a signed-in collector: every one of
+ * them targets a collector-tier route (My Collection, Vault, Wishlist), so
+ * advertising them to a signed-out visitor documents three shortcuts that can
+ * only ever land them on the sign-in wall. The shortcuts themselves are
+ * unchanged - AppShell still owns them - this is only about not printing a
+ * reference to capability the reader does not have. */
 export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { status } = useSession();
+  const showGotoShortcuts = status === "authenticated";
+
   if (!open) return null;
 
   return (
@@ -39,7 +51,9 @@ export function KeyboardShortcutsModal({ open, onClose }: { open: boolean; onClo
         </div>
 
         <ShortcutList title="General" items={GENERAL_SHORTCUTS} />
-        <ShortcutList title="Go to (press g then a key)" items={GOTO_SHORTCUTS} />
+        {showGotoShortcuts && (
+          <ShortcutList title="Go to (press g then a key)" items={GOTO_SHORTCUTS} />
+        )}
       </div>
     </div>
   );

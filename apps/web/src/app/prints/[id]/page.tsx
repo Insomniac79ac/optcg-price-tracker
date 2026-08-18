@@ -10,7 +10,9 @@ import { RarityBadge } from "@/components/RarityBadge";
 import { ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
+import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
+import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import {
   fetchPrint,
@@ -71,7 +73,7 @@ export default function PrintDetailPage() {
 
   const [print, setPrint] = useState<PrintUiModel | null>(null);
   const [detail, setDetail] = useState<PrintDetail | null>(null);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [status, setStatus] = useState<"loading" | "error" | "not_found" | "ready">("loading");
 
   useEffect(() => {
     if (!printId) return;
@@ -84,8 +86,13 @@ export default function PrintDetailPage() {
         setPrint(toPrintUiModel(result));
         setStatus("ready");
       })
-      .catch(() => {
-        if (!cancelled) setStatus("error");
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // A print id that does not exist is a different fact from "the
+        // catalogue is unreachable", and a collector who followed a stale
+        // link deserves to be told which one happened rather than being
+        // offered a Retry that can never succeed.
+        setStatus(err instanceof ApiError && err.status === 404 ? "not_found" : "error");
       });
     return () => {
       cancelled = true;
@@ -124,12 +131,31 @@ export default function PrintDetailPage() {
 
         {status === "loading" && (
           <div className="mt-4">
-            <LoadingState>Loading print…</LoadingState>
+            <LoadingState>Loading this print…</LoadingState>
+          </div>
+        )}
+        {status === "not_found" && (
+          <div className="mt-4">
+            <CollectorEmptyState
+              title="This print isn’t in the Atlas."
+              action={
+                <Link
+                  href="/cards"
+                  className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover"
+                >
+                  Browse the catalogue →
+                </Link>
+              }
+            >
+              The link may be out of date, or this printing hasn’t been catalogued yet.
+            </CollectorEmptyState>
           </div>
         )}
         {status === "error" && (
           <div className="mt-4">
-            <ErrorState>Failed to load this print.</ErrorState>
+            <ErrorState tone="collector">
+              This print couldn’t be loaded right now.
+            </ErrorState>
           </div>
         )}
 
@@ -184,7 +210,7 @@ function CardStage({ print }: { print: PrintUiModel }) {
   const provenance = imageProvenance(print);
 
   return (
-    <div className="mx-auto w-full max-w-[300px] lg:mx-0 lg:max-w-[380px]">
+    <div className="mx-auto w-full max-w-[300px] sm:mx-0 sm:max-w-[340px] lg:max-w-[380px]">
       <div className="rounded-panel-lg border border-border-muted bg-bg-elevated p-3 shadow-[0_20px_44px_-26px_rgba(0,0,0,0.95)]">
         <CardImageFrame
           imageUrl={print.imageUrl}
@@ -198,7 +224,7 @@ function CardStage({ print }: { print: PrintUiModel }) {
         />
       </div>
       {provenance && (
-        <p className="mt-2.5 text-center text-xs leading-snug text-text-muted lg:text-left">
+        <p className="mt-2.5 text-center text-xs leading-snug text-text-muted sm:text-left">
           {provenance}
         </p>
       )}

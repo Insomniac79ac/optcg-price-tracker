@@ -9,10 +9,21 @@ const COVERAGE_LABEL: Record<CoverageStatus, string> = {
   none: "no sources",
 };
 
+/** Collector palette, not the operational one.
+ *
+ * This badge only ever renders on collector-facing surfaces (its sole
+ * consumer is MarketIndexValue, and the /cards and /prints tiles both pass
+ * showCoverage={false} and state coverage by listing the real per-source
+ * prices instead) - so Discover, Market Index and the card detail page were
+ * the only places these chips appeared, all of them in the emerald/amber
+ * signal vocabulary docs/interface_design_system.md reserves for the admin
+ * surface. Teal is "trusted info", gold is the meaningful-highlight accent,
+ * and a missing index stays fully muted. Coverage is a statement about
+ * evidence, never a good/bad price signal, so nothing here is green or red. */
 const COVERAGE_TONE: Record<CoverageStatus, string> = {
-  full: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
-  limited: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
-  none: "bg-neutral-500/15 text-neutral-300 ring-1 ring-inset ring-neutral-500/30",
+  full: "bg-accent-teal/15 text-accent-teal-hover ring-1 ring-inset ring-accent-teal/30",
+  limited: "bg-accent-gold/12 text-accent-gold ring-1 ring-inset ring-accent-gold/30",
+  none: "bg-bg-card text-text-muted ring-1 ring-inset ring-border-default",
 };
 
 /** Names how many/which sources back a Market Index value (design brief

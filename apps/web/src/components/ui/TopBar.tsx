@@ -30,6 +30,32 @@ import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
  * away. Signed-out visitors never see it above `md` - everything they can
  * reach is already on the bar.
  */
+/** Every icon-only control in the bar, so they can never drift apart.
+ *
+ * 44x44 up to `md` and 36x36 above it: touch viewports get the full
+ * recommended target (the 60px mobile bar has exactly the room, the same 8px
+ * of clearance the 44px brand mark already gets), while pointer viewports
+ * keep the compact chrome the desktop lockup was composed against. */
+const ICON_BUTTON_CLASS =
+  "flex h-11 w-11 shrink-0 items-center justify-center border border-border-default text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-9 md:w-9";
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="h-[18px] w-[18px]"
+    >
+      <circle cx="8.75" cy="8.75" r="5.25" />
+      <path d="M12.6 12.6 16.5 16.5" />
+    </svg>
+  );
+}
+
 export function TopBar({
   onToggleMobileNav,
   onOpenPalette,
@@ -56,7 +82,7 @@ export function TopBar({
           type="button"
           onClick={onToggleMobileNav}
           aria-label="Toggle navigation"
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border-default text-sm text-text-secondary hover:text-text-primary ${
+          className={`${ICON_BUTTON_CLASS} rounded text-base ${
             authenticated ? "" : "md:hidden"
           }`}
         >
@@ -91,7 +117,7 @@ export function TopBar({
           title="Search (Ctrl/Cmd+K)"
           className="hidden items-center justify-between gap-6 rounded-control border border-border-default bg-bg-surface px-3 py-2 text-xs text-text-muted transition-colors hover:border-accent-teal/60 hover:text-text-secondary lg:flex lg:w-72"
         >
-          <span>Search cards, collection, wishlist…</span>
+          <span>Search cards…</span>
           <span className="mono rounded border border-border-default px-1 py-0.5 text-[10px] text-text-faint">
             ⌘K
           </span>
@@ -99,23 +125,30 @@ export function TopBar({
 
         {/* Icon-only command palette trigger below `lg`, where the full
             search bar has no room - the palette must stay reachable on every
-            viewport. */}
+            viewport. A drawn glyph rather than the "⌕" character, which most
+            of the shipped font stack renders a few pixels tall and which read
+            as an unlabelled speck beside the 44px brand mark at 390px. */}
         <button
           type="button"
           onClick={onOpenPalette}
           title="Search (Ctrl/Cmd+K)"
-          aria-label="Open command palette"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-border-default text-text-muted hover:text-text-secondary lg:hidden"
+          aria-label="Search cards"
+          className={`${ICON_BUTTON_CLASS} rounded-control lg:hidden`}
         >
-          ⌕
+          <SearchIcon />
         </button>
 
+        {/* `lg`+ only. This opens a reference for keyboard shortcuts, so it
+            is meaningless on the touch viewports where the header is also at
+            its tightest - and dropping it there is what buys the remaining
+            controls their full 44px targets at 390px. The "?" key still opens
+            the same modal wherever a keyboard exists. */}
         <button
           type="button"
           onClick={onOpenShortcuts}
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-border-default text-xs text-text-faint hover:text-text-secondary"
+          className={`${ICON_BUTTON_CLASS} hidden rounded-control text-xs text-text-faint lg:flex`}
         >
           ?
         </button>
@@ -178,7 +211,9 @@ function AuthControl() {
     return (
       <Link
         href={signInHref}
-        className="shrink-0 rounded-control bg-accent-gold px-3 py-1.5 text-xs font-semibold text-black/80 hover:bg-accent-gold-hover"
+        // Sized to the same 44px touch target as the icon buttons beside it
+        // up to `md`, then back to the compact desktop pill.
+        className="flex h-11 shrink-0 items-center rounded-control bg-accent-gold px-3.5 text-xs font-semibold text-black/80 transition-colors hover:bg-accent-gold-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-gold/60 md:h-8 md:px-3"
       >
         Sign in
       </Link>
@@ -197,7 +232,7 @@ function AuthControl() {
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}
         title={session.user?.name || session.user?.email || undefined}
-        className="rounded-control border border-border-default px-2 py-1 font-medium text-text-secondary hover:text-text-primary"
+        className="flex h-11 shrink-0 items-center rounded-control border border-border-default px-2.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 md:px-2"
       >
         Sign out
       </button>

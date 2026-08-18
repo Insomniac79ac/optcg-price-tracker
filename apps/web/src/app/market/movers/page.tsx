@@ -97,14 +97,18 @@ export default function MarketIndexPage() {
           </div>
         </div>
 
-        <p className="mb-6 text-xs text-text-faint">
-          Staging data - prices are from the mock price source (SCRAPING_MODE=mock), not live.
+        {/* Same claim as before - these staging prices are not live market
+            data - without naming the backend's own scraping-mode flag, which
+            is an internal implementation detail no collector can act on. */}
+        <p className="mb-6 text-xs text-text-muted">
+          Staging preview — prices here come from a test price source, not live market data.
         </p>
 
         {status === "loading" && <CardGridSkeleton />}
 
         {status === "error" && (
           <ErrorState
+            tone="collector"
             action={
               <button
                 type="button"
@@ -142,7 +146,10 @@ export default function MarketIndexPage() {
             </CardGrid>
             <p className="mt-6 text-xs text-text-muted">
               Looking for a specific card?{" "}
-              <Link href="/cards" className="text-sky-400 hover:underline">
+              <Link
+                href="/cards"
+                className="font-medium text-accent-teal hover:text-accent-teal-hover"
+              >
                 Browse the full catalogue →
               </Link>
             </p>

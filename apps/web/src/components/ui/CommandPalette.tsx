@@ -201,7 +201,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search pages, cards, saved views…"
+            placeholder="Search cards and pages…"
             className="w-full rounded-control border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-faint"
           />
         </div>

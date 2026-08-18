@@ -327,7 +327,7 @@ export default function CardDetailPage() {
         {status === "loading" && <LoadingState>Loading card…</LoadingState>}
 
         {status === "error" && (
-          <ErrorState>Failed to load this card from the API.</ErrorState>
+          <ErrorState tone="collector">This card couldn’t be loaded right now.</ErrorState>
         )}
 
         {status === "ready" && card && (
@@ -897,8 +897,10 @@ const META_FIELDS: { key: keyof Card; label: string }[] = [
  * Phase 9), placed inside the hero panel right after identity - loading and
  * error states are quiet/inline (a whole-panel LoadingState/ErrorState here
  * would compete with the image for attention on first paint). The staging
- * note is restrained (small, muted text) since SCRAPING_MODE stays "mock"
- * for this task - never claims these are live market prices. */
+ * note is restrained (small, muted text) and never claims these are live
+ * market prices - it says so in collector language rather than naming the
+ * backend's own scraping-mode flag, which is an implementation detail no
+ * visitor can act on. */
 function MarketIndexSection({
   status,
   index,
@@ -907,7 +909,9 @@ function MarketIndexSection({
   index: MarketIndex | null;
 }) {
   if (status === "loading") {
-    return <div className="h-12 w-40 animate-pulse rounded-control bg-bg-elevated" />;
+    return (
+      <div className="h-12 w-40 animate-pulse rounded-control bg-bg-elevated motion-reduce:animate-none" />
+    );
   }
   if (status === "error" || !index) {
     return <p className="text-xs text-text-muted">Market Index unavailable right now.</p>;
@@ -919,7 +923,7 @@ function MarketIndexSection({
       </div>
       <MarketIndexValue index={index} size="lg" />
       <p className="mt-1 text-[10px] text-text-faint">
-        Staging data - prices are from the mock price source (SCRAPING_MODE=mock), not live.
+        Staging preview — prices here come from a test price source, not live market data.
       </p>
     </div>
   );

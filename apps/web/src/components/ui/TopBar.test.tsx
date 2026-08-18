@@ -42,8 +42,21 @@ describe("TopBar", () => {
     expect(hrefs).not.toContain("/admin");
   });
 
-  it("does not reference 'signals' in the global search placeholder", () => {
+  it("does not promise search over anything the palette cannot actually search", () => {
     render(<TopBar />);
-    expect(screen.getByText(/search cards, collection/i).textContent).not.toMatch(/signals/i);
+    // The palette searches cards (GET /search?types=cards) and the static
+    // page/command registry - it has never searched collection, wishlist,
+    // notes or signals, so the placeholder must not claim any of them.
+    const placeholder = screen.getByText(/^search cards/i).textContent ?? "";
+    expect(placeholder).not.toMatch(/collection|wishlist|signals|notes|grading/i);
+  });
+
+  it("keeps the keyboard-shortcuts control off touch viewports", () => {
+    render(<TopBar />);
+    // A keyboard-shortcuts reference is meaningless where there is no
+    // keyboard, and the 390px bar needs the room for real 44px targets.
+    const shortcuts = screen.getByRole("button", { name: "Keyboard shortcuts" });
+    expect(shortcuts.className).toMatch(/\bhidden\b/);
+    expect(shortcuts.className).toMatch(/lg:flex/);
   });
 });

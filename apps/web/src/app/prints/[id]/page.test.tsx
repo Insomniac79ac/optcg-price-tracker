@@ -30,6 +30,7 @@ vi.mock("@/lib/api", async () => {
   return { ...actual, fetchCardMarketIndex, fetchCard };
 });
 
+import { ApiError } from "@/lib/api";
 import type {
   PrintDetail,
   PrintMarketIndex,
@@ -346,6 +347,17 @@ describe("print detail page", () => {
     fetchPrint.mockRejectedValue(new Error("boom"));
     render(<PrintDetailPage />);
 
-    expect(await screen.findByText("Failed to load this print.")).toBeTruthy();
+    expect(await screen.findByText("This print couldn’t be loaded right now.")).toBeTruthy();
+  });
+
+  it("tells a visitor a print does not exist rather than blaming the network", async () => {
+    // A stale/mistyped /prints/{id} is a 404, not an outage - offering a
+    // Retry there would only fail again.
+    fetchPrint.mockRejectedValue(new ApiError("Not Found", 404));
+    render(<PrintDetailPage />);
+
+    expect(await screen.findByText("This print isn’t in the Atlas.")).toBeTruthy();
+    expect(screen.queryByText("This print couldn’t be loaded right now.")).toBeNull();
+    expect(screen.getByRole("link", { name: /Browse the catalogue/ })).toBeTruthy();
   });
 });

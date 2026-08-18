@@ -199,6 +199,7 @@ function PrintsCataloguePageInner() {
 
         {status === "error" && (
           <ErrorState
+            tone="collector"
             action={
               <button
                 type="button"

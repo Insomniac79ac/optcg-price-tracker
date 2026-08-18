@@ -6,7 +6,21 @@
  * the math (page count, has-more) and the buttons. Safe when `total` is 0
  * or the current offset is past the last page (an empty last page after a
  * filter change, say) - `hasPrev`/`hasNext` and the page count are all
- * clamped rather than going negative/NaN. */
+ * clamped rather than going negative/NaN.
+ *
+ * Styled from the design tokens rather than raw `neutral-*` Tailwind. This
+ * bar renders directly under the approved /cards catalogue grid, where a
+ * #0a0a0a select and #737373 caption sat visibly outside the warm-charcoal
+ * palette every surface around it uses; the token values are the nearest
+ * equivalents, so the admin list pages that share it are unchanged in intent
+ * and only pick up the same warm neutrals as their own panels. */
+
+/** Shared so Previous and Next can never drift apart. `disabled` is stated
+ * with both reduced opacity and `cursor-not-allowed`, since opacity alone on
+ * a dark surface reads as "quiet" rather than "unavailable". */
+const PAGER_BUTTON_CLASS =
+  "rounded-control border border-border-default px-2 py-1 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-text-secondary";
+
 export function PaginationControls({
   offset,
   limit,
@@ -32,7 +46,7 @@ export function PaginationControls({
   const showControls = total > limit;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
       <div className="flex items-center gap-3">
         <span>
           {total === 0
@@ -45,7 +59,7 @@ export function PaginationControls({
             <select
               value={limit}
               onChange={(e) => onLimitChange(Number(e.target.value))}
-              className="rounded border border-neutral-700 bg-neutral-950 px-1.5 py-1 text-xs text-neutral-100"
+              className="rounded-control border border-border-default bg-bg-page px-1.5 py-1 text-xs text-text-primary focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
             >
               {limitOptions.map((n) => (
                 <option key={n} value={n}>
@@ -62,7 +76,7 @@ export function PaginationControls({
             type="button"
             onClick={() => onOffsetChange(Math.max(0, offset - limit))}
             disabled={!hasPrev}
-            className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+            className={PAGER_BUTTON_CLASS}
           >
             Previous
           </button>
@@ -73,7 +87,7 @@ export function PaginationControls({
             type="button"
             onClick={() => hasNext && onOffsetChange(offset + limit)}
             disabled={!hasNext}
-            className="rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 hover:text-neutral-100 disabled:opacity-40"
+            className={PAGER_BUTTON_CLASS}
           >
             Next
           </button>

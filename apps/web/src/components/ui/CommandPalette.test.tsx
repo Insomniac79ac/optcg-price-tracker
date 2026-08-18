@@ -65,7 +65,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "market index" },
     });
 
@@ -97,7 +97,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
     });
 
@@ -116,7 +116,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
     });
 
@@ -132,7 +132,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
     });
 
@@ -143,7 +143,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "wishlist" },
     });
 
@@ -159,7 +159,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "wishlist" },
     });
 
@@ -221,7 +221,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "OP01" },
     });
 
@@ -235,7 +235,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByPlaceholderText(/search pages, cards, saved views/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "O" },
     });
 

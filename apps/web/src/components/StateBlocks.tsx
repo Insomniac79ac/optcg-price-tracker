@@ -24,16 +24,34 @@ export function LoadingState({ children = "Loading…" }: { children?: ReactNode
 }
 
 /** Full-width error block. Pass the message as children; for a retry button
- * or other follow-up action, pass `action`. */
+ * or other follow-up action, pass `action`.
+ *
+ * `tone` defaults to the operational red alert this has always been, which is
+ * correct on the admin surface: a failed job-lock release or a broken import
+ * is an incident, and the dense operational screens use signal-red for
+ * exactly that. It is the wrong voice on a collector page, where a failed
+ * catalogue fetch is an inconvenience, not an alarm - and where
+ * docs/interface_design_system.md reserves signal-red for admin outright.
+ * `tone="collector"` renders the same block on the ordinary charcoal panel
+ * surface with muted type and a single restrained coral rule, so /cards, /
+ * and /prints degrade quietly instead of flashing a red box under the
+ * catalogue. Only the palette changes - the copy, the layout and the action
+ * slot are identical. */
 export function ErrorState({
   children = "Something went wrong.",
   action,
+  tone = "operational",
 }: {
   children?: ReactNode;
   action?: ReactNode;
+  tone?: "operational" | "collector";
 }) {
+  const toneClass =
+    tone === "collector"
+      ? "border-accent-coral/25 bg-bg-surface text-text-secondary"
+      : "border-signal-red/40 bg-signal-red/10 text-signal-red";
   return (
-    <div className={`${BLOCK_BASE} border-signal-red/40 bg-signal-red/10 text-signal-red`}>
+    <div className={`${BLOCK_BASE} ${toneClass}`}>
       <p>{children}</p>
       {action && <div className="mt-3">{action}</div>}
     </div>
