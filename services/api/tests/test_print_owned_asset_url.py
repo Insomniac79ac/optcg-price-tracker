@@ -123,25 +123,47 @@ def _add_print(db_session, index: int, *, image_url=BANDAI_URL):
     return {"canonical": canonical, "legacy": legacy, "print": print_row}
 
 
+# The first print id past the allow-list, used for the outside-the-gate case.
+# Derived from the allow-list itself so widening it again cannot leave this
+# test silently asserting about a print that is now inside.
+OUTSIDE_GATE_PRINT_ID = max(OWNED_ASSET_PRINT_IDS) + 1
+
+
 @pytest.fixture()
 def catalogue(db_session):
-    """Four prints covering every branch of the rule at once:
+    """Prints covering every branch of the rule at once:
 
-      1  verified SNKRDUNK evidence + an owned_asset   -> served from R2
-      2  verified SNKRDUNK evidence + an owned_asset   -> NOT served from R2
+      1   verified SNKRDUNK evidence + an owned_asset  -> served from R2
+      2   verified SNKRDUNK evidence + an owned_asset  -> served from R2
+                                                          (also inside the gate)
+      3   verified SNKRDUNK evidence, no owned_asset   -> marketplace URL
+      4   no mapping at all                            -> Bandai fallback
+      21  verified SNKRDUNK evidence + an owned_asset  -> NOT served from R2
                                                           (outside the gate)
-      3  verified SNKRDUNK evidence, no owned_asset    -> marketplace URL
-      4  no mapping at all                             -> Bandai fallback
 
-    Print 2 is the important one: identical evidence to print 1, and it must
-    not move. Ids are 1..4 because conftest drops and recreates the schema
-    for every test, which the assertion below states rather than assumes.
+    Print 21 is the important one: evidence byte-identical to print 1, and it
+    must not move, because an owned_asset existing is never on its own a
+    reason to switch origin. Prints 5..20 are filler that carries no mapping,
+    so that print 21 really is the id past the allow-list rather than a number
+    chosen by hand. Ids are contiguous from 1 because conftest drops and
+    recreates the schema for every test, which the assertion states rather
+    than assumes.
     """
     snkrdunk = make_source(db_session, "snkrdunk")
-    rows = {i: _add_print(db_session, i) for i in (1, 2, 3, 4)}
-    assert [rows[i]["print"].id for i in (1, 2, 3, 4)] == [1, 2, 3, 4]
+    ids = (1, 2, 3, 4)
+    rows = {i: _add_print(db_session, i) for i in ids}
+    filler = {i: _add_print(db_session, i) for i in range(5, OUTSIDE_GATE_PRINT_ID + 1)}
+    rows.update(filler)
+    assert [rows[i]["print"].id for i in ids] == [1, 2, 3, 4]
+    assert rows[OUTSIDE_GATE_PRINT_ID]["print"].id == OUTSIDE_GATE_PRINT_ID
+    assert OUTSIDE_GATE_PRINT_ID not in OWNED_ASSET_PRINT_IDS
 
-    for i, owned in ((1, OWNED_ASSET), (2, OWNED_ASSET), (3, None)):
+    for i, owned in (
+        (1, OWNED_ASSET),
+        (2, OWNED_ASSET),
+        (3, None),
+        (OUTSIDE_GATE_PRINT_ID, OWNED_ASSET),
+    ):
         make_mapping(
             db_session,
             rows[i]["legacy"],
@@ -223,10 +245,15 @@ def test_print_1_is_served_from_the_owned_r2_asset(client, catalogue, public_bas
     assert _catalogue(client)[1]["display_image"]["url"] == EXPECTED_URL
 
 
-def test_the_gate_is_print_1_and_only_print_1(client, catalogue, public_base):
-    """Print 2 carries a byte-identical owned_asset and must not move."""
-    assert OWNED_ASSET_PRINT_IDS == frozenset({1})
-    assert _detail(client, 2)["display_image"]["url"] == SNKRDUNK_URL
+def test_the_gate_is_an_explicit_allow_list(client, catalogue, public_base):
+    """Widened to the twenty migrated prints on 2026-08-18 - but still an
+    allow-list. A print outside it carries a byte-identical owned_asset and
+    must not move: the record existing is never on its own a reason to switch
+    origin."""
+    assert OWNED_ASSET_PRINT_IDS == frozenset(range(1, 21))
+    assert _detail(client, 1)["display_image"]["url"] == EXPECTED_URL
+    assert _detail(client, 2)["display_image"]["url"] == EXPECTED_URL
+    assert _detail(client, OUTSIDE_GATE_PRINT_ID)["display_image"]["url"] == SNKRDUNK_URL
 
 
 def test_the_url_is_derived_from_config_not_stored(client, catalogue, public_base, monkeypatch):
@@ -277,23 +304,25 @@ def test_a_custom_domain_path_prefix_is_preserved(client, catalogue, monkeypatch
 # --- everything that must not change ----------------------------------------
 
 
-def test_only_print_1_changes_its_display_url(client, catalogue, monkeypatch):
-    """The whole catalogue, before and after the owned asset becomes usable.
-    Exactly one field in exactly one item may differ."""
+def test_only_allow_listed_prints_change_their_display_url(client, catalogue, monkeypatch):
+    """The whole catalogue, before and after the owned assets become usable.
+    Only the `url` of allow-listed prints that carry an owned_asset may
+    differ - every other print, and every other field, byte for byte."""
     monkeypatch.setattr(settings, "R2_PUBLIC_BASE_URL", None)
     before = _normalize(_catalogue(client))
 
     monkeypatch.setattr(settings, "R2_PUBLIC_BASE_URL", PUBLIC_BASE)
     after = _normalize(_catalogue(client))
 
-    assert set(before) == set(after) == {1, 2, 3, 4}
-    for print_id in (2, 3, 4):
+    switched = {1, 2}
+    assert set(before) == set(after)
+    for print_id in sorted(set(before) - switched):
         assert after[print_id] == before[print_id], f"print {print_id} must be untouched"
 
-    changed = after[1]
-    expected = copy.deepcopy(before[1])
-    expected["display_image"]["url"] = EXPECTED_URL
-    assert changed == expected
+    for print_id in sorted(switched):
+        expected = copy.deepcopy(before[print_id])
+        expected["display_image"]["url"] = EXPECTED_URL
+        assert after[print_id] == expected
 
 
 def test_source_and_exact_print_verified_are_unchanged(client, catalogue, public_base):

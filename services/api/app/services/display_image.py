@@ -17,8 +17,9 @@ Where a chosen marketplace image has also been mirrored into our own R2
 bucket and recorded as a verified ``owned_asset``, the *URL* we serve for it
 is the R2 one instead of the marketplace CDN's - same image, same evidence,
 same `source`, different origin (see _owned_asset_url, and note that it is
-currently gated to one print). The URL is composed from configuration at
-read time and no delivery hostname is ever read from the database.
+gated to an explicit allow-list of prints). The URL is composed from
+configuration at read time and no delivery hostname is ever read from the
+database.
 
 That substitution is only made when the ``owned_asset`` record is provably
 about *this* image: its digest, byte size and pixel dimensions must match the
@@ -29,18 +30,25 @@ local consistency with already-verified evidence is the whole of what it can
 check, and anything less than all of it keeps the source URL.
 
 A mapping only qualifies when its ``match_explanation_json`` carries a
-``display_image`` object that was written by the display-image verification
+``display_image`` object that was written by a display-image verification
 tranche, asserting all four of: exact print verified, whole card preserved,
-no SAMPLE watermark, no overlay obscuring the card. Quarantined mappings
+no SAMPLE watermark, no overlay *obscuring* the card. Quarantined mappings
 (review_status != 'approved') carry no such key and can never contribute -
 and the key's own ``card_print_id`` is re-checked against the mapping's
 column so a sibling print's image can never cross over.
 
+Two evidence versions exist and both are honoured on their own terms. v1
+(SNKRDUNK, 2026-08-13) describes an image with no overlay at all. v2
+(Yuyu-Tei, 2026-08-18) describes an image carrying a retailer watermark that
+the approved MVP display policy accepts because it does not materially
+obscure the card; such evidence must record ``retailer_overlay_present``
+explicitly, so a watermark is never implied to be absent by omission.
+Historical v1 evidence is never rewritten or reinterpreted.
+
 Everything read here is structured JSON already stored on the mapping row.
-Nothing in this module parses raw_snapshots HTML - see
-docs/display_image_verification_tranche_2026-08-13.pdf for why that
-constraint exists (Yuyu-Tei's product image URLs live only in retained HTML,
-which is why Yuyu-Tei contributes no display images and is absent below).
+Nothing in this module parses raw_snapshots HTML: a source whose product
+image URL lives only in retained HTML has that URL extracted by its
+migration, which then persists structured evidence for this module to read.
 """
 
 from __future__ import annotations
@@ -72,13 +80,14 @@ BANDAI = "bandai"
 
 # Prints served from our own R2 copy instead of the source marketplace CDN.
 #
-# Deliberately an explicit allow-list of one, not "every mapping that happens
-# to carry an owned_asset". Exactly one asset (card_print_id 1) has been
-# mirrored and verified end to end so far; the rest of the tranche is not
-# done, and a print silently switching origin the moment a record appears is
-# not something that should happen without a test asserting it. Widening this
-# set is the next tranche's job, and its whole content.
-OWNED_ASSET_PRINT_IDS: frozenset[int] = frozenset({1})
+# Deliberately still an explicit allow-list, not "every mapping that happens
+# to carry an owned_asset": a print must never switch origin merely because a
+# record appeared next to it. Widened from {1} to the twenty current prints on
+# 2026-08-18, once every one of their Yuyu-Tei assets had been mirrored and
+# re-verified end to end (source == private == public digest, decoded size
+# confirmed) and its evidence had passed the owned-asset qualification checks
+# below. A twenty-first print gets added here only after the same proof.
+OWNED_ASSET_PRINT_IDS: frozenset[int] = frozenset(range(1, 21))
 
 # Only ever the provider this repository actually writes (see
 # app.services.display_image_asset_persist.PROVIDER). An owned_asset naming
@@ -111,20 +120,47 @@ OWNED_ASSET_REQUIRED_INT = ("byte_size", "width", "height")
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
-# Marketplace sources trusted to supply a display image, best first. Yuyu-Tei
-# is deliberately absent: all 20 of its exact-product images were verified on
-# 2026-08-13 and every one carries a "yuyu-tei.jp" retailer overlay across the
-# artwork and card-name band, so none qualified.
-DISPLAY_SOURCE_PRIORITY: tuple[str, ...] = ("snkrdunk",)
+# Marketplace sources trusted to supply a display image, best first.
+#
+# Yuyu-Tei was excluded until 2026-08-18 because every one of its images
+# carries a "yuyu-tei.jp" retailer overlay. The approved MVP display policy
+# accepts that watermark - it does not materially obscure the card - and the
+# image-quality audit of the same date found Yuyu-Tei materially better than
+# SNKRDUNK on every measured axis (1.34x linear resolution, neutral tone, no
+# crushed blacks, no colour cast), so it now ranks first.
+#
+# SNKRDUNK stays as the fallback and is not weakened: this tuple only decides
+# *order between qualifying sources*. A Yuyu-Tei mapping whose evidence does
+# not qualify contributes nothing and the SNKRDUNK evidence is used instead,
+# exactly as before.
+DISPLAY_SOURCE_PRIORITY: tuple[str, ...] = ("yuyutei", "snkrdunk")
+
+# Evidence written by the Yuyu-Tei migration (2026-08-18). Its contract
+# differs from v1 in one way only: a retailer watermark may be present, and
+# must then be recorded as present rather than omitted.
+VERIFICATION_VERSION_V2 = "display-image-v2"
 
 _REQUIRED_TRUE = ("exact_print_verified", "full_card_preserved")
 _REQUIRED_FALSE = ("sample_present", "overlay_obscures_card")
+
+# v2 evidence must state the retailer-overlay fact explicitly, as a real
+# boolean. Historical v1 evidence carries no such key and is not reinterpreted
+# - see _qualifies.
+_REQUIRED_BOOL_V2 = ("retailer_overlay_present",)
 
 
 def _qualifies(payload: object, card_print_id: int) -> bool:
     """A retained display_image payload is usable only if it makes every
     display-contract assertion explicitly, and claims the print we are
-    actually rendering."""
+    actually rendering.
+
+    `overlay_obscures_card` must be false in every version of the contract.
+    What changed in v2 is only what that field *means alongside*: a retailer
+    watermark may be present, so v2 evidence has to say so explicitly. An
+    image whose overlay does obscure the card still fails, whatever it says
+    about a watermark, and evidence that omits the v2 assertion fails closed
+    rather than being read as "no watermark".
+    """
     if not isinstance(payload, dict):
         return False
     if payload.get("classification") != "VERIFIED_DISPLAY":
@@ -133,6 +169,9 @@ def _qualifies(payload: object, card_print_id: int) -> bool:
         return False
     if not all(payload.get(k) is False for k in _REQUIRED_FALSE):
         return False
+    if payload.get("verification_version") == VERIFICATION_VERSION_V2:
+        if not all(isinstance(payload.get(k), bool) for k in _REQUIRED_BOOL_V2):
+            return False
     # Guards against a sibling print's evidence being read onto this print.
     if payload.get("card_print_id") != card_print_id:
         return False
