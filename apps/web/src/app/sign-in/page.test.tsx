@@ -40,8 +40,20 @@ describe("SignInPage (neutral sign-in-required route)", () => {
   it("explains that collector accounts are not enabled when Google OAuth is unconfigured", async () => {
     const ui = await SignInPage({ searchParams: Promise.resolve({}) });
     render(ui);
-    expect(screen.getByText(/collector accounts are not enabled in this staging build/i)).toBeInTheDocument();
+    expect(screen.getByText(/collector accounts are not enabled yet/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /sign in with google/i })).not.toBeInTheDocument();
+    // The public MVP must not describe itself as a staging build, and must not
+    // promise when accounts arrive.
+    expect(screen.queryByText(/staging/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/check back/i)).not.toBeInTheDocument();
+  });
+
+  it("still tells a visitor that browsing needs no account", async () => {
+    const ui = await SignInPage({ searchParams: Promise.resolve({}) });
+    render(ui);
+    expect(
+      screen.getByText(/browsing the card catalogue and market index does not require one/i),
+    ).toBeInTheDocument();
   });
 
   it("treats the documented change-me placeholder as unconfigured, not real credentials", async () => {

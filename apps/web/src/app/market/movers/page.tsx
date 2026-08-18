@@ -112,13 +112,6 @@ export default function MarketIndexPage() {
           </div>
         </div>
 
-        {/* Same claim as before - these staging prices are not live market
-            data - without naming the backend's own scraping-mode flag, which
-            is an internal implementation detail no collector can act on. */}
-        <p className="mb-6 text-xs text-text-muted">
-          Staging preview — prices here come from a test price source, not live market data.
-        </p>
-
         <p className="mb-3 text-xs text-text-muted">
           Ranked by current Market Index, highest first. Printings without an index appear last.
           This is a snapshot, not price movement &mdash; no change history is published yet.

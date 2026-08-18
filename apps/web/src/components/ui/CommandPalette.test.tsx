@@ -24,12 +24,79 @@ vi.mock("@/lib/api", async () => {
   };
 });
 
+// The public catalogue search a signed-out palette uses. toPrintUiModel stays
+// real so the rows are built by the same mapping /cards renders from.
+const fetchPrintCatalogue = vi.fn();
+vi.mock("@/lib/prints", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/prints")>("@/lib/prints");
+  return {
+    ...actual,
+    fetchPrintCatalogue: (...args: unknown[]) => fetchPrintCatalogue(...args),
+  };
+});
+
 import { CommandPalette } from "./CommandPalette";
 
 const EMPTY_SAVED_VIEWS = {
   items: [],
   pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
 };
+
+/** One GET /prints item, shaped as the catalogue really returns it. */
+function printItem(overrides: Record<string, unknown> = {}) {
+  return {
+    card_print_id: 13,
+    canonical_card_id: 40,
+    card_code: "OP04-044",
+    name_en: "Kaido",
+    name_jp: "カイドウ",
+    rarity: "SR",
+    card_type: "Character",
+    treatment: "parallel",
+    language: "jp",
+    release_product_code: "OP-04",
+    image_url: null,
+    display_image: null,
+    verification_status: "verified",
+    source_coverage: [],
+    latest_observation_at: null,
+    market_index: {
+      card_print_id: 13,
+      index_version: 1,
+      index_value_jpy: 1040,
+      calculation_method: "median",
+      source_count: 1,
+      coverage_status: "limited",
+      confidence: "medium",
+      source_values: [],
+      auxiliary_values: [],
+      freshest_observation_at: null,
+      stalest_eligible_source_at: null,
+      stale_sources: [],
+      calculated_at: "2026-08-18T00:00:00Z",
+    },
+    ...overrides,
+  };
+}
+
+function printList(items: ReturnType<typeof printItem>[]) {
+  return {
+    items,
+    total: items.length,
+    limit: 8,
+    offset: 0,
+    pagination: {
+      total: items.length,
+      limit: 8,
+      offset: 0,
+      has_next: false,
+      has_previous: false,
+      next_offset: null,
+      previous_offset: null,
+    },
+    facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
+  };
+}
 
 const EMPTY_SEARCH = {
   query: "",
@@ -45,6 +112,7 @@ describe("CommandPalette", () => {
     push.mockReset();
     fetchSavedViews.mockReset().mockResolvedValue(EMPTY_SAVED_VIEWS);
     fetchSearch.mockReset().mockResolvedValue(EMPTY_SEARCH);
+    fetchPrintCatalogue.mockReset().mockResolvedValue(printList([]));
     window.localStorage.clear();
     useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
   });
@@ -56,14 +124,14 @@ describe("CommandPalette", () => {
 
   it("renders static public commands when open, grouped under Commands", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Commands")).toBeInTheDocument();
   });
 
   it("filters commands as the user types", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "market index" },
@@ -76,7 +144,7 @@ describe("CommandPalette", () => {
   it("navigates and closes when a command is selected", async () => {
     const onClose = vi.fn();
     render(<CommandPalette open onClose={onClose} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.click(screen.getByText("Discover"));
 
@@ -87,7 +155,7 @@ describe("CommandPalette", () => {
   it("closes on Escape", async () => {
     const onClose = vi.fn();
     render(<CommandPalette open onClose={onClose} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
@@ -95,7 +163,7 @@ describe("CommandPalette", () => {
 
   it("does not render admin commands for a signed-out visitor", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
@@ -114,7 +182,7 @@ describe("CommandPalette", () => {
       status: "authenticated",
     });
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
@@ -130,7 +198,7 @@ describe("CommandPalette", () => {
       status: "authenticated",
     });
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "Catalog Ops" },
@@ -141,7 +209,7 @@ describe("CommandPalette", () => {
 
   it("hides collector-scoped commands when signed out", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "wishlist" },
@@ -157,7 +225,7 @@ describe("CommandPalette", () => {
       status: "authenticated",
     });
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "wishlist" },
@@ -167,6 +235,11 @@ describe("CommandPalette", () => {
   });
 
   it("renders saved views under a Saved Views group", async () => {
+    // Saved views are per-collector, so this is a signed-in scenario.
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" } },
+      status: "authenticated",
+    });
     fetchSavedViews.mockResolvedValue({
       items: [
         {
@@ -197,7 +270,11 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Saved Views")).toBeInTheDocument();
   });
 
-  it("looks up cards once the query is at least 2 characters", async () => {
+  it("looks up cards through the authenticated search when signed in", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "collector@example.com" } },
+      status: "authenticated",
+    });
     fetchSearch.mockResolvedValue({
       ...EMPTY_SEARCH,
       results: [
@@ -219,7 +296,7 @@ describe("CommandPalette", () => {
     });
 
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "OP01" },
@@ -229,11 +306,12 @@ describe("CommandPalette", () => {
       timeout: 1000,
     });
     await waitFor(() => expect(screen.getByText("OP01-001 Monkey D. Luffy")).toBeInTheDocument());
+    expect(fetchPrintCatalogue).not.toHaveBeenCalled();
   });
 
   it("does not call card search for a 1-character query", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
-    await waitFor(() => expect(fetchSavedViews).toHaveBeenCalled());
+    await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
       target: { value: "O" },
@@ -241,5 +319,167 @@ describe("CommandPalette", () => {
 
     await new Promise((r) => setTimeout(r, 350));
     expect(fetchSearch).not.toHaveBeenCalled();
+  });
+});
+
+describe("CommandPalette - public card search (signed out)", () => {
+  const typeQuery = (value: string) =>
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
+      target: { value },
+    });
+
+  beforeEach(() => {
+    push.mockReset();
+    fetchSavedViews.mockReset().mockResolvedValue(EMPTY_SAVED_VIEWS);
+    fetchSearch.mockReset().mockResolvedValue(EMPTY_SEARCH);
+    fetchPrintCatalogue.mockReset().mockResolvedValue(printList([]));
+    window.localStorage.clear();
+    useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
+  });
+
+  it("finds a real print for 'kaido' instead of claiming no matches", async () => {
+    fetchPrintCatalogue.mockResolvedValue(printList([printItem()]));
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("kaido");
+
+    await waitFor(
+      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "kaido", limit: 8 }),
+      { timeout: 1000 },
+    );
+    expect(await screen.findByText("Kaido")).toBeInTheDocument();
+    expect(screen.queryByText("No matches")).not.toBeInTheDocument();
+  });
+
+  it("searches the public catalogue, never the authenticated endpoint", async () => {
+    fetchPrintCatalogue.mockResolvedValue(printList([printItem()]));
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("kaido");
+
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled(), { timeout: 1000 });
+    expect(fetchSearch).not.toHaveBeenCalled();
+    expect(fetchSavedViews).not.toHaveBeenCalled();
+  });
+
+  it("finds a print by card code", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      printList([
+        printItem({
+          card_print_id: 1,
+          card_code: "OP01-001",
+          name_en: "Roronoa Zoro",
+          name_jp: "ロロノア・ゾロ",
+          treatment: "parallel",
+          release_product_code: "OP-01",
+        }),
+      ]),
+    );
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("OP01-001");
+
+    expect(await screen.findByText("Roronoa Zoro")).toBeInTheDocument();
+    expect(screen.getByText(/OP01-001/)).toBeInTheDocument();
+  });
+
+  it("finds a print by Japanese name", async () => {
+    fetchPrintCatalogue.mockResolvedValue(printList([printItem()]));
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("カイドウ");
+
+    await waitFor(
+      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "カイドウ", limit: 8 }),
+      { timeout: 1000 },
+    );
+    expect(await screen.findByText("Kaido")).toBeInTheDocument();
+  });
+
+  it("navigates to /prints/{card_print_id}, never a card_id URL", async () => {
+    // canonical_card_id deliberately differs from card_print_id so a mix-up
+    // would be visible rather than coincidentally correct.
+    fetchPrintCatalogue.mockResolvedValue(
+      printList([printItem({ card_print_id: 13, canonical_card_id: 40 })]),
+    );
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("kaido");
+    fireEvent.click(await screen.findByText("Kaido"));
+
+    expect(push).toHaveBeenCalledWith("/prints/13");
+    const pushed = push.mock.calls.map(([route]) => route as string);
+    expect(pushed.some((route) => route.startsWith("/cards/"))).toBe(false);
+    expect(pushed).not.toContain("/prints/40");
+  });
+
+  it("keeps base and parallel printings of one card distinguishable", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      printList([
+        printItem({ card_print_id: 13, treatment: "parallel" }),
+        printItem({ card_print_id: 14, treatment: "normal" }),
+      ]),
+    );
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("kaido");
+
+    const rows = await screen.findAllByText("Kaido");
+    expect(rows).toHaveLength(2);
+    // The parallel printing names its treatment; the base printing does not,
+    // so the two subtitles differ.
+    expect(screen.getByText(/OP04-044 · OP-04 · parallel/)).toBeInTheDocument();
+    expect(screen.getByText(/^OP04-044 · OP-04$/)).toBeInTheDocument();
+  });
+
+  it("shows the truthful empty state when the catalogue genuinely has no match", async () => {
+    fetchPrintCatalogue.mockResolvedValue(printList([]));
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("zzzznotacard");
+
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled(), { timeout: 1000 });
+    expect(await screen.findByText("No matches")).toBeInTheDocument();
+    expect(screen.queryByText("Search unavailable")).not.toBeInTheDocument();
+  });
+
+  it("distinguishes a failed search from an empty one", async () => {
+    fetchPrintCatalogue.mockRejectedValue(new Error("network down"));
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    typeQuery("kaido");
+
+    expect(await screen.findByText("Search unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("No matches")).not.toBeInTheDocument();
+  });
+
+  it("still offers the public page commands", async () => {
+    render(<CommandPalette open onClose={vi.fn()} />);
+    expect(await screen.findByText("Commands")).toBeInTheDocument();
+    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(screen.getByText("Cards")).toBeInTheDocument();
+    expect(screen.getByText("Market Index")).toBeInTheDocument();
+  });
+
+  it("does not offer authenticated concepts", async () => {
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+    for (const label of [
+      /^Collection$/,
+      /^Wishlist$/,
+      /^Grading$/,
+      /^Dashboard$/,
+      /^Saved Views$/,
+    ]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
   });
 });

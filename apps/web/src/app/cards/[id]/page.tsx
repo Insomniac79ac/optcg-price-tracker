@@ -922,9 +922,6 @@ function MarketIndexSection({
         Market Index
       </div>
       <MarketIndexValue index={index} size="lg" />
-      <p className="mt-1 text-[10px] text-text-faint">
-        Staging preview — prices here come from a test price source, not live market data.
-      </p>
     </div>
   );
 }

@@ -52,8 +52,8 @@ export default async function SignInPage({
             </>
           ) : (
             <p>
-              Collector accounts are not enabled in this staging build yet - Google sign-in
-              has not been configured here. Check back once it has been set up.
+              Collector accounts are not enabled yet, so there is nothing to sign in to
+              for now.
             </p>
           )}
 

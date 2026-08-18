@@ -4,8 +4,14 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchSavedViews, fetchSearch, type SavedView, type SearchResult } from "@/lib/api";
+import { fetchSavedViews, fetchSearch, type SavedView } from "@/lib/api";
 import { COMMAND_REGISTRY, searchCommands, visibleCommands, type Command } from "@/lib/commandRegistry";
+import {
+  MIN_QUERY_LENGTH,
+  PUBLIC_CARD_SEARCH_LIMIT,
+  searchPublicPrints,
+  type PaletteCardResult,
+} from "@/lib/publicCardSearch";
 import { getRecentWorkflows, recordRecentWorkflow, type RecentWorkflowEntry } from "@/lib/recentWorkflows";
 
 import { Badge } from "./Badge";
@@ -15,7 +21,13 @@ type PaletteItem =
   | { kind: "command"; key: string; command: Command }
   | { kind: "saved_view"; key: string; view: SavedView }
   | { kind: "recent"; key: string; entry: RecentWorkflowEntry }
-  | { kind: "card"; key: string; result: SearchResult };
+  | { kind: "card"; key: string; result: PaletteCardResult };
+
+/** Card search has three outcomes a visitor must be able to tell apart: a
+ * result set (possibly empty), a request still in flight, and a failed
+ * request. Collapsing the last two into "No matches" is what made the public
+ * palette claim Kaido did not exist. */
+type CardSearchStatus = "idle" | "loading" | "ready" | "error";
 
 /** Global Cmd/Ctrl+K command palette (design brief - "Command palette +
  * workflow shortcuts"). Mounted once in AppShell so every page gets it with
@@ -30,8 +42,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const [query, setQuery] = useState("");
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [recent, setRecent] = useState<RecentWorkflowEntry[]>([]);
-  const [cardResults, setCardResults] = useState<SearchResult[]>([]);
-  const [cardLoading, setCardLoading] = useState(false);
+  const [cardResults, setCardResults] = useState<PaletteCardResult[]>([]);
+  const [cardStatus, setCardStatus] = useState<CardSearchStatus>("idle");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [pendingDangerous, setPendingDangerous] = useState<Command | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,39 +54,59 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     setQuery("");
     setSelectedIndex(0);
     setRecent(getRecentWorkflows());
-    fetchSavedViews({ limit: 100 })
-      .then((res) => setSavedViews(res.items))
-      .catch(() => setSavedViews([]));
+    if (!isAuthenticated) {
+      // Saved views are per-collector. Asking for them while signed out only
+      // buys a 401 the palette would have to swallow anyway.
+      setSavedViews([]);
+    } else {
+      fetchSavedViews({ limit: 100 })
+        .then((res) => setSavedViews(res.items))
+        .catch(() => setSavedViews([]));
+    }
     const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 0);
     return () => window.clearTimeout(focusTimer);
-  }, [open]);
+  }, [open, isAuthenticated]);
 
   useEffect(() => {
     if (!open) return;
-    if (query.trim().length < 2) {
+    const trimmed = query.trim();
+    if (trimmed.length < MIN_QUERY_LENGTH) {
       setCardResults([]);
-      setCardLoading(false);
+      setCardStatus("idle");
       return;
     }
     const requestId = ++requestIdRef.current;
-    setCardLoading(true);
+    setCardStatus("loading");
     const debounceTimer = window.setTimeout(() => {
-      fetchSearch({ q: query.trim(), types: ["cards"], limit: 8 })
-        .then((res) => {
+      // Signed-out visitors search the public print catalogue - the same
+      // GET /prints the /cards page uses. /api/search stays authenticated.
+      const search = isAuthenticated
+        ? fetchSearch({ q: trimmed, types: ["cards"], limit: PUBLIC_CARD_SEARCH_LIMIT }).then((res) =>
+            res.results.map((result) => ({
+              key: `card-${result.type}-${result.id}`,
+              title: result.title,
+              subtitle: result.subtitle,
+              url: result.url,
+            })),
+          )
+        : searchPublicPrints(trimmed, PUBLIC_CARD_SEARCH_LIMIT);
+
+      search
+        .then((results) => {
           if (requestIdRef.current !== requestId) return;
-          setCardResults(res.results);
+          setCardResults(results);
+          setCardStatus("ready");
         })
         .catch(() => {
           if (requestIdRef.current !== requestId) return;
+          // Never fall through to "No matches" - that would claim a search
+          // succeeded and found nothing.
           setCardResults([]);
-        })
-        .finally(() => {
-          if (requestIdRef.current !== requestId) return;
-          setCardLoading(false);
+          setCardStatus("error");
         });
     }, 250);
     return () => window.clearTimeout(debounceTimer);
-  }, [open, query]);
+  }, [open, query, isAuthenticated]);
 
   const filteredCommands = useMemo(
     () => searchCommands(query, { isAuthenticated, isAdmin }),
@@ -101,7 +133,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       out.push({ kind: "command", key: `command-${command.id}`, command });
     }
     for (const result of cardResults) {
-      out.push({ kind: "card", key: `card-${result.type}-${result.id}`, result });
+      out.push({ kind: "card", key: result.key, result });
     }
     return out;
   }, [query, recent, filteredSavedViews, filteredCommands, cardResults]);
@@ -209,7 +241,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         <div className="max-h-[52vh] overflow-y-auto p-2">
           {items.length === 0 && (
             <div className="px-3 py-6 text-center text-xs text-text-muted">
-              {cardLoading ? "Searching…" : "No matches"}
+              {cardStatus === "loading"
+                ? "Searching…"
+                : cardStatus === "error"
+                  ? "Search unavailable"
+                  : "No matches"}
             </div>
           )}
 
