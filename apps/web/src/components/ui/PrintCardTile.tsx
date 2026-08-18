@@ -8,12 +8,15 @@ import { MarketIndexValue } from "./MarketIndexValue";
 
 /** One collectible print in the public catalogue grid.
  *
- * The print-centric counterpart to CollectorCardTile, which stays on the
- * legacy card_id-keyed `CardCatalogueItem` for the pages that still use it.
- * This one is keyed by `card_print_id` end to end - its link, its React key,
- * and its price all belong to exactly one print, so a base and a parallel
- * that bridge through the same legacy card render as two independent tiles
- * with two independent prices.
+ * The single collector-facing card tile. It replaced the legacy
+ * card_id-keyed CollectorCardTile once Discover and the Market Index page
+ * moved onto `GET /prints` too, so there is no longer a second, canonical
+ * tile for it to drift from.
+ *
+ * Keyed by `card_print_id` end to end - its link, its React key, and its
+ * price all belong to exactly one print, so a base and a parallel that bridge
+ * through the same legacy card render as two independent tiles with two
+ * independent prices.
  *
  * Hierarchy is artwork, then name, then code/set, then treatment + rarity,
  * then Market Index, then the sources behind it - the collector-UI skill's

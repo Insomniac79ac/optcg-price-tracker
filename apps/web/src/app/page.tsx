@@ -9,12 +9,11 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
-import { CollectorCardTile } from "@/components/ui/CollectorCardTile";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
+import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import { SkeletonBlock } from "@/components/ui/SkeletonBlock";
-import { type CardCatalogueItem, fetchCardsCatalogue } from "@/lib/api";
 import { brand } from "@/lib/brand";
-import { cardDisplayName } from "@/lib/format";
+import { fetchPrintCatalogue, toPrintUiModel, type PrintUiModel } from "@/lib/prints";
 
 const PRIMARY_LINK_CLASS =
   "rounded-control bg-accent-gold px-4 py-2 text-sm font-medium text-black/80 hover:bg-accent-gold-hover";
@@ -24,9 +23,23 @@ const SECONDARY_LINK_CLASS =
 // One request covers the whole page - hero art, Recent Finds, and the
 // collection-invitation stack all derive from this same array. The staging
 // catalogue is small enough that this is simpler and cheaper than a
-// separate fetch per section. Sorted "updated" so "Recent Finds" reflects a
-// genuine server-side signal (Card.updated_at), never an invented
-// popularity/trending order.
+// separate fetch per section.
+//
+// `GET /prints`, not the legacy `GET /cards/catalogue`: this page is now
+// print-centric end to end, so every card shown is one exact printing with
+// its own `card_print_id`, its own print-scoped Market Index and its own
+// verified artwork - and every tile can link to /prints/{card_print_id}
+// without anything having to guess which printing it meant. The legacy
+// catalogue carried no print identity at all, and some of its rows disagree
+// with the print catalogue on name, code and price.
+//
+// Sorted "updated" so "Recent Finds" reflects a genuine server-side signal
+// (CardPrint.updated_at - see services/api/app/services/print_catalogue.py),
+// never an invented popularity/trending order.
+//
+// 100 is the API's documented maximum for this endpoint (limit > 100 is a
+// 422), so this asks for the largest page it will serve rather than a
+// number that would silently fail.
 const CATALOGUE_FETCH_LIMIT = 100;
 const HERO_CARD_LIMIT = 3;
 const RECENT_FINDS_LIMIT = 4;
@@ -34,22 +47,22 @@ const RECENT_FINDS_LIMIT = 4;
 type CatalogueStatus =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "ready"; items: CardCatalogueItem[] };
+  | { kind: "ready"; items: PrintUiModel[] };
 
-/** Real-image cards first (just reordering what the API already returned,
- * never fabricated) so the hero's limited card-art slots favor cards that
- * actually have verified artwork (see docs/market_index.md "Image data
- * audit"). Cards without an image still render - CardImageFrame already
- * falls back to a branded placeholder - so the composition fills up to
- * HERO_CARD_LIMIT real catalogue entries instead of looking sparse. */
-function pickHeroCards(items: CardCatalogueItem[]): CardCatalogueItem[] {
-  const withImage = items.filter((c) => c.image_url);
-  const withoutImage = items.filter((c) => !c.image_url);
+/** Real-image prints first (just reordering what the API already returned,
+ * never fabricated) so the hero's limited card-art slots favor prints that
+ * actually have artwork (see docs/market_index.md "Image data audit").
+ * Prints without an image still render - CardImageFrame already falls back to
+ * a branded placeholder - so the composition fills up to HERO_CARD_LIMIT real
+ * catalogue entries instead of looking sparse. */
+function pickHeroPrints(items: PrintUiModel[]): PrintUiModel[] {
+  const withImage = items.filter((p) => p.imageUrl);
+  const withoutImage = items.filter((p) => !p.imageUrl);
   return [...withImage, ...withoutImage].slice(0, HERO_CARD_LIMIT);
 }
 
 /** The public Discover page (collector-first redesign, Tranche 2) - built
- * entirely from a single GET /cards/catalogue call, never invented
+ * entirely from a single GET /prints call, never invented
  * popularity/trending/sales-volume data. Every section degrades explicitly
  * (skeleton / empty / error), never silently to a blank gap. */
 export default function DiscoverPage() {
@@ -59,9 +72,11 @@ export default function DiscoverPage() {
   const load = useCallback(() => {
     let cancelled = false;
     setStatus({ kind: "loading" });
-    fetchCardsCatalogue({ sort: "updated", limit: CATALOGUE_FETCH_LIMIT })
+    fetchPrintCatalogue({ sort: "updated", limit: CATALOGUE_FETCH_LIMIT })
       .then((data) => {
-        if (!cancelled) setStatus({ kind: "ready", items: data.items });
+        if (!cancelled) {
+          setStatus({ kind: "ready", items: data.items.map(toPrintUiModel) });
+        }
       })
       .catch(() => {
         if (!cancelled) setStatus({ kind: "error" });
@@ -78,7 +93,7 @@ export default function DiscoverPage() {
   const isError = status.kind === "error";
   const isEmpty = status.kind === "ready" && items.length === 0;
 
-  const heroCards = pickHeroCards(items);
+  const heroCards = pickHeroPrints(items);
   const recentFinds = items.slice(0, RECENT_FINDS_LIMIT);
 
   return (
@@ -139,7 +154,7 @@ export default function DiscoverPage() {
  * whole composition is aria-hidden rather than exposing unlabeled card
  * fragments to assistive tech. Desktop shows up to 3 cards fanned; tablet
  * shows 2; mobile shows a single centered card. */
-function HeroArt({ loading, cards }: { loading: boolean; cards: CardCatalogueItem[] }) {
+function HeroArt({ loading, cards }: { loading: boolean; cards: PrintUiModel[] }) {
   if (loading) {
     return (
       <div aria-hidden="true" data-testid="hero-art-loading" className="flex justify-center gap-3 lg:justify-end">
@@ -157,15 +172,20 @@ function HeroArt({ loading, cards }: { loading: boolean; cards: CardCatalogueIte
 
   return (
     <div aria-hidden="true" data-testid="hero-art" className="flex justify-center gap-3 lg:justify-end">
-      {cards.map((card, i) => (
-        <div key={card.id} className={`w-24 shrink-0 sm:w-28 ${visibility[i]} ${fanTransform[i]}`}>
+      {cards.map((print, i) => (
+        <div
+          key={print.cardPrintId}
+          className={`w-24 shrink-0 sm:w-28 ${visibility[i]} ${fanTransform[i]}`}
+        >
           <CardImageFrame
-            imageUrl={card.image_url}
-            alt={`${cardDisplayName(card)} (${card.card_code})`}
-            cardCode={card.card_code}
-            rarity={card.rarity}
-            setCode={card.set_code}
+            imageUrl={print.imageUrl}
+            alt={`${print.displayName} (${print.cardCode})`}
+            cardCode={print.cardCode}
+            rarity={print.rarity}
+            setCode={print.releaseCode}
             size="full"
+            padded
+            geometry={print.imageGeometry}
           />
         </div>
       ))}
@@ -183,7 +203,7 @@ function RecentFindsSection({
   loading: boolean;
   error: boolean;
   empty: boolean;
-  cards: CardCatalogueItem[];
+  cards: PrintUiModel[];
   onRetry: () => void;
 }) {
   return (
@@ -192,7 +212,7 @@ function RecentFindsSection({
         <div>
           <h2 className="text-sm font-semibold text-text-primary">Recent Finds</h2>
           <p className="text-xs text-text-muted">
-            Newly added or recently updated cards from across the Atlas.
+            Newly added or recently updated printings from across the Atlas.
           </p>
         </div>
         {!loading && !error && !empty && (
@@ -238,8 +258,8 @@ function RecentFindsSection({
 
       {!loading && !error && !empty && (
         <CardGrid>
-          {cards.map((card) => (
-            <CollectorCardTile key={card.id} card={card} />
+          {cards.map((print) => (
+            <PrintCardTile key={print.cardPrintId} print={print} />
           ))}
         </CardGrid>
       )}
@@ -252,7 +272,7 @@ function CollectionInvitation({
   stackCards,
 }: {
   authenticated: boolean;
-  stackCards: CardCatalogueItem[];
+  stackCards: PrintUiModel[];
 }) {
   return (
     <section className="panel-elevated mt-14 rounded-panel-lg p-6 sm:p-8">
@@ -289,15 +309,20 @@ function CollectionInvitation({
 
         {stackCards.length > 0 && (
           <div aria-hidden="true" className="hidden -space-x-8 sm:flex sm:justify-end">
-            {stackCards.map((card, i) => (
-              <div key={card.id} className={`w-20 shrink-0 ${i === 1 ? "translate-y-2 rotate-3" : "-rotate-3"}`}>
+            {stackCards.map((print, i) => (
+              <div
+                key={print.cardPrintId}
+                className={`w-20 shrink-0 ${i === 1 ? "translate-y-2 rotate-3" : "-rotate-3"}`}
+              >
                 <CardImageFrame
-                  imageUrl={card.image_url}
+                  imageUrl={print.imageUrl}
                   alt=""
-                  cardCode={card.card_code}
-                  rarity={card.rarity}
-                  setCode={card.set_code}
+                  cardCode={print.cardCode}
+                  rarity={print.rarity}
+                  setCode={print.releaseCode}
                   size="full"
+                  padded
+                  geometry={print.imageGeometry}
                 />
               </div>
             ))}

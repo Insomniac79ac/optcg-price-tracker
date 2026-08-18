@@ -37,8 +37,8 @@ export type MarketIndexDisplay = Pick<
  * collector catalogue tile, which wants the value read as *the* price on the
  * tile (gold, with its own inline caption) and states its coverage by listing
  * the real per-source prices underneath instead of a chip. Both default to
- * the previous behaviour, so the card-detail pages and CollectorCardTile
- * render exactly as before. The "never show ¥0 for a missing index" rule
+ * the previous behaviour, so the legacy card-detail page renders exactly as
+ * before. The "never show ¥0 for a missing index" rule
  * stays in this one component whichever options are passed. */
 export function MarketIndexValue({
   index,
