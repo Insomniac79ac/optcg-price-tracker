@@ -30,6 +30,28 @@ class PriceObservation(Base):
             "price_type",
             "observed_at",
         ),
+        # The exact-print counterpart of the index above, for the public read
+        # path: every query in app.services.print_pricing/print_market_index
+        # filters on card_print_id, not card_id (see
+        # docs/print_centric_pricing.md). Same column order and same
+        # reasoning - (card_print_id, source_id, price_type) is the partition
+        # key, observed_at last so the index also covers the trailing range/
+        # ORDER BY within a series.
+        # Does NOT replace the single-column ix_price_observations_card_print_id
+        # (b858237e3706): measured on Postgres 16, a predicate on card_print_id
+        # alone (get_latest_prices_for_prints, get_price_history_for_print)
+        # still plans onto that narrower index, and both indexes coexist
+        # exactly as ix_price_observations_card_id coexists with the composite
+        # above. This one is what serves the multi-column predicate -
+        # print_market_index's (card_print_id, source_id, price_type,
+        # observed_at >= cutoff) sold/floor window - as a single index scan.
+        Index(
+            "ix_price_observations_print_source_type_observed",
+            "card_print_id",
+            "source_id",
+            "price_type",
+            "observed_at",
+        ),
         # Backs "latest observation(s) for one source across all cards"
         # queries (e.g. a per-source freshness/staleness sweep) that don't
         # filter by card_id at all.
