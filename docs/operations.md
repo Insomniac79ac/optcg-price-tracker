@@ -1221,7 +1221,7 @@ tables) have a retention policy enforced by `app.services.data_retention` - see 
 | `market_report_digest_sends` | 180 days | |
 | `market_intelligence_reports` | 365 days | |
 | `portfolio_valuation_snapshots` | 365 days | thinned to 1/week beyond 90 days |
-| `price_observations` | 365 days | thinned to 1/day beyond 90 days; latest observation per card/source/price type is never deleted regardless of age |
+| `price_observations` | 365 days | thinned to 1/day beyond 90 days; latest observation per series is never deleted regardless of age. A series is exact-print aware: `(card_print_id, source, price_type)` for print-linked rows, `(card_id, source, price_type)` for legacy rows where `card_print_id IS NULL`. Sibling prints that bridge through the same legacy `card_id` are therefore protected and thinned independently |
 | `market_signal_events` | 365 days | only `dismissed`/`resolved` events age out - `open`/`watching` events are kept forever |
 
 Everything else - `cards`, `sources`, `source_card_mappings`, `collection_items`,

@@ -14,10 +14,11 @@ collector record by mistake.
 Two tables additionally thin (rather than only hard-delete) rather than
 losing all history past their retention window:
 - price_observations: keeps every observation from the last 90 days as-is,
-  thins anything older to at most one row per (card, source, price_type,
-  day), and never deletes the single latest observation per (card, source,
-  price_type) no matter how old it is - a card that stopped getting price
-  updates keeps its last known price forever instead of going priceless.
+  thins anything older to at most one row per (series, day), and never
+  deletes the single latest observation per series no matter how old it is -
+  a print that stopped getting price updates keeps its last known price
+  forever instead of going priceless. "Series" here is exact-print aware:
+  see _series_identity below.
 - portfolio_valuation_snapshots: keeps every snapshot from the last 90 days,
   thins anything older to at most one snapshot per ISO week.
 
@@ -34,7 +35,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -126,7 +127,7 @@ POLICIES: dict[str, RetentionPolicy] = {
         table="price_observations",
         retention_days=365,
         mode="delete_old_rows_with_daily_thinning_protect_latest",
-        protected_records="latest observation per card/source/price_type",
+        protected_records="latest observation per exact print (or legacy card)/source/price_type",
     ),
     "market_signal_events": RetentionPolicy(
         table="market_signal_events",
@@ -225,20 +226,63 @@ def _market_signal_events_candidate_ids(db: Session, now: datetime) -> list[int]
     )
 
 
+def _series_identity(card_id: int, card_print_id: int | None) -> tuple[str, int]:
+    """The entity half of the price series an observation belongs to.
+
+    A print-linked observation (card_print_id IS NOT NULL - only ever set
+    together with source_card_mapping_id, see
+    ck_price_observations_lineage_paired) belongs to its exact print, so two
+    card_prints that bridge through the same legacy card_id - a base and a
+    parallel print of the same canonical card - are separate series here,
+    exactly as they are for every public read path (see
+    app.services.print_pricing). A legacy, lineage-less observation keeps its
+    historical one-series-per-legacy-card behaviour.
+
+    The "print"/"card" tag is load-bearing: card_prints.id and cards.id are
+    independent sequences, so an untagged key would group a print's
+    observations together with an unrelated legacy card's whenever the two
+    ids happened to collide.
+    """
+    if card_print_id is not None:
+        return ("print", card_print_id)
+    return ("card", card_id)
+
+
+def _series_partition_by() -> tuple:
+    """SQL counterpart of _series_identity, for the window function below.
+
+    CASE WHEN card_print_id IS NULL THEN card_id END is NULL for every
+    print-linked row, so a print's partition key is (NULL, print_id, source,
+    type) and a legacy row's is (card_id, NULL, source, type) - the two can
+    never collide, because card_id is NOT NULL. Both SQLite and PostgreSQL
+    treat NULLs as equal for PARTITION BY, which is what keeps all of one
+    legacy card's rows in a single partition as before.
+    """
+    return (
+        case((PriceObservation.card_print_id.is_(None), PriceObservation.card_id)),
+        PriceObservation.card_print_id,
+        PriceObservation.source_id,
+        PriceObservation.price_type,
+    )
+
+
 def _protected_price_observation_ids(db: Session) -> set[int]:
-    """The id of the single latest observation per (card_id, source_id,
-    price_type), across the WHOLE table (not scoped to any particular set
-    of cards) - these must never be deleted by pruning, no matter their
-    age. Same ROW_NUMBER()-over-partition technique as
-    app.services.latest_prices, just without a card_id filter."""
+    """The id of the single latest observation per (series, source_id,
+    price_type), across the WHOLE table (not scoped to any particular set of
+    cards or prints) - these must never be deleted by pruning, no matter
+    their age. Same ROW_NUMBER()-over-partition technique as
+    app.services.latest_prices, just without an entity filter.
+
+    Series identity is exact-print aware (see _series_identity /
+    _series_partition_by), so sibling prints sharing one legacy card_id each
+    keep their own last-known price. Grouping on card_id alone would protect
+    only whichever sibling was observed most recently and leave the other
+    prunable down to nothing.
+    """
     row_number = (
         func.row_number()
         .over(
-            partition_by=(
-                PriceObservation.card_id,
-                PriceObservation.source_id,
-                PriceObservation.price_type,
-            ),
+            partition_by=_series_partition_by(),
             order_by=PriceObservation.observed_at.desc(),
         )
         .label("rn")
@@ -263,12 +307,16 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
     candidate_ids.extend(i for i in hard_delete_ids if i not in protected_ids)
 
     # Thinning zone: older than 90 days but still within the 365-day hard
-    # cutoff - keep one row per (card, source, price_type, day), thin the
-    # rest. Only fetches the columns needed to group, not full rows.
+    # cutoff - keep one row per (series, day), thin the rest. Series is the
+    # same exact-print-aware identity the protection query partitions on, so
+    # one print's busy day can never thin away a sibling print's only
+    # observation of that day. Only fetches the columns needed to group, not
+    # full rows.
     thinning_rows = db.execute(
         select(
             PriceObservation.id,
             PriceObservation.card_id,
+            PriceObservation.card_print_id,
             PriceObservation.source_id,
             PriceObservation.price_type,
             PriceObservation.observed_at,
@@ -278,9 +326,11 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
         )
     ).all()
 
-    by_day_group: dict[tuple[int, int, str, object], list[tuple[int, datetime]]] = defaultdict(list)
-    for row_id, card_id, source_id, price_type, observed_at in thinning_rows:
-        key = (card_id, source_id, price_type, observed_at.date())
+    by_day_group: dict[
+        tuple[tuple[str, int], int, str, object], list[tuple[int, datetime]]
+    ] = defaultdict(list)
+    for row_id, card_id, card_print_id, source_id, price_type, observed_at in thinning_rows:
+        key = (_series_identity(card_id, card_print_id), source_id, price_type, observed_at.date())
         by_day_group[key].append((row_id, observed_at))
 
     for rows in by_day_group.values():

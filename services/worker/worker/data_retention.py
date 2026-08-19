@@ -3,11 +3,12 @@ DATA_RETENTION_ENABLED=true (see worker.celery_app's prune-data-retention
 task and "Data retention and pruning" in docs/operations.md).
 
 Mirrors app.services.data_retention on the api service - same policy, same
-table list, same protections (latest price_observation per card/source/
-price_type never deleted; open/watching market_signal_events never
-deleted; collector records - cards, collection_items, wishlist_items,
-grading_submissions, collector_tags/groups/notes, alert_rules,
-dashboard_preferences - never touched at all). Kept as a separate
+table list, same protections (latest price_observation per exact-print
+series never deleted - see _series_identity; open/watching
+market_signal_events never deleted; collector records - cards,
+collection_items, wishlist_items, grading_submissions,
+collector_tags/groups/notes, alert_rules, dashboard_preferences - never
+touched at all). Kept as a separate
 implementation against worker.models rather than importing from the api
 service, matching how this worker already keeps its own mirrored copy of
 every model it needs (see worker/models.py) instead of depending on the api
@@ -21,7 +22,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.orm import Session
 
 from worker.models import (
@@ -78,7 +79,7 @@ POLICIES: dict[str, RetentionPolicy] = {
     ),
     "price_observations": RetentionPolicy(
         "price_observations", 365, "delete_old_rows_with_daily_thinning_protect_latest",
-        "latest observation per card/source/price_type",
+        "latest observation per exact print (or legacy card)/source/price_type",
     ),
     "market_signal_events": RetentionPolicy(
         "market_signal_events", 365, "delete_old_dismissed_resolved", "open/watching events"
@@ -161,15 +162,37 @@ def _market_signal_events_candidate_ids(db: Session, now: datetime) -> list[int]
     )
 
 
+def _series_identity(card_id: int, card_print_id: int | None) -> tuple[str, int]:
+    """The entity half of the price series an observation belongs to - the
+    exact print when the row carries print lineage, else the legacy card.
+    Mirrors app.services.data_retention._series_identity; see that module for
+    why the "print"/"card" tag is load-bearing."""
+    if card_print_id is not None:
+        return ("print", card_print_id)
+    return ("card", card_id)
+
+
+def _series_partition_by() -> tuple:
+    """SQL counterpart of _series_identity - CASE WHEN card_print_id IS NULL
+    THEN card_id END is NULL for print-linked rows, so a print partitions as
+    (NULL, print_id, source, type) and a legacy row as (card_id, NULL,
+    source, type); card_id is NOT NULL, so the two can never collide."""
+    return (
+        case((PriceObservation.card_print_id.is_(None), PriceObservation.card_id)),
+        PriceObservation.card_print_id,
+        PriceObservation.source_id,
+        PriceObservation.price_type,
+    )
+
+
 def _protected_price_observation_ids(db: Session) -> set[int]:
+    """The latest observation per (series, source, price_type) - never
+    deleted, at any age. Exact-print aware, so sibling prints sharing one
+    legacy card_id each keep their own last-known price."""
     row_number = (
         func.row_number()
         .over(
-            partition_by=(
-                PriceObservation.card_id,
-                PriceObservation.source_id,
-                PriceObservation.price_type,
-            ),
+            partition_by=_series_partition_by(),
             order_by=PriceObservation.observed_at.desc(),
         )
         .label("rn")
@@ -195,6 +218,7 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
         select(
             PriceObservation.id,
             PriceObservation.card_id,
+            PriceObservation.card_print_id,
             PriceObservation.source_id,
             PriceObservation.price_type,
             PriceObservation.observed_at,
@@ -204,9 +228,11 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
         )
     ).all()
 
-    by_day_group: dict[tuple[int, int, str, object], list[tuple[int, datetime]]] = defaultdict(list)
-    for row_id, card_id, source_id, price_type, observed_at in thinning_rows:
-        key = (card_id, source_id, price_type, observed_at.date())
+    by_day_group: dict[
+        tuple[tuple[str, int], int, str, object], list[tuple[int, datetime]]
+    ] = defaultdict(list)
+    for row_id, card_id, card_print_id, source_id, price_type, observed_at in thinning_rows:
+        key = (_series_identity(card_id, card_print_id), source_id, price_type, observed_at.date())
         by_day_group[key].append((row_id, observed_at))
 
     for rows in by_day_group.values():

@@ -6,13 +6,16 @@ from datetime import datetime, timedelta, timezone
 
 from app.models import (
     AppLogEvent,
+    CanonicalCard,
     Card,
+    CardPrint,
     CollectorActivityEvent,
     MarketSignalEvent,
     PortfolioValuationSnapshot,
     PriceObservation,
     RawSnapshot,
     Source,
+    SourceCardMapping,
 )
 from app.services.data_retention import PRUNABLE_TABLES, prune_tables
 from app.services.job_locks import acquire_lock
@@ -36,6 +39,75 @@ def make_source(db_session, name: str = "yuyutei") -> Source:
     db_session.commit()
     db_session.refresh(source)
     return source
+
+
+def make_sibling_prints(db_session, card, source) -> tuple[tuple, tuple]:
+    """Two exact prints of one canonical card - a base and a parallel - both
+    bridging through the SAME legacy `card` row and the same source, each
+    with its own source_card_mapping. This is the real staging shape: 20
+    card_prints across only 15 legacy cards.
+
+    Returns two (CardPrint, SourceCardMapping) pairs, since a print-linked
+    observation has to carry both ids together.
+    """
+    canonical = CanonicalCard(
+        card_code="OP01-013",
+        name_en="Sanji",
+        original_set_code="OP01",
+        rarity="SR",
+        card_type="Character",
+    )
+    db_session.add(canonical)
+    db_session.commit()
+    db_session.refresh(canonical)
+
+    pairs = []
+    for treatment in ("base", "parallel"):
+        # release_product_code/artwork_key are required for a print to be
+        # `verified` (ck_card_prints_verified_requires_fields), and the
+        # artwork digest differs per treatment - two verified prints of one
+        # canonical card must differ somewhere in
+        # uq_card_prints_active_verified_identity.
+        print_row = CardPrint(
+            canonical_card_id=canonical.id,
+            language="jp",
+            treatment=treatment,
+            release_product_code="OP-01",
+            artwork_key=f"{treatment}-artwork-digest",
+            verification_status="verified",
+        )
+        db_session.add(print_row)
+        db_session.commit()
+        db_session.refresh(print_row)
+
+        mapping = SourceCardMapping(
+            card_id=card.id,
+            source_id=source.id,
+            card_print_id=print_row.id,
+            source_card_id=f"OP01-013-{treatment}",
+            source_url=f"https://example.test/{treatment}",
+        )
+        db_session.add(mapping)
+        db_session.commit()
+        db_session.refresh(mapping)
+        pairs.append((print_row, mapping))
+
+    return pairs[0], pairs[1]
+
+
+def print_observation(card, source, pair, *, price_jpy: int, observed_at) -> PriceObservation:
+    """A print-linked observation - card_print_id and source_card_mapping_id
+    are only ever set together (ck_price_observations_lineage_paired)."""
+    print_row, mapping = pair
+    return PriceObservation(
+        card_id=card.id,
+        source_id=source.id,
+        card_print_id=print_row.id,
+        source_card_mapping_id=mapping.id,
+        price_type="sell",
+        price_jpy=price_jpy,
+        observed_at=observed_at,
+    )
 
 
 # --- policy endpoint ---------------------------------------------------------
@@ -430,6 +502,187 @@ def test_price_observations_within_fresh_window_not_thinned(db_session):
                 card_id=card.id, source_id=source.id, price_type="sell", price_jpy=110,
                 observed_at=base_day + timedelta(hours=4),
             ),
+        ]
+    )
+    db_session.commit()
+
+    result = prune_tables(db_session, dry_run=True, tables=["price_observations"], now=NOW)
+    assert result.results[0].rows_would_delete == 0
+    assert db_session.query(PriceObservation).count() == 2
+
+
+# --- price_observations: exact-print series isolation ------------------------
+# Regression coverage for retention grouping being keyed on the legacy
+# card_id. Two card_prints routinely bridge through one `cards` row (a base
+# and a parallel print of the same canonical card), and every public read
+# path already scopes by card_print_id - retention was the last place still
+# merging them. Each test below states what the pre-fix, card_id-keyed
+# grouping would have done.
+
+
+def test_sibling_prints_each_keep_their_own_latest_observation(db_session):
+    """Protection is per exact print, not per legacy card.
+
+    Pre-fix: protection partitioned by (card_id, source_id, price_type), so
+    the two prints shared ONE protected slot - only the parallel print's
+    newer row won it, and the base print's single observation was pruned
+    outright, leaving that print with no price at all.
+    """
+    card = make_card(db_session)
+    source = make_source(db_session)
+    base, parallel = make_sibling_prints(db_session, card, source)
+
+    db_session.add_all(
+        [
+            # Each print's ONLY observation, both past the 365-day hard
+            # cutoff - each must be protected as its own print's last-known
+            # price.
+            print_observation(card, source, base, price_jpy=100, observed_at=NOW - timedelta(days=500)),
+            print_observation(
+                card, source, parallel, price_jpy=900, observed_at=NOW - timedelta(days=400)
+            ),
+        ]
+    )
+    db_session.commit()
+
+    result = prune_tables(db_session, dry_run=True, tables=["price_observations"], now=NOW)
+    assert result.results[0].rows_would_delete == 0
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 0
+
+    surviving_prints = {
+        obs.card_print_id for obs in db_session.query(PriceObservation).all()
+    }
+    assert surviving_prints == {base[0].id, parallel[0].id}
+
+
+def test_sibling_prints_are_thinned_independently(db_session):
+    """Daily thinning groups per exact print, not per legacy card.
+
+    Pre-fix: the day-group key was (card_id, source_id, price_type, day), so
+    the base print's three observations and the parallel print's single
+    observation on the same day landed in ONE group of four - only the
+    earliest survived, and the parallel print lost its only row for that day
+    to a sibling's busier day.
+    """
+    card = make_card(db_session)
+    source = make_source(db_session)
+    base, parallel = make_sibling_prints(db_session, card, source)
+
+    # Anchored to midnight UTC so the hour offsets can't roll into the next
+    # calendar day - same reasoning as the single-print thinning test above.
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    db_session.add_all(
+        [
+            # Base print: three rows on one day, inside the thinning zone.
+            print_observation(card, source, base, price_jpy=100, observed_at=base_day),
+            print_observation(
+                card, source, base, price_jpy=110, observed_at=base_day + timedelta(hours=4)
+            ),
+            print_observation(
+                card, source, base, price_jpy=120, observed_at=base_day + timedelta(hours=8)
+            ),
+            # Parallel print: exactly one row that same day, deliberately the
+            # LATEST of the four so a card_id-keyed group would discard it.
+            print_observation(
+                card, source, parallel, price_jpy=5000, observed_at=base_day + timedelta(hours=12)
+            ),
+            # A recent row per print, so the thinning-zone rows above are not
+            # incidentally protected as their series' latest.
+            print_observation(card, source, base, price_jpy=130, observed_at=NOW - timedelta(days=1)),
+            print_observation(
+                card, source, parallel, price_jpy=5500, observed_at=NOW - timedelta(days=1)
+            ),
+        ]
+    )
+    db_session.commit()
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    # Only the base print's own 3-row day is thinned to 1. The parallel
+    # print's single row that day is a group of one and is left alone.
+    assert apply_result.results[0].rows_deleted == 2
+
+    remaining = db_session.query(PriceObservation).all()
+    base_prices = sorted(o.price_jpy for o in remaining if o.card_print_id == base[0].id)
+    parallel_prices = sorted(o.price_jpy for o in remaining if o.card_print_id == parallel[0].id)
+
+    assert base_prices == [100, 130]  # earliest of the thinned day + the recent row
+    assert parallel_prices == [5000, 5500]  # its own day row survived untouched
+
+
+def test_legacy_observations_without_print_lineage_group_by_legacy_card(db_session):
+    """card_print_id IS NULL rows keep their historical behaviour exactly.
+
+    They still thin per legacy card, they are still protected per legacy
+    card, and two unrelated legacy cards are never merged into one series.
+    """
+    card_a = make_card(db_session, card_code="OP01-001")
+    card_b = make_card(db_session, card_code="OP02-002")
+    source = make_source(db_session)
+
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def legacy(card, price_jpy, observed_at):
+        return PriceObservation(
+            card_id=card.id,
+            source_id=source.id,
+            price_type="sell",
+            price_jpy=price_jpy,
+            observed_at=observed_at,
+        )
+
+    db_session.add_all(
+        [
+            # Card A: three same-day rows in the thinning zone + a recent row.
+            legacy(card_a, 100, base_day),
+            legacy(card_a, 110, base_day + timedelta(hours=4)),
+            legacy(card_a, 120, base_day + timedelta(hours=8)),
+            legacy(card_a, 130, NOW - timedelta(days=1)),
+            # Card B: one very old row, its only one - protected forever, and
+            # never pulled into card A's group.
+            legacy(card_b, 777, NOW - timedelta(days=500)),
+        ]
+    )
+    db_session.commit()
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2  # card A's day thinned 3 -> 1
+
+    remaining = db_session.query(PriceObservation).all()
+    assert sorted(o.price_jpy for o in remaining if o.card_id == card_a.id) == [100, 130]
+    assert [o.price_jpy for o in remaining if o.card_id == card_b.id] == [777]
+    assert all(o.card_print_id is None for o in remaining)
+
+
+def test_legacy_and_print_observations_on_one_card_are_separate_series(db_session):
+    """A lineage-less row and a print-linked row on the same legacy card are
+    two different series, so neither can prune the other away. Guards the
+    ("card", id) / ("print", id) tag in _series_identity - card_prints.id and
+    cards.id are independent sequences and would otherwise collide."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+    base, _parallel = make_sibling_prints(db_session, card, source)
+
+    db_session.add_all(
+        [
+            PriceObservation(
+                card_id=card.id,
+                source_id=source.id,
+                price_type="sell",
+                price_jpy=100,
+                observed_at=NOW - timedelta(days=500),  # legacy series' only row
+            ),
+            print_observation(
+                card, source, base, price_jpy=200, observed_at=NOW - timedelta(days=450)
+            ),  # print series' only row
         ]
     )
     db_session.commit()

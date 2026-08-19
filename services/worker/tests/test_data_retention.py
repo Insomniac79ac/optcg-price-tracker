@@ -69,6 +69,121 @@ def test_latest_price_observation_is_protected(db_session):
     assert result.results[0].rows_would_delete == 0
 
 
+def print_observation(card, source, card_print_id, *, price_jpy, observed_at):
+    """A print-linked observation. worker.models mirrors card_print_id /
+    source_card_mapping_id as plain nullable Integers (the api's
+    b858237e3706 migration owns the real constraints), so no CardPrint row
+    is needed here - but the two are still only ever set together, matching
+    ck_price_observations_lineage_paired."""
+    return PriceObservation(
+        card_id=card.id,
+        source_id=source.id,
+        card_print_id=card_print_id,
+        source_card_mapping_id=card_print_id,
+        price_type="sell",
+        price_jpy=price_jpy,
+        observed_at=observed_at,
+    )
+
+
+def test_sibling_prints_each_keep_their_own_latest_observation(db_session):
+    """Two exact prints bridging through ONE legacy card_id are separate
+    series. Pre-fix, protection partitioned by card_id alone, so only the
+    newer print's row was protected and the other print was pruned to
+    nothing. Mirrors the api service's test of the same name."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    db_session.add_all(
+        [
+            print_observation(card, source, 11, price_jpy=100, observed_at=NOW - timedelta(days=500)),
+            print_observation(card, source, 22, price_jpy=900, observed_at=NOW - timedelta(days=400)),
+        ]
+    )
+    db_session.commit()
+
+    result = prune_tables(db_session, dry_run=True, tables=["price_observations"], now=NOW)
+
+    assert result.results[0].rows_would_delete == 0
+
+
+def test_sibling_prints_are_thinned_independently(db_session):
+    """Daily thinning groups per exact print. Pre-fix, print 22's single row
+    for the day joined print 11's three in one card_id-keyed group and was
+    thinned away."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+    db_session.add_all(
+        [
+            print_observation(card, source, 11, price_jpy=100, observed_at=base_day),
+            print_observation(
+                card, source, 11, price_jpy=110, observed_at=base_day + timedelta(hours=4)
+            ),
+            print_observation(
+                card, source, 11, price_jpy=120, observed_at=base_day + timedelta(hours=8)
+            ),
+            # Print 22's only row that day, deliberately the latest of the four.
+            print_observation(
+                card, source, 22, price_jpy=5000, observed_at=base_day + timedelta(hours=12)
+            ),
+            # Recent rows so the above aren't protected as their series' latest.
+            print_observation(card, source, 11, price_jpy=130, observed_at=NOW - timedelta(days=1)),
+            print_observation(card, source, 22, price_jpy=5500, observed_at=NOW - timedelta(days=1)),
+        ]
+    )
+    db_session.commit()
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2  # only print 11's own day is thinned
+
+    remaining = db_session.query(PriceObservation).all()
+    assert sorted(o.price_jpy for o in remaining if o.card_print_id == 11) == [100, 130]
+    assert sorted(o.price_jpy for o in remaining if o.card_print_id == 22) == [5000, 5500]
+
+
+def test_legacy_observations_without_print_lineage_group_by_legacy_card(db_session):
+    """card_print_id IS NULL rows keep their historical per-legacy-card
+    grouping, and are never merged with a print series on the same card."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+    db_session.add_all(
+        [
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+                observed_at=base_day,
+            ),
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=110,
+                observed_at=base_day + timedelta(hours=4),
+            ),
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=130,
+                observed_at=NOW - timedelta(days=1),
+            ),
+            # Same legacy card, but its own print series - must survive on
+            # its own, not be thinned into the legacy rows above.
+            print_observation(card, source, 11, price_jpy=5000, observed_at=base_day),
+        ]
+    )
+    db_session.commit()
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 1  # the legacy day thinned 2 -> 1
+
+    remaining = db_session.query(PriceObservation).all()
+    legacy = sorted(o.price_jpy for o in remaining if o.card_print_id is None)
+    assert legacy == [100, 130]
+    assert [o.price_jpy for o in remaining if o.card_print_id == 11] == [5000]
+
+
 def test_open_and_watching_signal_events_are_protected(db_session):
     old = NOW - timedelta(days=500)
     db_session.add_all(
