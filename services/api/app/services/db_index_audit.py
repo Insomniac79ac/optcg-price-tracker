@@ -54,6 +54,17 @@ REQUIRED_INDEXES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
         ("card_id", "source_id", "price_type", "observed_at"),
         "critical",
     ),
+    # The exact-print counterpart of the entry above (migration
+    # d7e2b9f4a1c3). Critical for the same reason: it backs the print-scoped
+    # price reads in app.services.print_pricing/print_market_index, which are
+    # what every public /prints surface actually queries - see
+    # docs/print_centric_pricing.md.
+    (
+        "price_observations",
+        "ix_price_observations_print_source_type_observed",
+        ("card_print_id", "source_id", "price_type", "observed_at"),
+        "critical",
+    ),
     (
         "price_observations",
         "ix_price_observations_source_observed",

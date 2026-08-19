@@ -44,6 +44,97 @@ def test_db_index_audit_returns_checks(client, db_session):
     assert price_composite["severity"] == "critical"
 
 
+# --- the exact-print price observation index (migration d7e2b9f4a1c3) -------
+# Same four checks the legacy composite above gets, applied to its
+# print-scoped counterpart: registered, passing when present, detected when
+# absent, and subject to the audit's existing leading-column-order rule.
+
+PRINT_PRICE_INDEX = "ix_price_observations_print_source_type_observed"
+PRINT_PRICE_COLUMNS = ("card_print_id", "source_id", "price_type", "observed_at")
+
+
+def test_print_scoped_price_index_is_registered_as_critical():
+    from app.services.db_index_audit import REQUIRED_INDEXES
+
+    assert (
+        "price_observations",
+        PRINT_PRICE_INDEX,
+        PRINT_PRICE_COLUMNS,
+        "critical",
+    ) in REQUIRED_INDEXES
+
+
+def test_db_index_audit_passes_for_print_scoped_price_index(client, db_session):
+    """The in-memory test DB is created from the current models, which
+    declare this index - so a passing check here also proves the model
+    declaration and the audit registry agree on the column list."""
+    response = client.get("/admin/db-index-audit")
+    assert response.status_code == 200
+
+    check = next(c for c in response.json()["checks"] if c["index"] == PRINT_PRICE_INDEX)
+    assert check["table"] == "price_observations"
+    assert check["status"] == "pass"
+    assert check["severity"] == "critical"
+    assert check["message"] == "Index exists."
+
+
+def test_db_index_audit_reports_print_scoped_price_index_missing_when_absent():
+    """Drops the index on a throwaway database built from the real schema,
+    so 'absent' is a genuinely missing index rather than a stubbed audit.
+
+    The single-column ix_price_observations_card_print_id remains in place
+    and must NOT satisfy this check - a one-column index cannot serve a
+    four-column requirement (see _covers)."""
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+    from sqlalchemy.pool import StaticPool
+
+    import app.models  # noqa: F401  (registers models on Base.metadata)
+    from app.db import Base
+    from app.services.db_index_audit import run_db_index_audit
+
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    try:
+        with Session(bind=engine) as session:
+            before = next(c for c in run_db_index_audit(session) if c.index == PRINT_PRICE_INDEX)
+            assert before.status == "pass"
+
+            session.execute(text(f"DROP INDEX {PRINT_PRICE_INDEX}"))
+            session.commit()
+
+            after = next(c for c in run_db_index_audit(session) if c.index == PRINT_PRICE_INDEX)
+            assert after.status == "critical"
+            assert after.severity == "critical"
+            assert "Missing index on price_observations(" in after.message
+            assert "card_print_id, source_id, price_type, observed_at" in after.message
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_print_scoped_price_index_requires_leading_column_order():
+    """The audit's existing prefix rule (_covers) applies to this entry like
+    any other: the four columns must be the index's leading columns, in this
+    order. A same-columns-different-order index does not satisfy it."""
+    from app.services.db_index_audit import _covers
+
+    assert _covers(list(PRINT_PRICE_COLUMNS), PRINT_PRICE_COLUMNS)
+    # Extra trailing columns are fine - a wider index still leads with these.
+    assert _covers([*PRINT_PRICE_COLUMNS, "id"], PRINT_PRICE_COLUMNS)
+    # Reordered leading columns are not.
+    assert not _covers(
+        ["source_id", "card_print_id", "price_type", "observed_at"], PRINT_PRICE_COLUMNS
+    )
+    # Neither is the legacy card_id composite, nor the single-column print index.
+    assert not _covers(
+        ["card_id", "source_id", "price_type", "observed_at"], PRINT_PRICE_COLUMNS
+    )
+    assert not _covers(["card_print_id"], PRINT_PRICE_COLUMNS)
+
+
 def test_performance_summary_requires_admin_token(db_session):
     from fastapi.testclient import TestClient
 
