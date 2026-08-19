@@ -188,12 +188,17 @@ def _series_partition_by() -> tuple:
 def _protected_price_observation_ids(db: Session) -> set[int]:
     """The latest observation per (series, source, price_type) - never
     deleted, at any age. Exact-print aware, so sibling prints sharing one
-    legacy card_id each keep their own last-known price."""
+    legacy card_id each keep their own last-known price.
+
+    Ordered (observed_at DESC, id DESC), matching the api service's
+    app.services.latest_prices/print_pricing: on an identical observed_at the
+    higher id wins, so retention protects exactly the row the read path
+    serves as latest."""
     row_number = (
         func.row_number()
         .over(
             partition_by=_series_partition_by(),
-            order_by=PriceObservation.observed_at.desc(),
+            order_by=(PriceObservation.observed_at.desc(), PriceObservation.id.desc()),
         )
         .label("rn")
     )

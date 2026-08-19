@@ -184,6 +184,73 @@ def test_legacy_observations_without_print_lineage_group_by_legacy_card(db_sessi
     assert [o.price_jpy for o in remaining if o.card_print_id == 11] == [5000]
 
 
+def test_protection_breaks_observed_at_ties_by_highest_id(db_session):
+    """On an identical observed_at the HIGHER id is protected, matching the
+    api service's app.services.latest_prices/print_pricing ordering
+    (observed_at DESC, id DESC). Pre-fix this window ordered by observed_at
+    alone, leaving the choice among tied rows unspecified. Mirrors the api
+    service's test of the same name."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    tied_at = NOW - timedelta(days=500)  # past the hard cutoff; only protection saves a row
+    older = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+        observed_at=tied_at,
+    )
+    newer = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=200,
+        observed_at=tied_at,
+    )
+    db_session.add_all([older, newer])
+    db_session.commit()
+    db_session.refresh(older)
+    db_session.refresh(newer)
+    assert newer.id > older.id
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 1
+
+    remaining = db_session.query(PriceObservation).all()
+    assert len(remaining) == 1
+    assert remaining[0].id == newer.id
+    assert remaining[0].price_jpy == 200
+
+
+def test_sibling_prints_break_observed_at_ties_independently(db_session):
+    """The tie-break applies per exact-print series - each sibling print
+    keeps its own highest-id row at the tied instant."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    tied_at = NOW - timedelta(days=500)
+    rows = [
+        print_observation(card, source, 11, price_jpy=100, observed_at=tied_at),
+        print_observation(card, source, 11, price_jpy=200, observed_at=tied_at),
+        print_observation(card, source, 22, price_jpy=5000, observed_at=tied_at),
+        print_observation(card, source, 22, price_jpy=6000, observed_at=tied_at),
+    ]
+    db_session.add_all(rows)
+    db_session.commit()
+    for row in rows:
+        db_session.refresh(row)
+
+    expected = {
+        11: max(r.id for r in rows if r.card_print_id == 11),
+        22: max(r.id for r in rows if r.card_print_id == 22),
+    }
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2
+
+    remaining = db_session.query(PriceObservation).all()
+    assert {r.card_print_id: r.id for r in remaining} == expected
+
+
 def test_open_and_watching_signal_events_are_protected(db_session):
     old = NOW - timedelta(days=500)
     db_session.add_all(

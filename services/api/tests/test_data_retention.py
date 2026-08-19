@@ -692,6 +692,116 @@ def test_legacy_and_print_observations_on_one_card_are_separate_series(db_sessio
     assert db_session.query(PriceObservation).count() == 2
 
 
+# --- price_observations: deterministic latest-row protection -----------------
+
+
+def test_protection_breaks_observed_at_ties_by_highest_id(db_session):
+    """On an identical observed_at, the HIGHER id is the protected row.
+
+    Pre-fix the protection window ordered by observed_at DESC alone, so
+    ROW_NUMBER's choice among tied rows was unspecified - retention could
+    protect a different row than app.services.latest_prices/print_pricing
+    serve as "latest" (both of which already order observed_at DESC, id
+    DESC), and then delete the row collectors actually see. Identical
+    timestamps are not hypothetical: a batch import stamps every row with the
+    same fetch timestamp.
+    """
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    tied_at = NOW - timedelta(days=500)  # past the hard cutoff, so only protection saves a row
+    older = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+        observed_at=tied_at,
+    )
+    newer = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=200,
+        observed_at=tied_at,
+    )
+    db_session.add_all([older, newer])
+    db_session.commit()
+    db_session.refresh(older)
+    db_session.refresh(newer)
+    assert newer.id > older.id  # premise: same series, same instant, different ids
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 1
+
+    remaining = db_session.query(PriceObservation).all()
+    assert len(remaining) == 1
+    assert remaining[0].id == newer.id
+    assert remaining[0].price_jpy == 200
+
+
+def test_protection_tie_break_agrees_with_latest_prices_read_path(db_session):
+    """The protected row and the row the read path calls "latest" must be the
+    same row - that agreement is the whole point of matching the ordering."""
+    from app.services.latest_prices import get_latest_price_map
+
+    card = make_card(db_session)
+    source = make_source(db_session, name="yuyutei")
+
+    tied_at = NOW - timedelta(days=500)
+    db_session.add_all(
+        [
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+                observed_at=tied_at,
+            ),
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=200,
+                observed_at=tied_at,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    latest = get_latest_price_map(db_session, [card.id])[card.id][("yuyutei", "sell")]
+
+    prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+
+    remaining = db_session.query(PriceObservation).all()
+    assert len(remaining) == 1
+    assert remaining[0].id == latest.id
+
+
+def test_sibling_prints_break_observed_at_ties_independently(db_session):
+    """The tie-break is applied per exact-print series, not globally - each
+    sibling print keeps its own highest-id row at the tied instant."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+    base, parallel = make_sibling_prints(db_session, card, source)
+
+    tied_at = NOW - timedelta(days=500)
+    rows = [
+        print_observation(card, source, base, price_jpy=100, observed_at=tied_at),
+        print_observation(card, source, base, price_jpy=200, observed_at=tied_at),
+        print_observation(card, source, parallel, price_jpy=5000, observed_at=tied_at),
+        print_observation(card, source, parallel, price_jpy=6000, observed_at=tied_at),
+    ]
+    db_session.add_all(rows)
+    db_session.commit()
+    for row in rows:
+        db_session.refresh(row)
+
+    expected = {
+        base[0].id: max(r.id for r in rows if r.card_print_id == base[0].id),
+        parallel[0].id: max(r.id for r in rows if r.card_print_id == parallel[0].id),
+    }
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2  # one per print
+
+    remaining = db_session.query(PriceObservation).all()
+    assert {r.card_print_id: r.id for r in remaining} == expected
+
+
 # --- portfolio_valuation_snapshots: weekly thinning -------------------------
 
 

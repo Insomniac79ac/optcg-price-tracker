@@ -283,7 +283,15 @@ def _protected_price_observation_ids(db: Session) -> set[int]:
         func.row_number()
         .over(
             partition_by=_series_partition_by(),
-            order_by=PriceObservation.observed_at.desc(),
+            # id.desc() as a tiebreaker, matching
+            # app.services.latest_prices/print_pricing exactly: when two
+            # observations in one series share an identical observed_at (e.g.
+            # a batch import stamping every row with the same fetch
+            # timestamp), ROW_NUMBER's order among tied rows is otherwise
+            # unspecified. Without it, retention could protect a different
+            # row than the one the read path serves as "latest" - and then
+            # delete the row collectors actually display.
+            order_by=(PriceObservation.observed_at.desc(), PriceObservation.id.desc()),
         )
         .label("rn")
     )
