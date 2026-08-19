@@ -4,6 +4,8 @@ retention policy."""
 
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.models import (
     AppLogEvent,
     CanonicalCard,
@@ -108,6 +110,45 @@ def print_observation(card, source, pair, *, price_jpy: int, observed_at) -> Pri
         price_jpy=price_jpy,
         observed_at=observed_at,
     )
+
+
+_THINNING_COLUMNS = ["id", "card_id", "card_print_id", "source_id", "price_type", "observed_at"]
+
+
+class _ReversedRows:
+    """Stands in for a Result whose .all() hands the rows back reversed."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+
+def reverse_thinning_fetch(db_session, monkeypatch):
+    """Make the daily-thinning fetch return its rows in reverse-id order.
+
+    The defect these tests pin is that the thinning survivor depended on the
+    order the database returned rows in. SQLite happens to return rows in
+    rowid order, which accidentally agrees with the id-ASC tiebreak - so on
+    SQLite alone a tie test passes either way and proves nothing. Reversing
+    the fetch stands in for the plan or backend that does not (an unordered
+    SELECT is guaranteed no order at all), and makes these tests fail
+    against the old observed_at-only sort.
+
+    Matched by exact column list, so only the daily-thinning SELECT is
+    touched: the portfolio-valuation fetch, the DELETE, and the tests' own
+    assertion queries all pass straight through.
+    """
+    real_execute = db_session.execute
+
+    def execute(statement, *args, **kwargs):
+        columns = getattr(statement, "selected_columns", None)
+        if columns is not None and [c.name for c in columns] == _THINNING_COLUMNS:
+            return _ReversedRows(real_execute(statement, *args, **kwargs).all()[::-1])
+        return real_execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(db_session, "execute", execute)
 
 
 # --- policy endpoint ---------------------------------------------------------
@@ -800,6 +841,173 @@ def test_sibling_prints_break_observed_at_ties_independently(db_session):
 
     remaining = db_session.query(PriceObservation).all()
     assert {r.card_print_id: r.id for r in remaining} == expected
+
+
+# --- price_observations: deterministic daily thinning ------------------------
+
+
+@pytest.mark.parametrize("reverse_fetch", [False, True])
+def test_thinning_breaks_observed_at_ties_by_lowest_id(db_session, monkeypatch, reverse_fetch):
+    """Within one thinning day, an identical observed_at is broken by LOWEST id.
+
+    The policy is unchanged - the EARLIEST observation of the day is kept.
+    Pre-fix the day's rows were sorted by observed_at alone, so among rows
+    sharing the earliest timestamp the survivor was whichever the database
+    returned first: the same data could thin to a different survivor on a
+    different run or backend. Identical timestamps are not hypothetical - a
+    batch import stamps every row with the same fetch timestamp.
+
+    Run under both fetch orders: the survivor must be the same row either
+    way. See reverse_thinning_fetch for why the reversed case is the one
+    that actually pins this on SQLite.
+    """
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    # Anchored to midnight UTC so the hour offset can't roll into the next
+    # calendar day - same reasoning as the thinning tests above.
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    tied_low = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+        observed_at=base_day,
+    )
+    tied_high = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=200,
+        observed_at=base_day,  # same instant as tied_low, inserted after it
+    )
+    later_same_day = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=300,
+        observed_at=base_day + timedelta(hours=8),
+    )
+    recent = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=999,
+        observed_at=NOW - timedelta(days=1),
+    )
+    db_session.add_all([tied_low, tied_high, later_same_day, recent])
+    db_session.commit()
+    for row in (tied_low, tied_high, later_same_day, recent):
+        db_session.refresh(row)
+    assert tied_high.id > tied_low.id  # premise: same series, same instant, different ids
+    survivor_id, survivor_price = tied_low.id, tied_low.price_jpy
+    recent_id = recent.id
+
+    if reverse_fetch:
+        reverse_thinning_fetch(db_session, monkeypatch)
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2  # 3 same-day rows thinned to 1
+
+    remaining = db_session.query(PriceObservation).order_by(PriceObservation.observed_at).all()
+    assert [o.id for o in remaining] == [survivor_id, recent_id]
+    assert remaining[0].price_jpy == survivor_price  # earliest of the day, lowest id of the tie
+
+
+@pytest.mark.parametrize("reverse_fetch", [False, True])
+def test_thinning_tie_break_prefers_earlier_timestamp_over_lower_id(
+    db_session, monkeypatch, reverse_fetch
+):
+    """id is only a tiebreaker - a strictly earlier observed_at still wins even
+    when it carries the HIGHER id, so keep-earliest is not quietly turned into
+    keep-lowest-id."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Inserted later (higher id) but observed EARLIER in the day.
+    later_row = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=110,
+        observed_at=base_day + timedelta(hours=8),
+    )
+    db_session.add(later_row)
+    db_session.commit()
+    earliest_row = PriceObservation(
+        card_id=card.id, source_id=source.id, price_type="sell", price_jpy=100,
+        observed_at=base_day,
+    )
+    db_session.add_all(
+        [
+            earliest_row,
+            PriceObservation(
+                card_id=card.id, source_id=source.id, price_type="sell", price_jpy=999,
+                observed_at=NOW - timedelta(days=1),
+            ),
+        ]
+    )
+    db_session.commit()
+    db_session.refresh(later_row)
+    db_session.refresh(earliest_row)
+    assert earliest_row.id > later_row.id  # premise: earliest row has the higher id
+
+    if reverse_fetch:
+        reverse_thinning_fetch(db_session, monkeypatch)
+
+    prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+
+    remaining = db_session.query(PriceObservation).order_by(PriceObservation.observed_at).all()
+    assert [o.price_jpy for o in remaining] == [100, 999]  # earliest kept, not lowest id
+
+
+@pytest.mark.parametrize("reverse_fetch", [False, True])
+def test_sibling_prints_break_thinning_ties_independently(
+    db_session, monkeypatch, reverse_fetch
+):
+    """The thinning tiebreak is applied per exact-print series, so it composes
+    with the exact-print day grouping: each sibling print keeps its own
+    lowest-id row at its own tied earliest instant."""
+    card = make_card(db_session)
+    source = make_source(db_session)
+    base, parallel = make_sibling_prints(db_session, card, source)
+
+    base_day = (NOW - timedelta(days=200)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    tied = [
+        print_observation(card, source, base, price_jpy=100, observed_at=base_day),
+        print_observation(card, source, base, price_jpy=200, observed_at=base_day),
+        print_observation(card, source, parallel, price_jpy=5000, observed_at=base_day),
+        print_observation(card, source, parallel, price_jpy=6000, observed_at=base_day),
+    ]
+    db_session.add_all(tied)
+    db_session.commit()
+    # A recent row per print, so the tied rows above are not incidentally
+    # protected as their series' latest.
+    db_session.add_all(
+        [
+            print_observation(card, source, base, price_jpy=130, observed_at=NOW - timedelta(days=1)),
+            print_observation(
+                card, source, parallel, price_jpy=5500, observed_at=NOW - timedelta(days=1)
+            ),
+        ]
+    )
+    db_session.commit()
+    for row in tied:
+        db_session.refresh(row)
+
+    expected_survivor = {
+        base[0].id: min(r.id for r in tied if r.card_print_id == base[0].id),
+        parallel[0].id: min(r.id for r in tied if r.card_print_id == parallel[0].id),
+    }
+    thinned_day = base_day.date()
+
+    if reverse_fetch:
+        reverse_thinning_fetch(db_session, monkeypatch)
+
+    apply_result = prune_tables(
+        db_session, dry_run=False, tables=["price_observations"], confirm="PRUNE", now=NOW
+    )
+    assert apply_result.results[0].rows_deleted == 2  # one per print
+
+    thinned = [
+        o
+        for o in db_session.query(PriceObservation).all()
+        if o.observed_at.date() == thinned_day
+    ]
+    assert {o.card_print_id: o.id for o in thinned} == expected_survivor
 
 
 # --- portfolio_valuation_snapshots: weekly thinning -------------------------

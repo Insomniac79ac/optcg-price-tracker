@@ -344,7 +344,16 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
     for rows in by_day_group.values():
         if len(rows) <= 1:
             continue
-        rows.sort(key=lambda r: r[1])  # earliest observation of the day is kept
+        # (observed_at ASC, id ASC): the earliest observation of the day is
+        # kept, exactly as before - id.asc() only breaks ties. When several
+        # rows in one series/day share an identical observed_at (a batch
+        # import stamping every row with the same fetch timestamp), which
+        # one survived was otherwise decided by the order the database
+        # happened to return rows in, so the same data could thin to a
+        # different survivor on a different run or backend. Deliberately
+        # ASC, mirroring the keep-earliest policy - the protection window
+        # above keeps the LATEST row and so tie-breaks DESC.
+        rows.sort(key=lambda r: (r[1], r[0]))  # observed_at ASC, id ASC
         candidate_ids.extend(row_id for row_id, _observed_at in rows[1:] if row_id not in protected_ids)
 
     return candidate_ids

@@ -243,7 +243,11 @@ def _price_observations_candidate_ids(db: Session, now: datetime) -> list[int]:
     for rows in by_day_group.values():
         if len(rows) <= 1:
             continue
-        rows.sort(key=lambda r: r[1])
+        # (observed_at ASC, id ASC) - keep-earliest policy unchanged, id
+        # only breaks identical-timestamp ties so the survivor no longer
+        # depends on database row-return order. Mirrors
+        # app.services.data_retention; see that module for the full note.
+        rows.sort(key=lambda r: (r[1], r[0]))
         candidate_ids.extend(row_id for row_id, _observed_at in rows[1:] if row_id not in protected_ids)
 
     return candidate_ids
