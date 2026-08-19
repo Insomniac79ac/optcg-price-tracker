@@ -38,8 +38,12 @@ describe("TopBar", () => {
     render(<TopBar />);
     const nav = screen.getByRole("navigation", { name: "Public sections" });
     const hrefs = Array.from(nav.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/", "/cards", "/market/movers"]);
+    expect(hrefs).toEqual(["/", "/cards"]);
     expect(hrefs).not.toContain("/admin");
+    // Market Index is a value on every card, not a destination: its page was
+    // a re-sorted copy of /cards and now redirects there (tranche 1A).
+    expect(hrefs).not.toContain("/market/movers");
+    expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });
 
   it("does not promise search over anything the palette cannot actually search", () => {

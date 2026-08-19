@@ -6,8 +6,9 @@ vi.mock("next-auth/react", () => ({
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn() }),
   usePathname: () => "/",
 }));
 
@@ -108,13 +109,12 @@ describe("DiscoverPage hero", () => {
     expect(screen.getByRole("link", { name: /explore the atlas/i })).toHaveAttribute("href", "/cards");
   });
 
-  it("links to /market/movers as the secondary Market Index action", async () => {
+  it("no longer offers a Market Index page action", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(screen.getByRole("link", { name: /view market index/i })).toHaveAttribute(
-      "href",
-      "/market/movers",
-    );
+    const { container } = render(<DiscoverPage />);
+    expect(screen.queryByRole("link", { name: /view market index/i })).not.toBeInTheDocument();
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
+    expect(hrefs).not.toContain("/market/movers");
   });
 
   it("shows real card artwork in the hero when the catalogue has images, capped at 3", async () => {
@@ -303,11 +303,106 @@ describe("DiscoverPage Market Index preview", () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
     render(<DiscoverPage />);
     expect(await screen.findByText(/a clearer view of the market/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /explore the market index/i })).toHaveAttribute(
+    // Into the catalogue ordered by index, not to a retired standalone page.
+    expect(screen.getByRole("link", { name: /cards by market index/i })).toHaveAttribute(
       "href",
-      "/market/movers",
+      "/cards?sort=index_desc",
     );
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+});
+
+describe("DiscoverPage card search", () => {
+  function searchField() {
+    return screen.getByRole("searchbox", { name: /search cards by name or code/i });
+  }
+
+  async function renderDiscover() {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
+    render(<DiscoverPage />);
+    await screen.findByText(/your collection has a story/i);
+  }
+
+  it("puts a labelled card search in the hero", async () => {
+    await renderDiscover();
+    expect(searchField()).toBeInTheDocument();
+    // Examples, so a first-time visitor can see what the field accepts.
+    expect(searchField()).toHaveAttribute("placeholder", expect.stringContaining("OP01-001"));
+  });
+
+  it("submits an English name to the catalogue on Enter", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "kaido" } });
+    fireEvent.submit(searchField().closest("form")!);
+
+    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
+  });
+
+  it("submits from the visible Search action too", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "kaido" } });
+    fireEvent.click(within(searchField().closest("form")!).getByRole("button", { name: "Search" }));
+
+    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
+  });
+
+  it("encodes a card code", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "OP01-001" } });
+    fireEvent.submit(searchField().closest("form")!);
+
+    expect(push).toHaveBeenCalledWith("/cards?q=OP01-001");
+  });
+
+  it("encodes a Japanese name", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "カイドウ" } });
+    fireEvent.submit(searchField().closest("form")!);
+
+    expect(push).toHaveBeenCalledWith(`/cards?q=${encodeURIComponent("カイドウ")}`);
+  });
+
+  it("trims whitespace around the term before building q", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "  kaido  " } });
+    fireEvent.submit(searchField().closest("form")!);
+
+    // The padding never reaches the URL - no %20 on either end, and the
+    // catalogue receives the same term it would from a clean entry.
+    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
+  });
+
+  it("never builds a meaningless q from an empty or whitespace query", async () => {
+    await renderDiscover();
+    fireEvent.submit(searchField().closest("form")!);
+    expect(push).toHaveBeenCalledWith("/cards");
+
+    push.mockClear();
+    fireEvent.change(searchField(), { target: { value: "   " } });
+    fireEvent.submit(searchField().closest("form")!);
+    expect(push).toHaveBeenCalledWith("/cards");
+  });
+
+  it("queries nothing itself - it is an entry point, not a second search", async () => {
+    await renderDiscover();
+    const callsBefore = fetchPrintCatalogue.mock.calls.length;
+
+    fireEvent.change(searchField(), { target: { value: "kaido" } });
+    fireEvent.change(searchField(), { target: { value: "kaidou" } });
+
+    // No suggestion request, no results dropdown, no authenticated /api/search.
+    expect(fetchPrintCatalogue.mock.calls.length).toBe(callsBefore);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("routes only into /cards, never at a print or legacy card id", async () => {
+    await renderDiscover();
+    fireEvent.change(searchField(), { target: { value: "kaido" } });
+    fireEvent.submit(searchField().closest("form")!);
+
+    for (const [target] of push.mock.calls) {
+      expect(target).toMatch(/^\/cards(\?|$)/);
+    }
   });
 });
 

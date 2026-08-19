@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -102,7 +102,6 @@ function PrintsCataloguePageFallback() {
  * rather than merged into one row.
  */
 function PrintsCataloguePageInner() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { filters, offset } = parseCatalogueState(searchParams);
@@ -154,8 +153,32 @@ function PrintsCataloguePageInner() {
 
   const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
 
+  /** Commits catalogue state to the URL - the only state this page keeps, since
+   * everything above reads back out of `useSearchParams()`.
+   *
+   * Deliberately the native History API rather than `router.push`, which the
+   * App Router silently drops on this route. /cards is statically prerendered,
+   * and any *visible* `<Link href="/cards">` prefetches that static entry into
+   * the client router cache - the header's own public nav does exactly that
+   * from `md` up. Once it is cached, a `router.push` issued from a URL that
+   * already carries search params (`?q=...`) is answered with a replaceState
+   * back to the URL you are already on: the address bar never changes, so
+   * `useSearchParams()` never changes, so the grid never refetches. Below `md`
+   * the identical push works, because those links are `display:none`, never
+   * intersect, and so never prefetch /cards.
+   *
+   * Reproduced against a production build at 767px (works) and 769px (does
+   * not). It was not specific to clearing: submitting a second search from a
+   * `?q=` URL and the toolbar's own "Clear all" were dead the same way.
+   *
+   * Next.js supports the native History API for precisely this case - a
+   * same-route search-param update - and keeps `useSearchParams()`, its own
+   * router state and the back/forward buttons in sync with it. The explicit
+   * scroll-to-top just preserves `router.push`'s default, which pagination
+   * relies on. */
   function navigate(nextFilters: PrintCatalogueFilters, nextOffset: number) {
-    router.push(`${pathname}${buildQueryString(nextFilters, nextOffset)}`);
+    window.history.pushState(null, "", `${pathname}${buildQueryString(nextFilters, nextOffset)}`);
+    window.scrollTo({ top: 0 });
   }
 
   const emptyFacets = {

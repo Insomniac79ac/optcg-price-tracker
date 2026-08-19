@@ -6,8 +6,14 @@
  * to index. Deliberately only stable, canonical, parameter-free routes:
  * /prints/:id detail pages are real public pages but enumerating them would
  * mean querying the catalogue at build or request time, which is more
- * machinery than an MVP sitemap needs. They stay crawlable via /cards. */
-export const PUBLIC_INDEXABLE_ROUTES = ["/", "/cards", "/market/movers"] as const;
+ * machinery than an MVP sitemap needs. They stay crawlable via /cards.
+ *
+ * /market/movers left this list on 2026-08-19 (tranche 1A): it is a temporary
+ * redirect into /cards?sort=index_desc, not a destination of its own, and a
+ * sitemap should only claim pages that answer with a page. It is deliberately
+ * NOT added to the disallow list below - a crawler that already knows the URL
+ * should be allowed to follow the redirect and find /cards. */
+export const PUBLIC_INDEXABLE_ROUTES = ["/", "/cards"] as const;
 
 /** Path prefixes a crawler is asked to stay out of: private collector data,
  * the admin surface, internal market analytics, the API proxy routes, and the

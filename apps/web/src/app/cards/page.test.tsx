@@ -3,8 +3,20 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const push = vi.fn();
 let currentSearch = "";
+
+/** The page commits catalogue state with the native History API rather than
+ * router.push - see the `navigate` comment in ./page.tsx for why. These spies
+ * are what a navigation looks like from a test's point of view. */
+const pushState = vi.spyOn(window.history, "pushState");
+// jsdom has no layout, so window.scrollTo is unimplemented and would log on
+// every navigation.
+vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+
+/** Every URL the page has navigated to, in order. */
+function navigations(): string[] {
+  return pushState.mock.calls.map((call) => String(call[2]));
+}
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
@@ -12,7 +24,9 @@ vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, replace: vi.fn() }),
+  // The page itself no longer routes through useRouter, but AppShell (the
+  // header) still does for its "g then <key>" goto shortcuts.
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/cards",
   useSearchParams: () => new URLSearchParams(currentSearch),
 }));
@@ -299,7 +313,7 @@ describe("print catalogue page", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "OP01-013" } });
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
-    expect(push).toHaveBeenCalledWith("/cards?q=OP01-013");
+    expect(navigations()).toEqual(["/cards?q=OP01-013"]);
   });
 
   it("passes an English-name search to the server", async () => {
@@ -310,7 +324,7 @@ describe("print catalogue page", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Sanji" } });
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
-    expect(push).toHaveBeenCalledWith("/cards?q=Sanji");
+    expect(navigations()).toEqual(["/cards?q=Sanji"]);
   });
 
   it("passes a Japanese-name search to the server", async () => {
@@ -321,7 +335,35 @@ describe("print catalogue page", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "サンジ" } });
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
-    expect(push).toHaveBeenCalledWith(`/cards?q=${encodeURIComponent("サンジ")}`);
+    expect(navigations()).toEqual([`/cards?q=${encodeURIComponent("サンジ")}`]);
+  });
+
+  it("does not search while the visitor is still typing", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL, SANJI_BASE]));
+    render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+    const callsAfterLoad = fetchPrintCatalogue.mock.calls.length;
+
+    // Eight characters, no submit: still one page load's worth of requests
+    // and not one navigation. Clearing is the only edit that commits itself.
+    for (const value of ["O", "OP", "OP0", "OP01", "OP01-", "OP01-0", "OP01-01", "OP01-013"]) {
+      fireEvent.change(screen.getByRole("searchbox"), { target: { value } });
+    }
+
+    expect(navigations()).toEqual([]);
+    expect(fetchPrintCatalogue.mock.calls.length).toBe(callsAfterLoad);
+  });
+
+  it("submits on Enter as well as the Search button", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    const box = screen.getByRole("searchbox");
+    fireEvent.change(box, { target: { value: "Sanji" } });
+    fireEvent.submit(box.closest("form")!);
+
+    expect(navigations()).toEqual(["/cards?q=Sanji"]);
   });
 
   it("forwards a search term from the URL to the API, returning both siblings", async () => {
@@ -361,7 +403,7 @@ describe("print catalogue page", () => {
 
     // The underlying filter still works, from the same real facets.
     fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SEC" } });
-    expect(push).toHaveBeenCalledWith("/cards?rarity=SEC");
+    expect(navigations()).toEqual(["/cards?rarity=SEC"]);
   });
 
   it("sends the treatment filter to the server", async () => {
@@ -370,7 +412,7 @@ describe("print catalogue page", () => {
     await screen.findByRole("link", { name: /Sanji/ });
 
     fireEvent.change(screen.getByLabelText(/Treatment/), { target: { value: "parallel" } });
-    expect(push).toHaveBeenCalledWith("/cards?treatment=parallel");
+    expect(navigations()).toEqual(["/cards?treatment=parallel"]);
   });
 
   it("draws the intro card fan from prints the page already loaded, with no extra request", async () => {
@@ -531,5 +573,157 @@ describe("print catalogue page", () => {
     // there is no card to draw - the intro fan needs three prints and gets
     // none here.
     expect(container.querySelectorAll("img:not([data-brand-asset])")).toHaveLength(0);
+  });
+});
+
+/** Clearing a submitted search restores the catalogue on the spot - no second
+ * trip to the Search button (tranche 1A). The URL stays the single source of
+ * truth: clearing drops `q` and nothing else. */
+describe("clearing the catalogue search", () => {
+  function clearButton() {
+    return screen.getByRole("button", { name: "Clear search" });
+  }
+
+  async function renderWith(search: string) {
+    currentSearch = search;
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL, SANJI_BASE]));
+    const result = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+    return result;
+  }
+
+  it("shows the URL's term in the field, and no clear control without one", async () => {
+    await renderWith("");
+    expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Clear search" })).not.toBeInTheDocument();
+  });
+
+  it("shows a URL-derived term in the field", async () => {
+    await renderWith("q=kaido");
+    expect(screen.getByRole("searchbox")).toHaveValue("kaido");
+    expect(clearButton()).toBeInTheDocument();
+  });
+
+  it("drops q when the clear control is pressed", async () => {
+    await renderWith("q=kaido");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards"]);
+  });
+
+  it("drops q when the last character is deleted", async () => {
+    await renderWith("q=k");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
+
+    expect(navigations()).toEqual(["/cards"]);
+  });
+
+  it("drops q on select-all + delete of a longer term", async () => {
+    await renderWith("q=kaido");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "" } });
+
+    expect(navigations()).toEqual(["/cards"]);
+  });
+
+  it("needs no second submit - the navigation is the restore", async () => {
+    await renderWith("q=kaido");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards"]);
+  });
+
+  it("keeps the treatment filter", async () => {
+    await renderWith("q=kaido&treatment=parallel");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards?treatment=parallel"]);
+  });
+
+  it("keeps the rarity filter", async () => {
+    await renderWith("q=kaido&rarity=SR");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards?rarity=SR"]);
+  });
+
+  it("keeps the sort", async () => {
+    await renderWith("q=kaido&sort=index_desc");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards?sort=index_desc"]);
+  });
+
+  it("keeps every non-q parameter when they are combined", async () => {
+    await renderWith("q=kaido&treatment=parallel&rarity=SR&sort=index_desc");
+    fireEvent.click(clearButton());
+
+    expect(navigations()).toEqual(["/cards?treatment=parallel&rarity=SR&sort=index_desc"]);
+  });
+
+  it("leaves no empty ?q= behind", async () => {
+    await renderWith("q=kaido&treatment=parallel&sort=index_desc");
+    fireEvent.click(clearButton());
+
+    const [target] = navigations();
+    expect(target).not.toMatch(/[?&]q=/);
+    expect(target).toBe("/cards?treatment=parallel&sort=index_desc");
+  });
+
+  it("re-requests the catalogue without q once the URL has changed", async () => {
+    // The page reads its state from the URL, so the restore *is* the
+    // navigation - this proves the resulting URL fetches an unfiltered
+    // catalogue rather than leaving the filtered response on screen.
+    await renderWith("q=kaido&treatment=parallel");
+    await waitFor(() =>
+      expect(fetchPrintCatalogue).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "kaido", treatment: "parallel" }),
+      ),
+    );
+
+    fireEvent.click(clearButton());
+    expect(navigations()).toEqual(["/cards?treatment=parallel"]);
+
+    // What the browser then renders for that URL.
+    currentSearch = "treatment=parallel";
+    fetchPrintCatalogue.mockClear();
+    render(<PrintsCataloguePage />);
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
+    expect(fetchPrintCatalogue).toHaveBeenCalledWith(
+      expect.objectContaining({ q: undefined, treatment: "parallel" }),
+    );
+  });
+
+  it("does not navigate when an unsubmitted draft is cleared", async () => {
+    await renderWith("");
+    const box = screen.getByRole("searchbox");
+    fireEvent.change(box, { target: { value: "kaido" } });
+    fireEvent.change(box, { target: { value: "" } });
+
+    // There is no active search to restore from, so clearing is not a
+    // navigation - it is just an empty box.
+    expect(navigations()).toEqual([]);
+  });
+
+  it("follows the URL when a back navigation changes the committed term", async () => {
+    const { rerender } = await renderWith("q=kaido");
+    const box = screen.getByRole("searchbox");
+    expect(box).toHaveValue("kaido");
+
+    // A typed-but-unsubmitted draft is what a browser Back has to overrule:
+    // the URL, not the box, is the source of truth for `q`.
+    fireEvent.change(box, { target: { value: "kaid" } });
+    currentSearch = "q=sanji";
+    rerender(<PrintsCataloguePage />);
+
+    expect(screen.getByRole("searchbox")).toHaveValue("sanji");
+  });
+
+  it("leaves typing alone on a re-render that did not change the term", async () => {
+    const { rerender } = await renderWith("q=kaido");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "kaido parallel" } });
+
+    rerender(<PrintsCataloguePage />);
+
+    expect(screen.getByRole("searchbox")).toHaveValue("kaido parallel");
   });
 });

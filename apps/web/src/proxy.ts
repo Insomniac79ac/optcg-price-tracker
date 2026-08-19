@@ -33,8 +33,11 @@ import {
 // /market/opportunities, /market/signal-events, /market/report) join them,
 // and /cards/:id+ is matched to answer not-found rather than redirect.
 //
-// The public collector product - /, /cards, /market/movers and /prints/:id -
-// is deliberately NOT matched here and stays reachable while signed out.
+// The public collector product - /, /cards and /prints/:id - is deliberately
+// NOT matched here and stays reachable while signed out. /market/movers is
+// unmatched for the same reason: it is a temporary redirect into
+// /cards?sort=index_desc (tranche 1A), and a public redirect must not be
+// bounced through /sign-in.
 //
 // A signed-out visitor is sent to /sign-in (never /market/movers) with the
 // full original path + query preserved as callbackUrl - see

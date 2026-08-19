@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -114,12 +115,11 @@ export default function DiscoverPage() {
               every card fits into the wider market.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <DiscoverCardSearch />
+
+            <div className="mt-4 flex flex-wrap gap-3">
               <Link href="/cards" className={PRIMARY_LINK_CLASS}>
                 Explore the Atlas
-              </Link>
-              <Link href="/market/movers" className={SECONDARY_LINK_CLASS}>
-                View Market Index
               </Link>
             </div>
           </div>
@@ -143,6 +143,71 @@ export default function DiscoverPage() {
         <MarketIndexPreview />
       </main>
     </div>
+  );
+}
+
+/** The longest a query is carried into /cards - the catalogue clamps `q` to
+ * the same length when it reads it back out of the URL (see
+ * parseCatalogueState in app/cards/page.tsx), so this simply avoids handing
+ * it a term it would truncate anyway. */
+const MAX_SEARCH_LENGTH = 128;
+
+/** The URL a Discover search lands on. Always the public catalogue with a
+ * `q` filter - never a card/print id, and never a guess at which printing
+ * was meant: /cards resolves the term server-side against card code, English
+ * name and Japanese name, and every result it renders is one exact printing.
+ *
+ * A blank or whitespace-only term produces plain /cards, never `?q=` with
+ * nothing in it. */
+export function buildCardsSearchHref(term: string): string {
+  const q = term.trim().slice(0, MAX_SEARCH_LENGTH);
+  return q ? `/cards?q=${encodeURIComponent(q)}` : "/cards";
+}
+
+/** Discover's card search - an entry point into /cards, not a search of its
+ * own.
+ *
+ * It deliberately queries nothing: no request, no suggestions, no dropdown
+ * of results. Submitting navigates to /cards with the term as `q` and the
+ * catalogue does what it already does. That keeps one public search
+ * implementation (the print catalogue's) rather than a second one here, and
+ * keeps this reachable for a signed-out visitor, which the authenticated
+ * /api/search is not.
+ *
+ * Styled as the catalogue's own search field is (see CatalogueIntro) so the
+ * two read as the same control in two places, and sized to the hero column
+ * rather than spanning it - this is a way in, not the page's subject. */
+function DiscoverCardSearch() {
+  const router = useRouter();
+  const [term, setTerm] = useState("");
+
+  return (
+    <form
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        router.push(buildCardsSearchHref(term));
+      }}
+      className="mt-6 flex max-w-md flex-col gap-2 sm:flex-row"
+    >
+      <input
+        type="search"
+        name="q"
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        // Examples rather than instructions: one English name, one card
+        // code, one Japanese name is the whole of what /cards matches on.
+        placeholder="Kaido, OP01-001, カイドウ…"
+        aria-label="Search cards by name or code"
+        className="min-w-0 flex-1 rounded-control border border-border-default bg-bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
+      />
+      <button
+        type="submit"
+        className="shrink-0 rounded-control bg-accent-teal px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
+      >
+        Search
+      </button>
+    </form>
   );
 }
 
@@ -343,11 +408,14 @@ function MarketIndexPreview() {
         The Market Index combines eligible references from Yuyu-Tei and SNKRDUNK so you can
         understand the context around a card without reducing collecting to a single price.
       </p>
+      {/* Into the catalogue ordered by index, not to a second catalogue page
+          of its own: the Market Index is a value each printing carries, and
+          /cards already shows it on every tile and sorts by it. */}
       <Link
-        href="/market/movers"
+        href="/cards?sort=index_desc"
         className="mt-3 inline-flex text-sm font-medium text-accent-teal hover:text-accent-teal-hover"
       >
-        Explore the Market Index →
+        See cards by Market Index →
       </Link>
     </section>
   );

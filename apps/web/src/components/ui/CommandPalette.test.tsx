@@ -134,10 +134,10 @@ describe("CommandPalette", () => {
     await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
-      target: { value: "market index" },
+      target: { value: "catalogue" },
     });
 
-    await waitFor(() => expect(screen.getByText("Market Index")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Cards")).toBeInTheDocument());
     expect(screen.queryByText("Discover")).not.toBeInTheDocument();
   });
 
@@ -466,7 +466,20 @@ describe("CommandPalette - public card search (signed out)", () => {
     expect(await screen.findByText("Commands")).toBeInTheDocument();
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Cards")).toBeInTheDocument();
-    expect(screen.getByText("Market Index")).toBeInTheDocument();
+  });
+
+  it("no longer offers the retired Market Index page as a command", async () => {
+    render(<CommandPalette open onClose={vi.fn()} />);
+    await screen.findByText("Commands");
+
+    expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
+
+    // Including when someone goes looking for it by name - the static list
+    // has nothing to offer, and card search must not invent a page result.
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
+      target: { value: "market index" },
+    });
+    await waitFor(() => expect(screen.queryByText("Market Index")).not.toBeInTheDocument());
   });
 
   it("does not offer authenticated concepts", async () => {

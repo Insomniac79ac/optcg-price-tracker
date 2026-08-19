@@ -17,7 +17,13 @@
 // the old Analytics group, Dashboard) have been removed from this registry
 // entirely, matching their removal from SidebarNav - their routes still
 // exist, they're just not linked from either navigation surface pending a
-// later product decision (collector-blueprint.pdf Phase 3).
+// later product decision (collector-blueprint.pdf Phase 3). The public
+// "Market Index" page command went the same way on 2026-08-19 (tranche 1A),
+// alongside its nav entry - /market/movers is a temporary redirect into
+// /cards?sort=index_desc now, and a command that only re-routes to another
+// command's destination is noise. Card search in the palette is unaffected:
+// it is a live lookup over GET /prints (see lib/publicCardSearch.ts), not
+// part of this static list.
 
 export type CommandGroup = "Navigate" | "Cards" | "Collection" | "Wishlist" | "Grading" | "Market" | "Admin";
 
@@ -63,16 +69,6 @@ export const COMMAND_REGISTRY: Command[] = [
     keywords: ["find", "lookup", "browse", "catalogue"],
     scope: "public",
   }),
-  cmd({
-    id: "nav-market-index",
-    label: "Market Index",
-    description: "Market Index movers across Yuyu-Tei and SNKRDUNK",
-    group: "Market",
-    route_path: "/market/movers",
-    keywords: ["market", "index", "price"],
-    scope: "public",
-  }),
-
   // --- Collector -----------------------------------------------------------
   cmd({
     id: "nav-collection-table",

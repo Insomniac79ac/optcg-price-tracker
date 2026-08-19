@@ -48,7 +48,8 @@ describe("AppShell navigation rail", () => {
 
     const nav = screen.getByRole("navigation", { name: "Public sections" });
     const hrefs = Array.from(nav.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/", "/cards", "/market/movers"]);
+    expect(hrefs).toEqual(["/", "/cards"]);
     expect(hrefs).not.toContain("/admin");
+    expect(hrefs).not.toContain("/market/movers");
   });
 });

@@ -30,11 +30,21 @@ describe("SidebarNav - signed out", () => {
     useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
   });
 
-  it("shows only Discover, Cards and Market Index", () => {
+  it("shows only Discover and Cards", () => {
     render(<SidebarNav />);
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Cards")).toBeInTheDocument();
-    expect(screen.getByText("Market Index")).toBeInTheDocument();
+  });
+
+  it("no longer offers the retired Market Index page", () => {
+    // This component is also the mobile drawer's contents (see AppShell), so
+    // this is the mobile navigation assertion too.
+    const { container } = render(<SidebarNav />);
+    expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
+    const hrefs = Array.from(container.querySelectorAll("a")).map((a) =>
+      a.getAttribute("href"),
+    );
+    expect(hrefs).not.toContain("/market/movers");
   });
 
   it("does not show collector-authenticated links", () => {
@@ -71,7 +81,7 @@ describe("SidebarNav - signed in (collector session)", () => {
     render(<SidebarNav />);
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Cards")).toBeInTheDocument();
-    expect(screen.getByText("Market Index")).toBeInTheDocument();
+    expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });
 
   it("additionally shows My Collection, Wishlist, Grading and Activity", () => {

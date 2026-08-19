@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
 import { selectHeroFanPrints, utcDayKey } from "@/lib/heroFan";
@@ -47,7 +47,9 @@ function useIsNarrow(): boolean {
  *
  * Search is presentation-only: the form hands the trimmed term to `onSearch`,
  * and the page turns that into the same `?q=` URL navigation it always did.
- * The server still matches card code, English name and Japanese name.
+ * The server still matches card code, English name and Japanese name. See
+ * CatalogueSearchField for the one asymmetry - emptying the box commits on
+ * its own, while every other edit still waits for Enter/Search.
  */
 export function CatalogueIntro({
   query,
@@ -79,12 +81,6 @@ export function CatalogueIntro({
     () => selectHeroFanPrints(heroPrints, dayKey),
     [heroPrints, dayKey],
   );
-
-  function submitSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const entered = new FormData(e.currentTarget).get("q");
-    onSearch(typeof entered === "string" ? entered.trim() : "");
-  }
 
   return (
     <section
@@ -134,43 +130,7 @@ export function CatalogueIntro({
 
           <p className="mt-2 text-sm text-text-secondary sm:text-[15px]">Two markets. One index.</p>
 
-          {/* Stacks below `sm`: at 390px an inline "Search" button leaves the
-              input ~225px wide, which truncates the placeholder mid-word and
-              makes the primary interaction feel cramped. Full-width input
-              over a full-width button keeps the placeholder legible. From
-              `sm` up there is room for one row. */}
-          <form
-            onSubmit={submitSearch}
-            role="search"
-            className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row"
-          >
-            {/* Uncontrolled, keyed on the committed term: the URL is the single
-                source of truth for `q`, and re-keying resets the box whenever a
-                back/forward navigation or "Clear all" changes it - no state to
-                keep in sync, so no sync effect. */}
-            <input
-              key={query}
-              type="search"
-              name="q"
-              defaultValue={query}
-              // Presentation only - the server matches card code, English name
-              // and Japanese name either way. The long form does not fit a
-              // 390px field, so narrow viewports get the short one.
-              placeholder={
-                narrow
-                  ? "Search cards by code or name…"
-                  : "Search by card code, English or Japanese name…"
-              }
-              aria-label="Search prints by card code, English name, or Japanese name"
-              className="min-w-0 flex-1 rounded-control border border-border-default bg-bg-page/75 px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-control bg-accent-teal px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
-            >
-              Search
-            </button>
-          </form>
+          <CatalogueSearchField query={query} narrow={narrow} onSearch={onSearch} />
 
           <div className="mt-3 flex flex-col gap-0.5 text-xs text-text-muted sm:flex-row sm:items-center sm:gap-2.5">
             {totalPrints !== null && (
@@ -191,6 +151,140 @@ export function CatalogueIntro({
         {fanPrints.length > 0 && <HeroCardFan prints={fanPrints} />}
       </div>
     </section>
+  );
+}
+
+/** The catalogue's search box: an input, a clear (x) control, and a Search
+ * button.
+ *
+ * The URL is still the single source of truth for `q`: whenever the committed
+ * `query` prop changes - a back/forward navigation, the toolbar's "Clear
+ * all", a shared link - the box is reset to it during render (React's own
+ * "adjusting state when a prop changes" pattern, not an effect, which this
+ * repo lints against). Deliberately not a `key` remount, which would destroy
+ * the input the moment `q` cleared and drop focus on the floor right after
+ * someone pressed the clear button.
+ *
+ * Two ways out, deliberately asymmetric:
+ *
+ * - Submitting (Enter, or the Search button) commits whatever is typed. This
+ *   is still the only way to *start* or *change* a search: nothing fires per
+ *   keystroke, so a visitor typing "OP01-013" costs one request, not eight.
+ * - Emptying the box commits on its own, the moment it happens - by the x
+ *   control, by backspacing the last character, or by select-all + delete,
+ *   all of which are the same `onChange`. Clearing a search is a complete
+ *   gesture in itself ("show me everything again"), and making someone press
+ *   Search to be shown *more* results was the friction this fixes. It only
+ *   fires when a committed `query` actually exists, so clearing an
+ *   unsubmitted draft navigates nowhere.
+ *
+ * `onSearch("")` drops `q` and keeps every other filter and the sort, because
+ * the page rebuilds the query string from its current filters (see
+ * buildQueryString in app/cards/page.tsx) rather than resetting them - and an
+ * empty `q` is omitted outright, never left behind as a bare `?q=`.
+ *
+ * The x is a real button with an accessible name and a tab stop; the browser's
+ * own `type="search"` cancel widget is suppressed because it has neither, and
+ * two clear affordances in one field is one too many.
+ */
+function CatalogueSearchField({
+  query,
+  narrow,
+  onSearch,
+}: {
+  query: string;
+  narrow: boolean;
+  onSearch: (next: string) => void;
+}) {
+  const [value, setValue] = useState(query);
+  // What the URL last said, so a *changed* committed term can be told apart
+  // from a re-render carrying the same one (which must leave typing alone).
+  const [committed, setCommitted] = useState(query);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  if (query !== committed) {
+    setCommitted(query);
+    setValue(query);
+  }
+
+  function commitIfCleared(next: string) {
+    // `query`, not `value`: only a search the catalogue is actually filtered
+    // by is worth a navigation to undo.
+    if (query && next.trim() === "") onSearch("");
+  }
+
+  function handleChange(next: string) {
+    setValue(next);
+    commitIfCleared(next);
+  }
+
+  function handleClear() {
+    setValue("");
+    commitIfCleared("");
+    inputRef.current?.focus();
+  }
+
+  return (
+    // Stacks below `sm`: at 390px an inline "Search" button leaves the input
+    // ~225px wide, which truncates the placeholder mid-word and makes the
+    // primary interaction feel cramped. Full-width input over a full-width
+    // button keeps the placeholder legible. From `sm` up there is room for
+    // one row.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSearch(value.trim());
+      }}
+      role="search"
+      className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row"
+    >
+      <div className="relative min-w-0 flex-1">
+        <input
+          ref={inputRef}
+          type="search"
+          name="q"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          // Presentation only - the server matches card code, English name
+          // and Japanese name either way. The long form does not fit a 390px
+          // field, so narrow viewports get the short one.
+          placeholder={
+            narrow
+              ? "Search cards by code or name…"
+              : "Search by card code, English or Japanese name…"
+          }
+          aria-label="Search prints by card code, English name, or Japanese name"
+          className="w-full min-w-0 rounded-control border border-border-default bg-bg-page/75 py-2.5 pl-3.5 pr-10 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal [&::-webkit-search-cancel-button]:appearance-none"
+        />
+        {value !== "" && (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label="Clear search"
+            title="Clear search"
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-control text-text-faint transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-1 focus-visible:ring-accent-teal"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <button
+        type="submit"
+        className="shrink-0 rounded-control bg-accent-teal px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
+      >
+        Search
+      </button>
+    </form>
   );
 }
 

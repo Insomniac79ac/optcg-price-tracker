@@ -7,9 +7,11 @@
 // grading submissions, personal analytics), plus the internal market-analytics
 // surfaces that are not part of the collector MVP.
 //
-// The public collector product is exactly /, /cards, /market/movers and
-// /prints/:id - those are deliberately absent here and must stay reachable
-// while signed out.
+// The public collector product is exactly / and /cards, plus /prints/:id -
+// those are deliberately absent here and must stay reachable while signed
+// out. So is /market/movers, which since 2026-08-19 is a temporary redirect
+// into /cards?sort=index_desc rather than a page: guarding it would bounce a
+// signed-out visitor to /sign-in on the way to a public catalogue.
 //
 // Added 2026-08-18 for the MVP launch cleanup:
 //   /search           - a signed-in "command center" over collection,

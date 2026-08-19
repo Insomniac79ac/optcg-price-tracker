@@ -24,13 +24,21 @@ interface NavGroup {
 // command-center search, but is no longer the primary card-browsing surface
 // (see src/app/search/page.tsx's redirect). There is still no "Sets" entry -
 // see collector-blueprint.pdf.
+//
+// "Market Index" was removed here on 2026-08-19 (tranche 1A). It pointed at
+// /market/movers, which had become the same print catalogue as /cards under a
+// different sort - a second public catalogue surface, not a second
+// destination. The *metric* is untouched: every tile and every print page
+// still leads with its Market Index, and /market/movers now temporarily
+// redirects into /cards?sort=index_desc (see app/market/movers/page.tsx). The
+// route is expected back once there is enough history for real movement
+// analytics, which is when it will earn a nav entry again.
 // Exported so TopBar's desktop public nav renders exactly this list rather
 // than declaring a second one that could drift (or quietly gain an admin
 // entry) - see components/ui/TopBar.tsx.
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Discover" },
   { href: "/cards", label: "Cards" },
-  { href: "/market/movers", label: "Market Index" },
 ];
 
 // Collector tier - only shown once a session exists. Trading/internal pages

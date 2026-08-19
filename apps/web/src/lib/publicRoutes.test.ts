@@ -25,7 +25,19 @@ function isMatched(pathname: string): boolean {
 
 describe("public indexable routes", () => {
   it("is exactly the public collector surface", () => {
-    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/cards", "/market/movers"]);
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/cards"]);
+  });
+
+  it("never advertises a route that only redirects somewhere else", () => {
+    // /market/movers is a temporary redirect into /cards?sort=index_desc
+    // (tranche 1A), so it is not a standalone indexable destination.
+    expect([...PUBLIC_INDEXABLE_ROUTES]).not.toContain("/market/movers");
+  });
+
+  it("still advertises the two pages the public product actually has", () => {
+    // Guards against the removal above quietly taking a real page with it.
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toContain("/");
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toContain("/cards");
   });
 
   it("never advertises a route the request guard blocks", () => {
@@ -67,7 +79,10 @@ describe("crawler disallow list", () => {
     expect([...CRAWLER_DISALLOWED_PREFIXES]).not.toContain("/cards");
   });
 
-  it("does not disallow the public Market Index", () => {
+  it("does not block the /market/movers redirect", () => {
+    // Dropped from the sitemap, but deliberately still crawlable: a crawler
+    // that already knows the URL should be allowed to follow the redirect
+    // through to /cards rather than be told the path is off limits.
     for (const disallowed of CRAWLER_DISALLOWED_PREFIXES) {
       expect("/market/movers".startsWith(disallowed)).toBe(false);
     }
