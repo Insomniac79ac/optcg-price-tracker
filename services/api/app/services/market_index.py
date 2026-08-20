@@ -45,7 +45,7 @@ from sqlalchemy.orm import Session
 from app.models import PriceObservation
 from app.schemas import MarketIndexOut, MarketIndexSourceValueOut
 from app.services.latest_prices import get_latest_price_map
-from app.services.source_semantics import classify_observation
+from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
 
 INDEX_VERSION = 1
 CALCULATION_METHOD = "median_of_sources"
@@ -298,6 +298,14 @@ def _compute_index_fields(
 
     return {
         "index_version": INDEX_VERSION,
+        # Which source-normalisation ruleset interpreted the observations
+        # above - re-exported from app.services.source_semantics, never
+        # restated, and versioned independently of INDEX_VERSION because the
+        # combination algorithm and the per-source rules change on different
+        # cadences. Emitted here, on the one path both the card-keyed and
+        # print-keyed payloads are built from, so the two can never report
+        # different rulesets for the same observation.
+        "source_semantics_version": SOURCE_SEMANTICS_VERSION,
         "index_value_jpy": index_value,
         "calculation_method": CALCULATION_METHOD,
         "source_count": len(eligible),

@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.models import CanonicalCard, Card, CardPrint, PriceObservation, Source, SourceCardMapping
+from app.services.market_index import INDEX_VERSION
+from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
 NOW = datetime.now(timezone.utc)
 
@@ -717,3 +719,54 @@ def test_a_constrained_sibling_floor_never_appears_on_the_other_print(
     ]
     assert len(constrained) == 1
     assert constrained[0]["value_jpy"] == 1000
+
+
+# --- ruleset version metadata on the print-keyed payload (Task 1C-2C) -------
+
+
+def test_print_index_reports_the_source_semantics_version(client, sanji_constrained_floor):
+    """B: the print-keyed payload carries the same authoritative constant as
+    the card-keyed one - both are built from one shared construction path, so
+    they cannot report different rulesets for the same observation."""
+    parallel_id = sanji_constrained_floor["sanji_parallel"].id
+    body = client.get(f"/prints/{parallel_id}/market-index").json()
+
+    assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+    assert body["index_version"] == INDEX_VERSION
+    for value in body["source_values"] + body["auxiliary_values"]:
+        assert "source_semantics_version" not in value
+
+
+def test_print_catalogue_items_report_the_source_semantics_version(client, five_prints):
+    catalogue = client.get("/prints", params={"limit": 100}).json()
+
+    assert catalogue["items"]
+    for item in catalogue["items"]:
+        assert item["market_index"]["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+
+
+def test_version_metadata_did_not_move_any_print_pricing_value(
+    client, sanji_constrained_floor
+):
+    """C/D on the print path: the constrained parallel and its unconstrained
+    sibling produce exactly the results Task 1C-2B established."""
+    parallel_body, parallel = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
+    base_body, base = _sources(client, sanji_constrained_floor["sanji_base"].id)
+
+    assert parallel_body["index_value_jpy"] == 1980
+    assert parallel_body["source_count"] == 1
+    assert parallel_body["coverage_status"] == "limited"
+    assert parallel["snkrdunk"]["value_jpy"] == 1000
+    assert parallel["snkrdunk"]["constraint"] == "platform_floor"
+    assert parallel["snkrdunk"]["eligible"] is False
+
+    assert base_body["index_value_jpy"] == 810
+    assert base_body["source_count"] == 2
+    assert base_body["coverage_status"] == "full"
+    assert base["snkrdunk"]["value_jpy"] == 1500
+    assert base["snkrdunk"]["constraint"] is None
+    assert base["snkrdunk"]["eligible"] is True
+
+    # ...and both still report the ruleset that produced them.
+    assert parallel_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+    assert base_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION

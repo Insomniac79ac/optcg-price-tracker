@@ -292,6 +292,10 @@ class MarketIndexSourceValueOut(BaseModel):
 class MarketIndexOut(BaseModel):
     card_id: int
     index_version: int
+    # The app.services.source_semantics ruleset used to interpret this
+    # index's source observations (see MarketIndexSourceValueOut.constraint).
+    # Independent of index_version, which versions the combination algorithm.
+    source_semantics_version: int
     index_value_jpy: int | None
     calculation_method: str
     source_count: int
@@ -365,6 +369,7 @@ class PrintMarketIndexOut(BaseModel):
 
     card_print_id: int
     index_version: int
+    source_semantics_version: int
     index_value_jpy: int | None
     calculation_method: str
     source_count: int

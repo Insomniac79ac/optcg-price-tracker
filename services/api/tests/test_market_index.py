@@ -9,6 +9,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models import Card, PriceObservation, Source
 from app.services.market_index import (
+    CALCULATION_METHOD,
+    INDEX_VERSION,
     SNKRDUNK_FLOOR_MAX_AGE_DAYS,
     SNKRDUNK_SOLD_MIN_SAMPLE,
     SNKRDUNK_SOLD_WINDOW_DAYS,
@@ -16,7 +18,7 @@ from app.services.market_index import (
     get_market_index_for_card,
     get_market_index_for_cards,
 )
-from app.services.source_semantics import SOURCE_SEMANTICS
+from app.services.source_semantics import SOURCE_SEMANTICS, SOURCE_SEMANTICS_VERSION
 
 NOW = datetime.now(timezone.utc)
 
@@ -816,3 +818,121 @@ def test_classifier_is_actually_wired_into_the_resolver(db_session, monkeypatch)
     assert snk.constraint is None
     assert snk.eligible is True
     assert bypassed.index_value_jpy == 1000  # the pre-1C-2B behaviour
+
+
+# --- Ruleset version metadata (Task 1C-2C) ----------------------------------
+#
+# A derived index has to say which source-normalisation ruleset produced it,
+# so a stored or screenshotted number can later be traced back to the rules
+# that interpreted its observations. Purely additive metadata - every
+# assertion below also pins the pricing fields, because this must not have
+# moved a single one of them.
+
+
+def test_card_index_reports_the_source_semantics_version(db_session):
+    """A: card-keyed responses carry the authoritative constant, not a copy."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_semantics_version == SOURCE_SEMANTICS_VERSION
+
+
+def test_card_index_endpoint_exposes_the_source_semantics_version(client, db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+    # Index-level metadata, never per-source - the ruleset describes the whole
+    # derived index, not one observation.
+    for value in body["source_values"] + body["auxiliary_values"]:
+        assert "source_semantics_version" not in value
+
+
+def test_index_version_is_unchanged_and_still_reported(db_session):
+    """E: the pre-existing version field keeps its own value and meaning."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.index_version == INDEX_VERSION
+    assert index.calculation_method == CALCULATION_METHOD
+
+
+def test_the_two_versions_are_independent_fields(db_session, monkeypatch):
+    """F: they version different things - the combination algorithm and the
+    per-source ruleset - and change on different cadences. Move one and the
+    other must not follow, which also proves neither is a baked-in literal."""
+    import app.services.market_index as market_index_module
+
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    monkeypatch.setattr(market_index_module, "SOURCE_SEMANTICS_VERSION", 99)
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_semantics_version == 99
+    assert index.index_version == INDEX_VERSION  # unmoved
+
+
+def test_constrained_pricing_result_is_byte_for_byte_unchanged(client, db_session):
+    """C: the mixed constrained case from Task 1C-2B, re-pinned in full. Only
+    source_semantics_version is new; every pricing field is as it was."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert body["index_value_jpy"] == 580
+    assert body["source_count"] == 1
+    assert body["coverage_status"] == "limited"
+    assert body["confidence"] == "medium"
+    assert body["index_version"] == INDEX_VERSION
+    assert body["calculation_method"] == "median_of_sources"
+    assert body["stale_sources"] == []
+
+    values = {sv["source"]: sv for sv in body["source_values"]}
+    assert values["snkrdunk"]["value_jpy"] == 1000
+    assert values["snkrdunk"]["constraint"] == "platform_floor"
+    assert values["snkrdunk"]["eligible"] is False
+    assert values["snkrdunk"]["ineligible_reason"] == "platform_floor"
+    assert values["yuyutei"]["value_jpy"] == 580
+    assert values["yuyutei"]["eligible"] is True
+    assert values["yuyutei"]["constraint"] is None
+
+    assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+
+
+def test_unconstrained_pricing_result_is_byte_for_byte_unchanged(client, db_session):
+    """D: the ordinary two-source case, unaffected by any of this."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert body["index_value_jpy"] == 1350  # midpoint, unchanged
+    assert body["source_count"] == 2
+    assert body["coverage_status"] == "full"
+    assert body["confidence"] == "high"
+    assert body["index_version"] == INDEX_VERSION
+
+    values = {sv["source"]: sv for sv in body["source_values"]}
+    assert values["snkrdunk"]["value_jpy"] == 1500
+    assert values["snkrdunk"]["eligible"] is True
+    assert values["snkrdunk"]["constraint"] is None
+
+    assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
