@@ -43,7 +43,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import PriceObservation
-from app.schemas import MarketIndexOut, MarketIndexSourceValueOut
+from app.schemas import MarketIndexOut, MarketIndexSourceValueOut, SourcePriceRangeOut
 from app.services.latest_prices import get_latest_price_map
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
 
@@ -277,6 +277,20 @@ def _compute_index_fields(
     duplicating it."""
     eligible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
 
+    # How far apart the sources that actually counted are - min/max over the
+    # very same `eligible` list the index is computed from, so the two can
+    # never describe different value sets. min/max are order-independent by
+    # definition, so resolver ordering cannot affect the result, and equal
+    # values still produce a range object (a real, measured zero spread).
+    # Below two eligible sources there is no disagreement to report and the
+    # field is absent rather than a self-referential "X to X".
+    eligible_values: list[int] = [sv.value_jpy for sv in eligible]  # type: ignore[misc]
+    source_price_range = (
+        SourcePriceRangeOut(low_jpy=min(eligible_values), high_jpy=max(eligible_values))
+        if len(eligible_values) >= 2
+        else None
+    )
+
     if len(eligible) >= 2:
         index_value = _median_jpy([sv.value_jpy for sv in eligible])  # type: ignore[list-item]
         coverage_status = "full"
@@ -306,6 +320,7 @@ def _compute_index_fields(
         # print-keyed payloads are built from, so the two can never report
         # different rulesets for the same observation.
         "source_semantics_version": SOURCE_SEMANTICS_VERSION,
+        "source_price_range": source_price_range,
         "index_value_jpy": index_value,
         "calculation_method": CALCULATION_METHOD,
         "source_count": len(eligible),

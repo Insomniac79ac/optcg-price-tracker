@@ -1017,3 +1017,209 @@ def test_unconstrained_pricing_result_is_byte_for_byte_unchanged(client, db_sess
     assert values["snkrdunk"]["constraint"] is None
 
     assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+
+
+# --- Source price range (Task 2A-2) -----------------------------------------
+#
+# The index alone cannot express disagreement: with two sources the median is
+# their midpoint, and ¥27,350 looks exactly as confident whether the sources
+# were ¥24,900/¥29,800 (20% apart) or ¥120/¥1,500 (1150% apart). The range
+# reports the spread of the very same values the index was built from.
+
+
+def test_two_sources_report_their_spread(db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=29800, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=24900, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is not None
+    assert index.source_price_range.low_jpy == 24900
+    assert index.source_price_range.high_jpy == 29800
+    # The index itself is untouched: still the median of the same two values.
+    assert index.index_value_jpy == 27350
+    assert index.source_count == 2
+
+
+def test_range_is_independent_of_source_order(db_session):
+    """min/max, not first/last - which source resolves first must not decide
+    which end of the range it lands on."""
+    ascending = make_card(db_session, card_code="OP01-101")
+    descending = make_card(db_session, card_code="OP01-102")
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+
+    # Yuyu-Tei cheaper than SNKRDUNK on one card, dearer on the other.
+    yuyutei_sell(db_session, ascending, yuyutei, price_jpy=1200, days_ago=1)
+    snkrdunk_floor(db_session, ascending, snkrdunk, price_jpy=1800, days_ago=1)
+    yuyutei_sell(db_session, descending, yuyutei, price_jpy=1800, days_ago=1)
+    snkrdunk_floor(db_session, descending, snkrdunk, price_jpy=1200, days_ago=1)
+
+    first = get_market_index_for_card(db_session, ascending.id).source_price_range
+    second = get_market_index_for_card(db_session, descending.id).source_price_range
+
+    assert (first.low_jpy, first.high_jpy) == (1200, 1800)
+    assert (second.low_jpy, second.high_jpy) == (1200, 1800)
+
+
+def test_two_sources_agreeing_exactly_still_report_a_range(db_session):
+    """A measured zero spread is a real finding - two independent sources
+    landing on the same number is information, not a missing range."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1500, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is not None
+    assert index.source_price_range.low_jpy == 1500
+    assert index.source_price_range.high_jpy == 1500
+    assert index.index_value_jpy == 1500
+
+
+def test_single_eligible_source_has_no_range(db_session):
+    """One source cannot disagree with itself; "¥1,200 – ¥1,200" would state a
+    spread that was never measured."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is None
+    assert index.source_count == 1
+    assert index.index_value_jpy == 1200
+
+
+def test_no_eligible_sources_has_no_range(db_session):
+    card = make_card(db_session)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is None
+    assert index.index_value_jpy is None
+    assert index.source_count == 0
+
+
+def test_constrained_floor_is_excluded_from_the_range(db_session):
+    """The whole point: a value the index refused must not silently widen the
+    range that describes the index. The raw ¥1,000 stays visible."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=220, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is None  # only one eligible source remains
+    assert index.index_value_jpy == 220
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1000
+    assert snk.constraint == "platform_floor"
+
+
+def test_a_stale_source_is_excluded_from_the_range(db_session):
+    """Same rule via a different exclusion: the range tracks eligibility, not
+    the presence of a number."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    snkrdunk_floor(
+        db_session, card, snkrdunk,
+        price_jpy=9999, days_ago=SNKRDUNK_FLOOR_MAX_AGE_DAYS + 1,
+    )
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range is None
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 9999 and snk.eligible is False
+
+
+def test_auxiliary_values_never_enter_the_range(db_session):
+    """Yuyu-Tei's dealer buy price is not an index candidate, so it cannot be
+    an endpoint of the index's range - even though it is a real JPY value on
+    the same card."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    yuyutei_buy(db_session, card, yuyutei, price_jpy=300, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1800, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    # ¥300 is the lowest number on the card, and must not be the range's low.
+    assert index.source_price_range.low_jpy == 1200
+    assert index.source_price_range.high_jpy == 1800
+    assert index.auxiliary_values[0].value_jpy == 300
+
+
+def test_range_endpoints_come_from_the_indexed_values(db_session):
+    """Structural guarantee rather than a coincidence of numbers: whatever the
+    range reports must be present among the eligible source values."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    eligible = {sv.value_jpy for sv in index.source_values if sv.eligible}
+    assert index.source_price_range.low_jpy in eligible
+    assert index.source_price_range.high_jpy in eligible
+    assert index.source_price_range.low_jpy <= index.index_value_jpy
+    assert index.index_value_jpy <= index.source_price_range.high_jpy
+
+
+def test_range_is_exposed_through_the_api(client, db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert body["source_price_range"] == {"low_jpy": 120, "high_jpy": 1500}
+    assert body["index_value_jpy"] == 810  # unchanged midpoint
+    assert body["index_version"] == INDEX_VERSION
+
+
+def test_range_is_null_not_missing_for_a_single_source(client, db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert "source_price_range" in body
+    assert body["source_price_range"] is None
+
+
+def test_adding_the_range_did_not_move_any_index_field(client, db_session):
+    """Regression pin: every pre-existing pricing field on a two-source card
+    holds the value it had before this field existed."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    assert body["index_value_jpy"] == 1350
+    assert body["source_count"] == 2
+    assert body["coverage_status"] == "full"
+    assert body["confidence"] == "high"
+    assert body["calculation_method"] == "median_of_sources"
+    assert body["index_version"] == 1
+    assert body["source_semantics_version"] == 1

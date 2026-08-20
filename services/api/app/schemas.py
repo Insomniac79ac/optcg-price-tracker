@@ -289,6 +289,31 @@ class MarketIndexSourceValueOut(BaseModel):
     constraint: str | None = None
 
 
+class SourcePriceRangeOut(BaseModel):
+    """The spread between the cheapest and dearest source values that actually
+    counted toward this Market Index.
+
+    Answers "how far apart are the usable sources?" - the question a single
+    index number cannot answer on its own, because with two sources the median
+    is their midpoint and a midpoint looks identical whether the sources agreed
+    within 5% or disagreed by 1000%.
+
+    Derived from the same eligible set that produced index_value_jpy (see
+    app.services.market_index._compute_index_fields), so it can never describe
+    a different set of values than the index it accompanies. Constrained,
+    stale, and otherwise ineligible values are excluded - they are not part of
+    the index, so they are not part of its range - and auxiliary values (e.g.
+    Yuyu-Tei's dealer buy price) never enter either, because they live in a
+    separate list that is not an index candidate at all. The excluded values
+    all remain visible in source_values with their own reason.
+
+    Absent (null) below two eligible sources: one source cannot disagree with
+    itself, and "¥220 - ¥220" states a spread that was never measured."""
+
+    low_jpy: int
+    high_jpy: int
+
+
 class MarketIndexOut(BaseModel):
     card_id: int
     index_version: int
@@ -296,6 +321,9 @@ class MarketIndexOut(BaseModel):
     # index's source observations (see MarketIndexSourceValueOut.constraint).
     # Independent of index_version, which versions the combination algorithm.
     source_semantics_version: int
+    # The spread of the eligible sources behind index_value_jpy, or null when
+    # fewer than two sources were eligible - see SourcePriceRangeOut.
+    source_price_range: SourcePriceRangeOut | None = None
     index_value_jpy: int | None
     calculation_method: str
     source_count: int
@@ -370,6 +398,7 @@ class PrintMarketIndexOut(BaseModel):
     card_print_id: int
     index_version: int
     source_semantics_version: int
+    source_price_range: SourcePriceRangeOut | None = None
     index_value_jpy: int | None
     calculation_method: str
     source_count: int

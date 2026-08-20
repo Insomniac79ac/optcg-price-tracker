@@ -800,3 +800,55 @@ def test_below_minimum_floor_is_excluded_from_a_print_index(client, db_session, 
     # The sibling, which has no SNKRDUNK observation at all, is untouched.
     base_body, _ = _sources(client, five_prints["sanji_base"].id)
     assert base_body["index_value_jpy"] == 120
+
+
+# --- source price range stays print-scoped (Task 2A-2) ---------------------
+
+
+def test_sibling_prints_get_their_own_source_price_range(client, sanji_two_source):
+    """The parallel has two eligible sources and therefore a range; the base
+    has only Yuyu-Tei and must not inherit its sibling's spread, even though
+    both bridge one legacy card row."""
+    parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
+
+    parallel_yuyutei = next(
+        sv["value_jpy"] for sv in parallel_body["source_values"] if sv["source"] == "yuyutei"
+    )
+    assert parallel_body["source_price_range"] == {
+        "low_jpy": min(parallel_yuyutei, 1500),
+        "high_jpy": max(parallel_yuyutei, 1500),
+    }
+    assert base_body["source_count"] == 1
+    assert base_body["source_price_range"] is None
+
+
+def test_a_constrained_sibling_floor_produces_no_range(client, sanji_constrained_floor):
+    """The parallel's ¥1,000 floor is excluded by source semantics, so it has
+    one eligible source and no range - while the base, whose ¥1,500 floor is
+    unconstrained, gets a real one."""
+    parallel_body, _ = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_constrained_floor["sanji_base"].id)
+
+    assert parallel_body["source_count"] == 1
+    assert parallel_body["source_price_range"] is None
+
+    assert base_body["source_count"] == 2
+    assert base_body["source_price_range"] == {"low_jpy": 120, "high_jpy": 1500}
+    # ...and the index still sits inside its own range.
+    assert (base_body["source_price_range"]["low_jpy"]
+            <= base_body["index_value_jpy"]
+            <= base_body["source_price_range"]["high_jpy"])
+
+
+def test_print_catalogue_items_carry_the_range_field(client, sanji_two_source):
+    catalogue = client.get("/prints", params={"limit": 100}).json()
+
+    assert catalogue["items"]
+    for item in catalogue["items"]:
+        mi = item["market_index"]
+        assert "source_price_range" in mi
+        if mi["source_count"] >= 2:
+            assert mi["source_price_range"] is not None
+        else:
+            assert mi["source_price_range"] is None
