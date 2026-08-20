@@ -630,19 +630,100 @@ def test_constrained_floor_keeps_its_raw_value_and_timestamp(db_session):
     assert snk.fallback_used is True
 
 
-def test_floor_below_the_minimum_is_constrained(db_session):
-    """E: ¥999 - the boundary below. `<=`, not `==`, so a value under the
-    stated minimum is equally constrained."""
+def test_floor_below_the_minimum_is_excluded_under_its_own_reason(db_session):
+    """E: ¥999 - excluded like the floor itself, but not described as it.
+    SNKRDUNK documents ¥1,000 as its minimum, so a lower value contradicts the
+    source contract and fails closed (Task 1C-2D)."""
     card = make_card(db_session)
     snkrdunk = make_source(db_session, "snkrdunk")
     snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM - 1, days_ago=1)
 
     snk = find(get_market_index_for_card(db_session, card.id).source_values,
                "snkrdunk", "listing_floor")
-    assert snk.value_jpy == 999
-    assert snk.constraint == "platform_floor"
+    assert snk.value_jpy == 999  # raw value untouched
+    assert snk.constraint == "below_platform_minimum"
     assert snk.eligible is False
-    assert snk.ineligible_reason == "platform_floor"
+    assert snk.ineligible_reason == "below_platform_minimum"
+
+
+def test_a_far_below_minimum_floor_is_excluded_the_same_way(db_session):
+    """¥1 - nothing depends on proximity to the minimum, and an extractor
+    error cannot set a card's Market Index to ¥1."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1
+    assert snk.constraint == "below_platform_minimum"
+    assert snk.eligible is False
+    # The remaining eligible source carries the index; ¥1 never touches it.
+    assert index.index_value_jpy == 1200
+    assert index.source_count == 1
+
+
+def test_the_two_constrained_reasons_are_distinguishable_through_the_api(
+    client, db_session
+):
+    """A client must be able to tell "this is the platform floor" from "this
+    value should not exist" - they warrant different copy."""
+    at_floor = make_card(db_session, card_code="OP01-100")
+    below = make_card(db_session, card_code="OP01-101")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, at_floor, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+    snkrdunk_floor(db_session, below, snkrdunk, price_jpy=PLATFORM_MINIMUM - 1, days_ago=1)
+
+    at_floor_body = client.get(f"/cards/{at_floor.id}/market-index").json()
+    below_body = client.get(f"/cards/{below.id}/market-index").json()
+
+    at_floor_value = next(sv for sv in at_floor_body["source_values"] if sv["source"] == "snkrdunk")
+    below_value = next(sv for sv in below_body["source_values"] if sv["source"] == "snkrdunk")
+
+    assert at_floor_value["constraint"] == "platform_floor"
+    assert below_value["constraint"] == "below_platform_minimum"
+    assert at_floor_value["constraint"] != below_value["constraint"]
+    # Both raw values survive to the client.
+    assert (at_floor_value["value_jpy"], below_value["value_jpy"]) == (1000, 999)
+
+
+def test_a_below_minimum_only_card_has_no_index(db_session):
+    """All-ineligible behaviour is unchanged by the new reason: an anomalous
+    value is not evidence, so the honest answer stays "unavailable"."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM - 1, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.index_value_jpy is None
+    assert index.source_count == 0
+    assert index.coverage_status == "none"
+    assert index.confidence == "low"
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 999  # still reported
+
+
+def test_stale_reason_still_wins_over_below_platform_minimum(db_session):
+    """ineligible_reason precedence is unchanged by the new verdict: a
+    pre-existing rule keeps the reason, the semantic verdict stays in
+    `constraint`."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(
+        db_session, card, snkrdunk,
+        price_jpy=PLATFORM_MINIMUM - 1, days_ago=SNKRDUNK_FLOOR_MAX_AGE_DAYS + 1,
+    )
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.stale is True
+    assert snk.ineligible_reason == "stale"
+    assert snk.constraint == "below_platform_minimum"
+    assert snk.eligible is False
 
 
 def test_constrained_floor_does_not_drag_the_index_down(db_session):

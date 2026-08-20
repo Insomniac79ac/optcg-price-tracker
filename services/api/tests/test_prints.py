@@ -770,3 +770,33 @@ def test_version_metadata_did_not_move_any_print_pricing_value(
     # ...and both still report the ruleset that produced them.
     assert parallel_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
     assert base_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+
+
+def test_below_minimum_floor_is_excluded_from_a_print_index(client, db_session, five_prints):
+    """The print path shares market_index's resolver, so the Task 1C-2D
+    verdict reaches print-keyed payloads too - and a ¥999 SNKRDUNK floor
+    cannot drag a print's index below its real Yuyu-Tei evidence."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    legacy = five_prints["sanji_legacy"]
+    parallel = five_prints["sanji_parallel"]
+    mapping = make_mapping(
+        db_session, legacy, snkrdunk, parallel, source_card_id="snkr-below-minimum"
+    )
+    make_observation(
+        db_session, legacy, snkrdunk, mapping, parallel,
+        price_type="floor", price_jpy=999, condition_label="D",
+        stock_status=None, observed_at=NOW,
+    )
+
+    body, sources = _sources(client, parallel.id)
+
+    assert sources["snkrdunk"]["value_jpy"] == 999  # raw value preserved
+    assert sources["snkrdunk"]["constraint"] == "below_platform_minimum"
+    assert sources["snkrdunk"]["eligible"] is False
+    assert body["index_value_jpy"] == 1980  # the Yuyu-Tei value alone
+    assert body["source_count"] == 1
+    assert body["coverage_status"] == "limited"
+
+    # The sibling, which has no SNKRDUNK observation at all, is untouched.
+    base_body, _ = _sources(client, five_prints["sanji_base"].id)
+    assert base_body["index_value_jpy"] == 120
