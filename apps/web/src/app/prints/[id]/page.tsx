@@ -19,6 +19,7 @@ import {
   fetchPrint,
   sourceDisplayName,
   type PrintDetail,
+  type PrintMarketIndex,
   type PrintMarketIndexSourceValue,
   type PrintUiModel,
   toPrintUiModel,
@@ -308,12 +309,50 @@ function MarketIndexBlock({ print }: { print: PrintUiModel }) {
           showCoverage={false}
         />
       </div>
+      <SourcePriceRange range={print.marketIndex.source_price_range} />
       {print.latestObservationAt && (
         <p className="mt-2 text-[11px] text-text-faint">
           Updated {formatDate(print.latestObservationAt)}
         </p>
       )}
     </section>
+  );
+}
+
+/** How far apart the sources behind the index above actually were.
+ *
+ * The index alone cannot say: with two sources it is their midpoint, and a
+ * midpoint reads identically whether the sources agreed within 5% or disagreed
+ * by tenfold. One quiet line answers that at the moment of doubt, in the same
+ * 11px metadata scale as the "Updated ..." caption beneath it, so the gold
+ * index value stays the only figure on this page with weight.
+ *
+ * Every decision here belongs to the backend. Which values were eligible,
+ * which is low and which is high, and whether a range exists at all arrive
+ * decided in `source_price_range`; this component renders two numbers and
+ * never computes a minimum, a threshold, or a spread. Absent, null, or a
+ * single eligible source (the backend sends null below two) renders nothing
+ * at all rather than a self-referential "X to X".
+ *
+ * Equal endpoints print once: two sources landing on the same yen figure is a
+ * real, measured agreement, and "¥1,500 - ¥1,500" would only look broken. */
+function SourcePriceRange({
+  range,
+}: {
+  range: PrintMarketIndex["source_price_range"];
+}) {
+  if (!range) return null;
+
+  const { low_jpy, high_jpy } = range;
+  return (
+    <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
+      Source range{" "}
+      <span className="mono tabular">
+        {low_jpy === high_jpy
+          ? formatJpy(low_jpy)
+          : `${formatJpy(low_jpy)} – ${formatJpy(high_jpy)}`}
+      </span>
+    </p>
   );
 }
 

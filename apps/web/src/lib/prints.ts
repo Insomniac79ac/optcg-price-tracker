@@ -49,6 +49,13 @@ export interface PrintMarketIndex {
    * reproducibility metadata only - deliberately never shown to collectors.
    * Optional for the same backward-compatibility reason as `constraint`. */
   source_semantics_version?: number;
+  /** The span of the eligible source values behind index_value_jpy, or null
+   * when fewer than two sources were eligible - see schemas.SourcePriceRangeOut.
+   * Both endpoints are chosen by the backend from the same set that produced
+   * the index; nothing here is derived in the browser. Optional for the same
+   * backward-compatibility reason as `constraint` - a deployed API that
+   * predates the field simply omits it. */
+  source_price_range?: { low_jpy: number; high_jpy: number } | null;
   index_value_jpy: number | null;
   calculation_method: string;
   source_count: number;

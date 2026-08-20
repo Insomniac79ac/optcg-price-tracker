@@ -510,4 +510,110 @@ describe("print detail page", () => {
     expect(container.textContent).not.toMatch(/Minimum listing price|Source data anomaly/);
     expect(container.textContent).not.toMatch(/Not used in Market Index/);
   });
+
+  // --- source price range (Task 2A-3) --------------------------------------
+  //
+  // Real staging shapes: print 7 (index ¥810 from ¥120 and ¥1,500 - the case
+  // this line exists for) and print 5 (index ¥220, one eligible source, so the
+  // backend sends null).
+
+  function withRange(range: unknown, overrides: Record<string, unknown> = {}) {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 810,
+        source_count: 2,
+        coverage_status: "full",
+        confidence: "high",
+        source_price_range: range,
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120 }),
+          sourceValue({ source: "snkrdunk", value_jpy: 1500, fallback_used: true }),
+        ],
+        ...overrides,
+      } as PrintMarketIndex,
+    });
+  }
+
+  it("shows the span of the sources behind the index", async () => {
+    fetchPrint.mockResolvedValue(withRange({ low_jpy: 120, high_jpy: 1500 }));
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    expect(within(index).getByText(/Source range/)).toBeTruthy();
+    expect(within(index).getByText("￥120 – ￥1,500")).toBeTruthy();
+    // The index itself is untouched and still the loudest figure.
+    expect(within(index).getByText("￥810")).toBeTruthy();
+  });
+
+  it("prints a single figure when both sources agree exactly", async () => {
+    fetchPrint.mockResolvedValue(
+      withRange({ low_jpy: 1500, high_jpy: 1500 }, { index_value_jpy: 1500 }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    // Twice inside the block on purpose: the index value itself, and the range
+    // line stating the single figure both sources agreed on.
+    expect(within(index).getAllByText("￥1,500")).toHaveLength(2);
+    expect(within(index).getByText(/Source range/)).toBeTruthy();
+    // Never "￥1,500 – ￥1,500".
+    expect(container.textContent).not.toMatch(/￥1,500 – ￥1,500/);
+  });
+
+  it("renders nothing when the backend sends a null range", async () => {
+    // Print 5's real shape: one eligible source, so there is no span to state.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 220,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_price_range: null,
+          source_values: [
+            sourceValue({ source: "yuyutei", value_jpy: 220 }),
+            sourceValue({
+              source: "snkrdunk", value_jpy: 1000, eligible: false,
+              ineligible_reason: "platform_floor", constraint: "platform_floor",
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/Source range/);
+    // ...and the rest of the page is unaffected.
+    expect(screen.getAllByText("￥220").length).toBeGreaterThan(0);
+    expect(screen.getByText("Minimum listing price")).toBeTruthy();
+  });
+
+  it("stays safe against an API that predates the field", async () => {
+    // The currently deployed backend omits source_price_range entirely.
+    const detail = withRange(undefined);
+    delete (detail.market_index as unknown as Record<string, unknown>).source_price_range;
+    fetchPrint.mockResolvedValue(detail);
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/Source range/);
+    expect(screen.getByText("￥810")).toBeTruthy();
+  });
+
+  it("leaves the existing Market Index block otherwise unchanged", async () => {
+    fetchPrint.mockResolvedValue(withRange({ low_jpy: 120, high_jpy: 1500 }));
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    // Index, its date caption and the source panels all still render.
+    expect(within(index).getByText("￥810")).toBeTruthy();
+    expect(within(index).getByText(/Updated/)).toBeTruthy();
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("￥1,500")).toBeTruthy();
+    expect(within(sources).getByText(/Lowest listing/)).toBeTruthy();
+  });
 });
