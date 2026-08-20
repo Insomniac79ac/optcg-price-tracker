@@ -360,4 +360,154 @@ describe("print detail page", () => {
     expect(screen.queryByText("This print couldn’t be loaded right now.")).toBeNull();
     expect(screen.getByRole("link", { name: /Browse the catalogue/ })).toBeTruthy();
   });
+
+  // --- constrained source prices (Task 1C-2E) ------------------------------
+  //
+  // The real staging shape for print 5 (Portgas D. Ace OP02-013): a genuine
+  // Yuyu-Tei price of ¥220 beside a SNKRDUNK floor sitting exactly on that
+  // platform's ¥1,000 minimum, which the backend excluded from the index.
+  // Before this tranche the page showed both numbers and explained nothing,
+  // so a ¥220 index next to a ¥1,000 source read as a bug.
+
+  function constrainedDetail() {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 220,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 220 }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 1000,
+            fallback_used: true,
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+          }),
+        ],
+      } as PrintMarketIndex,
+    });
+  }
+
+  it("explains a platform-floor price instead of leaving the gap unexplained", async () => {
+    fetchPrint.mockResolvedValue(constrainedDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+
+    // The index and both raw prices are all still on the page: the ¥1,000 is
+    // explained, never hidden, and the index is the backend's own ¥220.
+    // ¥220 appears twice on purpose: as the index and as its one source.
+    expect(screen.getAllByText("￥220").length).toBeGreaterThan(1);
+    expect(within(sources).getByText("￥1,000")).toBeTruthy();
+    expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
+
+    expect(within(sources).getByText("Minimum listing price")).toBeTruthy();
+    expect(
+      within(sources).getByText(
+        /at the source's minimum listing price and may not reflect the card's actual market price/,
+      ),
+    ).toBeTruthy();
+    expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
+
+    // The explanation names no source and quotes no threshold - the source's
+    // identity is already on screen from the API's own data, and the rule
+    // itself belongs to the backend (Task 1C-2E2).
+    const note = within(sources).getByText("Minimum listing price").parentElement!;
+    expect(note.textContent).not.toMatch(/SNKRDUNK/i);
+    expect(note.textContent).not.toMatch(/[0-9]/);
+  });
+
+  it("never renders a backend constraint name to a collector", async () => {
+    fetchPrint.mockResolvedValue(constrainedDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/platform_floor|below_platform_minimum/);
+  });
+
+  it("marks a below-minimum price as an anomaly while keeping the raw value", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 220,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({ source: "yuyutei", value_jpy: 220 }),
+            sourceValue({
+              source: "snkrdunk",
+              value_jpy: 999,
+              fallback_used: true,
+              eligible: false,
+              ineligible_reason: "below_platform_minimum",
+              constraint: "below_platform_minimum",
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("￥999")).toBeTruthy();
+    expect(within(sources).getByText("Source data anomaly")).toBeTruthy();
+    expect(
+      within(sources).getByText(
+        /below the source's known minimum and is not used in Market Index/,
+      ),
+    ).toBeTruthy();
+    expect(container.textContent).not.toMatch(/below_platform_minimum/);
+    // Its own sentence already says it - the generic line would just repeat.
+    expect(within(sources).queryByText("Not used in Market Index")).toBeNull();
+  });
+
+  it("stays quiet and functional for a constraint it has never heard of", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 220,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({ source: "yuyutei", value_jpy: 220 }),
+            sourceValue({
+              source: "snkrdunk",
+              value_jpy: 1234,
+              eligible: false,
+              ineligible_reason: "future_constraint",
+              constraint: "future_constraint",
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    // The price survives, no invented meaning, no leaked identifier - and the
+    // one thing we do know (it did not count) is still said.
+    expect(within(sources).getByText("￥1,234")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/future_constraint/);
+    expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
+  });
+
+  it("leaves an ordinary source panel exactly as it was", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("￥29,800")).toBeTruthy();
+    expect(within(sources).getByText("￥24,000")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Minimum listing price|Source data anomaly/);
+    expect(container.textContent).not.toMatch(/Not used in Market Index/);
+  });
 });

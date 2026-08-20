@@ -12,6 +12,7 @@ import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
+import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
 import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import {
@@ -360,6 +361,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
                 Seen {formatDate(row.observed_at)}
               </p>
             )}
+            <SourceConstraintNote value={row} />
           </div>
         ))}
       </div>

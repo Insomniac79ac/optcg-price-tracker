@@ -107,11 +107,22 @@ export interface MarketIndexSourceValue {
   eligible: boolean;
   fallback_used: boolean;
   ineligible_reason: string | null;
+  /** Why this value may not mean what its number says - see
+   * app.services.source_semantics and @/lib/sourceConstraint, which owns the
+   * collector-facing wording. Optional because an API older than the
+   * source-semantics release omits the field entirely; absent and null are
+   * both "nothing to say about this value". Never rendered raw. */
+  constraint?: string | null;
 }
 
 export interface MarketIndex {
   card_id: number;
   index_version: number;
+  /** Which source-normalisation ruleset produced this index (see
+   * app.services.source_semantics.SOURCE_SEMANTICS_VERSION). Debug/
+   * reproducibility metadata only - deliberately never shown to collectors.
+   * Optional for the same backward-compatibility reason as `constraint`. */
+  source_semantics_version?: number;
   index_value_jpy: number | null;
   calculation_method: string;
   source_count: number;
