@@ -10,11 +10,13 @@ from app.main import app
 from app.models import Card, PriceObservation, Source
 from app.services.market_index import (
     SNKRDUNK_FLOOR_MAX_AGE_DAYS,
+    SNKRDUNK_SOLD_MIN_SAMPLE,
     SNKRDUNK_SOLD_WINDOW_DAYS,
     YUYUTEI_SELL_MAX_AGE_DAYS,
     get_market_index_for_card,
     get_market_index_for_cards,
 )
+from app.services.source_semantics import SOURCE_SEMANTICS
 
 NOW = datetime.now(timezone.utc)
 
@@ -536,3 +538,281 @@ def test_catalogue_endpoint_index_sort_places_unavailable_last(client, db_sessio
     response_asc = client.get("/cards/catalogue", params={"sort": "index_asc"})
     codes_asc = [item["card_code"] for item in response_asc.json()["items"]]
     assert codes_asc == ["OP01-001", "OP01-002"]
+
+
+# --- Source semantics: SNKRDUNK platform floor (Task 1C-2B) ------------------
+#
+# The product rule: a SNKRDUNK floor at or below the platform's minimum
+# permitted listing price is not market evidence, so it must not contribute to
+# the index - while its raw number stays visible with a `constraint` telling
+# the client why it is not counted. The threshold itself lives only in
+# app.services.source_semantics; nothing below hard-codes it, it is read from
+# SOURCE_SEMANTICS so a rule change moves these tests with it.
+
+PLATFORM_MINIMUM = SOURCE_SEMANTICS["snkrdunk"]["floor"].platform_minimum_jpy
+
+
+def test_yuyutei_sell_is_untouched_by_snkrdunk_semantics(db_session):
+    """A: the constrained-source rule is SNKRDUNK's floor rule, not a global
+    price threshold - a Yuyu-Tei sell below it is ordinary market evidence."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    sell = find(index.source_values, "yuyutei", "retail_sell")
+    assert sell.value_jpy == 580
+    assert sell.eligible is True
+    assert sell.constraint is None
+    assert sell.ineligible_reason is None
+    assert index.index_value_jpy == 580
+
+
+def test_floor_well_above_the_minimum_is_unconstrained(db_session):
+    """B: ¥1,500."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1500
+    assert snk.constraint is None
+    assert snk.eligible is True
+    assert snk.ineligible_reason is None
+
+
+def test_floor_one_yen_above_the_minimum_is_unconstrained(db_session):
+    """C: ¥1,001 - the first value the platform minimum does not explain."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM + 1, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1001
+    assert snk.constraint is None
+    assert snk.eligible is True
+
+
+def test_floor_exactly_at_the_minimum_is_constrained_and_ineligible(db_session):
+    """D: ¥1,000 - the platform minimum itself, the single most common stored
+    floor value in production."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1000  # D: the raw observed number is preserved
+    assert snk.constraint == "platform_floor"
+    assert snk.eligible is False
+    assert snk.ineligible_reason == "platform_floor"
+    assert snk.stale is False  # not disqualified by any pre-existing rule
+
+
+def test_constrained_floor_keeps_its_raw_value_and_timestamp(db_session):
+    """The value is excluded from the index, never blanked - a collector must
+    still be able to see what SNKRDUNK actually reports."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    observation = snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.value_jpy == observation.price_jpy
+    assert snk.observed_at is not None
+    assert snk.reference_type == "listing_floor"
+    assert snk.evidence_type == "listing"
+    assert snk.fallback_used is True
+
+
+def test_floor_below_the_minimum_is_constrained(db_session):
+    """E: ¥999 - the boundary below. `<=`, not `==`, so a value under the
+    stated minimum is equally constrained."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM - 1, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 999
+    assert snk.constraint == "platform_floor"
+    assert snk.eligible is False
+    assert snk.ineligible_reason == "platform_floor"
+
+
+def test_constrained_floor_does_not_drag_the_index_down(db_session):
+    """F: the mixed case. Two sources present, but only the Yuyu-Tei one is
+    real evidence, so the index is that value alone - NOT the midpoint of 580
+    and 1000, which is what the pre-1C-2B behaviour produced."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.index_value_jpy == 580
+    assert index.source_count == 1
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+
+    # The constrained value is excluded from the maths but still reported.
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1000
+    assert snk.constraint == "platform_floor"
+
+
+def test_all_sources_constrained_leaves_the_index_unavailable(db_session):
+    """G: knowingly constrained evidence is not evidence - the honest answer
+    is "unavailable", never a Market Index of ¥1,000."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.index_value_jpy is None
+    assert index.source_count == 0
+    assert index.coverage_status == "none"
+    assert index.confidence == "low"
+
+    # ...and the raw constrained value is still in the payload.
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.value_jpy == 1000
+    assert snk.constraint == "platform_floor"
+
+
+def test_stale_reason_still_wins_over_the_semantic_reason(db_session):
+    """ineligible_reason precedence: a pre-existing eligibility rule keeps
+    ownership of the reason string. A stale ¥1,000 floor is unusable *because
+    it is stale*; the semantic verdict rides alongside in `constraint`."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(
+        db_session, card, snkrdunk,
+        price_jpy=PLATFORM_MINIMUM, days_ago=SNKRDUNK_FLOOR_MAX_AGE_DAYS + 1,
+    )
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    snk = find(index.source_values, "snkrdunk", "listing_floor")
+    assert snk.stale is True
+    assert snk.ineligible_reason == "stale"
+    assert snk.constraint == "platform_floor"  # independently visible
+    assert snk.eligible is False
+    assert "snkrdunk" in index.stale_sources
+
+
+def test_semantics_never_rescue_a_stale_but_unconstrained_floor(db_session):
+    """The other half of "both gates must pass": semantic eligibility does not
+    relax the freshness rule for an unconstrained value."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(
+        db_session, card, snkrdunk,
+        price_jpy=1500, days_ago=SNKRDUNK_FLOOR_MAX_AGE_DAYS + 1,
+    )
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "listing_floor")
+    assert snk.constraint is None
+    assert snk.eligible is False
+    assert snk.ineligible_reason == "stale"
+
+
+def test_sold_prices_are_never_platform_floor_constrained(db_session):
+    """The platform-floor rule is about the minimum permitted *listing* price.
+    A completed sale at the same value is a real transaction, so the sold path
+    is unchanged - three sales at ¥1,000 still produce a ¥1,000 index."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    for _ in range(SNKRDUNK_SOLD_MIN_SAMPLE):
+        snkrdunk_sold(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    snk = find(index.source_values, "snkrdunk", "transaction_median")
+    assert snk.value_jpy == 1000
+    assert snk.eligible is True
+    assert snk.constraint is None
+    assert index.index_value_jpy == 1000
+
+
+def test_a_constrained_floor_is_ignored_in_favour_of_enough_sold_data(db_session):
+    """The sold branch still wins outright when the sample is there - the
+    constrained floor is not even reached."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    for price in (1200, 1300, 1400):
+        snkrdunk_sold(db_session, card, snkrdunk, price_jpy=price, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    snk = find(get_market_index_for_card(db_session, card.id).source_values,
+               "snkrdunk", "transaction_median")
+    assert snk.reference_type == "transaction_median"
+    assert snk.value_jpy == 1300
+    assert snk.constraint is None
+    assert snk.eligible is True
+
+
+def test_constraint_is_exposed_through_the_api(client, db_session):
+    """The field has to survive schema serialization, not just exist on the
+    internal dataclass."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    values = {sv["source"]: sv for sv in body["source_values"]}
+    assert values["snkrdunk"]["constraint"] == "platform_floor"
+    assert values["snkrdunk"]["value_jpy"] == 1000
+    assert values["snkrdunk"]["eligible"] is False
+    assert values["yuyutei"]["constraint"] is None
+    assert body["index_value_jpy"] == 580
+
+
+def test_constraint_defaults_to_null_for_every_other_value(client, db_session):
+    """Backward compatibility: the new field is present and null everywhere it
+    does not apply, including auxiliary values."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    yuyutei_buy(db_session, card, yuyutei, price_jpy=800, days_ago=1)
+
+    body = client.get(f"/cards/{card.id}/market-index").json()
+
+    for value in body["source_values"] + body["auxiliary_values"]:
+        assert value["constraint"] is None
+
+
+def test_classifier_is_actually_wired_into_the_resolver(db_session, monkeypatch):
+    """Proves the production path calls classify_observation rather than
+    re-deriving the rule locally: bypass the classifier with an always-
+    unconstrained stub and the constrained-price behaviour disappears.
+
+    Without this, every assertion above would still pass if the wiring were
+    replaced by a duplicated `price_jpy <= 1000` check in market_index."""
+    import app.services.market_index as market_index_module
+    from app.services.source_semantics import SourceSemantics
+
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=PLATFORM_MINIMUM, days_ago=1)
+
+    monkeypatch.setattr(
+        market_index_module, "classify_observation",
+        lambda source, price_type, value_jpy: SourceSemantics(),
+    )
+    bypassed = get_market_index_for_card(db_session, card.id)
+
+    snk = find(bypassed.source_values, "snkrdunk", "listing_floor")
+    assert snk.constraint is None
+    assert snk.eligible is True
+    assert bypassed.index_value_jpy == 1000  # the pre-1C-2B behaviour

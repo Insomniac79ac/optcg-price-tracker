@@ -279,6 +279,14 @@ class MarketIndexSourceValueOut(BaseModel):
     eligible: bool
     fallback_used: bool
     ineligible_reason: str | None = None
+    # What the observed number *means*, independent of whether it is
+    # currently eligible - see app.services.source_semantics. "platform_floor"
+    # says the value is the platform's minimum permitted listing price rather
+    # than an unconstrained market price. Reported even when the observation
+    # is ineligible for some other reason (e.g. stale), so the raw value can
+    # still be displayed with the right caveat. Optional with a None default:
+    # every existing client that ignores it is unaffected.
+    constraint: str | None = None
 
 
 class MarketIndexOut(BaseModel):

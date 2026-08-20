@@ -45,6 +45,7 @@ from sqlalchemy.orm import Session
 from app.models import PriceObservation
 from app.schemas import MarketIndexOut, MarketIndexSourceValueOut
 from app.services.latest_prices import get_latest_price_map
+from app.services.source_semantics import classify_observation
 
 INDEX_VERSION = 1
 CALCULATION_METHOD = "median_of_sources"
@@ -99,6 +100,11 @@ class _SourceValue:
     eligible: bool
     fallback_used: bool
     ineligible_reason: str | None = None
+    # Source semantics for the underlying observation (see
+    # app.services.source_semantics), carried separately from `eligible` on
+    # purpose: a constrained value stays visible with its raw number even
+    # when some other rule is what currently disqualifies it.
+    constraint: str | None = None
 
     def to_schema(self) -> MarketIndexSourceValueOut:
         return MarketIndexSourceValueOut(
@@ -112,6 +118,7 @@ class _SourceValue:
             eligible=self.eligible,
             fallback_used=self.fallback_used,
             ineligible_reason=self.ineligible_reason,
+            constraint=self.constraint,
         )
 
 
@@ -191,6 +198,10 @@ def _resolve_snkrdunk(
     floor_observation: PriceObservation | None,
     now: datetime,
 ) -> _SourceValue:
+    # Genuine completed sales - never subject to the platform-floor rule
+    # applied to the fallback listing below. A sold price at any value is a
+    # real transaction, not a platform minimum, and classify_observation
+    # already treats every non-"floor" price_type as unconstrained.
     if len(sold_observations) >= SNKRDUNK_SOLD_MIN_SAMPLE:
         median = _median_jpy([obs.price_jpy for obs in sold_observations])
         freshest = max(obs.observed_at for obs in sold_observations)
@@ -211,6 +222,19 @@ def _resolve_snkrdunk(
     if floor_observation is not None:
         age = now - _naive_utc(floor_observation.observed_at)
         stale = age > timedelta(days=SNKRDUNK_FLOOR_MAX_AGE_DAYS)
+        # What this number *means*, asked of the one module that owns
+        # source-specific rules - no threshold or source comparison is
+        # restated here. The stored price_type is passed through as-is
+        # (always "floor" for this query), never the API-facing
+        # reference_type below; see source_semantics' module docstring.
+        semantics = classify_observation(
+            SNKRDUNK, floor_observation.price_type, floor_observation.price_jpy
+        )
+        # Both gates must pass: semantics never relaxes the freshness rule,
+        # and freshness never overrides a semantic disqualification. For the
+        # reason string the pre-existing rule wins, so a stale observation
+        # keeps reporting "stale"; the semantic verdict stays visible either
+        # way through `constraint`.
         return _SourceValue(
             source=SNKRDUNK,
             reference_type="listing_floor",
@@ -219,9 +243,10 @@ def _resolve_snkrdunk(
             observed_at=floor_observation.observed_at,
             sample_size=None,
             stale=stale,
-            eligible=not stale,
+            eligible=not stale and semantics.eligible,
             fallback_used=True,
-            ineligible_reason="stale" if stale else None,
+            ineligible_reason="stale" if stale else semantics.ineligible_reason,
+            constraint=semantics.constraint,
         )
 
     return _SourceValue(

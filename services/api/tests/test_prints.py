@@ -631,3 +631,89 @@ def test_legacy_card_endpoint_does_merge_siblings_which_is_why_prints_exist(
     # Yuyu-Tei value beside the other print's SNKRDUNK floor.
     assert base_yuyutei != parallel_yuyutei
     assert values.get("yuyutei") in {base_yuyutei, parallel_yuyutei}
+
+
+# --- constrained SNKRDUNK floors stay print-scoped (Task 1C-2B) -------------
+#
+# Source semantics is applied inside a per-source resolver, which runs once per
+# print. These prove that stays true: a constrained floor on one print must not
+# suppress - or leak its constraint onto - its sibling, even though the two
+# bridge through one legacy card row.
+
+
+@pytest.fixture
+def sanji_constrained_floor(db_session, five_prints):
+    """Sanji parallel gets a SNKRDUNK floor at the platform minimum (¥1,000 -
+    constrained); Sanji base gets an unconstrained ¥1,500 one. Deliberately
+    the opposite verdict on each sibling, so any leakage flips an assertion."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    legacy = five_prints["sanji_legacy"]
+    parallel = five_prints["sanji_parallel"]
+    base = five_prints["sanji_base"]
+
+    parallel_mapping = make_mapping(
+        db_session, legacy, snkrdunk, parallel, source_card_id="snkr-OP01-013-parallel"
+    )
+    base_mapping = make_mapping(
+        db_session, legacy, snkrdunk, base, source_card_id="snkr-OP01-013-base"
+    )
+    make_observation(
+        db_session, legacy, snkrdunk, parallel_mapping, parallel,
+        price_type="floor", price_jpy=1000, condition_label="D",
+        stock_status=None, observed_at=NOW,
+    )
+    make_observation(
+        db_session, legacy, snkrdunk, base_mapping, base,
+        price_type="floor", price_jpy=1500, condition_label="D",
+        stock_status=None, observed_at=NOW,
+    )
+    return five_prints
+
+
+def test_a_constrained_floor_does_not_constrain_its_sibling_print(
+    client, sanji_constrained_floor
+):
+    _, parallel = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
+    _, base = _sources(client, sanji_constrained_floor["sanji_base"].id)
+
+    assert parallel["snkrdunk"]["value_jpy"] == 1000
+    assert parallel["snkrdunk"]["constraint"] == "platform_floor"
+    assert parallel["snkrdunk"]["eligible"] is False
+
+    # The sibling's own floor is above the minimum and entirely unaffected.
+    assert base["snkrdunk"]["value_jpy"] == 1500
+    assert base["snkrdunk"]["constraint"] is None
+    assert base["snkrdunk"]["eligible"] is True
+
+
+def test_a_constrained_floor_does_not_alter_a_sibling_index(
+    client, sanji_constrained_floor
+):
+    """The parallel loses its SNKRDUNK contribution and falls back to its
+    Yuyu-Tei value alone; the base keeps both sources."""
+    parallel_body, _ = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_constrained_floor["sanji_base"].id)
+
+    assert parallel_body["index_value_jpy"] == 1980  # Yuyu-Tei only
+    assert parallel_body["source_count"] == 1
+    assert parallel_body["coverage_status"] == "limited"
+
+    assert base_body["index_value_jpy"] == 810  # midpoint of 120 and 1500
+    assert base_body["source_count"] == 2
+    assert base_body["coverage_status"] == "full"
+
+
+def test_a_constrained_sibling_floor_never_appears_on_the_other_print(
+    client, sanji_constrained_floor
+):
+    """The 2026-08-11 contamination shape, retested with the new field: the
+    constrained ¥1,000 must appear on exactly one print."""
+    parallel_body, _ = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
+    base_body, _ = _sources(client, sanji_constrained_floor["sanji_base"].id)
+
+    constrained = [
+        sv for body in (parallel_body, base_body) for sv in body["source_values"]
+        if sv["constraint"] == "platform_floor"
+    ]
+    assert len(constrained) == 1
+    assert constrained[0]["value_jpy"] == 1000
