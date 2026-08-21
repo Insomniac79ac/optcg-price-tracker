@@ -73,6 +73,7 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     "price_refresh": 30 * 60,
     "market_workflow": 60 * 60,
     "portfolio_snapshot": 10 * 60,
+    "market_index_snapshot": 10 * 60,
     "market_signal_snapshot": 10 * 60,
     "market_report_generation": 10 * 60,
     "analytics_digest_generation": 10 * 60,

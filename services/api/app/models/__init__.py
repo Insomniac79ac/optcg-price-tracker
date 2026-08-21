@@ -20,6 +20,7 @@ from app.models.file_job import FileJob
 from app.models.grading_submission import GradingSubmission
 from app.models.import_validation_report import ImportValidationReport
 from app.models.job_lock import JobLock
+from app.models.market_index_snapshot import MarketIndexSnapshot
 from app.models.market_intelligence_report import MarketIntelligenceReport
 from app.models.market_report_digest_send import MarketReportDigestSend
 from app.models.market_signal_event import MarketSignalEvent
@@ -59,6 +60,7 @@ __all__ = [
     "AlertEvent",
     "AlertRule",
     "MarketSignalEvent",
+    "MarketIndexSnapshot",
     "MarketIntelligenceReport",
     "MarketReportDigestSend",
     "MarketWorkflowRun",
