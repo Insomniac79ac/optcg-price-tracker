@@ -105,6 +105,15 @@ exact name depends on the plugin version - check the plugin's "Variables" tab).
   over first would reintroduce the `ModuleNotFoundError` crash. Once deployed and verified, the
   custom reference can be replaced with the standard one and this note removed.
 
+- **Reading staging's Postgres from a dev machine:** use
+  `python scripts/staging_db_read_check.py`, which opens a fresh
+  `railway connect Postgres --tunnel-only` SSH tunnel and refuses to report success unless the
+  schema fingerprint proves it reached the Atlas staging database. Do **not** reach for
+  `DATABASE_PUBLIC_URL` on its own - it is a cached value, its TCP proxy port has been re-assigned
+  at least once (2026-08-21), and the stale endpoint accepted connections against a *different,
+  empty* database instead of failing. Details in "Read-only staging database access" in
+  [docs/operations.md](operations.md#staging-operations).
+
 ### 2. Redis (managed plugin)
 
 Add Railway's Redis plugin. Same private-networking preference as Postgres. Used as the Celery

@@ -224,6 +224,14 @@ Docker image only copies `services/api/.`, not the repo-root `data/` directory -
 `deploy/railway/api.Dockerfile`), build the same image locally instead and mount the data
 directory, connecting to `DATABASE_PUBLIC_URL` with a `+psycopg` scheme prefix:
 
+> **Validate the destination first.** `DATABASE_PUBLIC_URL` is a cached variable and can point at
+> the wrong database without failing. On 2026-08-21 a re-assigned TCP proxy left it aimed at a
+> different, empty Postgres that authenticated cleanly and reported the same `current_database()`.
+> Before running anything that reads or writes through it, confirm the destination with
+> `python scripts/staging_db_read_check.py --url-env DATABASE_URL` (or use the fresh-tunnel default,
+> which cannot hit a stale proxy). See "Read-only staging database access" in
+> [docs/operations.md](operations.md#staging-operations).
+
 ```bash
 docker build -f deploy/railway/api.Dockerfile -t opcg-api-local .
 docker run --rm -e DATABASE_URL="postgresql+psycopg://<rest-of-DATABASE_PUBLIC_URL-after-postgresql://>" \

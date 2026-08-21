@@ -1550,6 +1550,36 @@ deployment - see [docs/staging_deployment.md](staging_deployment.md) for the ful
 below targets the deployed staging URLs, not the local dev/prod Docker Compose stacks - swap in
 your actual Railway `api` URL and Vercel staging URL wherever a placeholder appears.
 
+**Read-only staging database access (validate before you trust any query)**:
+
+```
+python scripts/staging_db_read_check.py
+```
+
+Opens a fresh `railway connect Postgres --tunnel-only` SSH tunnel, connects read-only, and exits
+non-zero unless five independent fingerprints prove the connection is the Atlas staging database:
+required tables, Atlas-specific named indexes/constraints, print-lineage columns, the alembic head
+this checkout expects, and non-empty invariants. Run it *before* any audit or data investigation,
+and discard results from a connection it rejects.
+
+**Why this is mandatory, and why `DATABASE_PUBLIC_URL` is not trusted on its own.** On 2026-08-21
+the Postgres service's public TCP proxy was re-assigned (port 21415 -> 12258) and the CLI kept
+injecting the stale `DATABASE_PUBLIC_URL` for a window. The old port still had a live Postgres on
+it, so `railway run --service Postgres -- ... "$DATABASE_PUBLIC_URL"` **connected successfully**,
+authenticated, and reported `current_database() = 'railway'` - indistinguishable from the real
+thing - against an empty schema. An audit run that way reports "0 rows" for every table and looks
+entirely plausible. Neither the endpoint nor the database name distinguishes the two databases;
+only the schema does. The variable is a cache and can point anywhere, so validate the destination
+rather than assuming it. Prefer the tunnel: `railway connect --tunnel-only` resolves through the
+service itself over SSH and cannot land on a stale public proxy.
+
+Two rules the checker encodes, worth remembering independently:
+
+- **Zero rows is never proof of a valid database** - it is precisely what the wrong database
+  returns. (`collection_items` is genuinely empty on staging, so it is deliberately excluded from
+  the non-empty invariants; asserting it would fail against the real database.)
+- **Counts printed by the checker are identity evidence, not an audit result.**
+
 **Run migrations**:
 
 ```
