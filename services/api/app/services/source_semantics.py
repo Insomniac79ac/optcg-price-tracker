@@ -63,16 +63,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Bumped whenever any rule in SOURCE_SEMANTICS below changes, so a derived
-# Market Index can later be traced back to the ruleset that produced it.
-# Deliberately still 1 after the Task 1C-2D three-way correction: version 1 has
-# never been pushed or deployed, so there is no released ruleset to distinguish
-# this from - bumping would imply a version 1 exists in the wild that some
-# stored index could have been derived under. The first bump belongs to the
-# first rule change made *after* a release.
+# Identifies the SOURCE_SEMANTICS ruleset a derived Market Index was computed
+# under, so a stored index value can later be traced back to the rules that
+# produced it.
+#
+# Version 1 is still correct today: no Market Index snapshot has ever been
+# persisted, so there is no stored value anywhere that a bump would need to
+# distinguish itself from.
+#
+# The binding contract, from the first persisted snapshot onward
+# ---------------------------------------------------------------
+# market_index_snapshots rows record source_semantics_version and are
+# append-only - they are never recomputed, and the classification that
+# produced them cannot be reconstructed from the row itself. So once a
+# snapshot has been written under a given version, that version is frozen:
+# it permanently means "the ruleset as it stood when those rows were made".
+#
+# Therefore, once any snapshot exists, ANY subsequent change to the
+# SOURCE_SEMANTICS rules or thresholds below that could alter how an
+# observation is classified or whether it is eligible MUST increment
+# SOURCE_SEMANTICS_VERSION in the same change, before that change is
+# deployed. That includes adding or removing a source entry, changing a
+# platform minimum, changing which price_type maps to which semantics, and
+# changing the eligible flag for any existing combination. Editing the rules
+# in place without a bump silently makes older snapshot rows claim a ruleset
+# that no longer exists, which is the one failure this field is here to
+# prevent. Purely editorial changes - comments, reason-string docs, tests -
+# do not need a bump.
+#
 # Deliberately separate from market_index.INDEX_VERSION: the combination
-# algorithm and the per-source rules change on different cadences. Not exposed
-# through any API schema yet.
+# algorithm and the per-source rules change on different cadences, and a
+# snapshot records both independently. Not exposed through any API schema yet.
 SOURCE_SEMANTICS_VERSION = 1
 
 # Stored source names, as they appear in sources.name.
