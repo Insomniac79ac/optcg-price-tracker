@@ -375,14 +375,28 @@ export interface PrintPriceObservation {
   raw_snapshot_id: number | null;
 }
 
+/** One (source, price_type) series' trend inside a print's price history -
+ * see schemas.py PrintPriceSeriesTrendOut and
+ * app.services.print_pricing.compute_print_price_series_trends.
+ *
+ * The backend always has a latest observation for a series it emits at all,
+ * so `latest_price_jpy`/`latest_observed_at` are never null. What *is*
+ * nullable is each window's change: `sufficient_history` is false for a
+ * single-observation series, and even with history a `change_*_pct` stays
+ * null unless a real observation exists at or before that window's cutoff -
+ * the backend never fabricates one, and nothing here may substitute 0. */
 export interface PrintPriceSeriesTrend {
   source: string;
   price_type: string;
-  latest_price_jpy: number | null;
-  previous_price_jpy: number | null;
-  change_jpy: number | null;
-  change_pct: number | null;
-  observation_count: number;
+  latest_price_jpy: number;
+  /** ISO-8601 timestamp of the observation behind `latest_price_jpy`. */
+  latest_observed_at: string;
+  /** False when the series has fewer than two observations, in which case
+   * every change_*_pct below is null. */
+  sufficient_history: boolean;
+  change_24h_pct: number | null;
+  change_7d_pct: number | null;
+  change_30d_pct: number | null;
 }
 
 export interface PrintPriceHistory {
