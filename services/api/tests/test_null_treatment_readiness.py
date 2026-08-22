@@ -87,7 +87,7 @@ def _print(session, card: CanonicalCard, treatment, **overrides) -> CardPrint:
         verification_status="verified",
         release_product_code="OP-01",
         release_product_id=_release_product(session).id,
-        official_artwork_variant=_VARIANTS[treatment],
+        official_asset_variant=_VARIANTS[treatment],
         artwork_key=f"art-{card.card_code}-{treatment}",
         image_url=f"https://images.example.com/{card.card_code}.png",
     )
@@ -240,6 +240,6 @@ def test_treatment_is_no_longer_identity_in_the_real_schema():
         "canonical_card_id",
         "language",
         "release_product_id",
-        "official_artwork_variant",
+        "official_asset_variant",
     ]
     assert "treatment" not in {c.name for c in index.columns}

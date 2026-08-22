@@ -66,7 +66,12 @@ def test_migration_history_has_exactly_one_head():
                 downs.add(down.group(1))
 
     heads = sorted(rev for rev in revisions if rev not in downs)
-    assert heads == ["d4b17c9e2a83"], f"expected a single head, found {heads}"
+    # One head, whatever the latest revision happens to be - this migration is
+    # in the chain either as that head or as an ancestor of it. Pinning the
+    # head to this revision would make every later migration fail here.
+    assert len(heads) == 1, f"expected a single head, found {heads}"
+    assert "d4b17c9e2a83" in revisions
+    assert heads == ["d4b17c9e2a83"] or "d4b17c9e2a83" in downs
 
 
 def test_upgrade_preflights_before_any_ddl():

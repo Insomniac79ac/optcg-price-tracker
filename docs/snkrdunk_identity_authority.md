@@ -38,20 +38,53 @@ official card-list artwork URL, and Bandai encodes the card code in the path:
 ```
 https://www.onepiece-cardgame.com/images/cardlist/card/OP04-083.png
 https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png
+https://www.onepiece-cardgame.com/images/cardlist/card/OP01-120_r1.png
 ```
 
-The `_p<n>` suffix is not part of the code. This URL is already fetched and
-perceptual-hash compared on every validation run, so the code parsed from it is
-evidence the collector has independently exercised — not a value copied from a
-spreadsheet.
+The `_p<n>` / `_r<n>` suffix is not part of the code. This URL is already
+fetched and perceptual-hash compared on every validation run, so the code
+parsed from it is evidence the collector has independently exercised — not a
+value copied from a spreadsheet.
 
-**What `_p<n>` does and does not mean.** A bare `CODE.png` and each `CODE_pN.png`
-are *distinct official artwork variants* of the same card code. That is all the
-suffix establishes. It does **not** establish parallel, manga, special, alt-art,
-or any rarity rank — Bandai's Card List gives every sibling printing identical
-card code, rarity, category and product, and publishes no label distinguishing
-them at all. `treatment` in this repo is therefore an **Atlas editorial
-classification**, not source data, and must never be inferred from a filename.
+**The published grammar.** Measured across the complete JP catalogue on
+2026-08-22 (4,962 occurrences): `base` 2,821, `p1`–`p10` 1,680, `r1`–`r3` 461,
+and nothing else — no other suffix family, and no unparseable basename. Both
+families are read by `parse_official_asset_variant`
+(`app/services/official_asset_variant.py`) into
+`card_prints.official_asset_variant`.
+
+**Why `official_asset_variant`, not `official_artwork_variant`.** The field was
+originally named for artwork, which promised more than the evidence supports.
+The suffix identifies the official **asset/occurrence**; it does not guarantee
+the artwork differs. The same corpus contains **152 rN assets whose bytes are
+byte-for-byte identical to a base asset**. The name was corrected to match what
+the suffix actually discriminates.
+
+**What the suffix does and does not mean.** A bare `CODE.png` and each
+`CODE_pN.png` / `CODE_rN.png` are *distinct official assets* of the same card
+code. That is all the suffix establishes:
+
+- It **is** identity-bearing source evidence — the asset component of the
+  exact-print key `(canonical_card_id, language, release_product_id,
+  official_asset_variant)`.
+- It says **nothing** about parallel, manga, special, alt-art, or any rarity
+  rank. Bandai's Card List gives every sibling printing identical card code,
+  rarity, category and product, and publishes no label distinguishing them at
+  all — every one of the 459 rN assets whose card also has a base sibling
+  carries the *same* rarity as that sibling. `treatment` in this repo is
+  therefore an **Atlas editorial classification**, not source data, and must
+  never be inferred from a filename.
+- **Identical image bytes may still be distinct print identities.** When the
+  product or the asset variant differs, the printings differ even though
+  `artwork_key` — the SHA-256 of the bytes — is equal. `artwork_key` stays
+  evidence; it is not identity, and it never was.
+
+**Why rN had to be admitted.** Three cards publish both `_r1` and `_r2` inside
+one product — OP01-120, OP05-074 and OP05-119, all in PRB-01 — with distinct
+official entry ids, distinct asset addresses and distinct SHA-256 digests.
+While the vocabulary knew only `base` and `pN`, all three collapsed to a NULL
+variant and collided under the exact-print key. With rN read as a
+discriminator, the corpus has no suffix-induced collision left.
 
 Two further properties, both established from Bandai's own Card List:
 

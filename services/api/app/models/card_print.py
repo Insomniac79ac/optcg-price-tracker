@@ -22,16 +22,22 @@ class CardPrint(Base):
     in and the official artwork it carries.
 
     Exact-print identity is
-    `(canonical_card_id, language, release_product_id, official_artwork_variant)`
+    `(canonical_card_id, language, release_product_id, official_asset_variant)`
     for active, verified prints - see the uq_card_prints_active_verified_identity
     index. `treatment` is deliberately NOT part of it: it is editable Atlas
     descriptive metadata ("normal", "parallel", ...), never a physical
     property Bandai publishes, so a verified print may carry NULL there when
     Atlas has not classified it.
 
+    Two printings can share identical image bytes and still be distinct: the
+    identity above turns on product and official asset variant, never on
+    `artwork_key`. The 2026-08-22 JP corpus contains 152 rN assets that are
+    byte-for-byte identical to a base asset, so this is measured behaviour
+    rather than a hypothetical.
+
     A print starts life `unverified` with its identity fields null. The
     ck_card_prints_verified_requires_fields check is what forces
-    release_product_id, official_artwork_variant and artwork_key to be filled
+    release_product_id, official_asset_variant and artwork_key to be filled
     in before it can be marked `verified`. release_product_code is NOT
     required: Bandai ships uncoded limited/promotional products, and those
     prints are legitimate.
@@ -56,7 +62,7 @@ class CardPrint(Base):
             "canonical_card_id IS NOT NULL AND "
             "language IS NOT NULL AND trim(language, ' \t\n\r') <> '' AND "
             "release_product_id IS NOT NULL AND "
-            "official_artwork_variant IS NOT NULL AND "
+            "official_asset_variant IS NOT NULL AND "
             "artwork_key IS NOT NULL AND "
             # treatment is optional, but on a verified print a placeholder is
             # still not a classification - NULL says "unclassified" honestly.
@@ -83,21 +89,21 @@ class CardPrint(Base):
             ")",
             name="ck_card_prints_no_fake_artwork_key",
         ),
-        # official_artwork_variant is either absent or exactly 'base' or
-        # 'p<N>' with N a positive integer and no leading zero. Expressed with
-        # substr/length/trim rather than a regex so one constraint holds on
-        # both PostgreSQL and the sqlite the test suite runs on - Postgres'
+        # official_asset_variant is either absent or exactly 'base', 'p<N>'
+        # or 'r<N>' with N a positive integer and no leading zero. Expressed
+        # with substr/length/trim rather than a regex so one constraint holds
+        # on both PostgreSQL and the sqlite the test suite runs on - Postgres'
         # `~` and sqlite's GLOB have no common spelling. trim(x, '0123456789')
         # emptying out is what proves "digits only".
         CheckConstraint(
-            "official_artwork_variant IS NULL OR "
-            "official_artwork_variant = 'base' OR ("
-            "substr(official_artwork_variant, 1, 1) = 'p' AND "
-            "length(official_artwork_variant) >= 2 AND "
-            "substr(official_artwork_variant, 2, 1) <> '0' AND "
-            "trim(substr(official_artwork_variant, 2), '0123456789') = ''"
+            "official_asset_variant IS NULL OR "
+            "official_asset_variant = 'base' OR ("
+            "substr(official_asset_variant, 1, 1) IN ('p', 'r') AND "
+            "length(official_asset_variant) >= 2 AND "
+            "substr(official_asset_variant, 2, 1) <> '0' AND "
+            "trim(substr(official_asset_variant, 2), '0123456789') = ''"
             ")",
-            name="ck_card_prints_official_artwork_variant_format",
+            name="ck_card_prints_official_asset_variant_format",
         ),
         # Exact-print identity. Neither treatment (editorial), nor
         # release_product_code (absent for uncoded products), nor artwork_key
@@ -109,7 +115,7 @@ class CardPrint(Base):
             "canonical_card_id",
             "language",
             "release_product_id",
-            "official_artwork_variant",
+            "official_asset_variant",
             unique=True,
             postgresql_where=text("is_active = true AND verification_status = 'verified'"),
             sqlite_where=text("is_active = 1 AND verification_status = 'verified'"),
@@ -135,22 +141,26 @@ class CardPrint(Base):
         ForeignKey("release_products.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    # Which official Bandai artwork this print carries - 'base' for CODE.png,
-    # 'pN' for CODE_pN.png - parsed from the official asset address only (see
-    # app.services.official_artwork_variant). It says nothing about parallel/
-    # manga/special/alt-art/rarity, and treatment must never be inferred from
-    # it.
+    # Which official Bandai asset this print carries - 'base' for CODE.png,
+    # 'pN' for CODE_pN.png, 'rN' for CODE_rN.png - parsed from the official
+    # asset address only (see app.services.official_asset_variant).
     #
-    # Identity-bearing evidence: it is the artwork component of the intended
-    # future dedupe key (canonical_card_id, language, release_product_id,
-    # official_artwork_variant). This tranche only records it - the verified
-    # unique index above is unchanged and still keyed on treatment and
-    # artwork_key, and nothing reads this column yet.
+    # Named "asset", not "artwork", on purpose: the suffix identifies the
+    # official asset, and does NOT promise the artwork differs. 152 rN assets
+    # in the 2026-08-22 JP corpus are byte-identical to a base asset.
+    #
+    # It says nothing about parallel/manga/special/alt-art/rarity, and
+    # treatment must never be inferred from it.
+    #
+    # Identity-bearing evidence: the asset component of the live exact-print
+    # key (canonical_card_id, language, release_product_id,
+    # official_asset_variant). artwork_key stays the SHA-256 evidence anchor
+    # and is deliberately NOT identity - two prints may share it.
     #
     # Nullable because an unresolved or future asset must have a safe state:
     # no image, a non-Card-List address, or a basename that does not name
     # this print's own card all leave it NULL rather than guessed.
-    official_artwork_variant: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    official_asset_variant: Mapped[str | None] = mapped_column(String(16), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     artist: Mapped[str | None] = mapped_column(String(255), nullable=True)
     verification_status: Mapped[str] = mapped_column(

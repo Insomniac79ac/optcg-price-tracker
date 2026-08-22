@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import sqlalchemy as sa
 
-from app.services.official_artwork_variant import parse_official_artwork_variant
+from app.services.official_asset_variant import parse_official_asset_variant
 
 VERSIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 MIGRATION_PATH = VERSIONS_DIR / "c2f7b48a91d6_add_official_artwork_variant.py"
@@ -197,13 +197,31 @@ PARITY_CASES = [
 ]
 
 
-def test_migration_parser_matches_the_application_parser():
-    """The migration's frozen copy must agree with app.services case for
-    case - otherwise a replayed migration would write different evidence
-    than the application's own contract."""
+def test_migration_parser_matches_the_application_parser_on_this_revisions_vocabulary():
+    """The frozen copy must still agree on the vocabulary of ITS revision.
+
+    At c2f7b48a91d6 the grammar was base and pN, and a replayed migration must
+    write exactly the evidence it wrote originally. The application parser has
+    since learned the rN family (see test below); that divergence is
+    deliberate, and it is precisely why this migration froze its own copy
+    instead of importing application code.
+    """
     module = _load_migration()
 
     for image_url, card_code in PARITY_CASES:
-        assert module._parse_variant(image_url, card_code) == parse_official_artwork_variant(
+        assert module._parse_variant(image_url, card_code) == parse_official_asset_variant(
             image_url, card_code
         ), f"disagreement on {image_url!r} / {card_code!r}"
+
+
+def test_the_frozen_copy_deliberately_predates_the_r_family():
+    """The one place the two parsers are *meant* to disagree.
+
+    This migration ran before the rN family was measured, so its frozen copy
+    leaves an rN address unresolved. Replaying it must keep doing that rather
+    than back-dating a vocabulary the revision never had.
+    """
+    module = _load_migration()
+    url = f"{CARD_LIST}/OP01-024_r1.png"
+    assert module._parse_variant(url, "OP01-024") is None
+    assert parse_official_asset_variant(url, "OP01-024") == "r1"

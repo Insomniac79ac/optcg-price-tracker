@@ -10,7 +10,7 @@ Why a planner exists at all
 ---------------------------
 The exact-print identity went live on 2026-08-22:
 
-    (canonical_card_id, language, release_product_id, official_artwork_variant)
+    (canonical_card_id, language, release_product_id, official_asset_variant)
 
 Every component of that key is a fact somebody has to establish *before* a row
 can be written. Getting one wrong does not fail loudly - it silently creates a
@@ -50,7 +50,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, Card, CardPrint, ReleaseProduct, Source, SourceCardMapping
-from app.services.official_artwork_variant import parse_official_artwork_variant
+from app.services.official_asset_variant import parse_official_asset_variant
 from app.services.official_cardlist import (
     OfficialCardEntry,
     OfficialSeries,
@@ -190,7 +190,7 @@ class PlannedPrint:
     official_card_name: str
     language: str
     official_image_url: str | None
-    official_artwork_variant: str | None
+    official_asset_variant: str | None
     official_artwork_sha256: str | None
 
     # -- Atlas descriptive metadata, never derived from the suffix
@@ -338,7 +338,7 @@ class PrintImportPlanner:
                 CardPrint.canonical_card_id == canonical_card_id,
                 CardPrint.language == LANGUAGE,
                 CardPrint.release_product_id == release_product_id,
-                CardPrint.official_artwork_variant == variant,
+                CardPrint.official_asset_variant == variant,
                 CardPrint.is_active.is_(True),
             )
         ).scalar_one_or_none()
@@ -357,7 +357,7 @@ class PrintImportPlanner:
         creations: list[str] = []
 
         card_code = (entry.card_code or "").strip()
-        variant = parse_official_artwork_variant(entry.image_url, card_code)
+        variant = parse_official_asset_variant(entry.image_url, card_code)
 
         if not entry.is_wellformed:
             flags.append(FLAG_MALFORMED_ENTRY)
@@ -524,7 +524,7 @@ class PrintImportPlanner:
             creations.append(CREATE_CARD_PRINT)
             reasons.append(
                 "no active print holds this exact identity "
-                "(canonical_card, language, release_product, official_artwork_variant)"
+                "(canonical_card, language, release_product, official_asset_variant)"
             )
             if digest is None:
                 flags.append(FLAG_DIGEST_NOT_ESTABLISHED)
@@ -559,7 +559,7 @@ class PrintImportPlanner:
             official_card_name=entry.card_name,
             language=LANGUAGE,
             official_image_url=entry.image_url,
-            official_artwork_variant=variant,
+            official_asset_variant=variant,
             official_artwork_sha256=digest,
             treatment=treatment,
             existing_canonical_card_id=existing_card.id if existing_card else None,
@@ -688,7 +688,7 @@ class PrintImportPlanner:
         variants_per_code: dict[str, set[str]] = {}
         for plan in planned_list:
             variants_per_code.setdefault(plan.card_code.upper(), set()).add(
-                plan.official_artwork_variant or "?"
+                plan.official_asset_variant or "?"
             )
         planned_codes = set(variants_per_code)
 

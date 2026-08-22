@@ -233,7 +233,7 @@ def render_human(plan: ImportPlan, digests: AssetDigests) -> None:
             f"{planned.official_product_display_name or '<none>'}"
         )
         emit(
-            f"     artwork   : variant={planned.official_artwork_variant} "
+            f"     artwork   : variant={planned.official_asset_variant} "
             f"sha256={(planned.official_artwork_sha256 or '<none>')[:16]}"
         )
         emit(

@@ -79,7 +79,7 @@ def make_sibling_prints(db_session, card, source) -> tuple[tuple, tuple]:
 
     pairs = []
     for treatment, variant in (("base", "base"), ("parallel", "p1")):
-        # release_product_id/official_artwork_variant/artwork_key are required
+        # release_product_id/official_asset_variant/artwork_key are required
         # for a print to be `verified` (ck_card_prints_verified_requires_fields),
         # and two verified prints of one canonical card must differ somewhere in
         # uq_card_prints_active_verified_identity - which is the artwork
@@ -90,7 +90,7 @@ def make_sibling_prints(db_session, card, source) -> tuple[tuple, tuple]:
             treatment=treatment,
             release_product_code="OP-01",
             release_product_id=product.id,
-            official_artwork_variant=variant,
+            official_asset_variant=variant,
             artwork_key=f"{treatment}-artwork-digest",
             verification_status="verified",
         )

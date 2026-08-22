@@ -101,7 +101,7 @@ def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
     fields.setdefault(
         "release_product_id", make_release_product(db_session, overrides.get("release_product_code") or "OP-01").id
     )
-    fields.setdefault("official_artwork_variant", _variant_for(overrides))
+    fields.setdefault("official_asset_variant", _variant_for(overrides))
     fields.update(overrides)
     print_row = CardPrint(**fields)
     db_session.add(print_row)
@@ -110,7 +110,7 @@ def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
     return print_row
 
 
-# artwork_key -> official_artwork_variant, assigned first-seen. Exact-print
+# artwork_key -> official_asset_variant, assigned first-seen. Exact-print
 # identity now includes the artwork variant, so two fixture siblings of one
 # canonical card must not land on the same one. Callers already vary
 # artwork_key per print, so keying off it keeps every existing fixture legal

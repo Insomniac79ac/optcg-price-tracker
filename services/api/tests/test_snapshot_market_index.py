@@ -114,7 +114,7 @@ def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
         if key not in _VARIANTS_BY_ARTWORK_KEY:
             index = len(_VARIANTS_BY_ARTWORK_KEY)
             _VARIANTS_BY_ARTWORK_KEY[key] = "base" if index == 0 else f"p{index}"
-        fields.setdefault("official_artwork_variant", _VARIANTS_BY_ARTWORK_KEY[key])
+        fields.setdefault("official_asset_variant", _VARIANTS_BY_ARTWORK_KEY[key])
     fields.update(overrides)
     print_row = CardPrint(**fields)
     db_session.add(print_row)

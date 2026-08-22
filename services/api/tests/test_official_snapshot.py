@@ -426,33 +426,82 @@ def test_the_observed_suffix_indices_are_p1_to_p10_and_r1_to_r3(baseline):
     assert baseline["suffix_indices"]["p"]["10"] == 1
 
 
-def test_the_approved_identity_parser_cannot_yet_read_the_r_family(baseline):
-    """461 occurrences (9.3%) are unresolvable, and all of them are _rN.
+def test_the_baseline_records_the_gap_the_r_family_used_to_leave(baseline):
+    """461 occurrences (9.3%) were unresolvable when this corpus was recorded,
+    and all of them were _rN.
 
-    Recorded here so the size of the gap is visible. The parser is
-    deliberately NOT changed in this tranche - the vocabulary is discovered
-    first, and widening an identity rule is its own decision.
+    The baseline keeps the measurement that motivated widening the grammar:
+    discovering the vocabulary and admitting it were deliberately separate
+    decisions. The number stays as recorded history - what changed is that the
+    parser now reads it, which the test below asserts directly.
     """
     assert baseline["occurrences_unresolvable_by_approved_variant_parser"] == 461
     assert baseline["unresolvable_are_all_r_family"] is True
     assert baseline["suffix_families"]["r"] == 461
 
 
-def test_the_raw_suffix_survives_what_the_identity_parser_refuses():
-    """The two layers disagree on purpose, and the raw layer keeps the evidence.
+def test_the_identity_parser_now_reads_the_r_family_the_raw_layer_recorded():
+    """The gap is closed, and the two layers now agree on the r family.
 
-    parse_official_artwork_variant is the *identity* rule and returns None for
-    an _rN address it has no vocabulary for. The raw evidence layer must still
-    record exactly what Bandai published, or the information needed to decide
-    that rule would be lost the moment it was collected.
+    Keeping the raw suffix apart from the identity rule is what made this
+    possible: the evidence layer recorded `_r1` verbatim while the identity
+    rule still refused it, so the vocabulary could be measured before it was
+    admitted. The raw layer keeps doing its job for whatever family comes
+    next - see the test below.
     """
-    from app.services.official_artwork_variant import parse_official_artwork_variant
+    from app.services.official_asset_variant import parse_official_asset_variant
 
     url = f"{CARDLIST}/OP01-024_r1.png?260821"
-    assert parse_official_artwork_variant(url, "OP01-024") is None
+    assert parse_official_asset_variant(url, "OP01-024") == "r1"
     assert raw_suffix("OP01-024_r1.png", "OP01-024") == "_r1"
     assert suffix_family("_r1") == "r"
     assert suffix_index("_r1") == 1
+
+
+def test_the_raw_layer_still_outruns_the_identity_rule_for_an_unknown_family():
+    """The separation is not a historical accident, it is the design.
+
+    An `_s1` address has never been published. The identity rule refuses it -
+    unrecognised evidence a human must look at - while the raw layer records
+    exactly what Bandai served, which is precisely how the r family came to be
+    measurable in the first place.
+    """
+    from app.services.official_asset_variant import parse_official_asset_variant
+
+    url = f"{CARDLIST}/OP01-024_s1.png?260821"
+    assert parse_official_asset_variant(url, "OP01-024") is None
+    assert raw_suffix("OP01-024_s1.png", "OP01-024") == "_s1"
+    assert suffix_family("_s1") == "s"
+
+
+@pytest.mark.skipif(not LIVE_SNAPSHOT.exists(), reason="no local snapshot to compare")
+def test_every_occurrence_in_the_corpus_gets_a_recognized_asset_variant():
+    """The whole point of admitting rN: no official occurrence is left
+    unresolved by the identity rule any more.
+
+    All 4,962 basenames parse, the distribution is exactly what the raw
+    evidence layer independently counted, and nothing falls outside the
+    base/pN/rN grammar. Runs only where a snapshot has been collected.
+    """
+    from collections import Counter
+
+    from app.services.official_asset_variant import parse_official_asset_variant
+
+    entries = Snapshot(LIVE_SNAPSHOT).load("entries.jsonl")
+    variants = [
+        parse_official_asset_variant(e["image_url"], e["card_code"]) for e in entries
+    ]
+
+    assert len(variants) == 4962
+    assert None not in variants
+
+    families = Counter(
+        "base" if v == "base" else v[0] for v in variants
+    )
+    assert dict(families) == {"base": 2821, "p": 1680, "r": 461}
+    # The identity rule and the raw evidence layer agree occurrence for
+    # occurrence - two independent readings of the same 4,962 basenames.
+    assert dict(families) == suffix_inventory(entries)["families"]
 
 
 @pytest.mark.skipif(not LIVE_SNAPSHOT.exists(), reason="no local snapshot to compare")

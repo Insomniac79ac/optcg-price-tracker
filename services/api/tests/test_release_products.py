@@ -322,7 +322,7 @@ def test_print_can_reference_a_product_without_losing_its_code(db_session):
     print_row = CardPrint(
         canonical_card_id=card.id, language="jp", treatment="base",
         release_product_code="OP-01", artwork_key="art-1",
-        official_artwork_variant="base",
+        official_asset_variant="base",
         verification_status="verified", release_product_id=product.id,
     )
     db_session.add(print_row)

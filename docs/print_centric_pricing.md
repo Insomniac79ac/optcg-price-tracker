@@ -2,7 +2,7 @@
 
 Reference doc for the `/prints` API surface added to make public pricing
 reads collectible-print-centric, so two prints of the same canonical card
-(e.g. OP01-013 Sanji's two official artwork variants) can never contaminate
+(e.g. OP01-013 Sanji's two official asset variants) can never contaminate
 each other's prices, Market Index, or history.
 
 Those two prints are distinct because they are **different printings**, not

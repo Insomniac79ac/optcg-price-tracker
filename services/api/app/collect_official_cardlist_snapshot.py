@@ -342,7 +342,7 @@ def run_atlas_coverage(snapshot: Snapshot, *, staging: bool) -> dict[str, Any]:
     from sqlalchemy import select
 
     from app.models import CanonicalCard, CardPrint, ReleaseProduct
-    from app.services.official_artwork_variant import parse_official_artwork_variant
+    from app.services.official_asset_variant import parse_official_asset_variant
 
     if staging:
         from app.plan_canonical_print_import import (
@@ -366,7 +366,7 @@ def run_atlas_coverage(snapshot: Snapshot, *, staging: bool) -> dict[str, Any]:
         # live exact-print key resolves to once ids are assigned.
         official_identities: dict[tuple, dict] = {}
         for row in entries:
-            variant = parse_official_artwork_variant(row.get("image_url"), row.get("card_code"))
+            variant = parse_official_asset_variant(row.get("image_url"), row.get("card_code"))
             key = (row["card_code"], row.get("product_code"), variant)
             official_identities.setdefault(key, row)
 
@@ -382,14 +382,14 @@ def run_atlas_coverage(snapshot: Snapshot, *, staging: bool) -> dict[str, Any]:
             key = (
                 card.card_code,
                 product.official_code if product else None,
-                print_row.official_artwork_variant,
+                print_row.official_asset_variant,
             )
             official = official_identities.get(key)
             if official is None:
                 unmatched.append(
                     {"card_print_id": print_row.id, "card_code": card.card_code,
                      "product_code": product.official_code if product else None,
-                     "variant": print_row.official_artwork_variant}
+                     "variant": print_row.official_asset_variant}
                 )
                 continue
             represented.append(key)

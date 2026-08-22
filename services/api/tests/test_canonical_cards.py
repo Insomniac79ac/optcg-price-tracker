@@ -52,14 +52,14 @@ def make_print(db_session, canonical_card, **overrides) -> CardPrint:
         verification_status="unverified",
     )
     # Exact-print identity is (canonical_card, language, release_product_id,
-    # official_artwork_variant). Defaulted for verified fixtures unless the
+    # official_asset_variant). Defaulted for verified fixtures unless the
     # test is deliberately exercising their absence.
     if overrides.get("verification_status") == "verified":
         fields.setdefault(
             "release_product_id",
             make_release_product(db_session, overrides.get("release_product_code") or "OP-01").id,
         )
-        fields.setdefault("official_artwork_variant", _variant_for(overrides))
+        fields.setdefault("official_asset_variant", _variant_for(overrides))
     fields.update(overrides)
     print_row = CardPrint(**fields)
     db_session.add(print_row)
@@ -167,7 +167,7 @@ def test_verified_print_does_not_require_release_product_code(db_session):
 
     assert print_row.release_product_code is None
     assert print_row.release_product_id is not None
-    assert print_row.official_artwork_variant is not None
+    assert print_row.official_asset_variant is not None
 
 
 def test_verified_print_requires_artwork_key(db_session):
@@ -465,7 +465,7 @@ def test_update_transition_to_verified_rejects_unknown_treatment(db_session):
     print_row.release_product_code = "OP-01"
     print_row.artwork_key = "base-art"
     print_row.release_product_id = make_release_product(db_session).id
-    print_row.official_artwork_variant = "base"
+    print_row.official_asset_variant = "base"
     print_row.verification_status = "verified"
     with pytest.raises(IntegrityError):
         db_session.commit()
@@ -485,7 +485,7 @@ def test_update_transition_to_verified_succeeds_with_valid_values(db_session):
     print_row.release_product_code = "OP-01"
     print_row.artwork_key = "base-art"
     print_row.release_product_id = make_release_product(db_session).id
-    print_row.official_artwork_variant = "base"
+    print_row.official_asset_variant = "base"
     print_row.verification_status = "verified"
     db_session.commit()
 

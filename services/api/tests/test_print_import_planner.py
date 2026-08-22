@@ -103,7 +103,7 @@ def make_print(db_session, card, product, variant, **overrides) -> CardPrint:
         release_product_code="OP-01",
         release_product_id=product.id,
         artwork_key=BASE_DIGEST,
-        official_artwork_variant=variant,
+        official_asset_variant=variant,
         image_url=f"{CARDLIST}/OP01-001.png",
         verification_status="verified",
         is_active=True,
@@ -240,7 +240,7 @@ def test_multiple_pn_assets_plan_as_distinct_variants(db_session, op01, zoro):
         }.get,
         classify_mappings=False,
     )
-    variants = [p.official_artwork_variant for p in plan.prints]
+    variants = [p.official_asset_variant for p in plan.prints]
     assert variants == ["base", "p1", "p2"]
     # Three separate prints, never collapsed into one.
     assert all(p.outcome == OUTCOME_CREATE for p in plan.prints)
@@ -258,7 +258,7 @@ def test_pn_never_determines_treatment(db_session, op01, zoro):
             ),
             digests={f"{CARDLIST}/OP01-001{suffix}.png": BASE_DIGEST},
         )
-        assert planned.official_artwork_variant == variant
+        assert planned.official_asset_variant == variant
         assert planned.treatment is None, f"{suffix} invented a treatment"
         assert "parallel" not in str(planned.to_dict()).lower().replace("parallel_", "")
 
@@ -470,7 +470,7 @@ def test_a_changed_address_with_the_same_bytes_is_not_a_change(db_session, op01,
 )
 def test_a_malformed_asset_is_needs_review_never_guessed(db_session, op01, zoro, image):
     planned = plan_one(db_session, entry(image=image), digests={})
-    assert planned.official_artwork_variant is None
+    assert planned.official_asset_variant is None
     assert FLAG_MALFORMED_ASSET in planned.flags
     assert planned.outcome == OUTCOME_NEEDS_REVIEW
     assert planned.verification_status == "needs_review"
@@ -491,6 +491,136 @@ def test_without_a_digest_a_new_print_is_not_verified(db_session, op01, zoro):
     assert planned.official_artwork_sha256 is None
     assert planned.outcome == OUTCOME_NEEDS_REVIEW
     assert planned.verification_status == "needs_review"
+
+
+# --- 10b. the r family -------------------------------------------------------
+#
+# Admitting rN was the point of tranche 4B-3. Three cards in the complete
+# 2026-08-22 JP corpus publish both `_r1` and `_r2` inside PRB-01 - OP01-120,
+# OP05-074 and OP05-119 - and under the previous p-only vocabulary both of
+# each pair resolved to None, collided under the exact-print key, and landed
+# in needs_review as a malformed asset. These assert that the planner now
+# reads them as identity, and still reads nothing else out of them.
+
+
+R1_DIGEST = "c" * 64
+R2_DIGEST = "d" * 64
+
+
+@pytest.mark.parametrize("variant", ["r1", "r2", "r3"])
+def test_an_rn_asset_is_planned_as_identity_not_as_malformed(db_session, op01, zoro, variant):
+    image = f"{CARDLIST}/OP01-001_{variant}.png?260821"
+    planned = plan_one(
+        db_session,
+        entry(entry_id=f"OP01-001_{variant}", image=image),
+        digests={image: R1_DIGEST},
+    )
+
+    assert planned.official_asset_variant == variant
+    assert FLAG_MALFORMED_ASSET not in planned.flags
+    assert planned.outcome == OUTCOME_CREATE
+    assert planned.verification_status == "verified"
+
+
+@pytest.mark.parametrize("variant", ["r1", "r2", "r3"])
+def test_an_rn_asset_never_produces_a_treatment(db_session, op01, zoro, variant):
+    """The whole reason the field is called *asset* and not *artwork*: rN says
+    which official asset, and nothing about parallel/manga/special/rarity."""
+    image = f"{CARDLIST}/OP01-001_{variant}.png"
+    planned = plan_one(
+        db_session, entry(image=image, entry_id=f"OP01-001_{variant}"), digests={image: R1_DIGEST}
+    )
+
+    assert planned.treatment is None
+    assert planned.official_asset_variant == variant
+
+
+def test_r1_and_r2_in_one_product_are_planned_as_two_distinct_prints(db_session, op01, zoro):
+    """The OP01-120 / OP05-074 / OP05-119 shape. Under the p-only vocabulary
+    these two collapsed into one identity; now they are simply two."""
+    r1_image = f"{CARDLIST}/OP01-001_r1.png"
+    r2_image = f"{CARDLIST}/OP01-001_r2.png"
+
+    plan = plan_entries(
+        db_session,
+        [
+            entry(entry_id="OP01-001_r1", image=r1_image),
+            entry(entry_id="OP01-001_r2", image=r2_image),
+        ],
+        series_index=SERIES_INDEX,
+        digest_provider={r1_image: R1_DIGEST, r2_image: R2_DIGEST}.get,
+    )
+
+    variants = [p.official_asset_variant for p in plan.prints]
+    assert variants == ["r1", "r2"]
+    # Two identities, not one - and each is a create in its own right.
+    assert {p.outcome for p in plan.prints} == {OUTCOME_CREATE}
+    identities = {
+        (p.card_code, p.official_product_code, p.official_asset_variant) for p in plan.prints
+    }
+    assert len(identities) == 2
+
+
+def test_an_rn_print_with_identical_bytes_to_base_is_still_its_own_identity(
+    db_session, op01, zoro
+):
+    """152 rN assets in the JP corpus are byte-for-byte identical to a base
+    asset. An equal digest is equal *evidence*, never a merged identity."""
+    base_image = f"{CARDLIST}/OP01-001.png"
+    r1_image = f"{CARDLIST}/OP01-001_r1.png"
+    shared = BASE_DIGEST
+
+    plan = plan_entries(
+        db_session,
+        [
+            entry(entry_id="OP01-001", image=base_image),
+            entry(entry_id="OP01-001_r1", image=r1_image),
+        ],
+        series_index=SERIES_INDEX,
+        digest_provider={base_image: shared, r1_image: shared}.get,
+    )
+
+    assert [p.official_asset_variant for p in plan.prints] == ["base", "r1"]
+    assert {p.official_artwork_sha256 for p in plan.prints} == {shared}
+    assert {p.outcome for p in plan.prints} == {OUTCOME_CREATE}
+
+
+def test_an_existing_base_print_does_not_absorb_a_new_rn_entry(db_session, op01, zoro):
+    """An rN entry must not be matched against the base print that already
+    exists - that would silently rewrite one printing into another."""
+    make_print(db_session, zoro, op01, "base")
+    r1_image = f"{CARDLIST}/OP01-001_r1.png"
+
+    planned = plan_one(
+        db_session,
+        entry(entry_id="OP01-001_r1", image=r1_image),
+        digests={r1_image: R1_DIGEST},
+    )
+
+    assert planned.official_asset_variant == "r1"
+    assert planned.existing_card_print_id is None
+    assert planned.outcome == OUTCOME_CREATE
+    assert CREATE_CARD_PRINT in planned.creations
+
+
+def test_an_existing_rn_print_is_recognised_as_no_change(db_session, op01, zoro):
+    """The other direction: once an rN print exists, replanning it is a
+    no-change rather than a second create."""
+    existing = make_print(
+        db_session, zoro, op01, "r1",
+        artwork_key=R1_DIGEST, image_url=f"{CARDLIST}/OP01-001_r1.png",
+    )
+    r1_image = f"{CARDLIST}/OP01-001_r1.png"
+
+    planned = plan_one(
+        db_session,
+        entry(entry_id="OP01-001_r1", image=r1_image),
+        digests={r1_image: R1_DIGEST},
+    )
+
+    assert planned.existing_card_print_id == existing.id
+    assert planned.outcome == OUTCOME_NO_CHANGE
+    assert CREATE_CARD_PRINT not in planned.creations
 
 
 # --- 11. no writes -----------------------------------------------------------

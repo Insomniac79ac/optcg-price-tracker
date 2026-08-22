@@ -1,6 +1,6 @@
 """What identifies an exact print, now that the identity is active.
 
-    (canonical_card_id, language, release_product_id, official_artwork_variant)
+    (canonical_card_id, language, release_product_id, official_asset_variant)
 
 for active, verified prints. treatment is NOT in it - it is editable Atlas
 descriptive metadata, and Bandai publishes no such property. Neither is
@@ -52,7 +52,7 @@ def _print(db_session, card, product, **overrides) -> CardPrint:
         language="jp",
         treatment="normal",
         release_product_id=product.id if product is not None else None,
-        official_artwork_variant="base",
+        official_asset_variant="base",
         artwork_key="sha-256-of-the-artwork",
         verification_status="verified",
         is_active=True,
@@ -113,10 +113,10 @@ def test_same_identity_with_different_release_product_codes_is_rejected(db_sessi
 def test_base_and_p1_of_one_product_are_both_allowed(db_session):
     card, product = _card(db_session), _product(db_session)
 
-    base = _print(db_session, card, product, official_artwork_variant="base", artwork_key="sha-a")
-    p1 = _print(db_session, card, product, official_artwork_variant="p1", artwork_key="sha-b")
+    base = _print(db_session, card, product, official_asset_variant="base", artwork_key="sha-a")
+    p1 = _print(db_session, card, product, official_asset_variant="p1", artwork_key="sha-b")
 
-    assert {base.official_artwork_variant, p1.official_artwork_variant} == {"base", "p1"}
+    assert {base.official_asset_variant, p1.official_asset_variant} == {"base", "p1"}
 
 
 def test_the_same_artwork_in_two_products_is_allowed(db_session):
@@ -154,7 +154,7 @@ def test_an_unverified_duplicate_does_not_collide(db_session):
     card, product = _card(db_session), _product(db_session)
     _print(
         db_session, card, product, verification_status="unverified",
-        official_artwork_variant=None, artwork_key=None,
+        official_asset_variant=None, artwork_key=None,
     )
 
     verified = _print(db_session, card, product)
@@ -181,11 +181,11 @@ def test_verified_without_release_product_id_is_rejected(db_session):
         _print(db_session, card, None)
 
 
-def test_verified_without_official_artwork_variant_is_rejected(db_session):
+def test_verified_without_official_asset_variant_is_rejected(db_session):
     card, product = _card(db_session), _product(db_session)
 
     with pytest.raises(IntegrityError):
-        _print(db_session, card, product, official_artwork_variant=None)
+        _print(db_session, card, product, official_asset_variant=None)
 
 
 def test_verified_without_release_product_code_is_accepted(db_session):
@@ -226,11 +226,11 @@ def test_unresolved_prints_may_leave_every_identity_field_null(db_session, statu
 
     print_row = _print(
         db_session, card, None, verification_status=status, treatment=None,
-        official_artwork_variant=None, artwork_key=None, release_product_code=None,
+        official_asset_variant=None, artwork_key=None, release_product_code=None,
     )
 
     assert print_row.release_product_id is None
-    assert print_row.official_artwork_variant is None
+    assert print_row.official_asset_variant is None
     assert print_row.artwork_key is None
     assert print_row.treatment is None
 
@@ -243,7 +243,7 @@ def test_unresolved_prints_may_still_park_unknown_in_treatment(db_session, statu
 
     print_row = _print(
         db_session, card, None, verification_status=status, treatment="unknown",
-        official_artwork_variant=None, artwork_key=None,
+        official_asset_variant=None, artwork_key=None,
     )
 
     assert print_row.treatment == "unknown"
@@ -253,7 +253,7 @@ def test_promotion_to_verified_requires_the_identity_fields(db_session):
     card, product = _card(db_session), _product(db_session)
     print_row = _print(
         db_session, card, None, verification_status="unverified", treatment=None,
-        official_artwork_variant=None, artwork_key=None,
+        official_asset_variant=None, artwork_key=None,
     )
 
     print_row.verification_status = "verified"
@@ -263,7 +263,7 @@ def test_promotion_to_verified_requires_the_identity_fields(db_session):
 
     print_row = db_session.get(CardPrint, print_row.id)
     print_row.release_product_id = product.id
-    print_row.official_artwork_variant = "base"
+    print_row.official_asset_variant = "base"
     print_row.artwork_key = "sha-256-of-the-artwork"
     print_row.verification_status = "verified"
     db_session.commit()

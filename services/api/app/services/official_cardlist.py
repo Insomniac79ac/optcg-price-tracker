@@ -12,8 +12,8 @@ turns one already-fetched Card List page into records. It does not fetch, does
 not touch the database, does not decide anything, and does not interpret:
 
   * it never infers `treatment` - the `_pN` suffix is an artwork address, not
-    a classification, and the whole point of official_artwork_variant is that
-    those two facts are separate (see app.services.official_artwork_variant);
+    a classification, and the whole point of official_asset_variant is that
+    those two facts are separate (see app.services.official_asset_variant);
   * it never normalizes a product name into an identity - the repo's own
     normalize_release_text collapses 30 distinct Bandai products into 13 keys,
     which is why ReleaseProduct is keyed on a surrogate id and a frozen
@@ -226,7 +226,7 @@ class OfficialCardEntry:
         """Whether the entry carries the fields identity planning requires.
 
         Deliberately does not consider the image address: whether the asset
-        names this card is official_artwork_variant's judgement to make, not
+        names this card is official_asset_variant's judgement to make, not
         this parser's.
         """
         return bool(self.entry_id and self.card_code and self.card_name)
@@ -515,7 +515,7 @@ def parse_card_list(
     the canonical address for `series_id`, which is where the page came from.
     Query strings on those addresses are Bandai's cache buster and are kept
     verbatim - discarding them here would quietly change the evidence, and
-    parse_official_artwork_variant already ignores them when reading identity.
+    parse_official_asset_variant already ignores them when reading identity.
     """
     parser = _CardListParser()
     parser.feed(html)
