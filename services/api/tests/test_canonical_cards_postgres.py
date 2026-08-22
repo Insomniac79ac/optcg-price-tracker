@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, ReleaseProduct
 
 TEST_POSTGRES_URL = os.environ.get(
     "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
@@ -34,8 +34,12 @@ def postgres_session():
         engine.dispose()
         pytest.skip(f"No PostgreSQL server reachable at {TEST_POSTGRES_URL}")
 
+    # release_products is created alongside them only because card_prints
+    # now carries a (dormant, nullable) FK to it - this test is still about
+    # ON DELETE RESTRICT on canonical_card_id.
     Base.metadata.create_all(
-        bind=engine, tables=[CanonicalCard.__table__, CardPrint.__table__]
+        bind=engine,
+        tables=[ReleaseProduct.__table__, CanonicalCard.__table__, CardPrint.__table__],
     )
     session = sessionmaker(bind=engine)()
     try:
@@ -43,7 +47,8 @@ def postgres_session():
     finally:
         session.close()
         Base.metadata.drop_all(
-            bind=engine, tables=[CardPrint.__table__, CanonicalCard.__table__]
+            bind=engine,
+            tables=[CardPrint.__table__, CanonicalCard.__table__, ReleaseProduct.__table__],
         )
         engine.dispose()
 

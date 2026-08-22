@@ -29,6 +29,8 @@ from app.models.price_observation import PriceObservation
 from app.models.portfolio_valuation_snapshot import PortfolioValuationSnapshot
 from app.models.price_refresh_run import PriceRefreshRun
 from app.models.raw_snapshot import RawSnapshot
+from app.models.release_product import ReleaseProduct
+from app.models.release_product_alias import ReleaseProductAlias
 from app.models.saved_view import SavedView
 from app.models.search_history import SearchHistory
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
@@ -77,5 +79,7 @@ __all__ = [
     "FileJob",
     "AnalyticsDigestReport",
     "ImportValidationReport",
+    "ReleaseProduct",
+    "ReleaseProductAlias",
     "SavedView",
 ]

@@ -76,6 +76,15 @@ class CardPrint(Base):
     language: Mapped[str] = mapped_column(String(8), nullable=False, index=True)
     treatment: Mapped[str] = mapped_column(String(64), nullable=False)
     release_product_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Dormant lineage FK to the first-class product entity (release_products).
+    # Nullable on purpose: a print whose product is unknown or not yet
+    # resolved must have a safe state, and the backfill leaves an unexpected
+    # release_product_code NULL here rather than guessing a product.
+    # release_product_code above is NOT replaced by this - it stays the join
+    # key the SNKRDUNK collector's RELEASE_REFERENCES uses today.
+    release_product_id: Mapped[int | None] = mapped_column(
+        ForeignKey("release_products.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     artist: Mapped[str | None] = mapped_column(String(255), nullable=True)
