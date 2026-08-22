@@ -150,7 +150,9 @@ def migrated_db():
             "print_count": conn.execute(text("SELECT count(*) FROM card_prints")).scalar_one(),
         }
 
-    output = _run_alembic("upgrade", "head")
+    # This revision, not "head": later phases add their own migrations and
+    # this module is about what b6e3a9c15d47 itself does.
+    output = _run_alembic("upgrade", THIS_REVISION)
 
     try:
         yield engine, before, output
@@ -406,6 +408,6 @@ def test_downgrade_restores_the_pre_migration_shape(migrated_db):
             text("SELECT version_num FROM alembic_version")
         ).scalar_one() == PREVIOUS_HEAD
 
-    # Leave the database at head again so ordering between test files (and a
-    # re-run of this module) never depends on this test having run.
-    _run_alembic("upgrade", "head")
+    # Leave the database back at this revision so ordering between test files
+    # (and a re-run of this module) never depends on this test having run.
+    _run_alembic("upgrade", THIS_REVISION)

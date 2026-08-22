@@ -56,6 +56,22 @@ class CardPrint(Base):
             ")",
             name="ck_card_prints_no_fake_artwork_key",
         ),
+        # official_artwork_variant is either absent or exactly 'base' or
+        # 'p<N>' with N a positive integer and no leading zero. Expressed with
+        # substr/length/trim rather than a regex so one constraint holds on
+        # both PostgreSQL and the sqlite the test suite runs on - Postgres'
+        # `~` and sqlite's GLOB have no common spelling. trim(x, '0123456789')
+        # emptying out is what proves "digits only".
+        CheckConstraint(
+            "official_artwork_variant IS NULL OR "
+            "official_artwork_variant = 'base' OR ("
+            "substr(official_artwork_variant, 1, 1) = 'p' AND "
+            "length(official_artwork_variant) >= 2 AND "
+            "substr(official_artwork_variant, 2, 1) <> '0' AND "
+            "trim(substr(official_artwork_variant, 2), '0123456789') = ''"
+            ")",
+            name="ck_card_prints_official_artwork_variant_format",
+        ),
         Index(
             "uq_card_prints_active_verified_identity",
             "canonical_card_id",
@@ -86,6 +102,22 @@ class CardPrint(Base):
         ForeignKey("release_products.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Which official Bandai artwork this print carries - 'base' for CODE.png,
+    # 'pN' for CODE_pN.png - parsed from the official asset address only (see
+    # app.services.official_artwork_variant). It says nothing about parallel/
+    # manga/special/alt-art/rarity, and treatment must never be inferred from
+    # it.
+    #
+    # Identity-bearing evidence: it is the artwork component of the intended
+    # future dedupe key (canonical_card_id, language, release_product_id,
+    # official_artwork_variant). This tranche only records it - the verified
+    # unique index above is unchanged and still keyed on treatment and
+    # artwork_key, and nothing reads this column yet.
+    #
+    # Nullable because an unresolved or future asset must have a safe state:
+    # no image, a non-Card-List address, or a basename that does not name
+    # this print's own card all leave it NULL rather than guessed.
+    official_artwork_variant: Mapped[str | None] = mapped_column(String(16), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     artist: Mapped[str | None] = mapped_column(String(255), nullable=True)
     verification_status: Mapped[str] = mapped_column(
