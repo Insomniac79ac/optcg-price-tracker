@@ -1,0 +1,39 @@
+{
+  "captured_at": "2026-08-22",
+  "distinct_card_codes": 2823,
+  "distinct_image_digests": 4810,
+  "distinct_image_urls": 4962,
+  "entry_occurrences": 4962,
+  "note": "Observed invariants of the complete JP Card List corpus on the capture date. Recorded rather than asserted against the live site: Bandai publishes new products, so these numbers are a dated baseline to diff against, not a contract the catalogue owes us.",
+  "occurrences_unresolvable_by_approved_variant_parser": 461,
+  "series_coded": 59,
+  "series_total": 62,
+  "series_uncoded": 3,
+  "source_catalogue": "bandai_jp",
+  "suffix_families": {
+    "base": 2821,
+    "p": 1680,
+    "r": 461
+  },
+  "suffix_indices": {
+    "p": {
+      "1": 988,
+      "10": 1,
+      "2": 408,
+      "3": 156,
+      "4": 70,
+      "5": 36,
+      "6": 9,
+      "7": 7,
+      "8": 4,
+      "9": 1
+    },
+    "r": {
+      "1": 419,
+      "2": 41,
+      "3": 1
+    }
+  },
+  "unparseable_assets": 0,
+  "unresolvable_are_all_r_family": true
+}

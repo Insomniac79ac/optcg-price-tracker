@@ -76,6 +76,14 @@ opcg_backup_*.json
 data/file_jobs/*
 !data/file_jobs/.gitkeep
 
+# Raw official Card List evidence snapshots
+# (services/api/app/collect_official_cardlist_snapshot.py). A full JP snapshot
+# is ~1 GB of Bandai's own card images plus the page sources they came from -
+# a corpus that is re-fetchable from the catalogue at any time and must never
+# be committed. The snapshot is content-addressed and self-describing, so a
+# teammate reproduces it with one command rather than cloning it.
+data/official_snapshots/
+
 # Flask stuff:
 instance/
 .webassets-cache

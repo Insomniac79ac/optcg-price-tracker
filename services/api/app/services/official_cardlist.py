@@ -36,8 +36,9 @@ is therefore scoped to the catalogue it was read from.
 
 from __future__ import annotations
 
+import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import urljoin
 
@@ -47,6 +48,26 @@ from urllib.parse import urljoin
 SOURCE_CATALOGUE = "bandai_jp"
 
 CARD_LIST_BASE_URL = "https://www.onepiece-cardgame.com/cardlist/"
+
+# The field blocks Bandai publishes inside an entry's `<dd>`, named by its own
+# div class. Captured verbatim and keyed by that class rather than translated
+# into Atlas words: the raw layer's job is to preserve what was published, and
+# a card whose `cost` block is labelled ライフ (a Leader's life) rather than
+# コスト is exactly the kind of distinction a normalising reader would destroy.
+FIELD_CLASSES = (
+    "cost", "attribute", "power", "counter", "color",
+    "block", "feature", "text", "trigger", "getInfo",
+)
+
+# The `getInfo` class is NOT reliably the obtain-information block: Bandai
+# reuses it for a 備考 (remarks) note as well - OP01-010 carries one about an
+# illustrator misprint. Only the heading distinguishes them, so product
+# membership is keyed on this label and never on the class alone.
+OBTAIN_INFO_LABEL = "入手情報"
+
+# One card entry in the source document, from its opening tag to its close.
+ENTRY_OPEN_RE = re.compile(r'<dl class="modalCol"', re.IGNORECASE)
+ENTRY_CLOSE = "</dl>"
 
 # Bandai wraps a product's own code in full-width brackets at the end of its
 # title: 'ブースターパック ROMANCE DAWN【OP-01】'. Products genuinely without a
@@ -97,6 +118,16 @@ def _clean(text: str) -> str:
     return WHITESPACE_RE.sub(" ", INLINE_BREAK_RE.sub(" ", text)).strip()
 
 
+def _clean_multiline(text: str) -> str:
+    """Collapse whitespace per line, keeping the line breaks themselves.
+
+    A `<br>` inside 入手情報 separates two products, so flattening it would
+    merge two distinct facts into one string.
+    """
+    lines = [WHITESPACE_RE.sub(" ", line).strip() for line in text.split("\n")]
+    return "\n".join(line for line in lines if line)
+
+
 @dataclass(frozen=True)
 class OfficialSeries:
     """One product as the catalogue's own series picker names it."""
@@ -108,6 +139,59 @@ class OfficialSeries:
     @property
     def source_url(self) -> str:
         return card_list_url(self.series_id)
+
+
+@dataclass(frozen=True)
+class RawField:
+    """One published field block, exactly as the page carries it.
+
+    `name` is Bandai's own div class, `label` its own heading (ライフ / コスト /
+    パワー ...), and `value` the text as written - '-' included, because '-' is
+    what Bandai publishes for "no counter" and is not the same evidence as an
+    absent block. `image_alt`/`image_src` carry the attribute icon, which is a
+    picture rather than text in the source.
+    """
+
+    name: str
+    label: str
+    value: str
+    image_alt: str | None = None
+    image_src: str | None = None
+
+
+def iter_entry_fragments(html: str) -> list[str]:
+    """Every `<dl class="modalCol">...</dl>` substring, in document order.
+
+    Used to hash each entry's own source. modalCol elements do not nest, so
+    the first `</dl>` after an opening tag closes it - verified against the
+    live catalogue, where the fragment count always equals the parsed entry
+    count (the parser asserts exactly that before attaching any hash).
+    """
+    fragments: list[str] = []
+    for match in ENTRY_OPEN_RE.finditer(html):
+        end = html.find(ENTRY_CLOSE, match.start())
+        if end == -1:
+            fragments.append(html[match.start():])
+            continue
+        fragments.append(html[match.start(): end + len(ENTRY_CLOSE)])
+    return fragments
+
+
+def has_real_pagination(html: str) -> bool:
+    """Whether the page carries server-side pagination we would be missing.
+
+    The Card List renders a `pagerCol` containing PREV/NEXT, but they are
+    `javascript:void(0)` controls that step through the card *modals* and the
+    `pager` div itself is empty - one series page holds every card in that
+    series. This exists so that stops being an assumption: if Bandai ever
+    gives those controls a real href, the crawler says so instead of silently
+    collecting the first page only.
+    """
+    for match in re.finditer(r'<a[^>]*class="[^"]*(?:prevBtn|nextBtn)[^"]*"[^>]*>', html, re.I):
+        href = re.search(r'href="([^"]*)"', match.group(0))
+        if href and href.group(1).strip().lower() not in ("", "#", "javascript:void(0);", "javascript:void(0)"):
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -126,6 +210,16 @@ class OfficialCardEntry:
     card_name: str
     image_url: str | None
     product_names: tuple[str, ...]
+    # Everything else the page publishes, verbatim. Defaulted so the 4B-1
+    # planner and its tests construct entries exactly as before.
+    fields: tuple[RawField, ...] = ()
+    fragment_sha256: str | None = None
+
+    def field(self, name: str) -> RawField | None:
+        for candidate in self.fields:
+            if candidate.name == name:
+                return candidate
+        return None
 
     @property
     def is_wellformed(self) -> bool:
@@ -193,8 +287,14 @@ class _CardListParser(HTMLParser):
         self._entry_id: str = ""
         self._info_spans: list[str] = []
         self._card_name: list[str] = []
-        self._get_info: list[str] = []
         self._image_url: str | None = None
+        # Verbatim field blocks, keyed by Bandai's own div class.
+        self._fields: list[RawField] = []
+        self._field_name: str | None = None
+        self._field_depth = 0
+        self._field_label: list[str] = []
+        self._field_value: list[str] = []
+        self._field_img: tuple[str | None, str | None] = (None, None)
 
         # Which capturing region we are inside, and at what tag depth it
         # started, so nested markup closes the right region.
@@ -218,9 +318,31 @@ class _CardListParser(HTMLParser):
     def _classes(attrs: list[tuple[str, str | None]]) -> set[str]:
         return set((_CardListParser._attr(attrs, "class") or "").split())
 
+    def _close_field(self) -> None:
+        if self._field_name is None:
+            return
+        self._fields.append(
+            RawField(
+                name=self._field_name,
+                label=_clean("".join(self._field_label)),
+                value=_clean_multiline("".join(self._field_value)),
+                image_alt=self._field_img[0],
+                image_src=self._field_img[1],
+            )
+        )
+        self._field_name = None
+        self._field_label = []
+        self._field_value = []
+        self._field_img = (None, None)
+
     def _reset_entry(self) -> None:
         self._in_entry = False
         self._entry_id = ""
+        self._fields = []
+        self._field_name = None
+        self._field_label = []
+        self._field_value = []
+        self._field_img = (None, None)
         self._info_spans = []
         self._card_name = []
         self._get_info = []
@@ -255,10 +377,15 @@ class _CardListParser(HTMLParser):
                 self._region, self._region_depth = "info", self._depth
             elif "cardName" in classes:
                 self._region, self._region_depth = "name", self._depth
-            elif "getInfo" in classes:
-                self._region, self._region_depth = "getinfo", self._depth
             elif "frontCol" in classes:
                 self._in_front_col, self._front_col_depth = True, self._depth
+            named = classes.intersection(FIELD_CLASSES)
+            if named:
+                self._close_field()
+                self._field_name = sorted(named)[0]
+                self._field_depth = self._depth
+                if self._field_name == "getInfo":
+                    self._region, self._region_depth = "getinfo", self._depth
             return
 
         if tag == "span" and self._region == "info":
@@ -271,15 +398,21 @@ class _CardListParser(HTMLParser):
             self._in_h3 = True
             return
 
+        if tag == "img" and self._field_name is not None and not self._in_front_col:
+            # The attribute block carries its value as an icon, not as text.
+            self._field_img = (self._attr(attrs, "alt"), self._attr(attrs, "src"))
+            return
+
         if tag == "img" and self._in_front_col and self._image_url is None:
             # The lazy loader keeps the real address in data-src; src is a
             # shared placeholder gif.
             self._image_url = self._attr(attrs, "data-src") or self._attr(attrs, "src")
             return
 
-        if tag == "br" and self._region == "getinfo":
-            # One product per line inside 入手情報.
-            self._get_info.append("\n")
+        if tag == "br" and self._field_name is not None:
+            # A line break is structure, not wording: kept as a newline so a
+            # multi-product 入手情報 block stays separable.
+            (self._field_label if self._in_h3 else self._field_value).append("\n")
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         # An explicitly self-closing tag (<br/>) carries its own end, so it is
@@ -309,6 +442,9 @@ class _CardListParser(HTMLParser):
         if self._in_front_col and self._depth <= self._front_col_depth:
             self._in_front_col = False
 
+        if self._field_name is not None and self._depth <= self._field_depth:
+            self._close_field()
+
         if tag == "dl" and self._in_entry and self._depth <= self._dl_depth:
             self._finish_entry()
 
@@ -318,14 +454,17 @@ class _CardListParser(HTMLParser):
         if self._option_value is not None:
             self._option_text.append(data)
             return
-        if not self._in_entry or self._in_h3:
+        if not self._in_entry:
+            return
+        if self._field_name is not None:
+            (self._field_label if self._in_h3 else self._field_value).append(data)
+            return
+        if self._in_h3:
             return
         if self._region == "info" and self._in_span and self._info_spans:
             self._info_spans[-1] += data
         elif self._region == "name":
             self._card_name.append(data)
-        elif self._region == "getinfo":
-            self._get_info.append(data)
 
     # -- record construction ---------------------------------------------
     def _finish_option(self) -> None:
@@ -345,10 +484,13 @@ class _CardListParser(HTMLParser):
         )
 
     def _finish_entry(self) -> None:
+        self._close_field()
         spans = [_clean(s) for s in self._info_spans]
-        products = tuple(
-            _clean(part) for part in "".join(self._get_info).split("\n") if _clean(part)
+        fields = tuple(self._fields)
+        obtain = next(
+            (f for f in fields if f.name == "getInfo" and f.label == OBTAIN_INFO_LABEL), None
         )
+        products = tuple(obtain.value.split("\n")) if obtain and obtain.value else ()
         self.entries.append(
             OfficialCardEntry(
                 entry_id=self._entry_id.strip(),
@@ -358,6 +500,7 @@ class _CardListParser(HTMLParser):
                 card_name=_clean("".join(self._card_name)),
                 image_url=(self._image_url or "").strip() or None,
                 product_names=products,
+                fields=fields,
             )
         )
         self._reset_entry()
@@ -378,6 +521,18 @@ def parse_card_list(
     parser.feed(html)
     parser.close()
 
+    # Each entry's own source, hashed. Only attached when the fragment count
+    # matches the parsed count - a mismatch means the scan and the parser
+    # disagree about what an entry is, and a hash of the wrong fragment would
+    # be worse than none.
+    fragments = iter_entry_fragments(html)
+    aligned = len(fragments) == len(parser.entries)
+    digests = (
+        [hashlib.sha256(f.encode("utf-8")).hexdigest() for f in fragments]
+        if aligned
+        else [None] * len(parser.entries)
+    )
+
     resolved_base = base_url or card_list_url(series_id)
     entries = tuple(
         OfficialCardEntry(
@@ -388,8 +543,10 @@ def parse_card_list(
             card_name=e.card_name,
             image_url=urljoin(resolved_base, e.image_url) if e.image_url else None,
             product_names=e.product_names,
+            fields=e.fields,
+            fragment_sha256=digest,
         )
-        for e in parser.entries
+        for e, digest in zip(parser.entries, digests)
     )
     return OfficialCardListPage(
         series_id=series_id,
