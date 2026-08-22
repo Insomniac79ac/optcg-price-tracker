@@ -15,8 +15,10 @@ production report reached a wrong conclusion by using the wrong endpoint.
 
 ### Why
 
-Two `card_prints` (a base and a parallel treatment of the same card) bridge
-through **one legacy `cards` row**. The legacy card-keyed index does not keep
+Two `card_prints` — two distinct printings of the same card, which Atlas
+labels `base` and `parallel` — bridge through **one legacy `cards` row**. The
+labels are Atlas editorial classification, not what makes the prints distinct
+(see [snkrdunk_identity_authority.md](snkrdunk_identity_authority.md)). The legacy card-keyed index does not keep
 their observations separate — by design, and documented in
 `app.api.cards.get_card_market_index`'s own docstring.
 
@@ -25,7 +27,7 @@ The 2026-08-11 report used `get_market_index_for_cards` and produced:
 > "9 of 9 cards resolve from both sources"
 
 with a Sanji row pairing **Yuyu-Tei ¥120** with **SNKRDUNK ¥1,500**. Those two
-values belong to *different prints* — print 4 (base) and print 3 (parallel).
+values belong to *different prints* — print 4 and print 3.
 The print endpoints never produced that row. **The API was correct; the
 verification script was wrong.**
 
@@ -37,7 +39,7 @@ unit, than the "9 cards" figure.
 
 - Is the unit a **print_id**, not a card_id? Card-level counts are not
   comparable to print-level ones and must never be reported as such.
-- Do sibling prints show **different** values? If a base and parallel report
+- Do sibling prints show **different** values? If two sibling prints report
   identical source values, suspect the legacy path.
 - Does the row count match the number of **verified prints** (currently 20),
   not the number of legacy cards (currently fewer)?

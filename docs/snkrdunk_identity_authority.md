@@ -12,10 +12,19 @@ page being validated. Where it comes from is field-specific.
 | Field | Authority | Fallback | Never |
 |---|---|---|---|
 | `card_code` | Bandai card-level evidence | Verified Yuyu-Tei product for the same print | SNKRDUNK |
-| `release_product_code` / release name | **Bandai only** | *(none)* | SNKRDUNK, Yuyu-Tei |
+| Release name for a `release_product_code` | **Bandai only** | *(none)* | SNKRDUNK, Yuyu-Tei |
 | Name, rarity | `canonical_cards` | *(none)* | SNKRDUNK |
 | Treatment, language | `card_prints` | *(none)* | SNKRDUNK |
 | Artwork | Bandai official card artwork | *(none)* | SNKRDUNK |
+
+`release_product_code` itself is **not** a Bandai-published field. Bandai
+publishes a product *code* for its numbered lines (`OP-01`, `ST-xx`, `EB-xx`,
+`PRB-xx`) and a product *name* for every product; Atlas derives
+`card_prints.release_product_code` from its own canonical card/set data, in
+Bandai's `OP-01` format. What the table above places under Bandai authority is
+the **name** that code resolves to. See
+[snkrdunk_release_reference.md](snkrdunk_release_reference.md) for what that
+code can and cannot represent.
 
 ## Card code — a two-tier hierarchy
 
@@ -31,10 +40,32 @@ https://www.onepiece-cardgame.com/images/cardlist/card/OP04-083.png
 https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png
 ```
 
-The `_p<n>` suffix marks a parallel treatment's artwork and is not part of the
-code. This URL is already fetched and perceptual-hash compared on every
-validation run, so the code parsed from it is evidence the collector has
-independently exercised — not a value copied from a spreadsheet.
+The `_p<n>` suffix is not part of the code. This URL is already fetched and
+perceptual-hash compared on every validation run, so the code parsed from it is
+evidence the collector has independently exercised — not a value copied from a
+spreadsheet.
+
+**What `_p<n>` does and does not mean.** A bare `CODE.png` and each `CODE_pN.png`
+are *distinct official artwork variants* of the same card code. That is all the
+suffix establishes. It does **not** establish parallel, manga, special, alt-art,
+or any rarity rank — Bandai's Card List gives every sibling printing identical
+card code, rarity, category and product, and publishes no label distinguishing
+them at all. `treatment` in this repo is therefore an **Atlas editorial
+classification**, not source data, and must never be inferred from a filename.
+
+Two further properties, both established from Bandai's own Card List:
+
+- **Suffix numbering spans products.** It is indexed per card code across every
+  product, not per release. `OP01-001` has `_p2` in OP-01 while `_p1` and `_p3`
+  belong to entirely different limited products, and `OP01-002` has `_p1` in
+  OP-01 — the numbering is not contiguous within a release.
+- **Suffix numbering is per catalogue, not global.** The Japanese
+  (`www.onepiece-cardgame.com`) and Asia-English (`asia-en.onepiece-cardgame.com`)
+  catalogues serve the same artwork files under *swapped* suffixes: Asia-EN
+  `OP01-001_p1.png` is byte-identical to JP `OP01-001_p2.png`, and vice versa
+  (verified 2026-08-21 by SHA-256). A suffix read from one catalogue therefore
+  cannot be compared against a suffix read from another. The **image digest** is
+  the only artwork identity that is stable across catalogues.
 
 **2. Verified Yuyu-Tei product**, when Bandai has no card-level record. Valid
 only when the Yuyu-Tei mapping is:
@@ -67,6 +98,14 @@ checks, both required:
 
 Check A cannot catch a reprint carrying an unchanged card code but belonging to
 a different release; check B is what does.
+
+Both checks are scoped to **coded, numbered product lines**. `release_product_code`
+is Atlas-derived from the card's canonical set data rather than read from a
+Bandai product field, and it is the join key into `RELEASE_REFERENCES` — so
+SNKRDUNK release verification does depend on it. Bandai also publishes many
+limited and promotional products that carry a *name only*, and those cannot be
+named by a release code at all; see
+[snkrdunk_release_reference.md](snkrdunk_release_reference.md).
 
 ### Source-specific renderings
 

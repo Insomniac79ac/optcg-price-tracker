@@ -2,10 +2,17 @@
 
 Reference doc for the `/prints` API surface added to make public pricing
 reads collectible-print-centric, so two prints of the same canonical card
-(e.g. OP01-013 Sanji's base and parallel treatments) can never contaminate
-each other's prices, Market Index, or history. See `docs/market_index.md`
-for the Market Index calculation itself (unchanged by this task) and
-`docs/staging_data.md` for the five-print verified test dataset.
+(e.g. OP01-013 Sanji's two official artwork variants) can never contaminate
+each other's prices, Market Index, or history.
+
+Those two prints are distinct because they are **different printings**, not
+because of the `treatment` label they carry. `treatment` is an Atlas editorial
+classification, never the thing that establishes exact-print identity — see
+[snkrdunk_identity_authority.md](snkrdunk_identity_authority.md).
+
+See `docs/market_index.md` for the Market Index calculation itself (unchanged
+by this task) and `docs/staging_data.md` for the five-print verified test
+dataset.
 
 ## Root cause this fixes
 

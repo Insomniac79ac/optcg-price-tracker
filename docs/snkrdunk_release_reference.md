@@ -21,6 +21,68 @@ Check A alone cannot detect a reprint or alternate product that carries an
 unchanged card code but actually belongs to a different release product.
 Check B is what catches that, so the two are never collapsed into one reason.
 
+## What this table can and cannot represent
+
+**It covers coded, numbered product lines only** — `OP-xx`, `ST-xx`, `EB-xx`,
+`PRB-xx`. Those are the products for which Bandai publishes a code, and they are
+the only ones `release_product_code` can name.
+
+**Uncoded products exist, and there are many.** Bandai's Card List carries
+limited and promotional products that publish a *name only* — no code, no id, no
+slug, no data attribute. Sampling two series pages on 2026-08-21 found **223
+distinct products with no code at all** (196 under プロモーションカード, 27 under
+限定商品収録カード), including the two extra `OP01-001` printings:
+`プレミアムカードコレクション 25周年エディション` and
+`週刊少年ジャンプ応募者全員サービス`. A series id cannot stand in for a product
+id — one series page holds up to 196 different products.
+
+So **`release_product_code` alone cannot represent every Bandai product**, and a
+card belonging to an uncoded product cannot be given a release code without
+inventing one. Note also that `card_prints.release_product_code` is *Atlas-derived*
+from the card's canonical set data, not read from a Bandai product field —
+although its `OP-01` format is Bandai's own. The SNKRDUNK release verification
+below **does** use it, as the join key into `RELEASE_REFERENCES`.
+
+**A product code is scoped to the catalogue that published it.** Bandai runs
+more than one Card List catalogue, and they do not agree on the code space
+(verified 2026-08-22 against the official sites):
+
+| Catalogue | `OP-01` record | `EB-04` record |
+|---|---|---|
+| JP `www.onepiece-cardgame.com` | `ブースターパック ROMANCE DAWN【OP-01】`, 2022.07.22 | `エクストラブースター EGGHEAD CRISIS【EB-04】`, 2026-01-31 |
+| Asia-EN `asia-en.onepiece-cardgame.com` | `BOOSTER PACK -ROMANCE DAWN- [OP-01]`, 2022-07-22 | `EXTRA BOOSTER -EGGHEAD CRISIS- [EB-04]`, 2026-01-31 |
+| EN `en.onepiece-cardgame.com` | `BOOSTER PACK -ROMANCE DAWN- [OP01]`, 2022-12-02 | **no standalone record** — those cards ship inside `[OP14-EB04]` / `[OP15-EB04]` |
+
+Four consequences, none of them cosmetic:
+
+- The **same code names differently-dated products** — the two English
+  catalogues publish different release dates for `OP-01`, so language alone does
+  not identify a product record.
+- A code may **not exist at all** in another catalogue, or may be a *composite*:
+  the EN catalogue's series `569114` is titled `-THE AZURE SEA'S SEVEN-
+  [OP14-EB04]` and contains cards whose codes begin `EB04-`. Check A's
+  assumption — set token in the card code equals the product code — holds for the
+  JP catalogue and **would fail on EN data**, where `EB04-011` belongs to product
+  `OP14-EB04`.
+- Even the rendering is unstable: `【OP-01】`, `[OP-01]` and `[OP01]` are all the
+  same product. A code parsed from a page is a comparison aid, not identity.
+- Series ids are catalogue-local too: EN `?series=569114` resolves, the same id
+  on the JP catalogue returns `カードリストの取得に失敗しました`.
+
+**This table is collector-local Python, not canonical database product
+identity.** `RELEASE_REFERENCES` lives in one collector service and is invisible
+to the API and to any future importer. A first-class product entity, able to
+represent uncoded products and to survive Bandai renames, is designed in
+`docs/release_product_entity_2026-08-21.pdf`; until that lands, this table is the
+authority for release *names* and nothing else.
+
+When it does land, **release product identity will not be keyed globally by
+`official_code`.** The evidence above rules that out: a code is unique only
+within the catalogue that published it, may be absent or composite in another,
+and may carry a different release date under the same string. Identity will be a
+surrogate id, with a code unique per source catalogue where a code exists at all
+— and never unique on a product *name*.
+
 ## The authority is Bandai, never SNKRDUNK
 
 `release_reference.py` holds the table. Every entry is taken from Bandai's own
