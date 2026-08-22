@@ -24,6 +24,7 @@ from app.models import (
     CardPrint,
     MarketIndexSnapshot,
     PriceObservation,
+    ReleaseProduct,
     Source,
     SourceCardMapping,
 )
@@ -69,6 +70,32 @@ def make_canonical(db_session, card_code: str, **overrides) -> CanonicalCard:
     return canonical
 
 
+_VARIANTS_BY_ARTWORK_KEY: dict[str, str] = {}
+
+
+def make_release_product(db_session, official_code: str = "OP-01") -> ReleaseProduct:
+    product = (
+        db_session.query(ReleaseProduct)
+        .filter_by(source_catalogue="bandai_jp", official_code=official_code)
+        .one_or_none()
+    )
+    if product is not None:
+        return product
+    product = ReleaseProduct(
+        source_catalogue="bandai_jp",
+        official_code=official_code,
+        display_name=f"Booster {official_code}",
+        first_seen_name=f"Booster {official_code}",
+        source_series_id="550101",
+        source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.commit()
+    db_session.refresh(product)
+    return product
+
+
 def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
     fields = dict(
         canonical_card_id=canonical.id,
@@ -79,6 +106,15 @@ def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
         artwork_key=f"art-{canonical.card_code}",
         image_url="https://images.example.com/print.jpg",
     )
+    # Exact-print identity: product + artwork variant, distinct per artwork
+    # key so sibling fixtures of one canonical card never collide.
+    if overrides.get("verification_status", "verified") == "verified":
+        fields.setdefault("release_product_id", make_release_product(db_session).id)
+        key = str(overrides.get("artwork_key") or fields["artwork_key"])
+        if key not in _VARIANTS_BY_ARTWORK_KEY:
+            index = len(_VARIANTS_BY_ARTWORK_KEY)
+            _VARIANTS_BY_ARTWORK_KEY[key] = "base" if index == 0 else f"p{index}"
+        fields.setdefault("official_artwork_variant", _VARIANTS_BY_ARTWORK_KEY[key])
     fields.update(overrides)
     print_row = CardPrint(**fields)
     db_session.add(print_row)

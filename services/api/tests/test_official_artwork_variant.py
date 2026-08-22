@@ -10,7 +10,7 @@ from a source mapping."""
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, ReleaseProduct
 from app.services.official_artwork_variant import parse_official_artwork_variant
 
 CARD_LIST = "https://www.onepiece-cardgame.com/images/cardlist/card"
@@ -126,6 +126,29 @@ def test_variant_does_not_depend_on_treatment():
 # --- database constraint --------------------------------------------------
 
 
+def _release_product(db_session) -> ReleaseProduct:
+    product = (
+        db_session.query(ReleaseProduct)
+        .filter_by(source_catalogue="bandai_jp", official_code="OP-01")
+        .one_or_none()
+    )
+    if product is not None:
+        return product
+    product = ReleaseProduct(
+        source_catalogue="bandai_jp",
+        official_code="OP-01",
+        display_name="Booster OP-01",
+        first_seen_name="Booster OP-01",
+        source_series_id="550101",
+        source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.commit()
+    db_session.refresh(product)
+    return product
+
+
 def _print(db_session, variant, card_code="OP01-001", **overrides):
     card = CanonicalCard(
         card_code=card_code,
@@ -143,6 +166,7 @@ def _print(db_session, variant, card_code="OP01-001", **overrides):
         language="jp",
         treatment="normal",
         release_product_code="OP-01",
+        release_product_id=_release_product(db_session).id,
         artwork_key=SHA256_KEY,
         image_url=f"{CARD_LIST}/{card_code}.png?260630",
         verification_status="verified",
@@ -156,9 +180,17 @@ def _print(db_session, variant, card_code="OP01-001", **overrides):
     return print_row
 
 
-@pytest.mark.parametrize("variant", [None, "base", "p1", "p2", "p10", "p12", "p101"])
+@pytest.mark.parametrize("variant", ["base", "p1", "p2", "p10", "p12", "p101"])
 def test_valid_variants_are_accepted(db_session, variant):
     assert _print(db_session, variant).official_artwork_variant == variant
+
+
+def test_null_is_accepted_on_an_unresolved_print(db_session):
+    """NULL is still the safe state - but only while the print is not yet
+    verified. See test_a_verified_print_now_requires_a_variant."""
+    print_row = _print(db_session, None, verification_status="unverified")
+
+    assert print_row.official_artwork_variant is None
 
 
 @pytest.mark.parametrize(
@@ -170,13 +202,12 @@ def test_invalid_variants_are_rejected(db_session, variant):
         _print(db_session, variant)
 
 
-def test_a_verified_print_may_still_have_a_null_variant(db_session):
-    """The column is deliberately not part of the verified-requires-fields
-    constraint yet: this phase records evidence, it does not gate on it."""
-    print_row = _print(db_session, None, verification_status="verified")
-
-    assert print_row.verification_status == "verified"
-    assert print_row.official_artwork_variant is None
+def test_a_verified_print_now_requires_a_variant(db_session):
+    """Phase 3 recorded this evidence without gating on it. The identity
+    activation gates on it: a verified print must name its official artwork,
+    because that is half of what identifies the printing."""
+    with pytest.raises(IntegrityError):
+        _print(db_session, None, verification_status="verified")
 
 
 def test_changing_artwork_key_alone_does_not_change_the_variant(db_session):
@@ -201,9 +232,9 @@ def test_changing_the_image_url_query_string_does_not_change_the_variant(db_sess
     assert parse_official_artwork_variant(print_row.image_url, "OP01-001") == "p2"
 
 
-def test_the_verified_unique_index_is_unchanged_by_this_phase(db_session):
-    """Phase 3 records the evidence; it does not activate the future dedupe
-    key. The index must still be the treatment/artwork_key one."""
+def test_the_variant_is_now_part_of_the_verified_identity(db_session):
+    """Phase 3 recorded this evidence; the identity activation put it in the
+    key. treatment, release_product_code and artwork_key are all out of it."""
     index = next(
         i
         for i in CardPrint.__table__.indexes
@@ -213,8 +244,6 @@ def test_the_verified_unique_index_is_unchanged_by_this_phase(db_session):
     assert [c.name for c in index.columns] == [
         "canonical_card_id",
         "language",
-        "treatment",
-        "release_product_code",
-        "artwork_key",
+        "release_product_id",
+        "official_artwork_variant",
     ]
-    assert "official_artwork_variant" not in {c.name for c in index.columns}

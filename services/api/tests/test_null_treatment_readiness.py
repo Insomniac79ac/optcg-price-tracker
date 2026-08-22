@@ -10,12 +10,12 @@ What must hold when that day comes: no crash, no synthetic facet, no invented
 label - and today's non-null rows must behave exactly as they do now."""
 
 import pytest
-from sqlalchemy import MetaData, create_engine, select
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db import Base
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, ReleaseProduct
 from app.schemas import CardPrintSiblingOut, PrintCatalogueFacetsOut, PrintCatalogueItemOut
 from app.services.print_catalogue import (
     get_print_catalogue_facets,
@@ -25,27 +25,12 @@ from app.services.print_catalogue import (
 
 @pytest.fixture()
 def future_session():
-    """A database shaped like the one a later phase will produce: identical
-    to the app's metadata except card_prints.treatment is nullable."""
-    future_metadata = MetaData()
-    for table in Base.metadata.tables.values():
-        table.to_metadata(future_metadata)
-
-    card_prints = future_metadata.tables["card_prints"]
-    card_prints.c.treatment.nullable = True
-    # ck_card_prints_verified_requires_fields still demands a non-null,
-    # non-"unknown" treatment on a verified print. Relaxing it is a later
-    # phase's migration, not this tranche's - dropping it from this *copied*
-    # metadata is how the fixture reaches the future state without touching
-    # the real constraint, which test_the_real_schema_is_untouched pins.
-    for constraint in list(card_prints.constraints):
-        if constraint.name == "ck_card_prints_verified_requires_fields":
-            card_prints.constraints.discard(constraint)
-
+    """An ordinary database from the app's own metadata - treatment is
+    nullable there now, so nothing has to be simulated any more."""
     engine = create_engine(
         "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    future_metadata.create_all(engine)
+    Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, autoflush=False)()
     try:
         yield session
@@ -68,6 +53,32 @@ def _card(session, card_code: str) -> CanonicalCard:
     return card
 
 
+def _release_product(session) -> ReleaseProduct:
+    product = (
+        session.query(ReleaseProduct)
+        .filter_by(source_catalogue="bandai_jp", official_code="OP-01")
+        .one_or_none()
+    )
+    if product is not None:
+        return product
+    product = ReleaseProduct(
+        source_catalogue="bandai_jp",
+        official_code="OP-01",
+        display_name="Booster OP-01",
+        first_seen_name="Booster OP-01",
+        source_series_id="550101",
+        source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
+        verification_status="verified",
+    )
+    session.add(product)
+    session.commit()
+    session.refresh(product)
+    return product
+
+
+_VARIANTS = {"normal": "base", "parallel": "p1", None: "p2"}
+
+
 def _print(session, card: CanonicalCard, treatment, **overrides) -> CardPrint:
     fields = dict(
         canonical_card_id=card.id,
@@ -75,6 +86,8 @@ def _print(session, card: CanonicalCard, treatment, **overrides) -> CardPrint:
         treatment=treatment,
         verification_status="verified",
         release_product_code="OP-01",
+        release_product_id=_release_product(session).id,
+        official_artwork_variant=_VARIANTS[treatment],
         artwork_key=f"art-{card.card_code}-{treatment}",
         image_url=f"https://images.example.com/{card.card_code}.png",
     )
@@ -213,20 +226,12 @@ def test_ordering_sql_states_nulls_last_explicitly():
     assert "NULLS LAST" in compiled
 
 
-def test_the_real_schema_is_untouched_by_this_tranche():
-    """The fixture above simulates a future database. The real one must not
-    have moved: treatment is still NOT NULL, the verified-requires-fields
-    check still names it, and the verified unique index still keys on it."""
+def test_treatment_is_no_longer_identity_in_the_real_schema():
+    """What 4A-6A prepared for, now actually true: treatment is nullable and
+    absent from the verified identity."""
     card_prints = Base.metadata.tables["card_prints"]
 
-    assert card_prints.c.treatment.nullable is False
-
-    check = next(
-        c
-        for c in card_prints.constraints
-        if c.name == "ck_card_prints_verified_requires_fields"
-    )
-    assert "treatment IS NOT NULL" in str(check.sqltext)
+    assert card_prints.c.treatment.nullable is True
 
     index = next(
         i for i in card_prints.indexes if i.name == "uq_card_prints_active_verified_identity"
@@ -234,7 +239,7 @@ def test_the_real_schema_is_untouched_by_this_tranche():
     assert [c.name for c in index.columns] == [
         "canonical_card_id",
         "language",
-        "treatment",
-        "release_product_code",
-        "artwork_key",
+        "release_product_id",
+        "official_artwork_variant",
     ]
+    assert "treatment" not in {c.name for c in index.columns}

@@ -77,7 +77,11 @@ def test_migration_history_still_has_exactly_one_head():
                 downs.add(down.group(1))
 
     heads = sorted(rev for rev in revisions if rev not in downs)
-    assert heads == ["c2f7b48a91d6"], f"expected a single head, found {heads}"
+    # One head, whatever the latest revision happens to be - this migration is
+    # in the chain either as that head or as an ancestor of it.
+    assert len(heads) == 1, f"expected a single head, found {heads}"
+    assert "c2f7b48a91d6" in revisions
+    assert heads == ["c2f7b48a91d6"] or "c2f7b48a91d6" in downs
 
 
 def test_adds_one_nullable_string16_column():

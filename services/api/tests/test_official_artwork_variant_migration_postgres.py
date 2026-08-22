@@ -169,7 +169,9 @@ def migrated_db():
         }
         assert conn.execute(text("SELECT count(*) FROM card_prints")).scalar_one() == 20
 
-    output = _run_alembic("upgrade", "head")
+    # This revision, not "head": later phases add their own migrations and
+    # this module is about what c2f7b48a91d6 itself does.
+    output = _run_alembic("upgrade", THIS_REVISION)
 
     try:
         yield engine, before, output
@@ -347,7 +349,7 @@ def test_downgrade_restores_the_pre_migration_shape(migrated_db):
             PREVIOUS_HEAD
         )
 
-    _run_alembic("upgrade", "head")
+    _run_alembic("upgrade", THIS_REVISION)
 
 
 def test_an_unresolvable_row_is_left_null_and_reported(migrated_db):
@@ -399,7 +401,7 @@ def test_an_unresolvable_row_is_left_null_and_reported(migrated_db):
                     {"card_id": card_id, "image_url": image_url},
                 )
 
-        output = run("upgrade", "head")
+        output = run("upgrade", THIS_REVISION)
 
         with probe_engine.connect() as conn:
             rows = conn.execute(

@@ -82,6 +82,7 @@ def _print(session, product_id=None, card_code="OP01-PG-001") -> CardPrint:
         treatment="base",
         release_product_code="OP-01",
         artwork_key="art-pg-1",
+        official_artwork_variant="base",
         verification_status="verified",
         release_product_id=product_id,
     )

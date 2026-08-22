@@ -17,7 +17,15 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.models import CanonicalCard, Card, CardPrint, PriceObservation, Source, SourceCardMapping
+from app.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    PriceObservation,
+    ReleaseProduct,
+    Source,
+    SourceCardMapping,
+)
 from app.services.market_index import INDEX_VERSION
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
@@ -52,6 +60,31 @@ def make_canonical(db_session, **overrides) -> CanonicalCard:
     return canonical
 
 
+def make_release_product(db_session, official_code: str = "OP-01") -> ReleaseProduct:
+    """A verified print's identity now includes its product, so every print
+    fixture needs one - see ck_card_prints_verified_requires_fields."""
+    product = (
+        db_session.query(ReleaseProduct)
+        .filter_by(source_catalogue="bandai_jp", official_code=official_code)
+        .one_or_none()
+    )
+    if product is not None:
+        return product
+    product = ReleaseProduct(
+        source_catalogue="bandai_jp",
+        official_code=official_code,
+        display_name=f"Booster {official_code}",
+        first_seen_name=f"Booster {official_code}",
+        source_series_id="550101",
+        source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.commit()
+    db_session.refresh(product)
+    return product
+
+
 def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
     fields = dict(
         canonical_card_id=canonical.id,
@@ -62,12 +95,36 @@ def make_print(db_session, canonical: CanonicalCard, **overrides) -> CardPrint:
         artwork_key="art-1",
         image_url="https://images.example.com/print.jpg",
     )
+    # Exact-print identity: product + official artwork variant. Defaulted here
+    # (and kept unique per artwork_key) so every existing caller keeps
+    # producing a legal verified print.
+    fields.setdefault(
+        "release_product_id", make_release_product(db_session, overrides.get("release_product_code") or "OP-01").id
+    )
+    fields.setdefault("official_artwork_variant", _variant_for(overrides))
     fields.update(overrides)
     print_row = CardPrint(**fields)
     db_session.add(print_row)
     db_session.commit()
     db_session.refresh(print_row)
     return print_row
+
+
+# artwork_key -> official_artwork_variant, assigned first-seen. Exact-print
+# identity now includes the artwork variant, so two fixture siblings of one
+# canonical card must not land on the same one. Callers already vary
+# artwork_key per print, so keying off it keeps every existing fixture legal
+# without touching a single call site. Deterministic and stable: the same key
+# always maps to the same variant.
+_VARIANTS_BY_ARTWORK_KEY: dict[str, str] = {}
+
+
+def _variant_for(overrides: dict) -> str:
+    key = str(overrides.get("artwork_key") or "art-1")
+    if key not in _VARIANTS_BY_ARTWORK_KEY:
+        index = len(_VARIANTS_BY_ARTWORK_KEY)
+        _VARIANTS_BY_ARTWORK_KEY[key] = "base" if index == 0 else f"p{index}"
+    return _VARIANTS_BY_ARTWORK_KEY[key]
 
 
 def make_legacy_card(db_session, **overrides) -> Card:

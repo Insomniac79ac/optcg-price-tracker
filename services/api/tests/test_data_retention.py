@@ -16,6 +16,7 @@ from app.models import (
     PortfolioValuationSnapshot,
     PriceObservation,
     RawSnapshot,
+    ReleaseProduct,
     Source,
     SourceCardMapping,
 )
@@ -63,18 +64,33 @@ def make_sibling_prints(db_session, card, source) -> tuple[tuple, tuple]:
     db_session.commit()
     db_session.refresh(canonical)
 
+    product = ReleaseProduct(
+        source_catalogue="bandai_jp",
+        official_code="OP-01",
+        display_name="Booster OP-01",
+        first_seen_name="Booster OP-01",
+        source_series_id="550101",
+        source_url="https://www.onepiece-cardgame.com/products/boosters/op01.php",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.commit()
+    db_session.refresh(product)
+
     pairs = []
-    for treatment in ("base", "parallel"):
-        # release_product_code/artwork_key are required for a print to be
-        # `verified` (ck_card_prints_verified_requires_fields), and the
-        # artwork digest differs per treatment - two verified prints of one
-        # canonical card must differ somewhere in
-        # uq_card_prints_active_verified_identity.
+    for treatment, variant in (("base", "base"), ("parallel", "p1")):
+        # release_product_id/official_artwork_variant/artwork_key are required
+        # for a print to be `verified` (ck_card_prints_verified_requires_fields),
+        # and two verified prints of one canonical card must differ somewhere in
+        # uq_card_prints_active_verified_identity - which is the artwork
+        # variant here, not the treatment.
         print_row = CardPrint(
             canonical_card_id=canonical.id,
             language="jp",
             treatment=treatment,
             release_product_code="OP-01",
+            release_product_id=product.id,
+            official_artwork_variant=variant,
             artwork_key=f"{treatment}-artwork-digest",
             verification_status="verified",
         )
