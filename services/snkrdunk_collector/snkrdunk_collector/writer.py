@@ -159,7 +159,9 @@ def validate_identity(
         reasons.append("card_print_missing_for_identity_check")
     else:
         displayed_treatment = extracted.get("treatment")
-        if displayed_treatment != card_print.treatment:
+        # A NULL print treatment is "unclassified", not an expectation of
+        # nothing - see extractor.extract_product.
+        if card_print.treatment is not None and displayed_treatment != card_print.treatment:
             reasons.append(
                 f"treatment_mismatch:displayed={displayed_treatment},expected={card_print.treatment}"
             )

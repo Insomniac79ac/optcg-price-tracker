@@ -140,6 +140,89 @@ describe("print detail page", () => {
     ).toBeNull();
   });
 
+  it("renders an unclassified printing with no treatment chip and no invented label", async () => {
+    // treatment: null means Atlas has not classified this printing. No badge,
+    // no "Unclassified" copy, no fallback word - and the rest of the identity
+    // renders exactly as it does for a classified print.
+    fetchPrint.mockResolvedValue(makeDetail({ treatment: null }));
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/unclassified|unknown|null|undefined/i);
+    expect(screen.queryByText("parallel")).toBeNull();
+    expect(screen.queryByText("Treatment")).toBeNull();
+
+    // Identity and artwork are unaffected.
+    expect(screen.getAllByText("OP01-001").length).toBeGreaterThan(0);
+    expect(cardImage(container)!.getAttribute("src")).toBe(DISPLAY_IMAGE_URL);
+  });
+
+  it("still shows the treatment chip and row for a classified printing", async () => {
+    fetchPrint.mockResolvedValue(makeDetail({ treatment: "parallel" }));
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getAllByText("parallel").length).toBeGreaterThan(0);
+    expect(screen.getByText("Treatment")).toBeTruthy();
+  });
+
+  it("omits an unclassified sibling rather than labelling it", async () => {
+    // The treatment is this chip's only text, and there is no honest label
+    // for an unclassified printing - so the chip is not rendered at all.
+    // No "#12", no "Unclassified", no invented word.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        siblings: [
+          {
+            card_print_id: 12,
+            treatment: null,
+            artwork_key: null,
+            image_url: null,
+            verification_status: "verified",
+          },
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.queryByRole("link", { name: "#12" })).toBeNull();
+    expect(container.querySelector('a[href="/prints/12"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/unclassified|unknown|#12/i);
+    // With no labelled sibling left, the section says nothing at all.
+    expect(screen.queryByText("Other printings")).toBeNull();
+  });
+
+  it("still lists a classified sibling beside an unclassified one", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        siblings: [
+          {
+            card_print_id: 12,
+            treatment: null,
+            artwork_key: null,
+            image_url: null,
+            verification_status: "verified",
+          },
+          {
+            card_print_id: 13,
+            treatment: "normal",
+            artwork_key: null,
+            image_url: null,
+            verification_status: "verified",
+          },
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Other printings")).toBeTruthy();
+    const link = screen.getByRole("link", { name: "normal" });
+    expect(link.getAttribute("href")).toBe("/prints/13");
+    expect(container.querySelector('a[href="/prints/12"]')).toBeNull();
+  });
+
   it("never reaches for a legacy card_id-keyed endpoint", async () => {
     fetchPrint.mockResolvedValue(makeDetail());
     render(<PrintDetailPage />);

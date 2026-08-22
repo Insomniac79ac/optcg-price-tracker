@@ -384,7 +384,11 @@ class CardPrintSiblingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     card_print_id: int
-    treatment: str
+    # Nullable ahead of treatment becoming optional on card_prints: NULL means
+    # "Atlas has not classified this printing", and consumers render no badge
+    # and invent no label for it. Every current row is non-null, so today's
+    # payloads are unchanged.
+    treatment: str | None
     language: str
     verification_status: str
     image_url: str | None
@@ -541,7 +545,7 @@ class CardPrintOut(BaseModel):
     card_type: str
     colors: list[str] | None
     language: str
-    treatment: str
+    treatment: str | None
     release_product_code: str | None
     artwork_key: str | None
     image_url: str | None
@@ -563,7 +567,7 @@ class PrintCatalogueItemOut(BaseModel):
     name_jp: str | None
     rarity: str
     card_type: str
-    treatment: str
+    treatment: str | None
     language: str
     release_product_code: str | None
     image_url: str | None
@@ -575,6 +579,9 @@ class PrintCatalogueItemOut(BaseModel):
 
 
 class PrintCatalogueFacetsOut(BaseModel):
+    # Still list[str]: an unclassified print contributes no facet value at
+    # all. There is deliberately no synthetic "unclassified"/"other" bucket -
+    # a filter option must always name a real, selectable treatment.
     treatments: list[str]
     rarities: list[str]
     languages: list[str]

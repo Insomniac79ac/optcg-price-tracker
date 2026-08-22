@@ -142,6 +142,9 @@ def _apply_filters(
     verification_status: str | None,
 ):
     stmt = stmt.where(CardPrint.is_active.is_(True))
+    # Only ever an equality match on an explicit value - a NULL treatment can
+    # therefore never be returned by a treatment filter, and no filter value
+    # selects "unclassified".
     if treatment:
         stmt = stmt.where(CardPrint.treatment == treatment)
     if language:
@@ -214,8 +217,15 @@ def list_print_catalogue(
         elif sort == "updated":
             ordered = ordered.order_by(CardPrint.updated_at.desc(), CardPrint.id.asc())
         else:  # "card_code"
+            # NULLS LAST explicitly: an unclassified print sorts after the
+            # classified siblings of the same card rather than wherever the
+            # engine's default puts it (PostgreSQL puts NULLs last on ASC,
+            # sqlite puts them first - the same query must not order two ways).
+            # CardPrint.id.asc() still makes the whole order total.
             ordered = ordered.order_by(
-                CanonicalCard.card_code.asc(), CardPrint.treatment.asc(), CardPrint.id.asc()
+                CanonicalCard.card_code.asc(),
+                CardPrint.treatment.asc().nulls_last(),
+                CardPrint.id.asc(),
             )
 
         page_prints = db.scalars(ordered.limit(limit).offset(offset)).all()
@@ -242,8 +252,14 @@ def get_print_catalogue_facets(db: Session) -> PrintCatalogueFacetsOut:
     - ignores the request's own filters, same convention as
     app.services.card_catalogue.get_catalogue_facets."""
     active = CardPrint.is_active.is_(True)
+    # NULL is excluded rather than surfaced: a facet value is a filter the
+    # collector can select, and "unclassified" is not a treatment. No
+    # synthetic bucket is invented for it either.
     treatments = db.scalars(
-        select(CardPrint.treatment).where(active).distinct().order_by(CardPrint.treatment)
+        select(CardPrint.treatment)
+        .where(active, CardPrint.treatment.is_not(None))
+        .distinct()
+        .order_by(CardPrint.treatment)
     ).all()
     languages = db.scalars(
         select(CardPrint.language).where(active).distinct().order_by(CardPrint.language)

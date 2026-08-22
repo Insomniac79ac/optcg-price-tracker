@@ -114,6 +114,13 @@ def run_one_mapping_detailed(
         return MappingOutcome(mapping_id=mapping_id, stage="mapping_load_failed", reasons=load_reasons)
 
     expected_card_code = mapping.source_card_id
+    # Three states, and they are not the same thing:
+    #   print.treatment = "parallel"/"normal" -> the page must match it
+    #   print.treatment = NULL                -> Atlas has not classified this
+    #                                            print; no expectation at all
+    #   no CardPrint context                  -> legacy EXPECTED_TREATMENT
+    # Only the last one falls back, and only because there is no exact print
+    # to take an expectation from.
     expected_treatment = EXPECTED_TREATMENT
     if mapping.card_print_id is not None:
         card_print = session.get(CardPrint, mapping.card_print_id)

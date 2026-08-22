@@ -96,7 +96,13 @@ def validate_and_write_observation(
 
     if mapping.card_print_id is not None:
         card_print = session.get(CardPrint, mapping.card_print_id)
-        if card_print is not None and extracted.get("treatment") not in (None, card_print.treatment):
+        # card_print.treatment being NULL is "unclassified", not an
+        # expectation that the page show nothing - see extractor.py.
+        if (
+            card_print is not None
+            and card_print.treatment is not None
+            and extracted.get("treatment") not in (None, card_print.treatment)
+        ):
             reasons.append(
                 f"treatment_mismatch_vs_print:displayed={extracted.get('treatment')},print={card_print.treatment}"
             )

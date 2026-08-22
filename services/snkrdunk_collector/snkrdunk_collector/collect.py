@@ -253,7 +253,7 @@ def run_one_mapping_detailed(
                         holder["product_final_url"] = product_step["final_url"]
 
                         extraction = extract_product(
-                            html, product_step["final_url"], expected_card_code, expected_treatment or ""
+                            html, product_step["final_url"], expected_card_code, expected_treatment
                         )
                         holder["extraction"] = extraction
                         # Every observed identity field is logged verbatim so

@@ -73,7 +73,10 @@ class CardPrint(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     canonical_card_id: Mapped[int] = mapped_column(Integer)
     language: Mapped[str] = mapped_column(String(8))
-    treatment: Mapped[str] = mapped_column(String(64))
+    # Optional at the runtime type layer so a future NULL loads instead of
+    # tripping the mapper. The API owns the column and it is still NOT NULL
+    # in the database - this mirror emits no DDL.
+    treatment: Mapped[str | None] = mapped_column(String(64), nullable=True)
     release_product_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)

@@ -190,7 +190,9 @@ def find_product_ld_node(ld_json_nodes: list[dict[str, Any]]) -> dict[str, Any] 
     return None
 
 
-def extract_product(html: str, url: str, expected_card_code: str, expected_treatment: str) -> dict[str, Any]:
+def extract_product(
+    html: str, url: str, expected_card_code: str, expected_treatment: str | None
+) -> dict[str, Any]:
     """Top-level deterministic extractor for one already-fetched product
     page. Fails closed (extraction_status="fail_closed") on any identity
     conflict or missing raw price - never guesses. Mirrors the shape of
@@ -231,7 +233,10 @@ def extract_product(html: str, url: str, expected_card_code: str, expected_treat
         fail_reasons.append(
             f"card_code_conflict:displayed={resolved_card_code},expected={expected_card_code}"
         )
-    if resolved_treatment != expected_treatment:
+    # None means the print carries no Atlas treatment classification, so
+    # there is nothing to conflict with; it does NOT mean the page must show
+    # no treatment. A real expectation is still checked exactly as strictly.
+    if expected_treatment is not None and resolved_treatment != expected_treatment:
         fail_reasons.append(
             f"treatment_conflict:displayed={resolved_treatment},expected={expected_treatment}"
         )

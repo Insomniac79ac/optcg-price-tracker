@@ -48,7 +48,10 @@ class CardPrint(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     canonical_card_id: Mapped[int] = mapped_column(Integer)
-    treatment: Mapped[str] = mapped_column(String(64))
+    # Optional at the runtime type layer so a future NULL loads instead of
+    # tripping the mapper. The API owns the column and it is still NOT NULL
+    # in the database - this mirror emits no DDL.
+    treatment: Mapped[str | None] = mapped_column(String(64), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(16))
     # Default matches the real table's server_default="true" (see
     # services/api/app/models/card_print.py) - existing fixtures across this

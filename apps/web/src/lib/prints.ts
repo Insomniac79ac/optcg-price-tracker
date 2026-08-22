@@ -79,7 +79,9 @@ export interface PrintCatalogueItem {
   name_jp: string | null;
   rarity: string;
   card_type: string;
-  treatment: string;
+  /** null once a printing carries no Atlas treatment classification. Render
+   * no badge and no fallback label for it - never "Unclassified". */
+  treatment: string | null;
   language: string;
   release_product_code: string | null;
   image_url: string | null;
@@ -108,7 +110,7 @@ export interface PrintCatalogueList {
 
 export interface PrintSibling {
   card_print_id: number;
-  treatment: string;
+  treatment: string | null;
   artwork_key: string | null;
   image_url: string | null;
   verification_status: string;
@@ -157,7 +159,7 @@ export interface PrintDetail {
   card_type: string;
   colors: string[] | null;
   language: string;
-  treatment: string;
+  treatment: string | null;
   release_product_code: string | null;
   artwork_key: string | null;
   image_url: string | null;
@@ -212,9 +214,9 @@ export interface PrintUiModel {
   displayName: string;
   rarity: string;
   cardType: string;
-  treatment: string;
+  treatment: string | null;
   /** True when the treatment is worth surfacing on a tile (i.e. not the
-   * plain base printing). */
+   * plain base printing, and not an unclassified one). */
   isDistinctTreatment: boolean;
   language: string;
   releaseCode: string | null;
@@ -271,8 +273,13 @@ function valueForSource(index: PrintMarketIndex, source: string): number | null 
 
 /** "normal" is the plain base printing - not worth a badge on every tile.
  * Anything else (parallel, alt-art, reprint treatments) is a distinct
- * collectible and always labelled. */
-function isDistinctTreatment(treatment: string): boolean {
+ * collectible and always labelled.
+ *
+ * null means the printing has no Atlas classification at all, which is not a
+ * distinction to advertise: it gets no badge, and no invented label stands in
+ * for it. */
+function isDistinctTreatment(treatment: string | null): boolean {
+  if (treatment === null) return false;
   const normalized = treatment.trim().toLowerCase();
   return normalized !== "" && normalized !== "normal" && normalized !== "base";
 }

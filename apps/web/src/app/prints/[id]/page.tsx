@@ -242,7 +242,9 @@ function CardStage({ print }: { print: PrintUiModel }) {
  * "normal" - two printings of one card are two separate collectible objects
  * here, and this page is where a collector confirms which one they are
  * looking at. Nothing is renamed to "base" or inferred; a plain printing just
- * gets a quiet chip instead of the gold one a distinct treatment earns.
+ * gets a quiet chip instead of the gold one a distinct treatment earns. An
+ * unclassified printing (treatment null) gets no chip at all rather than a
+ * made-up word - the rest of its identity renders unchanged.
  */
 function Identity({ print }: { print: PrintUiModel }) {
   return (
@@ -268,15 +270,17 @@ function Identity({ print }: { print: PrintUiModel }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span
-          className={`mono inline-flex rounded border px-2 py-0.5 text-[11px] font-medium lowercase tracking-wide ${
-            print.isDistinctTreatment
-              ? "border-accent-gold/30 bg-accent-gold/10 text-accent-gold"
-              : "border-border-default bg-bg-elevated text-text-secondary"
-          }`}
-        >
-          {print.treatment}
-        </span>
+        {print.treatment && (
+          <span
+            className={`mono inline-flex rounded border px-2 py-0.5 text-[11px] font-medium lowercase tracking-wide ${
+              print.isDistinctTreatment
+                ? "border-accent-gold/30 bg-accent-gold/10 text-accent-gold"
+                : "border-border-default bg-bg-elevated text-text-secondary"
+            }`}
+          >
+            {print.treatment}
+          </span>
+        )}
         {print.rarity && <RarityBadge rarity={print.rarity} />}
       </div>
     </header>
@@ -414,9 +418,16 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
  * Rendered only when the payload actually carries them. Nothing here is
  * derived from the catalogue or from artwork keys client-side: if the API
  * says a print has no siblings, this page says nothing about siblings.
+ *
+ * A sibling with no treatment is skipped entirely. The treatment is this
+ * chip's only text, and this transitional treatment-keyed navigation has no
+ * honest label for an unclassified printing - so it says nothing rather than
+ * inventing one. Sibling identity is revisited after the final exact-print
+ * identity migration.
  */
 function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
-  if (siblings.length === 0) return null;
+  const labelled = siblings.filter((sibling) => sibling.treatment);
+  if (labelled.length === 0) return null;
 
   return (
     <section className="mt-10 border-t border-border-muted pt-6">
@@ -424,7 +435,7 @@ function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
         Other printings
       </h2>
       <div className="mt-3 flex flex-wrap gap-2">
-        {siblings.map((sibling) => (
+        {labelled.map((sibling) => (
           <Link
             key={sibling.card_print_id}
             href={`/prints/${sibling.card_print_id}`}
@@ -455,7 +466,7 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
     { term: "Card code", value: print.cardCode },
     ...(print.releaseCode ? [{ term: "Set", value: print.releaseCode }] : []),
     ...(print.rarity ? [{ term: "Rarity", value: print.rarity }] : []),
-    { term: "Treatment", value: print.treatment },
+    ...(print.treatment ? [{ term: "Treatment", value: print.treatment }] : []),
     ...(print.cardType ? [{ term: "Card type", value: print.cardType }] : []),
     ...(detail.colors && detail.colors.length > 0
       ? [{ term: detail.colors.length > 1 ? "Colours" : "Colour", value: detail.colors.join(" · ") }]

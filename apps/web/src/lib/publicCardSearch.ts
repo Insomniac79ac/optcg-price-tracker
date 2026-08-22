@@ -44,7 +44,7 @@ export function printToPaletteResult(item: PrintCatalogueItem): PaletteCardResul
   const model = toPrintUiModel(item);
   const parts = [model.cardCode];
   if (model.releaseCode) parts.push(model.releaseCode);
-  if (model.isDistinctTreatment) parts.push(model.treatment);
+  if (model.isDistinctTreatment && model.treatment) parts.push(model.treatment);
 
   return {
     key: `print-${model.cardPrintId}`,

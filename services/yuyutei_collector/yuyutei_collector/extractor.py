@@ -328,7 +328,7 @@ def extract_with_agreement(
     html: str,
     source_url: str,
     requested_card_code: str,
-    expected_treatment: str = EXPECTED_TREATMENT,
+    expected_treatment: str | None = EXPECTED_TREATMENT,
 ) -> dict:
     """Independent-agreement extractor (selector_version v3). Extracts
     JSON-LD and DOM values independently and only accepts a price/stock
@@ -500,7 +500,12 @@ def extract_with_agreement(
         treatment = "normal"
     else:
         treatment = None
-    if treatment != expected_treatment:
+    # expected_treatment=None means Atlas has NOT classified this print's
+    # treatment, so there is nothing for the page to conflict with - it does
+    # NOT mean "the page must show no treatment". Failing closed here would
+    # silently stop pricing every unclassified print. A non-None expectation
+    # is checked exactly as strictly as before.
+    if expected_treatment is not None and treatment != expected_treatment:
         fail_reasons.append(f"treatment_conflict:displayed={treatment},expected={expected_treatment}")
 
     extraction_status = "extracted" if not fail_reasons else "fail_closed"
