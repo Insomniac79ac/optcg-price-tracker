@@ -36,6 +36,12 @@ THIS_REVISION = "b8d5f1c40e73"
 CARD_LIST = "https://www.onepiece-cardgame.com/images/cardlist/card"
 
 VARIANT_COLUMN = "official_asset_variant"
+# At this migration's parent the schema is mid-release: f2e6b3a71c85 has added
+# the new column beside the legacy one, and the verified CHECK still names the
+# legacy one. A staging-shaped verified print therefore carries BOTH, with the
+# same value - which is exactly the State B invariant a9f31c7d5b64 checks
+# before it drops the legacy column.
+LEGACY_VARIANT_COLUMN = "official_artwork_variant"
 NEW_COLUMNS = (
     "official_rarity",
     "official_block_icon",
@@ -187,9 +193,11 @@ def _seed_staging_shape(db: _Database) -> None:
             conn.execute(
                 text(
                     "INSERT INTO card_prints (canonical_card_id, language, treatment, "
-                    f"release_product_code, artwork_key, {VARIANT_COLUMN}, image_url, "
+                    f"release_product_code, artwork_key, {LEGACY_VARIANT_COLUMN}, "
+                    f"{VARIANT_COLUMN}, image_url, "
                     "verification_status, is_active, release_product_id) VALUES (:card_id, 'jp', "
-                    ":treatment, :code, :artwork_key, :variant, :image_url, 'verified', true, "
+                    ":treatment, :code, :artwork_key, :variant, :variant, :image_url, "
+                    "'verified', true, "
                     "(SELECT rp.id FROM release_products rp WHERE rp.source_catalogue = "
                     "'bandai_jp' AND rp.official_code = :product_lookup))"
                 ),

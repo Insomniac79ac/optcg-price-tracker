@@ -1,13 +1,18 @@
-"""Structural coverage for f2e6b3a71c85_generalize_official_asset_variant.
+"""Structural coverage for f2e6b3a71c85, the EXPAND half of the release.
 
-What this migration must be able to say about itself without a database:
-it renames rather than drops-and-adds (so no value can be lost), it keeps the
-identity index name/columns/predicate and the verified requirements exactly as
-d4b17c9e2a83 left them, it widens the format check to the r family and nothing
-else, and its downgrade is the exact inverse of every step - with a preflight
-that refuses rN data rather than coercing it.
+What this migration must be able to say about itself without a database: it
+*adds* official_asset_variant rather than renaming official_artwork_variant
+(so both application generations can read the schema it leaves behind), it
+copies every stored value across, it installs the widened format check before
+that copy, and it leaves the identity index, the verified check and the legacy
+format check exactly as d4b17c9e2a83 left them - because the application
+deployed at the time it runs still depends on all three.
 
-The live-engine behaviour is in test_official_asset_variant_migration_postgres.
+Its downgrade drops the new column, and refuses whenever that column holds
+anything the legacy one does not.
+
+The contract half is covered by test_official_asset_variant_cleanup_migration;
+live-engine behaviour by the two *_postgres modules.
 """
 
 import importlib.util
@@ -16,13 +21,16 @@ from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import patch
 
-from app.models import CardPrint
-
 VERSIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 MIGRATION_PATH = VERSIONS_DIR / "f2e6b3a71c85_generalize_official_asset_variant.py"
 
 OLD_COLUMN = "official_artwork_variant"
 NEW_COLUMN = "official_asset_variant"
+
+IDENTITY_INDEX = "uq_card_prints_active_verified_identity"
+VERIFIED_CHECK = "ck_card_prints_verified_requires_fields"
+OLD_FORMAT_CHECK = "ck_card_prints_official_artwork_variant_format"
+NEW_FORMAT_CHECK = "ck_card_prints_official_asset_variant_format"
 
 
 def _load_migration():
@@ -38,13 +46,18 @@ def _run(direction: str, *, skip_preflight: bool = True):
     calls: list[tuple] = []
 
     patches = [
+        patch("alembic.op.add_column",
+              side_effect=lambda table, column, **kw: calls.append(
+                  ("add_column", column.name, str(column.type), column.nullable))),
+        patch("alembic.op.drop_column",
+              side_effect=lambda table, name, **kw: calls.append(("drop_column", name))),
         patch("alembic.op.drop_index",
               side_effect=lambda name, **kw: calls.append(("drop_index", name))),
         patch("alembic.op.drop_constraint",
               side_effect=lambda name, table, **kw: calls.append(("drop_constraint", name))),
         patch("alembic.op.alter_column",
               side_effect=lambda table, name, **kw: calls.append(
-                  ("alter_column", name, kw.get("new_column_name"), kw.get("existing_nullable")))),
+                  ("alter_column", name, kw.get("new_column_name")))),
         patch("alembic.op.create_check_constraint",
               side_effect=lambda name, table, condition, **kw: calls.append(
                   ("create_check_constraint", name, condition))),
@@ -52,6 +65,7 @@ def _run(direction: str, *, skip_preflight: bool = True):
               side_effect=lambda name, table, columns, **kw: calls.append(
                   ("create_index", name, tuple(columns), str(kw.get("postgresql_where"))))),
         patch.object(module, "_report"),
+        patch.object(module, "_backfill", return_value=20),
     ]
     if skip_preflight:
         patches.append(patch.object(module, "_preflight_downgrade"))
@@ -97,110 +111,100 @@ def test_migration_history_still_has_exactly_one_head():
     assert heads == ["f2e6b3a71c85"] or "f2e6b3a71c85" in downs
 
 
-# --- the rename ------------------------------------------------------------
+# --- expand, not rename ----------------------------------------------------
 
 
-def test_upgrade_renames_the_column_and_never_adds_or_drops_one():
-    """A drop-and-add would silently discard every stored variant. Only
-    alter_column with new_column_name can carry the values across."""
+def test_upgrade_adds_the_column_and_never_renames_or_drops_one():
+    """The whole point of the expand phase. A rename would remove the column
+    the currently deployed application queries, and a drop-and-add would
+    discard every stored variant."""
     module, calls = _run("upgrade")
 
-    renames = [c for c in calls if c[0] == "alter_column"]
-    assert renames == [("alter_column", OLD_COLUMN, NEW_COLUMN, True)]
+    added = [c for c in calls if c[0] == "add_column"]
+    assert added == [("add_column", NEW_COLUMN, "VARCHAR(16)", True)]
+    assert [c for c in calls if c[0] == "alter_column"] == []
+    assert [c for c in calls if c[0] == "drop_column"] == []
 
     source = MIGRATION_PATH.read_text(encoding="utf-8")
-    assert "op.add_column" not in source
-    assert "op.drop_column" not in source
-    # ...and nothing writes to card_prints at all.
-    for forbidden in ("UPDATE card_prints", "INSERT INTO", "DELETE FROM"):
+    upgrade_body = source.split("def upgrade()")[1].split("def downgrade()")[0]
+    assert "new_column_name" not in source
+    # The upgrade drops nothing; only the downgrade removes what it added.
+    assert "op.drop_column" not in upgrade_body
+    # The only write is the backfill; nothing inserts or deletes.
+    for forbidden in ("INSERT INTO", "DELETE FROM"):
         assert forbidden not in source
 
 
-def test_upgrade_releases_then_reinstates_everything_that_names_the_column():
+def test_the_upgrade_touches_nothing_the_deployed_application_depends_on():
+    """The compatibility guarantee, asserted as an absence: the expand phase
+    drops nothing at all, so every constraint and index the old application
+    relies on is still in force afterwards."""
+    module, calls = _run("upgrade")
+
+    assert [c for c in calls if c[0].startswith("drop_")] == []
+    assert [c for c in calls if c[0] == "create_index"] == []
+    assert [c[1] for c in calls if c[0] == "create_check_constraint"] == [NEW_FORMAT_CHECK]
+    # Named in the migration only to say they are left alone.
+    assert module.IDENTITY_INDEX == IDENTITY_INDEX
+    assert module.VERIFIED_CHECK == VERIFIED_CHECK
+
+
+def test_the_upgrade_order_checks_the_copy_rather_than_trusting_it():
+    """The format check must exist before the backfill runs, so a value the
+    new vocabulary does not admit fails loudly instead of being written."""
     module, calls = _run("upgrade")
     order = [c[0] for c in calls]
 
-    assert order == [
-        "drop_index", "drop_constraint", "drop_constraint",
-        "alter_column",
-        "create_check_constraint", "create_check_constraint", "create_index",
+    assert order == ["add_column", "create_check_constraint"]
+
+    body = MIGRATION_PATH.read_text(encoding="utf-8").split("def upgrade()")[1]
+    assert body.index("create_check_constraint") < body.index("_backfill()")
+    assert body.index("op.add_column") < body.index("create_check_constraint")
+
+
+def test_the_backfill_copies_verbatim_and_guesses_nothing():
+    """The statement itself, not a paraphrase of it: one column into the
+    other, only where a value exists, with no literal anywhere in it."""
+    module = _load_migration()
+    executed: list[str] = []
+
+    class _Bind:
+        def execute(self, statement, *args):
+            executed.append(re.sub(r"\s+", " ", str(statement)).strip())
+
+            class _Result:
+                rowcount = 20
+
+            return _Result()
+
+    with patch("alembic.op.get_bind", return_value=_Bind()):
+        assert module._backfill() == 20
+
+    assert executed == [
+        f"UPDATE card_prints SET {NEW_COLUMN} = {OLD_COLUMN} "
+        f"WHERE {OLD_COLUMN} IS NOT NULL"
     ]
-    dropped = [c[1] for c in calls if c[0] in ("drop_index", "drop_constraint")]
-    assert dropped == [
-        "uq_card_prints_active_verified_identity",
-        "ck_card_prints_verified_requires_fields",
-        "ck_card_prints_official_artwork_variant_format",
-    ]
+    statement = executed[0]
+    assert "'base'" not in statement
+    assert "coalesce" not in statement.lower()
 
 
-# --- the identity, kept exactly as it was ----------------------------------
+def test_the_upgrade_reports_how_many_values_it_copied():
+    module = _load_migration()
+    body = MIGRATION_PATH.read_text(encoding="utf-8").split("def upgrade()")[1]
 
-
-def test_the_identity_index_keeps_its_name_columns_and_predicate():
-    module, calls = _run("upgrade")
-    index = next(c for c in calls if c[0] == "create_index")
-
-    assert index[1] == "uq_card_prints_active_verified_identity"
-    assert index[2] == (
-        "canonical_card_id", "language", "release_product_id", NEW_COLUMN
-    )
-    assert index[3] == "is_active = true AND verification_status = 'verified'"
-
-
-def test_the_index_matches_the_model_exactly():
-    """The migration and the ORM must not be able to disagree about identity."""
-    module, calls = _run("upgrade")
-    index = next(c for c in calls if c[0] == "create_index")
-
-    model_index = next(
-        i for i in CardPrint.__table__.indexes
-        if i.name == "uq_card_prints_active_verified_identity"
-    )
-    assert tuple(c.name for c in model_index.columns) == index[2]
-
-
-def test_the_verified_check_only_changes_the_columns_spelling():
-    module, calls = _run("upgrade")
-
-    new = module._verified_check(NEW_COLUMN)
-    old = module._verified_check(OLD_COLUMN)
-    assert new.replace(NEW_COLUMN, OLD_COLUMN) == old
-
-    for requirement in (
-        "canonical_card_id IS NOT NULL",
-        "release_product_id IS NOT NULL",
-        f"{NEW_COLUMN} IS NOT NULL",
-        "artwork_key IS NOT NULL",
-    ):
-        assert requirement in new
-    # treatment stays optional and non-identity; release_product_code stays out.
-    assert "treatment IS NOT NULL" not in new
-    assert "release_product_code" not in new
-
-
-def test_the_verified_check_matches_the_model_exactly():
-    module, calls = _run("upgrade")
-    emitted = next(
-        c for c in calls
-        if c[0] == "create_check_constraint" and c[1] == "ck_card_prints_verified_requires_fields"
-    )
-
-    model_check = next(
-        c for c in CardPrint.__table__.constraints
-        if getattr(c, "name", None) == "ck_card_prints_verified_requires_fields"
-    )
-    assert emitted[2] == str(model_check.sqltext)
+    assert "copied = _backfill()" in body
+    assert "copied" in body.split("print(")[1]
 
 
 # --- the widened format check ----------------------------------------------
 
 
-def test_the_format_check_is_renamed_and_admits_exactly_p_and_r():
+def test_the_new_format_check_admits_exactly_base_p_and_r():
     module, calls = _run("upgrade")
     emitted = next(
         c for c in calls
-        if c[0] == "create_check_constraint"
-        and c[1] == "ck_card_prints_official_asset_variant_format"
+        if c[0] == "create_check_constraint" and c[1] == NEW_FORMAT_CHECK
     )
     condition = emitted[2]
 
@@ -214,24 +218,37 @@ def test_the_format_check_is_renamed_and_admits_exactly_p_and_r():
     assert "IN ('p', 'r', " not in condition
 
 
-def test_the_format_check_matches_the_model_exactly():
+def test_the_new_format_check_matches_the_model_exactly():
+    from app.models import CardPrint
+
     module, calls = _run("upgrade")
     emitted = next(
         c for c in calls
-        if c[0] == "create_check_constraint"
-        and c[1] == "ck_card_prints_official_asset_variant_format"
+        if c[0] == "create_check_constraint" and c[1] == NEW_FORMAT_CHECK
     )
 
     model_check = next(
         c for c in CardPrint.__table__.constraints
-        if getattr(c, "name", None) == "ck_card_prints_official_asset_variant_format"
+        if getattr(c, "name", None) == NEW_FORMAT_CHECK
     )
     assert emitted[2] == str(model_check.sqltext)
 
 
-def test_the_old_format_check_text_is_preserved_verbatim_for_the_downgrade():
-    """The downgrade must restore what c2f7b48a91d6 actually wrote, not a
-    paraphrase of it."""
+def test_the_new_vocabulary_is_a_superset_of_the_one_being_copied_from():
+    """Why the backfill cannot fail the check installed above it: every shape
+    the legacy column admits - NULL, 'base', 'p<N>' - the new one admits too."""
+    module = _load_migration()
+
+    new_rule = module.NEW_FORMAT_CHECK_SQL.replace(NEW_COLUMN, "X")
+    old_rule = module.OLD_FORMAT_CHECK_SQL.replace(OLD_COLUMN, "X")
+
+    # Identical rule, except that the leading letter set is widened.
+    assert new_rule.replace("IN ('p', 'r')", "= 'p'") == old_rule
+
+
+def test_the_old_format_check_text_is_preserved_verbatim():
+    """The legacy CHECK stays in force through the expand phase, so what this
+    migration writes down about it must be what c2f7b48a91d6 actually wrote."""
     module = _load_migration()
     original = (VERSIONS_DIR / "c2f7b48a91d6_add_official_artwork_variant.py").read_text(
         encoding="utf-8"
@@ -250,31 +267,18 @@ def test_the_old_format_check_text_is_preserved_verbatim_for_the_downgrade():
 # --- the downgrade ---------------------------------------------------------
 
 
-def test_downgrade_is_the_exact_inverse_of_the_upgrade():
+def test_downgrade_removes_only_what_the_upgrade_added():
     module, up = _run("upgrade")
     _, down = _run("downgrade")
 
-    assert [c[0] for c in down] == [c[0] for c in up]
-    assert [c[1] for c in down if c[0] == "alter_column"] == [NEW_COLUMN]
-    assert [c[2] for c in down if c[0] == "alter_column"] == [OLD_COLUMN]
-
-    dropped = [c[1] for c in down if c[0] in ("drop_index", "drop_constraint")]
-    assert dropped == [
-        "uq_card_prints_active_verified_identity",
-        "ck_card_prints_verified_requires_fields",
-        "ck_card_prints_official_asset_variant_format",
-    ]
-    created = [c[1] for c in down if c[0] in ("create_check_constraint", "create_index")]
-    assert created == [
-        "ck_card_prints_official_artwork_variant_format",
-        "ck_card_prints_verified_requires_fields",
-        "uq_card_prints_active_verified_identity",
-    ]
-    index = next(c for c in down if c[0] == "create_index")
-    assert index[2] == ("canonical_card_id", "language", "release_product_id", OLD_COLUMN)
+    assert [c[0] for c in down] == ["drop_constraint", "drop_column"]
+    assert [c[1] for c in down] == [NEW_FORMAT_CHECK, NEW_COLUMN]
+    # Nothing else is disturbed: the identity index and the verified check
+    # were never dropped on the way up, so they are not recreated here.
+    assert [c for c in down if c[0] in ("create_index", "create_check_constraint")] == []
 
 
-def test_the_downgrade_preflight_refuses_rn_rather_than_rewriting_it():
+def test_the_downgrade_preflight_refuses_rather_than_repairing():
     """It must abort, and it must not contain a repair for what it found."""
     module = _load_migration()
     source = MIGRATION_PATH.read_text(encoding="utf-8")
@@ -292,22 +296,23 @@ def test_downgrade_runs_its_preflight_before_any_ddl():
     module = _load_migration()
     body = MIGRATION_PATH.read_text(encoding="utf-8").split("def downgrade()")[1]
 
-    assert body.index("_preflight_downgrade()") < body.index("op.drop_index")
+    assert body.index("_preflight_downgrade()") < body.index("op.drop_constraint")
+    assert body.index("_preflight_downgrade()") < body.index("op.drop_column")
 
 
-def test_downgrade_aborts_when_the_data_carries_an_rn_variant():
+def test_downgrade_aborts_when_the_columns_disagree():
+    """rN is the case that matters - the legacy column has no spelling for it,
+    so dropping the new column would destroy the value."""
     module = _load_migration()
 
     class _Bind:
         def execute(self, statement, *args):
-            sql = str(statement)
-
             class _Result:
                 def scalar_one(inner):
                     return 2
 
                 def all(inner):
-                    return [(41, "r1"), (42, "r2")]
+                    return [(41, None, "r1"), (42, "base", "r2")]
 
             return _Result()
 
@@ -317,15 +322,15 @@ def test_downgrade_aborts_when_the_data_carries_an_rn_variant():
         except RuntimeError as exc:
             message = str(exc)
         else:
-            raise AssertionError("expected the preflight to refuse rN data")
+            raise AssertionError("expected the preflight to refuse diverged data")
 
     assert "DOWNGRADE ABORTED" in message
-    assert "2 card_prints row(s) carry an rN" in message
+    assert "2 card_prints row(s)" in message
     assert "id=41" in message and "id=42" in message
     assert "would merge distinct printings" in message
 
 
-def test_downgrade_preflight_passes_when_no_rn_variant_exists():
+def test_downgrade_preflight_passes_when_the_copy_is_still_faithful():
     module = _load_migration()
 
     class _Bind:

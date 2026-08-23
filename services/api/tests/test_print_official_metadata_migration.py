@@ -100,7 +100,12 @@ def test_migration_history_has_exactly_one_head():
             downs.add(down.group(1))
 
     heads = sorted(rev for rev in revisions if rev not in downs)
-    assert heads == ["b8d5f1c40e73"], f"expected a single head, found {heads}"
+    # One head, whatever the latest revision happens to be - this migration is
+    # in the chain either as that head or as an ancestor of it (a9f31c7d5b64,
+    # the asset-variant contract migration, now follows it).
+    assert len(heads) == 1, f"expected a single head, found {heads}"
+    assert "b8d5f1c40e73" in revisions
+    assert heads == ["b8d5f1c40e73"] or "b8d5f1c40e73" in downs
 
 
 # --- what upgrade does ------------------------------------------------------

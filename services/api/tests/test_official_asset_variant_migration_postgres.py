@@ -1,11 +1,18 @@
 """Runs f2e6b3a71c85 for real on throwaway PostgreSQL databases.
 
-Covers what only a live engine can prove: that the column rename carries the
-identity index, the verified check and every stored value across untouched,
-that the widened CHECK really does admit rN (and still refuses r0/leading
-zeros), that rN and base stay distinct identities even when their artwork_key
-is byte-identical, and that the downgrade refuses rather than coercing rN data
-back into a vocabulary that has no room for it.
+Covers what only a live engine can prove about the EXPAND phase: that the new
+column arrives beside the old one rather than replacing it, that every stored
+value is copied across exactly, that the identity index and the verified check
+still name the *legacy* column afterwards (which is what keeps the deployed
+application working), that the widened CHECK really does admit rN (and still
+refuses r0/leading zeros), and that the downgrade refuses rather than
+discarding a value the legacy column cannot hold.
+
+Identity behaviour under the new column can only be exercised once
+a9f31c7d5b64 has moved the index onto it, so those tests run against the
+`contracted` fixture. The release-state compatibility proof - old application
+and new application both working against the dual-column schema - is in
+test_asset_variant_release_states_postgres.
 
 The fixture data is staging-shaped: 20 active+verified jp prints across
 OP-01 x4, OP-02 x1, OP-03 x5, OP-04 x10, with treatments 13 normal / 7
@@ -34,6 +41,9 @@ ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 
 PREVIOUS_HEAD = "d4b17c9e2a83"
 THIS_REVISION = "f2e6b3a71c85"
+# The contract migration, needed only where identity must already sit on the
+# new column - two revisions later, with the metadata migration in between.
+CLEANUP_REVISION = "a9f31c7d5b64"
 
 CARD_LIST = "https://www.onepiece-cardgame.com/images/cardlist/card"
 
@@ -194,17 +204,25 @@ def _seed_staging_shape(db: _Database) -> None:
 
 
 def _insert_print(conn, card_id: int, variant: str | None, *, artwork_key: str,
-                  product_offset: int = 0, treatment: str | None = "normal") -> int:
+                  product_offset: int = 0, treatment: str | None = "normal",
+                  status: str = "verified") -> int:
+    """A print carrying only the new column.
+
+    Legal as a *verified* row only once a9f31c7d5b64 has moved the verified
+    CHECK onto that column - before then the check still requires the legacy
+    one, which is exactly the compatibility property this release relies on.
+    Tests that only need the format CHECK to bite pass status='unverified'.
+    """
     return conn.execute(
         text(
             "INSERT INTO card_prints (canonical_card_id, language, treatment, artwork_key, "
             f"{NEW_COLUMN}, verification_status, is_active, release_product_id) "
-            "VALUES (:card_id, 'jp', :treatment, :artwork_key, :variant, 'verified', true, "
+            "VALUES (:card_id, 'jp', :treatment, :artwork_key, :variant, :status, true, "
             "(SELECT id FROM release_products ORDER BY id OFFSET :offset LIMIT 1)) RETURNING id"
         ),
         {
             "card_id": card_id, "variant": variant, "artwork_key": artwork_key,
-            "offset": product_offset, "treatment": treatment,
+            "offset": product_offset, "treatment": treatment, "status": status,
         },
     ).scalar_one()
 
@@ -241,32 +259,74 @@ def migrated():
         db.close()
 
 
+@pytest.fixture(scope="module")
+def contracted():
+    """The same 20, carried all the way to the post-contract schema.
+
+    Identity lives on official_asset_variant only here, so every test that
+    needs a *verified* print addressed by the new column runs against this.
+    """
+    db = _new_database("opcg_test_asset_variant_contracted")
+    _seed_staging_shape(db)
+    _alembic(db.url, "upgrade", CLEANUP_REVISION)
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 # --- the current 20 prints -------------------------------------------------
 
 
 def test_the_twenty_prints_keep_every_value(migrated):
-    """Not one row rewritten - the whole-row fingerprint is identical across
-    the rename, with the variant column read under its new name."""
+    """Not one row rewritten. The whole-row fingerprint taken over the legacy
+    column is identical afterwards, and the same fingerprint taken over the
+    new column matches it - which is the copy being exact, row for row."""
     db, before, _ = migrated
 
     with db.engine.connect() as conn:
-        after = conn.execute(text(_row_fingerprint(NEW_COLUMN))).scalar_one()
+        legacy = conn.execute(text(_row_fingerprint(OLD_COLUMN))).scalar_one()
+        copied = conn.execute(text(_row_fingerprint(NEW_COLUMN))).scalar_one()
         assert conn.execute(text("SELECT count(*) FROM card_prints")).scalar_one() == 20
 
     assert before["count"] == 20
-    assert after == before["fingerprint"]
+    assert legacy == before["fingerprint"]
+    assert copied == before["fingerprint"]
+
+
+def test_the_two_columns_agree_on_every_one_of_the_twenty(migrated):
+    """The State B invariant the contract migration's preflight depends on."""
+    db, _, _ = migrated
+
+    with db.engine.connect() as conn:
+        disagreeing = conn.execute(
+            text(
+                f"SELECT count(*) FROM card_prints "
+                f"WHERE {NEW_COLUMN} IS DISTINCT FROM {OLD_COLUMN}"
+            )
+        ).scalar_one()
+        populated = conn.execute(
+            text(f"SELECT count({NEW_COLUMN}) FROM card_prints")
+        ).scalar_one()
+
+    assert disagreeing == 0
+    assert populated == 20
 
 
 def test_the_variant_distribution_is_unchanged(migrated):
     db, before, _ = migrated
 
     with db.engine.connect() as conn:
-        after = conn.execute(
+        legacy = conn.execute(
+            text(f"SELECT {OLD_COLUMN}, count(*) FROM card_prints GROUP BY 1 ORDER BY 1")
+        ).all()
+        copied = conn.execute(
             text(f"SELECT {NEW_COLUMN}, count(*) FROM card_prints GROUP BY 1 ORDER BY 1")
         ).all()
 
     assert [tuple(r) for r in before["variants"]] == [("base", 13), ("p1", 5), ("p2", 2)]
-    assert [tuple(r) for r in after] == [("base", 13), ("p1", 5), ("p2", 2)]
+    assert [tuple(r) for r in legacy] == [("base", 13), ("p1", 5), ("p2", 2)]
+    assert [tuple(r) for r in copied] == [("base", 13), ("p1", 5), ("p2", 2)]
 
 
 def test_treatments_products_and_evidence_are_untouched(migrated):
@@ -300,9 +360,10 @@ def test_treatments_products_and_evidence_are_untouched(migrated):
     assert tuple(evidence) == (20, 20, 20)
 
 
-def test_the_migration_reports_the_same_distribution_on_both_sides(migrated):
+def test_the_migration_reports_what_it_copied(migrated):
     _, _, output = migrated
 
+    assert f"copied 20 {OLD_COLUMN} value(s) into {NEW_COLUMN}" in output
     assert f"20 card_prints rows, {OLD_COLUMN} distribution: base=13, p1=5, p2=2" in output
     assert f"20 card_prints rows, {NEW_COLUMN} distribution: base=13, p1=5, p2=2" in output
 
@@ -310,7 +371,9 @@ def test_the_migration_reports_the_same_distribution_on_both_sides(migrated):
 # --- the final schema ------------------------------------------------------
 
 
-def test_the_column_was_renamed_not_replaced(migrated):
+def test_both_columns_exist_after_the_expand(migrated):
+    """The expand phase adds; it does not replace. A database that has run it
+    can be read by either application generation."""
     db, before, _ = migrated
 
     with db.engine.connect() as conn:
@@ -319,20 +382,25 @@ def test_the_column_was_renamed_not_replaced(migrated):
     assert [tuple(r) for r in before["state"]["columns"]] == [
         (OLD_COLUMN, "character varying", 16, "YES")
     ]
-    assert [tuple(r) for r in state["columns"]] == [
-        (NEW_COLUMN, "character varying", 16, "YES")
+    assert sorted(tuple(r) for r in state["columns"]) == [
+        (OLD_COLUMN, "character varying", 16, "YES"),
+        (NEW_COLUMN, "character varying", 16, "YES"),
     ]
 
 
-def test_the_identity_index_keeps_its_name_columns_and_predicate(migrated):
-    db, _, _ = migrated
+def test_the_identity_index_still_names_the_legacy_column(migrated):
+    """The expand phase deliberately leaves identity where the deployed
+    application expects it. Moving it is a9f31c7d5b64's job."""
+    db, before, _ = migrated
 
     with db.engine.connect() as conn:
         index = _schema_state(conn)["index"]
 
+    assert index == before["state"]["index"]
     assert (
-        f"btree (canonical_card_id, language, release_product_id, {NEW_COLUMN})" in index
+        f"btree (canonical_card_id, language, release_product_id, {OLD_COLUMN})" in index
     )
+    assert NEW_COLUMN not in index
     assert "UNIQUE INDEX uq_card_prints_active_verified_identity" in index
     assert "WHERE ((is_active = true) AND ((verification_status)::text = 'verified'::text))" in (
         index
@@ -342,14 +410,29 @@ def test_the_identity_index_keeps_its_name_columns_and_predicate(migrated):
         assert gone not in index.split("WHERE")[0]
 
 
-def test_the_verified_check_keeps_its_requirements(migrated):
-    db, _, _ = migrated
+def test_the_identity_index_moves_to_the_new_column_only_after_the_contract(contracted):
+    with contracted.engine.connect() as conn:
+        index = _schema_state(conn)["index"]
+
+    assert (
+        f"btree (canonical_card_id, language, release_product_id, {NEW_COLUMN})" in index
+    )
+    assert OLD_COLUMN not in index
+    assert "UNIQUE INDEX uq_card_prints_active_verified_identity" in index
+    assert "WHERE ((is_active = true) AND ((verification_status)::text = 'verified'::text))" in (
+        index
+    )
+
+
+def test_the_verified_check_still_requires_the_legacy_column(migrated):
+    db, before, _ = migrated
 
     with db.engine.connect() as conn:
         check = _schema_state(conn)["verified_check"]
 
-    assert f"{NEW_COLUMN} IS NOT NULL" in check
-    assert OLD_COLUMN not in check
+    assert check == before["state"]["verified_check"]
+    assert f"{OLD_COLUMN} IS NOT NULL" in check
+    assert NEW_COLUMN not in check
     assert "release_product_id IS NOT NULL" in check
     assert "artwork_key IS NOT NULL" in check
     # Unchanged: treatment is not required, release_product_code is not either.
@@ -357,7 +440,21 @@ def test_the_verified_check_keeps_its_requirements(migrated):
     assert "treatment IS NOT NULL" not in check
 
 
-def test_the_format_check_was_renamed_and_widened(migrated):
+def test_the_verified_check_moves_to_the_new_column_only_after_the_contract(contracted):
+    with contracted.engine.connect() as conn:
+        check = _schema_state(conn)["verified_check"]
+
+    assert f"{NEW_COLUMN} IS NOT NULL" in check
+    assert OLD_COLUMN not in check
+    assert "release_product_id IS NOT NULL" in check
+    assert "artwork_key IS NOT NULL" in check
+    assert "release_product_code" not in check
+    assert "treatment IS NOT NULL" not in check
+
+
+def test_both_format_checks_are_in_force_after_the_expand(migrated):
+    """The legacy column keeps its p-only vocabulary; the new column gets the
+    widened one. Each governs its own column and neither governs both."""
     db, before, _ = migrated
 
     with db.engine.connect() as conn:
@@ -366,10 +463,35 @@ def test_the_format_check_was_renamed_and_widened(migrated):
     assert list(dict(before["state"]["format_checks"])) == [
         "ck_card_prints_official_artwork_variant_format"
     ]
+    assert sorted(checks) == [
+        "ck_card_prints_official_artwork_variant_format",
+        "ck_card_prints_official_asset_variant_format",
+    ]
+
+    widened = checks["ck_card_prints_official_asset_variant_format"]
+    assert "'p'::text, 'r'::text" in widened or "IN ('p', 'r')" in widened
+    assert NEW_COLUMN in widened
+
+    legacy = checks["ck_card_prints_official_artwork_variant_format"]
+    assert legacy == dict(before["state"]["format_checks"])[
+        "ck_card_prints_official_artwork_variant_format"
+    ]
+    assert "'r'" not in legacy
+
+
+def test_only_the_new_format_check_survives_the_contract(contracted):
+    with contracted.engine.connect() as conn:
+        checks = dict(_schema_state(conn)["format_checks"])
+        columns = conn.execute(
+            text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'card_prints' AND column_name IN (:old, :new)"
+            ),
+            {"old": OLD_COLUMN, "new": NEW_COLUMN},
+        ).scalars().all()
+
     assert list(checks) == ["ck_card_prints_official_asset_variant_format"]
-    definition = checks["ck_card_prints_official_asset_variant_format"]
-    assert "'p'::text, 'r'::text" in definition or "IN ('p', 'r')" in definition
-    assert NEW_COLUMN in definition
+    assert columns == [NEW_COLUMN]
 
 
 # --- the widened vocabulary ------------------------------------------------
@@ -377,11 +499,14 @@ def test_the_format_check_was_renamed_and_widened(migrated):
 
 @pytest.mark.parametrize("variant", ["base", "p1", "p10", "r1", "r3", "r10", "p101"])
 def test_the_widened_check_admits_the_measured_grammar(migrated, variant):
+    """Unverified rows: at this state the verified CHECK still requires the
+    legacy column, and what is under test here is the new column's format."""
     db, _, _ = migrated
 
     with db.engine.begin() as conn:
         card_id = _new_card(conn, f"TEST-OK-{variant}")
-        _insert_print(conn, card_id, variant, artwork_key=f"sha-{variant}")
+        _insert_print(conn, card_id, variant, artwork_key=f"sha-{variant}",
+                      status="unverified")
     with db.engine.begin() as conn:
         conn.execute(text("DELETE FROM card_prints WHERE canonical_card_id = :i"), {"i": card_id})
         conn.execute(text("DELETE FROM canonical_cards WHERE id = :i"), {"i": card_id})
@@ -395,18 +520,22 @@ def test_the_widened_check_still_refuses_everything_else(migrated, variant):
 
     with pytest.raises(IntegrityError) as excinfo, db.engine.begin() as conn:
         card_id = _new_card(conn, f"TEST-BAD-{variant or 'empty'}")
-        _insert_print(conn, card_id, variant, artwork_key="sha-bad")
+        _insert_print(conn, card_id, variant, artwork_key="sha-bad", status="unverified")
     assert "ck_card_prints_official_asset_variant_format" in str(excinfo.value)
 
 
 # --- identity behaviour under the new column -------------------------------
+#
+# All of these need identity to actually be enforced on official_asset_variant,
+# which is true only after the contract migration - so they run against
+# `contracted` rather than the dual-column state.
 
 
-def test_base_and_rn_stay_distinct_even_with_an_identical_artwork_key(migrated):
+def test_base_and_rn_stay_distinct_even_with_an_identical_artwork_key(contracted):
     """The measured case: 152 rN assets in the JP corpus are byte-for-byte
     identical to a base asset. Identical bytes must not merge two printings,
     because artwork_key is evidence and the asset variant is identity."""
-    db, _, _ = migrated
+    db = contracted
     shared_key = "0" * 64
 
     with db.engine.begin() as conn:
@@ -431,11 +560,11 @@ def test_base_and_rn_stay_distinct_even_with_an_identical_artwork_key(migrated):
         conn.execute(text("DELETE FROM canonical_cards WHERE id = :i"), {"i": card_id})
 
 
-def test_r1_and_r2_in_one_product_are_two_identities(migrated):
+def test_r1_and_r2_in_one_product_are_two_identities(contracted):
     """OP01-120, OP05-074 and OP05-119 each publish _r1 and _r2 inside PRB-01.
     Under the pre-rN vocabulary both collapsed to NULL and collided; under
     this one they are simply two rows."""
-    db, _, _ = migrated
+    db = contracted
 
     with db.engine.begin() as conn:
         card_id = _new_card(conn, "OP01-120")
@@ -454,10 +583,10 @@ def test_r1_and_r2_in_one_product_are_two_identities(migrated):
         conn.execute(text("DELETE FROM canonical_cards WHERE id = :i"), {"i": card_id})
 
 
-def test_the_same_rn_in_two_products_stays_distinct_through_the_product_id(migrated):
+def test_the_same_rn_in_two_products_stays_distinct_through_the_product_id(contracted):
     """The suffix numbering spans products, so r1 is only unique *within* one.
     release_product_id is what separates them."""
-    db, _, _ = migrated
+    db = contracted
 
     with db.engine.begin() as conn:
         card_id = _new_card(conn, "TEST-CROSS-PRODUCT")
@@ -477,11 +606,11 @@ def test_the_same_rn_in_two_products_stays_distinct_through_the_product_id(migra
         conn.execute(text("DELETE FROM canonical_cards WHERE id = :i"), {"i": card_id})
 
 
-def test_an_rn_print_may_carry_a_null_treatment(migrated):
+def test_an_rn_print_may_carry_a_null_treatment(contracted):
     """rN is an address, never a classification. A verified rN print with no
     treatment at all is legal - the strongest statement that the suffix does
     not determine one."""
-    db, _, _ = migrated
+    db = contracted
 
     with db.engine.begin() as conn:
         card_id = _new_card(conn, "TEST-NULL-TREATMENT")
@@ -503,7 +632,9 @@ def test_an_rn_print_may_carry_a_null_treatment(migrated):
 # --- downgrade -------------------------------------------------------------
 
 
-def test_downgrade_restores_the_previous_contract_on_pre_rn_data():
+def test_downgrade_removes_the_new_column_and_leaves_the_rest_alone():
+    """Back to the pre-expand schema exactly: the new column and its format
+    check go, and nothing the expand phase never touched is disturbed."""
     db = _new_database("opcg_test_asset_variant_downgrade_ok")
     try:
         _seed_staging_shape(db)
@@ -528,14 +659,16 @@ def test_downgrade_restores_the_previous_contract_on_pre_rn_data():
         db.close()
 
 
-def test_downgrade_aborts_rather_than_coercing_rn_data():
+def test_downgrade_aborts_rather_than_discarding_rn_data():
+    """An rN value exists only in the new column - the legacy vocabulary has
+    no spelling for it - so dropping that column would destroy it."""
     db = _new_database("opcg_test_asset_variant_downgrade_blocked")
     try:
         _seed_staging_shape(db)
         _alembic(db.url, "upgrade", THIS_REVISION)
         with db.engine.begin() as conn:
             card_id = _new_card(conn, "OP05-074")
-            _insert_print(conn, card_id, "r1", artwork_key="sha-r1")
+            _insert_print(conn, card_id, "r1", artwork_key="sha-r1", status="unverified")
         with db.engine.connect() as conn:
             before = _schema_state(conn)
             fingerprint = conn.execute(text(_row_fingerprint(NEW_COLUMN))).scalar_one()
@@ -543,7 +676,7 @@ def test_downgrade_aborts_rather_than_coercing_rn_data():
         output = _alembic(db.url, "downgrade", PREVIOUS_HEAD, expect_success=False)
 
         assert "DOWNGRADE ABORTED" in output
-        assert "carry an rN" in output
+        assert f"the legacy {OLD_COLUMN} does not carry" in output
         assert "would merge distinct printings" in output
         with db.engine.connect() as conn:
             # No partial DDL, and nothing rewritten to 'base' or NULL.
