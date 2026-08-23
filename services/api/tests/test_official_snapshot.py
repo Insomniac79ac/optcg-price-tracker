@@ -504,6 +504,119 @@ def test_every_occurrence_in_the_corpus_gets_a_recognized_asset_variant():
     assert dict(families) == suffix_inventory(entries)["families"]
 
 
+# --- the variance boundary the print-metadata columns rest on ------------------
+#
+# Which published fields can materially differ between two occurrences of one
+# card code is what decided how many print-level columns card_prints carries.
+# Four fields vary materially, so four columns exist (see migration
+# b8d5f1c40e73); seven do not vary at all, so they stay on CanonicalCard.
+
+MATERIALLY_VARYING = {"rarity": 122, "block": 17, "text": 30, "card_name": 1}
+
+# Measured across every occurrence of every card code in the corpus. A
+# print-level column for one of these could only ever repeat what the
+# canonical row already says.
+MATERIALLY_INVARIANT = (
+    "color", "cost", "counter", "attribute", "feature", "category", "power",
+)
+
+
+def test_the_baseline_records_which_fields_vary_materially(baseline):
+    """The four that earned a print-level column, and how much they vary."""
+    variance = baseline["field_variance"]
+
+    for name, expected in MATERIALLY_VARYING.items():
+        assert variance[name]["materially_different"] == expected, name
+
+
+def test_the_baseline_records_which_fields_do_not_vary_at_all(baseline):
+    """Seven fields, zero variation of any kind - not even formatting.
+
+    This is the negative half of the boundary, and it is the half that stops
+    the schema growing columns nobody needs.
+    """
+    variance = baseline["field_variance"]
+
+    for name in MATERIALLY_INVARIANT:
+        assert variance[name]["card_codes_varying"] == 0, name
+        assert variance[name]["materially_different"] == 0, name
+        assert variance[name]["missing_or_inconsistent"] == 0, name
+
+
+def test_formatting_only_differences_are_counted_apart_from_material_ones(baseline):
+    """133 card codes publish differing effect text; only 30 differ in
+    substance. Folding the two together would have justified a column on 103
+    card codes' worth of typography."""
+    text_variance = baseline["field_variance"]["text"]
+
+    assert text_variance["card_codes_varying"] == 133
+    assert text_variance["formatting_only"] == 103
+    assert text_variance["materially_different"] == 30
+    assert text_variance["formatting_only"] + text_variance["materially_different"] == 133
+
+    # The same split for card names: 19 vary, 18 of them only typographically.
+    name_variance = baseline["field_variance"]["card_name"]
+    assert (name_variance["formatting_only"], name_variance["materially_different"]) == (18, 1)
+
+
+def test_trigger_is_inconsistently_published_rather_than_varying(baseline):
+    """Deliberately not given a column. Its 7 varying card codes are all
+    formatting, and 2,318 card codes do not publish the block at all - which
+    is a finding about the source, not a print-level property."""
+    trigger = baseline["field_variance"]["trigger"]
+
+    assert trigger["materially_different"] == 0
+    assert trigger["formatting_only"] == 7
+    assert trigger["missing_or_inconsistent"] == 2318
+
+
+@pytest.mark.skipif(not LIVE_SNAPSHOT.exists(), reason="no local snapshot to compare")
+def test_the_live_corpus_still_shows_the_same_variance_boundary(baseline):
+    """Recomputed from the snapshot itself, not read back from the baseline.
+
+    Runs only where a snapshot has been collected. If Bandai's next capture
+    moves one of these, the schema decision needs revisiting - which is
+    exactly why this is asserted rather than assumed.
+    """
+    from app.services.official_snapshot import occurrence_matrix, variance_report
+
+    entries = Snapshot(LIVE_SNAPSHOT).load("entries.jsonl")
+    fields = variance_report(occurrence_matrix(entries))["fields"]
+
+    for name, expected in MATERIALLY_VARYING.items():
+        assert fields[name]["materially_different"] == expected, name
+    for name in MATERIALLY_INVARIANT:
+        assert fields[name]["card_codes_varying"] == 0, name
+    assert fields["text"]["formatting_only"] == 103
+    assert fields["card_name"]["formatting_only"] == 18
+
+    # And the baseline agrees with the live recomputation, field for field.
+    for name, recorded in baseline["field_variance"].items():
+        assert fields[name]["materially_different"] == recorded["materially_different"], name
+        assert fields[name]["formatting_only"] == recorded["formatting_only"], name
+
+
+@pytest.mark.skipif(not LIVE_SNAPSHOT.exists(), reason="no local snapshot to compare")
+def test_every_occurrence_publishes_all_four_metadata_fields():
+    """Coverage of the catalogue, which is what decides whether a field could
+    ever be required: all 4,962 occurrences carry rarity, block icon, name
+    and effect text. None is ever absent."""
+    entries = Snapshot(LIVE_SNAPSHOT).load("entries.jsonl")
+
+    def block(entry, name):
+        for published in entry.get("fields", []):
+            if published.get("name") == name:
+                return published.get("value") or None
+        return None
+
+    assert len(entries) == 4962
+    for entry in entries:
+        assert entry.get("rarity"), entry.get("entry_id")
+        assert entry.get("card_name"), entry.get("entry_id")
+        assert block(entry, "block"), entry.get("entry_id")
+        assert block(entry, "text"), entry.get("entry_id")
+
+
 @pytest.mark.skipif(not LIVE_SNAPSHOT.exists(), reason="no local snapshot to compare")
 def test_the_local_snapshot_still_matches_the_recorded_baseline(baseline):
     """Runs only where a snapshot has been collected; skipped in CI."""

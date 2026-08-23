@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Text,
     func,
     text,
 )
@@ -34,6 +35,12 @@ class CardPrint(Base):
     `artwork_key`. The 2026-08-22 JP corpus contains 152 rN assets that are
     byte-for-byte identical to a base asset, so this is measured behaviour
     rather than a hypothetical.
+
+    `official_rarity`, `official_block_icon`, `official_name` and
+    `official_effect_text` record what Bandai publishes for this exact
+    printing. They are descriptive, never identity: they are absent from the
+    index above and from the verified check below, so populating or changing
+    one can never create, merge or split a print.
 
     A print starts life `unverified` with its identity fields null. The
     ck_card_prints_verified_requires_fields check is what forces
@@ -161,6 +168,86 @@ class CardPrint(Base):
     # no image, a non-Card-List address, or a basename that does not name
     # this print's own card all leave it NULL rather than guessed.
     official_asset_variant: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # --- print-specific official metadata -------------------------------
+    #
+    # The value Bandai publishes for THIS exact printing/occurrence, stored
+    # verbatim. Four fields, and only four, because the complete JP corpus of
+    # 2026-08-22 (4,962 occurrences, 2,823 card codes) is what decided the
+    # boundary: rarity varies materially across 122 card codes, the block icon
+    # across 17, effect text across 30, and the card name across exactly 1.
+    # color, cost, counter, attribute, feature, category and power do not vary
+    # at all in that corpus, so they stay on CanonicalCard - a print-level
+    # column for an invariant field would be a column that can only ever
+    # repeat what the canonical row already says.
+    #
+    # These are NOT identity. None of them appears in
+    # uq_card_prints_active_verified_identity, none feeds treatment, none
+    # feeds source-mapping identity, and none feeds pricing. Two prints may
+    # carry identical metadata and stay distinct printings; one print may
+    # carry metadata that disagrees with its CanonicalCard and still be the
+    # same printing.
+    #
+    # NULL means Atlas has not yet populated authoritative print-specific
+    # metadata for this row. It never means "same as the canonical card", and
+    # no fallback value is ever synthesised - a guessed rarity is
+    # indistinguishable from a published one once it is written down.
+    #
+    # Deliberately the published value, not a diff against CanonicalCard: the
+    # question these answer is "what does Bandai publish for this exact
+    # printing?", and a column that only records differences cannot answer it
+    # without a join and a convention about what NULL means.
+    #
+    # Comparing them against CanonicalCard is meaningful only where the
+    # canonical column represents the same language as this print's
+    # `language`. name_jp and name_en are language-tagged, so official_name
+    # can be held against the matching one; CanonicalCard.effect_text carries
+    # no language tag at all and today holds English while the JP Card List
+    # publishes Japanese, so comparing those two would classify a translation
+    # as a data conflict. Such a pair is `language_not_comparable`, never a
+    # formatting or material difference - see
+    # print_import_planner.compare_metadata_to_canonical. Comparing two values
+    # from the same source and language (a stored official_* against the
+    # catalogue occurrence it came from) is unaffected by this.
+
+    # Bandai's rarity for this occurrence. String(32) to match
+    # CanonicalCard.rarity, whose vocabulary this shares: the corpus publishes
+    # 10 values, the longest being 'SPカード'. Rarity is the most variable of
+    # the four because Bandai republishes a card into a later set under that
+    # set's rarity.
+    official_rarity: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Bandai's ブロック アイコン for this occurrence, kept as TEXT and not as an
+    # integer on purpose. The corpus publishes '1'-'5' *and* 'X' (27
+    # occurrences), so the source vocabulary is textual; storing it as a
+    # number would have to invent a meaning for 'X' or drop those rows.
+    official_block_icon: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # Bandai's card name for this occurrence, verbatim. Not `official_name_jp`
+    # and never paired with an `official_name_en`: this row already carries
+    # `language`, so the language of the value is a property of the print, not
+    # something the column name has to encode. A JP print holds
+    # 'モンキー・D・ルフィ' here and an EN print holds 'Monkey.D.Luffy', both in
+    # this one column. String(255) matches the canonical name columns; the
+    # longest name in the corpus is 32 characters.
+    #
+    # Verbatim includes Bandai's mistakes. EB01-056 is published as
+    # 'シャーロット・フランぺ' in EB-01 and 'シャーロット・フランペ' in OP-10 - a
+    # hiragana ぺ where every other occurrence has katakana ペ. That is the one
+    # material name difference in the whole corpus, and it is preserved rather
+    # than corrected: Atlas records what the source says, and a silent fix
+    # would destroy the evidence that the source is inconsistent.
+    official_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Bandai's effect text for this occurrence, verbatim. Text rather than a
+    # bounded String, matching CanonicalCard.effect_text.
+    #
+    # Most differences here are formatting rather than substance: 103 of the
+    # 133 card codes whose text varies differ only in characters NFKC folds
+    # together - 'ドン‼' against 'ドン!!' being the common one - while 30 differ
+    # materially, such as OP05-074, where one occurrence spells out the
+    # 【ブロッカー】 reminder text and another omits it. The raw value is stored
+    # either way; the formatting/material distinction is a question asked at
+    # comparison time (see app.services.official_snapshot.classify_field), not
+    # a normalisation baked into the column.
+    official_effect_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     artist: Mapped[str | None] = mapped_column(String(255), nullable=True)
     verification_status: Mapped[str] = mapped_column(

@@ -4,6 +4,81 @@
   "distinct_image_digests": 4810,
   "distinct_image_urls": 4962,
   "entry_occurrences": 4962,
+  "field_variance": {
+    "attribute": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "block": {
+      "card_codes_varying": 17,
+      "formatting_only": 0,
+      "materially_different": 17,
+      "missing_or_inconsistent": 0
+    },
+    "card_name": {
+      "card_codes_varying": 19,
+      "formatting_only": 18,
+      "materially_different": 1,
+      "missing_or_inconsistent": 0
+    },
+    "category": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "color": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "cost": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "counter": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "feature": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "power": {
+      "card_codes_varying": 0,
+      "formatting_only": 0,
+      "materially_different": 0,
+      "missing_or_inconsistent": 0
+    },
+    "rarity": {
+      "card_codes_varying": 122,
+      "formatting_only": 0,
+      "materially_different": 122,
+      "missing_or_inconsistent": 0
+    },
+    "text": {
+      "card_codes_varying": 133,
+      "formatting_only": 103,
+      "materially_different": 30,
+      "missing_or_inconsistent": 0
+    },
+    "trigger": {
+      "card_codes_varying": 7,
+      "formatting_only": 7,
+      "materially_different": 0,
+      "missing_or_inconsistent": 2318
+    }
+  },
+  "field_variance_note": "Per card code, across all occurrences of that code. 'materially_different' is what survives NFKC folding and whitespace collapsing; 'formatting_only' is what does not. This is the boundary that decided which print-level columns card_prints carries (see b8d5f1c40e73): only rarity, block, text and card_name vary materially, so only those four got a column.",
   "note": "Observed invariants of the complete JP Card List corpus on the capture date. Recorded rather than asserted against the live site: Bandai publishes new products, so these numbers are a dated baseline to diff against, not a contract the catalogue owes us.",
   "occurrences_unresolvable_by_approved_variant_parser": 461,
   "series_coded": 59,

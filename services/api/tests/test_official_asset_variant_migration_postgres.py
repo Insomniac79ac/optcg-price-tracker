@@ -564,12 +564,15 @@ def test_a_full_upgrade_downgrade_cycle_from_scratch_leaves_the_schema_stable():
     every step compose, with no data in play at all."""
     db = _new_database("opcg_test_asset_variant_roundtrip")
     try:
-        _alembic(db.url, "upgrade", "head")
+        # This revision, not "head": the cycle under test is this migration's
+        # own two directions, and a later migration must not be able to change
+        # what this test means.
+        _alembic(db.url, "upgrade", THIS_REVISION)
         with db.engine.connect() as conn:
             head_state = _schema_state(conn)
 
         _alembic(db.url, "downgrade", PREVIOUS_HEAD)
-        _alembic(db.url, "upgrade", "head")
+        _alembic(db.url, "upgrade", THIS_REVISION)
 
         with db.engine.connect() as conn:
             assert _schema_state(conn) == head_state

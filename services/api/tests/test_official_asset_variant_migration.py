@@ -89,7 +89,12 @@ def test_migration_history_still_has_exactly_one_head():
                 downs.add(down.group(1))
 
     heads = sorted(rev for rev in revisions if rev not in downs)
-    assert heads == ["f2e6b3a71c85"], f"expected a single head, got {heads}"
+    # One head, whatever the latest revision happens to be - this migration is
+    # in the chain either as that head or as an ancestor of it. Pinning the
+    # head to this revision would make every later migration fail here.
+    assert len(heads) == 1, f"expected a single head, got {heads}"
+    assert "f2e6b3a71c85" in revisions
+    assert heads == ["f2e6b3a71c85"] or "f2e6b3a71c85" in downs
 
 
 # --- the rename ------------------------------------------------------------

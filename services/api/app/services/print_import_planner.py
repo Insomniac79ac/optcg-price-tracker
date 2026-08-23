@@ -12,6 +12,12 @@ The exact-print identity went live on 2026-08-22:
 
     (canonical_card_id, language, release_product_id, official_asset_variant)
 
+Alongside identity the planner carries the four print-specific official
+metadata values - rarity, block icon, card name and effect text - which the
+complete 2026-08-22 JP corpus proves can materially vary between occurrences
+of one card code. Those are descriptive, not identity: a difference in any of
+them is reported and never proposes a second print.
+
 Every component of that key is a fact somebody has to establish *before* a row
 can be written. Getting one wrong does not fail loudly - it silently creates a
 duplicate print, or silently attaches prices to the wrong physical printing.
@@ -51,6 +57,7 @@ from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, Card, CardPrint, ReleaseProduct, Source, SourceCardMapping
 from app.services.official_asset_variant import parse_official_asset_variant
+from app.services.official_snapshot import normalize_for_comparison
 from app.services.official_cardlist import (
     OfficialCardEntry,
     OfficialSeries,
@@ -102,6 +109,77 @@ FLAG_MALFORMED_ENTRY = "malformed_entry"
 # difference is information about a printing - not evidence that the canonical
 # card is wrong, and not an identity component. It is surfaced, not blocking.
 FLAG_RARITY_DIFFERS_BY_PRINTING = "rarity_differs_by_printing"
+
+# --- print-specific official metadata ---------------------------------------
+#
+# The four fields the complete 2026-08-22 JP corpus proves can materially vary
+# between occurrences of one card code. They are carried so a later write step
+# can store what Bandai publishes for one exact printing; nothing here is
+# identity, and none of it can create, merge or split a print.
+
+METADATA_FIELDS = (
+    "official_rarity",
+    "official_block_icon",
+    "official_name",
+    "official_effect_text",
+)
+
+# Per-field comparison against the print Atlas already holds.
+METADATA_NOT_POPULATED = "not_populated"
+METADATA_EXACT_MATCH = "exact_match"
+METADATA_FORMATTING_ONLY = "formatting_only_difference"
+METADATA_MATERIAL = "material_difference"
+
+# The whole-row summary. Missing wins over differing: a row with one NULL
+# field has not been populated yet, and calling that "differs" would report a
+# disagreement with a value nobody ever wrote.
+METADATA_MISSING = "missing_metadata"
+METADATA_MATCHES = "metadata_matches"
+METADATA_DIFFERS = "metadata_differs"
+
+# --- comparing published metadata against CanonicalCard ----------------------
+#
+# A different question from the one compare_metadata answers. compare_metadata
+# holds two values from the same source and the same language side by side -
+# what Atlas stored for a printing against what the catalogue publishes for
+# that same occurrence - so a difference there is genuinely a difference.
+#
+# CanonicalCard is not that. It is Atlas's normalised, language-independent
+# card identity, and only some of its columns are language-tagged. Comparing
+# a Japanese published value against an untagged canonical column classifies a
+# *translation* as a data conflict: OP01-001's JP effect text against an
+# English CanonicalCard.effect_text is not a material difference, it is two
+# languages. So a pair is compared only where the canonical column represents
+# the same language as the print, and is `language_not_comparable` otherwise -
+# never formatting_only_difference, never material_difference.
+METADATA_LANGUAGE_NOT_COMPARABLE = "language_not_comparable"
+
+# The row summary when no field could be compared at all.
+METADATA_NOT_COMPARABLE = "metadata_not_comparable"
+
+# The canonical column that means the same thing as an official_* field, per
+# print language. A field absent from this table has no language-matched
+# counterpart and is never compared:
+#
+#   official_rarity       CanonicalCard.rarity is one normalised vocabulary
+#                         shared across languages; the JP catalogue publishes
+#                         'SPカード' where the canonical row records 'SP'.
+#   official_block_icon   CanonicalCard has no block-icon column at all.
+#   official_effect_text  CanonicalCard.effect_text carries no language tag
+#                         and today holds English.
+#
+# Only the name columns are language-tagged, so only the name is comparable -
+# and the corpus agrees that this is the useful one: the single material name
+# difference is EB01-056's hiragana ぺ, a real JP-against-JP disagreement.
+CANONICAL_COUNTERPART: dict[str, dict[str, str]] = {
+    "official_name": {"jp": "name_jp", "en": "name_en"},
+}
+
+# Surfaced, never blocking. A metadata difference is information about a
+# printing, not a reason to propose a second one - see _decide, which does not
+# consult either of these.
+FLAG_METADATA_MISSING = "official_metadata_missing"
+FLAG_METADATA_DIFFERS = "official_metadata_differs"
 
 # --- lineage-less source mapping classification ------------------------------
 
@@ -172,6 +250,200 @@ class ProposedReleaseProduct:
 
 
 @dataclass(frozen=True)
+class OfficialMetadata:
+    """What Bandai publishes for one exact occurrence. Pure evidence.
+
+    Read from the Card List entry and nowhere else. Never from CanonicalCard:
+    the whole point is to answer "what does Bandai publish for this exact
+    printing?", and an answer derived from the canonical row would be a
+    restatement of Atlas's own normalisation rather than the source's value.
+    """
+
+    official_rarity: str | None
+    official_block_icon: str | None
+    official_name: str | None
+    official_effect_text: str | None
+
+    @classmethod
+    def from_entry(cls, entry: OfficialCardEntry) -> "OfficialMetadata":
+        return cls(
+            official_rarity=_verbatim(entry.rarity),
+            official_block_icon=_verbatim(_block_value(entry, "block")),
+            # The same occurrence value PlannedPrint.official_card_name
+            # already carries; kept under its column name so a write step
+            # never has to guess which plan field feeds which column.
+            official_name=_verbatim(entry.card_name),
+            official_effect_text=_verbatim(_block_value(entry, "text")),
+        )
+
+
+@dataclass(frozen=True)
+class MetadataComparison:
+    """How a value Atlas holds stands against what the catalogue publishes.
+
+    The planner produces one only when Atlas already holds the exact print,
+    comparing that print's stored metadata against the occurrence it came from
+    - same source, same language. compare_metadata_to_canonical produces one
+    for the other question, against CanonicalCard, where fields whose
+    canonical column is a different language are `language_not_comparable`
+    rather than differences.
+
+    Either way it is only ever reported. It is not an outcome, it is not a
+    flag that blocks, and it can never add a creation - a printing whose
+    rarity was republished is still the same printing.
+    """
+
+    status: str
+    fields: dict[str, str]
+    differences: tuple[str, ...]
+
+    @property
+    def material_fields(self) -> tuple[str, ...]:
+        return tuple(n for n, v in self.fields.items() if v == METADATA_MATERIAL)
+
+    @property
+    def formatting_only_fields(self) -> tuple[str, ...]:
+        return tuple(n for n, v in self.fields.items() if v == METADATA_FORMATTING_ONLY)
+
+    @property
+    def not_comparable_fields(self) -> tuple[str, ...]:
+        """Fields no comparison was made for, because the canonical column
+        does not represent this print's language. Always empty for a
+        print-against-catalogue comparison."""
+        return tuple(
+            n for n, v in self.fields.items() if v == METADATA_LANGUAGE_NOT_COMPARABLE
+        )
+
+
+def _verbatim(value: str | None) -> str | None:
+    """The published value unchanged, with absence spelled None.
+
+    The only thing done to it is refusing to store an empty string, which is
+    not a published value - it is a missing one wearing a value's clothes.
+    Nothing is stripped, folded, case-changed or corrected; Bandai's typos
+    included (see CardPrint.official_name).
+    """
+    if value is None:
+        return None
+    return value if value != "" else None
+
+
+def _block_value(entry: OfficialCardEntry, name: str) -> str | None:
+    """One published block's raw value, or None when the block is absent."""
+    block = entry.field(name)
+    return getattr(block, "value", None) if block is not None else None
+
+
+def compare_metadata(stored: OfficialMetadata, official: OfficialMetadata) -> MetadataComparison:
+    """Per-field comparison, reusing the snapshot layer's own normaliser.
+
+    Each field lands in one of four states: not populated on the Atlas row,
+    exactly equal, equal once NFKC-folded and whitespace-collapsed
+    (`formatting_only_difference`), or genuinely different
+    (`material_difference`). The same rule the corpus analysis uses to say
+    that 103 of the 133 varying effect texts differ only in formatting, so
+    the planner and the snapshot report cannot drift apart.
+
+    The row summary reports missing ahead of differing: a NULL is not a
+    disagreement, it is a value Atlas has not written yet.
+    """
+    fields: dict[str, str] = {}
+    differences: list[str] = []
+
+    for name in METADATA_FIELDS:
+        held = getattr(stored, name)
+        published = getattr(official, name)
+        if held is None:
+            fields[name] = METADATA_NOT_POPULATED
+            continue
+        if held == published:
+            fields[name] = METADATA_EXACT_MATCH
+            continue
+        if normalize_for_comparison(held) == normalize_for_comparison(published):
+            fields[name] = METADATA_FORMATTING_ONLY
+            differences.append(
+                f"{name} differs only in formatting (Atlas {held!r}, catalogue {published!r})"
+            )
+            continue
+        fields[name] = METADATA_MATERIAL
+        differences.append(
+            f"{name} differs materially (Atlas {held!r}, catalogue {published!r})"
+        )
+
+    if METADATA_NOT_POPULATED in fields.values():
+        status = METADATA_MISSING
+    elif differences:
+        status = METADATA_DIFFERS
+    else:
+        status = METADATA_MATCHES
+
+    return MetadataComparison(
+        status=status, fields=fields, differences=tuple(differences)
+    )
+
+
+def compare_metadata_to_canonical(
+    metadata: OfficialMetadata, card: CanonicalCard, language: str
+) -> MetadataComparison:
+    """Published metadata against CanonicalCard, language rule applied.
+
+    Same four states as compare_metadata for anything actually compared, plus
+    `language_not_comparable` for every field whose canonical counterpart does
+    not represent this print's language (see CANONICAL_COUNTERPART). Text in
+    two languages is not a disagreement, and reporting it as one turns every
+    translated card in the catalogue into a data conflict nobody can resolve.
+
+    The print-specific value stays valid either way: this decides what may be
+    *said* about a pair, never whether the published value is kept. Nothing
+    here touches compare_metadata, which holds two same-source, same-language
+    values side by side and is unaffected by this rule.
+    """
+    fields: dict[str, str] = {}
+    differences: list[str] = []
+    compared = 0
+
+    for name in METADATA_FIELDS:
+        counterpart = CANONICAL_COUNTERPART.get(name, {}).get(language.lower())
+        if counterpart is None:
+            fields[name] = METADATA_LANGUAGE_NOT_COMPARABLE
+            continue
+        compared += 1
+        held = _verbatim(getattr(card, counterpart, None))
+        published = getattr(metadata, name)
+        if held is None:
+            fields[name] = METADATA_NOT_POPULATED
+            continue
+        if held == published:
+            fields[name] = METADATA_EXACT_MATCH
+            continue
+        if normalize_for_comparison(held) == normalize_for_comparison(published):
+            fields[name] = METADATA_FORMATTING_ONLY
+            differences.append(
+                f"{name} differs only in formatting from {counterpart} "
+                f"(Atlas {held!r}, catalogue {published!r})"
+            )
+            continue
+        fields[name] = METADATA_MATERIAL
+        differences.append(
+            f"{name} differs materially from {counterpart} "
+            f"(Atlas {held!r}, catalogue {published!r})"
+        )
+
+    if compared == 0:
+        status = METADATA_NOT_COMPARABLE
+    elif METADATA_NOT_POPULATED in fields.values():
+        status = METADATA_MISSING
+    elif differences:
+        status = METADATA_DIFFERS
+    else:
+        status = METADATA_MATCHES
+
+    return MetadataComparison(
+        status=status, fields=fields, differences=tuple(differences)
+    )
+
+
+@dataclass(frozen=True)
 class PlannedPrint:
     """One official artwork, resolved against Atlas. Pure data."""
 
@@ -193,6 +465,15 @@ class PlannedPrint:
     official_asset_variant: str | None
     official_artwork_sha256: str | None
 
+    # -- print-specific official metadata, verbatim from this occurrence
+    #
+    # Descriptive, never identity. A difference in any of these is information
+    # about a printing and is reported as such; it never proposes a second
+    # print. Read from the catalogue entry only - deriving them from
+    # CanonicalCard would answer a different question than the one the
+    # columns exist for.
+    official_metadata: OfficialMetadata
+
     # -- Atlas descriptive metadata, never derived from the suffix
     treatment: str | None
 
@@ -210,6 +491,40 @@ class PlannedPrint:
 
     proposed_canonical_card: ProposedCanonicalCard | None = None
     proposed_release_product: ProposedReleaseProduct | None = None
+    # Present only when Atlas already holds this exact print: there is nothing
+    # to compare a proposed print against. None here is "no comparison was
+    # possible", which is not the same as "nothing differs".
+    metadata_comparison: MetadataComparison | None = None
+
+    # The four published values, addressable directly as well as through
+    # `official_metadata`. They are the values a write step would put in the
+    # matching card_prints columns, named identically so no mapping table is
+    # needed to connect a plan to a column.
+    @property
+    def official_rarity(self) -> str | None:
+        return self.official_metadata.official_rarity
+
+    @property
+    def official_block_icon(self) -> str | None:
+        return self.official_metadata.official_block_icon
+
+    @property
+    def official_name(self) -> str | None:
+        return self.official_metadata.official_name
+
+    @property
+    def official_effect_text(self) -> str | None:
+        return self.official_metadata.official_effect_text
+
+    @property
+    def metadata_status(self) -> str | None:
+        """`missing_metadata` / `metadata_matches` / `metadata_differs`.
+
+        None when Atlas holds no print to compare against - a proposed print
+        has no stored metadata, and reporting "matches" or "differs" for one
+        would be inventing a comparison that did not happen.
+        """
+        return self.metadata_comparison.status if self.metadata_comparison else None
 
     @property
     def action(self) -> str:
@@ -229,6 +544,11 @@ class PlannedPrint:
     def to_dict(self) -> dict:
         document = asdict(self)
         document["action"] = self.action
+        # Flattened alongside the nested `official_metadata` so a consumer can
+        # read `official_rarity` without knowing the plan's internal shape.
+        for name in METADATA_FIELDS:
+            document[name] = getattr(self, name)
+        document["metadata_status"] = self.metadata_status
         return document
 
 
@@ -265,6 +585,27 @@ class ImportPlan:
         for planned in self.prints:
             counts[planned.outcome] = counts.get(planned.outcome, 0) + 1
         return counts
+
+    def metadata_coverage(self) -> dict[str, int]:
+        """How many planned occurrences carry each published metadata value.
+
+        Coverage of the *catalogue*, not of Atlas: it answers "did Bandai
+        publish this for the occurrences in this run?", which is the question
+        that decides whether a field could ever be required.
+        """
+        return {
+            name: sum(1 for p in self.prints if getattr(p, name) is not None)
+            for name in METADATA_FIELDS
+        }
+
+    def metadata_statuses(self) -> dict[str, int]:
+        """Metadata comparison outcomes, counted over prints Atlas already holds."""
+        statuses: dict[str, int] = {}
+        for planned in self.prints:
+            status = planned.metadata_status
+            if status is not None:
+                statuses[status] = statuses.get(status, 0) + 1
+        return statuses
 
 
 # A caller-supplied way to learn an official asset's SHA-256. Injected rather
@@ -358,6 +699,10 @@ class PrintImportPlanner:
 
         card_code = (entry.card_code or "").strip()
         variant = parse_official_asset_variant(entry.image_url, card_code)
+        # What Bandai publishes for this occurrence, read straight off the
+        # entry. Established before anything is resolved against Atlas so it
+        # cannot be contaminated by what Atlas already holds.
+        official_metadata = OfficialMetadata.from_entry(entry)
 
         if not entry.is_wellformed:
             flags.append(FLAG_MALFORMED_ENTRY)
@@ -505,6 +850,7 @@ class PrintImportPlanner:
         digest = self._digest(entry.image_url)
 
         treatment: str | None = None
+        metadata_comparison: MetadataComparison | None = None
         if existing_print is not None:
             # The only treatment a plan ever carries: one Atlas already holds.
             treatment = existing_print.treatment
@@ -519,6 +865,39 @@ class PrintImportPlanner:
                     "the official asset digest no longer equals this print's artwork_key "
                     f"(catalogue {digest[:12]}..., Atlas {existing_print.artwork_key[:12]}...); "
                     "this is the same exact print, so no duplicate is proposed"
+                )
+            # Metadata is compared only against a print that already exists,
+            # and only ever reported. It is deliberately computed after the
+            # identity decision above, and feeds nothing back into it: the
+            # outcome below stays no_change and `creations` stays empty no
+            # matter what this finds.
+            metadata_comparison = compare_metadata(
+                OfficialMetadata(
+                    official_rarity=existing_print.official_rarity,
+                    official_block_icon=existing_print.official_block_icon,
+                    official_name=existing_print.official_name,
+                    official_effect_text=existing_print.official_effect_text,
+                ),
+                official_metadata,
+            )
+            if metadata_comparison.status == METADATA_MISSING:
+                flags.append(FLAG_METADATA_MISSING)
+                unpopulated = [
+                    name
+                    for name, state in metadata_comparison.fields.items()
+                    if state == METADATA_NOT_POPULATED
+                ]
+                reasons.append(
+                    "card_print #%d carries no authoritative print-specific metadata for %s; "
+                    "the catalogue publishes it, but nothing is written here"
+                    % (existing_print.id, ", ".join(unpopulated))
+                )
+            elif metadata_comparison.status == METADATA_DIFFERS:
+                flags.append(FLAG_METADATA_DIFFERS)
+                reasons.append(
+                    "the catalogue disagrees with card_print #%d on %s; this is the same "
+                    "exact print, so no duplicate is proposed"
+                    % (existing_print.id, "; ".join(metadata_comparison.differences))
                 )
         else:
             creations.append(CREATE_CARD_PRINT)
@@ -561,6 +940,7 @@ class PrintImportPlanner:
             official_image_url=entry.image_url,
             official_asset_variant=variant,
             official_artwork_sha256=digest,
+            official_metadata=official_metadata,
             treatment=treatment,
             existing_canonical_card_id=existing_card.id if existing_card else None,
             existing_release_product_id=existing_product.id if existing_product else None,
@@ -572,6 +952,7 @@ class PrintImportPlanner:
             reasons=tuple(reasons),
             proposed_canonical_card=proposed_card,
             proposed_release_product=proposed_product,
+            metadata_comparison=metadata_comparison,
         )
 
     @staticmethod

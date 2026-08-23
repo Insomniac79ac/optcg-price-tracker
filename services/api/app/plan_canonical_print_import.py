@@ -214,6 +214,19 @@ def read_only_sessionmaker(url: str):
 # --- rendering ----------------------------------------------------------------
 
 
+def _one_line(value: str | None, width: int = 96) -> str:
+    """Effect text on a single terminal line, for the human view only.
+
+    Newlines become a visible marker rather than wrapping the report, and an
+    over-long value is elided. This is display, never storage: the planner and
+    the JSON output both carry Bandai's text verbatim.
+    """
+    if not value:
+        return "<none>"
+    flat = value.replace("\n", " / ")
+    return flat if len(flat) <= width else flat[: width - 1] + "…"
+
+
 def render_human(plan: ImportPlan, digests: AssetDigests) -> None:
     counts = plan.counts()
     emit("== planned prints ==")
@@ -221,6 +234,17 @@ def render_human(plan: ImportPlan, digests: AssetDigests) -> None:
         f"  {len(plan.prints)} official artwork(s): "
         + ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
     )
+    coverage = plan.metadata_coverage()
+    emit(
+        "  official metadata published for: "
+        + ", ".join(f"{k}={v}" for k, v in coverage.items())
+    )
+    statuses = plan.metadata_statuses()
+    if statuses:
+        emit(
+            "  metadata vs existing prints: "
+            + ", ".join(f"{k}={v}" for k, v in sorted(statuses.items()))
+        )
     emit()
     for planned in plan.prints:
         emit(f"  {planned.entry_id}  [{planned.action}]")
@@ -239,6 +263,18 @@ def render_human(plan: ImportPlan, digests: AssetDigests) -> None:
         emit(
             f"     treatment : {planned.treatment if planned.treatment is not None else 'NULL'}"
         )
+        # What Bandai publishes for this exact occurrence. Truncated for the
+        # human view only; the JSON output carries the value verbatim.
+        emit(
+            f"     official  : rarity={planned.official_rarity or '<none>'} "
+            f"block={planned.official_block_icon or '<none>'} "
+            f"name={planned.official_name or '<none>'}"
+        )
+        emit(f"     effect    : {_one_line(planned.official_effect_text)}")
+        if planned.metadata_comparison is not None:
+            emit(f"     metadata  : {planned.metadata_comparison.status}")
+            for name, state in planned.metadata_comparison.fields.items():
+                emit(f"       . {name}: {state}")
         emit(
             f"     existing  : canonical_card={planned.existing_canonical_card_id} "
             f"release_product={planned.existing_release_product_id} "
