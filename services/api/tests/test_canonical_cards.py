@@ -291,14 +291,60 @@ def test_colors_stays_nullable_without_guessed_default(db_session):
     assert card.colors is None
 
 
-@pytest.mark.parametrize("field", ["original_set_code", "rarity", "card_type"])
+@pytest.mark.parametrize("field", ["card_type"])
 def test_canonical_card_identity_field_rejects_null(db_session, field):
     with pytest.raises(IntegrityError):
         make_canonical_card(db_session, card_code="OP01-011", **{field: None})
 
 
+def test_original_set_code_accepts_null_for_a_card_from_no_set(db_session):
+    """Bandai codes every family with letters AND digits - ST-*, EB-*, PRB-*,
+    OP-* - and the set code is read straight out of that prefix. A promo's
+    prefix carries no digits because a promo has no set: `P-014`. The products
+    it is distributed in are distribution products, not its original set, and
+    card_prints.release_product_id already records those exactly.
+    See migration d1c48b7f36ae."""
+    promo = make_canonical_card(
+        db_session, card_code="P-014", name_jp="コビー", original_set_code=None
+    )
+
+    assert promo.original_set_code is None
+
+
+def test_a_null_original_set_code_is_never_a_placeholder(db_session):
+    """The blank guard still applies. NULL means 'this card is from no set';
+    '' and '   ' are a value pretending to be one, and stay refused. So would
+    'P' or 'PROMO', but those are refused by never being written at all."""
+    for blank in ("", "   ", "\t"):
+        with pytest.raises(IntegrityError):
+            make_canonical_card(
+                db_session, card_code="P-029", original_set_code=blank
+            )
+        db_session.rollback()
+
+
+def test_rarity_accepts_null_because_it_is_not_identity(db_session):
+    """Bandai publishes rarity per printing, and for 49 card codes in the
+    complete 2026-08-22 JP corpus the catalogue settles no card-level value.
+    NULL is that answer (migration c7e91a4d2b60); the authoritative
+    per-printing value lives on card_prints.official_rarity."""
+    card = make_canonical_card(db_session, card_code="OP01-016", rarity=None)
+
+    assert card.rarity is None
+
+
+def test_a_null_rarity_is_never_a_placeholder(db_session):
+    """The blank guard still applies. NULL means 'the catalogue establishes
+    none'; '' and '   ' are a value pretending to be one, and stay refused."""
+    for blank in ("", "   ", "\t"):
+        with pytest.raises(IntegrityError):
+            make_canonical_card(db_session, card_code="OP01-017", rarity=blank)
+        db_session.rollback()
+
+
 @pytest.mark.parametrize("field", ["original_set_code", "rarity", "card_type"])
 @pytest.mark.parametrize("blank_value", ["", "   ", "\t"])
+# rarity stays here: nullable and blank-guarded are different things.
 def test_canonical_card_identity_field_rejects_blank_on_insert(db_session, field, blank_value):
     with pytest.raises(IntegrityError):
         make_canonical_card(db_session, card_code="OP01-012", **{field: blank_value})

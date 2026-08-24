@@ -21,6 +21,7 @@ from app.services.print_import_planner import (
     FLAG_ASSET_CHANGED,
     FLAG_CANONICAL_CARD_CONFLICT,
     FLAG_MALFORMED_ASSET,
+    FLAG_NAME_DIFFERS_BY_PRINTING,
     FLAG_RARITY_DIFFERS_BY_PRINTING,
     FLAG_UNCODED_PRODUCT,
     OUTCOME_CONFLICT,
@@ -28,6 +29,7 @@ from app.services.print_import_planner import (
     OUTCOME_NEEDS_REVIEW,
     OUTCOME_NO_CHANGE,
     PrintImportPlanner,
+    is_promo_card_code,
     original_set_code,
     plan_entries,
 )
@@ -744,6 +746,354 @@ def test_a_reprints_rarity_is_a_note_not_a_canonical_conflict(db_session, zoro):
     assert FLAG_RARITY_DIFFERS_BY_PRINTING in planned.flags
     # And the canonical card is still not rewritten by anything here.
     assert planned.proposed_canonical_card is None
+
+
+# --- 11b. a sibling printing's NAME is a note, not a canonical conflict --------
+#
+# CanonicalCard.name_jp is the BASELINE name: what the card's own set
+# published. Bandai republishes the name per entry, so a later printing may
+# spell it differently - and across the complete 2026-08-22 JP corpus 17 card
+# codes do, 16 formatting-only and one materially. None of them is evidence
+# that the canonical card is wrong, and the exact published spelling is
+# already carried verbatim on that print's official_name.
+
+
+PRB02 = OfficialSeries(
+    series_id="550902",
+    display_name="プレミアムブースター【PRB-02】",
+    official_code="PRB-02",
+)
+
+
+def _sibling_printing(db_session, name, *, series=PRB02, entry_id="OP01-001_p3"):
+    """One later-printing occurrence of OP01-001, published under `series`."""
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider={f"{CARDLIST}/{entry_id}.png": BASE_DIGEST}.get,
+    )
+    return planner.plan_entry(
+        entry(
+            entry_id=entry_id,
+            image=f"{CARDLIST}/{entry_id}.png",
+            products=(series.display_name,),
+            name=name,
+        ),
+        series_index=(OP01_SERIES, series),
+    )
+
+
+def _name_note(planned) -> str:
+    return next(r for r in planned.reasons if "printing's name" in r)
+
+
+def test_an_nfkc_only_sibling_spelling_is_a_note_not_a_conflict(db_session, zoro):
+    """'ロロノア・ゾロ' vs a full-width-folded rendering of the same name.
+
+    The real corpus case is 'モンキー・D・ルフィ' against
+    'モンキー・Ｄ・ルフィ' on 15 codes; the mechanism is identical.
+    """
+    planned = _sibling_printing(db_session, "ﾛﾛﾉｱ･ｿﾞﾛ")
+
+    assert planned.outcome != OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT not in planned.flags
+    assert FLAG_NAME_DIFFERS_BY_PRINTING in planned.flags
+    assert "formatting-only" in _name_note(planned)
+
+
+def test_a_material_sibling_spelling_is_still_only_a_note(db_session, zoro):
+    """EB01-056: 'シャーロット・フランペ' in EB-01, 'シャーロット・フランぺ'
+    in its OP-10 reprint - a genuinely different character, not formatting.
+
+    Still descriptive. A material name difference on a later printing is a
+    fact about that printing; it is not a second card, and it is not evidence
+    that the canonical row is wrong.
+    """
+    planned = _sibling_printing(db_session, "ロロノア・ゾロウ")
+
+    assert planned.outcome != OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT not in planned.flags
+    assert FLAG_NAME_DIFFERS_BY_PRINTING in planned.flags
+    assert "material" in _name_note(planned)
+
+
+def test_a_sibling_name_difference_neither_creates_nor_rewrites_the_canonical_card(
+    db_session, zoro
+):
+    """Neither kind may touch identity. No second canonical card is proposed,
+    the exact print identity is unchanged, and name_jp is not rewritten."""
+    before = zoro.name_jp
+
+    for spelling in ("ﾛﾛﾉｱ･ｿﾞﾛ", "ロロノア・ゾロウ"):
+        planned = _sibling_printing(db_session, spelling)
+
+        assert planned.proposed_canonical_card is None
+        assert CREATE_CANONICAL_CARD not in planned.creations
+        assert planned.existing_canonical_card_id == zoro.id
+        # The published spelling survives exactly, on the print.
+        assert planned.official_name == spelling
+
+    db_session.refresh(zoro)
+    assert zoro.name_jp == before
+
+
+def test_a_name_disagreement_on_the_baseline_occurrence_still_conflicts(
+    db_session, op01, zoro
+):
+    """The card's OWN set is the occurrence name_jp is answerable against.
+
+    A different name there is a real disagreement about the card, not about a
+    printing, and it must still block.
+    """
+    planned = plan_one(db_session, entry(name="ロロノア・ゾロウ"))
+
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT in planned.flags
+    assert FLAG_NAME_DIFFERS_BY_PRINTING not in planned.flags
+    assert any("name_jp" in r for r in planned.reasons)
+
+
+# --- 11c. a card with NO original set (a promo) -------------------------------
+#
+# Bandai codes every family as <LETTERS><DIGITS>-<NUMBER> and reads the set
+# code out of that prefix: ST-* Starter Deck, EB-* Extra Booster, PRB-*
+# Premium Booster, OP-* Booster Pack. A promo's prefix carries no digits
+# because a promo has no set, so `original_set_code` is NULL for it (migration
+# d1c48b7f36ae) and no occurrence can ever be its baseline.
+
+
+def test_the_promo_shape_is_recognised_from_the_published_code():
+    """`P` is the only alphabetic-only prefix in the complete 2026-08-22 JP
+    corpus (251 of 4962 entries); every other family carries digits."""
+    assert is_promo_card_code("P-014") is True
+    assert is_promo_card_code("P-107") is True
+    for coded in ("OP01-001", "ST36-005", "PRB01-001", "EB01-012"):
+        assert is_promo_card_code(coded) is False, coded
+
+
+def test_a_malformed_code_is_not_mistaken_for_a_promo():
+    """`original_set_code()` returns None for these too, which is exactly why
+    the promo test is a separate, stricter question: a promo needs all three
+    of a separator, an alphabetic-only prefix and a numeric suffix."""
+    for junk in ("NOTACODE", "", "-014", "P-", "P-ABC"):
+        assert original_set_code(junk) is None, junk
+        assert is_promo_card_code(junk) is False, junk
+
+
+@pytest.fixture()
+def promo(db_session) -> CanonicalCard:
+    """A promo Atlas already holds. No original set, by construction."""
+    card = CanonicalCard(
+        card_code="P-075",
+        name_jp="モンキー・Ｄ・ルフィ",
+        original_set_code=None,
+        rarity="P",
+        card_type="Character",
+    )
+    db_session.add(card)
+    db_session.commit()
+    return card
+
+
+def _promo_printing(db_session, name, *, series=PRB02, entry_id="P-075_p2"):
+    planner = PrintImportPlanner(
+        db_session, digest_provider={f"{CARDLIST}/{entry_id}.png": BASE_DIGEST}.get
+    )
+    return planner.plan_entry(
+        entry(
+            entry_id=entry_id,
+            card_code="P-075",
+            image=f"{CARDLIST}/{entry_id}.png",
+            products=(series.display_name,),
+            name=name,
+            rarity="P",
+            category="CHARACTER",
+        ),
+        series_index=(OP01_SERIES, series),
+    )
+
+
+def test_a_formatting_only_sibling_of_a_promo_is_a_note_not_a_conflict(
+    db_session, promo
+):
+    """THE 4C-3B REGRESSION. P-075's two coded PRB-02 occurrences publish
+    'モンキー・Ｄ・ルフィ'; its two uncoded occurrences publish
+    'モンキー・D・ルフィ' - a full-width vs ASCII D, formatting only.
+
+    Before this fix the `baseline_set is None` branch made ANY difference a
+    conflict, so making original_set_code nullable would have turned that
+    sibling into a canonical-card conflict the moment its product resolved.
+    It must stay descriptive."""
+    planned = _promo_printing(db_session, "モンキー・D・ルフィ")
+
+    assert planned.outcome != OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT not in planned.flags
+    assert FLAG_NAME_DIFFERS_BY_PRINTING in planned.flags
+    note = next(r for r in planned.reasons if "printing's name" in r)
+    assert "formatting-only" in note
+    # And it says what the canonical name was established from - not a set.
+    assert "consensus across this card's coded occurrences" in note
+
+
+def test_a_materially_different_promo_name_still_conflicts(db_session, promo):
+    """Nothing settles a promo's canonical name, so a materially different
+    spelling is a real disagreement about what the card is called. This is
+    deliberately stricter than the has-a-baseline case, where a later
+    printing's material difference is only descriptive."""
+    planned = _promo_printing(db_session, "モンキー・Ｄ・ルフィウ")
+
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT in planned.flags
+    assert any("no original set" in r for r in planned.reasons)
+
+
+def test_an_exactly_matching_promo_name_reports_nothing(db_session, promo):
+    planned = _promo_printing(db_session, "モンキー・Ｄ・ルフィ")
+
+    assert planned.outcome != OUTCOME_CONFLICT
+    assert FLAG_NAME_DIFFERS_BY_PRINTING not in planned.flags
+    assert FLAG_CANONICAL_CARD_CONFLICT not in planned.flags
+
+
+def test_no_occurrence_of_a_promo_is_ever_treated_as_its_baseline(db_session, promo):
+    """The failure mode the fix must not swap in: every occurrence becoming
+    authoritative. No product code makes a promo occurrence the baseline."""
+    for product_code in ("PRB-02", "ST-16", "OP-17", "P", "PROMO", None):
+        assert PrintImportPlanner._is_baseline_occurrence(promo, product_code) is False
+    assert PrintImportPlanner._baseline_set_code(promo) is None
+
+
+def test_a_promo_rarity_difference_is_still_only_a_note(db_session, promo):
+    """Unchanged by any of this: with no own set, `own_set` is False, so a
+    differing rarity is descriptive - never a conflict."""
+    planned = _promo_printing(db_session, "モンキー・Ｄ・ルフィ")
+    planner_obj = PrintImportPlanner(db_session)
+    diffs, notes = planner_obj._canonical_card_conflicts(
+        promo, entry(card_code="P-075", name="モンキー・Ｄ・ルフィ", rarity="SPカード",
+                     category="CHARACTER"),
+        "PRB-02",
+    )
+
+    assert diffs == []
+    assert [f for f, _ in notes] == [FLAG_RARITY_DIFFERS_BY_PRINTING]
+
+
+def test_both_baseline_scoped_rules_resolve_the_baseline_the_same_way():
+    """The name rule and the rarity rule are both scoped to the card's own-set
+    occurrence, so they must agree about which occurrence that is.
+
+    They used to resolve it by different means - the name rule through
+    `_baseline_set_code` (column, falling back to the card code) and the rarity
+    rule by reading `card.original_set_code` directly. Since d1c48b7f36ae made
+    that column nullable for every row, a card with a NULL column and a
+    readable card code is representable, and under the old code it was the
+    baseline to one rule and not to the other: a name disagreement conflicted
+    while a rarity disagreement on the same printing was only a note.
+    """
+    card = CanonicalCard(
+        card_code="OP01-001", name_jp="ロロノア・ゾロ", original_set_code=None,
+        rarity="L", card_type="Leader",
+    )
+    assert PrintImportPlanner._baseline_set_code(card) == "OP-01"
+    assert PrintImportPlanner._is_baseline_occurrence(card, "OP-01") is True
+
+    on_baseline = entry(name="ちがう名前", rarity="SR")
+    conflicts, notes = PrintImportPlanner._canonical_card_conflicts(
+        card, on_baseline, "OP-01"
+    )
+
+    # Both fields disagree on the SAME occurrence, so both must conflict.
+    assert any(c.startswith("name_jp") for c in conflicts)
+    assert any(c.startswith("rarity") for c in conflicts)
+    assert notes == []
+
+
+def test_a_card_with_no_own_set_never_reports_one_as_none(promo):
+    """The note text is operator-facing. A promo has no own set, so it must
+    not read 'for the card's own set (None)'."""
+    _, notes = PrintImportPlanner._canonical_card_conflicts(
+        promo,
+        entry(card_code="P-075", name="モンキー・Ｄ・ルフィ", rarity="SPカード",
+              category="CHARACTER"),
+        "PRB-02",
+    )
+
+    assert [f for f, _ in notes] == [FLAG_RARITY_DIFFERS_BY_PRINTING]
+    text = notes[0][1]
+    assert "(None)" not in text
+    assert "consensus across this card's coded occurrences" in text
+
+
+def test_the_baseline_set_code_is_atlas_own_column_not_a_guess():
+    """Atlas's own column wins over what the card code would derive; the
+    derivation is the fallback for a card that has not been through the schema.
+    Since d1c48b7f36ae the column is nullable, and None there means "this card
+    is from no set" - which routes the name comparison to the promo rule
+    above rather than to a baseline."""
+    recorded = CanonicalCard(
+        card_code="OP01-001", name_jp="x", original_set_code="ST-01",
+        rarity="L", card_type="Leader",
+    )
+    # Atlas's own column wins over what the card code would derive.
+    assert PrintImportPlanner._baseline_set_code(recorded) == "ST-01"
+    assert PrintImportPlanner._is_baseline_occurrence(recorded, "ST-01") is True
+    assert PrintImportPlanner._is_baseline_occurrence(recorded, "OP-01") is False
+    # An uncoded product is never the baseline.
+    assert PrintImportPlanner._is_baseline_occurrence(recorded, None) is False
+
+    promo = CanonicalCard(
+        card_code="P-014", name_jp="x", original_set_code=None,
+        rarity="P", card_type="Character",
+    )
+    assert original_set_code("P-014") is None
+    assert PrintImportPlanner._baseline_set_code(promo) is None
+
+
+def test_card_type_still_conflicts_on_any_occurrence(db_session, zoro):
+    """card_type describes the CARD, not the printing, so it is not
+    baseline-scoped: a disagreement on a later printing still blocks."""
+    entry_id = "OP01-001_p3"
+    planner = PrintImportPlanner(
+        db_session,
+        digest_provider={f"{CARDLIST}/{entry_id}.png": BASE_DIGEST}.get,
+    )
+    planned = planner.plan_entry(
+        entry(
+            entry_id=entry_id,
+            image=f"{CARDLIST}/{entry_id}.png",
+            products=(PRB02.display_name,),
+            category="CHARACTER",
+        ),
+        series_index=(OP01_SERIES, PRB02),
+    )
+
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT in planned.flags
+    assert any("card_type" in r for r in planned.reasons)
+
+
+def test_a_rarity_disagreement_on_the_cards_own_set_still_conflicts(
+    db_session, op01, zoro
+):
+    """Unchanged by the name rule: the own-set occurrence is still where
+    rarity is answerable, and a disagreement there still blocks."""
+    planned = plan_one(db_session, entry(rarity="SR"))
+
+    assert planned.outcome == OUTCOME_CONFLICT
+    assert FLAG_CANONICAL_CARD_CONFLICT in planned.flags
+    assert any("rarity" in r for r in planned.reasons)
+
+
+def test_a_changed_asset_on_an_existing_print_is_still_blocking(db_session, op01, zoro):
+    """Print identity is untouched by any of the above: a digest that no
+    longer matches is still needs_review, and still never a second print."""
+    make_print(db_session, zoro, op01, "base", artwork_key="c" * 64)
+    planned = plan_one(
+        db_session, entry(), digests={f"{CARDLIST}/OP01-001.png?260821": BASE_DIGEST}
+    )
+
+    assert planned.outcome == OUTCOME_NEEDS_REVIEW
+    assert FLAG_ASSET_CHANGED in planned.flags
+    assert planned.creations == ()
 
 
 # --- 12. lineage-less source mappings, read-only ------------------------------

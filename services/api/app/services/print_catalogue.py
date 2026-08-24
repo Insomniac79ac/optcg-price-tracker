@@ -5,6 +5,11 @@ print detail, including sibling prints) and the paginated print catalogue.
 Display metadata (card_code/name/rarity/card_type/colors) always comes from
 a print's CanonicalCard, never from the legacy Card table's rarity/variant
 columns - see CardPrintOut/PrintCatalogueItemOut docstrings in app.schemas.
+
+`rarity` is optional on that canonical row and may be NULL; it is served as
+NULL, filtered on only when a caller names an explicit value, and contributes
+no facet when absent. The rarity of one exact printing is
+card_prints.official_rarity, which this module does not serve.
 """
 
 from __future__ import annotations
@@ -270,10 +275,15 @@ def get_print_catalogue_facets(db: Session) -> PrintCatalogueFacetsOut:
         .distinct()
         .order_by(CardPrint.verification_status)
     ).all()
+    # Same rule as treatments above, for the same reason: CanonicalCard.rarity
+    # is optional, and a card whose card-level rarity the catalogue does not
+    # establish contributes no facet value. Without the IS NOT NULL filter,
+    # DISTINCT would return NULL as if it were a selectable rarity - and no
+    # synthetic "Unknown" bucket is invented for it either.
     rarities = db.scalars(
         select(CanonicalCard.rarity)
         .join(CardPrint, CardPrint.canonical_card_id == CanonicalCard.id)
-        .where(active)
+        .where(active, CanonicalCard.rarity.is_not(None))
         .distinct()
         .order_by(CanonicalCard.rarity)
     ).all()

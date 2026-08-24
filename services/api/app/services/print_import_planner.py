@@ -109,6 +109,19 @@ FLAG_MALFORMED_ENTRY = "malformed_entry"
 # difference is information about a printing - not evidence that the canonical
 # card is wrong, and not an identity component. It is surfaced, not blocking.
 FLAG_RARITY_DIFFERS_BY_PRINTING = "rarity_differs_by_printing"
+# Bandai also republishes the card NAME per entry. The same card code appears
+# with 'モンキー・D・ルフィ' under one product and 'モンキー・Ｄ・ルフィ' under
+# another (full-width Latin D), and occasionally with a materially different
+# spelling - EB01-056 is 'シャーロット・フランペ' in EB-01 and
+# 'シャーロット・フランぺ' in OP-10 (observed 2026-08-24 across the complete
+# 2026-08-22 JP corpus: 17 card codes, 16 formatting-only and one material).
+#
+# CanonicalCard.name_jp is the card's BASELINE name - what the card's own set
+# published. A later printing spelling it differently is a fact about that
+# printing, carried verbatim on CardPrint.official_name, and it is neither a
+# reason to split the card nor a reason to rewrite the canonical row. It is
+# surfaced, not blocking. See _canonical_card_conflicts.
+FLAG_NAME_DIFFERS_BY_PRINTING = "name_differs_by_printing"
 
 # --- print-specific official metadata ---------------------------------------
 #
@@ -209,6 +222,48 @@ def original_set_code(card_code: str) -> str | None:
     if not letters or not digits:
         return None
     return f"{letters}-{digits}"
+
+
+def scope_of(baseline_set: str | None) -> str:
+    """What a canonical value was established from, in one sentence.
+
+    Shared by the name and rarity notes so an operator reads the same phrase
+    for the same fact, and so a card with no original set never reports one as
+    `None`.
+    """
+    if baseline_set:
+        return f"the card's own set ({baseline_set})"
+    return "consensus across this card's coded occurrences"
+
+
+def is_promo_card_code(card_code: str) -> bool:
+    """Whether this code names a PROMO - a card with no original set.
+
+    Bandai codes every family as `<LETTERS><DIGITS>-<NUMBER>`, and reads its
+    set code back out of that prefix:
+
+        ST-*   Starter Deck      ST01-001  -> ST-01
+        EB-*   Extra Booster     EB01-012  -> EB-01
+        PRB-*  Premium Booster   PRB01-001 -> PRB-01
+        OP-*   Booster Pack      OP01-001  -> OP-01
+
+    A promo's prefix carries letters and NO digits, because there is no set
+    number to carry: `P-014`. Across the complete 2026-08-22 JP corpus `P` is
+    the only such prefix (251 of 4962 entries; every other family is
+    letters+digits), so this recognises a real published shape rather than
+    hard-coding one string - a second promo family would be read correctly
+    without an edit.
+
+    Deliberately stricter than "original_set_code() returned None": that is
+    also true of a malformed code like `NOTACODE`, which is not a promo and
+    must not be treated as one. A promo needs all three of a separator, an
+    alphabetic-only prefix and a numeric suffix.
+    """
+    code = (card_code or "").strip().upper()
+    prefix, sep, number = code.partition("-")
+    if not sep or not prefix or not number:
+        return False
+    return prefix.isalpha() and number.isdigit()
 
 
 def _card_type_from_category(category: str | None) -> str | None:
@@ -817,8 +872,8 @@ class PrintImportPlanner:
             differences, notes = self._canonical_card_conflicts(
                 existing_card, entry, product_code
             )
-            for note in notes:
-                flags.append(FLAG_RARITY_DIFFERS_BY_PRINTING)
+            for note_flag, note in notes:
+                flags.append(note_flag)
                 reasons.append(note)
             if differences:
                 conflict = True
@@ -956,45 +1011,158 @@ class PrintImportPlanner:
         )
 
     @staticmethod
+    def _baseline_set_code(card: CanonicalCard) -> str | None:
+        """The set code whose printing established this canonical row, upper-cased.
+
+        Atlas's own column is the authority; the code is only derived from the
+        card code when the column is NULL, so a card whose recorded original
+        set disagrees with its code is compared against what Atlas actually
+        recorded rather than against a guess.
+        """
+        recorded = (card.original_set_code or "").strip().upper()
+        if recorded:
+            return recorded
+        derived = original_set_code(card.card_code or "")
+        return derived.upper() if derived else None
+
+    @classmethod
+    def _is_baseline_occurrence(
+        cls, card: CanonicalCard, product_code: str | None
+    ) -> bool:
+        """Whether this entry IS the card's own-set printing.
+
+        An uncoded product (`product_code is None`) is never the baseline: the
+        card's own set has a code by definition.
+        """
+        baseline = cls._baseline_set_code(card)
+        code = (product_code or "").strip().upper()
+        return bool(baseline and code and code == baseline)
+
+    @classmethod
     def _canonical_card_conflicts(
-        card: CanonicalCard, entry: OfficialCardEntry, product_code: str | None
-    ) -> tuple[list[str], list[str]]:
+        cls, card: CanonicalCard, entry: OfficialCardEntry, product_code: str | None
+    ) -> tuple[list[str], list[tuple[str, str]]]:
         """Material identity disagreements, and print-scoped differences.
 
-        Returns `(conflicts, notes)`. Only fields Bandai actually publishes are
-        compared, and only when Atlas holds a value: a NULL in Atlas is missing
-        information the catalogue can fill, not a contradiction of it.
+        Returns `(conflicts, notes)`, where each note is `(flag, reason)` so
+        the caller attaches the flag that actually describes it rather than
+        one blanket flag for every kind of note. Only fields Bandai actually
+        publishes are compared, and only when Atlas holds a value: a NULL in
+        Atlas is missing information the catalogue can fill, not a
+        contradiction of it.
 
-        Rarity is the subtle one. Bandai lists it per entry, so a reprint into a
-        later set legitimately shows a different rarity from the card's own set
-        - comparing those two would report a conflict that does not exist and
-        invite someone to "fix" a canonical card that is already right. Rarity
-        is therefore only treated as canonical evidence when the entry *is* the
-        card's own set; anywhere else the difference is reported as a note
-        about that printing.
+        BASELINE-SCOPED COMPARISON. Two of the three fields are published per
+        ENTRY, not per card, so which occurrence they are compared against is
+        the whole question. A canonical row is established from the card's own
+        set - the occurrence whose product code equals the card code's set
+        code - so that occurrence is the one `name_jp` and `rarity` are
+        answerable against. A later printing that spells the name or lists the
+        rarity differently is describing itself, and comparing it to the
+        canonical row would report a disagreement that does not exist and
+        invite someone to "fix" a canonical card that is already right.
+
+        The name case is the one this rule was added for. Across the complete
+        2026-08-22 JP corpus, 17 card codes carry more than one published
+        spelling: 16 differ only by NFKC-foldable formatting (full-width 'Ｄ'
+        for 'D', '＆' for '&') and EB01-056 differs materially
+        ('シャーロット・フランペ' in EB-01, 'シャーロット・フランぺ' in
+        OP-10). Every one of them is a NON-baseline occurrence. Neither kind
+        may change print identity, create a second canonical card, or rewrite
+        `name_jp`; the exact published spelling is already preserved on
+        `CardPrint.official_name` for that printing, so nothing is lost by
+        recording the difference instead of blocking on it. Whether a
+        difference is formatting-only or material is reported, because
+        "Bandai fixed a typo" and "Bandai used a different character" are
+        different facts about the same printing - but both are descriptive.
+
+        `card_type` is NOT baseline-scoped. It describes the card rather than
+        the printing, so a difference anywhere is a real disagreement.
+
+        WHEN NO BASELINE CAN LEGITIMATELY EXIST - a promo, whose code carries
+        no set number and whose `original_set_code` is therefore NULL (see
+        migration d1c48b7f36ae) - there is no own-set occurrence to scope the
+        comparison to, and there never will be. The canonical name for such a
+        card is established by CONSENSUS over its coded occurrences
+        (canonical_import_apply.resolve_canonical_baseline), so what is
+        compared here is each occurrence against that established consensus:
+
+            exact                -> nothing to report
+            formatting-only      -> descriptive name_differs_by_printing note
+            material             -> canonical-card conflict
+
+        That is deliberately stricter than the has-a-baseline case above,
+        where a material difference on a LATER printing is still only
+        descriptive because the baseline settles the canonical name. Here
+        nothing settles it, so a materially different spelling is a real
+        disagreement about what the card is called and must block. What must
+        NOT happen is the reverse of a baseline rule - treating every
+        occurrence as authoritative, so that any difference at all conflicts.
+        P-075 is the case that proves it: its two coded PRB-02 occurrences
+        agree on 'モンキー・Ｄ・ルフィ' while its two uncoded occurrences publish
+        'モンキー・D・ルフィ', a formatting-only difference that must stay a
+        note if those uncoded products are ever resolved.
+
+        No occurrence is ever picked to settle a tie - not the first, not the
+        most common, not the earliest or latest.
         """
         conflicts: list[str] = []
-        notes: list[str] = []
+        notes: list[tuple[str, str]] = []
+        # Resolved ONCE, and shared by both baseline-scoped rules below.
+        baseline_set = cls._baseline_set_code(card)
+        is_baseline = cls._is_baseline_occurrence(card, product_code)
 
         catalogue_name = (entry.card_name or "").strip()
         if card.name_jp and catalogue_name and card.name_jp.strip() != catalogue_name:
-            conflicts.append(f"name_jp ({card.name_jp!r} vs {catalogue_name!r})")
+            formatting_only = normalize_for_comparison(
+                card.name_jp
+            ) == normalize_for_comparison(catalogue_name)
+            if is_baseline:
+                # The card's own set disagreeing with the canonical row is a
+                # real disagreement about the card, not about a printing.
+                conflicts.append(f"name_jp ({card.name_jp!r} vs {catalogue_name!r})")
+            elif baseline_set is None and not formatting_only:
+                # No baseline can ever exist for this card, so nothing settles
+                # the canonical spelling and a materially different one is a
+                # genuine disagreement. Formatting-only falls through to a note.
+                conflicts.append(
+                    f"name_jp ({card.name_jp!r} vs {catalogue_name!r}); this card has no "
+                    "original set, so no occurrence can settle the canonical name"
+                )
+            else:
+                notes.append(
+                    (
+                        FLAG_NAME_DIFFERS_BY_PRINTING,
+                        f"the catalogue publishes this printing's name as {catalogue_name!r} "
+                        f"while canonical card #{card.id} records {card.name_jp!r} from "
+                        f"{scope_of(baseline_set)}; the difference is "
+                        + ("formatting-only" if formatting_only else "material")
+                        + " and is a property of this printing, preserved verbatim on the "
+                        "print's official_name - it is not a canonical-card disagreement",
+                    )
+                )
 
         catalogue_rarity = (entry.rarity or "").strip()
         if card.rarity and catalogue_rarity and card.rarity.strip().upper() != catalogue_rarity.upper():
-            own_set = bool(
-                product_code
-                and card.original_set_code
-                and product_code.strip().upper() == card.original_set_code.strip().upper()
-            )
-            if own_set:
+            # `is_baseline`, not a second reading of the column. The two
+            # baseline-scoped rules in this method MUST agree about which
+            # occurrence is authoritative, and resolving the baseline twice by
+            # different means is how they would drift apart: the helper falls
+            # back to deriving the set code from the card code, so a card whose
+            # column is NULL but whose code is readable is a baseline to one
+            # rule and not to the other. Since d1c48b7f36ae made the column
+            # nullable that state is representable, so it is resolved once.
+            if is_baseline:
                 conflicts.append(f"rarity ({card.rarity!r} vs {catalogue_rarity!r})")
             else:
                 notes.append(
-                    f"the catalogue lists this printing's rarity as {catalogue_rarity!r} while "
-                    f"canonical card #{card.id} records {card.rarity!r} for the card's own set "
-                    f"({card.original_set_code}); Bandai publishes rarity per printing, so this "
-                    "is a property of the reprint and not a canonical-card disagreement"
+                    (
+                        FLAG_RARITY_DIFFERS_BY_PRINTING,
+                        f"the catalogue lists this printing's rarity as {catalogue_rarity!r} "
+                        f"while canonical card #{card.id} records {card.rarity!r} for "
+                        f"{scope_of(baseline_set)}; Bandai publishes rarity per printing, so "
+                        "this is a property of this printing and not a canonical-card "
+                        "disagreement",
+                    )
                 )
 
         catalogue_type = _card_type_from_category(entry.category)

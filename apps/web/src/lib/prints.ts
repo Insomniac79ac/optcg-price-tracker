@@ -77,7 +77,11 @@ export interface PrintCatalogueItem {
   card_code: string;
   name_en: string | null;
   name_jp: string | null;
-  rarity: string;
+  /** The canonical card's summary rarity, or null where Bandai's catalogue
+   * establishes no single card-level value. It is NOT this printing's
+   * rarity - that is published per occurrence. Render no badge and no
+   * fallback label when it is null; never "Unknown". */
+  rarity: string | null;
   card_type: string;
   /** null once a printing carries no Atlas treatment classification. Render
    * no badge and no fallback label for it - never "Unclassified". */
@@ -155,7 +159,11 @@ export interface PrintDetail {
   card_code: string;
   name_en: string | null;
   name_jp: string | null;
-  rarity: string;
+  /** The canonical card's summary rarity, or null where Bandai's catalogue
+   * establishes no single card-level value. It is NOT this printing's
+   * rarity - that is published per occurrence. Render no badge and no
+   * fallback label when it is null; never "Unknown". */
+  rarity: string | null;
   card_type: string;
   colors: string[] | null;
   language: string;
@@ -212,7 +220,11 @@ export interface PrintUiModel {
   nameJp: string | null;
   /** Display name: English where available, Japanese otherwise. */
   displayName: string;
-  rarity: string;
+  /** The canonical card's summary rarity, or null where Bandai's catalogue
+   * establishes no single card-level value. It is NOT this printing's
+   * rarity - that is published per occurrence. Render no badge and no
+   * fallback label when it is null; never "Unknown". */
+  rarity: string | null;
   cardType: string;
   treatment: string | null;
   /** True when the treatment is worth surfacing on a tile (i.e. not the

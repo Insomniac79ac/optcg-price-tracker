@@ -909,3 +909,94 @@ def test_print_catalogue_items_carry_the_range_field(client, sanji_two_source):
             assert mi["source_price_range"] is not None
         else:
             assert mi["source_price_range"] is None
+
+
+# --- an optional canonical rarity serves safely ------------------------------
+#
+# `canonical_cards.rarity` became nullable in migration c7e91a4d2b60: Bandai
+# publishes rarity per printing, and for 49 card codes in the complete JP
+# corpus the catalogue settles no single card-level value. Nothing on the
+# serving path may crash on that, and nothing may substitute a placeholder.
+
+
+def _null_rarity_print(db_session):
+    canonical = make_canonical(
+        db_session, card_code="EB03-003", name_en="Uta", rarity=None
+    )
+    return canonical, make_print(
+        db_session, canonical, treatment="base", artwork_key="uta-base"
+    )
+
+
+def test_print_detail_serves_a_null_rarity_as_null(client, db_session):
+    _, print_row = _null_rarity_print(db_session)
+
+    response = client.get(f"/prints/{print_row.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["rarity"] is None
+    # Everything else about the print is served exactly as usual.
+    assert body["card_code"] == "EB03-003"
+    assert body["card_type"] == "Character"
+
+
+def test_the_catalogue_lists_a_null_rarity_print_without_a_placeholder(
+    client, db_session
+):
+    _null_rarity_print(db_session)
+
+    body = client.get("/prints").json()
+
+    item = next(i for i in body["items"] if i["card_code"] == "EB03-003")
+    assert item["rarity"] is None
+    # No synthetic value anywhere: not "Unknown", not "-", not "".
+    assert item["rarity"] not in ("Unknown", "-", "", "N/A")
+
+
+def test_a_null_rarity_contributes_no_facet_value(client, db_session):
+    """A facet option is a filter a collector can select, and "no established
+    rarity" is not one. NULL is excluded rather than surfaced, exactly as an
+    unclassified treatment already is - and no "Unknown" bucket is invented."""
+    _null_rarity_print(db_session)
+    make_print(
+        db_session,
+        make_canonical(db_session, card_code="OP01-070", name_en="Nami", rarity="SR"),
+        treatment="base",
+        artwork_key="nami-base",
+    )
+
+    facets = client.get("/prints").json()["facets"]
+
+    assert None not in facets["rarities"]
+    assert all(isinstance(r, str) and r for r in facets["rarities"])
+    assert "SR" in facets["rarities"]
+    assert "Unknown" not in facets["rarities"]
+
+
+def test_a_rarity_filter_never_selects_the_null_rows(client, db_session):
+    """Equality on an explicit value, same as the treatment filter: there is
+    no filter value that means "unclassified"."""
+    _null_rarity_print(db_session)
+    make_print(
+        db_session,
+        make_canonical(db_session, card_code="OP01-071", name_en="Nami", rarity="SR"),
+        treatment="base",
+        artwork_key="nami2-base",
+    )
+
+    filtered = client.get("/prints", params={"rarity": "SR"}).json()
+
+    assert {i["card_code"] for i in filtered["items"]} == {"OP01-071"}
+    assert filtered["total"] == 1
+
+
+def test_current_shaped_rows_are_completely_unaffected(client, five_prints):
+    """Canonical staging's rows all carry a rarity today, so this change must
+    alter nothing a user currently sees."""
+    detail = client.get(f"/prints/{five_prints['sanji_base'].id}").json()
+    body = client.get("/prints").json()
+
+    assert detail["rarity"] == "R"
+    assert all(i["rarity"] is not None for i in body["items"])
+    assert body["facets"]["rarities"] == sorted(set(body["facets"]["rarities"]))

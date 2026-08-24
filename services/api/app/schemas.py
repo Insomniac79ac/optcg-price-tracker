@@ -541,7 +541,12 @@ class CardPrintOut(BaseModel):
     card_code: str
     name_en: str | None
     name_jp: str | None
-    rarity: str
+    # Optional: the canonical card's summary rarity, NULL where the catalogue
+    # does not establish one card-level value. It is not this printing's
+    # rarity - Bandai publishes that per entry, and it is carried on
+    # card_prints.official_rarity. Clients render nothing when it is null;
+    # no placeholder is substituted.
+    rarity: str | None
     card_type: str
     colors: list[str] | None
     language: str
@@ -565,7 +570,8 @@ class PrintCatalogueItemOut(BaseModel):
     card_code: str
     name_en: str | None
     name_jp: str | None
-    rarity: str
+    # Optional, same reading as CardPrintOut.rarity.
+    rarity: str | None
     card_type: str
     treatment: str | None
     language: str
@@ -582,6 +588,11 @@ class PrintCatalogueFacetsOut(BaseModel):
     # Still list[str]: an unclassified print contributes no facet value at
     # all. There is deliberately no synthetic "unclassified"/"other" bucket -
     # a filter option must always name a real, selectable treatment.
+    #
+    # `rarities` reads the same way now that CanonicalCard.rarity is optional:
+    # a card with no established card-level rarity contributes no facet value,
+    # and there is no "Unknown" rarity option. See print_catalogue's facet
+    # query, which excludes NULL rather than letting it become a value here.
     treatments: list[str]
     rarities: list[str]
     languages: list[str]
