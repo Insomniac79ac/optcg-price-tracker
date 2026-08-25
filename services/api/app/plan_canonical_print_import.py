@@ -47,7 +47,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import sys
 import urllib.request
@@ -65,6 +64,7 @@ from app.services.official_cardlist import (
     card_list_url,
     parse_card_list,
 )
+from app.services import canonical_staging_target
 from app.services.print_import_planner import ImportPlan, plan_entries
 
 EXIT_OK = 0
@@ -136,15 +136,12 @@ class AssetDigests:
 
 
 def _load_staging_checker():
-    spec = importlib.util.spec_from_file_location("staging_db_read_check", STAGING_CHECKER)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {STAGING_CHECKER}")
-    module = importlib.util.module_from_spec(spec)
-    # Register before executing: the checker defines @dataclass types, and
-    # dataclasses resolves annotations through sys.modules[cls.__module__].
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+    """One loader for the checker, shared with the dedicated staging runner.
+
+    Delegated rather than re-spelled so there is a single place that decides
+    which file is the staging authority (4D-1).
+    """
+    return canonical_staging_target.load_staging_checker(STAGING_CHECKER)
 
 
 def verified_staging_url() -> str:

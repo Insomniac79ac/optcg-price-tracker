@@ -109,12 +109,31 @@ LANGUAGE = planner.LANGUAGE
 VERIFIED = planner.VERIFIED
 SOURCE_CATALOGUE = "bandai_jp"
 
-# Environments an apply run may write to. Canonical staging is deliberately
-# absent: this tranche writes only to a disposable database. Production is
-# additionally hard-refused by name so a typo cannot fall through to a
-# permissive default.
+# Environments an apply run may write to *by name alone*. Canonical staging is
+# deliberately absent: naming it buys nothing, because a staging write needs a
+# grant object (below) that no flag and no environment variable can produce.
+# Production is additionally hard-refused by name so a typo cannot fall
+# through to a permissive default.
 ALLOWED_APPLY_ENVIRONMENTS = ("test", "development", "staging_copy")
+
+# What the GENERIC CLI refuses outright, before it constructs an applier.
+# `staging` stays in this list: `--environment staging` is, and remains, a
+# refusal on that path. Unchanged from before the dedicated runner existed.
 REFUSED_APPLY_ENVIRONMENTS = ("production", "prod", "staging")
+
+# What NOTHING can make writable. No grant, no attestation, no confirmation
+# string reaches these - the check runs first and returns before any
+# authorisation is consulted.
+PERMANENTLY_REFUSED_APPLY_ENVIRONMENTS = ("production", "prod")
+
+# The one environment a grant can unlock, and only for the dedicated runner.
+CANONICAL_STAGING_ENVIRONMENT = "staging"
+
+# The exact phrase an operator must type to authorise a canonical staging
+# write. Compared for equality - not parsed, not lowercased, not prefix
+# matched - so a typo is a refusal rather than a near miss. There is no
+# --force and no --yes anywhere on that path.
+STAGING_APPLY_CONFIRMATION = "IMPORT_FROZEN_BANDAI_TO_CANONICAL_STAGING"
 
 # Arbitrary but fixed: the key two concurrent apply runs would contend on.
 # Transaction-scoped, so it needs no cleanup path.
@@ -917,6 +936,132 @@ class ApplyPinning:
     expected_snapshot_identity: str | None = None
 
 
+# --- 4D-1 the canonical staging write grant -------------------------------
+#
+# WHY A PYTHON OBJECT AND NOT A FLAG. The generic CLI refuses `--environment
+# staging` and always will. If staging write permission were a string, a
+# boolean, an environment variable or a config key, then "refuses staging"
+# would only mean "refuses staging until someone types the other thing" - and
+# the whole point of the refusal is that there is no other thing to type.
+#
+# So permission is an OBJECT that cannot be spelled on a command line. It is
+# minted by `grant_canonical_staging_write()`, which requires an attestation
+# that the connection in front of it really is canonical Atlas staging, plus
+# the exact confirmation phrase. The constructor is sealed behind a
+# module-private key, so a caller cannot fabricate one by importing the class.
+#
+# And the seal is not the only thing holding: the engine RE-PROVES the grant
+# against the live session before it writes (see `_check_staging_grant`). A
+# forged grant that somehow got past the key still has to agree with the
+# alembic revision of the database actually connected, which an attacker
+# writing a fake object has no way to make true for the wrong database.
+
+
+@dataclass(frozen=True)
+class StagingTargetAttestation:
+    """Evidence that a specific connection is the canonical Atlas staging DB.
+
+    Built by `app.services.canonical_staging_target` from the fingerprints in
+    `scripts/staging_db_read_check.py` - reused wholesale, never restated
+    here. This engine deliberately holds no opinion about what staging looks
+    like; it only checks that every fingerprint the established checker ran
+    came back PASS, and that the revision recorded here is the revision of the
+    session about to be written.
+
+    Carries no URL, no host, no credential - nothing that would make an
+    attestation unsafe to print or to put in a report.
+    """
+
+    railway_environment: str
+    railway_service: str
+    database: str
+    db_revision: str
+    checks: tuple[tuple[str, bool], ...] = ()
+
+    @property
+    def all_checks_passed(self) -> bool:
+        return bool(self.checks) and all(ok for _, ok in self.checks)
+
+    @property
+    def failed_checks(self) -> tuple[str, ...]:
+        return tuple(name for name, ok in self.checks if not ok)
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "railway_environment": self.railway_environment,
+            "railway_service": self.railway_service,
+            "database": self.database,
+            "db_revision": self.db_revision,
+            "checks_passed": sum(1 for _, ok in self.checks if ok),
+            "checks_total": len(self.checks),
+        }
+
+
+class _GrantKey:
+    """Module-private. Its only purpose is to be unobtainable from outside."""
+
+    __slots__ = ()
+
+
+_GRANT_KEY = _GrantKey()
+
+
+class CanonicalStagingWriteGrant:
+    """Permission for ONE applier to write to canonical staging.
+
+    Not constructible by callers: `__init__` refuses without the module's own
+    key object, so `CanonicalStagingWriteGrant(...)` from anywhere else raises
+    rather than producing permission. Mint via
+    `grant_canonical_staging_write()`.
+    """
+
+    __slots__ = ("attestation",)
+
+    def __init__(self, key: Any, attestation: StagingTargetAttestation) -> None:
+        if key is not _GRANT_KEY:
+            raise PermissionError(
+                "CanonicalStagingWriteGrant cannot be constructed directly; "
+                "mint one with grant_canonical_staging_write()"
+            )
+        self.attestation = attestation
+
+
+def grant_canonical_staging_write(
+    *, confirmation: str, attestation: StagingTargetAttestation
+) -> CanonicalStagingWriteGrant:
+    """Mints a staging write grant, or refuses.
+
+    `confirmation` must equal STAGING_APPLY_CONFIRMATION exactly. The typed
+    value is never echoed - a refusal says that it did not match, not what was
+    typed - so a shell history or a CI log cannot be mined for near misses.
+    """
+    if confirmation != STAGING_APPLY_CONFIRMATION:
+        raise ApplyAborted(
+            "staging_confirmation_mismatch",
+            "the canonical staging confirmation phrase was missing or did not "
+            "match exactly; nothing was written",
+        )
+    if attestation.railway_environment != CANONICAL_STAGING_ENVIRONMENT:
+        raise ApplyAborted(
+            "staging_target_not_attested",
+            f"attestation names environment "
+            f"{attestation.railway_environment!r}, not "
+            f"{CANONICAL_STAGING_ENVIRONMENT!r}",
+        )
+    if not attestation.all_checks_passed:
+        raise ApplyAborted(
+            "staging_target_not_attested",
+            "the staging fingerprint did not pass: "
+            + (", ".join(attestation.failed_checks) or "no checks were run"),
+        )
+    if not attestation.db_revision:
+        raise ApplyAborted(
+            "staging_target_not_attested",
+            "the attestation carries no alembic revision to bind the grant to",
+        )
+    return CanonicalStagingWriteGrant(_GRANT_KEY, attestation)
+
+
 class CanonicalImportApplier:
     """One apply run. Writes only inside `run(apply=True)`, and only once."""
 
@@ -928,11 +1073,16 @@ class CanonicalImportApplier:
         pinning: ApplyPinning,
         environment: str,
         entries: dict[str, Any] | None = None,
+        staging_grant: CanonicalStagingWriteGrant | None = None,
     ) -> None:
         self._session = session
         self._plan = plan
         self._pinning = pinning
         self._environment = (environment or "").strip().lower()
+        # 4D-1. None for every caller except the dedicated staging runner.
+        # Keyword-only and typed as an object, so no CLI flag, environment
+        # variable or config value can supply it.
+        self._staging_grant = staging_grant
         # Entry-id -> OfficialCardEntry, from the same frozen snapshot the
         # plan was built from. Only the baseline occurrence's numeric blocks
         # are read from it; identity never is.
@@ -940,6 +1090,32 @@ class CanonicalImportApplier:
 
     # -- guards ------------------------------------------------------------
     def _check_environment(self) -> None:
+        # Production first and unconditionally: the return below is the only
+        # way out of this branch, so no grant, attestation or confirmation is
+        # ever consulted for it.
+        if self._environment in PERMANENTLY_REFUSED_APPLY_ENVIRONMENTS:
+            raise ApplyAborted(
+                "refused_environment",
+                f"apply is hard-refused for environment {self._environment!r}",
+            )
+        if self._environment == CANONICAL_STAGING_ENVIRONMENT:
+            # 4D-1. Reachable only with a grant object, which only
+            # `grant_canonical_staging_write()` can mint and only after the
+            # target attested as canonical staging. Without one the message is
+            # the same refusal callers saw before the runner existed.
+            if self._staging_grant is None:
+                raise ApplyAborted(
+                    "refused_environment",
+                    f"apply is hard-refused for environment {self._environment!r}",
+                )
+            return
+        if self._staging_grant is not None:
+            raise ApplyAborted(
+                "refused_environment",
+                "a canonical staging write grant was supplied for environment "
+                f"{self._environment!r}; a grant authorises "
+                f"{CANONICAL_STAGING_ENVIRONMENT!r} and nothing else",
+            )
         if self._environment in REFUSED_APPLY_ENVIRONMENTS:
             raise ApplyAborted(
                 "refused_environment",
@@ -950,6 +1126,43 @@ class CanonicalImportApplier:
                 "refused_environment",
                 f"environment {self._environment!r} is not in the apply allowlist "
                 f"{ALLOWED_APPLY_ENVIRONMENTS}",
+            )
+
+    def _check_staging_grant(self) -> None:
+        """Re-proves the grant against the session that is about to write.
+
+        The sealed constructor stops a grant being fabricated; this stops a
+        genuine grant being pointed at a different database. The attested
+        revision must be the revision of THIS connection, so a grant minted
+        against staging cannot be carried over to anything else - including a
+        restored copy that has since been migrated past staging's head.
+        """
+        grant = self._staging_grant
+        if grant is None:  # pragma: no cover - _check_environment ran first
+            raise ApplyAborted(
+                "refused_environment",
+                "canonical staging writes require a grant",
+            )
+        if not isinstance(grant, CanonicalStagingWriteGrant):
+            raise ApplyAborted(
+                "staging_target_not_attested",
+                "the supplied staging authorisation is not a "
+                "CanonicalStagingWriteGrant",
+            )
+        attestation = grant.attestation
+        if not attestation.all_checks_passed:
+            raise ApplyAborted(
+                "staging_target_not_attested",
+                "the staging fingerprint did not pass: "
+                + (", ".join(attestation.failed_checks) or "no checks were run"),
+            )
+        live = db_revision(self._session)
+        if live != attestation.db_revision:
+            raise ApplyAborted(
+                "staging_target_revision_mismatch",
+                f"the attested staging database is at "
+                f"{attestation.db_revision!r} but this connection is at "
+                f"{live!r}; the grant does not authorise it",
             )
 
     def _take_import_lock(self) -> None:
@@ -976,6 +1189,8 @@ class CanonicalImportApplier:
             )
 
     def _check_pinning(self, pre: dict[str, int]) -> None:
+        if self._staging_grant is not None:
+            self._check_staging_grant()
         revision = db_revision(self._session)
         expected = self._pinning.expected_db_revision
         if expected is not None and revision != expected:

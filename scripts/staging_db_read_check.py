@@ -57,6 +57,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
@@ -301,12 +302,105 @@ def redacted_target(url: str) -> str:
     return f"{parts.hostname}:{parts.port}/{(parts.path or '/').lstrip('/')}"
 
 
+# Attribute the drain thread is parked on, so `close_tunnel` can join it
+# without changing what `open_tunnel` returns. Private by name: nothing outside
+# this module reads it except `close_tunnel`.
+DRAIN_ATTR = "_atlas_tunnel_drain"
+DRAIN_THREAD_NAME = "railway-tunnel-drain"
+DRAIN_CHUNK = 65536
+DRAIN_JOIN_TIMEOUT_S = 5.0
+
+
+def _drain(stream) -> None:
+    """Consume and discard everything the child writes after the URL line.
+
+    WHY THIS EXISTS. `open_tunnel` returns as soon as it has parsed the `URL:`
+    line, and the tunnel process keeps running - and keeps writing. Nothing was
+    reading the far end of that pipe, so a chatty `railway connect` would fill
+    the OS pipe buffer (~64 KiB on Linux) and then BLOCK on its next write. A
+    blocked tunnel process stops forwarding, and an import that had already
+    verified its target would stall mid-run rather than fail cleanly.
+
+    Reads in bounded chunks rather than lines: a child that emits a very long
+    line without a newline would otherwise buffer that whole line in memory.
+    Nothing is returned, stored, printed or logged - the chunk is dropped on
+    the next iteration - so the credential-bearing lines Railway prints after
+    the URL are consumed and forgotten, never accumulated.
+
+    Ends at EOF, which is what the child's exit produces. `ValueError` and
+    `OSError` are the two ways a read can fail when the stream is closed under
+    a blocked reader during shutdown; neither is reported, and neither carries
+    consumed text, because no consumed text is ever put into a message.
+    """
+    try:
+        while stream.read(DRAIN_CHUNK):
+            pass
+    except (ValueError, OSError):
+        return
+
+
+def _start_drain(proc: subprocess.Popen) -> threading.Thread | None:
+    """Starts the drain and parks it on the process for `close_tunnel`.
+
+    Daemon, so a drain blocked on a child that outlives us can never hold up
+    interpreter shutdown.
+    """
+    if proc.stdout is None:  # pragma: no cover - always a pipe here
+        return None
+    thread = threading.Thread(
+        target=_drain, args=(proc.stdout,), name=DRAIN_THREAD_NAME, daemon=True
+    )
+    thread.start()
+    setattr(proc, DRAIN_ATTR, thread)
+    return thread
+
+
+def close_tunnel(proc: subprocess.Popen, timeout: float = DRAIN_JOIN_TIMEOUT_S) -> None:
+    """Terminates a tunnel and leaves nothing behind. Idempotent.
+
+    Order matters: terminate, wait for the child (which is what produces the
+    EOF the drain is waiting on), join the drain, then close the pipe. Closing
+    before the join would raise inside a still-blocked reader; closing after it
+    means the drain has already returned and the fd has exactly one owner.
+    """
+    try:
+        proc.terminate()
+    except (OSError, ProcessLookupError):  # pragma: no cover - already gone
+        pass
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:  # pragma: no cover - a wedged child
+        proc.kill()
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+
+    thread = getattr(proc, DRAIN_ATTR, None)
+    if thread is not None:
+        thread.join(timeout=timeout)
+        setattr(proc, DRAIN_ATTR, None)
+
+    if proc.stdout is not None:
+        try:
+            proc.stdout.close()
+        except (ValueError, OSError):  # pragma: no cover
+            pass
+
+
 def open_tunnel(service: str, environment: str) -> tuple[subprocess.Popen, str]:
     """Opens `railway connect --tunnel-only` and returns (process, url).
 
     The tunnel is an SSH tunnel resolved through the service itself, which is
     precisely why it is preferred: unlike DATABASE_PUBLIC_URL it cannot point at
     a stale public proxy. The URL is returned for use, never logged.
+
+    The child's stdout and stderr are merged into one pipe that this function
+    reads: nothing Railway prints - host, port, user, password, the full DSN -
+    is inherited by the operator's terminal. Only the `URL:` line is parsed
+    out. Once it has been, a drain thread keeps consuming and discarding the
+    rest so the tunnel cannot block on a full pipe; close it with
+    `close_tunnel`.
     """
     proc = subprocess.Popen(
         [
@@ -319,20 +413,22 @@ def open_tunnel(service: str, environment: str) -> tuple[subprocess.Popen, str]:
         text=True,
     )
     deadline = time.time() + TUNNEL_READY_TIMEOUT_S
-    captured: list[str] = []
     while time.time() < deadline:
         if proc.poll() is not None:
             break
+        # Read, match, drop. Lines before the URL are not retained: they are
+        # the ones carrying "Password:" and "Connection string:", and a list
+        # of them would be a credential store with no reader.
         line = proc.stdout.readline() if proc.stdout else ""
         if not line:
             time.sleep(0.1)
             continue
-        captured.append(line)
         match = re.match(r"\s*URL:\s*(\S+)\s*$", line)
         if match:
+            _start_drain(proc)
             return proc, match.group(1)
 
-    proc.terminate()
+    close_tunnel(proc)
     raise RuntimeError(
         "railway connect did not report a tunnel URL within "
         f"{TUNNEL_READY_TIMEOUT_S}s (is the CLI logged in and the project linked?)"
@@ -413,7 +509,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         if proc is not None:
-            proc.terminate()
+            close_tunnel(proc)
 
     print(f"  database     : {facts.database}")
     print()
