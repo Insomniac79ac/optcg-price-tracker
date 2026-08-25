@@ -160,7 +160,11 @@ def verified_staging_url() -> str:
             connection.read_only = True
             facts = checker.collect_facts(connection)
     finally:
-        process.terminate()
+        # 4D-4. Through the checker's own cleanup, not `terminate()`: the
+        # tunnel is a process GROUP AND SESSION (railway + the ssh doing the
+        # forwarding), and signalling the leader alone leaves the forward
+        # running and the drain thread blocked on a pipe that never EOFs.
+        checker.close_tunnel(process)
 
     expected = checker.expected_revisions_from_repo(str(REPO_ROOT))
     results = checker.evaluate(facts, expected)

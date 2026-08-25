@@ -76,16 +76,26 @@ class _FakeChecker:
     def __init__(self, ok: bool) -> None:
         self._ok = ok
         self.tunnels_opened = 0
+        self.tunnels_closed = []
 
     def open_tunnel(self, service, environment):
         assert environment == "staging"
         self.tunnels_opened += 1
 
         class _Process:
-            def terminate(self):
-                return None
+            def terminate(self):  # pragma: no cover - must NOT be used
+                raise AssertionError(
+                    "the verification tunnel was closed with terminate(); since "
+                    "4D-4 cleanup must go through close_tunnel, which signals "
+                    "the tunnel's whole process group and session"
+                )
 
         return _Process(), "postgresql://u:p@127.0.0.1:1/railway"
+
+    def close_tunnel(self, proc, timeout=None):
+        """4D-4. The real checker's cleanup entry point, which this CLI must
+        use so the ssh doing the forwarding is signalled, not just the leader."""
+        self.tunnels_closed.append(proc)
 
     def collect_facts(self, connection):
         return object()
@@ -120,6 +130,9 @@ def test_staging_is_refused_when_verification_fails(monkeypatch):
         cli.verified_staging_url()
     # It refused before opening a second tunnel to plan through.
     assert checker.tunnels_opened == 1
+    # And the verification tunnel was closed through the checker's own
+    # group/session cleanup, so a refusal leaks no forward into staging.
+    assert len(checker.tunnels_closed) == 1
 
 
 def test_staging_proceeds_only_after_every_fingerprint_passes(monkeypatch):
@@ -143,11 +156,17 @@ def test_staging_proceeds_only_after_every_fingerprint_passes(monkeypatch):
         url = cli.verified_staging_url()
     finally:
         for process in cli._KEEP_ALIVE:
-            process.terminate()
+            checker.close_tunnel(process)
         cli._KEEP_ALIVE.clear()
     assert url.startswith("postgresql://")
     # One tunnel to verify, a second, fresh one to plan through.
     assert checker.tunnels_opened == 2
+    # The verification tunnel was closed inside verified_staging_url through
+    # the checker's group/session cleanup; the working one parked in
+    # _KEEP_ALIVE is the caller's to close, which is what this test's own
+    # finally just did. Ownership is explicit at both sites - there is no
+    # implicit shutdown hook, and none is relied on here.
+    assert len(checker.tunnels_closed) == 2
 
 
 # --- the session really is read-only (PostgreSQL) -----------------------------

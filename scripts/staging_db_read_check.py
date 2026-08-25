@@ -55,6 +55,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -310,6 +311,44 @@ DRAIN_THREAD_NAME = "railway-tunnel-drain"
 DRAIN_CHUNK = 65536
 DRAIN_JOIN_TIMEOUT_S = 5.0
 
+# 4D-4. The process-group id of the tunnel, captured at spawn and parked on the
+# process object.
+#
+# WHY IT IS STORED RATHER THAN LOOKED UP. `railway connect` is a node process
+# that spawns `ssh -L ...` and lets it do the forwarding. When cleanup runs the
+# LEADER IS USUALLY ALREADY GONE - it answers SIGTERM promptly, and `ssh` does
+# not - so `os.getpgid(proc.pid)` raises ProcessLookupError at exactly the
+# moment the group id is needed. Captured at spawn, the id stays valid for as
+# long as any member of the group is alive, which is precisely the window in
+# which we need to signal it.
+PGID_ATTR = "_atlas_tunnel_pgid"
+# How long the group is given to die between escalation steps.
+GROUP_SIGNAL_POLL_S = 0.05
+
+# WHY THE GROUP IS NOT THE WHOLE STORY. Measured against the real CLI on
+# 2026-08-25: `railway connect` spawns its `ssh -L` with setpgid, so the ssh
+# ends up in ITS OWN process group - but, because it does not call setsid, it
+# stays in the SESSION `start_new_session` created for the tunnel:
+#
+#     railway  pid=273096  pgid=273096  sid=273096   <- leader
+#     ssh      pid=273182  pgid=273182  sid=273096   <- own group, same session
+#
+# So `killpg(273096)` reaches the leader and misses the forward. The session is
+# the boundary that actually contains the tunnel, and on Linux its members are
+# enumerable from /proc. `killpg` is still issued first - it is atomic and
+# covers everything that stayed in the group - and the sweep catches the rest.
+PROC_FS = "/proc"
+
+# The one line `open_tunnel` cares about. Compiled once, used only by the
+# reader thread.
+URL_LINE_RE = re.compile(r"\s*URL:\s*(\S+)\s*$")
+
+# 4D-4B. Cap on the partial line held while looking for the URL. Railway's
+# `URL:` line is a couple of hundred bytes; anything past this is not it, so
+# the buffer is dropped rather than grown. Bounds memory against a child that
+# writes without ever emitting a newline.
+PRE_URL_SCAN_LIMIT = 64 * 1024
+
 
 def _drain(stream) -> None:
     """Consume and discard everything the child writes after the URL line.
@@ -339,48 +378,338 @@ def _drain(stream) -> None:
         return
 
 
-def _start_drain(proc: subprocess.Popen) -> threading.Thread | None:
-    """Starts the drain and parks it on the process for `close_tunnel`.
+class _TunnelHandshake:
+    """Where the reader thread publishes the URL, and how `open_tunnel` waits.
 
-    Daemon, so a drain blocked on a child that outlives us can never hold up
+    4D-4B. The caller no longer reads the pipe at all, so its deadline is an
+    `Event.wait(timeout)` - one blocking call that the OS wakes, with no
+    polling and no way to overrun. `settled` is set on EITHER outcome, so a
+    child that dies without ever announcing a URL refuses immediately rather
+    than making the operator wait out the full timeout.
+    """
+
+    __slots__ = ("_url", "_settled")
+
+    def __init__(self) -> None:
+        self._url: str | None = None
+        self._settled = threading.Event()
+
+    def publish(self, url: str) -> None:
+        self._url = url
+        self._settled.set()
+
+    def settle(self) -> None:
+        """Reader finished without a URL (EOF or read error). Unblocks."""
+        self._settled.set()
+
+    def wait(self, timeout: float) -> bool:
+        return self._settled.wait(timeout)
+
+    @property
+    def url(self) -> str | None:
+        return self._url
+
+
+def _scan_for_url(fd: int, handshake: _TunnelHandshake) -> bool:
+    """Phase 1: find the `URL:` line on `fd`, retaining nothing else.
+
+    Reads with `os.read`, not `readline`. That is the whole point: `readline`
+    returns only at a newline, so a child that writes a partial line and then
+    goes quiet blocks the reader indefinitely - and before 4D-4B that reader
+    was the CALLER, which is how TUNNEL_READY_TIMEOUT_S became advisory.
+    `os.read` returns as soon as ANY bytes are available, so this loop makes
+    progress on whatever arrives and never waits for punctuation.
+
+    Only one partial line is ever held, and only until the next newline.
+    PRE_URL_SCAN_LIMIT caps even that: a child emitting megabytes without a
+    newline cannot grow this buffer, because a run that long is not a `URL:`
+    line and is dropped. Nothing scanned is returned, stored, printed or
+    logged - the credential-bearing preamble is matched against and forgotten.
+
+    Returns True once the URL is published, False at EOF or on a read error.
+    """
+    buffered = b""
+    while True:
+        try:
+            chunk = os.read(fd, DRAIN_CHUNK)
+        except (OSError, ValueError):
+            return False
+        if not chunk:
+            return False  # EOF: the child exited without announcing a URL
+        buffered += chunk
+        while True:
+            newline = buffered.find(b"\n")
+            if newline < 0:
+                break
+            line = buffered[:newline]
+            buffered = buffered[newline + 1 :]
+            match = URL_LINE_RE.match(line.decode("utf-8", "replace"))
+            if match:
+                handshake.publish(match.group(1))
+                return True
+        if len(buffered) > PRE_URL_SCAN_LIMIT:
+            # Far too long to be the line we want. Drop it rather than grow.
+            buffered = b""
+
+
+def _read_tunnel(stream, handshake: _TunnelHandshake) -> None:
+    """The SINGLE owner of the tunnel's stdout, for the tunnel's whole life.
+
+    One thread, two phases: scan for the URL, then discard forever. The pipe
+    is never handed between competing readers - before 4D-4B the caller read
+    it until the URL and a drain thread took over afterwards, and a fd with two
+    readers is what makes "who is blocked on this?" unanswerable.
+    """
+    found = False
+    try:
+        found = _scan_for_url(stream.fileno(), handshake)
+    finally:
+        # Unblocks the caller on every path, including a read error.
+        handshake.settle()
+    if found:
+        _drain(stream)
+
+
+def _start_drain(
+    proc: subprocess.Popen, handshake: _TunnelHandshake
+) -> threading.Thread | None:
+    """Starts the reader/drain and parks it on the process for `close_tunnel`.
+
+    Daemon, so a reader blocked on a child that outlives us can never hold up
     interpreter shutdown.
     """
     if proc.stdout is None:  # pragma: no cover - always a pipe here
         return None
     thread = threading.Thread(
-        target=_drain, args=(proc.stdout,), name=DRAIN_THREAD_NAME, daemon=True
+        target=_read_tunnel,
+        args=(proc.stdout, handshake),
+        name=DRAIN_THREAD_NAME,
+        daemon=True,
     )
     thread.start()
     setattr(proc, DRAIN_ATTR, thread)
     return thread
 
 
-def close_tunnel(proc: subprocess.Popen, timeout: float = DRAIN_JOIN_TIMEOUT_S) -> None:
-    """Terminates a tunnel and leaves nothing behind. Idempotent.
+def tunnel_pgid(proc: subprocess.Popen) -> int | None:
+    """The process-group id captured for this tunnel, or None.
 
-    Order matters: terminate, wait for the child (which is what produces the
-    EOF the drain is waiting on), join the drain, then close the pipe. Closing
-    before the join would raise inside a still-blocked reader; closing after it
-    means the drain has already returned and the fd has exactly one owner.
+    None means the tunnel was not spawned by `open_tunnel` (a hand-built Popen
+    in a test, or a platform without sessions), and cleanup falls back to
+    signalling the leader alone.
     """
+    return getattr(proc, PGID_ATTR, None)
+
+
+def _safe_group(proc: subprocess.Popen) -> int | None:
+    """The stored PGID, but only when it is safe to signal.
+
+    A tunnel whose group or session is OUR OWN is never signalled: neither
+    `os.killpg` nor the session sweep excludes the caller, so a SIGKILL there
+    would take down the importer - or the test runner - along with the tunnel.
+    That can only happen if the new session was never created, in which case
+    leader-only termination is both correct and all that was ever available.
+    """
+    pgid = tunnel_pgid(proc)
+    if pgid is None:
+        return None
     try:
-        proc.terminate()
-    except (OSError, ProcessLookupError):  # pragma: no cover - already gone
+        if pgid == os.getpgid(0) or pgid == os.getsid(0):
+            return None
+    except OSError:  # pragma: no cover - no pgid/sid concept
+        return None
+    return pgid
+
+
+def _signal_group(pgid: int | None, sig: int) -> bool:
+    """Signals every member of the tunnel group. False if it is already gone.
+
+    ESRCH is the ordinary outcome of closing a tunnel that has already died,
+    and EPERM of one we may no longer signal; neither is an error worth
+    raising out of a cleanup path, and neither carries any credential.
+    """
+    if pgid is None:
+        return False
+    try:
+        os.killpg(pgid, sig)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:  # pragma: no cover - not ours to signal
+        return False
+
+
+def _session_members(sid: int | None) -> list[int]:
+    """Live pids in the tunnel's session, read from /proc. Never includes us.
+
+    This is what reaches the `ssh` that put itself in its own process group.
+    Anything unreadable is skipped rather than raised on: a pid can exit
+    between listing and reading, and a cleanup path must not fail for it.
+    """
+    if sid is None:
+        return []
+    try:
+        own_sid = os.getsid(0)
+    except OSError:  # pragma: no cover - no session concept
+        return []
+    if sid == own_sid:  # never sweep our own session
+        return []
+    try:
+        entries = os.listdir(PROC_FS)
+    except OSError:  # pragma: no cover - no procfs
+        return []
+    own_pid = os.getpid()
+    members: list[int] = []
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        pid = int(entry)
+        if pid == own_pid:
+            continue
+        try:
+            with open(f"{PROC_FS}/{pid}/stat", encoding="utf-8") as handle:
+                stat = handle.read()
+        except (OSError, ValueError):
+            continue
+        # "pid (comm) state ppid pgrp session ..." - comm may contain spaces
+        # and parentheses, so split after the LAST ')'.
+        try:
+            fields = stat.rsplit(")", 1)[1].split()
+            if fields[0] == "Z":  # a reaped corpse is not a survivor
+                continue
+            if int(fields[3]) == sid:
+                members.append(pid)
+        except (IndexError, ValueError):  # pragma: no cover - malformed row
+            continue
+    return members
+
+
+def _signal_tunnel(proc: subprocess.Popen, sig: int) -> None:
+    """Signals the tunnel's process group AND its wider session.
+
+    The group first, because `killpg` is one atomic call that covers every
+    process which stayed put. Then the session sweep, for the ones that gave
+    themselves a new group - which is exactly what Railway's `ssh` does.
+    """
+    pgid = _safe_group(proc)
+    _signal_group(pgid, sig)
+    for pid in _session_members(pgid):
+        try:
+            os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError):
+            continue
+
+
+def _tunnel_gone(proc: subprocess.Popen) -> bool:
+    """Whether nothing of the tunnel remains - group or session."""
+    pgid = _safe_group(proc)
+    if pgid is None:
+        return True
+    try:
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
         pass
+    except PermissionError:  # pragma: no cover - exists but not ours
+        return False
+    else:
+        return False
+    return not _session_members(pgid)
+
+
+def _await_tunnel_exit(proc: subprocess.Popen, timeout: float) -> bool:
+    """Polls until the tunnel is gone or the budget runs out. Never blocks."""
+    deadline = time.time() + max(timeout, 0.0)
+    while True:
+        if _tunnel_gone(proc):
+            return True
+        if time.time() >= deadline:
+            return _tunnel_gone(proc)
+        time.sleep(GROUP_SIGNAL_POLL_S)
+
+
+def _reap_leader(proc: subprocess.Popen, timeout: float) -> bool:
+    """Bounded `wait`. Already-reaped leaders return immediately."""
     try:
         proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:  # pragma: no cover - a wedged child
-        proc.kill()
-        try:
-            proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            pass
+        return True
+    except subprocess.TimeoutExpired:
+        return False
+    except (OSError, ValueError):  # pragma: no cover - nothing left to wait on
+        return True
 
+
+def close_tunnel(proc: subprocess.Popen, timeout: float = DRAIN_JOIN_TIMEOUT_S) -> None:
+    """Terminates a tunnel AND ITS WHOLE PROCESS GROUP. Idempotent, bounded.
+
+    4D-4. The previous implementation signalled the leader alone, and on a real
+    Railway tunnel that was never enough: `railway connect` dies from SIGTERM
+    while the `ssh -L` it spawned keeps running - and keeps the inherited pipe
+    WRITE END open. The drain thread therefore never reached EOF, its join
+    expired with the reader still inside `read()`, and `proc.stdout.close()`
+    then blocked forever on the `BufferedReader` lock that reader still held.
+    A hang, an orphaned forward into staging, and - on the apply path - a
+    committed import whose report never printed.
+
+    So the unit of cleanup is the tunnel's GROUP AND SESSION, in this order:
+
+        1. SIGTERM the entire group, addressed by the id captured at spawn
+           (not looked up now: the leader is usually already gone), then sweep
+           the session for members that gave themselves a different group -
+           which is what Railway's `ssh -L` does;
+        2. reap the leader and give the tunnel a bounded interval to exit;
+        3. if anything survives, SIGKILL THE SAME group and session and reap;
+        4. only then join the drain, which by now has its EOF;
+        5. only then close the pipe, with the reader provably returned.
+
+    Every step is bounded: `wait`, the liveness polls, the join and the close
+    can none of them block indefinitely. The timeout path still leaves zero
+    tunnel descendants, because escalation happens before the join, not after.
+    """
+    pgid = _safe_group(proc)
+
+    # 1. SIGTERM the whole tunnel.
+    if pgid is None:
+        # No group to address - signal the leader alone. This is the
+        # pre-4D-4 behaviour, kept only for processes we did not spawn.
+        try:
+            proc.terminate()
+        except (OSError, ProcessLookupError):  # pragma: no cover - already gone
+            pass
+    else:
+        _signal_tunnel(proc, signal.SIGTERM)
+
+    # 2. Reap the leader, then let the rest drain out. Reaping first matters:
+    #    an unreaped zombie leader still answers `killpg(0)`, so the tunnel
+    #    would look alive when only a corpse remained.
+    _reap_leader(proc, timeout)
+    gone = _await_tunnel_exit(proc, timeout)
+
+    # 3. Escalate on the SAME group and session. This is what reaches an `ssh`
+    #    that ignored - or, in its own group, never received - the first signal.
+    if not gone:
+        if pgid is None:
+            try:
+                proc.kill()
+            except (OSError, ProcessLookupError):  # pragma: no cover
+                pass
+        else:
+            _signal_tunnel(proc, signal.SIGKILL)
+        _reap_leader(proc, timeout)
+        _await_tunnel_exit(proc, timeout)
+
+    # 4. The group is gone, so the write end is closed and the drain has its
+    #    EOF. Join is bounded regardless.
     thread = getattr(proc, DRAIN_ATTR, None)
     if thread is not None:
         thread.join(timeout=timeout)
+        if thread.is_alive():  # pragma: no cover - a writer outside the group
+            # Do NOT close the pipe under a blocked reader: that is exactly the
+            # deadlock this function exists to remove. Leave the fd open, leave
+            # the (daemon) thread parked, and let a later call retry.
+            return
         setattr(proc, DRAIN_ATTR, None)
 
+    # 5. Sole owner of the fd now.
     if proc.stdout is not None:
         try:
             proc.stdout.close()
@@ -395,12 +724,31 @@ def open_tunnel(service: str, environment: str) -> tuple[subprocess.Popen, str]:
     precisely why it is preferred: unlike DATABASE_PUBLIC_URL it cannot point at
     a stale public proxy. The URL is returned for use, never logged.
 
-    The child's stdout and stderr are merged into one pipe that this function
-    reads: nothing Railway prints - host, port, user, password, the full DSN -
-    is inherited by the operator's terminal. Only the `URL:` line is parsed
-    out. Once it has been, a drain thread keeps consuming and discarding the
-    rest so the tunnel cannot block on a full pipe; close it with
-    `close_tunnel`.
+    The child's stdout and stderr are merged into one pipe: nothing Railway
+    prints - host, port, user, password, the full DSN - is inherited by the
+    operator's terminal. Only the `URL:` line is parsed out. The rest is
+    consumed and discarded so the tunnel cannot block on a full pipe; close it
+    with `close_tunnel`.
+
+    4D-4B. THE DEADLINE IS REAL NOW. This function no longer reads the pipe.
+    A single reader thread owns it for the tunnel's whole life - scanning for
+    the URL, then draining - and publishes what it finds through a
+    `_TunnelHandshake`. All this function does is `Event.wait(timeout)`: one
+    blocking call, woken by the OS, with no polling and no way to overrun.
+
+    Before, the caller drove `proc.stdout.readline()` in a loop that checked
+    the deadline only BETWEEN lines. `readline` returns at a newline, so a
+    child that stayed alive and wrote nothing - or wrote a partial line and
+    fell silent - blocked the caller indefinitely and TUNNEL_READY_TIMEOUT_S
+    meant nothing. That is the gap this closes.
+
+    4D-4. The tunnel is spawned in ITS OWN SESSION, so `railway connect` leads
+    a process group that every process it spawns - notably the `ssh -L` doing
+    the actual forwarding - inherits. That group is the unit `close_tunnel`
+    signals, and its id is recorded on the process object here, at the one
+    moment it is guaranteed to be knowable. No shell is involved: the argument
+    list is unchanged, and `start_new_session` is a fork-time setting, not a
+    command.
     """
     proc = subprocess.Popen(
         [
@@ -411,23 +759,29 @@ def open_tunnel(service: str, environment: str) -> tuple[subprocess.Popen, str]:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        # setsid in the child between fork and exec: the child becomes both
+        # session leader and process-group leader, so its pgid == its pid.
+        start_new_session=True,
     )
-    deadline = time.time() + TUNNEL_READY_TIMEOUT_S
-    while time.time() < deadline:
-        if proc.poll() is not None:
-            break
-        # Read, match, drop. Lines before the URL are not retained: they are
-        # the ones carrying "Password:" and "Connection string:", and a list
-        # of them would be a credential store with no reader.
-        line = proc.stdout.readline() if proc.stdout else ""
-        if not line:
-            time.sleep(0.1)
-            continue
-        match = re.match(r"\s*URL:\s*(\S+)\s*$", line)
-        if match:
-            _start_drain(proc)
-            return proc, match.group(1)
+    # Recorded now, not derived later: by cleanup time the leader is usually
+    # gone and `os.getpgid(proc.pid)` would raise. The value is the leader's
+    # own pid by construction of start_new_session.
+    setattr(proc, PGID_ATTR, proc.pid)
 
+    handshake = _TunnelHandshake()
+    _start_drain(proc, handshake)
+    # One bounded wait. Returns early when the reader publishes a URL, and
+    # early again if the child dies without one - only a live-but-silent child
+    # actually spends the full budget.
+    handshake.wait(TUNNEL_READY_TIMEOUT_S)
+    url = handshake.url
+    if url is not None:
+        return proc, url
+
+    # Timed out, or the child exited first. Either way this is a refusal, and
+    # it goes through the same process/session authority every other exit path
+    # uses - so a tunnel that never became usable still leaves no leader, no
+    # ssh, and no reader thread behind.
     close_tunnel(proc)
     raise RuntimeError(
         "railway connect did not report a tunnel URL within "
