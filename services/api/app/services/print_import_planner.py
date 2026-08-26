@@ -53,6 +53,7 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, Card, CardPrint, ReleaseProduct, Source, SourceCardMapping
@@ -683,20 +684,130 @@ class PrintImportPlanner:
         self._session = session
         self._catalogue = source_catalogue
         self._digest_provider = digest_provider
+        # Prefetched Atlas state, built once on first use. `None` means "not
+        # loaded yet" and is distinct from an empty index, so an Atlas that
+        # genuinely holds no products is not re-queried on every entry.
+        self._products_by_code: dict[str, list[ReleaseProduct]] | None = None
+        self._uncoded_products: list[ReleaseProduct] | None = None
+        self._cards_by_code: dict[str, list[CanonicalCard]] | None = None
+        self._prints_by_identity: dict[tuple[int, int, str], list[CardPrint]] | None = None
+
+    # -- prefetch ----------------------------------------------------------
+    #
+    # Why this exists
+    # ---------------
+    # The planner is read-only and never writes, so every row it can observe
+    # is already present before the first entry is planned and cannot change
+    # underneath the run. That makes a one-time read exactly equivalent to
+    # re-querying per entry - and re-querying per entry is what made a
+    # 4,962-entry corpus issue tens of thousands of round trips, which no
+    # SSH tunnel survives.
+    #
+    # Each index keeps a *list* per key rather than a single row. That is the
+    # point: `scalar_one_or_none()` raises on a duplicate, and collapsing the
+    # index into one row per key would silently convert that refusal into a
+    # first-match answer. `_only` below reproduces the same three outcomes.
+
+    @staticmethod
+    def _only(rows: list, describe: str):
+        """`scalar_one_or_none()` semantics against a prefetched bucket.
+
+        None for no row, the row for exactly one, and `MultipleResultsFound`
+        for more than one - the same exception type, from the same package,
+        that the per-entry query raised.
+        """
+        if not rows:
+            return None
+        if len(rows) > 1:
+            raise MultipleResultsFound(
+                f"Multiple rows were found for {describe}"
+            )
+        return rows[0]
+
+    def _load_products(self) -> None:
+        if self._products_by_code is not None:
+            return
+        # Both halves of the product question - by code, and uncoded by exact
+        # name - are answered from this one read, filtered by exactly the
+        # catalogue predicate the per-entry queries used.
+        rows = (
+            self._session.execute(
+                select(ReleaseProduct)
+                .where(ReleaseProduct.source_catalogue == self._catalogue)
+                .order_by(ReleaseProduct.id)
+            )
+            .scalars()
+            .all()
+        )
+        by_code: dict[str, list[ReleaseProduct]] = {}
+        uncoded: list[ReleaseProduct] = []
+        for row in rows:
+            if row.official_code is None:
+                uncoded.append(row)
+            else:
+                by_code.setdefault(row.official_code, []).append(row)
+        self._products_by_code = by_code
+        self._uncoded_products = uncoded
+
+    def _load_cards(self) -> None:
+        if self._cards_by_code is not None:
+            return
+        rows = (
+            self._session.execute(select(CanonicalCard).order_by(CanonicalCard.id))
+            .scalars()
+            .all()
+        )
+        by_code: dict[str, list[CanonicalCard]] = {}
+        for row in rows:
+            by_code.setdefault(row.card_code, []).append(row)
+        self._cards_by_code = by_code
+
+    def _load_prints(self) -> None:
+        if self._prints_by_identity is not None:
+            return
+        # Keyed on exactly the four identity columns the per-entry query
+        # filtered on - never treatment, never artwork_key, never
+        # release_product_code, never card code alone. `language` and
+        # `is_active` are pushed into the WHERE clause exactly as before, so
+        # the index cannot answer for an inactive or non-JP print.
+        rows = (
+            self._session.execute(
+                select(CardPrint)
+                .where(
+                    CardPrint.language == LANGUAGE,
+                    CardPrint.is_active.is_(True),
+                )
+                .order_by(CardPrint.id)
+            )
+            .scalars()
+            .all()
+        )
+        index: dict[tuple[int, int, str], list[CardPrint]] = {}
+        for row in rows:
+            if row.canonical_card_id is None or row.release_product_id is None:
+                # Cannot satisfy the identity predicate, which compares both
+                # columns to concrete ids; NULL would never have matched.
+                continue
+            key = (row.canonical_card_id, row.release_product_id, row.official_asset_variant)
+            index.setdefault(key, []).append(row)
+        self._prints_by_identity = index
 
     # -- lookups (all SELECT) ---------------------------------------------
     def _canonical_card(self, card_code: str) -> CanonicalCard | None:
-        return self._session.execute(
-            select(CanonicalCard).where(CanonicalCard.card_code == card_code)
-        ).scalar_one_or_none()
+        self._load_cards()
+        assert self._cards_by_code is not None
+        return self._only(
+            self._cards_by_code.get(card_code, []),
+            f"canonical card with card_code {card_code!r}",
+        )
 
     def _product_by_code(self, official_code: str) -> ReleaseProduct | None:
-        return self._session.execute(
-            select(ReleaseProduct).where(
-                ReleaseProduct.source_catalogue == self._catalogue,
-                ReleaseProduct.official_code == official_code,
-            )
-        ).scalar_one_or_none()
+        self._load_products()
+        assert self._products_by_code is not None
+        return self._only(
+            self._products_by_code.get(official_code, []),
+            f"{self._catalogue} release product with official code {official_code!r}",
+        )
 
     def _uncoded_product_by_exact_name(self, name: str) -> ReleaseProduct | None:
         """An uncoded product already established under this exact name.
@@ -706,17 +817,13 @@ class PrintImportPlanner:
         repo's own normalize_release_text collapses 30 Bandai products into 13
         keys, so anything fuzzier than equality would merge real products.
         """
-        candidates = (
-            self._session.execute(
-                select(ReleaseProduct).where(
-                    ReleaseProduct.source_catalogue == self._catalogue,
-                    ReleaseProduct.official_code.is_(None),
-                )
-            )
-            .scalars()
-            .all()
-        )
-        for candidate in candidates:
+        self._load_products()
+        assert self._uncoded_products is not None
+        # First match wins, exactly as before. This lookup was never
+        # `scalar_one_or_none`, so it is deliberately NOT routed through
+        # `_only`: two uncoded products sharing a name was always resolved,
+        # never refused.
+        for candidate in self._uncoded_products:
             if name in (candidate.first_seen_name, candidate.display_name):
                 return candidate
         return None
@@ -729,15 +836,13 @@ class PrintImportPlanner:
         Exactly the four identity columns - never treatment, never
         artwork_key, never release_product_code, never card code alone.
         """
-        return self._session.execute(
-            select(CardPrint).where(
-                CardPrint.canonical_card_id == canonical_card_id,
-                CardPrint.language == LANGUAGE,
-                CardPrint.release_product_id == release_product_id,
-                CardPrint.official_asset_variant == variant,
-                CardPrint.is_active.is_(True),
-            )
-        ).scalar_one_or_none()
+        self._load_prints()
+        assert self._prints_by_identity is not None
+        return self._only(
+            self._prints_by_identity.get((canonical_card_id, release_product_id, variant), []),
+            f"active {LANGUAGE} card print with canonical_card_id={canonical_card_id}, "
+            f"release_product_id={release_product_id}, official_asset_variant={variant!r}",
+        )
 
     # -- planning ----------------------------------------------------------
     def plan_entry(

@@ -11,6 +11,7 @@ identity exists to prevent, so they are tested directly rather than implied.
 
 import pytest
 from sqlalchemy import event
+from sqlalchemy.exc import MultipleResultsFound
 
 from app.models import CanonicalCard, CardPrint, ReleaseProduct
 from app.services.official_cardlist import OfficialCardEntry, OfficialSeries
@@ -1204,3 +1205,91 @@ def test_classifying_mappings_never_attaches_or_edits_one(db_session, op01, zoro
     db_session.refresh(row)
     assert (row.card_print_id, row.review_status, row.is_active, row.match_explanation_json) == before
     assert row.card_print_id is None
+
+
+# --- query shape: bounded, not proportional to corpus size -------------------
+#
+# The planner is read-only, so every row it can observe is already committed
+# before the first entry is planned. That is what makes a one-time prefetch
+# equivalent to re-querying per entry - and it is why the count below must not
+# grow with the corpus. A 4,962-entry run that issued four SELECTs per entry
+# produced tens of thousands of round trips and could not finish over an SSH
+# tunnel; these tests fail if that shape ever comes back.
+
+
+def _count_select_statements(session):
+    """Records every SELECT the session emits. Returns a mutable list."""
+    statements: list[str] = []
+
+    @event.listens_for(session.get_bind(), "before_cursor_execute")
+    def _record(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            statements.append(statement)
+
+    return statements
+
+
+def _corpus(size):
+    """`size` distinct entries across distinct card codes, all unknown to Atlas."""
+    return [
+        entry(
+            entry_id=f"OP01-{i:03d}",
+            card_code=f"OP01-{i:03d}",
+            image=f"{CARDLIST}/OP01-{i:03d}.png",
+        )
+        for i in range(1, size + 1)
+    ]
+
+
+def test_planning_query_count_does_not_grow_with_the_corpus(db_session, op01, zoro):
+    """The real guarantee: 10x the entries must not mean 10x the queries."""
+    small = _count_select_statements(db_session)
+    plan_entries(
+        db_session, _corpus(5), series_index=SERIES_INDEX, classify_mappings=False
+    )
+    small_count = len(small)
+
+    # A fresh planner, so the prefetch is paid again rather than reused.
+    db_session.expunge_all()
+    large = _count_select_statements(db_session)
+    plan_entries(
+        db_session, _corpus(50), series_index=SERIES_INDEX, classify_mappings=False
+    )
+    # `large` was registered after the first run, so it holds only the second.
+    large_count = len(large)
+
+    assert small_count > 0, "the planner must actually read Atlas"
+    assert large_count == small_count, (
+        f"planning 50 entries issued {large_count} SELECTs where 5 entries issued "
+        f"{small_count}: the query count is proportional to the corpus again"
+    )
+
+
+def test_planning_issues_a_small_bounded_number_of_selects(db_session, op01, zoro):
+    """Concrete ceiling, so an accidental extra per-entry read is visible."""
+    statements = _count_select_statements(db_session)
+    plan_entries(
+        db_session, _corpus(200), series_index=SERIES_INDEX, classify_mappings=False
+    )
+    assert len(statements) <= 4, (
+        f"planning 200 entries issued {len(statements)} SELECTs; the planner reads "
+        "release_products, canonical_cards and card_prints once each"
+    )
+
+
+def test_a_duplicate_exact_identity_is_still_refused_not_first_matched(
+    db_session, op01, zoro
+):
+    """Prefetching must not collapse a duplicate into an arbitrary winner.
+
+    The per-entry lookup was `scalar_one_or_none()`, which raises rather than
+    picking. An index keyed one-row-per-identity would have silently answered
+    with whichever row happened to be inserted first - turning a refusal into
+    a plausible-looking plan. The bucket keeps both, so it still raises.
+    """
+    make_print(db_session, zoro, op01, "base", verification_status="unverified")
+    make_print(db_session, zoro, op01, "base", verification_status="unverified")
+
+    planner = PrintImportPlanner(db_session)
+    with pytest.raises(MultipleResultsFound):
+        planner.plan_entry(entry(), series_index=SERIES_INDEX)
