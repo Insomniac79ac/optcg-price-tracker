@@ -4,11 +4,20 @@ app.snapshot_market_index).
 The dataset here is deliberately shaped like the real staging catalogue rather
 than like a convenient fixture: a two-source print, a Yuyu-Tei-only print, a
 print whose SNKRDUNK floor sits exactly at the platform minimum (constrained,
-archived, but excluded from the index), a print with no observations at all,
-and an unverified print that must never be snapshotted. Those are the five
-cases whose distinctions the snapshot exists to preserve - a test suite that
-only covered the happy two-source case would pass just as well against a
-schema that stored nothing but a number.
+archived, but excluded from the index), a print whose one observation is real
+but cannot produce a value, a verified print nobody has ever priced, and an
+unverified print. Those are the six cases whose distinctions the snapshot
+exists to preserve - a test suite that only covered the happy two-source case
+would pass just as well against a schema that stored nothing but a number.
+
+The last two are the ones the Bandai catalogue import (4D-8) made matter: it
+produced 4,261 prints that are active and verified because Bandai published
+them, not because Atlas prices them. `empty` is that shape and must not be
+snapshotted; `tracked` has a genuine market-facing observation behind it and
+must be, even though its index value is NULL.
+
+Snapshot eligibility is one market-facing observation - never a mapping, which
+is an identity claim made before any price exists.
 """
 
 import sys
@@ -30,7 +39,12 @@ from app.models import (
 )
 from app.services.job_locks import LockHeldError, acquire_lock
 from app.services.market_index import CALCULATION_METHOD, INDEX_VERSION
-from app.services.print_market_index import get_market_index_for_prints
+from app.services.print_market_index import (
+    AUXILIARY_ONLY_PRICE_TYPES,
+    INDEX_EVIDENCE_PRICE_TYPES,
+    INDEX_INPUT_PRICE_TYPES,
+    get_market_index_for_prints,
+)
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 from app.snapshot_market_index import (
     build_snapshot_row,
@@ -164,7 +178,7 @@ def add_observation(
 
 @pytest.fixture()
 def catalogue(db_session):
-    """Five prints covering every coverage/eligibility case the snapshot must
+    """Six prints covering every coverage/eligibility case the snapshot must
     distinguish. Returns them by name."""
     yuyutei = make_source(db_session, "yuyutei")
     snkrdunk = make_source(db_session, "snkrdunk")
@@ -210,11 +224,25 @@ def catalogue(db_session):
         price_type="floor", price_jpy=1000, observed_at=NOW - timedelta(minutes=30),
     )
 
-    # 4. Verified print with no observations at all -> none/low, NULL value.
+    # 4. One market-facing observation - a SNKRDUNK sold price - but below
+    #    SNKRDUNK_SOLD_MIN_SAMPLE and with no floor to fall back to. Real
+    #    evidence, no usable index: snapshotted as none/low with a NULL value.
+    tracked_canonical = make_canonical(db_session, "OP01-006")
+    tracked_legacy = make_legacy_card(db_session, "OP01-006")
+    tracked = make_print(db_session, tracked_canonical)
+    add_observation(
+        db_session, tracked_legacy, snkrdunk,
+        make_mapping(db_session, tracked_legacy, snkrdunk, tracked), tracked,
+        price_type="sold", price_jpy=4200, observed_at=NOW - timedelta(hours=5),
+    )
+
+    # 5. Verified print with no observations at all -> Atlas has never
+    #    observed a price for it, so it is not snapshotted. This is the shape
+    #    the Bandai catalogue import produced 4,261 of.
     empty_canonical = make_canonical(db_session, "OP01-004")
     empty = make_print(db_session, empty_canonical)
 
-    # 5. Unverified print -> must never be snapshotted.
+    # 6. Unverified print -> must never be snapshotted.
     unverified_canonical = make_canonical(db_session, "OP01-005")
     unverified = make_print(
         db_session, unverified_canonical,
@@ -225,6 +253,7 @@ def catalogue(db_session):
         "both": both,
         "solo": solo,
         "constrained": constrained,
+        "tracked": tracked,
         "empty": empty,
         "unverified": unverified,
         "yuyutei": yuyutei,
@@ -232,6 +261,7 @@ def catalogue(db_session):
         "both_legacy": both_legacy,
         "solo_legacy": solo_legacy,
         "constrained_legacy": constrained_legacy,
+        "tracked_legacy": tracked_legacy,
     }
 
 
@@ -245,7 +275,7 @@ def _by_print(db_session) -> dict[int, MarketIndexSnapshot]:
 # --- population selection -------------------------------------------------
 
 
-def test_selects_only_active_verified_prints(db_session, catalogue):
+def test_selects_only_active_verified_priced_prints(db_session, catalogue):
     ids = select_snapshottable_print_ids(db_session)
 
     assert catalogue["unverified"].id not in ids
@@ -254,8 +284,262 @@ def test_selects_only_active_verified_prints(db_session, catalogue):
         catalogue["both"].id,
         catalogue["solo"].id,
         catalogue["constrained"].id,
-        catalogue["empty"].id,
+        catalogue["tracked"].id,
     }
+
+
+def _priced_print(db_session, code, source, price_type, price_jpy, observed_at):
+    """A verified print whose only evidence is one observation of the given
+    (source, price_type). Returns the print."""
+    canonical = make_canonical(db_session, code)
+    legacy = make_legacy_card(db_session, code)
+    print_row = make_print(db_session, canonical)
+    add_observation(
+        db_session, legacy, source,
+        make_mapping(db_session, legacy, source, print_row), print_row,
+        price_type=price_type, price_jpy=price_jpy, observed_at=observed_at,
+    )
+    return print_row
+
+
+def _unpriced_mapped_print(db_session, code, source, **mapping_overrides):
+    """A verified print with an approved, active mapping and no observation -
+    the shape the next phase will create thousands of."""
+    canonical = make_canonical(db_session, code)
+    legacy = make_legacy_card(db_session, code)
+    print_row = make_print(db_session, canonical)
+    mapping = make_mapping(db_session, legacy, source, print_row)
+    for field, value in mapping_overrides.items():
+        setattr(mapping, field, value)
+    db_session.commit()
+    return print_row
+
+
+# A mapping is an identity claim, not pricing evidence -----------------------
+#
+# It is made before any collector has run, so admitting it would mean that
+# approving mappings across the imported catalogue writes thousands of
+# valueless immutable rows on the next nightly run - the verified-only failure
+# reached one step later.
+
+
+def test_approved_mapping_alone_does_not_qualify_a_print(db_session, catalogue):
+    print_row = _unpriced_mapped_print(db_session, "OP01-010", catalogue["yuyutei"])
+
+    mapping = (
+        db_session.query(SourceCardMapping).filter_by(card_print_id=print_row.id).one()
+    )
+    assert mapping.is_active is True
+    assert mapping.review_status == "approved"
+    assert print_row.verification_status == "verified"
+    assert print_row.id not in select_snapshottable_print_ids(db_session)
+
+
+def test_approved_mapping_alone_writes_no_snapshot_row(db_session, catalogue):
+    print_row = _unpriced_mapped_print(db_session, "OP01-011", catalogue["snkrdunk"])
+
+    snapshot_market_index(db_session, skip_lock=True)
+
+    assert print_row.id not in _by_print(db_session)
+
+
+def test_no_mapping_and_no_observation_does_not_qualify_a_print(db_session, catalogue):
+    """The 4D-8 shape: verified because Bandai published it, priced by nobody."""
+    ids = select_snapshottable_print_ids(db_session)
+
+    assert catalogue["empty"].verification_status == "verified"
+    assert catalogue["empty"].is_active is True
+    assert catalogue["empty"].id not in ids
+
+
+def test_mapping_to_a_non_index_source_does_not_qualify_a_print(db_session, catalogue):
+    """A Bandai identity/artwork mapping is not pricing evidence either."""
+    bandai = make_source(db_session, "bandai")
+    make_mapping(db_session, make_legacy_card(db_session, "OP01-004"), bandai, catalogue["empty"])
+
+    assert catalogue["empty"].id not in select_snapshottable_print_ids(db_session)
+
+
+def test_unapproved_mapping_does_not_qualify_a_print(db_session, catalogue):
+    print_row = _unpriced_mapped_print(
+        db_session, "OP01-012", catalogue["yuyutei"], review_status="needs_review"
+    )
+
+    assert print_row.id not in select_snapshottable_print_ids(db_session)
+
+
+def test_deactivating_a_mapping_does_not_drop_an_observed_print(db_session, catalogue):
+    """Evidence outlives the mapping that produced it. A print keeps its own
+    price history even if the mapping is later retired."""
+    mapping = (
+        db_session.query(SourceCardMapping)
+        .filter_by(card_print_id=catalogue["solo"].id)
+        .one()
+    )
+    mapping.is_active = False
+    mapping.review_status = "rejected"
+    db_session.commit()
+
+    assert catalogue["solo"].id in select_snapshottable_print_ids(db_session)
+
+
+# What counts as market-facing evidence -------------------------------------
+
+
+def test_yuyutei_sell_observation_qualifies_a_print(db_session, catalogue):
+    print_row = _priced_print(
+        db_session, "OP01-013", catalogue["yuyutei"], "sell", 1200,
+        NOW - timedelta(hours=1),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+
+def test_snkrdunk_floor_observation_qualifies_a_print(db_session, catalogue):
+    print_row = _priced_print(
+        db_session, "OP01-014", catalogue["snkrdunk"], "floor", 3300,
+        NOW - timedelta(hours=1),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+
+def test_snkrdunk_sold_observation_qualifies_a_print(db_session, catalogue):
+    print_row = _priced_print(
+        db_session, "OP01-015", catalogue["snkrdunk"], "sold", 5100,
+        NOW - timedelta(hours=1),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+
+def test_yuyutei_buy_observation_alone_does_not_qualify_a_print(db_session, catalogue):
+    """A dealer-buy quote is what Yuyu-Tei will PAY, never a market-facing
+    price, and _resolve_yuyutei_buy hardcodes eligible=False - so no quantity
+    of buy observations can ever produce an index value."""
+    print_row = _priced_print(
+        db_session, "OP01-016", catalogue["yuyutei"], "buy", 300,
+        NOW - timedelta(hours=1),
+    )
+
+    assert "buy" in INDEX_INPUT_PRICE_TYPES["yuyutei"]
+    assert "buy" not in INDEX_EVIDENCE_PRICE_TYPES["yuyutei"]
+    assert print_row.id not in select_snapshottable_print_ids(db_session)
+
+
+def test_yuyutei_buy_alongside_a_sell_still_qualifies(db_session, catalogue):
+    """The buy quote is not disqualifying - it simply cannot qualify on its
+    own. The sell observation is what admits this print."""
+    print_row = _priced_print(
+        db_session, "OP01-017", catalogue["yuyutei"], "sell", 900,
+        NOW - timedelta(hours=2),
+    )
+    legacy = db_session.query(Card).filter_by(card_code="OP01-017").one()
+    mapping = (
+        db_session.query(SourceCardMapping).filter_by(card_print_id=print_row.id).one()
+    )
+    add_observation(
+        db_session, legacy, catalogue["yuyutei"], mapping, print_row,
+        price_type="buy", price_jpy=400, observed_at=NOW - timedelta(hours=1),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+
+def test_stale_observation_still_qualifies_a_print(db_session, catalogue):
+    """Evidence, not ELIGIBLE evidence: a market-facing price was genuinely
+    observed. The print keeps recording a row - whose index value is
+    legitimately NULL - rather than vanishing from its own history on the day
+    its data aged out."""
+    print_row = _priced_print(
+        db_session, "OP01-018", catalogue["yuyutei"], "sell", 500,
+        NOW - timedelta(days=90),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+    snapshot_market_index(db_session, skip_lock=True)
+    row = _by_print(db_session)[print_row.id]
+    assert row.index_value_jpy is None
+    assert row.coverage_status == "none"
+    assert row.source_count == 0
+
+
+def test_constrained_snkrdunk_floor_still_qualifies_a_print(db_session, catalogue):
+    """A floor sitting at the platform minimum is disqualified from the index
+    by source semantics, but it is still a real observed listing price."""
+    print_row = _priced_print(
+        db_session, "OP01-019", catalogue["snkrdunk"], "floor", 1000,
+        NOW - timedelta(minutes=30),
+    )
+
+    assert print_row.id in select_snapshottable_print_ids(db_session)
+
+    snapshot_market_index(db_session, skip_lock=True)
+    row = _by_print(db_session)[print_row.id]
+    assert row.index_value_jpy is None
+    assert row.coverage_status == "none"
+    snkrdunk_value = next(
+        sv for sv in row.provenance["source_values"] if sv["source"] == "snkrdunk"
+    )
+    assert snkrdunk_value["eligible"] is False
+    assert snkrdunk_value["constraint"] is not None
+    assert snkrdunk_value["value_jpy"] == 1000
+
+
+def test_observation_from_a_non_index_source_does_not_qualify(db_session, catalogue):
+    """A price from a source the Market Index does not read is not evidence
+    for it, whatever its price_type."""
+    other_source = make_source(db_session, "cardrush")
+    print_row = _priced_print(
+        db_session, "OP01-020", other_source, "sell", 2400, NOW - timedelta(hours=1),
+    )
+
+    assert "cardrush" not in INDEX_EVIDENCE_PRICE_TYPES
+    assert print_row.id not in select_snapshottable_print_ids(db_session)
+
+
+def test_observation_of_a_price_type_the_index_ignores_does_not_qualify(
+    db_session, catalogue
+):
+    """Only the declared (source, price_type) pairs count - the selector
+    imports that declaration rather than restating it."""
+    print_row = _priced_print(
+        db_session, "OP01-021", catalogue["yuyutei"], "graded", 9000,
+        NOW - timedelta(hours=1),
+    )
+
+    assert "graded" not in INDEX_INPUT_PRICE_TYPES["yuyutei"]
+    assert print_row.id not in select_snapshottable_print_ids(db_session)
+
+
+def test_an_observation_on_an_unverified_print_does_not_qualify_it(
+    db_session, catalogue
+):
+    """Active and verified stay necessary - a demoted print drops out even
+    with real evidence behind it."""
+    catalogue["solo"].verification_status = "needs_review"
+    db_session.commit()
+
+    assert catalogue["solo"].id not in select_snapshottable_print_ids(db_session)
+
+
+def test_evidence_is_the_resolver_inputs_minus_the_auxiliary_only_ones(db_session):
+    """Snapshot evidence is derived from the resolver's declaration, never a
+    second literal - so a price_type added to the inputs becomes evidence
+    unless it is also declared auxiliary-only."""
+    assert INDEX_INPUT_PRICE_TYPES == {
+        "yuyutei": ("sell", "buy"),
+        "snkrdunk": ("floor", "sold"),
+    }
+    assert AUXILIARY_ONLY_PRICE_TYPES == {"yuyutei": ("buy",)}
+    assert INDEX_EVIDENCE_PRICE_TYPES == {
+        "yuyutei": ("sell",),
+        "snkrdunk": ("floor", "sold"),
+    }
+    for source, price_types in INDEX_EVIDENCE_PRICE_TYPES.items():
+        assert set(price_types) <= set(INDEX_INPUT_PRICE_TYPES[source])
+        assert not set(price_types) & set(AUXILIARY_ONLY_PRICE_TYPES.get(source, ()))
 
 
 def test_inactive_print_is_not_snapshotted(db_session, catalogue):
@@ -267,7 +551,7 @@ def test_inactive_print_is_not_snapshotted(db_session, catalogue):
     assert catalogue["solo"].id not in _by_print(db_session)
 
 
-def test_one_snapshot_per_active_verified_print(db_session, catalogue):
+def test_one_snapshot_per_active_verified_priced_print(db_session, catalogue):
     result = snapshot_market_index(db_session, skip_lock=True)
 
     assert result.prints_selected == 4
@@ -278,8 +562,9 @@ def test_one_snapshot_per_active_verified_print(db_session, catalogue):
         catalogue["both"].id,
         catalogue["solo"].id,
         catalogue["constrained"].id,
-        catalogue["empty"].id,
+        catalogue["tracked"].id,
     }
+    assert catalogue["empty"].id not in _by_print(db_session)
 
 
 # --- copied index fields --------------------------------------------------
@@ -341,9 +626,9 @@ def test_source_price_range_null_when_absent(db_session, catalogue):
     assert solo.source_price_range_high_jpy is None
 
     # Zero eligible sources: likewise absent, never a fabricated zero.
-    empty = rows[catalogue["empty"].id]
-    assert empty.source_price_range_low_jpy is None
-    assert empty.source_price_range_high_jpy is None
+    tracked = rows[catalogue["tracked"].id]
+    assert tracked.source_price_range_low_jpy is None
+    assert tracked.source_price_range_high_jpy is None
 
 
 # --- provenance -----------------------------------------------------------
@@ -421,9 +706,9 @@ def test_auxiliary_values_archived_separately(db_session, catalogue):
     assert row.index_value_jpy == 1740
 
 
-def test_empty_print_archives_both_ineligible_sources(db_session, catalogue):
+def test_unpriced_tracked_print_archives_both_ineligible_sources(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
-    row = _by_print(db_session)[catalogue["empty"].id]
+    row = _by_print(db_session)[catalogue["tracked"].id]
 
     assert [sv["eligible"] for sv in row.provenance["source_values"]] == [False, False]
     assert {sv["ineligible_reason"] for sv in row.provenance["source_values"]} == {
@@ -472,7 +757,7 @@ def test_freshness_bounds_bracket_two_eligible_contributors(db_session, catalogu
 
 def test_freshness_bounds_null_when_nothing_eligible(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
-    row = _by_print(db_session)[catalogue["empty"].id]
+    row = _by_print(db_session)[catalogue["tracked"].id]
 
     assert row.freshest_eligible_source_at is None
     assert row.stalest_eligible_source_at is None
@@ -495,7 +780,7 @@ def test_stalest_matches_market_index_payload(db_session, catalogue):
 
 def test_zero_eligible_snapshots_with_null_index_value(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
-    row = _by_print(db_session)[catalogue["empty"].id]
+    row = _by_print(db_session)[catalogue["tracked"].id]
 
     assert row.index_value_jpy is None
     assert row.coverage_status == "none"
@@ -556,7 +841,7 @@ def test_partial_retry_fills_only_missing_prints(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
     # Simulate a run that had failed to write one print.
     db_session.query(MarketIndexSnapshot).filter_by(
-        card_print_id=catalogue["empty"].id
+        card_print_id=catalogue["tracked"].id
     ).delete()
     db_session.commit()
 

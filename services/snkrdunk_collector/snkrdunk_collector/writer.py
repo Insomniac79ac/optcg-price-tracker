@@ -57,6 +57,38 @@ from snkrdunk_collector.models import (
 CARD_PRINT_LANGUAGE_TO_HTML_LANG = {"jp": "ja", "en": "en"}
 
 
+def _authoritative_rarity(
+    card_print: CardPrint | None, canonical: CanonicalCard | None
+) -> str | None:
+    """The rarity a page's own rarity token must match, or None if Atlas
+    holds no trustworthy value to compare against.
+
+    `card_prints.official_rarity` first: rarity is a property of a *printing*
+    - Bandai publishes it per catalogue entry, and the same card code is
+    published at different rarities in different products. That is exactly
+    what a SNKRDUNK title shows, so the print's own value is the right
+    comparand.
+
+    `canonical_cards.rarity` second, unchanged for every print that predates
+    the Bandai catalogue import: those rows carry the same token in both
+    columns, so the resolution is a no-op for them and this check keeps
+    behaving exactly as it did.
+
+    None third - and None fails the check closed at the call site. That is
+    the point of returning it rather than skipping the comparison: a print
+    whose rarity Atlas cannot establish must never have a SNKRDUNK page's own
+    claim accepted as agreement. Nothing here derives, infers or defaults a
+    rarity; the only two answers are a stored value or no answer at all.
+    """
+    if card_print is not None:
+        official = (card_print.official_rarity or "").strip()
+        if official:
+            return official
+    if canonical is not None:
+        return canonical.rarity
+    return None
+
+
 def _expected_html_lang(card_print_language: str) -> str:
     return CARD_PRINT_LANGUAGE_TO_HTML_LANG.get(card_print_language, card_print_language)
 
@@ -124,7 +156,7 @@ def validate_identity(
 
     Each dimension emits its own distinct reason so an audit record can name
     exactly which one failed. Comparison targets are the print's *canonical*
-    identity (name/rarity/set) plus the print row itself (treatment/language/
+    identity (name/set) plus the print row itself (rarity/treatment/language/
     release), never the mapping's free-text fields.
     """
     reasons: list[str] = []
@@ -224,12 +256,21 @@ def validate_identity(
                 f"title_mismatch:displayed={extracted.get('card_name')},expected={canonical.name_jp}"
             )
 
-        displayed_rarity = (extracted.get("rarity") or "").strip().upper() or None
-        expected_rarity = (canonical.rarity or "").strip().upper() or None
-        if not expected_rarity or displayed_rarity != expected_rarity:
-            reasons.append(
-                f"rarity_mismatch:displayed={extracted.get('rarity')},expected={canonical.rarity}"
-            )
+    # Rarity is checked outside the `canonical` branch above because its
+    # authority is the PRINT, not the card - see _authoritative_rarity. The
+    # gate itself is unchanged and still fails closed: an absent expected
+    # value is a mismatch, never a pass. What changed is only which column
+    # supplies that expected value, so a print whose card-level rarity the
+    # catalogue deliberately leaves NULL is no longer rejected for a fact
+    # Atlas does hold about it.
+    expected_rarity_value = _authoritative_rarity(card_print, canonical)
+    displayed_rarity = (extracted.get("rarity") or "").strip().upper() or None
+    expected_rarity = (expected_rarity_value or "").strip().upper() or None
+    if not expected_rarity or displayed_rarity != expected_rarity:
+        reasons.append(
+            f"rarity_mismatch:displayed={extracted.get('rarity')},"
+            f"expected={expected_rarity_value}"
+        )
 
     if artwork_comparison is None or not artwork_comparison.get("match"):
         reasons.append(

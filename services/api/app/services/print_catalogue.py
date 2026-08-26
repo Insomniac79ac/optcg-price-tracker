@@ -2,14 +2,24 @@
 counterpart to app.services.card_catalogue. Builds CardPrintOut (single
 print detail, including sibling prints) and the paginated print catalogue.
 
-Display metadata (card_code/name/rarity/card_type/colors) always comes from
-a print's CanonicalCard, never from the legacy Card table's rarity/variant
+Display metadata (card_code/name/card_type/colors) always comes from a
+print's CanonicalCard, never from the legacy Card table's rarity/variant
 columns - see CardPrintOut/PrintCatalogueItemOut docstrings in app.schemas.
 
-`rarity` is optional on that canonical row and may be NULL; it is served as
-NULL, filtered on only when a caller names an explicit value, and contributes
-no facet when absent. The rarity of one exact printing is
-card_prints.official_rarity, which this module does not serve.
+`rarity` is the one field that does not come from the canonical row alone, and
+deliberately so. Rarity is a property of a *printing*, not of a card code:
+Bandai publishes it per catalogue entry, and the same code is published at
+different rarities in different products. That is why `canonical_cards.rarity`
+is nullable - where the catalogue establishes no single card-level value it
+stores none rather than inventing one. This module therefore serves the
+*exact print's* rarity, resolving
+`card_prints.official_rarity` first and falling back to the canonical
+card-level value, via `effective_rarity` / `effective_rarity_sql` below. Where
+neither is present the field is still NULL: no placeholder, no guess.
+
+Display, filtering and faceting all go through that same resolution, so a tile
+can never show a rarity the `?rarity=` filter would not match, or offer a
+facet value that selects nothing.
 """
 
 from __future__ import annotations
@@ -35,6 +45,45 @@ SortKey = Literal["card_code", "name", "index_desc", "index_asc", "updated"]
 SORT_KEYS: tuple[SortKey, ...] = ("card_code", "name", "index_desc", "index_asc", "updated")
 
 _INDEX_SORTS = {"index_desc", "index_asc"}
+
+
+def effective_rarity(print_row: CardPrint, canonical: CanonicalCard) -> str | None:
+    """The rarity to serve for one exact printing.
+
+    `card_prints.official_rarity` is Bandai's own value for *this* catalogue
+    entry and is the authority. `canonical_cards.rarity` is a card-level
+    summary that the catalogue may not establish at all, in which case it is
+    NULL by design (migration c7e91a4d2b60 - see
+    app.services.canonical_import_apply "THE RARITY PROBLEM, AS RESOLVED").
+
+    Falling back to the canonical value rather than replacing it keeps every
+    pre-import print serving exactly what it served before: those rows carry
+    the same token in both columns, so the resolution is a no-op for them.
+
+    Returns None when neither column holds a value. Nothing is derived,
+    inferred from a sibling print, or defaulted - an unknown rarity stays
+    unknown, and the caller renders nothing for it.
+    """
+    official = (print_row.official_rarity or "").strip()
+    if official:
+        return official
+    return canonical.rarity
+
+
+def effective_rarity_sql():
+    """`effective_rarity` as a SQL expression, for filtering and faceting.
+
+    Kept beside the Python version on purpose: the two must agree, or the
+    catalogue would offer a facet value that matches nothing, or hide a print
+    whose own tile displays the very rarity being filtered on. `nullif(trim(
+    ...), '')` reproduces the Python `.strip()` emptiness test, and both
+    `trim` and `nullif` mean the same thing on PostgreSQL and on the SQLite
+    the test suite runs against.
+    """
+    return func.coalesce(
+        func.nullif(func.trim(CardPrint.official_rarity), ""),
+        CanonicalCard.rarity,
+    )
 
 
 def _sibling_out(sibling: CardPrint) -> CardPrintSiblingOut:
@@ -78,7 +127,7 @@ def to_print_out(
         card_code=canonical.card_code,
         name_en=canonical.name_en,
         name_jp=canonical.name_jp,
-        rarity=canonical.rarity,
+        rarity=effective_rarity(print_row, canonical),
         card_type=canonical.card_type,
         colors=canonical.colors,
         language=print_row.language,
@@ -114,7 +163,7 @@ def _to_catalogue_item(
         card_code=canonical.card_code,
         name_en=canonical.name_en,
         name_jp=canonical.name_jp,
-        rarity=canonical.rarity,
+        rarity=effective_rarity(print_row, canonical),
         card_type=canonical.card_type,
         treatment=print_row.treatment,
         language=print_row.language,
@@ -157,7 +206,11 @@ def _apply_filters(
     if verification_status:
         stmt = stmt.where(CardPrint.verification_status == verification_status)
     if rarity:
-        stmt = stmt.where(CanonicalCard.rarity == rarity)
+        # Matched against the same value the tile displays (see
+        # effective_rarity), never against the card-level column alone - a
+        # print whose rarity comes from its own catalogue entry must be
+        # reachable by filtering on the rarity it shows.
+        stmt = stmt.where(effective_rarity_sql() == rarity)
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -275,17 +328,23 @@ def get_print_catalogue_facets(db: Session) -> PrintCatalogueFacetsOut:
         .distinct()
         .order_by(CardPrint.verification_status)
     ).all()
-    # Same rule as treatments above, for the same reason: CanonicalCard.rarity
-    # is optional, and a card whose card-level rarity the catalogue does not
-    # establish contributes no facet value. Without the IS NOT NULL filter,
-    # DISTINCT would return NULL as if it were a selectable rarity - and no
-    # synthetic "Unknown" bucket is invented for it either.
+    # Same rule as treatments above, for the same reason: a print whose rarity
+    # the catalogue does not establish at all contributes no facet value.
+    # Without the IS NOT NULL filter, DISTINCT would return NULL as if it were
+    # a selectable rarity - and no synthetic "Unknown" bucket is invented for
+    # it either.
+    #
+    # Faceted on effective_rarity_sql(), the very expression `?rarity=` filters
+    # on and the tiles display, so every offered value selects at least one
+    # print and every displayed value is offered.
+    rarity_expr = effective_rarity_sql()
     rarities = db.scalars(
-        select(CanonicalCard.rarity)
-        .join(CardPrint, CardPrint.canonical_card_id == CanonicalCard.id)
-        .where(active, CanonicalCard.rarity.is_not(None))
+        select(rarity_expr)
+        .select_from(CardPrint)
+        .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
+        .where(active, rarity_expr.is_not(None))
         .distinct()
-        .order_by(CanonicalCard.rarity)
+        .order_by(rarity_expr)
     ).all()
     return PrintCatalogueFacetsOut(
         treatments=list(treatments),

@@ -47,12 +47,17 @@ class Source(Base):
 
 
 class CanonicalCard(Base):
-    """The print's own canonical identity - the authority for the name,
-    rarity and set a verified card_print represents. Deliberately preferred
-    over cards.* for verification: cards.rarity carries display variants
-    (e.g. "Parallel" on the OP01-002 row) rather than the true rarity token
-    a SNKRDUNK title shows, whereas canonical_cards.rarity is the real one
-    ("L"). Read-only here - services/api/app/models owns these rows."""
+    """The print's own canonical identity - the authority for the name and
+    set a verified card_print represents. Deliberately preferred over cards.*
+    for verification: cards.rarity carries display variants (e.g. "Parallel"
+    on the OP01-002 row) rather than the true rarity token a SNKRDUNK title
+    shows. Read-only here - services/api/app/models owns these rows.
+
+    `rarity` is the card-LEVEL summary and is nullable by design: the same
+    card code is published at different rarities in different products, so
+    where the catalogue establishes no single value it stores none. It is the
+    fallback for the identity check, not its first authority - see
+    CardPrint.official_rarity and writer._authoritative_rarity."""
 
     __tablename__ = "canonical_cards"
 
@@ -80,6 +85,11 @@ class CardPrint(Base):
     release_product_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Bandai's published rarity for THIS catalogue entry, and the authority
+    # the identity check compares a page's rarity token against. Preferred
+    # over canonical_cards.rarity, which is a card-level summary the
+    # catalogue may not establish at all (see writer._authoritative_rarity).
+    official_rarity: Mapped[str | None] = mapped_column(String(32), nullable=True)
     verification_status: Mapped[str] = mapped_column(String(16))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 

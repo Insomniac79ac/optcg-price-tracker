@@ -468,5 +468,101 @@ class IdentityVersusPriceTests(WriterTestCase):
         self.assertTrue(result.written)
 
 
+class RarityAuthorityTests(WriterTestCase):
+    """Which column supplies the rarity this check compares against.
+
+    The Bandai catalogue import (4D-8) landed 20 canonical cards - 66 prints -
+    whose card-level rarity is intentionally NULL because the catalogue
+    publishes several rarities for that card code, while each print's own
+    entry publishes exactly one. Comparing against the card-level column
+    rejected those prints for a fact Atlas holds about them.
+
+    Every test below mutates only the two rarity columns on the fixture print,
+    so each one isolates the rarity dimension while every other identity gate
+    stays exactly as the passing fixture leaves it.
+    """
+
+    def _set_rarities(self, *, canonical, official):
+        self.session.query(CanonicalCard).filter_by(id=2).one().rarity = canonical
+        self.verified_print.official_rarity = official
+        self.session.flush()
+
+    def test_print_official_rarity_is_accepted_when_canonical_is_null(self):
+        """The 4D-9 case. Previously rejected as rarity_mismatch:expected=None."""
+        self._set_rarities(canonical=None, official="L")
+
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+
+        self.assertTrue(result.identity_verified)
+        self.assertFalse(any(r.startswith("rarity_mismatch:") for r in result.reasons))
+        self.assertTrue(result.written)
+
+    def test_print_official_rarity_still_rejects_a_disagreeing_page(self):
+        """Falling back is not relaxing: a wrong rarity is still a mismatch."""
+        self._set_rarities(canonical=None, official="L")
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, rarity="SR"))
+
+        result = self._write(self.approved_mapping, extraction)
+
+        self.assertFalse(result.written)
+        self.assertFalse(result.identity_verified)
+        self.assertTrue(any(r.startswith("rarity_mismatch:") for r in result.reasons))
+
+    def test_no_trustworthy_rarity_anywhere_fails_closed(self):
+        """Neither column holds a value, so there is nothing to agree with -
+        and the page's own claim must never stand in for one."""
+        self._set_rarities(canonical=None, official=None)
+
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+
+        self.assertFalse(result.written)
+        self.assertFalse(result.identity_verified)
+        self.assertIn(
+            "rarity_mismatch:displayed=L,expected=None", result.identity_reasons
+        )
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
+
+    def test_the_prints_own_rarity_outranks_the_card_level_summary(self):
+        """Rarity belongs to the printing: where the two disagree, the print's
+        catalogue entry is the one describing this exact product."""
+        self._set_rarities(canonical="SR", official="L")
+
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+
+        self.assertTrue(result.identity_verified)
+        self.assertTrue(result.written)
+
+    def test_canonical_rarity_still_governs_a_print_without_its_own(self):
+        """Every mapping that predates the import keeps behaving identically:
+        those prints carry no official_rarity and their card-level value is
+        still what a page is checked against."""
+        self._set_rarities(canonical="L", official=None)
+
+        self.assertTrue(self._write(self.approved_mapping, GOOD_EXTRACTION).written)
+
+        self._set_rarities(canonical="L", official=None)
+        extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, rarity="SR"))
+        mismatched = self._write(self.approved_mapping, extraction)
+        self.assertFalse(mismatched.written)
+        self.assertTrue(
+            any(r.startswith("rarity_mismatch:") for r in mismatched.reasons)
+        )
+
+    def test_a_blank_official_rarity_falls_back_rather_than_failing(self):
+        self._set_rarities(canonical="L", official="   ")
+
+        self.assertTrue(self._write(self.approved_mapping, GOOD_EXTRACTION).written)
+
+    def test_rarity_check_writes_nothing_when_it_refuses(self):
+        """The refusal path is still zero rows, not a row marked bad."""
+        self._set_rarities(canonical=None, official="SEC")
+
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+
+        self.assertFalse(result.written)
+        self.session.commit()
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1000,3 +1000,130 @@ def test_current_shaped_rows_are_completely_unaffected(client, five_prints):
     assert detail["rarity"] == "R"
     assert all(i["rarity"] is not None for i in body["items"])
     assert body["facets"]["rarities"] == sorted(set(body["facets"]["rarities"]))
+
+
+# --- the exact print's own rarity is the one served --------------------------
+#
+# The Bandai catalogue import (4D-8) landed 66 prints whose canonical card
+# deliberately establishes no card-level rarity but whose own catalogue entry
+# publishes one. Serving the canonical NULL there hid a fact Atlas holds. The
+# print's `official_rarity` is the authority; the canonical value remains the
+# fallback, so every pre-import row serves exactly what it served before.
+
+
+def _print_with_official_rarity(db_session, **overrides):
+    """Canonical rarity NULL, print rarity published - the 4D-9 shape."""
+    canonical = make_canonical(
+        db_session, card_code="EB04-003", name_en="Smoker & Tashigi", rarity=None
+    )
+    fields = dict(treatment="base", artwork_key="smoker-base", official_rarity="R")
+    fields.update(overrides)
+    return canonical, make_print(db_session, canonical, **fields)
+
+
+def test_print_detail_serves_the_prints_official_rarity_when_canonical_is_null(
+    client, db_session
+):
+    canonical, print_row = _print_with_official_rarity(db_session)
+
+    body = client.get(f"/prints/{print_row.id}").json()
+
+    assert canonical.rarity is None
+    assert print_row.official_rarity == "R"
+    assert body["rarity"] == "R"
+
+
+def test_the_catalogue_serves_the_prints_official_rarity_too(client, db_session):
+    """Detail and tile must never disagree about the same print."""
+    _print_with_official_rarity(db_session)
+
+    body = client.get("/prints").json()
+
+    item = next(i for i in body["items"] if i["card_code"] == "EB04-003")
+    assert item["rarity"] == "R"
+
+
+def test_the_prints_official_rarity_wins_over_the_canonical_summary(
+    client, db_session
+):
+    """Rarity is a property of a printing: the same card code is published at
+    different rarities in different products, and the print's own entry is the
+    one that describes this printing."""
+    canonical = make_canonical(
+        db_session, card_code="OP05-119", name_en="Monkey D. Luffy", rarity="SR"
+    )
+    print_row = make_print(
+        db_session, canonical, artwork_key="luffy-sec", official_rarity="SEC"
+    )
+
+    assert client.get(f"/prints/{print_row.id}").json()["rarity"] == "SEC"
+
+
+def test_a_blank_official_rarity_falls_back_rather_than_serving_empty(
+    client, db_session
+):
+    canonical = make_canonical(
+        db_session, card_code="OP01-080", name_en="Usopp", rarity="UC"
+    )
+    print_row = make_print(
+        db_session, canonical, artwork_key="usopp-base", official_rarity="   "
+    )
+
+    assert client.get(f"/prints/{print_row.id}").json()["rarity"] == "UC"
+
+
+def test_no_rarity_is_invented_when_neither_column_has_one(client, db_session):
+    """The genuinely-unknown case is untouched: still NULL, still no
+    placeholder, and nothing borrowed from a sibling print."""
+    canonical = make_canonical(
+        db_session, card_code="P-084", name_en="Buggy", rarity=None
+    )
+    unknown = make_print(
+        db_session, canonical, artwork_key="buggy-base", official_rarity=None
+    )
+    make_print(
+        db_session, canonical, artwork_key="buggy-p1", official_rarity="SEC"
+    )
+
+    body = client.get(f"/prints/{unknown.id}").json()
+
+    assert body["rarity"] is None
+    assert body["rarity"] not in ("Unknown", "-", "", "N/A", "SEC")
+
+
+def test_the_rarity_filter_matches_what_the_tile_displays(client, db_session):
+    """Otherwise a collector sees "R" on a tile and filtering by R hides it -
+    exactly the frontend workaround this change exists to avoid."""
+    _, print_row = _print_with_official_rarity(db_session)
+
+    filtered = client.get("/prints", params={"rarity": "R"}).json()
+
+    assert print_row.id in {i["card_print_id"] for i in filtered["items"]}
+
+
+def test_the_rarity_facet_offers_what_the_tiles_display(client, db_session):
+    """Every offered value selects at least one print, and every displayed
+    value is offered."""
+    _print_with_official_rarity(db_session)
+
+    body = client.get("/prints").json()
+    facets = body["facets"]["rarities"]
+
+    assert "R" in facets
+    assert None not in facets
+    for value in facets:
+        assert client.get("/prints", params={"rarity": value}).json()["total"] >= 1
+    for item in body["items"]:
+        if item["rarity"] is not None:
+            assert item["rarity"] in facets
+
+
+def test_canonical_rarity_is_not_repopulated_by_serving(client, db_session):
+    """The nullable-rarity schema decision stands: this is a read-time
+    resolution, and the stored card-level column is left alone."""
+    canonical, print_row = _print_with_official_rarity(db_session)
+
+    assert client.get(f"/prints/{print_row.id}").json()["rarity"] == "R"
+
+    db_session.refresh(canonical)
+    assert canonical.rarity is None

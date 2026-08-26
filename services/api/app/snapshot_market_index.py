@@ -1,5 +1,7 @@
 """Writes today's exact-print Market Index snapshots - one immutable row per
-active, verified card_print per UTC day (see app.models.market_index_snapshot).
+active, verified, *priced* card_print per UTC day (see
+app.models.market_index_snapshot, and select_snapshottable_print_ids below for
+what "priced" means and why verified alone stopped being enough).
 
 Operational shape mirrors app.snapshot_portfolio_valuation: SessionLocal, a
 named job lock, a --dry-run flag, and a plain-text report on stdout. Intended
@@ -36,14 +38,17 @@ import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import CardPrint, MarketIndexSnapshot
+from app.models import CardPrint, MarketIndexSnapshot, PriceObservation, Source
 from app.schemas import PrintMarketIndexOut
 from app.services.job_locks import LockHeldError, with_job_lock
-from app.services.print_market_index import get_market_index_for_prints
+from app.services.print_market_index import (
+    INDEX_EVIDENCE_PRICE_TYPES,
+    get_market_index_for_prints,
+)
 
 LOCK_NAME = "market_index_snapshot"
 
@@ -72,29 +77,102 @@ class SnapshotRunResult:
         ]
 
 
+def _has_market_facing_observation():
+    """EXISTS: this print carries at least one market-facing pricing
+    observation - a price that could represent Market Index evidence.
+
+    The (source, price_type) pairs come from
+    app.services.print_market_index.INDEX_EVIDENCE_PRICE_TYPES, which that
+    module derives from the resolver's own inputs by removing the
+    auxiliary-only ones. Nothing about sources or price types is decided here;
+    this function only asks the question in SQL.
+
+    A MAPPING IS NOT EVIDENCE. An approved, active source mapping says Atlas
+    knows which product on a source corresponds to this print - it is an
+    identity claim, and it is made before any collector has run. Qualifying a
+    print on a mapping would mean that approving mappings across the imported
+    catalogue creates thousands of valueless immutable rows on the next
+    nightly run, which is the same failure the verified-only predicate had,
+    reached one step later. A print enters its own price history when a price
+    is first observed for it, not when someone decides where to look.
+
+    Deliberately "has evidence", not "has ELIGIBLE evidence": freshness
+    windows, the sold-sample minimum and the SNKRDUNK platform-floor rule all
+    live in the resolver and are re-evaluated on every run. A stale or
+    platform-constrained observation still means a market-facing price was
+    genuinely observed for this print, so it keeps recording a row - whose
+    index value may legitimately be NULL - rather than vanishing from its own
+    history on the day its data aged out. Restating any of those thresholds
+    here would be the second, drifting rule this module exists to avoid.
+    """
+    return (
+        select(PriceObservation.id)
+        .join(Source, Source.id == PriceObservation.source_id)
+        .where(
+            PriceObservation.card_print_id == CardPrint.id,
+            or_(
+                *[
+                    and_(
+                        Source.name == source_name,
+                        PriceObservation.price_type.in_(price_types),
+                    )
+                    for source_name, price_types in INDEX_EVIDENCE_PRICE_TYPES.items()
+                ]
+            ),
+        )
+        .exists()
+    )
+
+
 def select_snapshottable_print_ids(db: Session) -> list[int]:
-    """Every active, verified card_print - the population Atlas treats as
-    real, collectible and publishable.
+    """Every active, verified card_print that Atlas actually prices.
 
-    Deliberately the same two predicates the collectors gate their writes on
-    (see yuyutei_collector/snkrdunk_collector batch.select_eligible_mappings
-    and writer.validate_mapping_for_write, which refuse to anchor an
-    observation to a print that is not verified). A print outside this set
-    cannot have accumulated exact-print observations in the first place, so
-    snapshotting it would only ever produce a coverage_status="none" row for
-    a print Atlas does not yet publish.
+    Active and verified remain necessary - they are the same two predicates
+    the collectors gate their writes on (see yuyutei_collector/
+    snkrdunk_collector batch.select_eligible_mappings and
+    writer.validate_mapping_for_write, which refuse to anchor an observation
+    to a print that is not verified), and a demoted print must still drop
+    out. They are no longer sufficient.
 
-    Nothing is hardcoded: eligibility is entirely a database query, so a
-    newly verified print is picked up on the next run automatically and a
-    demoted one drops out automatically. Deterministic order (print id
-    ascending) so a run against unchanged state always builds rows in the
-    same sequence.
+    WHY THEY STOPPED BEING SUFFICIENT. This function used to select on
+    verified alone, justified by the claim that "a print outside this set
+    cannot have accumulated exact-print observations in the first place".
+    That held while every verified print was one an operator had hand-
+    verified and mapped to a price source. After the Bandai catalogue import
+    (4D-8) *verified* means "Bandai published this printing", not "Atlas
+    prices this printing": 4,281 prints are verified and 20 carry pricing
+    evidence. Selecting on verified alone would have written 4,261
+    coverage_status="none" rows every day - rows that are, by the model's own
+    "No backfill" contract, immutable once written and therefore not
+    correctable by a later, better-behaved run.
+
+    WHAT REPLACES IT. A print qualifies when at least one market-facing
+    pricing observation exists for it - see _has_market_facing_observation,
+    which takes its source and price_type rules from
+    app.services.print_market_index.INDEX_EVIDENCE_PRICE_TYPES rather than
+    restating them. A print without one produces no row at all, which is the
+    honest answer: Atlas has never observed a price for it and never claimed
+    to.
+
+    Note what is NOT in the predicate. Not a source mapping - that is an
+    identity claim made before any price exists, and the next phase will
+    approve mappings across the imported catalogue, so admitting them would
+    reintroduce mass valueless rows one step later. Not current eligibility -
+    a stale or platform-constrained observation is still an observation, and
+    the row it produces may legitimately carry a NULL index value.
+
+    Nothing is hardcoded: eligibility is entirely a database query, so a print
+    is picked up on the run after its first observation lands and drops out if
+    it is deactivated or demoted - the same self-maintaining property the
+    verified-only predicate had. Deterministic order (print id ascending) so a
+    run against unchanged state always builds rows in the same sequence.
     """
     stmt = (
         select(CardPrint.id)
         .where(
             CardPrint.is_active.is_(True),
             CardPrint.verification_status == "verified",
+            _has_market_facing_observation(),
         )
         .order_by(CardPrint.id.asc())
     )

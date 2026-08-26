@@ -532,20 +532,21 @@ class DisplayImageOut(BaseModel):
 
 class CardPrintOut(BaseModel):
     """Public print detail response - see GET /prints/{print_id}. Identity
-    fields (card_code/name/rarity/card_type/colors) come from the print's
-    CanonicalCard, never from the legacy Card table's rarity/variant
-    columns."""
+    fields (card_code/name/card_type/colors) come from the print's
+    CanonicalCard, never from the legacy Card table's rarity/variant columns;
+    `rarity` resolves per-printing (see below)."""
 
     card_print_id: int
     canonical_card_id: int
     card_code: str
     name_en: str | None
     name_jp: str | None
-    # Optional: the canonical card's summary rarity, NULL where the catalogue
-    # does not establish one card-level value. It is not this printing's
-    # rarity - Bandai publishes that per entry, and it is carried on
-    # card_prints.official_rarity. Clients render nothing when it is null;
-    # no placeholder is substituted.
+    # Optional: THIS PRINTING's rarity - card_prints.official_rarity, the
+    # value Bandai publishes for this exact catalogue entry, falling back to
+    # the canonical card's summary rarity where the print carries none (see
+    # app.services.print_catalogue.effective_rarity). NULL only where the
+    # catalogue establishes neither; clients render nothing for it and no
+    # placeholder is substituted.
     rarity: str | None
     card_type: str
     colors: list[str] | None
@@ -570,7 +571,8 @@ class PrintCatalogueItemOut(BaseModel):
     card_code: str
     name_en: str | None
     name_jp: str | None
-    # Optional, same reading as CardPrintOut.rarity.
+    # Optional, same reading as CardPrintOut.rarity: this printing's official
+    # rarity where it has one, else the canonical card-level value, else NULL.
     rarity: str | None
     card_type: str
     treatment: str | None
@@ -589,10 +591,12 @@ class PrintCatalogueFacetsOut(BaseModel):
     # all. There is deliberately no synthetic "unclassified"/"other" bucket -
     # a filter option must always name a real, selectable treatment.
     #
-    # `rarities` reads the same way now that CanonicalCard.rarity is optional:
-    # a card with no established card-level rarity contributes no facet value,
-    # and there is no "Unknown" rarity option. See print_catalogue's facet
-    # query, which excludes NULL rather than letting it become a value here.
+    # `rarities` reads the same way: a print for which neither its own
+    # official rarity nor the canonical card-level value is established
+    # contributes no facet value, and there is no "Unknown" rarity option. See
+    # print_catalogue's facet query, which facets on the same expression the
+    # tiles display and `?rarity=` filters on, and excludes NULL rather than
+    # letting it become a value here.
     treatments: list[str]
     rarities: list[str]
     languages: list[str]
