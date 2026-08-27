@@ -1,5 +1,9 @@
 import { getSession } from "next-auth/react";
 
+// The approval screen shows the same artwork the public catalogue does, so
+// it reuses the catalogue's display-image contract rather than restating it.
+import type { PrintDisplayImage } from "@/lib/prints";
+
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -213,6 +217,52 @@ export interface SnkrdunkCandidate {
   created_at: string;
   updated_at: string;
   matched_card: Card | null;
+}
+
+/** One printing the listing could be describing.
+ *
+ * Everything here is a fact a collector would recognise on a tile - artwork,
+ * names, product, printing - because that is what the operator is actually
+ * comparing. `card_print_id` is what the approval call must send, not what
+ * the operator reads. */
+export interface ApprovalPrintOption {
+  card_print_id: number;
+  card_code: string;
+  name_en: string | null;
+  name_jp: string | null;
+  display_image: PrintDisplayImage | null;
+  image_url: string | null;
+  found_in_product: string | null;
+  rarity: string | null;
+  special_print: string | null;
+  printing: string | null;
+  art_ordinal: number | null;
+  language: string;
+  approvable: boolean;
+  refusal_code: string | null;
+  refusal_detail: string | null;
+}
+
+export interface ApprovalSourceCandidate {
+  candidate_id: number;
+  source: string;
+  title: string | null;
+  source_url: string;
+  source_image_url: string | null;
+  detected_card_code: string | null;
+  detected_set_code: string | null;
+  detected_variant: string | null;
+  detected_rarity: string | null;
+  price_jpy: number | null;
+}
+
+export interface ApprovalContext {
+  candidate: ApprovalSourceCandidate;
+  options: ApprovalPrintOption[];
+  /** Set only when exactly one option is approvable. Pre-selects; never
+   * auto-approves. */
+  resolvable_card_print_id: number | null;
+  ambiguity_reason: string | null;
 }
 
 export interface SnkrdunkCandidateList {
@@ -991,14 +1041,36 @@ export function rematchAllCandidates(params: {
   );
 }
 
+/** The operator's decision aid: the listing on one side, and every printing
+ * that shares its card code on the other, each saying whether the stored
+ * evidence can justify approving it. */
+export function fetchCandidatePrintOptions(
+  candidateId: number,
+): Promise<ApprovalContext> {
+  return fetchAdminJson<ApprovalContext>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/print-options`,
+  );
+}
+
+/** `cardPrintId` is required by the API, not optional here for convenience:
+ * a mapping is a claim about which printing was priced, and the approval is
+ * refused outright when the source evidence cannot single that printing out. */
 export function approveCandidateMatch(
   candidateId: number,
   cardId: number,
+  cardPrintId: number,
   reviewNotes?: string,
 ): Promise<SnkrdunkCandidate> {
   return fetchAdminJson<SnkrdunkCandidate>(
     `/api/admin/snkrdunk-candidates/${candidateId}/approve-match`,
-    { method: "POST", body: { card_id: cardId, review_notes: reviewNotes ?? null } },
+    {
+      method: "POST",
+      body: {
+        card_id: cardId,
+        card_print_id: cardPrintId,
+        review_notes: reviewNotes ?? null,
+      },
+    },
   );
 }
 

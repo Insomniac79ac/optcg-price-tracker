@@ -36,7 +36,9 @@ from app.schemas import (
     SuggestedCardsOut,
 )
 from app.services.app_logging import record_app_log
+from app.api._mapping_approval import approval_http_error, guard_transition_to_approved
 from app.services.cache import delete_cache_prefix
+from app.services.exact_print_approval import ExactPrintApprovalError
 from app.services.source_mapping_confidence import (
     CONFIDENCE_LABELS,
     ISSUE_TYPES,
@@ -226,6 +228,20 @@ def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db
             )
             continue
 
+        # A bulk approve is still an approval. One refused row is reported
+        # against that row and skipped; the rest of the batch proceeds, which
+        # is what makes the result list per-mapping in the first place.
+        if body.action == "approve":
+            try:
+                guard_transition_to_approved(db, mapping)
+            except ExactPrintApprovalError as exc:
+                results.append(
+                    BulkMappingUpdateResultOut(
+                        mapping_id=mapping_id, ok=False, error=exc.code
+                    )
+                )
+                continue
+
         _apply_bulk_action(mapping, body.action, body.review_notes)
         any_applied = True
         results.append(BulkMappingUpdateResultOut(mapping_id=mapping_id, ok=True))
@@ -254,6 +270,16 @@ def replace_mapping_card(
     card = db.get(Card, body.card_id)
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found")
+
+    # replace-card reassigns the LEGACY card pointer; it has never resolved an
+    # exact print and does not start now. Approving through it therefore has
+    # to satisfy the same guard, and is checked before card_id is written so a
+    # refusal leaves the row untouched.
+    if body.approve:
+        try:
+            guard_transition_to_approved(db, mapping)
+        except ExactPrintApprovalError as exc:
+            raise approval_http_error(exc) from exc
 
     mapping.card_id = card.id
     if body.approve:

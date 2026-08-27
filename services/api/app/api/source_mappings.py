@@ -14,7 +14,9 @@ from app.schemas import (
     SourceCardMappingOut,
     SourceCardMappingUpdateIn,
 )
+from app.api._mapping_approval import APPROVED, approval_http_error, guard_transition_to_approved
 from app.services.cache import delete_cache_prefix
+from app.services.exact_print_approval import ExactPrintApprovalError
 
 router = APIRouter(
     prefix="/admin/source-mappings", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -29,6 +31,7 @@ def _to_out(
     return SourceCardMappingOut(
         id=mapping.id,
         card_id=mapping.card_id,
+        card_print_id=mapping.card_print_id,
         card_code=card.card_code if card is not None else None,
         name_en=card.name_en if card is not None else None,
         name_jp=card.name_jp if card is not None else None,
@@ -155,6 +158,15 @@ def update_source_mapping(
             detail=f"Invalid review_status. Must be one of {list(REVIEW_STATUSES)}",
         )
 
+    # Checked BEFORE anything is written, so a refused PATCH leaves every
+    # field - not just review_status - exactly as it was. This endpoint is a
+    # transition into `approved` as surely as POST /approve is.
+    if updates.get("review_status") == APPROVED:
+        try:
+            guard_transition_to_approved(db, mapping)
+        except ExactPrintApprovalError as exc:
+            raise approval_http_error(exc) from exc
+
     for field, value in updates.items():
         setattr(mapping, field, value)
 
@@ -180,6 +192,12 @@ def reject_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
 @router.post("/{mapping_id}/approve", response_model=SourceCardMappingOut)
 def approve_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     mapping = _get_mapping_or_404(db, mapping_id)
+    # Before any write: a row with no exact print cannot become approved, and
+    # nothing here fills one in for it.
+    try:
+        guard_transition_to_approved(db, mapping)
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
     mapping.is_active = True
     mapping.review_status = "approved"
     mapping.last_verified_at = datetime.now(timezone.utc)

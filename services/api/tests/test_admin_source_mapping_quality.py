@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
-from tests.test_source_mappings import make_card, make_mapping, make_source
+from tests.test_source_mappings import make_card, make_mapping, make_print, make_source
 
 
 def test_quality_requires_admin_token(db_session):
@@ -143,9 +143,13 @@ def test_recheck_quality_real_run_updates_confidence_fields(client, db_session):
 def test_bulk_update_approve(client, db_session):
     source = make_source(db_session, "snkrdunk")
     card = make_card(db_session, card_code="OP01-001", variant=None)
+    # A bulk approve is an approval, so the row has to name an exact print
+    # like any other - see tests/test_legacy_mapping_approval_guard.py.
+    print_row = make_print(db_session)
     mapping = make_mapping(
         db_session, card, source, source_card_id="OP01-001",
         review_status="needs_review", is_active=False, manual_verified=False,
+        card_print_id=print_row.id,
     )
 
     response = client.post(

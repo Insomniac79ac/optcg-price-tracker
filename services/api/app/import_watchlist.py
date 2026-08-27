@@ -102,12 +102,23 @@ def _upsert_mapping(
         summary.mappings_updated += 1
 
     # A row the watchlist itself vouches for (manual_verified=true) is
-    # authoritative - re-importing it should un-reject/re-activate it even if
-    # an earlier review had flagged it, since a curated watchlist entry is a
-    # stronger signal than a prior auto-match review decision.
+    # authoritative about the LISTING - re-importing it should un-reject/
+    # re-activate it even if an earlier review had flagged it, since a curated
+    # watchlist entry is a stronger signal than a prior auto-match review
+    # decision.
+    #
+    # It is NOT authoritative about the printing, and no longer claims to be.
+    # This importer resolves its target from `card_code` alone, which is the
+    # one inference exact-print approval forbids: a code routinely spans
+    # several printings across products and artworks, so a card_code-only row
+    # cannot say which item a price belongs to. It therefore lands as
+    # `needs_review` and has to pass through an approval path that runs
+    # app.services.exact_print_approval before it counts as approved. Existing
+    # rows are untouched: this only governs what a fresh import writes.
     if manual_verified:
         mapping.is_active = True
-        mapping.review_status = "approved"
+        if mapping.review_status != "approved":
+            mapping.review_status = "needs_review"
 
 
 def _import_row(

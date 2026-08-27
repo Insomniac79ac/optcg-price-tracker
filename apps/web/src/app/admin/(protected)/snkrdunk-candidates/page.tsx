@@ -15,11 +15,14 @@ import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
+  type ApprovalContext,
+  type ApprovalPrintOption,
   type Card,
   type CandidateMatches,
   type RematchAllResult,
   type SnkrdunkCandidate,
   approveCandidateMatch,
+  fetchCandidatePrintOptions,
   fetchCandidateMatches,
   fetchCards,
   fetchSnkrdunkCandidates,
@@ -48,6 +51,108 @@ const REMATCH_ALL_STATUS_OPTIONS = [
 ];
 
 const LIMIT_OPTIONS = [50, 100, 200, 500] as const;
+
+/** The API's refusal, verbatim where it has one.
+ *
+ * A refused approval carries the reason and the rival printings it could not
+ * distinguish - which is the whole content of the decision. Flattening that
+ * to "Failed to approve match" would hide the only thing the operator needs. */
+function approvalErrorMessage(err: unknown): string {
+  const detail = (err as { body?: { detail?: unknown } })?.body?.detail;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const d = detail as { message?: string; alternatives?: number[] };
+    const alts = d.alternatives?.length
+      ? ` Candidate printings: ${d.alternatives.join(", ")}.`
+      : "";
+    return `${d.message ?? "Approval refused."}${alts}`;
+  }
+  return "Failed to approve match.";
+}
+
+/** One printing, shown the way a collector would recognise it.
+ *
+ * The artwork leads, at a size where two alternate arts are actually
+ * distinguishable - that is the decision being made. The internal id is
+ * present but last and muted: it is what the request sends, not what the
+ * operator judges by.
+ */
+function PrintOptionCard({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: ApprovalPrintOption;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const src = option.display_image?.url ?? option.image_url ?? null;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={!option.approvable}
+      aria-pressed={selected}
+      className={`flex w-full gap-3 rounded border p-3 text-left transition-colors ${
+        selected
+          ? "border-accent-teal bg-bg-elevated"
+          : "border-border-default bg-bg-surface hover:border-border-strong"
+      } ${option.approvable ? "" : "cursor-not-allowed opacity-60"}`}
+    >
+      {src ? (
+        // object-contain, never cover: a cropped card is the wrong card.
+        <img
+          src={src}
+          alt={`${option.name_en ?? option.name_jp ?? option.card_code} (${option.card_code})`}
+          className="h-32 w-auto shrink-0 rounded object-contain"
+        />
+      ) : (
+        <div className="flex h-32 w-24 shrink-0 items-center justify-center rounded bg-bg-page text-xs text-text-muted">
+          no image
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-text-primary">
+          {option.name_en ?? option.name_jp ?? option.card_code}
+          {option.art_ordinal !== null && (
+            <span className="ml-1.5 text-xs font-normal text-text-muted">
+              Art {option.art_ordinal}
+            </span>
+          )}
+        </div>
+        {option.name_en && option.name_jp && (
+          <div className="text-xs text-text-secondary">{option.name_jp}</div>
+        )}
+        <div className="mono mt-1 text-xs text-text-muted">{option.card_code}</div>
+        <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+          {option.found_in_product && (
+            <span className="rounded bg-bg-page px-1.5 py-0.5 text-text-secondary">
+              Found in {option.found_in_product}
+            </span>
+          )}
+          {option.rarity && (
+            <span className="rounded bg-bg-page px-1.5 py-0.5 text-text-secondary">
+              {option.rarity}
+            </span>
+          )}
+          {option.special_print && (
+            <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-purple-300">
+              {option.special_print}
+            </span>
+          )}
+          {option.printing && (
+            <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-sky-300">
+              {option.printing}
+            </span>
+          )}
+        </div>
+        {!option.approvable && option.refusal_detail && (
+          <div className="mt-1.5 text-xs text-amber-400">{option.refusal_detail}</div>
+        )}
+        <div className="mt-1 text-[10px] text-text-faint">print #{option.card_print_id}</div>
+      </div>
+    </button>
+  );
+}
 
 export default function SnkrdunkCandidatesPage() {
   const [unauthorized, setUnauthorized] = useState(false);
@@ -157,6 +262,14 @@ export default function SnkrdunkCandidatesPage() {
       .slice(0, 25);
   }, [cards, cardQuery]);
 
+  // The exact printing the mapping will name. Never defaulted to "the
+  // first option": when the evidence leaves several printings standing the
+  // API refuses anyway, and pre-selecting one would only invite the operator
+  // to rubber-stamp a guess.
+  const [printOptions, setPrintOptions] = useState<ApprovalContext | null>(null);
+  const [printOptionsError, setPrintOptionsError] = useState<string | null>(null);
+  const [selectedPrintId, setSelectedPrintId] = useState<number | null>(null);
+
   function updateCandidateInList(updated: SnkrdunkCandidate) {
     setCandidates((prev) =>
       prev.map((c) => (c.id === updated.id ? updated : c)),
@@ -171,6 +284,9 @@ export default function SnkrdunkCandidatesPage() {
     setReviewNotes("");
     setCardQuery("");
     setSelectedCardId(candidate.matched_card_id ?? candidate.best_match_card_id);
+    setPrintOptions(null);
+    setPrintOptionsError(null);
+    setSelectedPrintId(null);
     fetchCandidateMatches(candidate.id)
       .then((data) => setDetailData(data))
       .catch((err) => {
@@ -178,6 +294,17 @@ export default function SnkrdunkCandidatesPage() {
         else setDetailError("Failed to load match candidates.");
       })
       .finally(() => setDetailLoading(false));
+    fetchCandidatePrintOptions(candidate.id)
+      .then((data) => {
+        setPrintOptions(data);
+        // Pre-select only when the evidence itself leaves exactly one
+        // printing standing.
+        setSelectedPrintId(data.resolvable_card_print_id);
+      })
+      .catch((err) => {
+        if (err instanceof AdminAuthRequiredError) setUnauthorized(true);
+        else setPrintOptionsError("Failed to load printings for this listing.");
+      });
   }
 
   function closeDetail() {
@@ -202,19 +329,27 @@ export default function SnkrdunkCandidatesPage() {
   }
 
   async function handleApprove(candidateId: number, cardId: number) {
+    if (selectedPrintId === null) {
+      setActionError("Choose the exact printing this listing is selling first.");
+      return;
+    }
     setPendingAction(candidateId);
     setActionError(null);
     try {
       const updated = await approveCandidateMatch(
         candidateId,
         cardId,
+        selectedPrintId,
         reviewNotes.trim() || undefined,
       );
       updateCandidateInList(updated);
       closeDetail();
     } catch (err) {
       if (err instanceof AdminAuthRequiredError) setUnauthorized(true);
-      else setActionError("Failed to approve match.");
+      // The API's refusal is the useful message here - it says which
+      // printings the evidence could not tell apart - so it is surfaced
+      // rather than replaced with a generic failure line.
+      else setActionError(approvalErrorMessage(err));
     } finally {
       setPendingAction(null);
     }
@@ -493,20 +628,9 @@ export default function SnkrdunkCandidatesPage() {
                               >
                                 Rematch
                               </ActionButton>
-                              {candidate.best_match_card_id !== null && (
-                                <ActionButton
-                                  variant="primary"
-                                  onClick={() =>
-                                    handleApprove(
-                                      candidate.id,
-                                      candidate.best_match_card_id!,
-                                    )
-                                  }
-                                  disabled={pendingAction === candidate.id}
-                                >
-                                  Approve best
-                                </ActionButton>
-                              )}
+                              {/* Approval moved into the detail panel: it now
+                                  requires choosing the exact printing, which
+                                  cannot be done from a row in a list. */}
                               <ActionButton
                                 variant="real"
                                 onClick={() => handleReject(candidate.id)}
@@ -596,6 +720,81 @@ export default function SnkrdunkCandidatesPage() {
                 </div>
               )}
 
+              {printOptionsError && (
+                <div className="mb-3 rounded border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">
+                  {printOptionsError}
+                </div>
+              )}
+
+              {printOptions && (
+                <section className="mb-5">
+                  {/* SOURCE CANDIDATE - what the listing itself says. */}
+                  <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-faint">
+                    Source listing
+                  </h3>
+                  <div className="flex gap-3 rounded border border-border-default bg-bg-surface p-3">
+                    {printOptions.candidate.source_image_url && (
+                      <img
+                        src={printOptions.candidate.source_image_url}
+                        alt=""
+                        className="h-24 w-auto shrink-0 rounded object-contain"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1 text-sm">
+                      <div className="font-medium text-text-primary">
+                        {printOptions.candidate.title ?? "(no title)"}
+                      </div>
+                      <a
+                        href={printOptions.candidate.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mono break-all text-xs text-accent-teal hover:underline"
+                      >
+                        {printOptions.candidate.source_url}
+                      </a>
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary">
+                        <span>{printOptions.candidate.source}</span>
+                        {printOptions.candidate.detected_card_code && (
+                          <span>code {printOptions.candidate.detected_card_code}</span>
+                        )}
+                        {printOptions.candidate.detected_set_code && (
+                          <span>product {printOptions.candidate.detected_set_code}</span>
+                        )}
+                        {printOptions.candidate.detected_variant && (
+                          <span>artwork {printOptions.candidate.detected_variant}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TARGET PRINT - which physical printing is being priced. */}
+                  <h3 className="mb-2 mt-4 text-xs font-medium uppercase tracking-wide text-text-faint">
+                    Which printing is this listing selling?
+                  </h3>
+                  {printOptions.ambiguity_reason && (
+                    <div className="mb-2 rounded border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                      {printOptions.ambiguity_reason}
+                    </div>
+                  )}
+                  {printOptions.options.length === 0 ? (
+                    <div className="rounded border border-border-default bg-bg-surface p-3 text-sm text-text-muted">
+                      No active verified printing matches this listing.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {printOptions.options.map((option) => (
+                        <PrintOptionCard
+                          key={option.card_print_id}
+                          option={option}
+                          selected={selectedPrintId === option.card_print_id}
+                          onSelect={() => setSelectedPrintId(option.card_print_id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
               {!detailLoading && detailData && (
                 <>
                   {detailData.matches.length === 0 && (
@@ -628,9 +827,14 @@ export default function SnkrdunkCandidatesPage() {
                                 detailCandidateId !== null &&
                                 handleApprove(detailCandidateId, match.card_id)
                               }
-                              disabled={pendingAction === detailCandidateId}
+                              disabled={
+                                pendingAction === detailCandidateId ||
+                                selectedPrintId === null
+                              }
                             >
-                              Approve
+                              {selectedPrintId === null
+                                ? "Choose a printing"
+                                : "Approve"}
                             </ActionButton>
                           </div>
                         </div>

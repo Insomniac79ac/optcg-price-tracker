@@ -685,6 +685,12 @@ class SnkrdunkCandidateListOut(BaseModel):
 
 class SnkrdunkCandidateMatchIn(BaseModel):
     card_id: int
+    # Required, and required on purpose: a mapping is a claim about which
+    # printing was priced, and the legacy card_id cannot carry that claim (25
+    # cards against 4,281 prints). Approval is refused rather than inferred
+    # when the source evidence does not single this print out - see
+    # app.services.exact_print_approval.
+    card_print_id: int
     manual_verified: bool = True
 
 
@@ -730,6 +736,8 @@ class RematchAllOut(BaseModel):
 
 class ApproveMatchIn(BaseModel):
     card_id: int
+    # See SnkrdunkCandidateMatchIn.card_print_id - same contract, same reason.
+    card_print_id: int
     review_notes: str | None = None
 
 
@@ -844,6 +852,11 @@ class AlertRuleUpdateIn(BaseModel):
 class SourceCardMappingOut(BaseModel):
     id: int
     card_id: int
+    # Additive and read-only here. NULL on every legacy row and populated on
+    # every new approval; the PATCH schema deliberately has no counterpart,
+    # so a print can only ever be (re)assigned through an approval path that
+    # runs the exact-print gate.
+    card_print_id: int | None = None
     card_code: str | None
     name_en: str | None
     name_jp: str | None
@@ -3866,3 +3879,64 @@ class AdminLoginVerifyOut(BaseModel):
     id: str
     email: str
     role: Literal["admin"]
+
+
+# --- exact-print mapping approval -------------------------------------------
+# The operator's decision aid. Everything here answers "which physical card is
+# this listing selling?", so it is card facts a collector would recognise -
+# artwork, names, product, printing - and never raw internal identifiers as
+# the primary cue. `card_print_id` is present because it is what the approval
+# call must send, not because it is what the operator reads.
+
+
+class ApprovalSourceCandidateOut(BaseModel):
+    """The listing side of the decision, exactly as the source published it."""
+
+    candidate_id: int
+    source: str
+    title: str | None
+    source_url: str
+    source_image_url: str | None
+    detected_card_code: str | None
+    detected_set_code: str | None
+    detected_variant: str | None
+    detected_rarity: str | None
+    price_jpy: int | None
+
+
+class ApprovalPrintOptionOut(BaseModel):
+    """One printing the listing could be describing, presented so an operator
+    can tell it apart from its siblings by eye."""
+
+    card_print_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    # The full uncropped artwork, same resolution path the public catalogue
+    # uses - a thumbnail is not enough to tell two alternate arts apart.
+    display_image: DisplayImageOut | None
+    image_url: str | None
+    found_in_product: str | None
+    rarity: str | None
+    special_print: str | None
+    printing: str | None
+    # Only where it is actually needed to separate two otherwise identical
+    # rows on screen; None when the printing already reads uniquely.
+    art_ordinal: int | None
+    language: str
+    # Whether THIS option can be approved from the evidence currently stored,
+    # and if not, why. The list is not filtered down to the approvable one:
+    # seeing the rejected siblings is how an operator understands that the
+    # source simply did not say which of them it meant.
+    approvable: bool
+    refusal_code: str | None
+    refusal_detail: str | None
+
+
+class ApprovalContextOut(BaseModel):
+    candidate: ApprovalSourceCandidateOut
+    options: list[ApprovalPrintOptionOut]
+    # Populated only when exactly one option is approvable - the UI uses it to
+    # pre-select, never to auto-approve.
+    resolvable_card_print_id: int | None
+    ambiguity_reason: str | None

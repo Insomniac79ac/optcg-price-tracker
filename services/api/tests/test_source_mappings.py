@@ -1,4 +1,54 @@
-from app.models import Card, Source, SourceCardMapping
+from app.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    ReleaseProduct,
+    Source,
+    SourceCardMapping,
+)
+
+
+def make_print(db_session, card_code: str = "OP01-001") -> CardPrint:
+    """An active, verified printing for a mapping to name.
+
+    Approval now requires one: a row with no card_print_id cannot enter
+    `approved`, because a price attached to a card code says nothing about
+    which printing was sold.
+    """
+    product = ReleaseProduct(
+        source_catalogue="jp",
+        official_code="OP-01",
+        display_name="OP-01",
+        first_seen_name="OP-01",
+        source_series_id="OP01",
+        source_url="https://example.test/OP-01",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.flush()
+    canonical = CanonicalCard(
+        card_code=card_code,
+        name_en="Monkey D. Luffy",
+        name_jp="モンキー・D・ルフィ",
+        card_type="Leader",
+        rarity="L",
+    )
+    db_session.add(canonical)
+    db_session.flush()
+    row = CardPrint(
+        canonical_card_id=canonical.id,
+        language="jp",
+        release_product_code="OP-01",
+        release_product_id=product.id,
+        artwork_key=f"sha256:{card_code}-base",
+        official_asset_variant="base",
+        verification_status="verified",
+        is_active=True,
+    )
+    db_session.add(row)
+    db_session.commit()
+    db_session.refresh(row)
+    return row
 
 
 def make_card(db_session, **overrides) -> Card:
@@ -239,8 +289,14 @@ def test_reject_source_mapping(client, db_session):
 def test_approve_source_mapping(client, db_session):
     card = make_card(db_session)
     source = make_source(db_session)
+    print_row = make_print(db_session)
     mapping = make_mapping(
-        db_session, card, source, is_active=False, review_status="needs_review"
+        db_session,
+        card,
+        source,
+        is_active=False,
+        review_status="needs_review",
+        card_print_id=print_row.id,
     )
 
     response = client.post(f"/admin/source-mappings/{mapping.id}/approve")

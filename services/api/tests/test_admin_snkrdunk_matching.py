@@ -1,6 +1,14 @@
 import pytest
 
-from app.models import Card, SnkrdunkCandidate, Source, SourceCardMapping
+from app.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    ReleaseProduct,
+    SnkrdunkCandidate,
+    Source,
+    SourceCardMapping,
+)
 
 
 @pytest.fixture()
@@ -17,10 +25,59 @@ def seeded(db_session):
         set_code="OP01", rarity="SR", variant="base", language="jp",
     )
     db_session.add_all([card, other_card])
+    db_session.flush()
+
+    # Approval now names an exact printing, so the fixture supplies one per
+    # card code. One active verified print each, so the card code alone
+    # identifies it and these tests stay about the review workflow rather than
+    # the ambiguity rules (test_exact_print_approval.py owns those).
+    product = ReleaseProduct(
+        source_catalogue="jp",
+        official_code="OP01",
+        display_name="OP-01",
+        first_seen_name="OP-01",
+        source_series_id="OP01",
+        source_url="https://example.test/OP-01",
+        verification_status="verified",
+    )
+    db_session.add(product)
+    db_session.flush()
+
+    prints = {}
+    for code, name_en, name_jp, rarity in (
+        ("OP01-001", "Monkey D. Luffy", "モンキー・D・ルフィ", "L"),
+        ("OP01-013", "Roronoa Zoro", "ロロノア・ゾロ", "SR"),
+    ):
+        canonical = CanonicalCard(
+            card_code=code, name_en=name_en, name_jp=name_jp,
+            card_type="Character", rarity=rarity,
+        )
+        db_session.add(canonical)
+        db_session.flush()
+        row = CardPrint(
+            canonical_card_id=canonical.id,
+            language="jp",
+            release_product_code="OP01",
+            release_product_id=product.id,
+            artwork_key=f"sha256:{code}-base",
+            official_asset_variant="base",
+            verification_status="verified",
+            is_active=True,
+        )
+        db_session.add(row)
+        db_session.flush()
+        prints[code] = row
+
     db_session.commit()
     db_session.refresh(card)
     db_session.refresh(other_card)
-    return {"source": source, "card": card, "other_card": other_card}
+    return {
+        "source": source,
+        "card": card,
+        "other_card": other_card,
+        "print": prints["OP01-001"],
+        "other_print": prints["OP01-013"],
+    }
 
 
 @pytest.fixture()
@@ -152,7 +209,11 @@ def test_rematch_all_real_run_updates_candidates(client, db_session, strong_cand
 def test_approve_match_creates_source_mapping_with_review_fields(client, db_session, strong_candidate, seeded):
     response = client.post(
         f"/admin/snkrdunk-candidates/{strong_candidate.id}/approve-match",
-        json={"card_id": seeded["card"].id, "review_notes": "looks right"},
+        json={
+            "card_id": seeded["card"].id,
+            "card_print_id": seeded["print"].id,
+            "review_notes": "looks right",
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -174,29 +235,36 @@ def test_approve_match_creates_source_mapping_with_review_fields(client, db_sess
     assert mapping.is_active is True
     assert mapping.match_confidence == 93.0
     assert mapping.review_notes == "looks right"
+    assert mapping.card_print_id == seeded["print"].id
 
 
-def test_approve_match_allows_selecting_non_best_card(client, db_session, strong_candidate, seeded):
+def test_approve_match_refuses_a_print_the_source_code_contradicts(
+    client, db_session, strong_candidate, seeded
+):
+    """An operator may still overrule the scorer's suggestion, but not the
+    source's own card code.
+
+    Before the exact-print gate this wrote a mapping for whatever card the
+    operator named, with no reference to what the listing said. The listing
+    here reports OP01-001; approving a printing of OP01-013 against it would
+    be asserting a fact the evidence contradicts.
+    """
     response = client.post(
         f"/admin/snkrdunk-candidates/{strong_candidate.id}/approve-match",
-        json={"card_id": seeded["other_card"].id},
+        json={
+            "card_id": seeded["other_card"].id,
+            "card_print_id": seeded["other_print"].id,
+        },
     )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["matched_card_id"] == seeded["other_card"].id
-
-    mapping = (
-        db_session.query(SourceCardMapping)
-        .filter_by(card_id=seeded["other_card"].id, source_id=seeded["source"].id)
-        .one()
-    )
-    assert mapping.card_id == seeded["other_card"].id
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "card_code_mismatch"
+    assert db_session.query(SourceCardMapping).count() == 0
 
 
-def test_approve_match_404_for_missing_card(client, strong_candidate):
+def test_approve_match_404_for_missing_card(client, strong_candidate, seeded):
     response = client.post(
         f"/admin/snkrdunk-candidates/{strong_candidate.id}/approve-match",
-        json={"card_id": 999999},
+        json={"card_id": 999999, "card_print_id": strong_candidate.id},
     )
     assert response.status_code == 404
 

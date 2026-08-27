@@ -25,6 +25,7 @@ const rematchCandidate = vi.fn();
 const rematchAllCandidates = vi.fn();
 const approveCandidateMatch = vi.fn();
 const rejectCandidateMatch = vi.fn();
+const fetchCandidatePrintOptions = vi.fn();
 
 const fetchSavedViews = vi.fn().mockResolvedValue({
   items: [],
@@ -42,6 +43,7 @@ vi.mock("@/lib/api", async () => {
     rematchAllCandidates: (...args: unknown[]) => rematchAllCandidates(...args),
     approveCandidateMatch: (...args: unknown[]) => approveCandidateMatch(...args),
     rejectCandidateMatch: (...args: unknown[]) => rejectCandidateMatch(...args),
+    fetchCandidatePrintOptions: (...args: unknown[]) => fetchCandidatePrintOptions(...args),
   };
 });
 
@@ -105,7 +107,27 @@ describe("SnkrdunkCandidatesPage", () => {
     rematchAllCandidates.mockReset();
     approveCandidateMatch.mockReset();
     rejectCandidateMatch.mockReset();
+    fetchCandidatePrintOptions.mockReset();
     fetchCards.mockResolvedValue([]);
+    // Opening the detail panel always asks for the printings; tests that do
+    // not care about them still need a promise back rather than undefined.
+    fetchCandidatePrintOptions.mockResolvedValue({
+      candidate: {
+        candidate_id: 1,
+        source: "snkrdunk",
+        title: null,
+        source_url: "https://snkrdunk.com/cards/1",
+        source_image_url: null,
+        detected_card_code: "OP01-001",
+        detected_set_code: null,
+        detected_variant: null,
+        detected_rarity: null,
+        price_jpy: null,
+      },
+      options: [],
+      resolvable_card_print_id: null,
+      ambiguity_reason: null,
+    });
   });
 
   it("does not crash and shows an empty state when there are no candidates", async () => {
@@ -167,9 +189,82 @@ describe("SnkrdunkCandidatesPage", () => {
     );
   });
 
-  it("approves the best match from a row action", async () => {
+  /** A single ranked card match, so the detail panel has an Approve button to
+   * press. The card-level ranking is unchanged by this tranche; what changed
+   * is that pressing Approve now also has to name a printing. */
+  function matchesFor(candidate: SnkrdunkCandidate): CandidateMatches {
+    return {
+      candidate,
+      matches: [
+        {
+          card_id: 1,
+          card_code: "OP01-001",
+          name_en: "Monkey D. Luffy",
+          name_jp: "モンキー・D・ルフィ",
+          set_code: "OP01",
+          rarity: "L",
+          variant: "base",
+          score: 93,
+          confidence_label: "exact",
+          ambiguous: false,
+          explanation: { positive: ["exact card_code match"], negative: [], caps_applied: [] },
+        },
+      ],
+    };
+  }
+
+  it("no longer offers one-click approval from a row", async () => {
+    // Approval names an exact printing now, and a printing cannot be chosen
+    // from a row in a list - so the row action is gone on purpose.
     const candidate = makeCandidate();
     fetchSnkrdunkCandidates.mockResolvedValue(listWith([candidate]));
+    render(<SnkrdunkCandidatesPage />);
+
+    await waitFor(() => expect(screen.getAllByText(/OP01-001/).length).toBeGreaterThan(0));
+
+    expect(screen.queryByRole("button", { name: "Approve best" })).not.toBeInTheDocument();
+    expect(approveCandidateMatch).not.toHaveBeenCalled();
+  });
+
+  it("approves with the printing the operator picked", async () => {
+    const candidate = makeCandidate();
+    fetchSnkrdunkCandidates.mockResolvedValue(listWith([candidate]));
+    fetchCandidatePrintOptions.mockResolvedValue({
+      candidate: {
+        candidate_id: 1,
+        source: "snkrdunk",
+        title: "OP01-001 Luffy",
+        source_url: "https://snkrdunk.com/cards/1",
+        source_image_url: null,
+        detected_card_code: "OP01-001",
+        detected_set_code: "OP-01",
+        detected_variant: "p1",
+        detected_rarity: null,
+        price_jpy: 1500,
+      },
+      options: [
+        {
+          card_print_id: 77,
+          card_code: "OP01-001",
+          name_en: "Monkey D. Luffy",
+          name_jp: "モンキー・D・ルフィ",
+          display_image: null,
+          image_url: null,
+          found_in_product: "OP-01",
+          rarity: "Leader",
+          special_print: null,
+          printing: "Alt Art",
+          art_ordinal: null,
+          language: "jp",
+          approvable: true,
+          refusal_code: null,
+          refusal_detail: null,
+        },
+      ],
+      resolvable_card_print_id: 77,
+      ambiguity_reason: null,
+    });
+    fetchCandidateMatches.mockResolvedValue(matchesFor(candidate));
     approveCandidateMatch.mockResolvedValue({
       ...candidate,
       match_status: "matched",
@@ -178,12 +273,74 @@ describe("SnkrdunkCandidatesPage", () => {
     render(<SnkrdunkCandidatesPage />);
 
     await waitFor(() => expect(screen.getAllByText(/OP01-001/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Matches" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Approve best" }));
+    await waitFor(() => expect(fetchCandidatePrintOptions).toHaveBeenCalledWith(1));
+    await waitFor(() =>
+      expect(screen.getByText("Which printing is this listing selling?")).toBeInTheDocument(),
+    );
+    // The single justifiable printing is pre-selected, so Approve is live.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
 
     await waitFor(() =>
-      expect(approveCandidateMatch).toHaveBeenCalledWith(1, 1, undefined),
+      expect(approveCandidateMatch).toHaveBeenCalledWith(1, 1, 77, undefined),
     );
+  });
+
+  it("will not approve while the evidence leaves the printing undecided", async () => {
+    const candidate = makeCandidate();
+    fetchSnkrdunkCandidates.mockResolvedValue(listWith([candidate]));
+    fetchCandidatePrintOptions.mockResolvedValue({
+      candidate: {
+        candidate_id: 1,
+        source: "snkrdunk",
+        title: "OP01-001 Luffy",
+        source_url: "https://snkrdunk.com/cards/1",
+        source_image_url: null,
+        detected_card_code: "OP01-001",
+        detected_set_code: null,
+        detected_variant: null,
+        detected_rarity: null,
+        price_jpy: 1500,
+      },
+      options: [1, 2].map((n) => ({
+        card_print_id: 70 + n,
+        card_code: "OP01-001",
+        name_en: "Monkey D. Luffy",
+        name_jp: "モンキー・D・ルフィ",
+        display_image: null,
+        image_url: null,
+        found_in_product: "OP-01",
+        rarity: "Leader",
+        special_print: null,
+        printing: n === 1 ? null : "Alt Art",
+        art_ordinal: n,
+        language: "jp",
+        approvable: false,
+        refusal_code: "evidence_cannot_distinguish_print",
+        refusal_detail: "The source evidence does not distinguish these printings.",
+      })),
+      resolvable_card_print_id: null,
+      ambiguity_reason: "0 of 2 printings can be justified from the stored evidence.",
+    });
+    fetchCandidateMatches.mockResolvedValue(matchesFor(candidate));
+    render(<SnkrdunkCandidatesPage />);
+
+    await waitFor(() => expect(screen.getAllByText(/OP01-001/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Matches" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/0 of 2 printings can be justified/),
+      ).toBeInTheDocument(),
+    );
+    // Nothing is pre-selected, and neither rival can be picked.
+    expect(screen.getByRole("button", { name: "Choose a printing" })).toBeDisabled();
+    expect(approveCandidateMatch).not.toHaveBeenCalled();
   });
 
   it("rejects a candidate from a row action", async () => {

@@ -13,6 +13,12 @@ from app.schemas import (
     SnkrdunkCandidateMatchIn,
     SnkrdunkCandidateOut,
 )
+from app.api._mapping_approval import approval_http_error
+from app.services.exact_print_approval import (
+    ExactPrintApprovalError,
+    SourceEvidence,
+    resolve_exact_print,
+)
 
 router = APIRouter(
     prefix="/snkrdunk", tags=["snkrdunk"], dependencies=[Depends(require_admin_token)]
@@ -122,13 +128,28 @@ def match_candidate(
     if source is None:
         raise HTTPException(status_code=500, detail="snkrdunk source is not configured")
 
+    # The same exact-print gate as the review workflow's approve-match. This
+    # is the "I already know the card" path, which makes the corroboration
+    # more important rather than less: there is no scorer in front of it.
+    try:
+        decision = resolve_exact_print(
+            db,
+            card_print_id=body.card_print_id,
+            evidence=SourceEvidence.from_snkrdunk_candidate(candidate),
+        )
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
+
     candidate.match_status = "matched"
     candidate.matched_card_id = card.id
     candidate.match_confidence = 1.0
 
+    # Keyed on (source, source_url) - the database's own uniqueness contract
+    # for a listing - not on (card_id, source_id), which pre-dated exact
+    # prints and collapsed every print of a card onto one row.
     mapping = (
         db.query(SourceCardMapping)
-        .filter_by(card_id=card.id, source_id=source.id)
+        .filter_by(source_id=source.id, source_url=candidate.source_url)
         .one_or_none()
     )
     if mapping is None:
@@ -139,6 +160,9 @@ def match_candidate(
         )
         db.add(mapping)
 
+    mapping.card_id = card.id
+    mapping.card_print_id = decision.card_print.id
+    mapping.review_notes = decision.as_review_note()
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
     mapping.source_url = candidate.source_url
     mapping.match_confidence = 1.0

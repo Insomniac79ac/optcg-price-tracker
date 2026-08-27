@@ -1,6 +1,14 @@
 import pytest
 
-from app.models import Card, SnkrdunkCandidate, Source, SourceCardMapping
+from app.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    ReleaseProduct,
+    SnkrdunkCandidate,
+    Source,
+    SourceCardMapping,
+)
 from app.seed import DEMO_CARDS, SOURCES
 
 
@@ -12,6 +20,50 @@ def seeded_db(db_session):
         db_session.add(Card(**data))
     db_session.commit()
     return db_session
+
+
+@pytest.fixture()
+def luffy_print(seeded_db):
+    """The exact printing OP01-001 approvals now have to name.
+
+    Exactly one active verified print for the code, so the card code alone
+    identifies it and these tests stay about the endpoints rather than about
+    the ambiguity rules (those live in test_exact_print_approval.py).
+    """
+    product = ReleaseProduct(
+        source_catalogue="jp",
+        official_code="OP-01",
+        display_name="OP-01",
+        first_seen_name="OP-01",
+        source_series_id="OP01",
+        source_url="https://example.test/OP-01",
+        verification_status="verified",
+    )
+    seeded_db.add(product)
+    seeded_db.flush()
+    canonical = CanonicalCard(
+        card_code="OP01-001",
+        name_en="Monkey D. Luffy",
+        name_jp="モンキー・D・ルフィ",
+        card_type="Leader",
+        rarity="L",
+    )
+    seeded_db.add(canonical)
+    seeded_db.flush()
+    row = CardPrint(
+        canonical_card_id=canonical.id,
+        language="jp",
+        release_product_code="OP-01",
+        release_product_id=product.id,
+        artwork_key="sha256:OP01-001-base",
+        official_asset_variant="base",
+        verification_status="verified",
+        is_active=True,
+    )
+    seeded_db.add(row)
+    seeded_db.commit()
+    seeded_db.refresh(row)
+    return row
 
 
 @pytest.fixture()
@@ -114,12 +166,12 @@ def test_get_candidate_not_found(client, seeded_db):
     assert response.status_code == 404
 
 
-def test_match_candidate_creates_mapping(client, candidate, seeded_db):
+def test_match_candidate_creates_mapping(client, candidate, seeded_db, luffy_print):
     luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
 
     response = client.post(
         f"/snkrdunk/candidates/{candidate.id}/match",
-        json={"card_id": luffy.id, "manual_verified": True},
+        json={"card_id": luffy.id, "card_print_id": luffy_print.id, "manual_verified": True},
     )
 
     assert response.status_code == 200
@@ -147,12 +199,14 @@ def test_match_candidate_creates_mapping(client, candidate, seeded_db):
     assert mapping.review_status == "approved"
 
 
-def test_match_candidate_without_manual_verification_needs_review(client, candidate, seeded_db):
+def test_match_candidate_without_manual_verification_needs_review(
+    client, candidate, seeded_db, luffy_print
+):
     luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
 
     response = client.post(
         f"/snkrdunk/candidates/{candidate.id}/match",
-        json={"card_id": luffy.id, "manual_verified": False},
+        json={"card_id": luffy.id, "card_print_id": luffy_print.id, "manual_verified": False},
     )
 
     assert response.status_code == 200
@@ -168,7 +222,10 @@ def test_match_candidate_without_manual_verification_needs_review(client, candid
     assert mapping.review_status == "needs_review"
 
 
-def test_match_candidate_updates_existing_mapping(client, candidate, seeded_db):
+def test_match_candidate_updates_the_mapping_for_the_same_listing(
+    client, candidate, seeded_db, luffy_print
+):
+    """Same listing URL -> the same row is updated, never duplicated."""
     luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
     snkrdunk_source = seeded_db.query(Source).filter_by(name="snkrdunk").one()
 
@@ -176,7 +233,7 @@ def test_match_candidate_updates_existing_mapping(client, candidate, seeded_db):
         card_id=luffy.id,
         source_id=snkrdunk_source.id,
         source_card_id="OP01-001",
-        source_url="https://snkrdunk.com/cards/old-url",
+        source_url=candidate.source_url,
         match_confidence=0.6,
         manual_verified=False,
     )
@@ -185,34 +242,73 @@ def test_match_candidate_updates_existing_mapping(client, candidate, seeded_db):
 
     response = client.post(
         f"/snkrdunk/candidates/{candidate.id}/match",
-        json={"card_id": luffy.id, "manual_verified": True},
+        json={"card_id": luffy.id, "card_print_id": luffy_print.id, "manual_verified": True},
     )
     assert response.status_code == 200
 
-    mappings = (
-        seeded_db.query(SourceCardMapping)
-        .filter_by(card_id=luffy.id, source_id=snkrdunk_source.id)
-        .all()
-    )
+    mappings = seeded_db.query(SourceCardMapping).filter_by(source_id=snkrdunk_source.id).all()
     assert len(mappings) == 1
+    assert mappings[0].id == existing.id
     assert mappings[0].source_url == candidate.source_url
     assert mappings[0].match_confidence == 1.0
     assert mappings[0].manual_verified is True
+    assert mappings[0].card_print_id == luffy_print.id
 
 
-def test_match_candidate_card_not_found(client, candidate):
+def test_match_candidate_leaves_a_different_listings_mapping_alone(
+    client, candidate, seeded_db, luffy_print
+):
+    """A mapping is per listing, matching the database's own
+    UNIQUE (source_id, source_url).
+
+    The lookup used to be keyed on (card_id, source_id), which meant matching
+    one listing REWROTE whatever mapping the card already had - silently
+    re-pointing a different listing's row at this candidate's URL. Keyed on
+    the listing, the two coexist, which is also the only way one card's
+    several printings can each carry their own source.
+    """
+    luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
+    snkrdunk_source = seeded_db.query(Source).filter_by(name="snkrdunk").one()
+
+    other_listing = SourceCardMapping(
+        card_id=luffy.id,
+        source_id=snkrdunk_source.id,
+        source_card_id="OP01-001",
+        source_url="https://snkrdunk.com/cards/a-different-listing",
+        match_confidence=0.6,
+        manual_verified=False,
+    )
+    seeded_db.add(other_listing)
+    seeded_db.commit()
+    untouched_id = other_listing.id
+
     response = client.post(
         f"/snkrdunk/candidates/{candidate.id}/match",
-        json={"card_id": 999999, "manual_verified": True},
+        json={"card_id": luffy.id, "card_print_id": luffy_print.id, "manual_verified": True},
+    )
+    assert response.status_code == 200
+
+    mappings = seeded_db.query(SourceCardMapping).filter_by(source_id=snkrdunk_source.id).all()
+    assert len(mappings) == 2
+    survivor = next(m for m in mappings if m.id == untouched_id)
+    assert survivor.source_url == "https://snkrdunk.com/cards/a-different-listing"
+    assert survivor.match_confidence == 0.6
+    assert survivor.manual_verified is False
+
+
+def test_match_candidate_card_not_found(client, candidate, luffy_print):
+    response = client.post(
+        f"/snkrdunk/candidates/{candidate.id}/match",
+        json={"card_id": 999999, "card_print_id": luffy_print.id, "manual_verified": True},
     )
     assert response.status_code == 404
 
 
-def test_match_candidate_not_found(client, seeded_db):
+def test_match_candidate_not_found(client, seeded_db, luffy_print):
     luffy = seeded_db.query(Card).filter_by(card_code="OP01-001").one()
     response = client.post(
         "/snkrdunk/candidates/999999/match",
-        json={"card_id": luffy.id, "manual_verified": True},
+        json={"card_id": luffy.id, "card_print_id": luffy_print.id, "manual_verified": True},
     )
     assert response.status_code == 404
 

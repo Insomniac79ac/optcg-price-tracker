@@ -21,6 +21,9 @@ from app.db import get_db
 from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.schemas import (
+    ApprovalContextOut,
+    ApprovalPrintOptionOut,
+    ApprovalSourceCandidateOut,
     ApproveMatchIn,
     CandidateMatchesOut,
     CandidateMatchOut,
@@ -38,6 +41,16 @@ from app.services.card_matching import (
     rank_candidate_matches,
 )
 from app.services.cache import delete_cache_prefix
+from app.api._mapping_approval import approval_http_error
+from app.services.display_image import get_display_images_for_prints
+from app.services.exact_print_approval import (
+    ExactPrintApprovalError,
+    SourceEvidence,
+    sibling_prints_for_card_code,
+    printing_label,
+    resolve_exact_print,
+    special_print_label,
+)
 
 router = APIRouter(
     prefix="/admin/snkrdunk-candidates", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -183,6 +196,106 @@ def rematch_all_candidates(body: RematchAllIn, db: Session = Depends(get_db)):
     return RematchAllOut(dry_run=body.dry_run, **counts)
 
 
+@router.get("/{candidate_id}/print-options", response_model=ApprovalContextOut)
+def get_print_options(candidate_id: int, db: Session = Depends(get_db)):
+    """What the operator needs to see before approving a mapping.
+
+    The listing on one side, and on the other every active verified printing
+    that shares its card code - each with its artwork, names, product and
+    printing type, and a straight yes/no on whether the stored evidence can
+    justify approving it.
+
+    The siblings that CANNOT be approved are returned too, and that is the
+    point of the screen: when a card code covers five printings and the source
+    named only the code, the operator should see the five and understand that
+    nothing here distinguishes them, rather than be handed one row and asked
+    to trust it.
+    """
+    candidate = _get_candidate_or_404(db, candidate_id)
+    evidence = SourceEvidence.from_snkrdunk_candidate(candidate)
+
+    siblings = (
+        sibling_prints_for_card_code(db, evidence.card_code) if evidence.card_code else []
+    )
+    prints = [p for p, _ in siblings]
+    display_images = get_display_images_for_prints(db, prints) if prints else {}
+
+    # An ordinal is a disambiguator of last resort, so it is only assigned
+    # where two options would otherwise be indistinguishable on screen.
+    label_counts: dict[tuple, int] = {}
+    for print_row, canonical in siblings:
+        key = (canonical.card_code, print_row.release_product_code, print_row.language)
+        label_counts[key] = label_counts.get(key, 0) + 1
+    ordinals: dict[int, int] = {}
+    seen: dict[tuple, int] = {}
+    for print_row, canonical in sorted(siblings, key=lambda r: r[0].id):
+        key = (canonical.card_code, print_row.release_product_code, print_row.language)
+        if label_counts[key] > 1:
+            seen[key] = seen.get(key, 0) + 1
+            ordinals[print_row.id] = seen[key]
+
+    options: list[ApprovalPrintOptionOut] = []
+    approvable_ids: list[int] = []
+    for print_row, canonical in sorted(siblings, key=lambda r: r[0].id):
+        try:
+            resolve_exact_print(db, card_print_id=print_row.id, evidence=evidence)
+        except ExactPrintApprovalError as exc:
+            approvable, code, detail = False, exc.code, exc.detail
+        else:
+            approvable, code, detail = True, None, None
+            approvable_ids.append(print_row.id)
+        options.append(
+            ApprovalPrintOptionOut(
+                card_print_id=print_row.id,
+                card_code=canonical.card_code,
+                name_en=canonical.name_en,
+                name_jp=canonical.name_jp,
+                display_image=display_images.get(print_row.id),
+                image_url=print_row.image_url,
+                found_in_product=print_row.release_product_code,
+                rarity=canonical.rarity,
+                special_print=special_print_label(print_row, canonical),
+                printing=printing_label(print_row),
+                art_ordinal=ordinals.get(print_row.id),
+                language=print_row.language,
+                approvable=approvable,
+                refusal_code=code,
+                refusal_detail=detail,
+            )
+        )
+
+    ambiguity_reason = None
+    if not options:
+        ambiguity_reason = (
+            "No active verified print shares this listing's card code."
+            if evidence.card_code
+            else "The listing has no detected card code, so no printing can be proposed."
+        )
+    elif len(approvable_ids) != 1:
+        ambiguity_reason = (
+            f"{len(approvable_ids)} of {len(options)} printings can be justified from the "
+            "stored evidence. Approval needs evidence that names the product or the artwork."
+        )
+
+    return ApprovalContextOut(
+        candidate=ApprovalSourceCandidateOut(
+            candidate_id=candidate.id,
+            source="snkrdunk",
+            title=candidate.title,
+            source_url=candidate.source_url,
+            source_image_url=candidate.image_url,
+            detected_card_code=candidate.detected_card_code,
+            detected_set_code=candidate.detected_set_code,
+            detected_variant=candidate.detected_variant,
+            detected_rarity=candidate.detected_rarity,
+            price_jpy=candidate.price_jpy,
+        ),
+        options=options,
+        resolvable_card_print_id=approvable_ids[0] if len(approvable_ids) == 1 else None,
+        ambiguity_reason=ambiguity_reason,
+    )
+
+
 @router.post("/{candidate_id}/approve-match", response_model=SnkrdunkCandidateOut)
 def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends(get_db)):
     candidate = _get_candidate_or_404(db, candidate_id)
@@ -192,6 +305,20 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
 
     source = _get_snkrdunk_source(db)
 
+    # THE EXACT-PRINT GATE. Nothing is written until the source's own stored
+    # evidence corroborates the printing the operator named - see
+    # app.services.exact_print_approval. A refusal that needs a human is 409
+    # (the request was well-formed, the evidence was not sufficient); a
+    # malformed or dangling reference is 400/404.
+    try:
+        decision = resolve_exact_print(
+            db,
+            card_print_id=body.card_print_id,
+            evidence=SourceEvidence.from_snkrdunk_candidate(candidate),
+        )
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
+
     match_result = calculate_candidate_match(candidate, card)
 
     mapping = (
@@ -200,12 +327,18 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         .one_or_none()
     )
     review_notes = body.review_notes
-    if review_notes is None and match_result.explanation.positive:
-        review_notes = (
-            f"Approved via matching review (score={match_result.score}, "
-            f"confidence={match_result.confidence_label}): "
-            + "; ".join(match_result.explanation.positive[:3])
-        )
+    if review_notes is None:
+        # The print, and what proved it, ahead of the card-level score: the
+        # score says how well the title matched a legacy card, which is not
+        # the fact this mapping is asserting.
+        parts = [decision.as_review_note()]
+        if match_result.explanation.positive:
+            parts.append(
+                f"Card match score={match_result.score} "
+                f"({match_result.confidence_label}): "
+                + "; ".join(match_result.explanation.positive[:3])
+            )
+        review_notes = " ".join(parts)
     if mapping is None:
         mapping = SourceCardMapping(
             card_id=card.id,
@@ -215,6 +348,9 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         db.add(mapping)
 
     mapping.card_id = card.id
+    # Authoritative for every new approval. card_id above stays written only
+    # because the column is NOT NULL and the legacy read paths still use it.
+    mapping.card_print_id = decision.card_print.id
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
     mapping.source_url = candidate.source_url
     mapping.manual_verified = True
@@ -239,8 +375,15 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         "info",
         "api",
         "snkrdunk_matching",
-        f"Candidate {candidate.id} approved -> card_id={card.id} (score={match_result.score}).",
-        context={"candidate_id": candidate.id, "card_id": card.id, "score": match_result.score},
+        f"Candidate {candidate.id} approved -> card_print_id={decision.card_print.id} "
+        f"(card_id={card.id}, score={match_result.score}).",
+        context={
+            "candidate_id": candidate.id,
+            "card_id": card.id,
+            "card_print_id": decision.card_print.id,
+            "evidence_used": decision.evidence_used,
+            "score": match_result.score,
+        },
         related_entity_type="snkrdunk_candidate",
         related_entity_id=candidate.id,
     )

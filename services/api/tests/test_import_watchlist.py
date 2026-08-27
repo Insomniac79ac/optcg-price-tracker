@@ -115,7 +115,13 @@ def test_import_creates_source_mappings(tmp_path, db_session):
     assert sources == {"yuyutei", "snkrdunk"}
 
 
-def test_import_creates_active_approved_mappings_when_manual_verified(tmp_path, db_session):
+def test_import_creates_active_needs_review_mappings_when_manual_verified(tmp_path, db_session):
+    """A curated watchlist row activates the mapping but cannot approve it.
+
+    The CSV identifies its target by card_code alone, and a card code spans
+    several printings - so the row cannot say which item a price belongs to.
+    It lands active and `needs_review`, and reaches `approved` only through a
+    path that runs the exact-print gate."""
     csv_path = write_csv(
         tmp_path,
         [
@@ -131,10 +137,12 @@ def test_import_creates_active_approved_mappings_when_manual_verified(tmp_path, 
     card = db_session.query(Card).filter_by(card_code="OP01-001").one()
     mapping = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
     assert mapping.is_active is True
-    assert mapping.review_status == "approved"
+    assert mapping.review_status == "needs_review"
+    assert mapping.card_print_id is None
 
 
 def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path, db_session):
+    """Re-activation still works; the row comes back for review, not approved."""
     csv_path = write_csv(
         tmp_path,
         [
@@ -166,7 +174,7 @@ def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path,
     db_session.expire_all()
     updated = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
     assert updated.is_active is True
-    assert updated.review_status == "approved"
+    assert updated.review_status == "needs_review"
 
 
 def test_import_skips_empty_source_urls(tmp_path, db_session):
