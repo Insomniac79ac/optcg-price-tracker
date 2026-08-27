@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { RarityBadge } from "@/components/RarityBadge";
+import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
 import type { PrintUiModel } from "@/lib/prints";
 import { CardImageFrame } from "./CardImageFrame";
@@ -18,11 +18,11 @@ import { MarketIndexValue } from "./MarketIndexValue";
  * through the same legacy card render as two independent tiles with two
  * independent prices.
  *
- * Hierarchy is artwork, then name, then code/set, then treatment + rarity,
- * then Market Index, then the sources behind it - the collector-UI skill's
- * ordering. Everything the API returns but a collector doesn't need
- * mid-browse (card type, language, confidence, verification status) is
- * deliberately left off the tile.
+ * Hierarchy is artwork, then name, then code/set, then rarity + special
+ * print + printing, then Market Index, then the sources behind it - the
+ * collector-UI skill's ordering. Everything the API returns but a collector
+ * doesn't need mid-browse (card type, language, confidence, verification
+ * status) is deliberately left off the tile.
  *
  * The artwork is the only thing here with any real colour: the tile itself is
  * a charcoal surface with a hairline border and no gradient, glow or frame
@@ -32,14 +32,35 @@ import { MarketIndexValue } from "./MarketIndexValue";
  * Every value shown comes from this print's own catalogue payload. Nothing
  * here fetches, and nothing is derived from a sibling print.
  */
-export function PrintCardTile({ print }: { print: PrintUiModel }) {
-  const treatmentLabel = print.isDistinctTreatment ? print.treatment : null;
+export function PrintCardTile({
+  print,
+  showArtOrdinal = false,
+}: {
+  print: PrintUiModel;
+  /** Last-resort disambiguator. The grid sets it only for prints whose
+   * collector-facing label would otherwise be identical to another tile's -
+   * see `needsArtOrdinal` in CardGrid. Never on by default: "Art 3" on every
+   * alt art would be noise, and the printing badge alone separates most
+   * tiles. */
+  showArtOrdinal?: boolean;
+}) {
+  // The printing type is derived from Bandai's own asset address, never from
+  // artwork, rarity or product - and a base printing gets nothing, which is
+  // what makes an "Alt Art" beside it read as the different one.
+  const printingType = print.printingType;
+  const artOrdinal = showArtOrdinal ? print.artOrdinal : null;
+  // Rarity, special print and printing are three different facts, so the
+  // accessible name says all three in the order the badges below read - never
+  // the raw token, and never one standing in for another.
   const accessibleName = [
     print.displayName,
     print.cardCode,
-    treatmentLabel,
-    print.releaseCode,
-    print.rarity,
+    print.rarityTerm?.label,
+    print.specialPrint?.label,
+    print.unknownRarityToken,
+    printingType?.label,
+    artOrdinal,
+    print.releaseCode ? `found in ${print.releaseCode}` : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -57,6 +78,8 @@ export function PrintCardTile({ print }: { print: PrintUiModel }) {
         imageUrl={print.imageUrl}
         alt={`${print.displayName} (${print.cardCode})`}
         cardCode={print.cardCode}
+        // The RAW token: the placeholder has room for one chip only, and
+        // RarityBadge classifies it there rather than being handed a label.
         rarity={print.rarity}
         setCode={print.releaseCode}
         size="full"
@@ -80,29 +103,61 @@ export function PrintCardTile({ print }: { print: PrintUiModel }) {
           {print.displayName}
         </span>
 
+        {/* The Japanese name is kept where it adds something: the English name
+            is now the display name for almost every card, so the JP line is
+            the collector's link back to what is printed on the card itself.
+            Suppressed when they are the same string, which is what a card
+            with no English name yet renders. */}
+        {print.nameJp && print.nameJp !== print.displayName && (
+          <span className="truncate text-[11px] leading-none text-text-muted">
+            {print.nameJp}
+          </span>
+        )}
+
         <div className="mono flex flex-wrap items-center gap-x-1.5 text-[10px] leading-none text-text-muted">
           <span>{print.cardCode}</span>
           {print.releaseCode && (
             <>
               <span aria-hidden="true">·</span>
-              <span>{print.releaseCode}</span>
+              {/* "Found in", not "Set": for a reprint this product is a later
+                  release than the set the card came from. */}
+              <span>
+                <span className="text-text-faint">Found in </span>
+                {print.releaseCode}
+              </span>
             </>
           )}
         </div>
 
-        {/* Treatment sits with rarity rather than in the code row, because it
-            is the one thing that keeps two sibling prints of the same card
-            apart at a glance. Only ever the API's own string ("parallel"),
-            never renamed or inferred - and the plain base printing shows
-            nothing here, which is what makes the parallel beside it read as
-            the different one. */}
-        <div className="flex min-h-[18px] items-center gap-1.5">
-          {treatmentLabel && (
-            <span className="mono inline-flex rounded border border-accent-gold/30 bg-accent-gold/10 px-1.5 py-px text-[10px] font-medium lowercase tracking-wide text-accent-gold">
-              {treatmentLabel}
+        {/* Three independent facts, in the order the detail page states them:
+            how scarce the card is, whether this printing is a special
+            category, and which printing it is. They read left to right from
+            the card's own property to this item's, and a print is commonly
+            two or three of them at once - a Super Rare that is also an SP
+            Card and an Alt Art is not a contradiction, which is exactly what
+            keeping the chips separate says.
+
+            Together they are also what keeps two sibling prints of one card
+            apart at a glance. The base printing shows no printing badge - its
+            absence is the signal. The art ordinal appears only when even
+            these leave two tiles reading identically. */}
+        <div className="flex min-h-[18px] flex-wrap items-center gap-1.5">
+          {print.rarityTerm && <RarityTermBadge term={print.rarityTerm} />}
+          {print.specialPrint && <SpecialPrintBadge term={print.specialPrint} />}
+          {print.unknownRarityToken && <UnknownRarityBadge token={print.unknownRarityToken} />}
+          {printingType && (
+            <span
+              className="mono inline-flex rounded border border-accent-gold/30 bg-accent-gold/10 px-1.5 py-px text-[10px] font-medium tracking-wide text-accent-gold"
+              title={`${printingType.label} — ${printingType.definition}`}
+            >
+              {printingType.label}
             </span>
           )}
-          {print.rarity && <RarityBadge rarity={print.rarity} />}
+          {artOrdinal && (
+            <span className="mono inline-flex rounded border border-border-muted px-1.5 py-px text-[10px] font-medium tracking-wide text-text-muted">
+              {artOrdinal}
+            </span>
+          )}
         </div>
 
         {/* Caption stacked over the value, not inline beside it: inline made

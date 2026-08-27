@@ -108,6 +108,8 @@ function makePrint(
     treatment: "parallel",
     language: "jp",
     release_product_code: "OP-01",
+    original_set_code: "OP-01",
+    official_asset_variant: "base",
     image_url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-013_p2.png",
     display_image: null,
     verification_status: "verified",
@@ -135,14 +137,20 @@ function catalogueResponse(items: PrintCatalogueItem[]): PrintCatalogueList {
     },
     facets: {
       treatments: ["normal", "parallel"],
-      rarities: ["C", "L", "R", "SEC", "SR", "UC"],
+      // Exactly what GET /prints publishes now: the two raw SP tokens are
+      // folded server-side into one SP CARD value.
+      rarities: ["C", "L", "P", "R", "SEC", "SP CARD", "SR", "TR", "UC"],
       languages: ["jp"],
       verification_statuses: ["verified"],
     },
   };
 }
 
-const SANJI_PARALLEL = makePrint({ card_print_id: 3, treatment: "parallel" });
+const SANJI_PARALLEL = makePrint({
+  card_print_id: 3,
+  treatment: "parallel",
+  official_asset_variant: "p1",
+});
 const SANJI_BASE = makePrint({
   card_print_id: 4,
   treatment: "normal",
@@ -216,8 +224,14 @@ describe("print catalogue page", () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL, SANJI_BASE]));
     render(<PrintsCataloguePage />);
 
-    const parallel = await screen.findByRole("link", { name: /Sanji, OP01-013, parallel/ });
-    const base = screen.getByRole("link", { name: /Sanji, OP01-013, OP-01/ });
+    // The tiles are told apart by the printing type derived from Bandai's
+    // asset variant, not by the raw Atlas treatment word. Rarity comes first
+    // in the accessible name because rarity, special print and printing are
+    // stated in that order everywhere - see PrintCardTile.
+    const parallel = await screen.findByRole("link", {
+      name: /^Sanji, OP01-013, Rare, Alt Art, found in OP-01/,
+    });
+    const base = screen.getByRole("link", { name: /^Sanji, OP01-013, Rare, found in OP-01/ });
 
     expect(parallel).not.toBe(base);
     // Each tile carries only its own print's money. The base tile shows ￥120
@@ -397,13 +411,71 @@ describe("print catalogue page", () => {
     await screen.findByRole("link", { name: /Sanji/ });
 
     // The rarity chip strip that briefly stood in for set navigation is gone:
-    // no "All cards" reset control, and no group of rarity buttons.
-    expect(screen.queryByRole("group", { name: "Rarity" })).toBeNull();
+    // no "All cards" reset control, and no rarity buttons. Asserted on buttons
+    // rather than on a group role, because the select's own "Rarity"/"Special
+    // print" <optgroup>s legitimately carry that role now.
     expect(screen.queryByRole("button", { name: "All cards" })).toBeNull();
+    for (const label of ["Common", "Rare", "Super Rare", "Secret Rare", "SP Card"]) {
+      expect(screen.queryByRole("button", { name: label }), `${label} chip`).toBeNull();
+    }
 
     // The underlying filter still works, from the same real facets.
     fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SEC" } });
     expect(navigations()).toEqual(["/cards?rarity=SEC"]);
+  });
+
+  it("offers exactly one SP Card option, never one per source token", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("link", { name: /Sanji/ });
+
+    const options = Array.from(
+      screen.getByLabelText(/Rarity/).querySelectorAll("option"),
+    ).map((option) => option.textContent);
+
+    expect(options.filter((label) => label === "SP Card")).toHaveLength(1);
+    // Never the disambiguated pair the raw tokens used to produce...
+    expect(options).not.toContain("SP Card (SPカード)");
+    expect(options).not.toContain("SP Card (SP P)");
+    // ...and no raw source token reaches a catalogue-facing filter at all.
+    for (const label of options) {
+      expect(label).not.toContain("SPカード");
+      expect(label).not.toContain("SP P");
+    }
+  });
+
+  it("files the special prints under their own optgroup, not among the rarities", async () => {
+    // Listing "SP Card" inline between Rare and Super Rare is exactly what
+    // made an SP print read as though SP Card were its scarcity tier.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("link", { name: /Sanji/ });
+
+    const select = screen.getByLabelText(/Rarity/);
+    const groups = Array.from(select.querySelectorAll("optgroup"));
+    const byLabel = Object.fromEntries(
+      groups.map((group) => [
+        group.getAttribute("label"),
+        Array.from(group.querySelectorAll("option")).map((o) => o.textContent),
+      ]),
+    );
+
+    expect(byLabel["Rarity"]).toEqual([
+      "Common", "Leader", "Promo", "Rare", "Secret Rare", "Super Rare", "Uncommon",
+    ]);
+    expect(byLabel["Special print"]).toEqual(["SP Card", "Treasure Rare"]);
+  });
+
+  it("sends the single SP Card value to the server verbatim", async () => {
+    // The value is the API's own facet, and the API expands it to both source
+    // tokens - so the browser neither merges nor rewrites anything.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("link", { name: /Sanji/ });
+
+    fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SP CARD" } });
+
+    expect(navigations()).toEqual(["/cards?rarity=SP+CARD"]);
   });
 
   it("sends the treatment filter to the server", async () => {

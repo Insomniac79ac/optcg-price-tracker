@@ -27,6 +27,7 @@ from app.models import (
     SourceCardMapping,
 )
 from app.services.market_index import INDEX_VERSION
+from app.services.rarity_facets import SP_CARD, facet_value
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
 NOW = datetime.now(timezone.utc)
@@ -1103,7 +1104,13 @@ def test_the_rarity_filter_matches_what_the_tile_displays(client, db_session):
 
 def test_the_rarity_facet_offers_what_the_tiles_display(client, db_session):
     """Every offered value selects at least one print, and every displayed
-    value is offered."""
+    value is reachable from the facet it folds into.
+
+    The second half is stated through `facet_value` rather than by identity,
+    because one offered value can now cover more than one published token -
+    a tile showing `SPカード` is reached by the `SP CARD` option, not by an
+    option of its own. Nothing else about the invariant changes.
+    """
     _print_with_official_rarity(db_session)
 
     body = client.get("/prints").json()
@@ -1115,7 +1122,7 @@ def test_the_rarity_facet_offers_what_the_tiles_display(client, db_session):
         assert client.get("/prints", params={"rarity": value}).json()["total"] >= 1
     for item in body["items"]:
         if item["rarity"] is not None:
-            assert item["rarity"] in facets
+            assert facet_value(item["rarity"]) in facets
 
 
 def test_canonical_rarity_is_not_repopulated_by_serving(client, db_session):
@@ -1124,6 +1131,256 @@ def test_canonical_rarity_is_not_repopulated_by_serving(client, db_session):
     canonical, print_row = _print_with_official_rarity(db_session)
 
     assert client.get(f"/prints/{print_row.id}").json()["rarity"] == "R"
+
+    db_session.refresh(canonical)
+    assert canonical.rarity is None
+
+
+# --- presentation metadata the terminology layer needs --------------------------
+#
+# Two columns that already existed on the models but were not served. Exposed
+# so a client can tell two printings of one card apart and can label the
+# product honestly; nothing about identity, pricing or rarity changes.
+
+
+def test_detail_exposes_the_original_set_and_the_asset_variant(client, db_session):
+    canonical = make_canonical(
+        db_session, card_code="OP09-004", name_en="Shanks", original_set_code="OP-09"
+    )
+    print_row = make_print(
+        db_session,
+        canonical,
+        release_product_code="PRB-02",
+        artwork_key="shanks-r1",
+        official_asset_variant="r1",
+    )
+
+    body = client.get(f"/prints/{print_row.id}").json()
+
+    # The product this printing appeared in, and the set the card came from,
+    # are different facts and are served as different fields.
+    assert body["release_product_code"] == "PRB-02"
+    assert body["original_set_code"] == "OP-09"
+    assert body["official_asset_variant"] == "r1"
+
+
+def test_catalogue_items_expose_the_same_two_fields(client, db_session):
+    canonical = make_canonical(
+        db_session, card_code="OP13-118", name_en="Monkey.D.Luffy", original_set_code="OP-13"
+    )
+    make_print(
+        db_session,
+        canonical,
+        release_product_code="OP-13",
+        artwork_key="luffy-p2",
+        official_asset_variant="p2",
+    )
+
+    item = next(
+        i for i in client.get("/prints").json()["items"] if i["card_code"] == "OP13-118"
+    )
+
+    assert item["original_set_code"] == "OP-13"
+    assert item["official_asset_variant"] == "p2"
+
+
+def test_a_promo_has_no_original_set_and_still_serves(client, db_session):
+    """Promos belong to no numbered set, so the field is null - not a placeholder."""
+    canonical = make_canonical(
+        db_session, card_code="P-105", name_en="Sabo", original_set_code=None
+    )
+    print_row = make_print(
+        db_session, canonical, artwork_key="sabo-p2", official_asset_variant="p2"
+    )
+
+    body = client.get(f"/prints/{print_row.id}").json()
+
+    assert body["original_set_code"] is None
+    assert body["official_asset_variant"] == "p2"
+
+
+def test_existing_print_fields_are_unchanged(client, five_prints):
+    """Backward compatibility: the new fields are additive only."""
+    body = client.get(f"/prints/{five_prints['sanji_base'].id}").json()
+
+    for field in (
+        "card_print_id", "canonical_card_id", "card_code", "name_en", "name_jp",
+        "rarity", "card_type", "colors", "language", "treatment",
+        "release_product_code", "artwork_key", "image_url", "display_image",
+        "verification_status", "market_index", "siblings",
+    ):
+        assert field in body, f"{field} disappeared from CardPrintOut"
+
+
+# --- one collector-facing SP Card, two published tokens ------------------------
+#
+# Bandai publishes the same special-art printing category as `SPカード` on
+# almost every occurrence and `SP P` on one, and as `SP CARD` in the English
+# catalogue. Served raw, the facet offered a collector two options that mean
+# the same thing, one of which selected a single print. These tests pin the
+# collapse: one option, whole population, nothing mutated, everything else
+# untouched. See app.services.rarity_facets.
+
+
+def _sp_corpus(db_session) -> dict[str, CardPrint]:
+    """Three SP prints across both published tokens, plus an ordinary one."""
+    jp_a = make_canonical(db_session, card_code="OP06-007", name_en="Shanks", rarity="SR")
+    jp_b = make_canonical(db_session, card_code="OP09-020", name_en="Cross Guild", rarity="R")
+    alt = make_canonical(db_session, card_code="P-105", name_en="Sabo", original_set_code=None, rarity=None)
+    plain = make_canonical(db_session, card_code="OP01-001", name_en="Roronoa Zoro", rarity="SR")
+    return {
+        "jp_a": make_print(db_session, jp_a, artwork_key="shanks-p2", official_rarity="SPカード"),
+        "jp_b": make_print(db_session, jp_b, artwork_key="crossguild-p2", official_rarity="SPカード"),
+        "alt": make_print(db_session, alt, artwork_key="sabo-p2", official_rarity="SP P"),
+        "plain": make_print(db_session, plain, artwork_key="zoro-base", official_rarity="SR"),
+    }
+
+
+def test_the_catalogue_offers_exactly_one_sp_card_filter_value(client, db_session):
+    _sp_corpus(db_session)
+
+    rarities = client.get("/prints").json()["facets"]["rarities"]
+
+    assert rarities.count(SP_CARD) == 1
+    # No collector-facing filter offers a raw source token.
+    assert "SPカード" not in rarities
+    assert "SP P" not in rarities
+
+
+def test_the_sp_card_filter_reaches_both_source_tokens(client, db_session):
+    """The count for the one option is the combined population of both."""
+    prints = _sp_corpus(db_session)
+
+    selected = client.get("/prints", params={"rarity": SP_CARD}).json()
+
+    assert selected["total"] == 3
+    assert {i["card_print_id"] for i in selected["items"]} == {
+        prints["jp_a"].id,
+        prints["jp_b"].id,
+        prints["alt"].id,
+    }
+    # ...and exactly the sum of what each raw token selects on its own.
+    jp_total = client.get("/prints", params={"rarity": "SPカード"}).json()["total"]
+    alt_total = client.get("/prints", params={"rarity": "SP P"}).json()["total"]
+    assert selected["total"] == jp_total + alt_total
+
+
+def test_a_raw_source_token_still_filters_exactly_itself(client, db_session):
+    """Backward compatible: an alias is offered, not imposed. A bookmarked or
+    scripted `?rarity=SPカード` keeps selecting precisely those prints."""
+    prints = _sp_corpus(db_session)
+
+    assert {i["card_print_id"] for i in client.get(
+        "/prints", params={"rarity": "SPカード"}
+    ).json()["items"]} == {prints["jp_a"].id, prints["jp_b"].id}
+    assert {i["card_print_id"] for i in client.get(
+        "/prints", params={"rarity": "SP P"}
+    ).json()["items"]} == {prints["alt"].id}
+
+
+def test_the_alias_leaves_every_other_rarity_filtering_alone(client, db_session):
+    prints = _sp_corpus(db_session)
+
+    body = client.get("/prints", params={"rarity": "SR"}).json()
+
+    # The ordinary SR print, and NOT the SP print whose card-level rarity is SR:
+    # that print publishes its own SPカード and is reachable under SP Card.
+    assert {i["card_print_id"] for i in body["items"]} == {prints["plain"].id}
+
+
+def test_an_unknown_rarity_stays_its_own_facet_and_filter(client, db_session):
+    """Fail-safe: only listed membership is ever merged, so a rarity Bandai
+    invents next release is offered and filtered unchanged rather than
+    disappearing into a bucket."""
+    canonical = make_canonical(db_session, card_code="OP20-001", name_en="Future", rarity=None)
+    print_row = make_print(db_session, canonical, artwork_key="future-base", official_rarity="XR")
+
+    rarities = client.get("/prints").json()["facets"]["rarities"]
+
+    assert "XR" in rarities
+    assert {i["card_print_id"] for i in client.get(
+        "/prints", params={"rarity": "XR"}
+    ).json()["items"]} == {print_row.id}
+
+
+def test_the_alias_never_touches_a_stored_or_served_rarity(client, db_session):
+    """Query-time only. The exact published token stays on the row and on the
+    wire, so a detail page can still quote it as provenance."""
+    prints = _sp_corpus(db_session)
+
+    body = client.get(f"/prints/{prints['alt'].id}").json()
+
+    assert body["rarity"] == "SP P"
+    db_session.refresh(prints["alt"])
+    assert prints["alt"].official_rarity == "SP P"
+    db_session.refresh(prints["jp_a"])
+    assert prints["jp_a"].official_rarity == "SPカード"
+
+
+def test_treasure_rare_is_not_folded_into_sp_card(client, db_session):
+    """TR is a separate token in both catalogues and is language-specific.
+    Merging it would flatten a distinction Bandai does make."""
+    canonical = make_canonical(db_session, card_code="OP16-042", name_en="Prisoner", rarity=None)
+    tr = make_print(db_session, canonical, artwork_key="prisoner-p1", official_rarity="TR")
+    _sp_corpus(db_session)
+
+    rarities = client.get("/prints").json()["facets"]["rarities"]
+
+    assert "TR" in rarities
+    assert facet_value("TR") == "TR"
+    assert tr.id not in {
+        i["card_print_id"] for i in client.get("/prints", params={"rarity": SP_CARD}).json()["items"]
+    }
+
+
+# --- the card-level rarity, served separately ----------------------------------
+
+
+def test_canonical_rarity_is_served_beside_the_printing_rarity(client, db_session):
+    """The only honest source of an UNDERLYING rarity for a print whose own
+    token names a printing category rather than a scarcity tier."""
+    canonical = make_canonical(db_session, card_code="OP06-007", name_en="Shanks", rarity="SR")
+    print_row = make_print(
+        db_session, canonical, artwork_key="shanks-p2", official_rarity="SPカード"
+    )
+
+    body = client.get(f"/prints/{print_row.id}").json()
+
+    assert body["rarity"] == "SPカード"
+    assert body["canonical_rarity"] == "SR"
+
+
+def test_canonical_rarity_is_null_when_the_catalogue_established_none(client, db_session):
+    """Not a placeholder and not a fallback: the client renders no rarity."""
+    canonical = make_canonical(
+        db_session, card_code="OP16-042", name_en="Prisoner", rarity=None
+    )
+    print_row = make_print(db_session, canonical, artwork_key="prisoner-p1", official_rarity="TR")
+
+    body = client.get(f"/prints/{print_row.id}").json()
+
+    assert body["rarity"] == "TR"
+    assert body["canonical_rarity"] is None
+
+
+def test_catalogue_items_carry_the_card_level_rarity_too(client, db_session):
+    canonical = make_canonical(db_session, card_code="EB02-061", name_en="Luffy", rarity="SEC")
+    make_print(db_session, canonical, artwork_key="luffy-p3", official_rarity="SPカード")
+
+    item = next(
+        i for i in client.get("/prints").json()["items"] if i["card_code"] == "EB02-061"
+    )
+
+    assert item["rarity"] == "SPカード"
+    assert item["canonical_rarity"] == "SEC"
+
+
+def test_serving_the_card_level_rarity_does_not_write_it_back(client, db_session):
+    """Same standing decision as the resolution above it: read-time only."""
+    canonical = make_canonical(db_session, card_code="P-105", name_en="Sabo", rarity=None)
+    print_row = make_print(db_session, canonical, artwork_key="sabo-p2", official_rarity="SP P")
+
+    assert client.get(f"/prints/{print_row.id}").json()["canonical_rarity"] is None
 
     db_session.refresh(canonical)
     assert canonical.rarity is None

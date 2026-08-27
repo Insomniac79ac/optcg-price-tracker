@@ -6,10 +6,15 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
-import { RarityBadge } from "@/components/RarityBadge";
+import {
+  RarityTermBadge,
+  SpecialPrintBadge,
+  UnknownRarityBadge,
+} from "@/components/RarityBadge";
 import { ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
+import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
@@ -24,6 +29,7 @@ import {
   type PrintUiModel,
   toPrintUiModel,
 } from "@/lib/prints";
+import { getTerm, type Term } from "@/lib/terminology";
 
 /** What each `reference_type` in `market_index.source_values` actually is,
  * in a collector's words.
@@ -264,24 +270,33 @@ function Identity({ print }: { print: PrintUiModel }) {
         {print.releaseCode && (
           <>
             <span aria-hidden="true">·</span>
-            <span>{print.releaseCode}</span>
+            {/* "Found in", never "Set": for a reprint this is a later product
+                than the set the card came from. The true set has its own row
+                in "About this print". */}
+            <span>
+              <span className="text-text-faint">Found in </span>
+              {print.releaseCode}
+            </span>
           </>
         )}
       </div>
 
+      {/* Rarity, then special print, then printing - the same three
+          dimensions, in the same order, as the "About this print" rows below,
+          so the badges and the list never read as two different accounts of
+          the card. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {print.treatment && (
+        {print.rarityTerm && <RarityTermBadge term={print.rarityTerm} />}
+        {print.specialPrint && <SpecialPrintBadge term={print.specialPrint} />}
+        {print.unknownRarityToken && <UnknownRarityBadge token={print.unknownRarityToken} />}
+        {print.printingType && (
           <span
-            className={`mono inline-flex rounded border px-2 py-0.5 text-[11px] font-medium lowercase tracking-wide ${
-              print.isDistinctTreatment
-                ? "border-accent-gold/30 bg-accent-gold/10 text-accent-gold"
-                : "border-border-default bg-bg-elevated text-text-secondary"
-            }`}
+            className="mono inline-flex rounded border border-accent-gold/30 bg-accent-gold/10 px-2 py-0.5 text-[11px] font-medium tracking-wide text-accent-gold"
+            title={`${print.printingType.label} — ${print.printingType.definition}`}
           >
-            {print.treatment}
+            {print.printingType.label}
           </span>
         )}
-        {print.rarity && <RarityBadge rarity={print.rarity} />}
       </div>
     </header>
   );
@@ -462,27 +477,65 @@ function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
  * Every row is omitted rather than dashed when its value is absent.
  */
 function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintDetail }) {
-  const rows: { term: string; value: string }[] = [
+  // Six separate facts, deliberately not collapsed into one another, in the
+  // order a collector reads them: which card this is, where the card came
+  // from, where THIS printing turned up, how scarce the card is, whether the
+  // printing is a special category, and which printing it is.
+  //
+  // "Set" and "Found in" are different products for a reprint, and only one of
+  // them is the card's origin - so "Set" appears only when the API genuinely
+  // has an `original_set_code`, and never borrows the release product to fill
+  // the row. "Rarity" appears only when an ordinary rarity is actually
+  // established for the card (see rarityFacts in lib/prints.ts): a Treasure
+  // Rare whose card-level rarity the catalogue never settled gets no Rarity
+  // row at all rather than a guess. Nothing here is dashed or defaulted - an
+  // absent value is an absent row.
+  const rows: { term: string; value: string; hint?: string }[] = [
     { term: "Card code", value: print.cardCode },
-    ...(print.releaseCode ? [{ term: "Set", value: print.releaseCode }] : []),
-    ...(print.rarity ? [{ term: "Rarity", value: print.rarity }] : []),
-    ...(print.treatment ? [{ term: "Treatment", value: print.treatment }] : []),
+    ...termRow("Set", print.originalSetCode, getTerm("identity.set")),
+    ...termRow("Found in", print.releaseCode, getTerm("identity.found_in")),
+    ...termRow(
+      "Rarity",
+      print.rarityTerm?.label ?? null,
+      print.rarityTerm,
+      // Said out loud rather than left implicit: on an SP Card this rarity is
+      // the card's, read from its own set, not a token printed on this
+      // printing's catalogue entry - which is the whole reason it can sit
+      // beside "SP Card" without the two contradicting each other.
+      print.rarityIsCardLevel ? "The card's rarity, from its own set." : undefined,
+    ),
+    ...termRow("Special print", print.specialPrint?.label ?? null, print.specialPrint),
+    ...termRow("Printing", print.printingType?.label ?? null, print.printingType),
+    // The fail-safe: a rarity token this build cannot classify is still
+    // published evidence, so it is shown verbatim under a heading that claims
+    // nothing about what it means.
+    ...termRow("Published rarity", print.unknownRarityToken, null),
     ...(print.cardType ? [{ term: "Card type", value: print.cardType }] : []),
     ...(detail.colors && detail.colors.length > 0
       ? [{ term: detail.colors.length > 1 ? "Colours" : "Colour", value: detail.colors.join(" · ") }]
       : []),
-    ...(print.language ? [{ term: "Language", value: print.language.toUpperCase() }] : []),
+    ...(print.language
+      ? [{ term: "Language", value: print.language.toLowerCase() === "jp" ? "Japanese" : print.language.toUpperCase() }]
+      : []),
   ];
 
   return (
     <section className="mt-7 border-t border-border-muted pt-5">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        About this print
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
+          About this print
+        </h2>
+        {/* The same key as the catalogue, on the page where a collector is
+            most likely to be asking what "SP Card" is next to "Super Rare".
+            The row hints below are a mouse-only enhancement; this is the
+            route that works on a phone and from the keyboard. */}
+        <CatalogueLegend />
+      </div>
       <dl className="mt-4 grid gap-x-10 gap-y-2.5 sm:grid-cols-2">
         {rows.map((row) => (
           <div
             key={row.term}
+            title={row.hint}
             className="flex items-baseline justify-between gap-4 border-b border-border-muted/60 pb-2.5"
           >
             <dt className="text-xs text-text-muted">{row.term}</dt>
@@ -492,4 +545,34 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
       </dl>
     </section>
   );
+}
+
+/** One "About this print" row, or none at all when the value is absent.
+ *
+ * Every row on this page is omitted rather than dashed when it has no value,
+ * and doing that inline for six rows buried the rule in ternaries. The `hint`
+ * is the term's own definition plus, where the term records one, the raw token
+ * Bandai published - which is the one place a collector can still see
+ * "SPカード" and understand where "SP Card" came from.
+ */
+function termRow(
+  label: string,
+  value: string | null,
+  term: Term | null,
+  note?: string,
+): { term: string; value: string; hint?: string }[] {
+  if (!value) return [];
+  if (!term) return [{ term: label, value }];
+  // The raw token is quoted only for a special print, which is the one case
+  // where it is a different vocabulary rather than the label abbreviated:
+  // "SPカード" explains where "SP Card" came from. Beside "Super Rare",
+  // 'published as "SR"' would be noise - and on an SP print it would be wrong,
+  // because that rarity came from the card, not from this catalogue entry.
+  const raw = term.category === "special_print" ? term.sourceLabel : undefined;
+  // ...and only where the token is not simply the label already on screen:
+  // 'published as "TR"' beside a TR badge says nothing, whereas "SPカード"
+  // is the one place a collector learns where "SP Card" came from.
+  const worthSaying = raw && raw !== term.label && raw !== term.shortLabel;
+  const provenance = worthSaying ? ` Published as "${raw}".` : "";
+  return [{ term: label, value, hint: `${term.definition}${provenance}${note ? ` ${note}` : ""}` }];
 }

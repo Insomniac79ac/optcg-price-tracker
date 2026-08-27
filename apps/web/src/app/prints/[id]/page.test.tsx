@@ -88,11 +88,14 @@ function makeDetail(overrides: Partial<PrintDetail> = {}): PrintDetail {
     name_en: "Roronoa Zoro",
     name_jp: "ロロノア・ゾロ",
     rarity: "L",
+    canonical_rarity: "L",
     card_type: "Leader",
     colors: ["Red"],
     language: "jp",
     treatment: "parallel",
     release_product_code: "OP-01",
+    original_set_code: "OP-01",
+    official_asset_variant: "base",
     artwork_key: "4b2462f2b042a020",
     image_url: "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
     display_image: {
@@ -157,13 +160,20 @@ describe("print detail page", () => {
     expect(cardImage(container)!.getAttribute("src")).toBe(DISPLAY_IMAGE_URL);
   });
 
-  it("still shows the treatment chip and row for a classified printing", async () => {
-    fetchPrint.mockResolvedValue(makeDetail({ treatment: "parallel" }));
+  it("states the printing type from the asset variant, not the raw treatment word", async () => {
+    // "treatment" is Atlas's internal classification and is NULL on every
+    // imported print, so it can never be the thing that tells two printings
+    // apart. Bandai's own asset variant can.
+    fetchPrint.mockResolvedValue(
+      makeDetail({ treatment: "parallel", official_asset_variant: "p1" }),
+    );
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(screen.getAllByText("parallel").length).toBeGreaterThan(0);
-    expect(screen.getByText("Treatment")).toBeTruthy();
+    expect(screen.getAllByText("Alt Art").length).toBeGreaterThan(0);
+    expect(screen.getByText("Printing")).toBeTruthy();
+    expect(screen.queryByText("Treatment")).toBeNull();
+    expect(screen.queryByText("parallel")).toBeNull();
   });
 
   it("omits an unclassified sibling rather than labelling it", async () => {
@@ -312,15 +322,19 @@ describe("print detail page", () => {
     expect(sources.querySelector(".sm\\:grid-cols-2")).toBeNull();
   });
 
-  it("always states the treatment in the API's own word, including a plain printing", async () => {
-    fetchPrint.mockResolvedValue(makeDetail({ treatment: "normal" }));
+  it("gives a base printing no printing badge at all", async () => {
+    // Its absence is the signal: the Alt Art beside it is the different one.
+    fetchPrint.mockResolvedValue(
+      makeDetail({ treatment: "normal", official_asset_variant: "base" }),
+    );
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    // Two separate printings are two separate collectibles, so "normal" is
-    // shown as-is and never relabelled "base" or dropped.
-    expect(screen.getAllByText("normal").length).toBeGreaterThan(0);
-    expect(container.textContent).not.toMatch(/\bbase\b/i);
+    expect(screen.queryByText("Alt Art")).toBeNull();
+    expect(screen.queryByText("Reprint")).toBeNull();
+    expect(screen.queryByText("Printing")).toBeNull();
+    // The internal words never reach the page either way.
+    expect(container.textContent).not.toMatch(/\bnormal\b|\btreatment\b/i);
   });
 
   it("describes the print only with fields the payload actually carries", async () => {
@@ -328,15 +342,158 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const about = screen.getByRole("heading", { name: "About this print" }).parentElement!;
-    for (const term of ["Card code", "Set", "Rarity", "Treatment", "Card type", "Colour", "Language"]) {
+    const about = screen
+      .getByRole("heading", { name: "About this print" })
+      .closest("section")!;
+    for (const term of ["Card code", "Set", "Found in", "Rarity", "Card type", "Colour", "Language"]) {
       expect(within(about).getByText(term)).toBeTruthy();
     }
     expect(within(about).getByText("OP01-001")).toBeTruthy();
-    expect(within(about).getByText("Leader")).toBeTruthy();
+    // Rarity "L" now reads "Leader", the same word as the card type - so each
+    // is asserted as a term/value pair rather than by a bare text lookup.
+    expect(within(about).getAllByText("Leader").length).toBe(2);
     expect(within(about).getByText("Red")).toBeTruthy();
     // GET /prints/{id} returns no cost, power, attribute or effect text.
     expect(about.textContent).not.toMatch(/\b(Cost|Power|Attribute|Effect|Counter)\b/);
+  });
+
+  /** The rows of "About this print", as term -> value, in document order.
+   * The whole point of this tranche is which rows exist and what each one
+   * says, so the tests read them off the page rather than probing for text. */
+  function aboutRows(): [string, string][] {
+    const about = screen
+      .getByRole("heading", { name: "About this print" })
+      .closest("section")!;
+    return Array.from(about.querySelectorAll("dl > div")).map((row) => [
+      row.querySelector("dt")!.textContent!,
+      row.querySelector("dd")!.textContent!,
+    ]);
+  }
+
+  it("states an SP Card's rarity and its special print as two separate rows", async () => {
+    // OP06-007 Shanks: published as SPカード in PRB-02, Super Rare under its
+    // own set OP-06, and Bandai's p2 asset. Three independent facts.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        card_code: "OP06-007",
+        name_en: "Shanks",
+        name_jp: "シャンクス",
+        rarity: "SPカード",
+        canonical_rarity: "SR",
+        card_type: "Character",
+        release_product_code: "PRB-02",
+        original_set_code: "OP-06",
+        official_asset_variant: "p2",
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Shanks", level: 1 });
+
+    expect(aboutRows()).toEqual([
+      ["Card code", "OP06-007"],
+      ["Set", "OP-06"],
+      ["Found in", "PRB-02"],
+      ["Rarity", "Super Rare"],
+      ["Special print", "SP Card"],
+      ["Printing", "Alt Art"],
+      ["Card type", "Character"],
+      ["Colour", "Red"],
+      ["Language", "Japanese"],
+    ]);
+    // And never the raw token, anywhere a collector reads.
+    expect(document.body.textContent).not.toContain("SPカード");
+  });
+
+  it("omits the Rarity row for a TR print rather than inventing one", async () => {
+    // OP16-042: the catalogue establishes no card-level rarity, so there is
+    // no underlying rarity to show and none is guessed from the product, the
+    // asset variant or a sibling.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        card_code: "OP16-042",
+        name_en: "Prisoner of Impel Down",
+        name_jp: "インペルダウンの囚人",
+        rarity: "TR",
+        canonical_rarity: null,
+        card_type: "Character",
+        release_product_code: "OP-16",
+        original_set_code: "OP-16",
+        official_asset_variant: "p1",
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Prisoner of Impel Down", level: 1 });
+
+    expect(aboutRows()).toEqual([
+      ["Card code", "OP16-042"],
+      ["Set", "OP-16"],
+      ["Found in", "OP-16"],
+      ["Special print", "Treasure Rare"],
+      ["Printing", "Alt Art"],
+      ["Card type", "Character"],
+      ["Colour", "Red"],
+      ["Language", "Japanese"],
+    ]);
+    expect(aboutRows().map(([term]) => term)).not.toContain("Rarity");
+  });
+
+  it("omits the Set row for a promo, which belongs to no numbered set", async () => {
+    // P-105 Sabo, the single SP P print: no original set, no card-level
+    // rarity, and a rarity token that names a special print. Two rows absent,
+    // neither dashed.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        card_code: "P-105",
+        name_en: "Sabo",
+        name_jp: "サボ",
+        rarity: "SP P",
+        canonical_rarity: null,
+        card_type: "Character",
+        release_product_code: "OP-15",
+        original_set_code: null,
+        official_asset_variant: "p2",
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Sabo", level: 1 });
+
+    expect(aboutRows()).toEqual([
+      ["Card code", "P-105"],
+      ["Found in", "OP-15"],
+      ["Special print", "SP Card"],
+      ["Printing", "Alt Art"],
+      ["Card type", "Character"],
+      ["Colour", "Red"],
+      ["Language", "Japanese"],
+    ]);
+    expect(document.body.textContent).not.toContain("SP P");
+  });
+
+  it("shows an unrecognised rarity token verbatim rather than dropping it", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({ rarity: "XR", canonical_rarity: null, card_type: "Character" }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const rows = Object.fromEntries(aboutRows());
+    expect(rows["Published rarity"]).toBe("XR");
+    expect(rows["Rarity"]).toBeUndefined();
+    expect(rows["Special print"]).toBeUndefined();
+  });
+
+  it("offers the terminology key on the page, not only on the catalogue", async () => {
+    // The detail page is where "Super Rare" and "SP Card" sit next to each
+    // other, so the explanation has to be reachable here without a hover.
+    fetchPrint.mockResolvedValue(makeDetail({ rarity: "SPカード", canonical_rarity: "SR" }));
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const toggle = screen.getByRole("button", { name: /what do these labels mean/i });
+    toggle.click();
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Catalogue terminology" })).toBeTruthy(),
+    );
   });
 
   it("keeps the metadata in the identity column, after the prices", async () => {

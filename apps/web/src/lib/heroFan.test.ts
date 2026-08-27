@@ -8,6 +8,7 @@ import {
   utcDayKey,
 } from "./heroFan";
 import type { PrintMarketIndex, PrintUiModel } from "./prints";
+import { rarityTerm } from "./terminology";
 
 const EMPTY_INDEX: PrintMarketIndex = {
   card_print_id: 0,
@@ -36,11 +37,18 @@ function print(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel 
     nameJp: null,
     displayName: `Card ${id}`,
     rarity: "R",
+    rarityTerm: rarityTerm("R"),
+    rarityIsCardLevel: false,
+    specialPrint: null,
+    unknownRarityToken: null,
     cardType: "Character",
     treatment: "normal",
     isDistinctTreatment: false,
     language: "jp",
     releaseCode: "SET",
+    originalSetCode: "SET",
+    printingType: null,
+    artOrdinal: null,
     imageUrl: `https://example.test/art/${id}.png`,
     sourceImageUrl: `https://example.test/art/${id}.png`,
     imageSource: "snkrdunk",

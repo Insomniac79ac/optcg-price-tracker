@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { CatalogueIntro } from "@/components/ui/CatalogueIntro";
+import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import {
@@ -24,6 +25,7 @@ import {
   type PrintCatalogueSort,
   type PrintUiModel,
   toPrintUiModel,
+  printsNeedingArtOrdinal,
 } from "@/lib/prints";
 
 const PAGE_SIZE = 24;
@@ -152,6 +154,8 @@ function PrintsCataloguePageInner() {
   }, [paramsKey]);
 
   const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
+  // Scoped to the prints on screen together - see printsNeedingArtOrdinal.
+  const ordinalNeeded = useMemo(() => printsNeedingArtOrdinal(prints), [prints]);
 
   /** Commits catalogue state to the URL - the only state this page keeps, since
    * everything above reads back out of `useSearchParams()`.
@@ -209,13 +213,17 @@ function PrintsCataloguePageInner() {
             divider that used to sit here read as a standalone ornament and
             cost ~60px before the first card; the intro panel's own edge is
             transition enough. */}
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-3">
           <PrintCatalogueToolbar
             filters={filters}
             facets={data?.facets ?? emptyFacets}
             onChange={(next) => navigate(next, 0)}
             onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
           />
+          {/* The terminology key. Sits under the filters rather than in them:
+              it explains the badges on the tiles below, not the controls
+              above. Tap/click/keyboard - never hover-only. */}
+          <CatalogueLegend />
         </div>
 
         {status === "loading" && <CardGridSkeleton />}
@@ -264,7 +272,11 @@ function PrintsCataloguePageInner() {
           <>
             <CardGrid>
               {prints.map((print) => (
-                <PrintCardTile key={print.cardPrintId} print={print} />
+                <PrintCardTile
+                  key={print.cardPrintId}
+                  print={print}
+                  showArtOrdinal={ordinalNeeded.has(print.cardPrintId)}
+                />
               ))}
             </CardGrid>
             <div className="mt-4">

@@ -22,6 +22,8 @@ function printItem(overrides: Record<string, unknown> = {}) {
     treatment: "parallel",
     language: "jp",
     release_product_code: "OP-04",
+    original_set_code: "OP-04",
+    official_asset_variant: "base",
     image_url: null,
     display_image: null,
     verification_status: "verified",

@@ -17,6 +17,13 @@
 
 import { apiGet, type PaginationMeta } from "./api";
 import { resolveCardImageUrl } from "./cardImage";
+import {
+  artOrdinalLabel,
+  classifyRarityToken,
+  printingTypeTerm,
+  rarityTerm,
+  type Term,
+} from "./terminology";
 
 /** Print-scoped Market Index - the same shape as the legacy card-keyed
  * `MarketIndex` except keyed by `card_print_id`. Computed by
@@ -77,17 +84,37 @@ export interface PrintCatalogueItem {
   card_code: string;
   name_en: string | null;
   name_jp: string | null;
-  /** The canonical card's summary rarity, or null where Bandai's catalogue
-   * establishes no single card-level value. It is NOT this printing's
-   * rarity - that is published per occurrence. Render no badge and no
-   * fallback label when it is null; never "Unknown". */
+  /** THIS printing's published rarity token, resolved server-side from
+   * `card_prints.official_rarity` with the card-level value as a fallback.
+   * Null only where the catalogue establishes neither - render nothing for it,
+   * never "Unknown".
+   *
+   * It is a raw token, and it does not always name a rarity: `SPカード`,
+   * `SP P` and `TR` name a special PRINT category instead. Never render it raw
+   * and never label it "Rarity" without putting it through
+   * `classifyRarityToken` first. */
   rarity: string | null;
+  /** The card-level summary rarity from `canonical_cards`, served separately
+   * and never a fallback for `rarity`. The only authoritative source of an
+   * underlying rarity for a print whose own token names a special print, and
+   * null wherever the catalogue established none - see schemas.py
+   * CardPrintOut.canonical_rarity. Optional so an older API response parses. */
+  canonical_rarity?: string | null;
   card_type: string;
   /** null once a printing carries no Atlas treatment classification. Render
    * no badge and no fallback label for it - never "Unclassified". */
   treatment: string | null;
   language: string;
+  /** The product THIS printing appeared in - not the card's set. A reprint
+   * carries the later product here, so it must never be labelled "Set". */
   release_product_code: string | null;
+  /** The set the card was originally published in. null for promos, which
+   * belong to no numbered set. Optional so an older API response parses. */
+  original_set_code?: string | null;
+  /** Bandai's own asset address for this printing - 'base', 'pN', 'rN'. Used
+   * only to derive a printing type and, as a last resort, an art ordinal.
+   * Never rendered raw, and never read as a rarity or a "parallel" claim. */
+  official_asset_variant?: string | null;
   image_url: string | null;
   display_image: PrintDisplayImage | null;
   verification_status: string;
@@ -159,16 +186,36 @@ export interface PrintDetail {
   card_code: string;
   name_en: string | null;
   name_jp: string | null;
-  /** The canonical card's summary rarity, or null where Bandai's catalogue
-   * establishes no single card-level value. It is NOT this printing's
-   * rarity - that is published per occurrence. Render no badge and no
-   * fallback label when it is null; never "Unknown". */
+  /** THIS printing's published rarity token, resolved server-side from
+   * `card_prints.official_rarity` with the card-level value as a fallback.
+   * Null only where the catalogue establishes neither - render nothing for it,
+   * never "Unknown".
+   *
+   * It is a raw token, and it does not always name a rarity: `SPカード`,
+   * `SP P` and `TR` name a special PRINT category instead. Never render it raw
+   * and never label it "Rarity" without putting it through
+   * `classifyRarityToken` first. */
   rarity: string | null;
+  /** The card-level summary rarity from `canonical_cards`, served separately
+   * and never a fallback for `rarity`. The only authoritative source of an
+   * underlying rarity for a print whose own token names a special print, and
+   * null wherever the catalogue established none - see schemas.py
+   * CardPrintOut.canonical_rarity. Optional so an older API response parses. */
+  canonical_rarity?: string | null;
   card_type: string;
   colors: string[] | null;
   language: string;
   treatment: string | null;
+  /** The product THIS printing appeared in - not the card's set. A reprint
+   * carries the later product here, so it must never be labelled "Set". */
   release_product_code: string | null;
+  /** The set the card was originally published in. null for promos, which
+   * belong to no numbered set. Optional so an older API response parses. */
+  original_set_code?: string | null;
+  /** Bandai's own asset address for this printing - 'base', 'pN', 'rN'. Used
+   * only to derive a printing type and, as a last resort, an art ordinal.
+   * Never rendered raw, and never read as a rarity or a "parallel" claim. */
+  official_asset_variant?: string | null;
   artwork_key: string | null;
   image_url: string | null;
   display_image: PrintDisplayImage | null;
@@ -220,18 +267,52 @@ export interface PrintUiModel {
   nameJp: string | null;
   /** Display name: English where available, Japanese otherwise. */
   displayName: string;
-  /** The canonical card's summary rarity, or null where Bandai's catalogue
-   * establishes no single card-level value. It is NOT this printing's
-   * rarity - that is published per occurrence. Render no badge and no
-   * fallback label when it is null; never "Unknown". */
+  /** The raw published rarity token for this printing, kept for provenance
+   * and for the fail-safe path only. Read `rarityTerm`/`specialPrint` for
+   * anything a collector sees - this token may name a special print rather
+   * than a rarity. */
   rarity: string | null;
+  /** How scarce the card is, when that can be established honestly: this
+   * printing's own token when it names an ordinary rarity, otherwise the
+   * card-level `canonical_rarity` when THAT names one. Null when neither
+   * does - which is the common case for a Treasure Rare - and callers then
+   * render no rarity at all rather than filling the row. Nothing here is
+   * inferred from a special-print token, an asset variant or a sibling. */
+  rarityTerm: Term | null;
+  /** True when `rarityTerm` came from the CARD-level `canonical_rarity` rather
+   * than from this printing's own published token - which is the case for
+   * every SP Card that has a rarity to show at all. Callers say so, because
+   * "Super Rare" on an SP print is a fact about the card, established from its
+   * own set, not a token printed on this catalogue entry. */
+  rarityIsCardLevel: boolean;
+  /** The special printing category - SP Card, Treasure Rare - or null. A
+   * separate dimension from rarity and from printing: a print is commonly
+   * two or three of them at once. */
+  specialPrint: Term | null;
+  /** The raw rarity token when this build recognises it as neither a rarity
+   * nor a special print. Rendered verbatim so unfamiliar published evidence
+   * reaches the collector instead of being silently dropped. */
+  unknownRarityToken: string | null;
   cardType: string;
   treatment: string | null;
   /** True when the treatment is worth surfacing on a tile (i.e. not the
    * plain base printing, and not an unclassified one). */
   isDistinctTreatment: boolean;
   language: string;
+  /** The product this printing appeared in. Rendered under "Found in", never
+   * "Set" - for a reprint the two are different products. */
   releaseCode: string | null;
+  /** The set the card was originally published in, where the API supplies it.
+   * null for promos and for an API older than this field. */
+  originalSetCode: string | null;
+  /** Collector-facing printing type - "Alt Art" or "Reprint" - or null for a
+   * base printing and for an asset family this build does not recognise. The
+   * raw variant is never exposed. */
+  printingType: Term | null;
+  /** Which artwork of the card this is, e.g. "Art 2". Only a last-resort
+   * disambiguator; callers show it when two tiles would otherwise read
+   * identically. */
+  artOrdinal: string | null;
   /** Ready to put straight into an <img src>: the print's verified display
    * image where one exists, the canonical Bandai artwork otherwise, rewritten
    * to a same-origin proxy path for hosts that refuse cross-origin embedding
@@ -296,6 +377,51 @@ function isDistinctTreatment(treatment: string | null): boolean {
   return normalized !== "" && normalized !== "normal" && normalized !== "base";
 }
 
+/** Splits one published rarity token into the dimensions a collector reads
+ * separately, and finds an underlying rarity ONLY where one is already
+ * established.
+ *
+ * The rule that matters is the one about what we refuse to do. When this
+ * printing's own token names a special print - `SPカード`, `SP P`, `TR` -
+ * there is no ordinary rarity in it, and the only other place an ordinary
+ * rarity may come from is `canonical_rarity`, the card-level value the
+ * importer writes solely where the card's own set publishes exactly one (see
+ * canonical_import_apply "THE RARITY PROBLEM, AS RESOLVED"). Where that is
+ * null, or is itself a special-print token, the answer is null and the caller
+ * renders no rarity: nothing is derived from a sibling print, from an asset
+ * variant, from the product, or from what the rarity "probably" is.
+ *
+ * `canonical_rarity` is never consulted when the printing's own token already
+ * names an ordinary rarity - the print's own published value is the
+ * authority, and the two agree for every ordinary print in the corpus anyway.
+ */
+function rarityFacts(item: PrintCatalogueItem | PrintDetail): {
+  rarityTerm: Term | null;
+  rarityIsCardLevel: boolean;
+  specialPrint: Term | null;
+  unknownRarityToken: string | null;
+} {
+  const facts = classifyRarityToken(item.rarity);
+  if (facts.rarity) {
+    return {
+      rarityTerm: facts.rarity,
+      rarityIsCardLevel: false,
+      specialPrint: null,
+      unknownRarityToken: null,
+    };
+  }
+  // Only a KNOWN ordinary rarity is trustworthy enough to stand as the
+  // underlying one; an unrecognised canonical token is left alone rather than
+  // promoted into a "Rarity" row beside a special print.
+  const underlying = rarityTerm(item.canonical_rarity);
+  return {
+    rarityTerm: underlying,
+    rarityIsCardLevel: underlying !== null,
+    specialPrint: facts.specialPrint,
+    unknownRarityToken: facts.unknownToken,
+  };
+}
+
 export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiModel {
   const index = item.market_index;
   const contributingSources = index.source_values
@@ -309,11 +435,15 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     nameJp: item.name_jp,
     displayName: item.name_en || item.name_jp || item.card_code,
     rarity: item.rarity,
+    ...rarityFacts(item),
     cardType: item.card_type,
     treatment: item.treatment,
     isDistinctTreatment: isDistinctTreatment(item.treatment),
     language: item.language,
     releaseCode: item.release_product_code,
+    originalSetCode: item.original_set_code ?? null,
+    printingType: printingTypeTerm(item.official_asset_variant),
+    artOrdinal: artOrdinalLabel(item.official_asset_variant),
     // Presentation prefers the verified display image; identity stays with
     // image_url below. Falls back to the canonical URL when the API is older
     // than this field or no display image was resolved.
@@ -427,4 +557,46 @@ export interface PrintPriceHistory {
 /** GET /prints/{id}/prices */
 export function fetchPrintPrices(printId: string | number): Promise<PrintPriceHistory> {
   return apiGet<PrintPriceHistory>(`/prints/${printId}/prices`);
+}
+
+/** Print ids whose collector-facing label would still be ambiguous on this
+ * page, and which therefore need an art ordinal to be told apart.
+ *
+ * The label a tile actually shows is name + card code + product + printing
+ * type + rarity + special print. Two prints sharing all of it are
+ * indistinguishable to a reader even though they are different printings with
+ * different artwork - that is the case the ordinal exists for, and the only
+ * one. Scoped to the prints on screen together: an ordinal on a tile whose
+ * twin is 40 pages away would be noise a collector cannot act on.
+ */
+export function printsNeedingArtOrdinal(prints: PrintUiModel[]): Set<number> {
+  const byLabel = new Map<string, PrintUiModel[]>();
+  for (const print of prints) {
+    const label = [
+      print.displayName,
+      print.cardCode,
+      print.releaseCode ?? "",
+      print.printingType?.label ?? "",
+      // The rendered dimensions, not the raw token: two tiles reading
+      // "SP Card" are indistinguishable to a collector even when one was
+      // published as `SPカード` and the other as `SP P`.
+      print.rarityTerm?.label ?? "",
+      print.specialPrint?.label ?? "",
+      print.unknownRarityToken ?? "",
+    ].join("\u0000");
+    const bucket = byLabel.get(label);
+    if (bucket) bucket.push(print);
+    else byLabel.set(label, [print]);
+  }
+
+  const needing = new Set<number>();
+  for (const bucket of byLabel.values()) {
+    if (bucket.length < 2) continue;
+    for (const print of bucket) {
+      // Only helps if this print actually has an ordinal to show. A base
+      // printing has none, and inventing one would be a false distinction.
+      if (print.artOrdinal) needing.add(print.cardPrintId);
+    }
+  }
+  return needing;
 }

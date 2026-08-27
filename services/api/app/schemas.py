@@ -548,11 +548,38 @@ class CardPrintOut(BaseModel):
     # catalogue establishes neither; clients render nothing for it and no
     # placeholder is substituted.
     rarity: str | None
+    # Optional: the card-level summary rarity from canonical_cards, served
+    # unresolved and independently of `rarity` above.
+    #
+    # It exists so a client can separate two facts that Bandai publishes in one
+    # column. Where `rarity` names a special printing category rather than a
+    # scarcity tier ('SPカード', 'TR'), this is the only authoritative place an
+    # UNDERLYING rarity can come from - and it is written only where the card's
+    # own set publishes exactly one (see app.services.canonical_import_apply
+    # "THE RARITY PROBLEM, AS RESOLVED"), so it is NULL rather than guessed
+    # wherever the catalogue established none.
+    #
+    # It is therefore never a fallback for `rarity` and never a default: a
+    # client shows it as a separate "Rarity" only when it holds a real ordinary
+    # rarity, and shows no rarity at all when it is NULL. It may also equal
+    # `rarity` outright for an ordinary print, which is not a second fact.
+    canonical_rarity: str | None
     card_type: str
     colors: list[str] | None
     language: str
     treatment: str | None
+    # The product THIS printing appeared in. Not the card's set: a reprint
+    # carries the later product here, so a UI must not label it "Set".
     release_product_code: str | None
+    # The set the card was originally published in, from the canonical card.
+    # NULL for promos, which belong to no numbered set.
+    original_set_code: str | None
+    # Which official Bandai asset this printing carries - 'base', 'pN', 'rN'.
+    # Identity-bearing evidence, exposed so a client can tell two printings of
+    # one card apart. It is an address, never a classification: a client must
+    # not read "parallel" or a rarity out of it (see
+    # app.services.official_asset_variant).
+    official_asset_variant: str | None
     artwork_key: str | None
     image_url: str | None
     display_image: DisplayImageOut | None
@@ -574,10 +601,18 @@ class PrintCatalogueItemOut(BaseModel):
     # Optional, same reading as CardPrintOut.rarity: this printing's official
     # rarity where it has one, else the canonical card-level value, else NULL.
     rarity: str | None
+    # Same reading as CardPrintOut.canonical_rarity: the card-level summary
+    # value, NULL where the catalogue established none, never a fallback for
+    # `rarity`.
+    canonical_rarity: str | None
     card_type: str
     treatment: str | None
     language: str
+    # Same reading as CardPrintOut's two: the product this printing appeared
+    # in, the set the card came from, and which official asset it carries.
     release_product_code: str | None
+    original_set_code: str | None
+    official_asset_variant: str | None
     image_url: str | None
     display_image: DisplayImageOut | None
     verification_status: str

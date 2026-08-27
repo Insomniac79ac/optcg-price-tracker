@@ -20,6 +20,23 @@ neither is present the field is still NULL: no placeholder, no guess.
 Display, filtering and faceting all go through that same resolution, so a tile
 can never show a rarity the `?rarity=` filter would not match, or offer a
 facet value that selects nothing.
+
+One layer sits above that resolution and only above it: `app.services.
+rarity_facets` folds tokens that name a single collector concept into one
+catalogue-facing value, and expands that value back to every token it covers
+when filtering. It is what makes `SPカード` and `SP P` a single `SP CARD`
+option whose population is the sum of both. It is a query-time mapping only -
+`rarity` on the wire is still the exact published token, and no stored value is
+normalised or mutated - so the invariant above holds under it: every offered
+facet value selects at least one print, and every print is reachable from the
+facet its own rarity folds into.
+
+The card-level summary value is served separately as `canonical_rarity`,
+untouched by any of this. It is the only honest source of an *underlying*
+rarity for a print whose own token names a special printing category instead
+of a scarcity tier (`SPカード`, `TR`), and it is NULL wherever the catalogue
+established none - which a client must render as no rarity at all rather than
+fill in.
 """
 
 from __future__ import annotations
@@ -40,6 +57,7 @@ from app.schemas import (
 )
 from app.services.display_image import get_display_images_for_prints
 from app.services.print_market_index import get_market_index_for_prints
+from app.services.rarity_facets import facet_values, filter_tokens
 
 SortKey = Literal["card_code", "name", "index_desc", "index_asc", "updated"]
 SORT_KEYS: tuple[SortKey, ...] = ("card_code", "name", "index_desc", "index_asc", "updated")
@@ -128,11 +146,14 @@ def to_print_out(
         name_en=canonical.name_en,
         name_jp=canonical.name_jp,
         rarity=effective_rarity(print_row, canonical),
+        canonical_rarity=canonical.rarity,
         card_type=canonical.card_type,
         colors=canonical.colors,
         language=print_row.language,
         treatment=print_row.treatment,
         release_product_code=print_row.release_product_code,
+        original_set_code=canonical.original_set_code,
+        official_asset_variant=print_row.official_asset_variant,
         artwork_key=print_row.artwork_key,
         image_url=print_row.image_url,
         display_image=display_image,
@@ -164,10 +185,13 @@ def _to_catalogue_item(
         name_en=canonical.name_en,
         name_jp=canonical.name_jp,
         rarity=effective_rarity(print_row, canonical),
+        canonical_rarity=canonical.rarity,
         card_type=canonical.card_type,
         treatment=print_row.treatment,
         language=print_row.language,
         release_product_code=print_row.release_product_code,
+        original_set_code=canonical.original_set_code,
+        official_asset_variant=print_row.official_asset_variant,
         image_url=print_row.image_url,
         display_image=display_image,
         verification_status=print_row.verification_status,
@@ -210,7 +234,13 @@ def _apply_filters(
         # effective_rarity), never against the card-level column alone - a
         # print whose rarity comes from its own catalogue entry must be
         # reachable by filtering on the rarity it shows.
-        stmt = stmt.where(effective_rarity_sql() == rarity)
+        #
+        # IN, not =, because one collector-facing value can cover more than one
+        # published token: `SP CARD` reaches both `SPカード` and `SP P`, so the
+        # single SP Card option selects the whole category rather than the
+        # larger half of it. Every other value expands to itself, so this stays
+        # an equality match for them - see app.services.rarity_facets.
+        stmt = stmt.where(effective_rarity_sql().in_(filter_tokens(rarity)))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -338,7 +368,7 @@ def get_print_catalogue_facets(db: Session) -> PrintCatalogueFacetsOut:
     # on and the tiles display, so every offered value selects at least one
     # print and every displayed value is offered.
     rarity_expr = effective_rarity_sql()
-    rarities = db.scalars(
+    stored_rarities = db.scalars(
         select(rarity_expr)
         .select_from(CardPrint)
         .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
@@ -346,6 +376,13 @@ def get_print_catalogue_facets(db: Session) -> PrintCatalogueFacetsOut:
         .distinct()
         .order_by(rarity_expr)
     ).all()
+    # Folded through the alias map so tokens that name one collector concept
+    # are offered once - `SPカード` and `SP P` become a single `SP CARD`
+    # option, whose population is the sum of both because `?rarity=` expands
+    # the same way in _apply_filters. Deduplication happens after folding, so
+    # the option count drops but no print becomes unreachable. Everything else
+    # folds to itself.
+    rarities = facet_values(list(stored_rarities))
     return PrintCatalogueFacetsOut(
         treatments=list(treatments),
         rarities=list(rarities),

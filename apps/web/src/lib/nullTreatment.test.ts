@@ -43,6 +43,8 @@ function item(overrides: Partial<PrintCatalogueItem> = {}): PrintCatalogueItem {
     treatment: "parallel",
     language: "jp",
     release_product_code: "OP-01",
+    original_set_code: "OP-01",
+    official_asset_variant: "base",
     image_url: "https://example.test/OP01-013_p2.png",
     display_image: null,
     verification_status: "verified",

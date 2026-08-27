@@ -1,5 +1,7 @@
 "use client";
 
+import { classifyRarityToken } from "@/lib/terminology";
+
 import type { PrintCatalogueFacets, PrintCatalogueSort } from "@/lib/prints";
 
 const SORT_OPTIONS: { value: PrintCatalogueSort; label: string }[] = [
@@ -88,10 +90,20 @@ export function PrintCatalogueToolbar({
       {facets.rarities.length > 0 && (
         <FilterSelect
           label="Rarity"
+          // The control offers two different kinds of thing, and the optgroups
+          // below say which is which. The accessible name says so too, because
+          // an option list read aloud one item at a time is exactly where "SP
+          // Card" would otherwise be heard as a scarcity tier.
+          accessibleName="Rarity or special print"
           value={filters.rarity}
           onSelect={(value) => set("rarity", value)}
           placeholder="All rarities"
-          options={facets.rarities.map((value) => ({ value, label: value }))}
+          // The option VALUE is whatever the API's facet published, because
+          // that is what `?rarity=` filters on - including the single
+          // `SP CARD` value the backend expands to both source tokens (see
+          // app/services/rarity_facets.py). Only the LABEL is translated, so
+          // the dropdown never offers a collector "SPカード".
+          groups={rarityOptionGroups(facets.rarities)}
         />
       )}
 
@@ -136,15 +148,26 @@ const SELECT_CLASS =
  * hiding the caption never costs the accessible name. */
 function FilterSelect({
   label,
+  accessibleName,
   value,
   onSelect,
   options,
+  groups,
   placeholder,
 }: {
   label: string;
+  /** The `aria-label`, where the visible caption is too short to be the whole
+   * truth. The caption has to survive beside two other controls on a 640px
+   * row; the accessible name has no such budget, so it carries the fuller
+   * wording. Defaults to `label`. */
+  accessibleName?: string;
   value: string;
   onSelect: (value: string) => void;
-  options: { value: string; label: string }[];
+  /** A flat option list. Mutually exclusive with `groups`. */
+  options?: { value: string; label: string }[];
+  /** Options split into labelled `<optgroup>`s, for a control whose values
+   * are not all the same kind of thing. */
+  groups?: FilterOptionGroup[];
   /** Rendered as the empty/"no filter" option. Omit for a control like sort
    * that is always set to something. */
   placeholder?: string;
@@ -153,18 +176,70 @@ function FilterSelect({
     <label className="flex min-w-0 items-center gap-1.5">
       <span className="hidden text-[11px] text-text-muted sm:inline">{label}</span>
       <select
-        aria-label={label}
+        aria-label={accessibleName ?? label}
         value={value}
         onChange={(e) => onSelect(e.target.value)}
         className={SELECT_CLASS}
       >
         {placeholder && <option value="">{placeholder}</option>}
-        {options.map((option) => (
+        {options?.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
+        {groups?.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
       </select>
     </label>
   );
+}
+
+export interface FilterOptionGroup {
+  label: string;
+  options: { value: string; label: string }[];
+}
+
+/** The rarity control's options, split into the two kinds of thing the API's
+ * one `?rarity=` parameter actually carries.
+ *
+ * The grouping is the point. "SP Card" and "Treasure Rare" are special
+ * PRINT categories, not rungs on the scarcity ladder, and listing them
+ * inline among Common/Rare/Super Rare is what made an SP print read as though
+ * SP Card were its rarity. Under their own `<optgroup>` heading they are
+ * plainly a different question - in the open list, in the accessible name,
+ * and to a screen reader, which announces the group before the option.
+ *
+ * There is exactly ONE SP Card option, never one per source token. The
+ * collapsing is the API's: `GET /prints` facets `SPカード` and `SP P` into a
+ * single `SP CARD` value and expands that value back to both when filtering,
+ * so the one option's population is the sum of both (see
+ * app/services/rarity_facets.py). Nothing is merged, hidden or renamed here -
+ * this function only labels and orders what the facet published, so a value
+ * this build has never seen is still offered, under its own raw name, in the
+ * group that does not claim to know what it is.
+ */
+function rarityOptionGroups(rarities: string[]): FilterOptionGroup[] {
+  const rarityOptions: { value: string; label: string }[] = [];
+  const specialOptions: { value: string; label: string }[] = [];
+  const unknownOptions: { value: string; label: string }[] = [];
+
+  for (const value of rarities) {
+    const { rarity, specialPrint, unknownToken } = classifyRarityToken(value);
+    if (rarity) rarityOptions.push({ value, label: rarity.label });
+    else if (specialPrint) specialOptions.push({ value, label: specialPrint.label });
+    else if (unknownToken) unknownOptions.push({ value, label: unknownToken });
+  }
+
+  return [
+    { label: "Rarity", options: rarityOptions },
+    { label: "Special print", options: specialOptions },
+    { label: "Other", options: unknownOptions },
+  ].filter((group) => group.options.length > 0);
 }
