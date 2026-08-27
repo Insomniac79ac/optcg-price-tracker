@@ -279,12 +279,17 @@ function PrintsCataloguePageInner() {
                 />
               ))}
             </CardGrid>
-            <div className="mt-4">
+            {/* The catalogue variant, not the dense list-page one: 179 pages
+                of grid need the way onward to read as navigation rather than
+                as a caption under the last row of artwork. Same component and
+                the same offsets - only the presentation differs. */}
+            <div className="mt-8">
               <PaginationControls
                 offset={offset}
                 limit={PAGE_SIZE}
                 total={data.total}
                 onOffsetChange={(nextOffset) => navigate(filters, nextOffset)}
+                variant="catalogue"
               />
             </div>
           </>

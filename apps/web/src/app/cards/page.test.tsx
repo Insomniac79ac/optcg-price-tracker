@@ -799,3 +799,92 @@ describe("clearing the catalogue search", () => {
     expect(screen.getByRole("searchbox")).toHaveValue("kaido parallel");
   });
 });
+
+/** Pagination as the collector meets it: 179 pages of catalogue, and the way
+ * onward has to be visible under the grid rather than read as footer text.
+ * Presentation is asserted in PaginationControls.test.tsx; what matters here
+ * is that /cards asks for the catalogue presentation and that paging still
+ * goes through the URL exactly as it did. */
+describe("catalogue pagination", () => {
+  /** A response that really is one page of a much longer catalogue. The
+   * shared `catalogueResponse` sets total = items.length, which is a single
+   * page by definition and hides the controls. */
+  function pageOf(items: PrintCatalogueItem[], offset: number, total: number): PrintCatalogueList {
+    const base = catalogueResponse(items);
+    return {
+      ...base,
+      total,
+      offset,
+      pagination: {
+        ...base.pagination,
+        total,
+        offset,
+        has_next: offset + 24 < total,
+        has_previous: offset > 0,
+        next_offset: offset + 24 < total ? offset + 24 : null,
+        previous_offset: offset > 0 ? Math.max(0, offset - 24) : null,
+      },
+    };
+  }
+
+  async function renderPage(offset: number, total = 4281) {
+    currentSearch = offset > 0 ? `offset=${offset}` : "";
+    fetchPrintCatalogue.mockResolvedValue(pageOf(CATALOGUE, offset, total));
+    const view = render(<PrintsCataloguePage />);
+    await waitFor(() => expect(screen.getByRole("navigation", { name: "Catalogue pagination" })).toBeInTheDocument());
+    return view;
+  }
+
+  it("renders the catalogue pagination landmark under the grid, not the dense bar", async () => {
+    await renderPage(0);
+    const nav = screen.getByRole("navigation", { name: "Catalogue pagination" });
+    expect(nav.className).toContain("border-t");
+    expect(within(nav).getByText("Page 1 of 179")).toBeInTheDocument();
+    expect(within(nav).getByText("Showing 1–24 of 4,281")).toBeInTheDocument();
+  });
+
+  it("disables Previous on the first page", async () => {
+    await renderPage(0);
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
+  });
+
+  it("enables both controls in the middle of the catalogue", async () => {
+    await renderPage(2160);
+    expect(screen.getByRole("button", { name: "Previous" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
+    expect(screen.getByText("Page 91 of 179")).toBeInTheDocument();
+  });
+
+  it("disables Next on the last page", async () => {
+    await renderPage(4272);
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).not.toBeDisabled();
+    expect(screen.getByText("Page 179 of 179")).toBeInTheDocument();
+  });
+
+  it("commits the next page to the URL as ?offset=, unchanged", async () => {
+    await renderPage(0);
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(navigations().at(-1)).toBe("/cards?offset=24");
+  });
+
+  it("drops ?offset= entirely on the way back to page one", async () => {
+    await renderPage(24);
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    expect(navigations().at(-1)).toBe("/cards");
+  });
+
+  it("still honours an offset that arrived in the URL", async () => {
+    await renderPage(96);
+    expect(fetchPrintCatalogue).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 96, limit: 24 }),
+    );
+    expect(screen.getByText("Page 5 of 179")).toBeInTheDocument();
+  });
+
+  it("keeps the grid to one tile per print, untouched by the pagination change", async () => {
+    await renderPage(0);
+    expect(screen.getAllByRole("link", { name: /OP0/ })).toHaveLength(CATALOGUE.length);
+  });
+});
