@@ -35,6 +35,10 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     "telegram_market_digest": 5 * 60,
     "data_retention_prune": 30 * 60,
     "backup_restore": 60 * 60,
+    # Bounded discovery: a run is capped at ~5 minutes of wall clock,
+    # so a 30-minute TTL leaves ample slack for a stuck fetch while
+    # still releasing on its own after a hard container kill.
+    "snkrdunk_discovery": 30 * 60,
 }
 
 

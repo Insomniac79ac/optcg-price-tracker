@@ -167,6 +167,11 @@ class SnkrdunkDiscoveryRun(Base):
     candidates_found: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     candidates_matched: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Compact, versioned resume state - see worker.jobs.snkrdunk_checkpoint.
+    # Nullable so every row written before the column existed stays valid, and
+    # so "this run stored no checkpoint" is distinguishable from "this run
+    # stored empty progress".
+    resume_state_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class PriceRefreshRun(Base):

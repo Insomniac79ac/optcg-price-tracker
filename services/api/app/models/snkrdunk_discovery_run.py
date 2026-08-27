@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Integer, String, Text, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -36,3 +36,7 @@ class SnkrdunkDiscoveryRun(Base):
     candidates_found: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     candidates_matched: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Mirrors worker.models.SnkrdunkDiscoveryRun - same table, same column.
+    # Compact versioned resume state written by the worker's discovery job
+    # (worker.jobs.snkrdunk_checkpoint); the API only ever reads it.
+    resume_state_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
