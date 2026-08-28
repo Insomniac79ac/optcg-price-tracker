@@ -30,6 +30,7 @@ from app.services.exact_print_approval import (
     REFUSAL_PRINT_NOT_FOUND,
     REFUSAL_PRINT_REQUIRED,
     REFUSAL_PRINT_UNVERIFIED,
+    REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
     ExactPrintApprovalError,
     SourceEvidence,
     resolve_exact_print,
@@ -634,3 +635,239 @@ def test_print_options_assigns_an_art_ordinal_only_where_it_disambiguates(
     # The PRB-01 and OP-08 prints are alone in their product and need none.
     assert by_id[catalogue["prints"]["r1"].id]["art_ordinal"] is None
     assert by_id[catalogue["prints"]["sp_p3"].id]["art_ordinal"] is None
+
+
+# --- 4F-3C: unresolved product evidence is not absent evidence ----------------
+#
+# The 2026-08-27 staging replay found four of six "exact" SNKRDUNK candidates
+# were exact only because Atlas holds no print of the product the listing
+# named, leaving one unrelated printing standing unopposed. These pin the four
+# cases apart: no label, resolved label, unresolved label, contradicting label.
+#
+# Labels are verbatim from discovery run 1.
+
+PCC = "Premium Card Collection 25th Anniversary Edition"
+WSJ = "Weekly Shonen Jump 2023 6th and 7th issue All applicants service Recafig"
+
+
+def _solo_evidence(**kw) -> SourceEvidence:
+    """Evidence for OP01-999, the card code with exactly ONE active verified
+    print - the shape that produced every exact-by-absence verdict."""
+    base = {
+        "source_name": "snkrdunk",
+        "source_url": "https://snkrdunk.com/cards/solo-1",
+        "card_code": "OP01-999",
+    }
+    base.update(kw)
+    return SourceEvidence(**base)
+
+
+def test_no_product_label_still_resolves_a_lone_print_exactly(catalogue):
+    """Case A, unchanged. Silence narrows nothing, and a card code with one
+    printing is genuinely unambiguous."""
+    decision = resolve_exact_print(
+        catalogue["db"],
+        card_print_id=catalogue["prints"]["solo"].id,
+        evidence=_solo_evidence(),
+    )
+    assert decision.card_print.id == catalogue["prints"]["solo"].id
+    assert decision.evidence_used == ["card code OP01-999"]
+
+
+def test_an_unresolved_product_label_refuses_even_a_lone_print(catalogue):
+    """Case C, and the whole point of the tranche.
+
+    Before this rule the same call returned exact. One survivor under a label
+    Atlas cannot read usually means Atlas holds no print of the named product -
+    the survivor is not the answer, it is the only wrong answer available."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["solo"].id,
+            evidence=_solo_evidence(product_label=PCC),
+        )
+    assert err.value.code == REFUSAL_UNRESOLVED_SOURCE_PRODUCT
+    assert err.value.needs_review
+    # The operator still sees what Atlas does hold.
+    assert err.value.alternatives == [catalogue["prints"]["solo"].id]
+
+
+def test_an_unresolved_product_label_refuses_when_many_prints_survive(catalogue):
+    """The refusal replaces the ambiguity verdict rather than hiding behind it.
+
+    'Five printings, indistinguishable' implies one of them is right. When the
+    named product could not be read, that implication is unearned."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["base"].id,
+            evidence=_evidence(product_label=PCC),
+        )
+    assert err.value.code == REFUSAL_UNRESOLVED_SOURCE_PRODUCT
+    assert len(err.value.alternatives) == 5
+
+
+def test_an_applicant_service_label_is_refused_the_same_way(catalogue):
+    """A mail-in premium names a distribution context Atlas has no product
+    for. It is unresolved product evidence, not absent product evidence -
+    even when the source also supplied an exact asset variant."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["solo"].id,
+            evidence=_solo_evidence(product_label=WSJ, variant="base"),
+        )
+    assert err.value.code == REFUSAL_UNRESOLVED_SOURCE_PRODUCT
+
+
+def test_a_resolved_product_that_uniquely_narrows_still_approves(catalogue):
+    """Case B. OP-08 carries exactly one printing of this code."""
+    decision = resolve_exact_print(
+        catalogue["db"],
+        card_print_id=catalogue["prints"]["sp_p3"].id,
+        evidence=_evidence(product_label="Booster Pack Two Legends", set_code="OP-08"),
+    )
+    assert decision.card_print.id == catalogue["prints"]["sp_p3"].id
+    assert "product OP-08" in decision.evidence_used
+
+
+def test_a_resolved_product_with_several_artwork_variants_stays_ambiguous(catalogue):
+    """Case B, and existing ambiguity handling is untouched: knowing the
+    product does not tell you which of its three artworks was sold."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["base"].id,
+            evidence=_evidence(product_label="Booster Pack Paramount War", set_code="OP-02"),
+        )
+    assert err.value.code == REFUSAL_AMBIGUOUS
+    assert err.value.alternatives == sorted(
+        catalogue["prints"][k].id for k in ("base", "p1", "p2")
+    )
+
+
+def test_a_resolved_product_that_rules_the_print_out_is_incompatible(catalogue):
+    """Case D, unchanged."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["base"].id,
+            evidence=_evidence(
+                product_label="Premium Booster ONE PIECE CARD THE BEST", set_code="PRB-01"
+            ),
+        )
+    assert err.value.code == REFUSAL_EVIDENCE_CONTRADICTS
+
+
+def test_a_contradiction_is_reported_ahead_of_an_unresolved_label(catalogue):
+    """Ordering. A print the source's own artwork evidence rules out is a
+    harder, more specific error than a label we could not map, so the operator
+    hears about that one first."""
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"],
+            card_print_id=catalogue["prints"]["base"].id,
+            evidence=_evidence(product_label=PCC, variant="p1"),
+        )
+    assert err.value.code == REFUSAL_EVIDENCE_CONTRADICTS
+
+
+def test_an_exact_asset_variant_still_resolves_without_a_product_label(catalogue):
+    """Control case: artwork evidence that genuinely discriminates, with no
+    product label in play, is still enough on its own."""
+    decision = resolve_exact_print(
+        catalogue["db"],
+        card_print_id=catalogue["prints"]["p2"].id,
+        evidence=_evidence(variant="p2"),
+    )
+    assert decision.card_print.id == catalogue["prints"]["p2"].id
+
+
+# --- reading the label off the stored candidate row --------------------------
+
+
+@pytest.mark.parametrize(
+    "title, expected",
+    [
+        # Verbatim run-1 titles.
+        ("Usopp R [OP01-004] (Booster Pack ROMANCE DAWN)", "Booster Pack ROMANCE DAWN"),
+        ('Shanks SEC-SP (Comic Parallel) [OP01-120](Booster Pack "ROMANCE DAWN")',
+         'Booster Pack "ROMANCE DAWN"'),
+        ("Charlotte Compote C [EB01-055] (Extra Booster Memorial Collection)",
+         "Extra Booster Memorial Collection"),
+        ("Jimbe C Parallel [ST01-005] (Premium Card Collection 25th Anniversary Edition)",
+         PCC),
+        # No trailing group: the source named no product.
+        ("OP02-013 ポートガス・D・エース SR", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_the_product_label_is_read_off_the_stored_title(title, expected):
+    """The gate must be able to tell 'no label' from 'label we could not
+    resolve', and `detected_set_code` is NULL for both. The label is recovered
+    from the title the row already stores - no migration, and it works on rows
+    written before any of this existed."""
+    candidate = SnkrdunkCandidate(
+        source_url="https://snkrdunk.com/cards/x",
+        title=title,
+        detected_card_code="OP01-004",
+    )
+    assert SourceEvidence.from_snkrdunk_candidate(candidate).product_label == expected
+
+
+def test_a_label_resolved_at_parse_time_is_treated_as_resolved(catalogue):
+    """The EB-01 control case in the shape a candidate row actually carries:
+    once discovery has re-parsed with the alias present, `detected_set_code` is
+    populated and the same label is narrowing evidence, not a refusal."""
+    candidate = SnkrdunkCandidate(
+        source_url="https://snkrdunk.com/cards/compote",
+        title="Charlotte Compote C [OP01-999] (Extra Booster Memorial Collection)",
+        detected_card_code="OP01-999",
+        detected_set_code="OP-02",  # the fixture's product for the solo print
+    )
+    evidence = SourceEvidence.from_snkrdunk_candidate(candidate)
+    assert evidence.product_label == "Extra Booster Memorial Collection"
+    assert not evidence.has_unresolved_product
+
+    decision = resolve_exact_print(
+        catalogue["db"], card_print_id=catalogue["prints"]["solo"].id, evidence=evidence
+    )
+    assert "product OP-02" in decision.evidence_used
+
+
+def test_a_stale_row_whose_label_never_resolved_is_refused(catalogue):
+    """The converse, and the reason the staging rows all moved: a row parsed
+    before the alias existed carries a NULL detected_set_code, so its label is
+    unresolved and it fails closed until discovery re-parses it."""
+    candidate = SnkrdunkCandidate(
+        source_url="https://snkrdunk.com/cards/compote-stale",
+        title="Charlotte Compote C [OP01-999] (Extra Booster Memorial Collection)",
+        detected_card_code="OP01-999",
+        detected_set_code=None,
+    )
+    evidence = SourceEvidence.from_snkrdunk_candidate(candidate)
+    assert evidence.has_unresolved_product
+    with pytest.raises(ExactPrintApprovalError) as err:
+        resolve_exact_print(
+            catalogue["db"], card_print_id=catalogue["prints"]["solo"].id, evidence=evidence
+        )
+    assert err.value.code == REFUSAL_UNRESOLVED_SOURCE_PRODUCT
+
+
+def test_print_options_explains_an_unresolved_product_rather_than_blaming_the_source(
+    client, catalogue, candidate
+):
+    """The operator screen must not tell someone to find product evidence the
+    listing already supplied."""
+    candidate.title = f"Portgas.D.Ace SR [OP02-013] ({PCC})"
+    catalogue["db"].commit()
+
+    body = client.get(f"/admin/snkrdunk-candidates/{candidate.id}/print-options").json()
+    assert body["resolvable_card_print_id"] is None
+    assert PCC in body["ambiguity_reason"]
+    assert "does not resolve" in body["ambiguity_reason"]
+    assert all(o["approvable"] is False for o in body["options"])
+    assert {o["refusal_code"] for o in body["options"]} == {
+        REFUSAL_UNRESOLVED_SOURCE_PRODUCT
+    }

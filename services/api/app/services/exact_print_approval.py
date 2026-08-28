@@ -24,6 +24,31 @@ The operator's explicit choice is required but is NOT self-justifying: the
 chosen print still has to survive the evidence filter. A human clicking the
 wrong row is precisely the failure this is here to catch.
 
+WHAT THE SOURCE'S PRODUCT EVIDENCE IS WORTH, in four cases. Product evidence
+arrives as two separate facts: the product the source NAMED (`product_label`)
+and the Atlas product that label RESOLVED to (`set_code`). Collapsing them is
+what let unsafe approvals through.
+
+  A. No label.            Narrows nothing. The card code and the asset variant
+                          do their usual work, and one surviving print is a
+                          real exact.
+  B. Label resolves.      Narrowing evidence, used as before.
+  C. Label unresolved.    REFUSED - `source_product_unresolved`. The source
+                          described the item's product and Atlas could not
+                          read it, so no surviving print is corroborated. This
+                          holds EVEN WHEN ONLY ONE PRINT SURVIVES: a lone
+                          survivor under an unreadable product label usually
+                          means Atlas holds no print of the named product at
+                          all, which is the opposite of proof.
+  D. Label resolves and   REFUSED - `evidence_contradicts_selection`, as
+     rules the print out. before.
+
+Case C is the 4F-3C change. Before it, an unresolved label was indistinguishable
+from no label, and four of the six "exact" SNKRDUNK candidates on staging were
+exact purely because the product they named - a Premium Card Collection box, a
+Weekly Shonen Jump mail-in premium - has no Atlas ReleaseProduct, leaving one
+unrelated printing standing unopposed.
+
 WHAT IT DELIBERATELY DOES NOT DO. It does not fetch anything, does not create
 price observations, does not touch the 74 existing mappings, and does not
 invent a uniqueness rule - duplicate protection is already the database's
@@ -33,6 +58,7 @@ constraint is what stops one listing reaching two prints.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -51,6 +77,12 @@ REFUSAL_NO_SOURCE_CARD_CODE = "source_card_code_missing"
 REFUSAL_CARD_CODE_MISMATCH = "card_code_mismatch"
 REFUSAL_EVIDENCE_CONTRADICTS = "evidence_contradicts_selection"
 REFUSAL_AMBIGUOUS = "evidence_cannot_distinguish_print"
+# The source named a product and Atlas could not say which product that is.
+# Distinct from REFUSAL_AMBIGUOUS (Atlas knows the candidates and the source
+# cannot separate them) and from REFUSAL_EVIDENCE_CONTRADICTS (the source's
+# product is known and rules the print out). Here the evidence could not be
+# EVALUATED at all, so nothing about the catalogue can corroborate the print.
+REFUSAL_UNRESOLVED_SOURCE_PRODUCT = "source_product_unresolved"
 # A row that predates exact prints being written, asked to become approved.
 # Distinct from REFUSAL_PRINT_REQUIRED, which is about a missing request
 # field: here the request is well formed and it is the ROW that cannot
@@ -64,6 +96,7 @@ NEEDS_REVIEW_REFUSALS = frozenset(
         REFUSAL_NO_SOURCE_CARD_CODE,
         REFUSAL_AMBIGUOUS,
         REFUSAL_EVIDENCE_CONTRADICTS,
+        REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
         REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
     }
 )
@@ -82,12 +115,32 @@ def _norm(value: str | None) -> str | None:
     return cleaned or None
 
 
+# The product a SNKRDUNK title names, which is always the trailing "(...)"
+# group: "Roronoa Zoro L [OP01-001] (Booster Pack ROMANCE DAWN)".
+#
+# DELIBERATELY THE SAME PATTERN as worker.matching.snkrdunk_listing_evidence's
+# `_PRODUCT_RE`, and coupled to it on purpose. The worker reads this group at
+# parse time and resolves it to a product code; this module has to know
+# whether the source supplied a product AT ALL, which the resolved code cannot
+# tell it - a NULL `detected_set_code` means "no label" and "label we could
+# not resolve" alike, and those two lead to opposite verdicts. The services do
+# not import each other (separate deployables), so the pattern is mirrored
+# rather than shared, against the same stored `title` string.
+_SOURCE_PRODUCT_LABEL_RE = re.compile(r"\(([^()]+)\)\s*$")
+
+
 @dataclass(frozen=True)
 class SourceEvidence:
     """What the source actually told us about the item it is selling.
 
     Every field is optional because sources genuinely omit them - that is the
     point. Absent evidence narrows nothing; it never counts as agreement.
+
+    `product_label` and `set_code` are two different facts and must not be
+    collapsed. `product_label` is the product the source NAMED, verbatim, in
+    its own nomenclature. `set_code` is the Atlas product that label RESOLVED
+    to. A label with no resolution is the case this module now refuses: the
+    source described the item's product and we cannot check it.
     """
 
     source_name: str
@@ -97,14 +150,25 @@ class SourceEvidence:
     variant: str | None = None
     rarity: str | None = None
     title: str | None = None
+    product_label: str | None = None
+
+    @property
+    def has_unresolved_product(self) -> bool:
+        """The source named a product and Atlas could not resolve it."""
+        return self.product_label is not None and _norm(self.set_code) is None
 
     @classmethod
     def from_snkrdunk_candidate(cls, candidate) -> "SourceEvidence":
         """The SNKRDUNK candidate row, read as evidence.
 
         These are the fields the discovery/parse step already persisted; this
-        reads them, and fetches nothing.
+        reads them, and fetches nothing. `product_label` is read back off the
+        stored title rather than from a column of its own: the label is not
+        persisted separately, and re-reading it here needs no migration and no
+        rewrite of existing candidate rows.
         """
+        match = _SOURCE_PRODUCT_LABEL_RE.search(candidate.title or "")
+        label = match.group(1).strip() if match else None
         return cls(
             source_name="snkrdunk",
             source_url=candidate.source_url,
@@ -113,6 +177,7 @@ class SourceEvidence:
             variant=candidate.detected_variant,
             rarity=candidate.detected_rarity,
             title=candidate.title,
+            product_label=label or None,
         )
 
 
@@ -284,6 +349,43 @@ def resolve_exact_print(
             f"It is consistent with {surviving_ids} instead.",
             alternatives=surviving_ids,
         )
+    # UNRESOLVED PRODUCT EVIDENCE IS NOT ABSENT EVIDENCE.
+    #
+    # The 2026-08-27 replay found four of six "exact" SNKRDUNK candidates were
+    # exact only because Atlas holds no print for the product the listing
+    # named. ST01-005 sold as "(Premium Card Collection 25th Anniversary
+    # Edition)" narrowed to one print - the ST-01 base - because that is the
+    # only printing of that code Atlas has. The item on sale was a different
+    # printing that the catalogue does not contain at all, so the single
+    # survivor was not the answer; it was the only wrong answer available.
+    #
+    # Silence and an unreadable statement are not the same evidence. A listing
+    # with no product label narrows nothing and leaves the other dimensions to
+    # do their work (case A). A listing that NAMES a product Atlas cannot
+    # resolve has told us the item's product and we failed to read it, so no
+    # surviving print can be said to be corroborated - however few of them
+    # there are. Approving anyway would be exactly the inference this module
+    # exists to refuse, dressed up as a lucky uniqueness.
+    #
+    # Ordered after the contradiction checks on purpose: a print the source's
+    # own artwork evidence rules out is a harder and more specific error than
+    # a label we could not map, and the operator should be told about that
+    # first. Ordered before the ambiguity check because an unreadable product
+    # is a fact about the catalogue's coverage, not about the operator's
+    # ability to choose between known printings - and reporting six printings
+    # as "indistinguishable" implies one of them is right.
+    if evidence.has_unresolved_product:
+        raise ExactPrintApprovalError(
+            REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
+            f"The listing names product {evidence.product_label!r}, which does not resolve "
+            f"to any Atlas release product. Card code {canonical.card_code} cannot be "
+            f"corroborated against it, so none of {surviving_ids} can be approved - "
+            "including when only one survives, which would mean Atlas simply holds no "
+            "print of the named product. Add a verified product alias, or import the "
+            "product, before approving.",
+            alternatives=surviving_ids,
+        )
+
     if len(surviving_ids) > 1:
         # The whole point. The operator may well be right, but nothing in the
         # source proves it, and a mapping is a claim about which item was

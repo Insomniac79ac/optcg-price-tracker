@@ -271,6 +271,18 @@ def get_print_options(candidate_id: int, db: Session = Depends(get_db)):
             if evidence.card_code
             else "The listing has no detected card code, so no printing can be proposed."
         )
+    elif evidence.has_unresolved_product:
+        # Saying "approval needs evidence that names the product" would be
+        # wrong here and would send the operator looking for something the
+        # listing already supplied. The listing DID name a product; Atlas
+        # cannot map it, and that is a gap in the catalogue or the alias
+        # table, not in the source.
+        ambiguity_reason = (
+            f"The listing names product {evidence.product_label!r}, which does not resolve "
+            f"to an Atlas release product, so none of the {len(options)} printing(s) below "
+            "can be corroborated - not even if only one is shown. Add a verified product "
+            "alias for that label, or import the product, before approving."
+        )
     elif len(approvable_ids) != 1:
         ambiguity_reason = (
             f"{len(approvable_ids)} of {len(options)} printings can be justified from the "
