@@ -15,6 +15,13 @@ argon2-cffi
 # display-image mirroring verifier (app.services.display_image_mirror). It
 # must never produce image bytes: no Image.save, re-encode, resize or crop.
 Pillow
+# Perceptual hashing for app.services.artwork_evidence. Pinned to the same
+# version the snkrdunk collector uses: the two compute distances that are
+# compared against shared thresholds, so a version skew between them would
+# silently move the numbers. artwork_evidence imports it lazily, which is why
+# its absence here surfaced only as an "unusable" verdict at runtime rather
+# than an import error - see tests/test_artwork_evidence.py.
+ImageHash==4.3.2
 # Cloudflare R2 via its S3-compatible API (app.services.object_storage) - the
 # only S3 client in this service. botocore is pulled in transitively and is
 # deliberately not listed separately, matching the convention above. R2 is

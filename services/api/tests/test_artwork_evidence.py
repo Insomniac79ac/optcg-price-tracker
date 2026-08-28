@@ -220,3 +220,22 @@ def test_the_flag_defaults_off():
     from app.settings import Settings
 
     assert Settings().ARTWORK_EVIDENCE_ENABLED is False
+
+
+def test_imagehash_is_declared_in_this_service_requirements():
+    """artwork_evidence imports imagehash lazily, inside _phash.
+
+    That means the API starts, every test passes, and the module imports
+    cleanly even when the dependency is missing from the deployed image - the
+    only symptom is that every verdict comes back `unusable`. That is exactly
+    what happened on staging. This test pins the declaration so the failure
+    cannot recur silently.
+    """
+    from pathlib import Path
+
+    requirements = (Path(__file__).resolve().parents[1] / "requirements.txt").read_text()
+    assert "ImageHash" in requirements
+
+    import imagehash  # the import artwork_evidence actually performs
+
+    assert imagehash is not None
