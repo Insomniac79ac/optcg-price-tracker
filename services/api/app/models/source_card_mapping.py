@@ -31,31 +31,43 @@ class SourceCardMapping(Base):
         ),
         # Exists only so price_observations can carry a composite
         # ForeignKeyConstraint(source_card_mapping_id, card_print_id,
-        # card_id, source_id) -> (id, card_print_id, card_id, source_id) -
-        # see PriceObservation - which pins each priced observation to the
-        # exact print, legacy card, and source its mapping was made
-        # against, not just the mapping/print pair. Not a uniqueness rule
-        # on any of these columns individually (a print, card, or source
-        # can still be reachable via many mappings).
+        # source_id) -> (id, card_print_id, source_id) - see
+        # PriceObservation - which pins each priced observation to the exact
+        # print and source its mapping was made against. Not a uniqueness
+        # rule on any of these columns individually (a print or source can
+        # still be reachable via many mappings); id alone is already unique.
+        #
+        # card_id is deliberately NOT part of this key. It is legacy
+        # compatibility, not identity, and including a nullable
+        # compatibility column would silently disable the FK under MATCH
+        # SIMPLE for exactly the print-authoritative rows that most need
+        # checking - see the c9f31e2a7d04 migration.
         UniqueConstraint(
             "id",
             "card_print_id",
-            "card_id",
             "source_id",
-            name="uq_source_card_mappings_lineage_identity",
+            name="uq_source_card_mappings_print_lineage_identity",
         ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"), index=True
+    # LEGACY COMPATIBILITY, NOT IDENTITY. The exact print this mapping prices
+    # is card_print_id below; that is what the pricing and Market Index paths
+    # read. This column stays for the older services that still join `cards`
+    # (see app.services.card_audit / source_mapping_confidence /
+    # catalog_coverage) and is populated on every row written so far, but a
+    # print-authoritative mapping may leave it NULL: the legacy table covers
+    # 21 of the catalogue's 2,710 card codes and cannot describe the rest.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True, index=True
     )
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
     )
-    # Additive print-lineage pointer alongside the legacy card_id above -
-    # nothing switches reads/writes to this yet. Nullable so every existing
-    # mapping row stays valid as legacy (card_id-only) lineage.
+    # THE AUTHORITATIVE IDENTITY for a mapping written through the
+    # exact-print gate. Still nullable, because every pre-existing legacy
+    # (card_id-only) mapping row stays valid as it is; new approvals always
+    # populate it.
     card_print_id: Mapped[int | None] = mapped_column(
         ForeignKey("card_prints.id", ondelete="RESTRICT"), nullable=True, index=True
     )

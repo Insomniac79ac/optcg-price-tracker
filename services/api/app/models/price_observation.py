@@ -56,23 +56,29 @@ class PriceObservation(Base):
         # queries (e.g. a per-source freshness/staleness sweep) that don't
         # filter by card_id at all.
         Index("ix_price_observations_source_observed", "source_id", "observed_at"),
-        # Pins an observation to the exact print, legacy card, and source its
+        # Pins an observation to the exact print and source its
         # source_card_mapping was made against - source_card_mappings.
-        # card_print_id/card_id/source_id can each differ per mapping, so a
-        # narrower FK couldn't catch a mismatch between the observation's own
-        # card_id/source_id and the mapping it claims to use. Composite by
-        # design, not independent FKs (see
-        # uq_source_card_mappings_lineage_identity).
+        # card_print_id/source_id can each differ per mapping, so a narrower
+        # FK couldn't catch a mismatch between the observation's own print/
+        # source and the mapping it claims to use. Composite by design, not
+        # independent FKs (see
+        # uq_source_card_mappings_print_lineage_identity).
+        #
+        # card_id is deliberately absent. It is legacy compatibility and is
+        # now nullable, and Postgres FKs default to MATCH SIMPLE: including a
+        # nullable column would switch the check OFF entirely for any row
+        # that leaves it NULL - precisely the print-authoritative rows this
+        # constraint exists to police. Narrowing the key is what keeps them
+        # enforced.
         ForeignKeyConstraint(
-            ["source_card_mapping_id", "card_print_id", "card_id", "source_id"],
+            ["source_card_mapping_id", "card_print_id", "source_id"],
             [
                 "source_card_mappings.id",
                 "source_card_mappings.card_print_id",
-                "source_card_mappings.card_id",
                 "source_card_mappings.source_id",
             ],
             ondelete="RESTRICT",
-            name="fk_price_observations_mapping_print_card_source",
+            name="fk_price_observations_mapping_print_source",
         ),
         # Legacy observations carry neither lineage field; print-linked ones
         # must carry both together, never just one.
@@ -84,8 +90,14 @@ class PriceObservation(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"), index=True
+    # LEGACY COMPATIBILITY, NOT IDENTITY. A priced observation is identified
+    # by (source_card_mapping_id, card_print_id, source_id) below. This
+    # column stays for the older read paths that still join `cards`
+    # (app.services.latest_prices, catalog_coverage, card_audit) and is set
+    # on every row written so far, but a print-authoritative observation may
+    # leave it NULL - the legacy table cannot name most of the catalogue.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True, index=True
     )
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
@@ -116,25 +128,24 @@ class PriceObservation(Base):
 
     # Read-only convenience accessor for the composite lineage FK above -
     # viewonly because the pairing is already fully owned by the plain
-    # columns plus fk_price_observations_mapping_print_card_source/
+    # columns plus fk_price_observations_mapping_print_source/
     # ck_price_observations_lineage_paired; a writable relationship here
     # would offer a second, redundant way to set the same columns.
     # Not accessed by any existing code path, so this doesn't change current
     # loading or write behaviour, and (being viewonly) can never cascade a
-    # delete. foreign_keys is explicit because card_id/source_id each also
-    # carry their own single-column ForeignKey to cards/sources, so the join
-    # here would otherwise be ambiguous.
+    # delete. foreign_keys is explicit because source_id also carries its own
+    # single-column ForeignKey to sources, so the join here would otherwise
+    # be ambiguous.
     source_card_mapping: Mapped["SourceCardMapping | None"] = relationship(
         "SourceCardMapping",
         primaryjoin=(
             "and_(PriceObservation.source_card_mapping_id == SourceCardMapping.id, "
             "PriceObservation.card_print_id == SourceCardMapping.card_print_id, "
-            "PriceObservation.card_id == SourceCardMapping.card_id, "
             "PriceObservation.source_id == SourceCardMapping.source_id)"
         ),
         foreign_keys=(
             "[PriceObservation.source_card_mapping_id, PriceObservation.card_print_id, "
-            "PriceObservation.card_id, PriceObservation.source_id]"
+            "PriceObservation.source_id]"
         ),
         viewonly=True,
     )

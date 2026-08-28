@@ -1,3 +1,5 @@
+import pytest
+
 from app.models import (
     CanonicalCard,
     Card,
@@ -312,3 +314,111 @@ def test_approve_source_mapping(client, db_session):
     assert updated.is_active is True
     assert updated.review_status == "approved"
     assert updated.last_verified_at is not None
+
+
+# --- print-authoritative mappings (c9f31e2a7d04) ---------------------------
+#
+# card_id is legacy compatibility, not identity, and may be NULL. These pin
+# the admin read paths against the two ways that used to break them: an inner
+# join to `cards` silently dropping the row, and db.get(Card, None) raising.
+
+
+def make_print_authoritative_mapping(db_session, source: Source, **overrides) -> SourceCardMapping:
+    print_row = make_print(db_session, card_code=overrides.pop("card_code", "OP01-900"))
+    fields = dict(
+        card_id=None,
+        source_id=source.id,
+        card_print_id=print_row.id,
+        source_card_id="print-only-listing",
+        source_url=f"https://{source.name}.example/print-only",
+    )
+    fields.update(overrides)
+    mapping = SourceCardMapping(**fields)
+    db_session.add(mapping)
+    db_session.commit()
+    db_session.refresh(mapping)
+    return mapping
+
+
+def test_list_source_mappings_includes_a_mapping_with_no_legacy_card(client, db_session):
+    source = make_source(db_session)
+    mapping = make_print_authoritative_mapping(db_session, source)
+
+    response = client.get("/admin/source-mappings")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    item = body["items"][0]
+    assert item["id"] == mapping.id
+    assert item["card_id"] is None
+    assert item["card_print_id"] == mapping.card_print_id
+    assert item["card_code"] is None
+    assert item["name_en"] is None
+    assert item["source_name"] == source.name
+
+
+def test_list_source_mappings_returns_legacy_and_print_authoritative_together(client, db_session):
+    source = make_source(db_session)
+    card = make_card(db_session)
+    legacy = make_mapping(db_session, card, source)
+    print_only = make_print_authoritative_mapping(db_session, source)
+
+    response = client.get("/admin/source-mappings")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 2
+    by_id = {item["id"]: item for item in body["items"]}
+    assert by_id[legacy.id]["card_id"] == card.id
+    assert by_id[print_only.id]["card_id"] is None
+
+
+def test_list_source_mappings_card_code_filter_excludes_the_cardless_mapping(client, db_session):
+    source = make_source(db_session)
+    card = make_card(db_session, card_code="OP01-001")
+    make_mapping(db_session, card, source)
+    make_print_authoritative_mapping(db_session, source)
+
+    response = client.get("/admin/source-mappings", params={"card_code": "OP01-001"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"][0]["card_id"] == card.id
+
+
+# db.get(Card, None) does not raise on this SQLAlchemy version - it emits
+# "fully NULL primary key identity cannot load any object" and returns None,
+# with the warning itself saying it "may raise an error in a future release".
+# Promoting it to an error here is what makes these two tests actually prove
+# the None-guard in _to_out_with_lookups, rather than passing either way.
+@pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
+def test_get_source_mapping_with_no_legacy_card(client, db_session):
+    source = make_source(db_session)
+    mapping = make_print_authoritative_mapping(db_session, source)
+
+    response = client.get(f"/admin/source-mappings/{mapping.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == mapping.id
+    assert body["card_id"] is None
+    assert body["card_code"] is None
+    assert body["card_print_id"] == mapping.card_print_id
+
+
+@pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
+def test_patch_source_mapping_with_no_legacy_card_serializes_back(client, db_session):
+    """The PATCH response goes through the same lookup-then-serialize path."""
+    source = make_source(db_session)
+    mapping = make_print_authoritative_mapping(db_session, source)
+
+    response = client.patch(
+        f"/admin/source-mappings/{mapping.id}", json={"review_notes": "print-only"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["card_id"] is None
+    assert body["review_notes"] == "print-only"

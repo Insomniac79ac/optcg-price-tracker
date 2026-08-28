@@ -237,7 +237,15 @@ def test_observation_correct_mapping_print_but_wrong_source_id_is_rejected(postg
     postgres_session.rollback()
 
 
-def test_observation_correct_mapping_print_source_but_wrong_card_id_is_rejected(postgres_session):
+def test_observation_legacy_card_id_no_longer_has_to_match_the_mapping(postgres_session):
+    """Deliberately relaxed by c9f31e2a7d04, and the reason the FK narrowed.
+
+    card_id was dropped from the composite key because it is legacy
+    compatibility rather than identity, and PostgreSQL FKs are MATCH SIMPLE:
+    leaving a nullable card_id in the key would have switched the whole check
+    off for print-authoritative rows. The cost is that the lineage FK no
+    longer polices card_id - the print and source, which are the identity,
+    are still pinned (see the two tests either side of this one)."""
     card = make_legacy_card(postgres_session)
     other_card = make_legacy_card(postgres_session, card_code="OP01-202", name_en="Other Card")
     source = make_source(postgres_session)
@@ -245,15 +253,16 @@ def test_observation_correct_mapping_print_source_but_wrong_card_id_is_rejected(
     print_row = make_print(postgres_session, canonical_card)
     mapping = make_mapping(postgres_session, card, source, card_print_id=print_row.id)
 
-    with pytest.raises(IntegrityError):
-        make_observation(
-            postgres_session,
-            other_card,
-            source,
-            source_card_mapping_id=mapping.id,
-            card_print_id=print_row.id,
-        )
-    postgres_session.rollback()
+    observation = make_observation(
+        postgres_session,
+        other_card,
+        source,
+        source_card_mapping_id=mapping.id,
+        card_print_id=print_row.id,
+    )
+
+    assert observation.card_id == other_card.id
+    assert observation.card_print_id == print_row.id
 
 
 def test_deleting_a_referenced_source_card_mapping_is_rejected(postgres_session):
@@ -301,7 +310,11 @@ def test_changing_a_used_mappings_card_print_id_is_rejected(postgres_session):
     postgres_session.rollback()
 
 
-def test_changing_a_used_mappings_card_id_is_rejected(postgres_session):
+def test_changing_a_used_mappings_card_id_is_allowed(postgres_session):
+    """Same relaxation as above, from the mapping side: repointing a used
+    mapping's legacy card no longer breaks the composite key, because card_id
+    is not in it. Repointing its card_print_id or source_id still does - see
+    the tests either side."""
     card = make_legacy_card(postgres_session)
     other_card = make_legacy_card(postgres_session, card_code="OP01-203", name_en="Another Card")
     source = make_source(postgres_session)
@@ -318,9 +331,11 @@ def test_changing_a_used_mappings_card_id_is_rejected(postgres_session):
 
     mapping.card_id = other_card.id
     postgres_session.add(mapping)
-    with pytest.raises(IntegrityError):
-        postgres_session.commit()
-    postgres_session.rollback()
+    postgres_session.commit()
+
+    postgres_session.refresh(mapping)
+    assert mapping.card_id == other_card.id
+    assert mapping.card_print_id == print_row.id
 
 
 def test_changing_a_used_mappings_source_id_is_rejected(postgres_session):

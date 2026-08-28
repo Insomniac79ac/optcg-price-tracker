@@ -81,11 +81,12 @@ def postgres_session():
         # target (id) matters for this test, not canonical_cards/card_prints'
         # full column set.
         conn.execute(text("CREATE TABLE card_prints (id SERIAL PRIMARY KEY)"))
-        # The exact constraint DDL from
-        # services/api/alembic/versions/b858237e3706_add_print_lineage_to_source_card_.py,
-        # layered onto worker's own (plain-column) tables so this proves
-        # acceptance under the real schema rather than worker's lighter ORM
-        # mirror of it.
+        # The exact constraint DDL the api's migrations leave in place -
+        # b858237e3706 as narrowed by c9f31e2a7d04, which dropped the legacy
+        # card_id from both the unique key and the composite FK - layered
+        # onto worker's own (plain-column) tables so this proves acceptance
+        # under the real schema rather than worker's lighter ORM mirror of
+        # it.
         conn.execute(
             text(
                 "ALTER TABLE source_card_mappings "
@@ -96,16 +97,16 @@ def postgres_session():
         conn.execute(
             text(
                 "ALTER TABLE source_card_mappings "
-                "ADD CONSTRAINT uq_source_card_mappings_lineage_identity "
-                "UNIQUE (id, card_print_id, card_id, source_id)"
+                "ADD CONSTRAINT uq_source_card_mappings_print_lineage_identity "
+                "UNIQUE (id, card_print_id, source_id)"
             )
         )
         conn.execute(
             text(
                 "ALTER TABLE price_observations "
-                "ADD CONSTRAINT fk_price_observations_mapping_print_card_source "
-                "FOREIGN KEY (source_card_mapping_id, card_print_id, card_id, source_id) "
-                "REFERENCES source_card_mappings (id, card_print_id, card_id, source_id) "
+                "ADD CONSTRAINT fk_price_observations_mapping_print_source "
+                "FOREIGN KEY (source_card_mapping_id, card_print_id, source_id) "
+                "REFERENCES source_card_mappings (id, card_print_id, source_id) "
                 "ON DELETE RESTRICT"
             )
         )
@@ -132,7 +133,7 @@ def postgres_session():
             conn.execute(
                 text(
                     "ALTER TABLE price_observations "
-                    "DROP CONSTRAINT fk_price_observations_mapping_print_card_source"
+                    "DROP CONSTRAINT fk_price_observations_mapping_print_source"
                 )
             )
             conn.execute(

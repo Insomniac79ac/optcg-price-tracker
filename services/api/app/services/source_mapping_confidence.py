@@ -80,7 +80,10 @@ class MappingQualityItem:
     source_name: str | None
     source_url: str | None
     source_card_id: str
-    card_id: int
+    # Legacy compatibility, nullable since c9f31e2a7d04 - a print-
+    # authoritative mapping has no legacy Card, and is reported with
+    # issue_type "missing_card_reference".
+    card_id: int | None
     card_code: str | None
     name_en: str | None
     name_jp: str | None
@@ -241,7 +244,11 @@ def evaluate_source_mapping(
     sentinel - None is a valid "no observations" result."""
     now = now or datetime.now(timezone.utc)
 
-    if card is None:
+    if card is None and mapping.card_id is not None:
+        # A print-authoritative mapping has no legacy card; db.get(Card, None)
+        # raises. `card is None` from here on already means "legacy card data
+        # unavailable", which the scoring below reports as an issue rather
+        # than treating as a low-quality match.
         card = db.get(Card, mapping.card_id)
     if source is None:
         source = db.get(Source, mapping.source_id)
@@ -361,9 +368,12 @@ class MappingQualityFilters:
 
 
 def _base_query(filters: MappingQualityFilters):
+    # OUTER join for the same reason as the admin listing: a mapping with no
+    # legacy card must still be assessable rather than silently absent from
+    # the quality report.
     query = (
         select(SourceCardMapping)
-        .join(Card, SourceCardMapping.card_id == Card.id)
+        .outerjoin(Card, SourceCardMapping.card_id == Card.id)
         .join(Source, SourceCardMapping.source_id == Source.id)
     )
     conditions = []

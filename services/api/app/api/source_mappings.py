@@ -59,7 +59,10 @@ def _get_mapping_or_404(db: Session, mapping_id: int) -> SourceCardMapping:
 
 
 def _to_out_with_lookups(db: Session, mapping: SourceCardMapping) -> SourceCardMappingOut:
-    card = db.get(Card, mapping.card_id)
+    # A print-authoritative mapping has no legacy card, and db.get(Card, None)
+    # raises rather than returning None. _to_out already renders card=None as
+    # empty card_code/name fields.
+    card = db.get(Card, mapping.card_id) if mapping.card_id is not None else None
     source = db.get(Source, mapping.source_id)
     return _to_out(mapping, card, source)
 
@@ -95,16 +98,20 @@ def list_source_mappings(
     if card_code is not None:
         filters.append(Card.card_code == card_code)
 
+    # OUTER join to `cards`: a print-authoritative mapping has no legacy card,
+    # and an inner join would drop it from the admin list entirely - the
+    # mapping would exist, price things, and be invisible here. Filtering by
+    # card_code still works, since a NULL card matches no code.
     base = (
         select(SourceCardMapping)
-        .join(Card, SourceCardMapping.card_id == Card.id)
+        .outerjoin(Card, SourceCardMapping.card_id == Card.id)
         .join(Source, SourceCardMapping.source_id == Source.id)
         .where(*filters)
     )
     count_base = (
         select(func.count())
         .select_from(SourceCardMapping)
-        .join(Card, SourceCardMapping.card_id == Card.id)
+        .outerjoin(Card, SourceCardMapping.card_id == Card.id)
         .join(Source, SourceCardMapping.source_id == Source.id)
         .where(*filters)
     )
@@ -114,7 +121,7 @@ def list_source_mappings(
         base.order_by(SourceCardMapping.id).limit(limit).offset(offset)
     ).all()
 
-    card_ids = {m.card_id for m in mappings}
+    card_ids = {m.card_id for m in mappings if m.card_id is not None}
     source_ids = {m.source_id for m in mappings}
     cards_by_id: dict[int, Card] = {}
     if card_ids:
@@ -128,7 +135,12 @@ def list_source_mappings(
         }
 
     items = [
-        _to_out(m, cards_by_id.get(m.card_id), sources_by_id.get(m.source_id)) for m in mappings
+        _to_out(
+            m,
+            cards_by_id.get(m.card_id) if m.card_id is not None else None,
+            sources_by_id.get(m.source_id),
+        )
+        for m in mappings
     ]
     return SourceCardMappingListOut(
         items=items,

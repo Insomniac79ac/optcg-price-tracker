@@ -67,16 +67,22 @@ class SourceCardMapping(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"), index=True
+    # LEGACY COMPATIBILITY, NOT IDENTITY - card_print_id below is what
+    # identifies the printing this mapping prices. Nullable since
+    # c9f31e2a7d04: the legacy `cards` table names 21 of the catalogue's
+    # 2,710 card codes, so a print-authoritative mapping may have no legacy
+    # row to point at. Existing rows keep the value they have.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True, index=True
     )
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
     )
-    # Additive print-lineage pointer alongside the legacy card_id above - the
-    # api's b858237e3706 migration owns the card_prints FK and the composite
-    # lineage constraints, so this mirrors it as a plain nullable column
-    # rather than redeclaring them here.
+    # THE AUTHORITATIVE IDENTITY. The api's b858237e3706 and c9f31e2a7d04
+    # migrations own the card_prints FK and the composite lineage
+    # constraints, so this mirrors them as a plain nullable column rather
+    # than redeclaring them here. Nullable only because pre-existing legacy
+    # (card_id-only) mappings stay valid.
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
@@ -117,8 +123,11 @@ class PriceObservation(Base):
     __tablename__ = "price_observations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(
-        ForeignKey("cards.id", ondelete="CASCADE"), index=True
+    # LEGACY COMPATIBILITY, NOT IDENTITY - a priced observation is identified
+    # by (source_card_mapping_id, card_print_id, source_id) below. Nullable
+    # since c9f31e2a7d04; existing rows keep the value they have.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True, index=True
     )
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="CASCADE"), index=True
@@ -137,11 +146,12 @@ class PriceObservation(Base):
     candidate_id: Mapped[int | None] = mapped_column(
         ForeignKey("snkrdunk_candidates.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    # Additive print lineage alongside the legacy card_id/source_id above -
-    # the api's b858237e3706 migration owns the composite
-    # (source_card_mapping_id, card_print_id, card_id, source_id) FK and the
-    # paired-lineage check constraint, so these mirror it as plain nullable
-    # columns rather than redeclaring them here.
+    # THE AUTHORITATIVE LINEAGE, with source_id above. The api's
+    # b858237e3706 and c9f31e2a7d04 migrations own the composite
+    # (source_card_mapping_id, card_print_id, source_id) FK and the
+    # paired-lineage check constraint, so these mirror them as plain nullable
+    # columns rather than redeclaring them here. Nullable only because legacy
+    # observations carry neither field.
     source_card_mapping_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 

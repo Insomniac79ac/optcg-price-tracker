@@ -1,7 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
 from app.models import Card, PriceObservation, Source, SourceCardMapping
-from tests.test_source_mappings import make_card, make_mapping, make_print, make_source
+from tests.test_source_mappings import (
+    make_card,
+    make_mapping,
+    make_print,
+    make_print_authoritative_mapping,
+    make_source,
+)
 
 
 def test_quality_requires_admin_token(db_session):
@@ -257,3 +263,23 @@ def test_suggested_cards_returns_ranked_matches(client, db_session):
     assert body["mapping_id"] == mapping.id
     assert len(body["matches"]) >= 1
     assert body["matches"][0]["card_code"] == "OP01-001"
+
+
+def test_quality_reports_a_mapping_with_no_legacy_card_instead_of_dropping_it(client, db_session):
+    """The quality report joins `cards` too. A print-authoritative mapping
+    (card_id NULL since c9f31e2a7d04) must still be assessed - and reported as
+    missing its legacy reference - rather than vanish from the report or blow
+    up in db.get(Card, None)."""
+    source = make_source(db_session, "snkrdunk")
+    mapping = make_print_authoritative_mapping(db_session, source)
+
+    response = client.get("/admin/source-mappings/quality")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["total_mappings"] == 1
+    item = body["items"][0]
+    assert item["mapping_id"] == mapping.id
+    assert item["card_id"] is None
+    assert item["card_code"] is None
+    assert "missing_card_reference" in item["issue_types"]

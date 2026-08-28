@@ -851,7 +851,10 @@ class AlertRuleUpdateIn(BaseModel):
 
 class SourceCardMappingOut(BaseModel):
     id: int
-    card_id: int
+    # NULL on a print-authoritative mapping: card_print_id below is the
+    # identity, and the legacy `cards` table cannot name most of the
+    # catalogue. Populated on every row written so far.
+    card_id: int | None = None
     # Additive and read-only here. NULL on every legacy row and populated on
     # every new approval; the PATCH schema deliberately has no counterpart,
     # so a print can only ever be (re)assigned through an approval path that
@@ -897,7 +900,10 @@ class MappingQualityItemOut(BaseModel):
     source_name: str | None
     source_url: str | None
     source_card_id: str
-    card_id: int
+    # NULL on a print-authoritative mapping, same as SourceCardMappingOut
+    # above: the quality report scores such a mapping and flags it with
+    # issue_type "missing_card_reference" rather than omitting it.
+    card_id: int | None = None
     card_code: str | None
     name_en: str | None
     name_jp: str | None
