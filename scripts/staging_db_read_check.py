@@ -91,8 +91,27 @@ REQUIRED_RELATIONS = (
     "uq_card_prints_active_verified_identity",
     "uq_market_index_snapshots_print_date",
     "ix_market_index_snapshots_print_calculated",
-    "uq_source_card_mappings_lineage_identity",
     "uq_cards_identity",
+)
+
+# Fingerprint B, renamed-relation groups: at least one name from each group
+# must be present. A fingerprint's job is to prove provenance, not to pin a
+# schema version, so a relation that a migration RENAMES has to be accepted
+# under either name - otherwise this checker fails on exactly the databases it
+# is meant to bracket, before and after the upgrade.
+#
+# The mapping lineage key is the current case. b858237e3706 created it as
+# (id, card_print_id, card_id, source_id); c9f31e2a7d04 replaced it with
+# (id, card_print_id, source_id) under a new name, because card_id became a
+# nullable legacy column and PostgreSQL FKs are MATCH SIMPLE - leaving it in
+# the key would have switched the composite FK off for every
+# print-authoritative row. Either name is equally good evidence that this is
+# Atlas staging.
+REQUIRED_RELATION_ALTERNATIVES = (
+    (
+        "uq_source_card_mappings_lineage_identity",
+        "uq_source_card_mappings_print_lineage_identity",
+    ),
 )
 REQUIRED_CONSTRAINTS = (
     "ck_card_prints_verified_requires_fields",
@@ -182,8 +201,13 @@ def evaluate(facts: Facts, expected_revisions: frozenset[str]) -> list[CheckResu
     )
 
     missing_rel = [r for r in REQUIRED_RELATIONS if r not in facts.relations_present]
+    missing_alt = [
+        " or ".join(group)
+        for group in REQUIRED_RELATION_ALTERNATIVES
+        if not any(name in facts.relations_present for name in group)
+    ]
     missing_con = [c for c in REQUIRED_CONSTRAINTS if c not in facts.constraints_present]
-    missing_b = missing_rel + missing_con
+    missing_b = missing_rel + missing_alt + missing_con
     results.append(
         CheckResult(
             "fingerprint B - named indexes/constraints",

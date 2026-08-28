@@ -100,7 +100,12 @@ def _passing_facts(checker, **overrides):
     facts.transaction_read_only = "on"
     facts.alembic_revisions = (_expected_head(),)
     facts.tables_present = frozenset(checker.REQUIRED_TABLES)
-    facts.relations_present = frozenset(checker.REQUIRED_RELATIONS)
+    # Plus one name from each renamed-relation group - a real database
+    # carries exactly one of them (see checker.REQUIRED_RELATION_ALTERNATIVES,
+    # which spans the c9f31e2a7d04 rename of the mapping lineage key).
+    facts.relations_present = frozenset(checker.REQUIRED_RELATIONS) | {
+        group[-1] for group in checker.REQUIRED_RELATION_ALTERNATIVES
+    }
     facts.constraints_present = frozenset(checker.REQUIRED_CONSTRAINTS)
     facts.columns_present = frozenset(checker.REQUIRED_COLUMNS)
     facts.row_counts = {t: 4260 for t in checker.NON_EMPTY_TABLES}

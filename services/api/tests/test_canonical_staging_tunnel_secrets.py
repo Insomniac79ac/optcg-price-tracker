@@ -127,7 +127,12 @@ def _passing_facts(checker, **overrides):
     heads = checker.expected_revisions_from_repo(str(REPO_ROOT))
     facts.alembic_revisions = (next(iter(heads)),)
     facts.tables_present = frozenset(checker.REQUIRED_TABLES)
-    facts.relations_present = frozenset(checker.REQUIRED_RELATIONS)
+    # Plus one name from each renamed-relation group - a real database
+    # carries exactly one of them (see checker.REQUIRED_RELATION_ALTERNATIVES,
+    # which spans the c9f31e2a7d04 rename of the mapping lineage key).
+    facts.relations_present = frozenset(checker.REQUIRED_RELATIONS) | {
+        group[-1] for group in checker.REQUIRED_RELATION_ALTERNATIVES
+    }
     facts.constraints_present = frozenset(checker.REQUIRED_CONSTRAINTS)
     facts.columns_present = frozenset(checker.REQUIRED_COLUMNS)
     facts.row_counts = {t: 4260 for t in checker.NON_EMPTY_TABLES}

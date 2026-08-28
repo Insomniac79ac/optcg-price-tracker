@@ -54,7 +54,10 @@ def good_facts(mod):
         transaction_read_only="on",
         alembic_revisions=("a9c4e17b6d52",),
         tables_present=frozenset(mod.REQUIRED_TABLES),
-        relations_present=frozenset(mod.REQUIRED_RELATIONS),
+        # One name from each renamed-relation group, as a real database
+        # carries: post-c9f31e2a7d04 staging has the print-lineage name.
+        relations_present=frozenset(mod.REQUIRED_RELATIONS)
+        | {group[-1] for group in mod.REQUIRED_RELATION_ALTERNATIVES},
         constraints_present=frozenset(mod.REQUIRED_CONSTRAINTS),
         columns_present=frozenset(mod.REQUIRED_COLUMNS),
         row_counts={t: 1 for t in mod.NON_EMPTY_TABLES},
@@ -206,3 +209,28 @@ def test_redacted_target_omits_credentials(mod):
     assert target == "db.example.com:5432/railway"
     assert "sup3rsecret" not in target
     assert "someuser" not in target
+
+
+# --- renamed relations (c9f31e2a7d04) ---------------------------------------
+
+
+def test_either_name_of_a_renamed_relation_satisfies_fingerprint_b(mod, good_facts):
+    """The mapping lineage key was renamed by c9f31e2a7d04. This checker runs
+    on both sides of that upgrade, so both names must pass - otherwise it
+    fails on the very databases it exists to bracket."""
+    base = frozenset(mod.REQUIRED_RELATIONS)
+    for group in mod.REQUIRED_RELATION_ALTERNATIVES:
+        for name in group:
+            facts = mod.Facts(**{**good_facts.__dict__, "relations_present": base | {name}})
+            assert "fingerprint B - named indexes/constraints" not in _failed(
+                mod.evaluate(facts, EXPECTED)
+            ), f"{name} should satisfy fingerprint B"
+
+
+def test_a_renamed_relation_missing_under_every_name_still_fails(mod, good_facts):
+    """Tolerating a rename must not become tolerating its absence."""
+    facts = mod.Facts(
+        **{**good_facts.__dict__, "relations_present": frozenset(mod.REQUIRED_RELATIONS)}
+    )
+    failed = _failed(mod.evaluate(facts, EXPECTED))
+    assert "fingerprint B - named indexes/constraints" in failed
