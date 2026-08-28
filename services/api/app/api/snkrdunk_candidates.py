@@ -120,9 +120,15 @@ def match_candidate(
 ):
     candidate = _get_candidate_or_404(db, candidate_id)
 
-    card = db.get(Card, body.card_id)
-    if card is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+    # Optional for the same reason as on approve-match: card_print_id below
+    # is the identity, and the legacy `cards` table cannot name most of the
+    # catalogue. A dangling card_id is still a 404; only omitting it is
+    # permitted.
+    card = None
+    if body.card_id is not None:
+        card = db.get(Card, body.card_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Card not found")
 
     source = db.query(Source).filter_by(name="snkrdunk").one_or_none()
     if source is None:
@@ -141,7 +147,12 @@ def match_candidate(
         raise approval_http_error(exc) from exc
 
     candidate.match_status = "matched"
-    candidate.matched_card_id = card.id
+    # match_confidence is the operator's own assertion on this endpoint (there
+    # is no scorer in front of it), so it stands with or without a legacy
+    # card. matched_card_id is only written when one was actually named -
+    # assigning None would erase an existing legacy pointer.
+    if card is not None:
+        candidate.matched_card_id = card.id
     candidate.match_confidence = 1.0
 
     # Keyed on (source, source_url) - the database's own uniqueness contract
@@ -154,13 +165,13 @@ def match_candidate(
     )
     if mapping is None:
         mapping = SourceCardMapping(
-            card_id=card.id,
             source_id=source.id,
             source_card_id=candidate.detected_card_code or candidate.source_url,
         )
         db.add(mapping)
 
-    mapping.card_id = card.id
+    if card is not None:
+        mapping.card_id = card.id
     mapping.card_print_id = decision.card_print.id
     mapping.review_notes = decision.as_review_note()
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
@@ -172,7 +183,11 @@ def match_candidate(
 
     db.commit()
     db.refresh(candidate)
-    return _to_out(candidate, card)
+    # Re-read rather than reusing `card`: a print-authoritative match leaves
+    # any pre-existing matched_card_id in place, and the response must show
+    # the row as it now stands.
+    matched = db.get(Card, candidate.matched_card_id) if candidate.matched_card_id else None
+    return _to_out(candidate, matched)
 
 
 @router.post("/candidates/{candidate_id}/reject", response_model=SnkrdunkCandidateOut)

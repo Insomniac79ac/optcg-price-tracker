@@ -310,10 +310,28 @@ def get_print_options(candidate_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{candidate_id}/approve-match", response_model=SnkrdunkCandidateOut)
 def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends(get_db)):
+    """Approve a candidate onto an exact printing.
+
+    THE LEGACY CARD IS OPTIONAL HERE, AND THAT IS THE POINT. What this
+    endpoint writes is a claim about which *printing* was priced, and
+    `card_print_id` carries that claim on its own. `cards` holds 25 rows
+    against 4,281 active verified prints, so for almost every listing there
+    is no legacy row to name - demanding one would mean either refusing to
+    price 98.6% of the catalogue or manufacturing a `cards` row whose
+    identity columns the 2026-08-27 audit showed to be unreliable. Neither is
+    acceptable, so `card_id` is simply left NULL (allowed since
+    c9f31e2a7d04).
+
+    Supplying `card_id` still works exactly as before, and is what the
+    existing legacy mappings continue to do.
+    """
     candidate = _get_candidate_or_404(db, candidate_id)
-    card = db.get(Card, body.card_id)
-    if card is None:
-        raise HTTPException(status_code=404, detail="Card not found")
+    # A dangling card_id is still a 404 - only *omitting* it is permitted.
+    card = None
+    if body.card_id is not None:
+        card = db.get(Card, body.card_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Card not found")
 
     source = _get_snkrdunk_source(db)
 
@@ -331,7 +349,11 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
     except ExactPrintApprovalError as exc:
         raise approval_http_error(exc) from exc
 
-    match_result = calculate_candidate_match(candidate, card)
+    # Only meaningful against a legacy card: the scorer compares the listing
+    # title to a `cards` row. With no card there is nothing to score, and a
+    # fabricated score would misrepresent how well-evidenced the approval is
+    # - the exact-print decision above is the evidence.
+    match_result = calculate_candidate_match(candidate, card) if card is not None else None
 
     mapping = (
         db.query(SourceCardMapping)
@@ -344,7 +366,7 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         # score says how well the title matched a legacy card, which is not
         # the fact this mapping is asserting.
         parts = [decision.as_review_note()]
-        if match_result.explanation.positive:
+        if match_result is not None and match_result.explanation.positive:
             parts.append(
                 f"Card match score={match_result.score} "
                 f"({match_result.confidence_label}): "
@@ -353,31 +375,41 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         review_notes = " ".join(parts)
     if mapping is None:
         mapping = SourceCardMapping(
-            card_id=card.id,
             source_id=source.id,
             source_card_id=candidate.detected_card_code or candidate.source_url,
         )
         db.add(mapping)
 
-    mapping.card_id = card.id
-    # Authoritative for every new approval. card_id above stays written only
-    # because the column is NOT NULL and the legacy read paths still use it.
+    # Written only when a legacy card was actually supplied. Assigning None
+    # here instead would silently ERASE the legacy pointer on an existing
+    # mapping being re-approved against a corrected print, which is a data
+    # loss this endpoint has no business causing.
+    if card is not None:
+        mapping.card_id = card.id
+    # THE AUTHORITATIVE IDENTITY of the mapping. Unlike card_id above this is
+    # never optional: an approval that cannot name the exact print never
+    # reaches this line - resolve_exact_print raised instead.
     mapping.card_print_id = decision.card_print.id
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
     mapping.source_url = candidate.source_url
     mapping.manual_verified = True
     mapping.review_status = "approved"
     mapping.is_active = True
-    mapping.match_confidence = match_result.score
     mapping.review_notes = review_notes
+    if match_result is not None:
+        mapping.match_confidence = match_result.score
 
     candidate.match_status = "matched"
-    candidate.matched_card_id = card.id
-    candidate.match_confidence = match_result.score / 100.0
-    candidate.best_match_card_id = card.id
-    candidate.best_match_score = match_result.score
-    candidate.best_match_confidence_label = match_result.confidence_label
-    candidate.match_explanation_json = match_result.explanation.to_dict()
+    # Same reasoning as mapping.card_id above - a print-authoritative approval
+    # neither sets nor clears the candidate's legacy card pointer and its
+    # card-level scores. They describe a legacy match that was not made here.
+    if match_result is not None:
+        candidate.matched_card_id = card.id
+        candidate.match_confidence = match_result.score / 100.0
+        candidate.best_match_card_id = card.id
+        candidate.best_match_score = match_result.score
+        candidate.best_match_confidence_label = match_result.confidence_label
+        candidate.match_explanation_json = match_result.explanation.to_dict()
     candidate.ambiguous_matches_json = None
 
     db.commit()
@@ -388,13 +420,14 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         "api",
         "snkrdunk_matching",
         f"Candidate {candidate.id} approved -> card_print_id={decision.card_print.id} "
-        f"(card_id={card.id}, score={match_result.score}).",
+        f"(card_id={card.id if card else None}, "
+        f"score={match_result.score if match_result else None}).",
         context={
             "candidate_id": candidate.id,
-            "card_id": card.id,
+            "card_id": card.id if card is not None else None,
             "card_print_id": decision.card_print.id,
             "evidence_used": decision.evidence_used,
-            "score": match_result.score,
+            "score": match_result.score if match_result is not None else None,
         },
         related_entity_type="snkrdunk_candidate",
         related_entity_id=candidate.id,

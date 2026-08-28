@@ -871,3 +871,117 @@ def test_print_options_explains_an_unresolved_product_rather_than_blaming_the_so
     assert {o["refusal_code"] for o in body["options"]} == {
         REFUSAL_UNRESOLVED_SOURCE_PRODUCT
     }
+
+
+# --- approving without a legacy card (c9f31e2a7d04) --------------------------
+#
+# card_id is legacy compatibility, not identity. `cards` holds 25 rows against
+# 4,281 active verified prints, so for almost every listing there is no legacy
+# row to name - and manufacturing one would put the approval's identity in the
+# table the 2026-08-27 audit found unreliable. The exact-print gate is
+# unchanged by any of this: these approvals pass it or they are refused.
+
+
+def test_approve_match_without_card_id_writes_a_print_authoritative_mapping(
+    client, catalogue, candidate
+):
+    candidate.detected_set_code = "OP-02"
+    candidate.detected_variant = "p2"
+    catalogue["db"].commit()
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.card_id is None
+    assert mapping.card_print_id == catalogue["prints"]["p2"].id
+    assert mapping.review_status == "approved"
+    assert mapping.is_active is True
+    # No legacy card was named, so no card-level score was invented.
+    assert mapping.match_confidence is None
+    assert "Exact print" in mapping.review_notes
+
+    catalogue["db"].refresh(candidate)
+    assert candidate.match_status == "matched"
+    assert candidate.matched_card_id is None
+
+
+def test_approve_match_without_card_id_still_obeys_the_exact_print_gate(
+    client, catalogue, candidate
+):
+    """Omitting the legacy card buys no leniency: the card code alone still
+    cannot single out one of OP02-013's five printings."""
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["base"].id},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == REFUSAL_AMBIGUOUS
+    assert catalogue["db"].query(SourceCardMapping).count() == 0
+
+
+def test_approve_match_with_a_dangling_card_id_is_still_404(client, catalogue, candidate):
+    """Optional means omittable, not unchecked."""
+    candidate.detected_set_code = "OP-02"
+    candidate.detected_variant = "p2"
+    catalogue["db"].commit()
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_id": 999_999, "card_print_id": catalogue["prints"]["p2"].id},
+    )
+
+    assert response.status_code == 404
+    assert catalogue["db"].query(SourceCardMapping).count() == 0
+
+
+def test_re_approving_without_card_id_does_not_erase_an_existing_legacy_pointer(
+    client, catalogue, candidate
+):
+    """A legacy mapping re-approved onto a corrected print keeps its card_id -
+    dropping it would be silent data loss, not a print-authoritative write."""
+    candidate.detected_set_code = "OP-02"
+    candidate.detected_variant = "p1"
+    catalogue["db"].commit()
+    first = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_id": _card_id(catalogue), "card_print_id": catalogue["prints"]["p1"].id},
+    )
+    assert first.status_code == 200, first.text
+
+    candidate.detected_variant = "p2"
+    catalogue["db"].commit()
+    second = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert second.status_code == 200, second.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.card_id == _card_id(catalogue)
+    assert mapping.card_print_id == catalogue["prints"]["p2"].id
+
+
+def test_manual_match_endpoint_also_accepts_a_print_without_a_card(
+    client, catalogue, candidate
+):
+    """The "I already know the card" path has the same contract - and no
+    scorer in front of it, so the exact-print gate matters more there."""
+    candidate.detected_set_code = "OP-02"
+    candidate.detected_variant = "p2"
+    catalogue["db"].commit()
+
+    response = client.post(
+        f"/snkrdunk/candidates/{candidate.id}/match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.card_id is None
+    assert mapping.card_print_id == catalogue["prints"]["p2"].id
+    assert mapping.review_status == "approved"

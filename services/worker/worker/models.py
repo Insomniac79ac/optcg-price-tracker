@@ -63,7 +63,16 @@ class Source(Base):
 class SourceCardMapping(Base):
     __tablename__ = "source_card_mappings"
     __table_args__ = (
-        UniqueConstraint("card_id", "source_id", name="uq_source_card_mappings_card_source"),
+        # The real uniqueness contract, mirroring app.models.source_card_
+        # mapping. It is (source_id, source_url) - one listing, one mapping -
+        # and NOT the (card_id, source_id) key this mirror carried until now,
+        # which the api replaced in ff75028d733f because it collapsed every
+        # printing of a card onto a single row. Keeping the stale key here
+        # mattered once ingest_snkrdunk_candidate_prices started looking a
+        # mapping up BY (source_id, source_url): worker-built test schemas
+        # would otherwise permit two mappings for one listing while forbidding
+        # two listings for one legacy card - the exact inverse of production.
+        UniqueConstraint("source_id", "source_url", name="uq_source_card_mappings_source_url"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

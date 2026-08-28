@@ -684,7 +684,12 @@ class SnkrdunkCandidateListOut(BaseModel):
 
 
 class SnkrdunkCandidateMatchIn(BaseModel):
-    card_id: int
+    # OPTIONAL SINCE c9f31e2a7d04. card_print_id below is what identifies the
+    # printing; this is a legacy compatibility pointer and the `cards` table
+    # cannot name most of the catalogue, so a print-authoritative approval
+    # simply omits it. Supplying it still works and still populates the
+    # mapping's legacy column.
+    card_id: int | None = None
     # Required, and required on purpose: a mapping is a claim about which
     # printing was priced, and the legacy card_id cannot carry that claim (25
     # cards against 4,281 prints). Approval is refused rather than inferred
@@ -735,7 +740,11 @@ class RematchAllOut(BaseModel):
 
 
 class ApproveMatchIn(BaseModel):
-    card_id: int
+    # See SnkrdunkCandidateMatchIn.card_id - same contract, same reason.
+    # Omitting it approves a print-authoritative mapping with card_id NULL;
+    # the card-level match score is then simply not computed, because there
+    # is no legacy card to score the title against.
+    card_id: int | None = None
     # See SnkrdunkCandidateMatchIn.card_print_id - same contract, same reason.
     card_print_id: int
     review_notes: str | None = None
