@@ -15,6 +15,7 @@ from worker.db import SessionLocal
 from worker.job_locks import LockHeldError, with_job_lock
 from worker.market_report import generate_market_report
 from worker.market_signal_events import snapshot_market_signals
+from worker.mapping_gate import PRICEABLE_MAPPING_CONDITIONS
 from worker.models import PriceObservation, PriceRefreshRun, RawSnapshot, Source, SourceCardMapping
 from worker.portfolio_valuation import create_portfolio_valuation_snapshot
 from worker.settings import settings
@@ -172,10 +173,16 @@ def _refresh_prices_locked(
 
             sources_by_id = {src.id: src for src in db.query(Source).all()}
 
+            # Active AND approved. Filtering on is_active alone - which this
+            # did until 4F-5B - let a `needs_review` mapping be scraped and
+            # priced: live and fetchable, but with nobody having confirmed
+            # which printing it sells. Both production collectors and the
+            # SNKRDUNK candidate-price ingest already refused that; see
+            # worker.mapping_gate for the single statement of the rule.
             query = (
                 db.query(SourceCardMapping)
                 .join(Source, SourceCardMapping.source_id == Source.id)
-                .filter(SourceCardMapping.is_active.is_(True))
+                .filter(*PRICEABLE_MAPPING_CONDITIONS)
             )
             if source and source != "all":
                 query = query.filter(Source.name == source)

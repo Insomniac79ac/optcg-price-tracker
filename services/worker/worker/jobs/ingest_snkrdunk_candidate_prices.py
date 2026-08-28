@@ -39,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from worker.db import SessionLocal
+from worker.mapping_gate import PRICEABLE_MAPPING_CONDITIONS
 from worker.matching.candidate_store import get_snkrdunk_source
 from worker.models import PriceObservation, SnkrdunkCandidate, SourceCardMapping
 
@@ -47,12 +48,6 @@ logger = logging.getLogger(__name__)
 PRICE_TYPE = "floor"
 ELIGIBLE_STATUSES_ONLY_MATCHED = ("matched",)
 ELIGIBLE_STATUSES_ALL = ("matched", "suggested")
-
-# Only an approved mapping is a statement that a human confirmed which
-# printing this listing sells. `needs_review` and `rejected` are explicitly
-# not that, and an inactive row has been withdrawn.
-APPROVED_REVIEW_STATUS = "approved"
-
 
 @dataclass
 class IngestSummary:
@@ -106,8 +101,9 @@ def _approved_mapping_for(
         .filter(
             SourceCardMapping.source_id == source_id,
             SourceCardMapping.source_url == candidate.source_url,
-            SourceCardMapping.is_active.is_(True),
-            SourceCardMapping.review_status == APPROVED_REVIEW_STATUS,
+            # The same active+approved rule refresh_prices and both
+            # production collectors apply - see worker.mapping_gate.
+            *PRICEABLE_MAPPING_CONDITIONS,
         )
         .one_or_none()
     )

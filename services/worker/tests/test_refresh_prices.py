@@ -586,3 +586,111 @@ def test_cli_exits_2_when_lock_held(db_session, monkeypatch, capsys):
     assert exc_info.value.code == 2
     out = capsys.readouterr().out
     assert "Job already running: price_refresh" in out
+
+# --- the mapping gate: active AND approved (worker.mapping_gate) -------------
+#
+# Until 4F-5B this job filtered on is_active alone, so a mapping sitting at
+# `needs_review` - live, fetchable, and confirmed by nobody - was scraped and
+# priced like any other. Both production collectors and the SNKRDUNK
+# candidate-price ingest already refused that; these pin the shared rule here.
+
+
+def test_needs_review_mapping_does_not_produce_an_observation(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(
+        db_session, source, card, "OP01-001", review_status="needs_review"
+    )
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")}
+    )
+
+    assert summary.mappings_checked == 0
+    assert summary.observations_inserted == 0
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_rejected_mapping_does_not_produce_an_observation(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(
+        db_session, source, card, "OP01-001", review_status="rejected"
+    )
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")}
+    )
+
+    assert summary.mappings_checked == 0
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_inactive_approved_mapping_does_not_produce_an_observation(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(
+        db_session, source, card, "OP01-001", is_active=False, review_status="approved"
+    )
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")}
+    )
+
+    assert summary.mappings_checked == 0
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_only_the_approved_active_mapping_of_a_mixed_set_prices(db_session):
+    """One source, four mappings, one legitimate. The gate must let exactly
+    the approved+active one through rather than merely reducing the count."""
+    source, approved_card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    others = {}
+    for code, kwargs in (
+        ("OP01-002", {"review_status": "needs_review"}),
+        ("OP01-003", {"review_status": "rejected"}),
+        ("OP01-004", {"is_active": False}),
+    ):
+        card = Card(
+            card_code=code, name_en=f"Card {code}", name_jp=None,
+            set_code="OP01", rarity="L", variant=None, language="jp",
+        )
+        db_session.add(card)
+        db_session.flush()
+        others[code] = card
+        make_source_card_mapping(db_session, source, card, code, **kwargs)
+    make_source_card_mapping(db_session, source, approved_card, "OP01-001")
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": StubAdapter("yuyutei")}
+    )
+
+    assert summary.mappings_checked == 1
+    observations = db_session.query(PriceObservation).all()
+    assert [o.card_id for o in observations] == [approved_card.id]
+
+
+def test_unapproving_a_mapping_does_not_mutate_observations_already_written(db_session):
+    """An observation records what was true when it was taken. Withdrawing the
+    mapping's approval stops FUTURE prices; it never rewrites or removes past
+    ones, and it must not silently strip their lineage either."""
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(
+        db_session, source, card, "OP01-001", card_print_id=42
+    )
+    adapters = {"yuyutei": StubAdapter("yuyutei")}
+    refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    before = [
+        (o.id, o.card_id, o.card_print_id, o.source_card_mapping_id, o.price_jpy)
+        for o in db_session.query(PriceObservation).order_by(PriceObservation.id).all()
+    ]
+    assert len(before) == 1
+
+    mapping.review_status = "needs_review"
+    db_session.flush()
+    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+
+    assert summary.mappings_checked == 0
+    after = [
+        (o.id, o.card_id, o.card_print_id, o.source_card_mapping_id, o.price_jpy)
+        for o in db_session.query(PriceObservation).order_by(PriceObservation.id).all()
+    ]
+    assert after == before
