@@ -128,14 +128,33 @@ def test_the_product_label_is_resolved_only_through_an_authoritative_alias():
 
 
 def test_an_unknown_product_label_stays_unresolved():
-    """A translated-looking label is not evidence. Unknown stays None, and the
-    label is recorded so the alias table can grow deliberately."""
+    """A label Bandai publishes no coded product for stays None, and is recorded
+    so the alias table can grow deliberately.
+
+    The 25th Anniversary Edition is real and unmistakable - and still refused,
+    because Bandai files it inside the uncoded 限定商品収録カード bucket and
+    Atlas therefore holds no ReleaseProduct to resolve it to. See
+    worker.matching.release_product_aliases, "REFUSED LABELS"."""
+    ev = parse_listing(
+        URL,
+        page("Roronoa Zoro L Parallel [OP01-001] "
+             "(Premium Card Collection 25th Anniversary Edition)"),
+    )
+    assert ev.product_label == "Premium Card Collection 25th Anniversary Edition"
+    assert ev.resolved_product_code is None
+    assert any("unresolved" in n for n in ev.notes)
+
+
+def test_a_label_matching_a_published_bandai_title_resolves():
+    """EB-01, from the same run-1 corpus: Bandai publishes this product as
+    'EXTRA BOOSTER -Memorial Collection- [EB-01]' in the Asia-EN catalogue, so
+    the label is Bandai's own name for it rather than a translation of one."""
     ev = parse_listing(
         URL, page("Charlotte Compote C [EB01-055] (Extra Booster Memorial Collection)")
     )
     assert ev.product_label == "Extra Booster Memorial Collection"
-    assert ev.resolved_product_code is None
-    assert any("unresolved" in n for n in ev.notes)
+    assert ev.resolved_product_code == "EB-01"
+    assert not any("unresolved" in n for n in ev.notes)
 
 
 def test_the_card_code_prefix_is_never_used_as_a_product_code():
