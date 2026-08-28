@@ -65,6 +65,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, CardPrint
+from app.services.artwork_evidence import ArtworkVerdict
 
 # Machine-readable refusal codes. They are part of the endpoint contract - the
 # admin UI branches on them - so they are named here rather than spelled out
@@ -270,17 +271,68 @@ def assert_print_is_priceable(db: Session, card_print_id: int) -> CardPrint:
     return print_row
 
 
+def _narrow_by_artwork(
+    surviving_ids: list[int],
+    card_print_id: int,
+    artwork: ArtworkVerdict | None,
+) -> tuple[list[int], str | None]:
+    """Remove prints the listing's own photo rules out. Returns the possibly
+    narrowed set and, when it actually narrowed, the audit line to record.
+
+    Every branch here fails OPEN - returning the set unchanged - because
+    absent or unusable image evidence must never eliminate a printing. It is
+    only ever allowed to shrink the set, and only to prints already in it:
+
+      * the feature flag is off                     -> unchanged
+      * no verdict, or not `exact`                  -> unchanged
+      * the verdict was computed over a different
+        print set than the one that survived        -> unchanged
+      * the chosen print is not among the survivors -> unchanged, because
+        another channel already excluded it and artwork must not resurrect it
+      * the operator named a different print        -> unchanged, so the
+        existing contradiction/ambiguity refusals answer, not this
+    """
+    from app.settings import settings
+
+    if not getattr(settings, "ARTWORK_EVIDENCE_ENABLED", False):
+        return surviving_ids, None
+    if artwork is None or not artwork.is_exact or artwork.card_print_id is None:
+        return surviving_ids, None
+    if tuple(sorted(artwork.card_print_ids_before)) != tuple(sorted(surviving_ids)):
+        return surviving_ids, None
+    chosen = artwork.card_print_id
+    if chosen not in surviving_ids:
+        return surviving_ids, None
+    if chosen != card_print_id:
+        # Artwork disagrees with the operator. Narrowing to `chosen` would
+        # turn that into an ambiguity refusal and hide the disagreement; leave
+        # the set alone so the existing contradiction path reports it.
+        return surviving_ids, None
+    if len(surviving_ids) == 1:
+        return surviving_ids, None
+    return [chosen], f"listing artwork {artwork.as_evidence_note()}"
+
+
 def resolve_exact_print(
     db: Session,
     *,
     card_print_id: int | None,
     evidence: SourceEvidence,
+    artwork: ArtworkVerdict | None = None,
 ) -> ApprovalDecision:
     """Resolve and corroborate the exact print for a new mapping approval.
 
     Raises ExactPrintApprovalError on every path that cannot prove the print.
     Returns only when the source's own evidence narrows the catalogue to
     exactly the print the operator named.
+
+    `artwork` is an OPTIONAL, ALREADY-COMPUTED verdict about the listing's own
+    photo (app.services.artwork_evidence). It is passed in rather than derived
+    here on purpose: this function must never fetch anything, and an approval
+    request must not become a network call. It is consulted only when
+    settings.ARTWORK_EVIDENCE_ENABLED is true, and even then only to REMOVE
+    prints from the set the card-code/product/variant gates already allowed -
+    see `_narrow_by_artwork`.
     """
     if card_print_id is None:
         raise ExactPrintApprovalError(
@@ -389,6 +441,13 @@ def resolve_exact_print(
             "product, before approving.",
             alternatives=surviving_ids,
         )
+
+    # Artwork may narrow, never widen, and never overrides a refusal above:
+    # every check that can reject has already run, so reaching here means the
+    # remaining prints are all individually permissible.
+    surviving_ids, artwork_used = _narrow_by_artwork(surviving_ids, card_print_id, artwork)
+    if artwork_used is not None:
+        evidence_used.append(artwork_used)
 
     if len(surviving_ids) > 1:
         # The whole point. The operator may well be right, but nothing in the

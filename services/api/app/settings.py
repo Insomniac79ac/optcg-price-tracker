@@ -122,6 +122,14 @@ class Settings(BaseSettings):
     # (deliberately not app.core.rate_limit, which is in-memory/per-process
     # and unsuitable for a public login endpoint).
     ADMIN_LOGIN_ENABLED: bool = False
+
+    # Artwork as an exact-print evidence channel (app.services.artwork_evidence).
+    # OFF by design, not by oversight: the thresholds are provisional and the
+    # control corpus (17 exact prints, 14 of them discrimination-testable) is
+    # not yet large enough to justify letting an image eliminate a printing
+    # unattended. With it off, resolve_exact_print behaves exactly as before -
+    # artwork is never consulted and never appears in an explanation.
+    ARTWORK_EVIDENCE_ENABLED: bool = False
     ADMIN_LOGIN_EMAIL: str | None = None
     ADMIN_LOGIN_PASSWORD_HASH: str | None = None
     ADMIN_LOGIN_MAX_ATTEMPTS: int = 5
