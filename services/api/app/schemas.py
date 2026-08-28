@@ -3948,6 +3948,37 @@ class ApprovalPrintOptionOut(BaseModel):
     refusal_detail: str | None
 
 
+class ArtworkPreviewOut(BaseModel):
+    """Advisory artwork evidence for the approval screen.
+
+    ADVISORY MEANS ADVISORY. Nothing here participates in approval: the
+    resolver does not read it, it is not stored, and `advisory_only` is part
+    of the payload so a client cannot render it as a decision by accident.
+    There is deliberately no confidence percentage and no "safe"/"approved"
+    field - the widened validation showed the accept threshold is nearly
+    inert on its own, so a single number would overstate what this proves.
+    """
+
+    status: str  # exact | ambiguous | no_match | unusable
+    summary: str
+    method_version: str
+    listing_image_url: str | None
+    considered_card_print_ids: list[int]
+    winning_card_print_ids: list[int]
+    # True when the matched artwork belongs to more than one printing (a
+    # reprint). Artwork can never separate those, however good the score.
+    winning_class_is_shared: bool
+    # Present only when exactly one surviving print carries the matched
+    # artwork; it is what the image CORROBORATES, never what it approves.
+    corroborates_card_print_id: int | None
+    best_score: int | None
+    runner_up_score: int | None
+    margin: int | None
+    detail: str | None
+    fetch_errors: list[str]
+    advisory_only: bool = True
+
+
 class ApprovalContextOut(BaseModel):
     candidate: ApprovalSourceCandidateOut
     options: list[ApprovalPrintOptionOut]

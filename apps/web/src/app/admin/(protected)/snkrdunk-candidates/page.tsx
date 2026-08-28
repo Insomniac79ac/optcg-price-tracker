@@ -17,11 +17,13 @@ import {
   AdminAuthRequiredError,
   type ApprovalContext,
   type ApprovalPrintOption,
+  type ArtworkPreview,
   type Card,
   type CandidateMatches,
   type RematchAllResult,
   type SnkrdunkCandidate,
   approveCandidateMatch,
+  fetchCandidateArtworkPreview,
   fetchCandidatePrintOptions,
   fetchCandidateMatches,
   fetchCards,
@@ -51,6 +53,89 @@ const REMATCH_ALL_STATUS_OPTIONS = [
 ];
 
 const LIMIT_OPTIONS = [50, 100, 200, 500] as const;
+
+/** Advisory artwork evidence.
+ *
+ * Deliberately styled as neutral information, never as an approval signal:
+ * no green "safe"/"approved" state, no confidence percentage, and the
+ * "Advisory only" line is always present. Validation showed the accept
+ * threshold is nearly inert on its own and the margin is what separates a
+ * real match from a near-miss, so a single headline number would overstate
+ * what this proves. The operator still decides.
+ */
+function ArtworkEvidencePanel({
+  preview,
+  loading,
+  error,
+  onRun,
+}: {
+  preview: ArtworkPreview | null;
+  loading: boolean;
+  error: string | null;
+  onRun: () => void;
+}) {
+  return (
+    <div className="mb-2 rounded border border-border-default bg-bg-surface p-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-text-secondary">Artwork evidence</span>
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={loading}
+          className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary hover:bg-bg-subtle disabled:opacity-60"
+        >
+          {loading ? "Checking…" : preview ? "Re-check" : "Check listing artwork"}
+        </button>
+      </div>
+
+      {!preview && !loading && !error && (
+        <p className="mt-1.5 text-xs text-text-muted">
+          Not evaluated. Compares the listing photo against each printing&apos;s official
+          artwork; fetches images from the source, so it runs only when asked.
+        </p>
+      )}
+
+      {error && <p className="mt-1.5 text-xs text-amber-400">{error}</p>}
+
+      {preview && (
+        <div className="mt-1.5 space-y-1">
+          <p className="text-xs text-text-primary">{preview.summary}</p>
+
+          {preview.winning_class_is_shared && (
+            <p className="text-xs text-amber-400">
+              {preview.winning_card_print_ids.length} printings share this official
+              artwork ({preview.winning_card_print_ids.join(", ")}) — artwork cannot tell
+              them apart.
+            </p>
+          )}
+
+          {preview.best_score !== null && (
+            <p className="text-xs text-text-muted">
+              Score {preview.best_score}
+              {preview.margin !== null && <> · margin {preview.margin}</>}
+              {preview.runner_up_score !== null && (
+                <> · next closest {preview.runner_up_score}</>
+              )}
+            </p>
+          )}
+
+          {preview.detail && <p className="text-xs text-text-muted">{preview.detail}</p>}
+
+          {preview.fetch_errors.length > 0 && (
+            <p className="text-xs text-amber-400">
+              Could not read {preview.fetch_errors.length} image
+              {preview.fetch_errors.length === 1 ? "" : "s"}: {preview.fetch_errors[0]}
+            </p>
+          )}
+
+          <p className="text-xs text-text-muted">
+            Advisory only — not used for approval · {preview.method_version}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** The API's refusal, verbatim where it has one.
  *
@@ -269,6 +354,25 @@ export default function SnkrdunkCandidatesPage() {
   const [printOptions, setPrintOptions] = useState<ApprovalContext | null>(null);
   const [printOptionsError, setPrintOptionsError] = useState<string | null>(null);
   const [selectedPrintId, setSelectedPrintId] = useState<number | null>(null);
+  // Artwork evidence is advisory and costs third-party fetches, so it is
+  // never loaded with the panel - the operator asks for it per candidate.
+  const [artwork, setArtwork] = useState<ArtworkPreview | null>(null);
+  const [artworkLoading, setArtworkLoading] = useState(false);
+  const [artworkError, setArtworkError] = useState<string | null>(null);
+
+  async function runArtworkPreview(candidateId: number) {
+    setArtworkLoading(true);
+    setArtworkError(null);
+    try {
+      setArtwork(await fetchCandidateArtworkPreview(candidateId));
+    } catch (err) {
+      setArtworkError(
+        err instanceof Error ? err.message : "Could not evaluate the listing artwork.",
+      );
+    } finally {
+      setArtworkLoading(false);
+    }
+  }
 
   function updateCandidateInList(updated: SnkrdunkCandidate) {
     setCandidates((prev) =>
@@ -281,6 +385,8 @@ export default function SnkrdunkCandidatesPage() {
     setDetailData(null);
     setDetailError(null);
     setDetailLoading(true);
+    setArtwork(null);
+    setArtworkError(null);
     setReviewNotes("");
     setCardQuery("");
     setSelectedCardId(candidate.matched_card_id ?? candidate.best_match_card_id);
@@ -776,6 +882,12 @@ export default function SnkrdunkCandidatesPage() {
                       {printOptions.ambiguity_reason}
                     </div>
                   )}
+                  <ArtworkEvidencePanel
+                    preview={artwork}
+                    loading={artworkLoading}
+                    error={artworkError}
+                    onRun={() => runArtworkPreview(printOptions.candidate.candidate_id)}
+                  />
                   {printOptions.options.length === 0 ? (
                     <div className="rounded border border-border-default bg-bg-surface p-3 text-sm text-text-muted">
                       No active verified printing matches this listing.

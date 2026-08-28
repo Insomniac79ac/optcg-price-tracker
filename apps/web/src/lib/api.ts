@@ -256,6 +256,30 @@ export interface ApprovalSourceCandidate {
   price_jpy: number | null;
 }
 
+/** Advisory artwork evidence, fetched only when an operator asks for it.
+ *
+ * `advisory_only` is in the payload rather than assumed: this must never be
+ * rendered as a decision. There is no confidence score by design - the
+ * validation showed a single number would overstate what the image proves. */
+export interface ArtworkPreview {
+  status: "exact" | "ambiguous" | "no_match" | "unusable";
+  summary: string;
+  method_version: string;
+  listing_image_url: string | null;
+  considered_card_print_ids: number[];
+  winning_card_print_ids: number[];
+  /** True when the matched artwork belongs to more than one printing (a
+   * reprint). No image can separate those. */
+  winning_class_is_shared: boolean;
+  corroborates_card_print_id: number | null;
+  best_score: number | null;
+  runner_up_score: number | null;
+  margin: number | null;
+  detail: string | null;
+  fetch_errors: string[];
+  advisory_only: boolean;
+}
+
 export interface ApprovalContext {
   candidate: ApprovalSourceCandidate;
   options: ApprovalPrintOption[];
@@ -1049,6 +1073,21 @@ export function fetchCandidatePrintOptions(
 ): Promise<ApprovalContext> {
   return fetchAdminJson<ApprovalContext>(
     `/api/admin/snkrdunk-candidates/${candidateId}/print-options`,
+  );
+}
+
+/** Advisory only, and deliberately a separate call an operator triggers.
+ *
+ * It makes the server fetch the marketplace photo and the official artwork
+ * for every sibling printing, so it must not run on page load - browsing the
+ * candidate queue would otherwise depend on third-party latency. Nothing it
+ * returns affects approval. */
+export function fetchCandidateArtworkPreview(
+  candidateId: number,
+): Promise<ArtworkPreview> {
+  return fetchAdminJson<ArtworkPreview>(
+    `/api/admin/snkrdunk-candidates/${candidateId}/artwork-preview`,
+    { method: "POST" },
   );
 }
 

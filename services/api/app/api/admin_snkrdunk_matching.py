@@ -22,6 +22,7 @@ from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.schemas import (
     ApprovalContextOut,
+    ArtworkPreviewOut,
     ApprovalPrintOptionOut,
     ApprovalSourceCandidateOut,
     ApproveMatchIn,
@@ -42,6 +43,7 @@ from app.services.card_matching import (
 )
 from app.services.cache import delete_cache_prefix
 from app.api._mapping_approval import approval_http_error
+from app.services.artwork_preview import preview_candidate_artwork, summary_line
 from app.services.display_image import get_display_images_for_prints
 from app.services.exact_print_approval import (
     ExactPrintApprovalError,
@@ -306,6 +308,43 @@ def get_print_options(candidate_id: int, db: Session = Depends(get_db)):
         options=options,
         resolvable_card_print_id=approvable_ids[0] if len(approvable_ids) == 1 else None,
         ambiguity_reason=ambiguity_reason,
+    )
+
+
+@router.post("/{candidate_id}/artwork-preview", response_model=ArtworkPreviewOut)
+def preview_artwork(candidate_id: int, db: Session = Depends(get_db)):
+    """Advisory artwork evidence for one candidate, on explicit request.
+
+    POST rather than GET, and its own endpoint rather than a field on
+    /print-options, because it reaches out to a marketplace CDN and the
+    official card list. Putting that on the page load would make browsing the
+    candidate queue depend on third-party latency and hammer those hosts for
+    operators who only wanted the list.
+
+    Read-only in the strongest sense: it opens no transaction of its own,
+    writes nothing, stores no hash or verdict, and cannot change what
+    resolve_exact_print allows. It is available whether or not
+    ARTWORK_EVIDENCE_ENABLED is set - that flag governs whether artwork may
+    NARROW a resolution, which is a different question from whether an
+    operator may look at the evidence.
+    """
+    candidate = _get_candidate_or_404(db, candidate_id)
+    preview = preview_candidate_artwork(db, candidate)
+    verdict = preview.verdict
+    return ArtworkPreviewOut(
+        status=verdict.status,
+        summary=summary_line(preview),
+        method_version=verdict.method_version,
+        listing_image_url=preview.listing_image_url,
+        considered_card_print_ids=list(preview.considered_print_ids),
+        winning_card_print_ids=list(verdict.winning_class),
+        winning_class_is_shared=preview.winning_class_is_shared,
+        corroborates_card_print_id=verdict.card_print_id,
+        best_score=verdict.best_score,
+        runner_up_score=verdict.runner_up_score,
+        margin=verdict.margin,
+        detail=verdict.detail,
+        fetch_errors=list(preview.fetch_errors),
     )
 
 
