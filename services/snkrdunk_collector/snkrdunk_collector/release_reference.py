@@ -96,6 +96,29 @@ RELEASE_REFERENCES: dict[str, ReleaseReference] = {
         bandai_official_name="謀略の王国",
         source_url="https://www.onepiece-cardgame.com/products/boosters/op04.php",
     ),
+    # EB-01, from Bandai's own frozen card-list catalogue snapshot in this
+    # repo - data/official_snapshots/bandai_jp/current/series.jsonl, fetched
+    # 2026-08-22T14:05:51Z:
+    #
+    #   {"official_code": "EB-01", "source_catalogue": "bandai_jp",
+    #    "display_name": "エクストラブースター メモリアルコレクション【EB-01】",
+    #    "source_series_id": "550201", "entry_count": 80,
+    #    "source_url": "https://www.onepiece-cardgame.com/cardlist/?series=550201"}
+    #
+    # Recorded as the set name alone, matching every entry above:
+    # normalize_release_text strips the "エクストラブースター" category prefix
+    # (it is already in identity.RELEASE_TEXT_PREFIXES) and the 【EB-01】
+    # bracket, so the stored value is what survives normalisation on both
+    # sides. NOT taken from SNKRDUNK, which is the page being checked.
+    "EB-01": ReleaseReference(
+        release_product_code="EB-01",
+        bandai_official_name="メモリアルコレクション",
+        source_url="https://www.onepiece-cardgame.com/cardlist/?series=550201",
+        # Bandai publishes one rendering, and SNKRDUNK writes the same
+        # Japanese name, so no storefront rendering is needed here.
+        additional_official_names=(),
+        snkrdunk_renderings=(),
+    ),
 }
 
 RELEASE_NAME_AUTHORITY = "Bandai official Japanese product page"

@@ -302,7 +302,19 @@ def test_seed_aliases_are_evidence_backed_and_kind_separated():
 
 def test_seed_names_match_the_collectors_release_reference():
     """The collector's RELEASE_REFERENCES is the repository's existing
-    authority for release names - the seed must not invent different ones."""
+    authority for release names - the seed must not invent different ones.
+
+    Asserted seed -> reference, which is what that sentence actually says.
+    The reverse (every reference code must appear in this seed) cannot hold:
+    this migration is an applied historical artifact that seeded the four
+    products existing when it was written, while RELEASE_REFERENCES keeps
+    growing as releases are established from Bandai evidence - EB-01 was
+    added from the repo's frozen bandai_jp catalogue snapshot. Requiring
+    equality would mean editing already-applied migration history every time
+    a release is added, so instead every seeded code is checked strictly
+    against the reference, and any reference this seed predates still has to
+    satisfy the same "cites Bandai" invariant.
+    """
     import sys
 
     collector_path = (
@@ -322,12 +334,23 @@ def test_seed_names_match_the_collectors_release_reference():
         code: name for code, name, kind, _ in module.SEED_ALIASES if kind == "source_rendering"
     }
 
-    for code, reference in RELEASE_REFERENCES.items():
-        assert official[code] == reference.bandai_official_name
+    # Every code this migration seeds must be one the collector knows, and
+    # must agree with it exactly - name, citation, and storefront rendering.
+    for code, name in official.items():
+        reference = RELEASE_REFERENCES[code]
+        assert name == reference.bandai_official_name
         product = next(p for p in module.SEED_PRODUCTS if p["official_code"] == code)
         assert product["source_url"] == reference.source_url
-        for rendering in reference.snkrdunk_renderings:
-            assert renderings[code] == rendering
+    for code, rendering in renderings.items():
+        assert rendering in RELEASE_REFERENCES[code].snkrdunk_renderings
+
+    # References added after this migration are legitimate, but must still be
+    # Bandai-attested - the seed is not the only thing forbidden to invent.
+    for code, reference in RELEASE_REFERENCES.items():
+        if code in official:
+            continue
+        assert "onepiece-cardgame.com" in reference.source_url
+        assert reference.bandai_official_name
 
 
 def test_downgrade_removes_everything_it_added():

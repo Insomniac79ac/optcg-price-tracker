@@ -9,7 +9,11 @@ thing being CHECKED, never as the source of truth.
 
 import pytest
 
-from snkrdunk_collector.identity import normalize_release_text, release_names_match
+from snkrdunk_collector.identity import (
+    normalize_release_text,
+    parse_release_text,
+    release_names_match,
+)
 from snkrdunk_collector.release_reference import (
     MATCH_BANDAI_OFFICIAL,
     MATCH_SOURCE_RENDERING,
@@ -29,8 +33,8 @@ OBSERVED = {
 
 
 class TestAuthoritativeTable:
-    def test_all_four_current_releases_are_present(self):
-        assert sorted(RELEASE_REFERENCES) == ["OP-01", "OP-02", "OP-03", "OP-04"]
+    def test_the_current_releases_are_present(self):
+        assert sorted(RELEASE_REFERENCES) == ["EB-01", "OP-01", "OP-02", "OP-03", "OP-04"]
 
     @pytest.mark.parametrize(
         "code,official",
@@ -39,6 +43,7 @@ class TestAuthoritativeTable:
             ("OP-02", "頂上決戦"),
             ("OP-03", "強大な敵"),
             ("OP-04", "謀略の王国"),
+            ("EB-01", "メモリアルコレクション"),
         ],
     )
     def test_official_names_match_bandai_product_pages(self, code, official):
@@ -184,3 +189,75 @@ class TestSourceSpecificRenderings:
         assert classify_release_name_match(
             get_release_reference("OP-03"), "ブースターパック 二つの伝説", release_names_match
         ) is None
+
+
+class TestEb01FromBandaiCatalogue:
+    """EB-01, established from Bandai's own frozen card-list snapshot in this
+    repo (data/official_snapshots/bandai_jp/current/series.jsonl, fetched
+    2026-08-22): official_code "EB-01", source_catalogue "bandai_jp",
+    display_name "エクストラブースター メモリアルコレクション【EB-01】",
+    series 550201.
+
+    It was added because the disposable-collector proof showed SNKRDUNK
+    listing 171994 (EB01-055) reaching a real floor of ¥1000 and failing only
+    on `authoritative_release_name_missing:release=EB-01`.
+    """
+
+    def test_eb01_resolves_to_the_bandai_name(self):
+        assert get_release_reference("EB-01").bandai_official_name == "メモリアルコレクション"
+
+    def test_eb01_cites_the_bandai_cardlist_series_page(self):
+        assert (
+            get_release_reference("EB-01").source_url
+            == "https://www.onepiece-cardgame.com/cardlist/?series=550201"
+        )
+
+    def test_eb01_records_no_marketplace_rendering(self):
+        """SNKRDUNK writes the same Japanese name, so nothing storefront-
+        specific is needed - and a marketplace spelling must never be the
+        thing that makes this release verifiable."""
+        ref = get_release_reference("EB-01")
+        assert ref.snkrdunk_renderings == ()
+        assert ref.additional_official_names == ()
+
+    def test_the_real_snkrdunk_eb01_release_text_matches_bandai(self):
+        """The exact string SNKRDUNK's JP page publishes for listing 171994,
+        as parsed by this collector's own title parser."""
+        observed = parse_release_text(
+            "シャーロット・コンポート C [EB01-055] "
+            "(エクストラブースター メモリアルコレクション)通販・買取・相場｜スニダン"
+        )
+        assert observed == "エクストラブースター メモリアルコレクション"
+        ref = get_release_reference("EB-01")
+        assert any(release_names_match(observed, n) for n in ref.accepted_names())
+
+    def test_the_match_is_attributed_to_bandai_not_a_storefront(self):
+        observed = "エクストラブースター メモリアルコレクション"
+        assert (
+            classify_release_name_match(
+                get_release_reference("EB-01"), observed, release_names_match
+            )
+            == MATCH_BANDAI_OFFICIAL
+        )
+
+    def test_a_different_extra_booster_does_not_match_eb01(self):
+        """EB-02/03/04 exist in the same Bandai snapshot and share the
+        category prefix - only the set name distinguishes them."""
+        ref = get_release_reference("EB-01")
+        for other in (
+            "エクストラブースター Anime 25th collection",
+            "エクストラブースター ONE PIECE Heroines Edition",
+            "エクストラブースター EGGHEAD CRISIS",
+        ):
+            assert not any(release_names_match(other, n) for n in ref.accepted_names())
+
+    def test_an_op_release_name_does_not_match_eb01(self):
+        ref = get_release_reference("EB-01")
+        assert not any(
+            release_names_match("ブースターパック 頂上決戦", n) for n in ref.accepted_names()
+        )
+
+    def test_releases_beyond_the_table_still_fail_closed(self):
+        """Adding EB-01 must not make the table permissive."""
+        for unknown in ("EB-02", "EB-05", "OP-05", "ST-01", "PRB-01", ""):
+            assert get_release_reference(unknown) is None
