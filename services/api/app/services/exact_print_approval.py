@@ -88,6 +88,10 @@ REFUSAL_UNRESOLVED_SOURCE_PRODUCT = "source_product_unresolved"
 # field: here the request is well formed and it is the ROW that cannot
 # support approval.
 REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT = "mapping_has_no_card_print"
+# The listing URL cannot be turned into the page the collector must fetch for
+# this print's language - see app.services.snkrdunk_urls. A malformed request
+# rather than a judgement call, so it is not a needs_review refusal.
+REFUSAL_SOURCE_URL_NOT_CANONICAL = "source_url_not_canonical"
 
 # Refusals that mean "a human needs to look at this", as opposed to "the
 # request was malformed". Callers map these onto review_status='needs_review'.

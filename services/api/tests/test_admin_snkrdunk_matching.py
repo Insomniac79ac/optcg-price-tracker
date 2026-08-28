@@ -83,7 +83,7 @@ def seeded(db_session):
 @pytest.fixture()
 def strong_candidate(db_session, seeded):
     candidate = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/trading-cards/op01-001-luffy-l",
+        source_url="https://snkrdunk.com/en/trading-cards/900004",
         title="OP01-001 モンキー・D・ルフィ L",
         normalized_title="OP01-001 モンキー・D・ルフィ L",
         raw_text="Luffy",
@@ -101,7 +101,7 @@ def strong_candidate(db_session, seeded):
 @pytest.fixture()
 def weak_candidate(db_session, seeded):
     candidate = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/trading-cards/mystery-listing",
+        source_url="https://snkrdunk.com/en/trading-cards/900005",
         title="謎のリスティング",
         normalized_title="謎のリスティング",
         match_status="unmatched",
@@ -229,7 +229,11 @@ def test_approve_match_creates_source_mapping_with_review_fields(client, db_sess
         .filter_by(card_id=seeded["card"].id, source_id=seeded["source"].id)
         .one()
     )
-    assert mapping.source_url == strong_candidate.source_url
+    # The mapping stores the JP page the collector must fetch for a jp
+    # print, not the English mirror discovery walked - see
+    # app.services.snkrdunk_urls. The candidate keeps its own URL.
+    assert mapping.source_url == "https://snkrdunk.com/apparels/900004"
+    assert strong_candidate.source_url == "https://snkrdunk.com/en/trading-cards/900004"
     assert mapping.manual_verified is True
     assert mapping.review_status == "approved"
     assert mapping.is_active is True
@@ -288,7 +292,7 @@ def test_reject_match_does_not_delete_existing_mapping(client, db_session, stron
         card_id=seeded["card"].id,
         source_id=seeded["source"].id,
         source_card_id="OP01-001",
-        source_url="https://snkrdunk.com/trading-cards/some-other-listing",
+        source_url="https://snkrdunk.com/en/trading-cards/900003",
     )
     db_session.add(mapping)
     db_session.commit()

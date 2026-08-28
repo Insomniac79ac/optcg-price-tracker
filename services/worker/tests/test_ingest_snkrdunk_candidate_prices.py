@@ -319,3 +319,80 @@ def test_suggested_candidate_is_not_priced_by_relaxing_only_matched(db_session):
     assert summary.candidates_skipped_unmatched == 0
     assert summary.candidates_skipped_no_approved_mapping == 1
     assert db_session.query(PriceObservation).count() == 0
+
+
+# --- candidate/mapping URL divergence (4F-9) ---------------------------------
+#
+# Since 4F-9 the candidate keeps discovery's `/en/trading-cards/{id}` while an
+# approved jp mapping stores the `/apparels/{id}` the collector must fetch.
+# `candidate.source_url == mapping.source_url` is therefore no longer true,
+# and this job must match on the listing identity instead.
+
+EN_URL = "https://snkrdunk.com/en/trading-cards/171994"
+JP_URL = "https://snkrdunk.com/apparels/171994"
+
+
+def test_candidate_on_the_en_path_finds_its_canonical_jp_mapping(db_session):
+    source, card = seed_source_and_card(db_session)
+    mapping = print_mapping(db_session, source, source_url=JP_URL)
+    make_candidate(db_session, card, source_url=EN_URL, matched_card_id=None)
+
+    summary = ingest_snkrdunk_candidate_prices(db=db_session)
+
+    assert summary.candidates_skipped_no_approved_mapping == 0
+    assert summary.observations_created == 1
+    observation = db_session.query(PriceObservation).one()
+    assert observation.source_card_mapping_id == mapping.id
+    assert observation.card_print_id == mapping.card_print_id
+    assert observation.card_id is None
+
+
+def test_a_candidate_and_mapping_on_the_same_path_still_match(db_session):
+    """The pre-4F-9 shape keeps working - both on /apparels."""
+    source, card = seed_source_and_card(db_session)
+    mapping = print_mapping(db_session, source, source_url=JP_URL)
+    make_candidate(db_session, card, source_url=JP_URL, matched_card_id=None)
+
+    ingest_snkrdunk_candidate_prices(db=db_session)
+
+    assert db_session.query(PriceObservation).one().source_card_mapping_id == mapping.id
+
+
+def test_a_legacy_en_mapping_is_still_found_by_its_own_url(db_session):
+    """Existing /en mappings that predate canonicalisation must keep pricing."""
+    source, card = seed_source_and_card(db_session)
+    mapping = legacy_mapping(db_session, source, card, source_url=EN_URL)
+    make_candidate(db_session, card, source_url=EN_URL)
+
+    ingest_snkrdunk_candidate_prices(db=db_session)
+
+    observation = db_session.query(PriceObservation).one()
+    assert observation.source_card_mapping_id is None  # legacy: no print lineage
+    assert observation.card_id == card.id
+    assert mapping.card_print_id is None
+
+
+def test_a_different_listing_is_never_matched(db_session):
+    """Listing identity is the id, so a different id must not match - this is
+    exact matching on a derived set, never a fuzzy URL comparison."""
+    source, card = seed_source_and_card(db_session)
+    print_mapping(db_session, source, source_url="https://snkrdunk.com/apparels/999999")
+    make_candidate(db_session, card, source_url=EN_URL, matched_card_id=None)
+
+    summary = ingest_snkrdunk_candidate_prices(db=db_session)
+
+    assert summary.candidates_skipped_no_approved_mapping == 1
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_an_unrecognised_candidate_url_matches_only_itself(db_session):
+    """Fail closed rather than matching loosely."""
+    source, card = seed_source_and_card(db_session)
+    print_mapping(db_session, source, source_url=JP_URL)
+    make_candidate(db_session, card, source_url="https://snkrdunk.com/cards/OP01-001",
+                   matched_card_id=None)
+
+    summary = ingest_snkrdunk_candidate_prices(db=db_session)
+
+    assert summary.candidates_skipped_no_approved_mapping == 1
+    assert db_session.query(PriceObservation).count() == 0

@@ -69,7 +69,7 @@ def luffy_print(seeded_db):
 @pytest.fixture()
 def candidate(seeded_db):
     row = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/cards/example-1",
+        source_url="https://snkrdunk.com/en/trading-cards/900101",
         title="OP01-001 Monkey D. Luffy L",
         price_jpy=1500,
         listing_count=3,
@@ -139,7 +139,7 @@ def test_list_candidates_pagination(client, seeded_db):
     for i in range(5):
         seeded_db.add(
             SnkrdunkCandidate(
-                source_url=f"https://snkrdunk.com/cards/example-{i}",
+                source_url=f"https://snkrdunk.com/en/trading-cards/9001{i:02d}",
                 title=f"Candidate {i}",
             )
         )
@@ -194,7 +194,11 @@ def test_match_candidate_creates_mapping(client, candidate, seeded_db, luffy_pri
         .one()
     )
     assert mapping.manual_verified is True
-    assert mapping.source_url == candidate.source_url
+    # The mapping stores the JP page the collector must fetch for a jp
+    # print, not the English mirror discovery walked - see
+    # app.services.snkrdunk_urls. The candidate keeps its own URL.
+    assert mapping.source_url == "https://snkrdunk.com/apparels/900101"
+    assert candidate.source_url == "https://snkrdunk.com/en/trading-cards/900101"
     assert mapping.is_active is True
     assert mapping.review_status == "approved"
 
@@ -249,7 +253,7 @@ def test_match_candidate_updates_the_mapping_for_the_same_listing(
     mappings = seeded_db.query(SourceCardMapping).filter_by(source_id=snkrdunk_source.id).all()
     assert len(mappings) == 1
     assert mappings[0].id == existing.id
-    assert mappings[0].source_url == candidate.source_url
+    assert mappings[0].source_url == "https://snkrdunk.com/apparels/900101"
     assert mappings[0].match_confidence == 1.0
     assert mappings[0].manual_verified is True
     assert mappings[0].card_print_id == luffy_print.id
@@ -274,7 +278,7 @@ def test_match_candidate_leaves_a_different_listings_mapping_alone(
         card_id=luffy.id,
         source_id=snkrdunk_source.id,
         source_card_id="OP01-001",
-        source_url="https://snkrdunk.com/cards/a-different-listing",
+        source_url="https://snkrdunk.com/en/trading-cards/900002",
         match_confidence=0.6,
         manual_verified=False,
     )
@@ -291,7 +295,9 @@ def test_match_candidate_leaves_a_different_listings_mapping_alone(
     mappings = seeded_db.query(SourceCardMapping).filter_by(source_id=snkrdunk_source.id).all()
     assert len(mappings) == 2
     survivor = next(m for m in mappings if m.id == untouched_id)
-    assert survivor.source_url == "https://snkrdunk.com/cards/a-different-listing"
+    # Untouched, so it keeps the URL it was seeded with - canonicalisation
+    # applies to the mapping being approved, never to a bystander row.
+    assert survivor.source_url == "https://snkrdunk.com/en/trading-cards/900002"
     assert survivor.match_confidence == 0.6
     assert survivor.manual_verified is False
 

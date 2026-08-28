@@ -19,6 +19,7 @@ from app.services.exact_print_approval import (
     SourceEvidence,
     resolve_exact_print,
 )
+from app.services.snkrdunk_urls import canonical_listing_url, equivalent_listing_urls
 
 router = APIRouter(
     prefix="/snkrdunk", tags=["snkrdunk"], dependencies=[Depends(require_admin_token)]
@@ -158,9 +159,21 @@ def match_candidate(
     # Keyed on (source, source_url) - the database's own uniqueness contract
     # for a listing - not on (card_id, source_id), which pre-dated exact
     # prints and collapsed every print of a card onto one row.
+    # Same canonicalisation as approve-match, from the same helper - the two
+    # endpoints must not disagree about which page the collector fetches.
+    try:
+        mapping_url = canonical_listing_url(
+            candidate.source_url, card_print_language=decision.card_print.language
+        )
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
+
     mapping = (
         db.query(SourceCardMapping)
-        .filter_by(source_id=source.id, source_url=candidate.source_url)
+        .filter(
+            SourceCardMapping.source_id == source.id,
+            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
+        )
         .one_or_none()
     )
     if mapping is None:
@@ -175,7 +188,7 @@ def match_candidate(
     mapping.card_print_id = decision.card_print.id
     mapping.review_notes = decision.as_review_note()
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
-    mapping.source_url = candidate.source_url
+    mapping.source_url = mapping_url
     mapping.match_confidence = 1.0
     mapping.manual_verified = body.manual_verified
     mapping.is_active = True

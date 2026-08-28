@@ -41,6 +41,7 @@ from sqlalchemy.orm import Session
 from worker.db import SessionLocal
 from worker.mapping_gate import PRICEABLE_MAPPING_CONDITIONS
 from worker.matching.candidate_store import get_snkrdunk_source
+from worker.snkrdunk_urls import equivalent_listing_urls
 from worker.models import PriceObservation, SnkrdunkCandidate, SourceCardMapping
 
 logger = logging.getLogger(__name__)
@@ -80,10 +81,17 @@ def _approved_mapping_for(
 ) -> SourceCardMapping | None:
     """The approved mapping for this listing, or None.
 
-    Keyed on (source_id, source_url) - the database's own uniqueness contract
-    for a listing (`uq_source_card_mappings_source_url`), and the same key the
-    api's approval endpoints write through - never on the candidate's legacy
-    card pointer, which cannot distinguish two printings of one card.
+    Keyed on (source_id, LISTING) - never on the candidate's legacy card
+    pointer, which cannot distinguish two printings of one card.
+
+    Matching is by listing IDENTITY rather than URL equality, because since
+    4F-9 the two deliberately differ: discovery stores the English mirror
+    `/en/trading-cards/{id}` while an approved jp mapping stores the Japanese
+    `/apparels/{id}` the collector must fetch. Both name the same listing, so
+    both are tried - as exact strings derived from the id, not a pattern
+    match. `uq_source_card_mappings_source_url` still guarantees at most one
+    row per URL, and a listing cannot have an approved mapping under both
+    paths at once because the approval endpoints look the row up the same way.
 
     Returns None rather than raising for every "not priceable" shape, so the
     caller can count it and move on:
@@ -100,12 +108,13 @@ def _approved_mapping_for(
         db.query(SourceCardMapping)
         .filter(
             SourceCardMapping.source_id == source_id,
-            SourceCardMapping.source_url == candidate.source_url,
+            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
             # The same active+approved rule refresh_prices and both
             # production collectors apply - see worker.mapping_gate.
             *PRICEABLE_MAPPING_CONDITIONS,
         )
-        .one_or_none()
+        .order_by(SourceCardMapping.id)
+        .first()
     )
     if mapping is None:
         return None

@@ -68,7 +68,13 @@ ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 
 TEST_ADMIN_TOKEN = "test-admin-token"
 
-CANDIDATE_URL = "https://snkrdunk.com/trading-cards/op02-013-ace-parallel"
+# Discovery walks SNKRDUNK's English sitemap, so a candidate carries the
+# /en path. The approved mapping for a jp print must carry the Japanese
+# one, because the collector validates page language against the print
+# (see app.services.snkrdunk_urls) - so these two deliberately differ,
+# and the chain below has to work across that boundary.
+CANDIDATE_URL = "https://snkrdunk.com/en/trading-cards/910213"
+CANONICAL_MAPPING_URL = "https://snkrdunk.com/apparels/910213"
 # A real SNKRDUNK title: name, rarity, code, then the product in trailing
 # parentheses. app.services.exact_print_approval reads that trailing group
 # back off the stored title to tell "no product label" from "product label we
@@ -267,12 +273,16 @@ def test_candidate_to_print_scoped_price_without_any_legacy_card(chain):
     assert mapping.card_print_id == p1.id
     assert mapping.review_status == "approved"
     assert mapping.is_active is True
-    assert mapping.source_url == CANDIDATE_URL
+    # Canonicalised to the JP page the collector must fetch; the candidate
+    # keeps the /en URL discovery saw.
+    assert mapping.source_url == CANONICAL_MAPPING_URL
 
-    # The candidate is decided without acquiring a legacy card pointer.
+    # The candidate is decided without acquiring a legacy card pointer, and
+    # keeps the /en URL discovery saw.
     candidate = session.get(SnkrdunkCandidate, chain["candidate"].id)
     assert candidate.match_status == "matched"
     assert candidate.matched_card_id is None
+    assert candidate.source_url == CANDIDATE_URL
 
     # 3. Ingestion, run as the worker deployable runs it.
     output = _run_worker_ingest(chain["db"].url)

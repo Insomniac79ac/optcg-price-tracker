@@ -30,6 +30,7 @@ from app.services.exact_print_approval import (
     REFUSAL_PRINT_NOT_FOUND,
     REFUSAL_PRINT_REQUIRED,
     REFUSAL_PRINT_UNVERIFIED,
+    REFUSAL_SOURCE_URL_NOT_CANONICAL,
     REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
     ExactPrintApprovalError,
     SourceEvidence,
@@ -125,7 +126,7 @@ def catalogue(db_session):
 def _evidence(**kw) -> SourceEvidence:
     base = {
         "source_name": "snkrdunk",
-        "source_url": "https://snkrdunk.com/cards/ace-1",
+        "source_url": "https://snkrdunk.com/en/trading-cards/900001",
         "card_code": "OP02-013",
     }
     base.update(kw)
@@ -315,7 +316,7 @@ def test_unverified_sibling_is_not_counted_as_a_rival(catalogue):
 def candidate(catalogue):
     db = catalogue["db"]
     row = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/cards/ace-1",
+        source_url="https://snkrdunk.com/en/trading-cards/900001",
         title="OP02-013 ポートガス・D・エース SR",
         price_jpy=1500,
         detected_card_code="OP02-013",
@@ -470,8 +471,8 @@ def test_two_distinct_listings_may_map_to_two_prints_of_one_card(client, catalog
     db = catalogue["db"]
     made = []
     for url, variant, key in [
-        ("https://snkrdunk.com/cards/ace-base", "base", "base"),
-        ("https://snkrdunk.com/cards/ace-p2", "p2", "p2"),
+        ("https://snkrdunk.com/en/trading-cards/900011", "base", "base"),
+        ("https://snkrdunk.com/en/trading-cards/900010", "p2", "p2"),
     ]:
         row = SnkrdunkCandidate(
             source_url=url,
@@ -655,7 +656,7 @@ def _solo_evidence(**kw) -> SourceEvidence:
     print - the shape that produced every exact-by-absence verdict."""
     base = {
         "source_name": "snkrdunk",
-        "source_url": "https://snkrdunk.com/cards/solo-1",
+        "source_url": "https://snkrdunk.com/en/trading-cards/900007",
         "card_code": "OP01-999",
     }
     base.update(kw)
@@ -809,7 +810,7 @@ def test_the_product_label_is_read_off_the_stored_title(title, expected):
     from the title the row already stores - no migration, and it works on rows
     written before any of this existed."""
     candidate = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/cards/x",
+        source_url="https://snkrdunk.com/en/trading-cards/900006",
         title=title,
         detected_card_code="OP01-004",
     )
@@ -821,7 +822,7 @@ def test_a_label_resolved_at_parse_time_is_treated_as_resolved(catalogue):
     once discovery has re-parsed with the alias present, `detected_set_code` is
     populated and the same label is narrowing evidence, not a refusal."""
     candidate = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/cards/compote",
+        source_url="https://snkrdunk.com/en/trading-cards/900009",
         title="Charlotte Compote C [OP01-999] (Extra Booster Memorial Collection)",
         detected_card_code="OP01-999",
         detected_set_code="OP-02",  # the fixture's product for the solo print
@@ -841,7 +842,7 @@ def test_a_stale_row_whose_label_never_resolved_is_refused(catalogue):
     before the alias existed carries a NULL detected_set_code, so its label is
     unresolved and it fails closed until discovery re-parses it."""
     candidate = SnkrdunkCandidate(
-        source_url="https://snkrdunk.com/cards/compote-stale",
+        source_url="https://snkrdunk.com/en/trading-cards/900008",
         title="Charlotte Compote C [OP01-999] (Extra Booster Memorial Collection)",
         detected_card_code="OP01-999",
         detected_set_code=None,
@@ -985,3 +986,155 @@ def test_manual_match_endpoint_also_accepts_a_print_without_a_card(
     assert mapping.card_id is None
     assert mapping.card_print_id == catalogue["prints"]["p2"].id
     assert mapping.review_status == "approved"
+
+
+# --- canonical collector URL on approval (4F-9) ------------------------------
+#
+# The mapping must name the page the COLLECTOR has to fetch for this print's
+# language, not the page discovery happened to walk. Staging mappings 75/76
+# were approved from the English mirror against jp prints and were therefore
+# permanently unpriceable (`language_mismatch:displayed=en,expected=jp`)
+# while looking perfectly approved.
+
+EN_LISTING = "https://snkrdunk.com/en/trading-cards/900001"
+JP_LISTING = "https://snkrdunk.com/apparels/900001"
+
+
+def _evidence_for(catalogue, candidate, variant="p2"):
+    candidate.detected_set_code = "OP-02"
+    candidate.detected_variant = variant
+    catalogue["db"].commit()
+
+
+def test_approve_match_stores_the_jp_page_for_a_jp_print(client, catalogue, candidate):
+    candidate.source_url = EN_LISTING
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.source_url == JP_LISTING
+    catalogue["db"].refresh(candidate)
+    assert candidate.source_url == EN_LISTING
+
+
+def test_manual_match_stores_the_same_canonical_url(client, catalogue, candidate):
+    """Both approval surfaces must agree - they share one helper."""
+    candidate.source_url = EN_LISTING
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/snkrdunk/candidates/{candidate.id}/match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+    assert catalogue["db"].query(SourceCardMapping).one().source_url == JP_LISTING
+
+
+def test_an_already_canonical_url_is_stored_unchanged(client, catalogue, candidate):
+    candidate.source_url = JP_LISTING
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+    assert catalogue["db"].query(SourceCardMapping).one().source_url == JP_LISTING
+
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "https://snkrdunk.com/cards/OP02-013",
+        "https://example.com/apparels/900001",
+        "https://snkrdunk.com/apparels/not-a-number",
+    ],
+)
+def test_an_unrecognised_listing_url_refuses_and_writes_nothing(
+    client, catalogue, candidate, bad_url
+):
+    """Fail closed: never silently rewrite a URL we cannot parse."""
+    candidate.source_url = bad_url
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == REFUSAL_SOURCE_URL_NOT_CANONICAL
+    assert catalogue["db"].query(SourceCardMapping).count() == 0
+
+
+def test_re_approving_the_other_path_updates_the_same_row(client, catalogue, candidate):
+    """Duplicate protection across canonicalisation: a listing first approved
+    from one path must not produce a second row when re-approved from the
+    other - uq_source_card_mappings_source_url cannot catch that, because the
+    two URLs are different strings."""
+    candidate.source_url = EN_LISTING
+    _evidence_for(catalogue, candidate, variant="p1")
+    first = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p1"].id},
+    )
+    assert first.status_code == 200, first.text
+    mapping_id = catalogue["db"].query(SourceCardMapping).one().id
+
+    candidate.source_url = JP_LISTING
+    _evidence_for(catalogue, candidate, variant="p2")
+    second = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert second.status_code == 200, second.text
+
+    mappings = catalogue["db"].query(SourceCardMapping).all()
+    assert len(mappings) == 1
+    assert mappings[0].id == mapping_id
+    assert mappings[0].source_url == JP_LISTING
+    assert mappings[0].card_print_id == catalogue["prints"]["p2"].id
+
+
+def test_canonicalisation_preserves_the_print_authoritative_shape(
+    client, catalogue, candidate
+):
+    """card_id stays NULL through canonicalisation - the two are independent."""
+    candidate.source_url = EN_LISTING
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.card_id is None
+    assert mapping.card_print_id == catalogue["prints"]["p2"].id
+    assert mapping.source_url == JP_LISTING
+    catalogue["db"].refresh(candidate)
+    assert candidate.match_status == "matched"
+    assert candidate.source_url == EN_LISTING
+
+
+def test_a_legacy_card_id_approval_is_canonicalised_the_same_way(
+    client, catalogue, candidate
+):
+    candidate.source_url = EN_LISTING
+    _evidence_for(catalogue, candidate)
+
+    response = client.post(
+        f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
+        json={"card_id": _card_id(catalogue), "card_print_id": catalogue["prints"]["p2"].id},
+    )
+    assert response.status_code == 200, response.text
+
+    mapping = catalogue["db"].query(SourceCardMapping).one()
+    assert mapping.card_id == _card_id(catalogue)
+    assert mapping.source_url == JP_LISTING

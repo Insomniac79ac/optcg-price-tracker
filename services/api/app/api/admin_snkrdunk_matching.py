@@ -51,6 +51,7 @@ from app.services.exact_print_approval import (
     resolve_exact_print,
     special_print_label,
 )
+from app.services.snkrdunk_urls import canonical_listing_url, equivalent_listing_urls
 
 router = APIRouter(
     prefix="/admin/snkrdunk-candidates", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -355,9 +356,29 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
     # - the exact-print decision above is the evidence.
     match_result = calculate_candidate_match(candidate, card) if card is not None else None
 
+    # THE URL THE COLLECTOR WILL FETCH, not the one discovery happened to see.
+    # SNKRDUNK serves one listing under a Japanese and an English path, and
+    # the collector rejects a page whose <html lang> disagrees with the
+    # print's language - so a jp print approved against the English mirror is
+    # correct about identity and unpriceable. Derived from the listing id
+    # alone; an unrecognised URL is refused, never rewritten on a guess.
+    # See app.services.snkrdunk_urls.
+    try:
+        mapping_url = canonical_listing_url(
+            candidate.source_url, card_print_language=decision.card_print.language
+        )
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
+
+    # Looked up by the canonical URL too, so re-approving a listing that was
+    # first approved under the other path updates that row instead of
+    # colliding with uq_source_card_mappings_source_url.
     mapping = (
         db.query(SourceCardMapping)
-        .filter_by(source_id=source.id, source_url=candidate.source_url)
+        .filter(
+            SourceCardMapping.source_id == source.id,
+            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
+        )
         .one_or_none()
     )
     review_notes = body.review_notes
@@ -391,7 +412,7 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
     # reaches this line - resolve_exact_print raised instead.
     mapping.card_print_id = decision.card_print.id
     mapping.source_card_id = candidate.detected_card_code or candidate.source_url
-    mapping.source_url = candidate.source_url
+    mapping.source_url = mapping_url
     mapping.manual_verified = True
     mapping.review_status = "approved"
     mapping.is_active = True
