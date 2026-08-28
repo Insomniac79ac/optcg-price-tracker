@@ -120,16 +120,37 @@ def parse_listing(source_url: str, html: str) -> ListingEvidence:
 
     Never raises on odd input: an unparseable page comes back with
     `card_code=None`, which the caller treats as "not a One Piece listing".
+
+    This function's only job is to get `title` and `image_url` OUT of the
+    HTML. Every judgement made about them lives in `evidence_from_listing`
+    below, so that a caller holding those two strings without the page - the
+    offline reparse - reaches identical conclusions by construction rather
+    than by a second implementation kept in step by hand.
     """
-    ev = ListingEvidence(source_url=source_url)
     if not html:
+        ev = ListingEvidence(source_url=source_url)
         ev.notes.append("empty response body")
         return ev
 
     title = _clean_title((_TITLE_RE.search(html) or [None, None])[1] if _TITLE_RE.search(html) else None)
+    return evidence_from_listing(source_url, title, _meta(html, "og:image"))
+
+
+def evidence_from_listing(
+    source_url: str, title: str | None, image_url: str | None
+) -> ListingEvidence:
+    """The single interpretation of a listing, given its title and image URL.
+
+    Split out of `parse_listing` so the offline reparse can re-derive a stored
+    candidate's fields from the evidence already persisted on the row - the
+    title and the image URL are the whole of what the derivation ever reads -
+    without refetching the page and without a second reading of card code,
+    product label, alias, rarity token or asset variant.
+    """
+    ev = ListingEvidence(source_url=source_url)
     ev.title = title
     ev.raw_text = title
-    ev.image_url = _meta(html, "og:image")
+    ev.image_url = image_url
     if ev.image_url:
         ev.image_is_timestamp = is_timestamp_filename(ev.image_url)
 
