@@ -22,6 +22,13 @@ Pillow
 # its absence here surfaced only as an "unusable" verdict at runtime rather
 # than an import error - see tests/test_artwork_evidence.py.
 ImageHash==4.3.2
+# Listed although ImageHash already pulls it in, unlike botocore below: the
+# connected-component sweep in app.services.artwork_evidence._foreground_regions
+# imports numpy DIRECTLY, and that import is lazy too. An undeclared direct
+# import fails exactly the way the ImageHash one did - every verdict comes back
+# "unusable" and nothing else looks wrong. Unpinned deliberately: ImageHash
+# pins no numpy version, and pinning one here could contradict it.
+numpy
 # Cloudflare R2 via its S3-compatible API (app.services.object_storage) - the
 # only S3 client in this service. botocore is pulled in transitively and is
 # deliberately not listed separately, matching the convention above. R2 is

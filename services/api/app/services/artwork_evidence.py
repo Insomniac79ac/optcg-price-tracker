@@ -37,6 +37,15 @@ anything: callers pass image bytes in. It has no access to the card code,
 product label, variant or title, so an image score cannot be manufactured from
 metadata it was not given.
 
+WHICH PIXELS GET COMPARED. A background-removed listing canvas can hold more
+than the card. Cropping to the whole foreground then squashes the card and
+every score derived from it is noise rather than evidence - staging candidate
+10 produced a confident-looking `no_match` at 112 that way, when the card
+alone scores 24. `_subject_bbox` therefore picks the dominant connected
+component of the foreground and refuses when no single object dominates. The
+rule is geometric: connected components, area and aspect. No text, no OCR, no
+learned model, no per-candidate knowledge.
+
 THRESHOLDS ARE PROVISIONAL. See ARTWORK_METHOD_VERSION. They were fitted on a
 control corpus of exact prints whose listing photo and official artwork are
 both known, where correct matches scored <= 56 and the nearest different
@@ -54,7 +63,7 @@ from typing import Any
 
 # Bumped whenever the pipeline or thresholds change, and recorded on every
 # verdict so a stored decision can always be traced to how it was reached.
-ARTWORK_METHOD_VERSION = "artwork-evidence/phash16-v1"
+ARTWORK_METHOD_VERSION = "artwork-evidence/phash16-v2"
 
 # PROVISIONAL. Fitted on the 4F control corpus; see the module docstring.
 # Enabling behaviour is a separate decision (settings.ARTWORK_EVIDENCE_ENABLED).
@@ -63,6 +72,36 @@ ARTWORK_MARGIN_MIN = 40
 
 NORMALIZE_SIZE = (256, 256)
 PHASH_SIZE = 16
+
+# SUBJECT SELECTION. Not decision thresholds - these govern which pixels are
+# hashed, never what a score means. ARTWORK_ACCEPT_MAX and ARTWORK_MARGIN_MIN
+# are untouched by this layer.
+#
+# A background-removed listing canvas is not guaranteed to hold exactly one
+# object. When it holds two, cropping to the whole foreground squashes the card
+# and every score computed from it is noise - see `_subject_bbox`.
+FOREGROUND_ALPHA_MIN = 1
+# Below this share of the foreground a component is compression fringe or dust,
+# not an object competing to be the subject.
+REGION_NOISE_SHARE = 0.005
+# The subject has to actually dominate. Two comparable objects mean the image
+# does not say which one is being sold, and that is a refusal, not a coin toss.
+REGION_DOMINANCE_SHARE = 0.60
+# Degenerate regions: a card photographed at any sane scale is neither a speck
+# nor a sliver. Both bounds are deliberately loose - they exclude nonsense, not
+# unusual framing.
+MIN_REGION_CANVAS_SHARE = 0.01
+MAX_REGION_ASPECT = 6.0
+
+
+class UnusableImage(ValueError):
+    """The image holds nothing that could be a photographed card.
+
+    Raised by `_normalize` and deliberately NOT caught as a match of any kind:
+    an image we cannot read the subject out of is absent evidence, and absent
+    evidence never eliminates a printing.
+    """
+
 
 STATUS_EXACT = "exact"
 STATUS_AMBIGUOUS = "ambiguous"
@@ -108,13 +147,148 @@ class ArtworkVerdict:
         )
 
 
-def _normalize(image_bytes: bytes):
-    """Decode -> alpha-autocrop -> flatten -> fixed size RGB.
+def _find(parent: list[int], index: int) -> int:
+    while parent[index] != index:
+        parent[index] = parent[parent[index]]
+        index = parent[index]
+    return index
 
-    The autocrop is the important step: SNKRDUNK's background-removed photos
-    pad the card inside a canvas of a different shape, so without it the
-    comparison is dominated by transparent margin rather than by the card.
-    Mirrors snkrdunk_collector.artwork, which validated this pipeline live.
+
+def _union(parent: list[int], left: int, right: int) -> None:
+    """Merge toward the lower index, so labelling is order-independent."""
+    a, b = _find(parent, left), _find(parent, right)
+    if a != b:
+        parent[max(a, b)] = min(a, b)
+
+
+def _foreground_regions(alpha) -> list[tuple[int, tuple[int, int, int, int]]]:
+    """Every 8-connected run of opaque pixels, as (area, bbox), largest first.
+
+    Run-length encoded rather than pixel-labelled: a card is one run per row,
+    so a 625-row canvas costs a few hundred runs instead of half a million
+    pixel visits, and a pathologically speckled alpha channel still stays
+    linear because adjacent rows are merged with a two-pointer sweep.
+
+    bbox is (left, top, right, bottom) with right/bottom exclusive - PIL's
+    crop convention, and the same convention `Image.getbbox` returns, so a
+    single-region image comes out of here byte-identical to the old autocrop.
+    """
+    import numpy as np
+
+    mask = np.asarray(alpha) >= FOREGROUND_ALPHA_MIN
+    height, width = mask.shape
+    runs: list[tuple[int, int, int]] = []
+    parent: list[int] = []
+    previous: list[int] = []
+
+    for row_index in range(height):
+        edges = np.diff(np.concatenate(([0], mask[row_index].view(np.int8), [0])))
+        starts = np.flatnonzero(edges == 1).tolist()
+        stops = np.flatnonzero(edges == -1).tolist()
+        current = []
+        for start, stop in zip(starts, stops):
+            current.append(len(runs))
+            runs.append((row_index, start, stop))
+            parent.append(len(parent))
+        # Both lists are sorted and their runs are disjoint, so one sweep finds
+        # every overlap. `<=` rather than `<` is the 8-connectivity: two runs
+        # meeting only at a diagonal corner are still one object.
+        i = j = 0
+        while i < len(current) and j < len(previous):
+            _, start, stop = runs[current[i]]
+            _, other_start, other_stop = runs[previous[j]]
+            if start <= other_stop and other_start <= stop:
+                _union(parent, current[i], previous[j])
+            if other_stop < stop:
+                j += 1
+            else:
+                i += 1
+        previous = current
+
+    areas: dict[int, int] = {}
+    boxes: dict[int, tuple[int, int, int, int]] = {}
+    for index, (row_index, start, stop) in enumerate(runs):
+        root = _find(parent, index)
+        areas[root] = areas.get(root, 0) + (stop - start)
+        left, top, right, bottom = boxes.get(root, (width, height, 0, 0))
+        boxes[root] = (
+            min(left, start),
+            min(top, row_index),
+            max(right, stop),
+            max(bottom, row_index + 1),
+        )
+    # Ties broken on the box itself so the choice never depends on dict order.
+    return sorted(
+        ((areas[root], boxes[root]) for root in areas), key=lambda r: (-r[0], r[1])
+    )
+
+
+def _subject_bbox(alpha, canvas_area: int) -> tuple[int, int, int, int]:
+    """The one object in this canvas that the photo is of.
+
+    WHY THIS EXISTS. The old pipeline cropped to `alpha.getbbox()`, the box
+    around ALL opaque pixels. That is correct exactly when the canvas holds one
+    object, and silently wrong when it holds two: staging candidate 10's
+    listing carries the card plus a second item, so the crop spanned both, the
+    resize squashed the card, and the closest artwork scored 112 against an
+    accept ceiling of 70 - a `no_match` that said nothing about artwork. With
+    the card alone the same comparison scores 24 at margin 48.
+
+    THE RULE IS GEOMETRIC AND GENERAL. Take the connected components of the
+    foreground, drop fringe, and keep the one that dominates. It reads no
+    title, card code, product, variant or text, runs no OCR and no learned
+    model, and has no knowledge of any particular candidate - it only answers
+    "which blob is the subject", which is a question about pixels.
+
+    IT REFUSES RATHER THAN GUESSES. Two comparable objects, no object at all,
+    or a subject too small or too sliver-shaped to be a photographed card all
+    raise `UnusableImage`. That is the safe direction: an unusable listing
+    yields an `unusable` verdict, and an unusable official leaves its print in
+    the surviving set. Neither can eliminate a printing.
+    """
+    regions = _foreground_regions(alpha)
+    if not regions:
+        raise UnusableImage("the image is fully transparent")
+
+    foreground = sum(area for area, _ in regions)
+    objects = [r for r in regions if r[0] >= foreground * REGION_NOISE_SHARE]
+    area, bbox = objects[0]
+
+    if len(objects) > 1:
+        kept = sum(a for a, _ in objects)
+        if area < kept * REGION_DOMINANCE_SHARE:
+            raise UnusableImage(
+                f"{len(objects)} comparable objects share this canvas and the largest "
+                f"holds only {area / kept:.0%} of it, so the image does not say which "
+                "one is being sold"
+            )
+
+    if area < canvas_area * MIN_REGION_CANVAS_SHARE:
+        raise UnusableImage(
+            f"the largest object covers {area / canvas_area:.2%} of the canvas, "
+            "too little to be a photographed card"
+        )
+    left, top, right, bottom = bbox
+    aspect = (right - left) / (bottom - top)
+    if not 1 / MAX_REGION_ASPECT <= aspect <= MAX_REGION_ASPECT:
+        raise UnusableImage(
+            f"the largest object has aspect ratio {aspect:.2f}, which is a sliver, "
+            "not a card"
+        )
+    return bbox
+
+
+def _normalize(image_bytes: bytes):
+    """Decode -> isolate the subject -> flatten -> fixed size RGB.
+
+    Isolating the subject is the important step: SNKRDUNK's background-removed
+    photos pad the card inside a canvas of a different shape, so without it the
+    comparison is dominated by transparent margin rather than by the card. For
+    a canvas holding one object this is exactly the old alpha autocrop, byte
+    for byte; `_subject_bbox` only changes what happens when it holds more than
+    one, or none. snkrdunk_collector.artwork still carries the single-object
+    version of this crop - it is a separate deployable with its own live
+    thresholds and is deliberately not touched here.
     """
     from PIL import Image
 
@@ -122,9 +296,8 @@ def _normalize(image_bytes: bytes):
     image.load()
     if image.mode in ("RGBA", "LA") or "transparency" in image.info:
         rgba = image.convert("RGBA")
-        bbox = rgba.split()[-1].getbbox()
-        if bbox is not None:
-            rgba = rgba.crop(bbox)
+        width, height = rgba.size
+        rgba = rgba.crop(_subject_bbox(rgba.split()[-1], width * height))
         flat = Image.new("RGB", rgba.size, (255, 255, 255))
         flat.paste(rgba, mask=rgba.split()[-1])
         image = flat
@@ -195,6 +368,16 @@ def evaluate_artwork(
     try:
         listing = _normalize(listing_bytes)
         listing_hash = _phash(listing)
+    except UnusableImage as exc:
+        # A readable image we cannot pick a subject out of. Reported in its own
+        # words rather than as a decode failure, because the operator's next
+        # move is different: look at the photo, not at the fetch.
+        return ArtworkVerdict(
+            status=STATUS_UNUSABLE,
+            card_print_ids_before=before,
+            card_print_ids_after=before,
+            detail=f"no card could be isolated in the listing image: {exc}",
+        )
     except Exception as exc:  # decode failures are evidence of nothing
         return ArtworkVerdict(
             status=STATUS_UNUSABLE,
