@@ -2,6 +2,11 @@ playwright==1.61.0
 beautifulsoup4==4.14.3
 Pillow==12.3.0
 ImageHash==4.3.2
+# artwork_subject imports numpy lazily, inside _foreground_regions. A lazy
+# import of a missing dependency does not fail at start-up - it fails at the
+# first comparison, silently, as ImageHash once did on staging. Declared here
+# and pinned by test_artwork.py so that cannot recur.
+numpy>=1.26
 sqlalchemy>=2.0
 psycopg[binary]
 pydantic-settings

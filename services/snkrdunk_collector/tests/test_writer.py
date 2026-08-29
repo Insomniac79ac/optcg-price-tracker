@@ -566,3 +566,79 @@ class RarityAuthorityTests(WriterTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --- the four mappings released from quarantine on 2026-08-29 ----------------
+#
+# Blinded human review (sealed key sha-256 2e51968a...9eb145) confirmed all four
+# point at the printing they already named. They were moved needs_review ->
+# approved. Two of them STILL do not price, and that is the intended end state:
+# the artwork gate is unchanged, and 42 and 43 sit outside it. These tests pin
+# that "approved" and "priceable" are different things, using each mapping's own
+# measured collector distance under the shared subject-isolation crop.
+QUARANTINE_RELEASE_2026_08_29 = {
+    42: {"average_hash": 13, "aspect": 0.0012, "gate": False},
+    43: {"average_hash": 19, "aspect": 0.0012, "gate": False},
+    49: {"average_hash": 11, "aspect": 0.0094, "gate": True},
+    52: {"average_hash": 12, "aspect": 0.0012, "gate": True},
+}
+
+
+def _measured_artwork(mapping_id: int) -> dict:
+    c = QUARANTINE_RELEASE_2026_08_29[mapping_id]
+    return {
+        "match": c["gate"],
+        "hash_distances": {"average_hash": c["average_hash"]},
+        "aspect_ratio_relative_diff": c["aspect"],
+    }
+
+
+class QuarantineReleaseTests(WriterTestCase):
+    """What the four released mappings do when a collection actually runs."""
+
+    def test_approved_but_refused_by_artwork_writes_nothing_and_says_why(self):
+        """Mappings 42 and 43. Approving them removed the approval reason and
+        nothing else; the artwork gate is untouched and still refuses, so no
+        price is written and the run reports exactly one cause."""
+        for mapping_id in (42, 43):
+            with self.subTest(mapping=mapping_id):
+                result = self._write(
+                    self.approved_mapping, GOOD_EXTRACTION, artwork=_measured_artwork(mapping_id)
+                )
+                self.assertFalse(result.written)
+                self.assertTrue(
+                    any(r.startswith("artwork_not_confirmed_match") for r in result.reasons)
+                )
+                # The point of the state change: approval is no longer a reason.
+                self.assertFalse(
+                    any(r.startswith("mapping_not_approved") for r in result.reasons)
+                )
+        # A refused write returns before anything is added, so the table is
+        # still empty without needing a rollback to prove it.
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
+
+    def test_approved_and_accepted_by_the_unchanged_gate_writes_normally(self):
+        """Mappings 49 and 52. 52 already passed the gate; 49 passes now only
+        because the crop stopped spanning a second object on its canvas. Neither
+        needed a threshold to move."""
+        for mapping_id in (49, 52):
+            with self.subTest(mapping=mapping_id):
+                result = self._write(
+                    self.approved_mapping, GOOD_EXTRACTION, artwork=_measured_artwork(mapping_id)
+                )
+                self.assertTrue(result.written, result.reasons)
+                self.assertEqual(result.reasons, [])
+        self.assertEqual(self.session.query(PriceObservation).count(), 2)
+
+    def test_before_the_release_approval_was_also_blocking(self):
+        """The state these four were actually in. Reproduced so the change is
+        legible: `needs_review` blocked the write on its own, independently of
+        artwork, which is why 52 was unpriced despite passing the gate."""
+        self.approved_mapping.review_status = "needs_review"
+        self.session.flush()
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION, artwork=_measured_artwork(52))
+        self.assertFalse(result.written)
+        self.assertIn("mapping_not_approved:review_status=needs_review", result.reasons)
+        self.assertFalse(
+            any(r.startswith("artwork_not_confirmed_match") for r in result.reasons)
+        )

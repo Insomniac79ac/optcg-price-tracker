@@ -23,10 +23,10 @@ from app.services.artwork_evidence import (
     ArtworkVerdict,
     UnusableImage,
     _normalize,
-    _subject_bbox,
     evaluate_artwork,
     official_artwork_digest,
 )
+from app.services.artwork_subject import subject_bbox
 from app.services.exact_print_approval import (
     REFUSAL_AMBIGUOUS,
     ExactPrintApprovalError,
@@ -183,7 +183,7 @@ def test_a_single_object_canvas_is_cropped_exactly_as_it_always_was():
 
     body = _canvas([(_png(61), (140, 90))])
     alpha = Image.open(io.BytesIO(body)).convert("RGBA").split()[-1]
-    assert _subject_bbox(alpha, 520 * 380) == alpha.getbbox()
+    assert subject_bbox(alpha, 520 * 380) == alpha.getbbox()
     # And the pixels that reach the hash are those of the unpadded original.
     assert _normalize(body).tobytes() == _normalize(_png(61)).tobytes()
 
@@ -210,7 +210,7 @@ def test_the_old_whole_foreground_crop_is_what_this_replaces():
     whole = Image.open(io.BytesIO(body)).convert("RGBA")
     whole_foreground = whole.crop(whole.split()[-1].getbbox())
     assert whole_foreground.size != Image.open(io.BytesIO(card)).size
-    assert _subject_bbox(whole.split()[-1], 520 * 380) != whole.split()[-1].getbbox()
+    assert subject_bbox(whole.split()[-1], 520 * 380) != whole.split()[-1].getbbox()
 
 
 def test_compression_fringe_does_not_count_as_a_second_object():
@@ -418,7 +418,7 @@ def test_the_flag_defaults_off():
 
 def test_every_lazy_dependency_is_declared_in_this_service_requirements():
     """artwork_evidence imports imagehash lazily inside `_phash`, and numpy
-    lazily inside `_foreground_regions`.
+    lazily inside `artwork_subject._foreground_regions`.
 
     That means the API starts, every test passes, and the module imports
     cleanly even when a dependency is missing from the deployed image - the

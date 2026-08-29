@@ -7,10 +7,30 @@ live-validated 2026-08-09 against the real pair for card_print.id=1
 average_hash distance 3/64, aspect ratio 0.716 vs. 0.7151 (0.13% apart).
 Thresholds below carry margin above that observed distance while staying
 well below what a genuinely different card's artwork produces.
+
+WHICH PIXELS GET COMPARED, since 2026-08-29. The crop is no longer this
+module's own alpha-bbox autocrop; it is `artwork_subject.isolate_subject`, a
+byte-identical copy of the crop `services/api`'s artwork matcher uses, so the
+collector, the admin artwork preview and the matcher all preprocess the same
+source bytes the same way. For a canvas holding one object it returns exactly
+the box the old autocrop did - verified unchanged on every SNKRDUNK image and
+every official artwork Atlas holds - and for a canvas holding two it isolates
+the card instead of spanning both. Quarantined mapping 49 was the case that
+proved it: its listing carries a second object, so the old crop reported an
+aspect ratio of 1.002 against a card's true 0.723 and refused a photo that was
+never wrong.
+
+THE THRESHOLDS AND HASHES BELOW ARE UNCHANGED and are deliberately not shared
+with the API. ARTWORK_HASH_DISTANCE_THRESHOLD, ARTWORK_ASPECT_RATIO_TOLERANCE,
+ARTWORK_HASH_SIZE and ARTWORK_COMPARE_SIZE are this service's own live pricing
+gate, fitted against its own corpus. A better crop is allowed to change which
+pixels reach them; nothing here is allowed to change what they accept.
 """
 
 import io
 from typing import Any
+
+from snkrdunk_collector.artwork_subject import UnusableImage, isolate_subject
 
 ARTWORK_HASH_DISTANCE_THRESHOLD = 12
 ARTWORK_ASPECT_RATIO_TOLERANCE = 0.08  # relative difference, e.g. 0.08 = 8%
@@ -18,37 +38,16 @@ ARTWORK_HASH_SIZE = 8
 ARTWORK_COMPARE_SIZE = (256, 256)
 
 
-def _autocrop_transparent_padding(image: Any) -> Any:
-    """If the image carries an alpha channel, crop to the bounding box of
-    its non-transparent pixels. SNKRDUNK's background-removed product
-    photos are otherwise padded with transparent space inside a canvas of a
-    different aspect ratio than the actual card artwork, which would make
-    an aspect-ratio/perceptual-hash comparison against the un-padded
-    official artwork meaningless."""
-    from PIL import Image
-
-    if image.mode not in ("RGBA", "LA") and "transparency" not in image.info:
-        return image
-    rgba = image.convert("RGBA")
-    alpha = rgba.split()[-1]
-    bbox = alpha.getbbox()
-    if bbox is None:
-        return image
-    cropped = rgba.crop(bbox)
-    background = Image.new("RGB", cropped.size, (255, 255, 255))
-    background.paste(cropped, mask=cropped.split()[-1])
-    return background
-
-
 def compare_artwork(official_bytes: bytes, candidate_bytes: bytes) -> dict[str, Any]:
     """Compare a candidate (SNKRDUNK) product image against the known
     official Bandai artwork. Pure function over raw bytes - independently
     testable offline with small synthetic images, no network required.
 
-    Never requires byte identity. Accounts for background removal (autocrop
-    to alpha bbox) and resolution/compression differences (resize to a
-    common normalization size before hashing). Fails closed (match=False) on
-    any decode error or when computed distances exceed the documented
+    Never requires byte identity. Accounts for background removal (the
+    subject is isolated from the canvas) and resolution/compression
+    differences (resize to a common normalization size before hashing).
+    Fails closed (match=False) on any decode error, on a canvas with no
+    isolable subject, or when computed distances exceed the documented
     thresholds.
     """
     import imagehash
@@ -71,8 +70,16 @@ def compare_artwork(official_bytes: bytes, candidate_bytes: bytes) -> dict[str, 
     official_raw_size = official_img.size
     candidate_raw_size = candidate_img.size
 
-    official_norm = _autocrop_transparent_padding(official_img).convert("RGB")
-    candidate_norm = _autocrop_transparent_padding(candidate_img).convert("RGB")
+    # Fails closed exactly like a decode error: a canvas we cannot pick a
+    # subject out of is absent evidence, and absent evidence is never a match.
+    # It is reported in its own words because the operator's next move is
+    # different - look at the photo, not at the fetch.
+    try:
+        official_norm = isolate_subject(official_img)
+        candidate_norm = isolate_subject(candidate_img)
+    except UnusableImage as exc:
+        result["error"] = f"unusable_image:{exc}"
+        return result
 
     official_aspect = official_norm.size[0] / official_norm.size[1]
     candidate_aspect = candidate_norm.size[0] / candidate_norm.size[1]
