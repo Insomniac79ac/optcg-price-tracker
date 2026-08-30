@@ -40,10 +40,92 @@ SNAPSHOTS = pathlib.Path(__file__).resolve().parents[3] / "data" / "official_sna
     [
         ("Booster Pack ROMANCE DAWN", "OP-01"),
         ("Extra Booster Memorial Collection", "EB-01"),
+        # Bandai's own Asia-EN Latin titles for OP-02/03/04. SNKRDUNK writes
+        # them with quotes and title-case "Of"; both are folded by
+        # normalise_label and neither is a difference in fact.
+        ('Booster Pack "Paramount War"', "OP-02"),
+        ('Booster Pack "Pillars Of Strength"', "OP-03"),
+        ('Booster Pack "Kingdoms Of Intrigue"', "OP-04"),
     ],
 )
 def test_an_accepted_alias_resolves_to_its_product(label, expected):
     assert resolve_product_code(label) == expected
+
+
+@pytest.mark.parametrize(
+    "label, expected",
+    [
+        # The same three products written the several ways the corpus and
+        # Bandai each spell them. Quoting, dashes, case and spacing are folded;
+        # nothing else is.
+        ("Booster Pack Paramount War", "OP-02"),
+        ("BOOSTER PACK -Paramount War-", "OP-02"),
+        ("  booster   pack   paramount war  ", "OP-02"),
+        ('Booster Pack "Pillars of Strength"', "OP-03"),
+        ("BOOSTER PACK -Pillars of Strength-", "OP-03"),
+        ("booster pack pillars OF strength", "OP-03"),
+        ("Booster Pack Kingdoms of Intrigue", "OP-04"),
+        ("BOOSTER PACK -Kingdoms of Intrigue-", "OP-04"),
+    ],
+)
+def test_the_new_booster_aliases_fold_the_same_way(label, expected):
+    assert resolve_product_code(label) == expected
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        # One character or word of difference is a different product until
+        # someone shows otherwise.
+        "Booster Pack Paramount Wars",
+        "Booster Pack Paramount War 2",
+        "Booster Pack Pillar of Strength",
+        "Booster Pack Pillars of Strengths",
+        "Booster Pack Kingdom of Intrigue",
+        "Booster Pack Kingdoms of Intrigues",
+        # Fragments of an alias, and labels merely CONTAINING one.
+        "Paramount War",
+        "Pillars of Strength",
+        "Kingdoms of Intrigue",
+        "Booster Pack Paramount War sealed box",
+        "Reprint of Booster Pack Kingdoms of Intrigue",
+        # The doubled label a real listing carries (candidate 95). Exact
+        # whole-label matching refuses it rather than reading it as OP-01.
+        "Booster Pack ROMANCE DAWN ROMANCE DAWN",
+    ],
+)
+def test_a_near_match_or_substring_of_the_new_aliases_refuses(label):
+    assert resolve_product_code(label) is None
+
+
+def test_the_new_aliases_do_not_disturb_the_existing_ones():
+    assert resolve_product_code("Booster Pack ROMANCE DAWN") == "OP-01"
+    assert resolve_product_code("Extra Booster Memorial Collection") == "EB-01"
+    assert known_aliases() == {
+        "BOOSTERPACKROMANCEDAWN": "OP-01",
+        "EXTRABOOSTERMEMORIALCOLLECTION": "EB-01",
+        "BOOSTERPACKPARAMOUNTWAR": "OP-02",
+        "BOOSTERPACKPILLARSOFSTRENGTH": "OP-03",
+        "BOOSTERPACKKINGDOMSOFINTRIGUE": "OP-04",
+    }
+
+
+@pytest.mark.parametrize(
+    "code, jp_series, en_series, size",
+    [("OP-02", "550102", "556102", 121),
+     ("OP-03", "550103", "556103", 127),
+     ("OP-04", "550104", "556104", 124)],
+)
+def test_the_new_aliases_name_the_same_product_in_both_catalogues(
+    code, jp_series, en_series, size
+):
+    """Check 3. Each alias reads Bandai's Asia-EN Latin title but resolves
+    against Atlas's JP prints, so the two catalogues' product must be shown to
+    be the same by CONTENTS. Codes are catalogue-scoped; membership is not."""
+    jp = _entry_card_codes("bandai_jp", jp_series)
+    en = _entry_card_codes("bandai_asia_en", en_series)
+    assert jp == en, f"{code}: JP and Asia-EN disagree on contents"
+    assert len(jp) == size
 
 
 def test_every_alias_carries_recorded_evidence():

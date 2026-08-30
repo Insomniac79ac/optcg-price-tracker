@@ -114,6 +114,42 @@ _ALIASES: dict[str, tuple[str, str]] = {
         "in discovery run 1. Atlas ReleaseProduct EB-01 carries the JP title and "
         "source_series_id 550201.",
     ),
+    "BOOSTERPACKPARAMOUNTWAR": (
+        "OP-02",
+        "Bandai publishes this product as 'BOOSTER PACK -Paramount War- [OP-02]' "
+        "(bandai_asia_en series 556102); the label equals that Latin title exactly "
+        "once normalised, and it is the only title in either frozen catalogue that "
+        "normalises to it. JP series 550102 "
+        "'ブースターパック 頂上決戦【OP-02】' is the same product, proven by contents "
+        "rather than by the shared code: both catalogues list an identical set of "
+        "121 card codes. Atlas ReleaseProduct OP-02 carries the JP title and "
+        "source_series_id 550102. Distinct from the SNKRDUNK-only label 'Booster "
+        "Pack Final Battle', which renders the JP subtitle 頂上決戦 and is resolved "
+        "by contents in source_product_aliases - Bandai publishes no such title.",
+    ),
+    "BOOSTERPACKPILLARSOFSTRENGTH": (
+        "OP-03",
+        "Bandai publishes this product as 'BOOSTER PACK -Pillars of Strength- "
+        "[OP-03]' (bandai_asia_en series 556103); the label equals that Latin title "
+        "exactly once normalised - the case difference SNKRDUNK introduces ('Of' "
+        "for 'of') is folded by normalise_label and is not a difference in fact - "
+        "and it is the only title in either frozen catalogue that normalises to it. "
+        "JP series 550103 'ブースターパック 強大な敵【OP-03】' is the same product, "
+        "proven by contents: both catalogues list an identical set of 127 card "
+        "codes, including the four reprints Bandai carries inside OP-03. Atlas "
+        "ReleaseProduct OP-03 carries the JP title and source_series_id 550103.",
+    ),
+    "BOOSTERPACKKINGDOMSOFINTRIGUE": (
+        "OP-04",
+        "Bandai publishes this product as 'BOOSTER PACK -Kingdoms of Intrigue- "
+        "[OP-04]' (bandai_asia_en series 556104); the label equals that Latin title "
+        "exactly once normalised, and it is the only title in either frozen "
+        "catalogue that normalises to it. JP series 550104 "
+        "'ブースターパック 謀略の王国【OP-04】' is the same product, proven by "
+        "contents: both catalogues list an identical set of 124 card codes, "
+        "including the five reprints Bandai carries inside OP-04. Atlas "
+        "ReleaseProduct OP-04 carries the JP title and source_series_id 550104.",
+    ),
 }
 
 

@@ -25,7 +25,11 @@ import pathlib
 
 import pytest
 
-from worker.matching.release_product_aliases import resolve_product_code
+from worker.matching.release_product_aliases import (
+    known_aliases,
+    normalise_label,
+    resolve_product_code,
+)
 from worker.matching.source_product_aliases import (
     known_source_aliases,
     official_membership,
@@ -109,8 +113,10 @@ def test_an_official_alias_is_not_subject_to_the_membership_guard():
 
 
 def test_no_source_alias_shadows_an_official_label():
-    official = {"BOOSTERPACKROMANCEDAWN", "EXTRABOOSTERMEMORIALCOLLECTION"}
-    assert official.isdisjoint(known_source_aliases("snkrdunk"))
+    """Derived from the official table rather than a hardcoded list, so this
+    keeps holding as that table grows - it gained OP-02/03/04 on 2026-08-30,
+    and a fixed set of two would have stopped checking the new rows."""
+    assert set(known_aliases()).isdisjoint(known_source_aliases("snkrdunk"))
 
 
 # --- the membership guard fails CLOSED ---------------------------------------
@@ -200,21 +206,46 @@ def test_a_substring_on_either_side_refuses(label):
 
 
 @pytest.mark.parametrize(
+    "label",
+    [
+        # The Japanese subtitles themselves. No translation happens at runtime,
+        # so neither table reads these as naming a product.
+        "ブースターパック 頂上決戦",
+        "頂上決戦",
+        "強大な敵",
+        "謀略の王国",
+    ],
+)
+def test_no_translation_happens_here(label):
+    assert resolve_source_product_code("snkrdunk", label, "OP02-001") is None
+
+
+@pytest.mark.parametrize(
     "label, product",
     [
-        # Bandai's OWN Asia-EN names for the same three products. They resolve
-        # to nothing here because they are not what SNKRDUNK writes, and adding
-        # them would belong in the official table on a title match, not here.
+        # Bandai's OWN Asia-EN names for the same three products. These moved
+        # into release_product_aliases on 2026-08-30, where they belong: they
+        # equal a title Bandai publishes, so they meet the OFFICIAL standard
+        # and never needed the contents-based one this module applies.
         ("Booster Pack Paramount War", "OP-02"),
         ("Booster Pack Pillars of Strength", "OP-03"),
         ("Booster Pack Kingdoms of Intrigue", "OP-04"),
-        # The Japanese subtitles themselves. No translation happens at runtime.
-        ("ブースターパック 頂上決戦", "OP-02"),
-        ("頂上決戦", "OP-02"),
     ],
 )
-def test_no_translation_or_official_name_inference_happens_here(label, product):
-    assert resolve_source_product_code("snkrdunk", label, "OP02-001") is None
+def test_bandais_own_names_resolve_officially_not_through_this_table(label, product):
+    """The distinction this module exists for, stated as a test.
+
+    Both routes now answer for these three products, but on different
+    evidence and through different tables. Bandai's published Latin title
+    resolves under the official standard; SNKRDUNK's own rendering of the JP
+    subtitle has no published title to match and is identified by contents
+    here. What must stay true is that the SOURCE table never grew a row for a
+    label the official one can already answer - otherwise the two tables could
+    drift into disagreeing about the same product.
+    """
+    assert resolve_product_code(label) == product
+    assert resolve_source_product_code("snkrdunk", label, "OP02-001") == product
+    assert normalise_label(label) not in known_source_aliases("snkrdunk")
 
 
 @pytest.mark.parametrize(
