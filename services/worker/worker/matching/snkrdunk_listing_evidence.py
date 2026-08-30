@@ -36,11 +36,11 @@ import html as html_lib
 import re
 from dataclasses import dataclass, field
 
-from worker.matching.release_product_aliases import resolve_product_code
 from worker.matching.snkrdunk_image_variant import (
     is_timestamp_filename,
     variant_from_image_url,
 )
+from worker.matching.source_product_aliases import resolve_source_product_code
 
 # One Piece card codes as SNKRDUNK prints them, always inside square brackets:
 # "Trafalgar law L-P[OP01-002] (Booster Pack ROMANCE DAWN)". Anchoring on the
@@ -171,7 +171,14 @@ def evidence_from_listing(
     product = _PRODUCT_RE.search(title)
     if product:
         ev.product_label = product.group(1).strip()
-        ev.resolved_product_code = resolve_product_code(ev.product_label)
+        # Official titles first, then SNKRDUNK's own product names - see
+        # worker.matching.source_product_aliases. The card code is passed
+        # because a source alias is honoured only when this listing's own code
+        # is a member of the product it names; a code the product does not
+        # contain fails closed to None, i.e. to no product evidence at all.
+        ev.resolved_product_code = resolve_source_product_code(
+            "snkrdunk", ev.product_label, ev.card_code
+        )
         if ev.resolved_product_code is None:
             ev.notes.append(f"product label unresolved: {ev.product_label!r}")
 
