@@ -96,6 +96,12 @@ FLAG_ASSET_CHANGED = "asset_changed"
 FLAG_MALFORMED_ASSET = "malformed_asset"
 FLAG_ENTRY_ASSET_MISMATCH = "entry_asset_mismatch"
 FLAG_UNCODED_PRODUCT = "uncoded_product"
+# The uncoded product is one Atlas has NOT established. This, not
+# FLAG_UNCODED_PRODUCT, is what blocks: an uncoded product Atlas already
+# holds under its exact frozen name has had its identity settled by a
+# deliberate, evidenced act (app.services.uncoded_product_evidence), and
+# re-refusing it would make that act unable to have any effect.
+FLAG_UNCODED_PRODUCT_NOT_ESTABLISHED = "uncoded_product_not_established"
 FLAG_NEW_PRODUCT_PROPOSED = "new_product_proposed"
 FLAG_MULTIPLE_PRODUCTS = "multiple_products"
 FLAG_CANONICAL_CARD_CONFLICT = "canonical_card_conflict"
@@ -680,6 +686,7 @@ class PrintImportPlanner:
         *,
         source_catalogue: str = "bandai_jp",
         digest_provider: DigestProvider | None = None,
+        authorised_uncoded_names: Iterable[str] | None = None,
     ) -> None:
         self._session = session
         self._catalogue = source_catalogue
@@ -689,6 +696,12 @@ class PrintImportPlanner:
         # genuinely holds no products is not re-queried on every entry.
         self._products_by_code: dict[str, list[ReleaseProduct]] | None = None
         self._uncoded_products: list[ReleaseProduct] | None = None
+        # Exact frozen names an operator explicitly authorised this run to
+        # establish, each already proved by
+        # app.services.uncoded_product_evidence. Empty for every caller that
+        # does not pass one, which is what keeps the default behaviour - an
+        # unestablished uncoded product blocks - completely unchanged.
+        self._authorised_uncoded_names = frozenset(authorised_uncoded_names or ())
         self._cards_by_code: dict[str, list[CanonicalCard]] | None = None
         self._prints_by_identity: dict[tuple[int, int, str], list[CardPrint]] | None = None
 
@@ -952,6 +965,14 @@ class PrintImportPlanner:
             else:
                 creations.append(CREATE_RELEASE_PRODUCT)
                 flags.append(FLAG_NEW_PRODUCT_PROPOSED)
+                if product_name not in self._authorised_uncoded_names:
+                    flags.append(FLAG_UNCODED_PRODUCT_NOT_ESTABLISHED)
+                else:
+                    reasons.append(
+                        f"the uncoded product {product_name!r} is not established, and this "
+                        "run was explicitly authorised to establish it from proved frozen "
+                        "catalogue evidence"
+                    )
                 proposed_product = ProposedReleaseProduct(
                     source_catalogue=self._catalogue,
                     official_code=None,
@@ -1305,7 +1326,19 @@ class PrintImportPlanner:
             # An uncoded product that Atlas has not already established cannot
             # be told apart from a product it already holds under another
             # spelling, so a human decides before anything is created.
-            FLAG_UNCODED_PRODUCT,
+            #
+            # Narrowed on 2026-08-30 from FLAG_UNCODED_PRODUCT to
+            # FLAG_UNCODED_PRODUCT_NOT_ESTABLISHED, which is what that
+            # sentence always described. The broader flag is raised for every
+            # uncoded entry including ones whose product Atlas HAS
+            # established, so blocking on it made establishing a product
+            # unable to change any outcome - while
+            # canonical_import_apply.evaluate_eligibility already documented
+            # the opposite ("an uncoded product that is not already
+            # established never reaches here") and has a test asserting an
+            # established one is not refused. The two layers disagreed; this
+            # is the planner adopting the rule the apply layer states.
+            FLAG_UNCODED_PRODUCT_NOT_ESTABLISHED,
         }
         if set(flags) & blocking:
             return OUTCOME_NEEDS_REVIEW, NEEDS_REVIEW
@@ -1436,15 +1469,32 @@ def plan_entries(
     source_catalogue: str = "bandai_jp",
     digest_provider: DigestProvider | None = None,
     classify_mappings: bool = True,
+    sibling_counts: dict[str, int] | None = None,
+    authorised_uncoded_names: Iterable[str] | None = None,
 ) -> ImportPlan:
-    """Plan a set of official entries, with sibling counts resolved for free."""
+    """Plan a set of official entries, with sibling counts resolved for free.
+
+    `sibling_counts` overrides the per-card-code artwork count that would
+    otherwise be derived from `entries` alone. A run that plans a SUBSET of a
+    snapshot - one product out of a catalogue, say - would otherwise report
+    "Bandai publishes 1 official artwork for OP01-021" simply because the
+    other artworks were filtered out before they got here, which is a
+    statement about the filter and not about Bandai. Pass the counts measured
+    over the whole snapshot and the flag stays true. It is advisory either
+    way: FLAG_SIBLING_VARIANTS never gates an outcome.
+    """
     planner = PrintImportPlanner(
-        session, source_catalogue=source_catalogue, digest_provider=digest_provider
+        session,
+        source_catalogue=source_catalogue,
+        digest_provider=digest_provider,
+        authorised_uncoded_names=authorised_uncoded_names,
     )
     per_code: dict[str, int] = {}
     for entry in entries:
         key = (entry.card_code or "").strip().upper()
         per_code[key] = per_code.get(key, 0) + 1
+    if sibling_counts:
+        per_code = {**per_code, **sibling_counts}
 
     plan = ImportPlan()
     for entry in entries:

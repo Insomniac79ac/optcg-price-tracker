@@ -92,6 +92,12 @@ from app.services.canonical_staging_target import (
     scrub_credentials,
 )
 from app.services.print_import_planner import plan_entries
+from app.services.uncoded_source_renderings import UNCODED_SOURCE_RENDERINGS
+from app.services.uncoded_product_evidence import (
+    UncodedProductEvidenceError,
+    prove_asia_en_carries_no_uncoded_names,
+    prove_uncoded_product,
+)
 from app.services.snapshot_planner_input import (
     SnapshotInputError,
     default_snapshot_root,
@@ -153,6 +159,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="JSON object of table->count the plan was reviewed against. The run "
         "aborts if canonical staging has drifted since the dry run.",
+    )
+    parser.add_argument(
+        "--uncoded-product",
+        action="append",
+        default=None,
+        metavar="NAME",
+        dest="uncoded_products",
+        help=(
+            "Exact frozen JP catalogue name of an UNCODED product to establish, "
+            "repeatable. Each name is proved against the frozen catalogue by "
+            "app.services.uncoded_product_evidence before anything is created, and "
+            "the run is SCOPED to those products' entries - nothing else in the "
+            "snapshot is planned. Without this flag the run behaves exactly as "
+            "before: the whole snapshot is planned and no uncoded product is ever "
+            "created."
+        ),
     )
     parser.add_argument(
         "--json",
@@ -231,6 +253,59 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_USAGE
 
     # --- resolve and prove the target -------------------------------------
+    # --- authorised uncoded products, proved before anything is resolved ---
+    #
+    # Deliberately BEFORE the target is used: a name that does not meet the
+    # standard is a usage error, and finding that out should not require a
+    # database, a tunnel or an attestation. `authorised` is empty unless the
+    # operator named products, and an empty dict is what makes every existing
+    # invocation behave exactly as it did.
+    authorised: dict[str, object] = {}
+    planned_entries = snapshot.entries
+    sibling_counts: dict[str, int] = {}
+    renderings: dict = {}
+    requested = [n for n in (args.uncoded_products or []) if n and n.strip()]
+    if requested:
+        asia_en_root = Path(str(root).replace("bandai_jp", "bandai_asia_en"))
+        try:
+            absence = prove_asia_en_carries_no_uncoded_names(asia_en_root)
+            for name in requested:
+                if name in authorised:
+                    print(f"FAIL: --uncoded-product {name!r} given twice.", file=sys.stderr)
+                    return EXIT_USAGE
+                authorised[name] = prove_uncoded_product(
+                    name,
+                    jp_root=root,
+                    asia_en_root=asia_en_root,
+                    snapshot_identity=snapshot.identity,
+                    asia_en_absence_proof=absence,
+                )
+        except UncodedProductEvidenceError as exc:
+            print(f"FAIL: uncoded product evidence refused: {exc}", file=sys.stderr)
+            return EXIT_USAGE
+
+        # Scope. Only entries belonging to the named products are planned, so
+        # naming one product can never import a second one by accident.
+        wanted = set(requested)
+        planned_entries = tuple(
+            e for e in snapshot.entries if wanted & set(getattr(e, "product_names", ()) or ())
+        )
+        # Sibling counts stay measured over the WHOLE snapshot: see plan_entries.
+        for entry in snapshot.entries:
+            key = (entry.card_code or "").strip().upper()
+            sibling_counts[key] = sibling_counts.get(key, 0) + 1
+
+        # Storefront spellings for exactly the products being established, so a
+        # source label can reach a product that has no code to be reached by.
+        # Restricted to `wanted`: naming one product never records another's
+        # rendering.
+        for row in UNCODED_SOURCE_RENDERINGS:
+            if row.product_name in wanted:
+                renderings.setdefault(row.product_name, []).append(
+                    (row.source_label, row.source_name)
+                )
+        renderings = {k: tuple(v) for k, v in renderings.items()}
+
     try:
         verified = target_authority.verified_staging_target(
             environment=environment,
@@ -246,6 +321,14 @@ def main(argv: list[str] | None = None) -> int:
 
     attestation = verified.attestation
     emit("== canonical staging Bandai catalogue import ==")
+    for name in requested:
+        ev = authorised[name]
+        emit(f"  {'uncoded product':<24} {name}")
+        emit(f"  {'  series':<24} {ev.source_series_id} ({ev.source_series_name})")
+        emit(f"  {'  members':<24} {len(ev.member_card_codes)} card codes")
+        emit(f"  {'  validation':<24} JP-only ({ev.asia_en_absence_proof})")
+    if requested:
+        emit(f"  {'scoped entries':<24} {len(planned_entries)} of {snapshot.entry_count}")
     for key, value in snapshot.describe().items():
         emit(f"  {key:<24} {value}")
     for key, value in attestation.describe().items():
@@ -263,11 +346,13 @@ def main(argv: list[str] | None = None) -> int:
         with Session(engine) as session:
             plan = plan_entries(
                 session,
-                snapshot.entries,
+                planned_entries,
                 series_index=snapshot.series,
                 source_catalogue=SOURCE_CATALOGUE,
                 digest_provider=snapshot.digest_provider(),
                 classify_mappings=False,
+                sibling_counts=sibling_counts,
+                authorised_uncoded_names=frozenset(authorised),
             )
             pinning = ApplyPinning(
                 snapshot_identity=snapshot.identity,
@@ -292,6 +377,8 @@ def main(argv: list[str] | None = None) -> int:
                 environment=CANONICAL_STAGING_ENVIRONMENT,
                 entries={entry.entry_id: entry for entry in snapshot.entries},
                 staging_grant=grant,
+                authorised_uncoded_products=authorised,
+                source_renderings=renderings,
             )
             try:
                 report = applier.run(apply=args.apply)

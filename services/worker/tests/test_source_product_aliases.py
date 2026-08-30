@@ -83,13 +83,21 @@ def test_every_source_alias_carries_recorded_evidence():
         assert source_alias_evidence("snkrdunk", label), f"{label!r} has no evidence"
 
 
-def test_the_three_aliases_are_the_whole_table():
-    """Pinned so a fourth row cannot be added without landing in this test and
-    therefore in front of the evidence standard."""
+def test_the_four_aliases_are_the_whole_table():
+    """Pinned so a fifth row cannot be added without landing in this test and
+    therefore in front of the evidence standard.
+
+    ST-04 was added 2026-08-30. Unlike the three boosters - whose observed code
+    sets EQUAL their product's membership - its observed set is a strict subset
+    (2 of 17). That is permitted: checks 2 and 3 are containment and
+    uniqueness, and equality was an observation about the boosters, never the
+    standard. See test_a_subset_observation_is_enough_when_containment_is_unique.
+    """
     assert known_source_aliases("snkrdunk") == {
         "BOOSTERPACKFINALBATTLE": "OP-02",
         "BOOSTERPACKFORMIDABLEENEMY": "OP-03",
         "BOOSTERPACKTHEKINGDOMOFCONSPIRACY": "OP-04",
+        "STARTDACKSBEASTSPIRATES": "ST-04",
     }
 
 
@@ -338,3 +346,64 @@ def test_no_source_alias_could_have_been_an_official_one():
         assert resolve_product_code(label) is None, (
             f"{label!r} resolves officially; it must not be a source alias"
         )
+
+# --- ST-04: the 2026-08-30 row, and what makes it different ------------------
+
+
+@pytest.mark.parametrize("card_code", ["ST04-005", "ST04-010"])
+def test_the_st04_alias_resolves_for_the_codes_actually_observed(card_code):
+    assert resolve_source_product_code("snkrdunk", "Start Dacks Beasts Pirates", card_code) == "ST-04"
+
+
+def test_a_subset_observation_is_enough_when_containment_is_unique():
+    """ST-04's observed set is 2 of 17, not all 17.
+
+    The three booster rows each happened to observe a product's COMPLETE
+    membership, and it would be easy to read that coincidence as the standard.
+    It is not: checks 2 and 3 are containment and uniqueness. What must hold is
+    that every observed code is a member and that exactly one product contains
+    the set - both true here.
+    """
+    observed = {"ST04-005", "ST04-010"}
+    membership = official_membership("ST-04")
+    assert len(membership) == 17
+    assert observed < membership
+
+
+def test_the_st04_runtime_guard_still_fails_closed_off_membership():
+    """A code ST-04 does not contain refuses, even under the right label."""
+    for code in ["OP01-001", "ST05-001", "ST04-018", "ST03-005"]:
+        assert resolve_source_product_code("snkrdunk", "Start Dacks Beasts Pirates", code) is None
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        # The typo is part of the label, not something to be corrected. The
+        # correctly-spelled name is a DIFFERENT string and resolves to nothing,
+        # which is what proves no typo-correction step exists.
+        "Start Deck Beasts Pirates",
+        "Start Dacks Beast Pirates",
+        "Start Dacks Beasts Pirate",
+        "Start Dacks",
+        "Beasts Pirates",
+        "Start Dacks Beasts Pirates Vol.2",
+        # Bandai's own names for ST-04, which belong to the official table if
+        # anywhere - never to this one.
+        "START DECK -Animal Kingdom Pirates- [ST-04]",
+        "スタートデッキ 百獣海賊団【ST-04】",
+    ],
+)
+def test_a_near_miss_of_the_st04_label_refuses(label):
+    assert resolve_source_product_code("snkrdunk", label, "ST04-005") is None
+
+
+def test_st04_did_not_disturb_the_three_booster_rows():
+    assert resolve_source_product_code("snkrdunk", "Booster Pack Final Battle", "OP02-013") == "OP-02"
+    assert resolve_source_product_code("snkrdunk", "Booster Pack Formidable Enemy", "OP03-001") == "OP-03"
+    assert (
+        resolve_source_product_code("snkrdunk", "Booster Pack The Kingdom Of Conspiracy", "OP04-001")
+        == "OP-04"
+    )
+    assert resolve_product_code("Booster Pack ROMANCE DAWN") == "OP-01"
+    assert resolve_product_code("Extra Booster Memorial Collection") == "EB-01"

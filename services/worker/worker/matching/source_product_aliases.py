@@ -116,6 +116,26 @@ _SOURCE_ALIASES: dict[str, dict[str, tuple[str, str]]] = {
             "only product containing that set (next closest PRB-01, 16/124). JP and "
             "Asia-EN agree.",
         ),
+        "STARTDACKSBEASTSPIRATES": (
+            "ST-04",
+            "SNKRDUNK's own rendering of ST-04, whose Bandai JP title is "
+            "'スタートデッキ 百獣海賊団【ST-04】' and whose Asia-EN title is "
+            "'START DECK -Animal Kingdom Pirates- [ST-04]'. The label matches neither, "
+            "and it additionally misspells 'Deck' as 'Dacks' - which is why it is "
+            "resolved by CONTENTS and not by name: no typo correction, stemming or "
+            "edit-distance step exists here or anywhere in this module, and adding one "
+            "to reach this single row would create a general inference engine to solve "
+            "a two-listing problem. Identified by contents: the 2 distinct card codes "
+            "observed under this label across the 676-candidate corpus of 2026-08-30 "
+            "(ST04-005, ST04-010) are both members of ST-04's 17-code official "
+            "membership, and ST-04 is the only Bandai product in either frozen "
+            "catalogue whose membership contains that set. JP series 550004 and Asia-EN "
+            "series 556004 list an IDENTICAL 17-code membership, so check 4 holds "
+            "without substitution. The observed set is a strict subset of the "
+            "membership rather than equal to it, which the standard permits - checks 2 "
+            "and 3 are containment and uniqueness, and equality was an observation "
+            "about the three booster rows, never a requirement."
+        ),
     },
 }
 
@@ -145,8 +165,10 @@ _SOURCE_ALIASES: dict[str, dict[str, tuple[str, str]]] = {
 #     entries.jsonl sha256
 #       40d23870573fc9ca65d134799757f3034c4155e23cd06a6634c47ed54c6f5f1e
 #
-# Both catalogues yield IDENTICAL sets for all three products - check 4 of the
+# Both catalogues yield IDENTICAL sets for all four products - check 4 of the
 # EVIDENCE STANDARD - so the literals do not depend on which one was read.
+# (ST-04 was added 2026-08-30: JP series 550004 and Asia-EN series 556004, 17
+# codes each, identical.)
 #
 # FINGERPRINTS of the generated sets, sha256 over the sorted codes joined by
 # newlines, so a hand edit is detectable even where the catalogues are absent:
@@ -157,12 +179,21 @@ _SOURCE_ALIASES: dict[str, dict[str, tuple[str, str]]] = {
 #     0598f64006f5240a3c6e865f083b855f524cddecd38ddc5e6c41cd4675019b44
 #   OP-04  124 codes
 #     725acc384a56ebe87c22c093a3310511d5235d381eaa2ded22b4097e61c36a10
+#   ST-04   17 codes
+#     110aa1e4da853d565215a1271ce4f0e461775cb8dd8e1bc5f9515c079b7da3c8
 #
 # REGENERATION IS VERIFIED, NOT TRUSTED. tests/test_source_product_aliases.py::
 # test_frozen_membership_matches_the_catalogues re-derives every set below from
 # BOTH catalogues and fails on any drift; it skips only where the snapshots are
 # not checked out (gitignored, ~1GB), and the pinned sizes still run in CI.
 _OFFICIAL_MEMBERSHIP: dict[str, frozenset[str]] = {
+    "ST-04": frozenset({
+        # 17 card codes.
+        "ST04-001", "ST04-002", "ST04-003", "ST04-004", "ST04-005",
+        "ST04-006", "ST04-007", "ST04-008", "ST04-009", "ST04-010",
+        "ST04-011", "ST04-012", "ST04-013", "ST04-014", "ST04-015",
+        "ST04-016", "ST04-017",
+    }),
     "OP-02": frozenset({
         # 121 card codes.
         "OP02-001", "OP02-002", "OP02-003", "OP02-004", "OP02-005",

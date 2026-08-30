@@ -90,7 +90,7 @@ from typing import Any, Iterable, Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint, ReleaseProduct
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
 from app.services import print_import_planner as planner
 from app.services.official_snapshot import normalize_for_comparison
 from app.services.print_import_planner import (
@@ -149,6 +149,9 @@ SKIP_NO_IMAGE = "no_official_image_url"
 SKIP_NO_DIGEST = "no_artwork_sha256"
 SKIP_INCOMPLETE_METADATA = "incomplete_official_metadata"
 SKIP_UNCODED_PRODUCT = "uncoded_product_not_established"
+# The only alias_kind this module ever writes. A storefront's spelling is
+# never a Bandai name; see ReleaseProductAlias.ALIAS_KINDS.
+SOURCE_RENDERING_KIND = "source_rendering"
 SKIP_NO_CARD_CODE = "no_card_code"
 
 # Why a NEW canonical card cannot be composed. None of these is about rarity:
@@ -693,6 +696,7 @@ def evaluate_eligibility(
     *,
     composable_card_codes: set[str] | None = None,
     baselines: dict[str, CanonicalBaseline] | None = None,
+    authorised_uncoded_names: frozenset[str] | None = None,
 ) -> Eligibility:
     """Whether one plan may be applied. Consumes the planner; re-decides nothing."""
     reasons: list[str] = []
@@ -713,11 +717,22 @@ def evaluate_eligibility(
         reasons.append(SKIP_NO_DIGEST)
     if not _metadata_complete(planned):
         reasons.append(SKIP_INCOMPLETE_METADATA)
-    # A coded product, or one Atlas already holds. An uncoded product that is
-    # not already established never reaches here (the planner blocks it), but
-    # this is asserted rather than assumed.
+    # A coded product, one Atlas already holds, or one this run was
+    # explicitly authorised to establish.
+    #
+    # `authorised_uncoded_names` is the set of product names an operator named
+    # on the command line AND that app.services.uncoded_product_evidence
+    # proved against the frozen JP catalogue. It is not a relaxation of this
+    # rule: an unnamed or unproven uncoded product still lands here, so the
+    # default (None) behaves exactly as before. What it buys is that
+    # establishing a product and importing its prints can happen in ONE
+    # transaction - the audit of 2026-08-30 established that creating uncoded
+    # products WITHOUT their prints turns ~34 unresolved candidates into
+    # conflicts, so the two must not be separable.
     if planned.official_product_code is None and planned.existing_release_product_id is None:
-        reasons.append(SKIP_UNCODED_PRODUCT)
+        name = planned.official_product_display_name
+        if not (authorised_uncoded_names and name and name in authorised_uncoded_names):
+            reasons.append(SKIP_UNCODED_PRODUCT)
 
     # A print whose canonical card must be CREATED needs that card to be
     # composable. Rarity is not part of that any more; the NOT NULL identity
@@ -817,6 +832,7 @@ class ApplyReport:
     finished_at: str | None = None
 
     products_created: int = 0
+    product_aliases_created: int = 0
     canonical_cards_created: int = 0
     card_prints_created: int = 0
     existing_print_metadata_updated: int = 0
@@ -859,6 +875,7 @@ class ApplyReport:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "products_created": self.products_created,
+            "product_aliases_created": self.product_aliases_created,
             "canonical_cards_created": self.canonical_cards_created,
             "card_prints_created": self.card_prints_created,
             "existing_print_metadata_updated": self.existing_print_metadata_updated,
@@ -1074,6 +1091,8 @@ class CanonicalImportApplier:
         environment: str,
         entries: dict[str, Any] | None = None,
         staging_grant: CanonicalStagingWriteGrant | None = None,
+        authorised_uncoded_products: dict[str, Any] | None = None,
+        source_renderings: dict[str, tuple[tuple[str, str], ...]] | None = None,
     ) -> None:
         self._session = session
         self._plan = plan
@@ -1087,6 +1106,18 @@ class CanonicalImportApplier:
         # plan was built from. Only the baseline occurrence's numeric blocks
         # are read from it; identity never is.
         self._entries = entries or {}
+        # Exact frozen product name -> UncodedProductEvidence, one entry per
+        # product an operator named and the JP-only standard proved. Empty for
+        # every caller that does not pass one, which is every caller today
+        # except the uncoded-product runner.
+        self._authorised_uncoded = dict(authorised_uncoded_products or {})
+        # Frozen product name -> ((alias_name, source_name), ...). How a
+        # storefront writes a product this run establishes, recorded as
+        # `source_rendering` evidence so the exact-print gate can resolve a
+        # source label to a product that has no code to resolve to. Passed in
+        # rather than known here: which marketplace writes what is not a fact
+        # about importing a catalogue, and this class must not learn it.
+        self._source_renderings = dict(source_renderings or {})
 
     # -- guards ------------------------------------------------------------
     def _check_environment(self) -> None:
@@ -1287,7 +1318,10 @@ class CanonicalImportApplier:
                 report.skipped_no_change += 1
                 continue
             decision = evaluate_eligibility(
-                planned, composable_card_codes=composable, baselines=audit.baselines
+                planned,
+                composable_card_codes=composable,
+                baselines=audit.baselines,
+                authorised_uncoded_names=frozenset(self._authorised_uncoded),
             )
             if decision.eligible:
                 eligible.append(planned)
@@ -1314,12 +1348,20 @@ class CanonicalImportApplier:
             report.post_counts = pre
             return
 
-        # 6. the writes, all inside the caller's transaction
+        # 6. the writes, all inside the caller's transaction.
+        #
+        # Uncoded products are created in the SAME transaction as the prints
+        # that reference them, and never in one of their own: the 2026-08-30
+        # residual audit established that a product with no prints narrows the
+        # exact-print gate's survivor set to empty, which turns an unresolved
+        # candidate into a conflict. Products and prints are one unit or they
+        # are a regression.
         products = self._create_products(eligible, report)
         self._session.flush()
+        uncoded = self._create_uncoded_release_products(eligible, report)
         cards = self._create_canonical_cards(eligible, audit, report)
         self._session.flush()
-        self._create_card_prints(eligible, products, cards, report)
+        self._create_card_prints(eligible, products, cards, report, uncoded_products=uncoded)
         self._session.flush()
         self._backfill_existing_metadata(report)
         self._session.flush()
@@ -1658,6 +1700,119 @@ class CanonicalImportApplier:
                 f"{proposed.source_series_id!r}",
             )
 
+    def _create_uncoded_release_products(
+        self,
+        eligible: Sequence[PlannedPrint],
+        report: ApplyReport,
+    ) -> dict[str, ReleaseProduct]:
+        """Missing AUTHORISED uncoded bandai_jp products, created exactly once.
+
+        Deliberately parallel to `_create_release_products` and deliberately
+        separate from it. A coded product is reused on
+        `(source_catalogue, official_code)`; an uncoded one has no code, so it
+        is reused on its EXACT frozen catalogue name - the same untransformed
+        equality `PrintImportPlanner._uncoded_product_by_exact_name` uses, and
+        for the same reason: the repo's own normalize_release_text collapses
+        30 Bandai products into 13 keys, so anything fuzzier would merge real
+        products.
+
+        Two things this may not do, both of which the evidence object exists
+        to prevent. It never invents an `official_code` - the column stays
+        NULL, which the schema explicitly allows because "Bandai ships uncoded
+        limited/promotional products, and those prints are legitimate". And it
+        never creates a product this run was not authorised for: the name must
+        be in `self._authorised_uncoded`, which only proven evidence populates.
+        """
+        wanted: dict[str, PlannedPrint] = {}
+        for planned in eligible:
+            name = planned.official_product_display_name
+            if (
+                planned.official_product_code is None
+                and planned.existing_release_product_id is None
+                and name
+                and name in self._authorised_uncoded
+            ):
+                wanted.setdefault(name, planned)
+
+        resolved: dict[str, ReleaseProduct] = {}
+        for name, _planned in sorted(wanted.items()):
+            evidence = self._authorised_uncoded[name]
+            existing = self._session.execute(
+                select(ReleaseProduct).where(
+                    ReleaseProduct.source_catalogue == SOURCE_CATALOGUE,
+                    ReleaseProduct.official_code.is_(None),
+                    ReleaseProduct.first_seen_name == name,
+                )
+            ).scalars().first()
+            if existing is not None:
+                if existing.source_series_id != evidence.source_series_id:
+                    raise ApplyAborted(
+                        "product_evidence_conflict",
+                        f"release_product #{existing.id} ({name!r}) has series "
+                        f"{existing.source_series_id!r} but the catalogue says "
+                        f"{evidence.source_series_id!r}",
+                    )
+                resolved[name] = existing
+                continue
+
+            product = ReleaseProduct(
+                source_catalogue=SOURCE_CATALOGUE,
+                official_code=None,
+                display_name=name,
+                first_seen_name=name,
+                source_series_id=evidence.source_series_id,
+                source_url=evidence.source_url,
+                verification_status=VERIFIED,
+            )
+            self._session.add(product)
+            resolved[name] = product
+            report.products_created += 1
+        if resolved:
+            # Ids are needed by _create_card_prints in this same transaction,
+            # and by the alias rows below.
+            self._session.flush()
+            self._record_source_renderings(resolved, report)
+        return resolved
+
+    def _record_source_renderings(
+        self, products: dict[str, ReleaseProduct], report: ApplyReport
+    ) -> None:
+        """Storefront spellings for the products this run established.
+
+        Written as `source_rendering` and never anything else, so a
+        marketplace's wording can never be read back as a name Bandai
+        publishes - the distinction `ReleaseProductAlias.alias_kind` exists to
+        keep, and the one the 2026-08-10 fabricated-evidence incident came
+        from. `source_url` is deliberately left NULL: the provenance of a
+        source rendering is the declared rendering table, and minting a
+        plausible storefront URL to fill the column would be fabricating
+        exactly the evidence the column is for.
+
+        Idempotent by the table's own (product_id, alias_kind, alias_name)
+        identity, so a second run adds nothing.
+        """
+        for name, product in sorted(products.items()):
+            for alias_name, _source_name in self._source_renderings.get(name, ()):
+                exists = self._session.execute(
+                    select(ReleaseProductAlias).where(
+                        ReleaseProductAlias.product_id == product.id,
+                        ReleaseProductAlias.alias_kind == SOURCE_RENDERING_KIND,
+                        ReleaseProductAlias.alias_name == alias_name,
+                    )
+                ).scalars().first()
+                if exists is not None:
+                    continue
+                self._session.add(
+                    ReleaseProductAlias(
+                        product_id=product.id,
+                        alias_name=alias_name,
+                        alias_kind=SOURCE_RENDERING_KIND,
+                        source_url=None,
+                    )
+                )
+                report.product_aliases_created += 1
+        self._session.flush()
+
     def _create_canonical_cards(
         self,
         eligible: Sequence[PlannedPrint],
@@ -1715,6 +1870,7 @@ class CanonicalImportApplier:
         products: dict[str, ReleaseProduct],
         cards: dict[str, CanonicalCard],
         report: ApplyReport,
+        uncoded_products: dict[str, ReleaseProduct] | None = None,
     ) -> None:
         for planned in eligible:
             code = (planned.card_code or "").strip().upper()
@@ -1729,6 +1885,13 @@ class CanonicalImportApplier:
             product_id = planned.existing_release_product_id
             if product_id is None and planned.official_product_code:
                 product = products.get(planned.official_product_code)
+                product_id = product.id if product else None
+            if product_id is None and not planned.official_product_code:
+                # An authorised uncoded product created earlier in this same
+                # transaction. Keyed on the exact frozen name, never on a code.
+                product = (uncoded_products or {}).get(
+                    planned.official_product_display_name or ""
+                )
                 product_id = product.id if product else None
             if product_id is None:
                 raise ApplyAborted(

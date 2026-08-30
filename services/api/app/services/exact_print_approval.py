@@ -64,7 +64,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
 from app.services.artwork_evidence import ArtworkVerdict
 
 # Machine-readable refusal codes. They are part of the endpoint contract - the
@@ -224,6 +224,82 @@ class ApprovalDecision:
         )
 
 
+def resolve_uncoded_product_id(db: Session, source_name: str, product_label: str | None) -> int | None:
+    """The Atlas product a source's own label names, when that product is UNCODED.
+
+    Returns the `release_products.id`, or None when the label names nothing.
+
+    WHY THIS EXISTS AND WHY IT IS NOT release_product_code. A coded product is
+    reachable from a source label through a code: the worker resolves
+    "Booster Pack Final Battle" to OP-02 and this module narrows on
+    `card_prints.release_product_code`. Bandai also ships products with no code
+    at all - promotional, limited and event products, filed under three uncoded
+    catch-all series - and Atlas models those with `official_code IS NULL` and
+    `release_product_code IS NULL` on their prints, because the alternative is
+    inventing a code and an invented code is indistinguishable from a published
+    one once it is written down.
+
+    So the narrowing key for those is the product's surrogate identity,
+    `card_prints.release_product_id`, which is already a component of the live
+    exact-print identity `(canonical_card_id, language, release_product_id,
+    official_asset_variant)`. Nothing new is introduced here; the column the
+    identity index has always used is simply also used to narrow.
+
+    EXACT WHOLE-LABEL EQUALITY, and nothing else. The lookup is `alias_name =
+    label` against `alias_kind = 'source_rendering'` rows only. No
+    normalisation, no casefolding, no substring, no similarity - the repo's own
+    normalize_release_text collapses 30 Bandai products into 13 keys, so
+    anything fuzzier would merge real products. A `bandai_official` alias can
+    never answer here: a storefront's spelling and Bandai's name are different
+    kinds of fact and this is the storefront's question.
+
+    FAILS CLOSED. No row, or more than one product behind the label, returns
+    None - which leaves the label unresolved and the gate refuses the approval
+    exactly as it does today. A drift can only ever cost coverage.
+
+    `source_name` IS NOT CONSULTED, and saying so is the point of this
+    paragraph. `release_product_aliases` records no source column, so a
+    `source_rendering` row is source-agnostic in storage: a label recorded for
+    SNKRDUNK would answer for Yuyu-Tei too. That is harmless today because
+    SNKRDUNK is the only source with renderings and because a wrong answer
+    still has to survive the card-code and variant filters, but it is a real
+    limit rather than an oversight. The argument is kept so that call sites
+    state which source is asking, and so that adding a source column later is
+    a change to this function and its table rather than to every caller. Until
+    then, do not add a rendering for a second source without addressing it.
+    """
+    if not product_label:
+        return None
+    # UNCODED PRODUCTS ONLY, enforced by the join rather than by convention.
+    #
+    # Staging already carries a `source_rendering` row for a CODED product -
+    # 'ロマンスドーン' -> OP-01, SNKRDUNK's katakana for a product Bandai titles
+    # in Latin. Without `official_code IS NULL` this function would answer for
+    # that too, quietly creating a SECOND route to a coded product whose
+    # evidence was reviewed for the first one: the worker's contents-based
+    # alias table, which is where a coded product's label is supposed to be
+    # judged. Two routes to one product can drift into disagreeing, and the
+    # cheaper of the two would win purely by being consulted here.
+    #
+    # So a coded product's label is refused here and continues to resolve -
+    # or not - exactly where it did before this tranche.
+    rows = db.execute(
+        select(ReleaseProductAlias.product_id)
+        .join(ReleaseProduct, ReleaseProduct.id == ReleaseProductAlias.product_id)
+        .where(
+            ReleaseProductAlias.alias_kind == "source_rendering",
+            ReleaseProductAlias.alias_name == product_label,
+            ReleaseProduct.official_code.is_(None),
+        )
+    ).scalars().all()
+    unique = set(rows)
+    if len(unique) != 1:
+        # Zero is "not ours". More than one is a contradiction, and a
+        # contradiction must never be resolved by picking one.
+        return None
+    return unique.pop()
+
+
 def sibling_prints_for_card_code(db: Session, card_code: str) -> list[tuple[CardPrint, CanonicalCard]]:
     """Every active, verified print that shares this card code.
 
@@ -375,11 +451,27 @@ def resolve_exact_print(
     # printings of one card. Rarity is descriptive and is deliberately not a
     # discriminator here.
     surviving = list(siblings)
+    # Product narrowing has two channels and they are mutually exclusive: a
+    # product either has a Bandai code or it does not. The coded channel is
+    # unchanged. The uncoded one is consulted ONLY when the coded one said
+    # nothing, so a resolved code can never be overridden by a label.
+    uncoded_product_id: int | None = None
     if _norm(evidence.set_code) is not None:
         surviving = [
             (p, c) for p, c in surviving if _norm(p.release_product_code) == _norm(evidence.set_code)
         ]
         evidence_used.append(f"product {evidence.set_code}")
+    else:
+        uncoded_product_id = resolve_uncoded_product_id(
+            db, evidence.source_name, evidence.product_label
+        )
+        if uncoded_product_id is not None:
+            surviving = [
+                (p, c) for p, c in surviving if p.release_product_id == uncoded_product_id
+            ]
+            evidence_used.append(
+                f"uncoded product #{uncoded_product_id} ({evidence.product_label!r})"
+            )
     if _norm(evidence.variant) is not None:
         surviving = [
             (p, c)
@@ -430,7 +522,7 @@ def resolve_exact_print(
     # is a fact about the catalogue's coverage, not about the operator's
     # ability to choose between known printings - and reporting six printings
     # as "indistinguishable" implies one of them is right.
-    if evidence.has_unresolved_product:
+    if evidence.has_unresolved_product and uncoded_product_id is None:
         raise ExactPrintApprovalError(
             REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
             f"The listing names product {evidence.product_label!r}, which does not resolve "
