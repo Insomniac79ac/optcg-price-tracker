@@ -47,6 +47,7 @@ from worker.jobs.snkrdunk_checkpoint import (
     reconcile_with_sitemap,
     save_checkpoint,
 )
+from worker.matching.non_target_tcg import identify_non_target_tcg
 from worker.matching.opcg_normalizer import normalize_title
 from worker.matching.snkrdunk_listing_evidence import ListingEvidence, parse_listing
 from worker.models import SnkrdunkCandidate, SnkrdunkDiscoveryRun
@@ -63,6 +64,13 @@ class DiscoverySummary:
     http_errors: int = 0
     blocked_responses: int = 0
     not_one_piece: int = 0
+    # Pages refused because the source's own asset naming identified them as
+    # another game. Reported separately from `not_one_piece`, which means only
+    # "no card code was found": these DID carry a well-formed code, and
+    # collapsing the two would hide a contaminating game behind a parser
+    # statistic. No schema work - this summary is returned and logged, never
+    # stored.
+    non_target_tcg: int = 0
     english_listings_excluded: int = 0
     candidates_inserted: int = 0
     candidates_updated: int = 0
@@ -77,6 +85,8 @@ class DiscoverySummary:
     card_codes: set[str] = field(default_factory=set)
     unresolved_product_labels: dict[str, int] = field(default_factory=dict)
     english_examples: list[str] = field(default_factory=list)
+    non_target_tcg_games: dict[str, int] = field(default_factory=dict)
+    non_target_examples: list[str] = field(default_factory=list)
     # Sitemap shards whose content moved since the last run, and the anchors
     # whose progress was discarded as a result. Both are expected to be empty
     # on an ordinary run.
@@ -147,6 +157,26 @@ def _consume(db, pages, summary: DiscoverySummary, discovery_run_id: int | None)
             continue
 
         ev = parse_listing(page.url, page.body)
+
+        # ANOTHER GAME'S CARD, established positively from the source's own
+        # asset naming - see worker.matching.non_target_tcg. Checked before
+        # `is_one_piece` because a Shadowverse code is structurally identical
+        # to a One Piece one ([BP08-117]) and so passes that test; the more
+        # specific fact is the one worth acting on and reporting. The module
+        # answers None for everything it does not positively recognise, so an
+        # unfamiliar or future One Piece listing still becomes a candidate.
+        foreign_game = identify_non_target_tcg(ev.image_url)
+        if foreign_game is not None:
+            summary.non_target_tcg += 1
+            summary.non_target_tcg_games[foreign_game] = (
+                summary.non_target_tcg_games.get(foreign_game, 0) + 1
+            )
+            if len(summary.non_target_examples) < 10:
+                summary.non_target_examples.append(
+                    f"{foreign_game}: {ev.card_code} {page.url}"
+                )
+            continue
+
         if not ev.is_one_piece:
             summary.not_one_piece += 1
             continue
