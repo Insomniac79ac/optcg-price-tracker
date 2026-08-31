@@ -28,6 +28,50 @@ RARITY_PARALLEL_TOKEN_RE = re.compile(r"^([A-Z]{1,4})-P$")
 # A bare (non-parallel) rarity token: letters/digits only, no separators.
 BARE_RARITY_TOKEN_RE = re.compile(r"^[A-Z0-9]{1,4}$")
 
+# Trailing words that mark the parallel printing in prose instead of with the
+# "-P" suffix. SNKRDUNK uses BOTH renderings for the same concept, in the same
+# position, and which one a listing carries depends on the page's language:
+#
+#   English mirror   "Jimbe C Parallel [ST01-005] (...)"
+#   Japanese page    "ジンベエ C パラレル  [ST01-005] (...)"
+#
+# The collector reads the Japanese page (a jp print's identity check demands
+# <html lang>=ja), so it saw only the katakana form and read no rarity at all -
+# `パラレル` is not a rarity token, so the whole prefix fell through to the
+# card name. That cost three of the thirty canary mappings a `rarity_mismatch`
+# on 2026-08-31, with `displayed=None` against a perfectly ordinary expected C.
+#
+# THIS IS NOT AN INFERENCE ABOUT WHAT THE SITE MEANS. Atlas's own discovery
+# parser already reads the English form this way and stored
+# `detected_rarity = C` for those very listings, from titles reading
+# "C Parallel". The two pages are the same listing; only the word is
+# translated. Recognising the katakana makes the collector agree with a
+# reading Atlas had already committed to, rather than inventing one.
+#
+# Exact whole-token equality against a closed list - never a substring, never
+# case-folded, never fuzzy. A word not listed here leaves the title parsed
+# exactly as it is today.
+PARALLEL_TREATMENT_WORDS = ("パラレル", "Parallel")
+
+# What the title said about rarity, as distinct from what the rarity IS.
+#
+# The difference matters because these two are not the same fact and must not
+# lead to the same verdict:
+#
+#   ABSENT       the title carries no rarity field at all. SNKRDUNK genuinely
+#                publishes none for some listings - confirmed for ST01-007,
+#                ST02-007, ST03-007 and ST05-014 on BOTH language pages, where
+#                Atlas's own discovery parser also stored an empty
+#                detected_rarity. Absent evidence narrows nothing.
+#   UNRECOGNISED a rarity-shaped token is present and this parser could not
+#                read it (e.g. the compound "SR-SPC"). Something was claimed
+#                and we failed to understand it, which is the opposite of
+#                silence and must fail closed.
+#   PUBLISHED    a rarity token was read.
+RARITY_ABSENT = "absent"
+RARITY_UNRECOGNISED = "unrecognised"
+RARITY_PUBLISHED = "published"
+
 
 # The release/box parenthetical that follows the "[card_code]" bracket in a
 # product title, e.g. "... [OP01-001] (ブースターパックロマンスドーン)通販...".
@@ -146,6 +190,25 @@ def parse_release_text(title: str) -> str | None:
     return match.group(1).strip() or None
 
 
+# A token that occupies the rarity POSITION and is built from the alphabet
+# rarity tokens use - upper-case letters, digits and separators - but which
+# this parser has no rule for. "SR-SPC" is the live example: SNKRDUNK's
+# compound of a base rarity and a special-print category, observed on
+# ST01-012 and OP01-047. It is deliberately NOT decoded here: "SPC" would have
+# to be equated with Bandai's "SPカード", and no such attestation exists. It is
+# reported as unrecognised so the mapping fails closed and an operator can
+# declare the rendering with evidence, exactly as source product renderings
+# are declared.
+#
+# A card name never matches this: names are kana, kanji or mixed-case Latin.
+_RARITY_SHAPED_TOKEN_RE = re.compile(r"^[A-Z0-9][A-Z0-9\-]{0,15}$")
+
+
+def _looks_like_a_rarity_field(token: str) -> bool:
+    """True when a token sits where a rarity would and is spelled like one."""
+    return bool(_RARITY_SHAPED_TOKEN_RE.match(token or ""))
+
+
 def parse_card_identity(title: str) -> dict[str, str | None]:
     """Titles look like "<name> <rarity token> [<card_code>] (<release>)...".
     The rarity token is whatever whitespace-delimited run of text
@@ -164,6 +227,7 @@ def parse_card_identity(title: str) -> dict[str, str | None]:
         "treatment": None,
         "name": None,
         "release_text": None,
+        "rarity_evidence": RARITY_ABSENT,
     }
 
     code_match = CARD_CODE_IN_TITLE_RE.search(title or "")
@@ -183,18 +247,51 @@ def parse_card_identity(title: str) -> dict[str, str | None]:
     if not tokens:
         return base
 
+    # A trailing "パラレル"/"Parallel" is the prose form of the "-P" suffix, so
+    # the rarity is one token further back. Consumed first, and only when the
+    # token behind it really is a rarity - otherwise the word is just part of
+    # a card name and the title is parsed exactly as before.
+    treatment_from_word = None
+    if len(tokens) >= 2 and tokens[-1] in PARALLEL_TREATMENT_WORDS:
+        if BARE_RARITY_TOKEN_RE.match(tokens[-2]):
+            treatment_from_word = "parallel"
+            tokens = tokens[:-1]
+
     last_token = tokens[-1]
     name = " ".join(tokens[:-1]).strip() or None
 
     parallel_match = RARITY_PARALLEL_TOKEN_RE.match(last_token)
     if parallel_match:
-        return {**base, "rarity": parallel_match.group(1), "treatment": "parallel", "name": name}
+        return {
+            **base,
+            "rarity": parallel_match.group(1),
+            "treatment": "parallel",
+            "name": name,
+            "rarity_evidence": RARITY_PUBLISHED,
+        }
 
     if BARE_RARITY_TOKEN_RE.match(last_token):
-        return {**base, "rarity": last_token, "treatment": "normal", "name": name}
+        return {
+            **base,
+            "rarity": last_token,
+            "treatment": treatment_from_word or "normal",
+            "name": name,
+            "rarity_evidence": RARITY_PUBLISHED,
+        }
 
-    # No recognizable rarity token: the whole prefix is the name.
-    return {**base, "name": " ".join(tokens).strip() or None}
+    # Nothing readable as a rarity. Which of the two silences this is decides
+    # whether the collector may proceed, so it is classified rather than
+    # collapsed: a token that LOOKS like a rarity field we cannot read is
+    # UNRECOGNISED and must fail closed, while a prefix that is simply the
+    # card name means the listing published no rarity at all.
+    evidence = (
+        RARITY_UNRECOGNISED if _looks_like_a_rarity_field(last_token) else RARITY_ABSENT
+    )
+    return {
+        **base,
+        "name": " ".join(tokens).strip() or None,
+        "rarity_evidence": evidence,
+    }
 
 
 HTML_LANG_RE = re.compile(r"<html[^>]*\blang=[\"']([a-zA-Z-]+)[\"']", re.IGNORECASE)

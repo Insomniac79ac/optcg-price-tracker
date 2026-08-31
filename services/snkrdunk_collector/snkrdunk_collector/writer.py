@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from snkrdunk_collector.card_code_authority import CardCodeAuthority, resolve_expected_card_code
-from snkrdunk_collector.identity import normalize_card_name
+from snkrdunk_collector.identity import RARITY_ABSENT, normalize_card_name
 from snkrdunk_collector.release_identity import (
     NO_PRODUCT_LINK,
     ReleaseIdentityResult,
@@ -267,10 +267,39 @@ def validate_identity(
     expected_rarity_value = _authoritative_rarity(card_print, canonical)
     displayed_rarity = (extracted.get("rarity") or "").strip().upper() or None
     expected_rarity = (expected_rarity_value or "").strip().upper() or None
-    if not expected_rarity or displayed_rarity != expected_rarity:
+    rarity_evidence = extracted.get("rarity_evidence")
+    if not expected_rarity:
+        # Unchanged: an absent EXPECTED value is a mismatch, never a pass.
+        # Atlas holding no rarity for a print is a gap in our catalogue, and a
+        # gap cannot corroborate anything.
         reasons.append(
             f"rarity_mismatch:displayed={extracted.get('rarity')},"
             f"expected={expected_rarity_value}"
+        )
+    elif rarity_evidence == RARITY_ABSENT:
+        # THE LISTING PUBLISHES NO RARITY, so this dimension yields no
+        # evidence - and absent evidence narrows nothing. It is not a
+        # disagreement, and treating it as one refused four canary mappings
+        # for a fact SNKRDUNK simply does not print (confirmed on BOTH
+        # language pages, where Atlas's own discovery parser also stored an
+        # empty detected_rarity).
+        #
+        # WHY THIS DOES NOT WEAKEN THE GATE. Rarity is corroboration, not
+        # identity: exact-print identity is
+        # (canonical_card_id, language, release_product_id,
+        # official_asset_variant), so within one product and variant there is
+        # exactly ONE active verified print and no "other rarity printing"
+        # exists for it to be confused with. Every other dimension - card code
+        # against an authority independent of this page, release name against
+        # the print's own ReleaseProduct, language, treatment, artwork - still
+        # applies unchanged. What is NOT waved through is an unreadable rarity
+        # claim: that is RARITY_UNRECOGNISED and falls to the branch below.
+        pass
+    elif displayed_rarity != expected_rarity:
+        reasons.append(
+            f"rarity_mismatch:displayed={extracted.get('rarity')},"
+            f"expected={expected_rarity_value},"
+            f"evidence={rarity_evidence}"
         )
 
     if artwork_comparison is None or not artwork_comparison.get("match"):

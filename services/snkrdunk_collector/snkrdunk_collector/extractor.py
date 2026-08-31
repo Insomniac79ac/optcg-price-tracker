@@ -262,6 +262,11 @@ def extract_product(
             "card_name": parsed_identity.get("name"),
             "card_code": resolved_card_code,
             "rarity": parsed_identity.get("rarity"),
+            # Whether the title PUBLISHED a rarity, could not be READ, or
+            # carried none at all - see identity.RARITY_*. The writer needs the
+            # distinction: silence narrows nothing, an unreadable claim fails
+            # closed.
+            "rarity_evidence": parsed_identity.get("rarity_evidence"),
             "treatment": resolved_treatment,
             "page_language": page_language,
             "release_text": parsed_identity.get("release_text"),
