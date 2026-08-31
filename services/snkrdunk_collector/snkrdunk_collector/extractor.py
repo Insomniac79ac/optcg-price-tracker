@@ -267,6 +267,9 @@ def extract_product(
             # distinction: silence narrows nothing, an unreadable claim fails
             # closed.
             "rarity_evidence": parsed_identity.get("rarity_evidence"),
+            # The raw unreadable rarity token, for a declared source rendering
+            # to be looked up against - see source_rarity_renderings.
+            "rarity_token": parsed_identity.get("rarity_token"),
             "treatment": resolved_treatment,
             "page_language": page_language,
             "release_text": parsed_identity.get("release_text"),

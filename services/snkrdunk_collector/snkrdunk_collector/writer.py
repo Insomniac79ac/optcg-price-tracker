@@ -35,7 +35,12 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from snkrdunk_collector.card_code_authority import CardCodeAuthority, resolve_expected_card_code
-from snkrdunk_collector.identity import RARITY_ABSENT, normalize_card_name
+from snkrdunk_collector.identity import (
+    RARITY_ABSENT,
+    RARITY_UNRECOGNISED,
+    normalize_card_name,
+)
+from snkrdunk_collector.source_rarity_renderings import rendering_for_token
 from snkrdunk_collector.release_identity import (
     NO_PRODUCT_LINK,
     ReleaseIdentityResult,
@@ -49,6 +54,11 @@ from snkrdunk_collector.models import (
     RawSnapshot,
     SourceCardMapping,
 )
+
+# This collector only ever reads SNKRDUNK, and a rarity rendering is declared
+# per source - naming it here keeps the lookup from being source-agnostic by
+# accident.
+SOURCE_NAME = "snkrdunk"
 
 # card_prints.language uses this app's own short locale codes (e.g. "jp"),
 # not the ISO 639-1 codes a page's own <html lang="..."> attribute uses
@@ -268,6 +278,13 @@ def validate_identity(
     displayed_rarity = (extracted.get("rarity") or "").strip().upper() or None
     expected_rarity = (expected_rarity_value or "").strip().upper() or None
     rarity_evidence = extracted.get("rarity_evidence")
+    # Only consulted for a token this parser could not read; a declared
+    # rendering can never override a rarity that WAS read.
+    rendering = (
+        rendering_for_token(SOURCE_NAME, extracted.get("rarity_token"))
+        if rarity_evidence == RARITY_UNRECOGNISED
+        else None
+    )
     if not expected_rarity:
         # Unchanged: an absent EXPECTED value is a mismatch, never a pass.
         # Atlas holding no rarity for a print is a gap in our catalogue, and a
@@ -295,6 +312,23 @@ def validate_identity(
         # applies unchanged. What is NOT waved through is an unreadable rarity
         # claim: that is RARITY_UNRECOGNISED and falls to the branch below.
         pass
+    elif rarity_evidence == RARITY_UNRECOGNISED and rendering is not None:
+        # A DECLARED source rendering of a compound token - see
+        # source_rarity_renderings, which carries the evidence. It is not a
+        # value substitution: the token asserts TWO facts and both are checked
+        # against Atlas, so this path is stricter than the ordinary
+        # single-value comparison, not looser. Either half disagreeing refuses.
+        canonical_rarity = ((canonical.rarity if canonical else None) or "").strip().upper() or None
+        expected_base = rendering.base_rarity.strip().upper()
+        expected_print = rendering.print_rarity.strip().upper()
+        if expected_rarity != expected_print or canonical_rarity != expected_base:
+            reasons.append(
+                f"rarity_rendering_contradicted:token={rendering.source_token},"
+                f"expected_print_rarity={rendering.print_rarity},"
+                f"got_print_rarity={expected_rarity_value},"
+                f"expected_base_rarity={rendering.base_rarity},"
+                f"got_base_rarity={canonical.rarity if canonical else None}"
+            )
     elif displayed_rarity != expected_rarity:
         reasons.append(
             f"rarity_mismatch:displayed={extracted.get('rarity')},"

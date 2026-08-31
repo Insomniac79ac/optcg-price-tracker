@@ -21,6 +21,7 @@ def test_leader_parallel_l_dash_p():
         "name": "ロロノア・ゾロ",
         "release_text": "ブースターパックロマンスドーン",
         "rarity_evidence": "published",
+        "rarity_token": None,
     }
 
 
@@ -33,6 +34,7 @@ def test_rare_parallel_r_dash_p():
         "name": "サンジ",
         "release_text": "ブースターパック ロマンスドーン",
         "rarity_evidence": "published",
+        "rarity_token": None,
     }
 
 
@@ -45,6 +47,7 @@ def test_super_rare_parallel_sr_dash_p():
         "name": "ナミ",
         "release_text": "ブースターパック「神の島の冒険」",
         "rarity_evidence": "published",
+        "rarity_token": None,
     }
 
 
@@ -57,6 +60,7 @@ def test_base_rarity_without_dash_p_is_normal_treatment():
         "name": "サンジ",
         "release_text": "プロモーションカードセット2",
         "rarity_evidence": "published",
+        "rarity_token": None,
     }
 
 
@@ -86,6 +90,7 @@ def test_malformed_no_card_code_bracket_fails_closed():
         "name": None,
         "release_text": None,
         "rarity_evidence": "absent",
+        "rarity_token": None,
     }
 
 
@@ -104,6 +109,7 @@ def test_empty_title_fails_closed():
         "name": None,
         "release_text": None,
         "rarity_evidence": "absent",
+        "rarity_token": None,
     }
 
 

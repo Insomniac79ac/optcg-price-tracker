@@ -89,14 +89,76 @@ CARD_CODE_SET_TOKEN_RE = re.compile(r"^([A-Z]{1,4}\d{0,2})-\d{2,3}$")
 SET_TOKEN_PARTS_RE = re.compile(r"^([A-Z]+)(\d*)$")
 
 
+# Codepoints a storefront substitutes for the Japanese PROLONGED SOUND MARK
+# (chouonpu, U+30FC) - the stroke that lengthens the vowel of the kana before
+# it, as in the "-" of ケイミー or カルー.
+#
+# ONLY U+2015 IS LISTED, and only because it was OBSERVED. SNKRDUNK served
+# `ケイミ―` (OP03-101) and `カル―` (OP04-004) with U+2015 HORIZONTAL BAR where
+# Bandai publishes U+30FC, and in both cases the names were otherwise
+# character-for-character identical. Other dash-like codepoints (U+2014 em
+# dash, U+2212 minus, U+FF0D fullwidth hyphen) are NOT listed: they are
+# plausible substitutions, not observed ones, and a normalisation nobody has
+# seen fire is an equivalence asserted without evidence. Add one only with a
+# real listing to cite.
+_PROLONGED_SOUND_SUBSTITUTES = ("\u2015",)
+
+# The real prolonged sound mark.
+_PROLONGED_SOUND_MARK = "\u30fc"
+
+
+def _is_kana(ch: str) -> bool:
+    """Hiragana or katakana, the only characters a chouonpu may follow."""
+    return "\u3040" <= ch <= "\u309f" or "\u30a0" <= ch <= "\u30ff"
+
+
+def _restore_prolonged_sound_marks(text: str) -> str:
+    """Rewrite a substituted dash back to U+30FC, but ONLY where it is doing
+    the chouonpu's job: directly after a kana.
+
+    THE CONTEXT TEST IS THE WHOLE SAFETY ARGUMENT. A prolonged sound mark
+    lengthens the vowel of the kana it follows, so after a kana a horizontal
+    bar can only be that mark. Anywhere else - between Latin words, between
+    digits, at the start of a string - it is an ordinary dash and is left
+    exactly as it is. That keeps this from becoming "collapse punctuation",
+    which would quietly equate names that genuinely differ.
+
+    Deterministic, positional, and length-preserving: one codepoint in, one
+    codepoint out. No fuzzy matching, no edit distance, no stripping.
+    """
+    if not any(sub in text for sub in _PROLONGED_SOUND_SUBSTITUTES):
+        return text
+    out = []
+    for index, ch in enumerate(text):
+        if (
+            ch in _PROLONGED_SOUND_SUBSTITUTES
+            and index > 0
+            and _is_kana(text[index - 1])
+        ):
+            out.append(_PROLONGED_SOUND_MARK)
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def normalize_card_name(name: str | None) -> str | None:
     """Compare-ready form of a Japanese card name: NFKC-folded (so fullwidth
-    and halfwidth punctuation/latin compare equal) with all whitespace
+    and halfwidth punctuation/latin compare equal), with a substituted
+    prolonged sound mark restored where it follows a kana, and all whitespace
     removed. Deliberately generic - it normalizes source formatting only and
-    never rewrites, aliases or special-cases any individual card's name."""
+    never rewrites, aliases or special-cases any individual card's name.
+
+    WHAT IT STILL REFUSES, and must. It equalises how a character is SPELLED,
+    never how many characters there are. `ラディカルビ〜〜〜〜ム!!!!` against
+    Bandai's `ラディカルビ～～～ム‼‼` differs by a wave-dash COUNT (four versus
+    three), which is a different name and not a different encoding of the same
+    one - so it stays a title_mismatch. NFKC already equates ～/〜 and ‼/!!;
+    the count is what refuses, and nothing here touches counts.
+    """
     if name is None:
         return None
     folded = unicodedata.normalize("NFKC", name)
+    folded = _restore_prolonged_sound_marks(folded)
     return "".join(folded.split()) or None
 
 
@@ -228,6 +290,11 @@ def parse_card_identity(title: str) -> dict[str, str | None]:
         "name": None,
         "release_text": None,
         "rarity_evidence": RARITY_ABSENT,
+        # The raw token that sat in the rarity position but could not be read.
+        # Carried so a DECLARED source rendering can be looked up by exact
+        # equality (see source_rarity_renderings); None whenever the title
+        # published no rarity field at all.
+        "rarity_token": None,
     }
 
     code_match = CARD_CODE_IN_TITLE_RE.search(title or "")
@@ -284,13 +351,12 @@ def parse_card_identity(title: str) -> dict[str, str | None]:
     # collapsed: a token that LOOKS like a rarity field we cannot read is
     # UNRECOGNISED and must fail closed, while a prefix that is simply the
     # card name means the listing published no rarity at all.
-    evidence = (
-        RARITY_UNRECOGNISED if _looks_like_a_rarity_field(last_token) else RARITY_ABSENT
-    )
+    unrecognised = _looks_like_a_rarity_field(last_token)
     return {
         **base,
         "name": " ".join(tokens).strip() or None,
-        "rarity_evidence": evidence,
+        "rarity_evidence": RARITY_UNRECOGNISED if unrecognised else RARITY_ABSENT,
+        "rarity_token": last_token if unrecognised else None,
     }
 
 
