@@ -159,6 +159,80 @@ UNCODED_SOURCE_RENDERINGS: tuple[SourceRendering, ...] = (
             "identified by contents, and a coincidence of spelling is not authority."
         ),
     ),
+    # --- Japanese page renderings, added 2026-08-31 -------------------------
+    #
+    # WHY THESE EXIST ALONGSIDE THE ENGLISH LABELS ABOVE. The six rows above
+    # are the labels SNKRDUNK prints in a CANDIDATE TITLE's trailing
+    # parenthetical, which discovery reads from the English mirror
+    # (/en/trading-cards/{id}) - so they are English, and they serve the
+    # approval gate (exact_print_approval.resolve_uncoded_product_id).
+    #
+    # The collector fetches the JAPANESE page (/apparels/{id}), because a jp
+    # print's identity check demands `<html lang>` = ja, and that page prints
+    # the release name in Japanese. Those are different strings for the same
+    # products, and until they were declared the collector refused nine of the
+    # thirty canary mappings with `release_name_mismatch` - correctly, because
+    # an undeclared storefront spelling is not evidence of anything.
+    #
+    # Each label below was OBSERVED VERBATIM in the 2026-08-31 live collector
+    # run, and each is recorded exactly as observed. Note that Vol.1/Vol.2
+    # carry no space before "Vol." on the Japanese page, where an operator
+    # might write one; the observed form is what is recorded, because a
+    # rendering nobody observed is not evidence. (The collector's
+    # `release_names_match` folds whitespace, so the spaced form resolves too -
+    # but that is a property of the comparison, not a licence to declare an
+    # unobserved string.)
+    SourceRendering(
+        source_name="snkrdunk",
+        source_label="スタンダードバトルパックVol.1",
+        product_name="スタンダードバトルパック2022 Vol.1",
+        observed_card_codes=("OP01-021", "OP01-033", "ST04-011"),
+        membership_relation="equal",
+        evidence=(
+            "SNKRDUNK's Japanese product pages for listings 106105, 103295 and 103294 "
+            "displayed this release name on 2026-08-31 (collector batch 2769f9740dc1). "
+            "The 3 distinct card codes observed under it are EXACTLY the 3-code Bandai "
+            "membership of JP series 550901 product 'スタンダードバトルパック2022 Vol.1', "
+            "the only product containing the set - the same contents evidence that "
+            "identified the English label 'Standard Battle Pack Vol.1' above. Bandai's "
+            "name carries a year ('2022') this storefront spelling omits; identification "
+            "is by contents, never by the prose."
+        ),
+    ),
+    SourceRendering(
+        source_name="snkrdunk",
+        source_label="スタンダードバトルパックVol.2",
+        product_name="スタンダードバトルパック2022 Vol.2",
+        observed_card_codes=("ST01-007", "ST02-007", "ST03-007"),
+        membership_relation="subset",
+        evidence=(
+            "SNKRDUNK's Japanese product pages for listings 105467, 105468 and 105470 "
+            "displayed this release name on 2026-08-31 (collector batch 2769f9740dc1). "
+            "The 3 distinct card codes observed under it are a strict SUBSET of the "
+            "4-code Bandai membership of JP series 550901 product "
+            "'スタンダードバトルパック2022 Vol.2', the only product containing the set. The "
+            "unobserved member ST04-010 is present in the corpus but under the ST-04 "
+            "starter deck, which is a different product - so its absence here is "
+            "expected and is not evidence against the identification."
+        ),
+    ),
+    SourceRendering(
+        source_name="snkrdunk",
+        source_label="1st アニバーサリーセット",
+        product_name="1st ANNIVERSARY SET",
+        observed_card_codes=("OP01-006", "OP02-015", "OP03-013"),
+        membership_relation="equal",
+        evidence=(
+            "SNKRDUNK's Japanese product pages for listings 142189, 142188 and 142187 "
+            "displayed this release name on 2026-08-31 (collector batch 2769f9740dc1). "
+            "The 3 distinct card codes observed under it are EXACTLY the 3-code Bandai "
+            "membership of JP series 550801 product '1st ANNIVERSARY SET', the only "
+            "product containing the set. This is the katakana transliteration of a "
+            "product Bandai titles in Latin letters - the same shape as OP-01's "
+            "'ロマンスドーン', and for the same reason it is a source rendering and never "
+            "a Bandai name."
+        ),
+    ),
 )
 
 

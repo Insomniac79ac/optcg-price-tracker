@@ -220,6 +220,53 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.assertIsNone(result.identity)
         self.assertEqual(result.refusals, ("card_print_missing_for_release_identity",))
 
+    # --- the three Japanese renderings added 2026-08-31 ----------------------
+
+    def test_the_japanese_storefront_renderings_resolve_their_products(self):
+        """The nine canary mappings that failed `release_name_mismatch`.
+
+        Each product is given the storefront spelling observed on SNKRDUNK's
+        JAPANESE page, as a `source_rendering` alias, and the release name the
+        page displayed must then resolve - reported as a source rendering, not
+        as a Bandai attestation.
+        """
+        cases = [
+            ("スタンダードバトルパック2022 Vol.1", "スタンダードバトルパックVol.1"),
+            ("スタンダードバトルパック2022 Vol.2", "スタンダードバトルパックVol.2"),
+            ("1st ANNIVERSARY SET", "1st アニバーサリーセット"),
+        ]
+        for index, (bandai_name, storefront) in enumerate(cases, start=40):
+            with self.subTest(product=bandai_name):
+                product = self._product(index, None, bandai_name)
+                self._alias(product, storefront, "source_rendering")
+                identity = resolve_release_identity(
+                    self.session, self._print(500 + index, product)
+                ).identity
+                # Bandai's own name still answers as Bandai...
+                self.assertEqual(
+                    identity.classify_match(bandai_name), MATCH_BANDAI_OFFICIAL
+                )
+                # ...and the storefront spelling answers as a rendering.
+                self.assertEqual(
+                    identity.classify_match(storefront), MATCH_SOURCE_RENDERING
+                )
+
+    def test_a_storefront_rendering_does_not_leak_to_a_neighbouring_product(self):
+        """Vol.3 is the dangerous neighbour: Bandai drops the year from its
+        name, so its prose is the closest to the Vol.1/Vol.2 spellings. It must
+        not accept them, and they must not accept its."""
+        vol1 = self._product(60, None, "スタンダードバトルパック2022 Vol.1")
+        self._alias(vol1, "スタンダードバトルパックVol.1", "source_rendering")
+        vol3 = self._product(61, None, "スタンダードバトルパック Vol.3")
+
+        id1 = resolve_release_identity(self.session, self._print(560, vol1)).identity
+        id3 = resolve_release_identity(self.session, self._print(561, vol3)).identity
+
+        self.assertIsNone(id1.classify_match("スタンダードバトルパックVol.3"))
+        self.assertIsNone(id3.classify_match("スタンダードバトルパックVol.1"))
+        # Vol.3's own name still resolves for Vol.3.
+        self.assertIsNotNone(id3.classify_match("スタンダードバトルパックVol.3"))
+
     # --- authority separation ------------------------------------------------
 
     def test_a_storefront_spelling_is_never_reported_as_a_bandai_name(self):
