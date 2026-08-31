@@ -423,7 +423,33 @@ class PrintPriceObservationOut(BaseModel):
     Yuyu-Tei stock (product decision - see docs/market_index.md "Source
     eligibility" and docs/yuyutei_collector_operations.md "Stock is not
     required"). It never had any consumer to keep backwards-compatible, so
-    it is omitted outright rather than deprecated-and-nulled."""
+    it is omitted outright rather than deprecated-and-nulled.
+
+    Source semantics (constraint/eligible/ineligible_reason)
+    --------------------------------------------------------
+    Annotations only. The observation above them is returned exactly as
+    stored - same source, price_type, price_jpy, observed_at, condition and
+    provenance - and nothing here filters, reorders, or rewrites a row. They
+    exist so a client can tell a genuine 1000 JPY market price from SNKRDUNK's
+    1000 JPY platform minimum, which are indistinguishable from price_jpy
+    alone, without reimplementing any source rule of its own.
+
+    Derived at read time by app.services.source_semantics.classify_observation
+    - the same classifier app.services.market_index calls - from
+    (source, price_type, price_jpy). No threshold, source name, or platform
+    minimum is restated here or in the endpoint; a rules change therefore
+    reaches this payload with no migration and no backfill.
+
+    WHAT ``eligible`` DOES NOT MEAN. It answers only "is this observation
+    disqualified by *source semantics*?", exactly as
+    SourceSemantics.eligible does. It is NOT "this observation counted toward
+    the Market Index": staleness (YUYUTEI_SELL_MAX_AGE_DAYS,
+    SNKRDUNK_FLOOR_MAX_AGE_DAYS) and the sold-sample minimum live in
+    market_index's resolvers and are deliberately not applied here, because
+    this is a *history* endpoint and an observation that is stale today was
+    not stale when it was made. So a fresh-looking eligible=true row may still
+    be excluded from today's index. For "what the index actually used", read
+    MarketIndexOut.source_values - never this field."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -437,6 +463,12 @@ class PrintPriceObservationOut(BaseModel):
     condition_label: str | None
     listing_count: int | None
     raw_snapshot_id: int | None
+    # Defaulted to the unconstrained verdict so the three stay optional for
+    # any client that predates them, and so a caller that omits them cannot
+    # accidentally assert a constraint that was never classified.
+    constraint: str | None = None
+    eligible: bool = True
+    ineligible_reason: str | None = None
 
 
 class PrintPriceSeriesTrendOut(BaseModel):

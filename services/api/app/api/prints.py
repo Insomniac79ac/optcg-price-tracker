@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
 from app.db import get_db
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, PriceObservation
 from app.schemas import (
     CardPrintOut,
     PrintCatalogueListOut,
@@ -36,6 +36,7 @@ from app.services.print_pricing import (
     compute_print_price_series_trends,
     get_price_history_for_print,
 )
+from app.services.source_semantics import classify_observation
 
 router = APIRouter(prefix="/prints", tags=["prints"])
 
@@ -112,25 +113,48 @@ def get_print_market_index(print_id: int, db: Session = Depends(get_db)):
     return get_market_index_for_print(db, print_id)
 
 
+def _to_price_observation_out(
+    print_id: int, obs: PriceObservation, source_name: str
+) -> PrintPriceObservationOut:
+    """One stored observation, returned verbatim plus its source semantics.
+
+    The raw row is copied field for field - nothing is filtered, reordered,
+    rounded or rewritten - and the semantics ride alongside as annotations
+    (see PrintPriceObservationOut). Every source-specific rule is asked of
+    classify_observation, the same classifier market_index's resolvers use, so
+    no threshold, source name or platform minimum is restated in this module.
+    A future auxiliary price_type flows through the same call and picks up its
+    configured semantics automatically, with no branch added here.
+    """
+    semantics = classify_observation(source_name, obs.price_type, obs.price_jpy)
+    return PrintPriceObservationOut(
+        id=obs.id,
+        card_print_id=print_id,
+        source_id=obs.source_id,
+        source=source_name,
+        observed_at=obs.observed_at,
+        price_type=obs.price_type,
+        price_jpy=obs.price_jpy,
+        condition_label=obs.condition_label,
+        listing_count=obs.listing_count,
+        raw_snapshot_id=obs.raw_snapshot_id,
+        constraint=semantics.constraint,
+        eligible=semantics.eligible,
+        ineligible_reason=semantics.ineligible_reason,
+    )
+
+
 @router.get("/{print_id}/prices", response_model=PrintPriceHistoryOut)
 def get_print_prices(print_id: int, db: Session = Depends(get_db)):
     _get_print_or_404(db, print_id)
 
     rows = get_price_history_for_print(db, print_id)
+    # Same rows, same order, one-to-one - get_price_history_for_print already
+    # orders oldest-first and this endpoint deliberately applies no freshness
+    # or eligibility filter of its own: history keeps every observation it
+    # ever recorded, annotated rather than pruned.
     observations = [
-        PrintPriceObservationOut(
-            id=obs.id,
-            card_print_id=print_id,
-            source_id=obs.source_id,
-            source=source_name,
-            observed_at=obs.observed_at,
-            price_type=obs.price_type,
-            price_jpy=obs.price_jpy,
-            condition_label=obs.condition_label,
-            listing_count=obs.listing_count,
-            raw_snapshot_id=obs.raw_snapshot_id,
-        )
-        for obs, source_name in rows
+        _to_price_observation_out(print_id, obs, source_name) for obs, source_name in rows
     ]
     series = [PrintPriceSeriesTrendOut(**trend) for trend in compute_print_price_series_trends(rows)]
     return PrintPriceHistoryOut(card_print_id=print_id, observations=observations, series=series)

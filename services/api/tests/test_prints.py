@@ -14,9 +14,11 @@ also fail to catch the real contamination bug.
 """
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
+import app.api.prints
 from app.models import (
     CanonicalCard,
     Card,
@@ -28,7 +30,7 @@ from app.models import (
 )
 from app.services.market_index import INDEX_VERSION
 from app.services.rarity_facets import SP_CARD, facet_value
-from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
+from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
 
 NOW = datetime.now(timezone.utc)
 
@@ -1384,3 +1386,220 @@ def test_serving_the_card_level_rarity_does_not_write_it_back(client, db_session
 
     db_session.refresh(canonical)
     assert canonical.rarity is None
+
+
+# --- source semantics on print price history -------------------------------
+#
+# GET /prints/{id}/prices annotates every observation with the verdict of
+# app.services.source_semantics.classify_observation, so a client can tell
+# SNKRDUNK's 1000 JPY platform minimum from a genuine 1000 JPY market price -
+# indistinguishable from price_jpy alone. The staging shape that motivated
+# this: 131 of 311 stored SNKRDUNK floor observations sit at exactly 1000, and
+# for 18 prints the *entire* floor series does, so an unannotated chart would
+# draw a flat "price" line that is really the platform's minimum.
+#
+# These prove the annotations are exactly that - annotations. Nothing is
+# filtered, reordered or rewritten, and no threshold is restated outside
+# source_semantics.
+
+
+@pytest.fixture
+def snkrdunk_floor_print(db_session, five_prints):
+    """Ace base gets a SNKRDUNK floor series spanning all three semantic
+    verdicts, oldest first: unconstrained, exactly the platform minimum, and
+    below it."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    legacy = make_legacy_card(db_session, card_code="OP01-002-SD", rarity="SR")
+    canonical = make_canonical(db_session, card_code="OP01-777", name_en="Marco", rarity="SR")
+    print_row = make_print(db_session, canonical, treatment="base", artwork_key="marco-base")
+    mapping = make_mapping(db_session, legacy, snkrdunk, print_row, source_card_id="OP01-777")
+
+    for days_ago, price in ((3, 1500), (2, 1000), (1, 900)):
+        make_observation(
+            db_session, legacy, snkrdunk, mapping, print_row,
+            price_type="floor", price_jpy=price,
+            observed_at=NOW - timedelta(days=days_ago),
+        )
+    return print_row
+
+
+def _observations(client, print_id):
+    return client.get(f"/prints/{print_id}/prices").json()["observations"]
+
+
+def test_unconstrained_snkrdunk_floor_is_eligible(client, snkrdunk_floor_print):
+    obs = next(o for o in _observations(client, snkrdunk_floor_print.id) if o["price_jpy"] == 1500)
+
+    assert obs["eligible"] is True
+    assert obs["constraint"] is None
+    assert obs["ineligible_reason"] is None
+
+
+def test_platform_floor_is_returned_raw_but_marked_ineligible(client, snkrdunk_floor_print):
+    """The raw number survives untouched - the annotation is what changes."""
+    obs = next(o for o in _observations(client, snkrdunk_floor_print.id) if o["price_jpy"] == 1000)
+
+    assert obs["price_jpy"] == 1000  # never rewritten, nulled or suppressed
+    assert obs["source"] == "snkrdunk"
+    assert obs["price_type"] == "floor"
+    assert obs["eligible"] is False
+    assert obs["constraint"] == "platform_floor"
+    assert obs["ineligible_reason"] == "platform_floor"
+
+
+def test_below_platform_minimum_matches_source_semantics(client, snkrdunk_floor_print):
+    """A value under the documented minimum gets its own distinct reason, not
+    the platform_floor one - see source_semantics "Why below-minimum fails
+    closed". Asserted against the classifier itself so this test cannot drift
+    from the ruleset it documents."""
+    obs = next(o for o in _observations(client, snkrdunk_floor_print.id) if o["price_jpy"] == 900)
+    expected = classify_observation("snkrdunk", "floor", 900)
+
+    assert obs["eligible"] is expected.eligible is False
+    assert obs["constraint"] == expected.constraint == "below_platform_minimum"
+    assert obs["ineligible_reason"] == expected.ineligible_reason == "below_platform_minimum"
+
+
+def test_yuyutei_sell_remains_unconstrained(client, five_prints):
+    """Yuyu-Tei has no configured platform minimum, so every sell observation
+    stays unconstrained at any value - including one that happens to equal
+    SNKRDUNK's 1000 JPY minimum, proving the rule is keyed on source and not
+    on the number."""
+    print_id = five_prints["sanji_base"].id
+    observations = _observations(client, print_id)
+
+    assert observations, "fixture should have at least one Yuyu-Tei observation"
+    for obs in observations:
+        assert obs["source"] == "yuyutei"
+        assert obs["eligible"] is True
+        assert obs["constraint"] is None
+        assert obs["ineligible_reason"] is None
+
+
+def test_yuyutei_sell_at_1000_is_not_treated_as_a_platform_floor(client, db_session, five_prints):
+    canonical = make_canonical(db_session, card_code="OP01-888", name_en="Shanks", rarity="L")
+    legacy = make_legacy_card(db_session, card_code="OP01-888", rarity="L")
+    print_row = make_print(db_session, canonical, artwork_key="shanks-base")
+    mapping = make_mapping(db_session, legacy, five_prints["source"], print_row)
+    make_observation(
+        db_session, legacy, five_prints["source"], mapping, print_row,
+        price_type="sell", price_jpy=1000, observed_at=NOW,
+    )
+
+    obs = _observations(client, print_row.id)[0]
+
+    assert obs["price_jpy"] == 1000
+    assert obs["eligible"] is True
+    assert obs["constraint"] is None
+
+
+def test_annotating_does_not_filter_any_observation(client, snkrdunk_floor_print):
+    """Two of the three are ineligible; all three are still returned."""
+    observations = _observations(client, snkrdunk_floor_print.id)
+
+    assert len(observations) == 3
+    assert sorted(o["price_jpy"] for o in observations) == [900, 1000, 1500]
+    assert sum(1 for o in observations if not o["eligible"]) == 2
+
+
+def test_annotating_does_not_change_ordering(client, snkrdunk_floor_print):
+    """Still oldest-first, regardless of each row's verdict."""
+    observations = _observations(client, snkrdunk_floor_print.id)
+
+    assert [o["observed_at"] for o in observations] == sorted(o["observed_at"] for o in observations)
+    assert [o["price_jpy"] for o in observations] == [1500, 1000, 900]
+
+
+def test_stale_ineligible_observations_stay_in_history(client, db_session, five_prints):
+    """History is annotated, never pruned: an observation far older than any
+    freshness threshold is still returned, and its semantics verdict is
+    unaffected by its age - this endpoint applies no staleness rule of its
+    own (that lives in market_index's resolvers)."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    canonical = make_canonical(db_session, card_code="OP01-999", name_en="Nami", rarity="R")
+    legacy = make_legacy_card(db_session, card_code="OP01-999", rarity="R")
+    print_row = make_print(db_session, canonical, artwork_key="nami-base")
+    mapping = make_mapping(db_session, legacy, snkrdunk, print_row, source_card_id="OP01-999")
+    make_observation(
+        db_session, legacy, snkrdunk, mapping, print_row,
+        price_type="floor", price_jpy=2400, observed_at=NOW - timedelta(days=400),
+    )
+
+    obs = _observations(client, print_row.id)[0]
+
+    assert obs["price_jpy"] == 2400
+    assert obs["eligible"] is True  # semantics only - NOT "counted toward the index"
+    assert obs["constraint"] is None
+
+
+def test_an_all_platform_floor_series_is_identifiable_as_constrained(client, db_session):
+    """The 18-print staging shape: every observation in the SNKRDUNK series
+    sits at exactly the platform minimum. A client can now detect that from
+    the payload alone - previously indistinguishable from a genuinely flat
+    1000 JPY price history."""
+    snkrdunk = make_source(db_session, name="snkrdunk")
+    canonical = make_canonical(db_session, card_code="OP02-100", name_en="Kid", rarity="R")
+    legacy = make_legacy_card(db_session, card_code="OP02-100", rarity="R")
+    print_row = make_print(db_session, canonical, artwork_key="kid-base")
+    mapping = make_mapping(db_session, legacy, snkrdunk, print_row, source_card_id="OP02-100")
+    for days_ago in range(23, 0, -1):
+        make_observation(
+            db_session, legacy, snkrdunk, mapping, print_row,
+            price_type="floor", price_jpy=1000, observed_at=NOW - timedelta(days=days_ago),
+        )
+
+    body = client.get(f"/prints/{print_row.id}/prices").json()
+    floor_series = [o for o in body["observations"] if o["price_type"] == "floor"]
+
+    assert len(floor_series) == 23
+    assert all(o["constraint"] == "platform_floor" for o in floor_series)
+    assert not any(o["eligible"] for o in floor_series)
+    # The trend still reports the raw series unchanged - annotations never
+    # reach into the change calculation.
+    trend = next(s for s in body["series"] if s["source"] == "snkrdunk")
+    assert trend["latest_price_jpy"] == 1000
+    assert trend["sufficient_history"] is True
+
+
+def test_trend_series_are_unchanged_by_annotations(client, snkrdunk_floor_print):
+    """compute_print_price_series_trends sees the same rows it always did -
+    the semantics are added when the observation is serialised, downstream of
+    the trend computation, so no change_*_pct can move."""
+    body = client.get(f"/prints/{snkrdunk_floor_print.id}/prices").json()
+    trend = next(s for s in body["series"] if s["source"] == "snkrdunk")
+
+    assert trend["price_type"] == "floor"
+    assert trend["latest_price_jpy"] == 900  # the newest row, ineligible though it is
+    assert trend["sufficient_history"] is True
+    # No semantics leak into the trend schema.
+    for field in ("constraint", "eligible", "ineligible_reason"):
+        assert field not in trend
+
+
+def test_market_index_is_unaffected_by_the_history_annotations(client, snkrdunk_floor_print):
+    """The index reads its own resolvers, not this endpoint. The 900 JPY
+    below-minimum row is the freshest, so the index correctly reports no
+    eligible source rather than absorbing it."""
+    index = client.get(f"/prints/{snkrdunk_floor_print.id}/market-index").json()
+
+    assert index["index_version"] == INDEX_VERSION
+    assert index["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
+    assert index["index_value_jpy"] is None
+    assert index["source_count"] == 0
+    assert index["coverage_status"] == "none"
+    assert index["confidence"] == "low"
+    assert index["source_price_range"] is None
+
+
+def test_endpoint_restates_no_source_specific_threshold():
+    """Guards the "no duplicated 1000 JPY logic" rule: the router must reach
+    every verdict through classify_observation, so neither the source name
+    nor any platform minimum may appear as a literal in the module."""
+    source = Path(app.api.prints.__file__).read_text()
+    body = source.split('"""', 2)[2]  # skip the module docstring
+
+    assert "classify_observation" in body
+    assert "snkrdunk" not in body.lower()
+    assert "1000" not in body
+    assert "platform_floor" not in body
+    assert "below_platform_minimum" not in body
