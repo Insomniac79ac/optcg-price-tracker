@@ -1659,6 +1659,34 @@ Treat the Codespace as a scratch environment, never as backup storage.
   `optcg-price-tracker_postgres_data`, `optcg-prod_opcg_postgres_data_prod`
   and `optcg-prod_opcg_redis_data_prod` are the local dev/prod compose
   databases. Remove anonymous (64-hex-named) volumes explicitly instead.
+- **"Dangling" does not mean disposable, and this is the trap that actually
+  fired.** On 2026-08-31 a cleanup step ran
+  `docker volume ls -qf dangling=true` and removed everything it returned,
+  destroying all three named volumes above. Docker calls a volume dangling
+  when no *container* currently references it - and a compose database whose
+  stack is merely stopped, the normal state in a Codespace, is dangling by
+  that definition. The word describes attachment, not value. Never delete a
+  volume because Docker labelled it dangling, and never use `dangling=true`,
+  `docker volume prune` or `docker system prune --volumes` to *find* things to
+  delete. Disposability is asserted by name, never inferred.
+- **Use the helper**: `scripts/codespaces_cleanup.sh` plans by default and
+  deletes only what you name explicitly:
+
+  ```
+  scripts/codespaces_cleanup.sh                                   # plan only
+  scripts/codespaces_cleanup.sh --containers opcg-pg --images foo:bar \
+      --build-cache --apply
+  scripts/codespaces_cleanup.sh --volumes <exact-name> --apply \
+      --confirm-volumes "delete these volumes"
+  ```
+
+  It never discovers volumes on its own, and refuses the three protected names
+  even when they are passed explicitly. `scripts/tests/test_codespaces_cleanup.sh`
+  pins that behaviour.
+- Removing task-created containers, images and build cache individually (or
+  through the helper) is always correct; only volumes need the extra
+  confirmation, because a volume is the one resource here holding data the
+  repo cannot rebuild.
 
 **What not to accumulate**
 - Do not keep marketplace/listing images downloaded during analysis unless
