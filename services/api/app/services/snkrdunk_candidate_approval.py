@@ -38,16 +38,20 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select
+
 from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_matching import CandidateMatchResult, calculate_candidate_match
 from app.services.exact_print_approval import (
+    REFUSAL_MAPPING_WAS_REJECTED,
+    REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
     ApprovalDecision,
     ExactPrintApprovalError,
     SourceEvidence,
     resolve_exact_print,
 )
-from app.services.snkrdunk_urls import canonical_listing_url, equivalent_listing_urls
+from app.services.snkrdunk_urls import canonical_listing_url, listing_id
 
 APPROVED = "approved"
 MATCHED = "matched"
@@ -87,6 +91,83 @@ def get_snkrdunk_source(db: Session) -> Source:
     if source is None:
         raise SnkrdunkSourceMissing("snkrdunk source is not configured")
     return source
+
+
+REJECTED = "rejected"
+
+
+def find_mapping_for_listing(
+    db: Session, *, source: Source, url: str | None
+) -> SourceCardMapping | None:
+    """The one mapping that already holds this listing, or None.
+
+    KEYED ON LISTING IDENTITY, NOT ON URL EQUALITY, and that distinction is
+    the whole reason this function exists rather than a `source_url IN (...)`
+    filter inline at each call site.
+
+    SNKRDUNK publishes one listing under two paths, and discovery stores
+    whatever it saw - including the query string. Staging mapping 8 is
+
+        https://snkrdunk.com/en/trading-cards/94915?slide=right&query_id=9d4a...
+
+    which a person set to `rejected` on 2026-08-09. Matching on the two
+    canonical spellings does not find that row, so an approval of the same
+    listing found nothing, created a SECOND mapping at the canonical URL - no
+    `uq_source_card_mappings_source_url` collision, because the stored strings
+    genuinely differ - and the human's refusal was overturned by a row nobody
+    looked at. One listing then had two mappings, and the collector would have
+    priced the new one.
+
+    So the question asked here is the one the operator means: is any mapping
+    already about this listing? `listing_id` parses the id out of either path
+    and tolerates the query string; the SQL `LIKE` is only a cheap pre-filter
+    and the parsed id is what decides, so no row is matched loosely.
+
+    RAISES rather than choosing when more than one mapping claims the listing.
+    Picking one would leave the other pointing at a print nobody re-examined.
+
+    Returns None for a URL that is not a recognised listing at all. That is
+    not a silent pass: every caller goes on to `canonical_listing_url`, which
+    refuses the same URL with `source_url_not_canonical`.
+    """
+    parsed = listing_id(url)
+    if parsed is None:
+        return None
+    rows = db.scalars(
+        select(SourceCardMapping).where(
+            SourceCardMapping.source_id == source.id,
+            SourceCardMapping.source_url.like(f"%{parsed}%"),
+        )
+    ).all()
+    matches = [m for m in rows if listing_id(m.source_url) == parsed]
+    if len(matches) > 1:
+        raise ExactPrintApprovalError(
+            REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
+            f"SNKRDUNK listing {parsed} is already held by {len(matches)} mappings "
+            f"({sorted(m.id for m in matches)}). Approving would have to choose one and "
+            "leave the others pointing at printings nobody re-examined. Resolve the "
+            "duplicates first.",
+            alternatives=sorted(m.id for m in matches),
+        )
+    return matches[0] if matches else None
+
+
+def assert_mapping_may_be_approved(mapping: SourceCardMapping | None) -> None:
+    """Refuse to reuse a mapping a person has already refused.
+
+    Deliberately narrow: it blocks ONE transition, `rejected` -> approved, and
+    says nothing about any other state. A `needs_review` row is still a row
+    the approval path is meant to advance, and an already-`approved` one is
+    the ordinary re-approval case.
+    """
+    if mapping is not None and mapping.review_status == REJECTED:
+        raise ExactPrintApprovalError(
+            REFUSAL_MAPPING_WAS_REJECTED,
+            f"Source mapping {mapping.id} for this listing was REJECTED by a person "
+            f"({(mapping.review_notes or '')[:160]!r}). Approving it here would overturn "
+            "that decision without anyone reading why it was made. Clear the rejection "
+            "explicitly first.",
+        )
 
 
 def approve_candidate_onto_print(
@@ -140,17 +221,12 @@ def approve_candidate_onto_print(
         candidate.source_url, card_print_language=decision.card_print.language
     )
 
-    # Looked up by every equivalent URL, so re-approving a listing that was
-    # first approved under the other path updates that row instead of
-    # colliding with uq_source_card_mappings_source_url.
-    mapping = (
-        db.query(SourceCardMapping)
-        .filter(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
-        )
-        .one_or_none()
-    )
+    # Looked up by LISTING IDENTITY - see find_mapping_for_listing for why URL
+    # equality was not enough and what it cost. Re-approving a listing first
+    # approved under the other path (or stored with discovery's query string)
+    # updates that row instead of creating a second mapping for one listing.
+    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    assert_mapping_may_be_approved(mapping)
     mapping_created = mapping is None
 
     if review_notes is None:
@@ -221,6 +297,9 @@ def approve_candidate_onto_print(
 
 __all__ = [
     "APPROVED",
+    "REJECTED",
+    "assert_mapping_may_be_approved",
+    "find_mapping_for_listing",
     "MATCHED",
     "CandidateApprovalResult",
     "ExactPrintApprovalError",

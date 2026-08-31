@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from snkrdunk_collector.db import Base
 from snkrdunk_collector.models import (
+    ReleaseProduct,
     CanonicalCard,
     Card,
     CardPrint,
@@ -75,7 +76,20 @@ class WriterTestCase(unittest.TestCase):
             rarity="L",
             original_set_code="OP-01",
         )
-        self.session.add_all([card, source, canonical])
+        # The product the prints belong to. Release verification resolves this
+        # from card_prints.release_product_id and reads its authoritative
+        # names from the catalogue - see release_identity.py - so the fixture
+        # now populates the product the way staging actually holds it.
+        self.op01_product = ReleaseProduct(
+            id=101,
+            source_catalogue="bandai_jp",
+            official_code="OP-01",
+            display_name="ROMANCE DAWN",
+            first_seen_name="ROMANCE DAWN",
+            source_series_id="569001",
+            verification_status="verified",
+        )
+        self.session.add_all([card, source, canonical, self.op01_product])
         self.session.flush()
 
         self.verified_print = CardPrint(
@@ -84,6 +98,7 @@ class WriterTestCase(unittest.TestCase):
             language="jp",
             treatment="parallel",
             release_product_code="OP-01",
+            release_product_id=101,
             artwork_key="abc",
             image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
             verification_status="verified",
@@ -94,6 +109,7 @@ class WriterTestCase(unittest.TestCase):
             language="jp",
             treatment="parallel",
             release_product_code="OP-01",
+            release_product_id=101,
             verification_status="unverified",
         )
         self.session.add_all([self.verified_print, self.unverified_print])
@@ -204,26 +220,39 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertTrue(any(r.startswith("language_mismatch:") for r in result.reasons))
         self.assertFalse(result.identity_verified)
 
-    def test_release_product_mismatch_fails_closed(self):
-        """A product whose own card code belongs to a different set than the
-        linked print must never be accepted."""
+    def test_a_listing_naming_a_different_release_fails_closed(self):
+        """REPLACES test_release_product_mismatch_fails_closed, keeping the
+        protection it was actually there for.
+
+        The old test proved a *derived code* disagreement was refused. What
+        must genuinely never be accepted is a listing that NAMES a different
+        release than the print belongs to - which is the marketplace
+        contradicting the catalogue, and is caught here.
+        """
         extraction = dict(
             GOOD_EXTRACTION,
-            extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04", card_code="OP01-001"),
+            extracted=dict(
+                GOOD_EXTRACTED,
+                card_code="OP01-001",
+                release_product_code="OP-04",
+                release_text="ブースターパック 謀略の王国",
+            ),
         )
         result = self._write(self.approved_mapping, extraction)
         self.assertFalse(result.written)
-        self.assertTrue(any(r.startswith("release_product_mismatch:") for r in result.reasons))
         self.assertFalse(result.identity_verified)
+        self.assertTrue(any(r.startswith("release_name_mismatch:") for r in result.reasons))
 
-    def test_release_product_mismatch_reason_retains_observed_release_text(self):
+    def test_the_refusal_retains_the_observed_release_text(self):
+        """Whatever the page actually said has to survive into the audit
+        record - otherwise a refusal cannot be reviewed without refetching."""
         extraction = dict(
             GOOD_EXTRACTION,
             extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04", release_text="別のブースター"),
         )
         result = self._write(self.approved_mapping, extraction)
-        reason = next(r for r in result.reasons if r.startswith("release_product_mismatch:"))
-        self.assertIn("release_text=別のブースター", reason)
+        reason = next(r for r in result.reasons if r.startswith("release_name_mismatch:"))
+        self.assertIn("displayed=別のブースター", reason)
 
     def test_release_name_mismatch_is_its_own_reason(self):
         """A product whose card code says OP-01 but whose release name is a
@@ -247,14 +276,34 @@ class FailClosedWriteTests(WriterTestCase):
         )
         result = self._write(self.approved_mapping, extraction)
         reason = next(r for r in result.reasons if r.startswith("release_name_mismatch:"))
-        self.assertIn("expected=ROMANCE DAWN", reason)
+        # The expectation is now named by the PRODUCT (its code, or its
+        # surrogate id when uncoded) with the accepted names listed beside it,
+        # so a refusal says which product was expected as well as what would
+        # have satisfied it.
+        self.assertIn("expected=OP-01", reason)
+        self.assertIn("ROMANCE DAWN", reason)
         self.assertIn("authority=Bandai official Japanese product page", reason)
 
-    def test_correct_release_name_with_wrong_code_is_a_code_mismatch(self):
+    def test_the_card_code_derived_product_no_longer_decides_anything(self):
+        """REPLACES test_correct_release_name_with_wrong_code_is_a_code_mismatch.
+
+        That test asserted the page's card-code-derived product code had to
+        equal the print's product, and it was wrong - not merely obsolete.
+        `extracted["release_product_code"]` is SNKRDUNK's inference from the
+        DISPLAYED CARD CODE (ST01-012 -> "ST-01"), so comparing it to the
+        print's product asked whether Atlas agrees with a prefix rule. No page
+        can fail that dishonestly, and every legitimate reprint fails it by
+        construction: staging mapping 88 is ST01-012 printed in OP-03, whose
+        listing carried Bandai's official OP-03 name and was refused anyway.
+
+        The release NAME is what corroborates the product, and it still does -
+        asserted here by the name matching while the derived code disagrees.
+        """
         extraction = dict(GOOD_EXTRACTION, extracted=dict(GOOD_EXTRACTED, release_product_code="OP-04"))
         result = self._write(self.approved_mapping, extraction)
-        self.assertTrue(any(r.startswith("release_product_mismatch:") for r in result.reasons))
+        self.assertFalse(any(r.startswith("release_product_mismatch:") for r in result.reasons))
         self.assertFalse(any(r.startswith("release_name_mismatch:") for r in result.reasons))
+        self.assertTrue(result.identity_verified)
 
     def test_snkrdunk_katakana_op01_rendering_passes_as_source_nomenclature(self):
         """The real observed OP-01 text. Accepted via the declared SNKRDUNK
@@ -276,8 +325,22 @@ class FailClosedWriteTests(WriterTestCase):
 
     def test_a_source_rendering_never_widens_to_another_release(self):
         """snkrdunk_renderings is scoped to its own release, not a global
-        alias pool - OP-01's rendering must not satisfy OP-04."""
+        alias pool - OP-01's rendering must not satisfy OP-04.
+
+        The print is repointed at a real OP-04 product row rather than just
+        having its code string changed: since release verification resolves
+        the product from `release_product_id`, editing the code alone would no
+        longer move the print to another product and the test would pass
+        vacuously.
+        """
+        op04 = ReleaseProduct(
+            id=104, source_catalogue="bandai_jp", official_code="OP-04",
+            display_name="謀略の王国", first_seen_name="謀略の王国",
+            source_series_id="569004", verification_status="verified",
+        )
+        self.session.add(op04)
         self.verified_print.release_product_code = "OP-04"
+        self.verified_print.release_product_id = 104
         self.session.flush()
         extraction = dict(
             GOOD_EXTRACTION,
@@ -326,8 +389,16 @@ class FailClosedWriteTests(WriterTestCase):
         result = self._write(future_mapping, extraction)
         self.assertFalse(result.written)
         self.assertFalse(result.identity_verified)
+        # The print names no product at all, so there is no authoritative
+        # release identity to check the listing against. Still a refusal - the
+        # protection the old `authoritative_release_name_missing` gave for an
+        # unknown CODE now comes from the missing product LINK, which covers
+        # uncoded products too.
         self.assertTrue(
-            any(r.startswith("authoritative_release_name_missing:") for r in result.identity_reasons)
+            any(
+                r.startswith("authoritative_release_identity_missing:")
+                for r in result.identity_reasons
+            )
         )
         self.assertEqual(self.session.query(PriceObservation).count(), 0)
 
@@ -403,6 +474,98 @@ class FailClosedWriteTests(WriterTestCase):
         result = self._write(self.approved_mapping, GOOD_EXTRACTION)
         self.assertFalse(result.written)
         self.assertTrue(any(r.startswith("mapping_not_approved:") for r in result.reasons))
+
+
+class UncodedAndReprintProductTests(WriterTestCase):
+    """End to end through the writer: the two shapes the old code-keyed table
+    could not express at all.
+
+    These are the 2026-08-31 canary's two failure populations - 18 uncoded
+    products and every reprint - reduced to the smallest cases that reproduce
+    them.
+    """
+
+    def test_an_uncoded_product_collects_end_to_end(self):
+        """E. `release_product_code IS NULL`, which no code-keyed lookup can
+        ever cover, and which is the whole promotional/limited catalogue."""
+        uncoded = ReleaseProduct(
+            id=230,
+            source_catalogue="bandai_jp",
+            official_code=None,
+            display_name="プレミアムカードコレクション 25周年エディション",
+            first_seen_name="プレミアムカードコレクション 25周年エディション",
+            source_series_id="569230",
+            verification_status="verified",
+        )
+        self.session.add(uncoded)
+        self.verified_print.release_product_code = None
+        self.verified_print.release_product_id = 230
+        self.session.flush()
+
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(
+                GOOD_EXTRACTED,
+                # SNKRDUNK still derives a code from the card code. It is
+                # ignored, which is the point.
+                release_product_code="OP-01",
+                release_text="プレミアムカードコレクション25周年エディション",
+            ),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(result.identity_verified, result.identity_reasons)
+        self.assertTrue(result.written)
+
+    def test_an_uncoded_product_still_refuses_a_contradicting_label(self):
+        """...and being uncoded does not make it permissive."""
+        uncoded = ReleaseProduct(
+            id=231, source_catalogue="bandai_jp", official_code=None,
+            display_name="スタンダードバトルパック Vol.3",
+            first_seen_name="スタンダードバトルパック Vol.3",
+            source_series_id="569231", verification_status="verified",
+        )
+        self.session.add(uncoded)
+        self.verified_print.release_product_code = None
+        self.verified_print.release_product_id = 231
+        self.session.flush()
+
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(GOOD_EXTRACTED, release_text="ブースターパック 頂上決戦"),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertFalse(result.identity_verified)
+        self.assertFalse(result.written)
+        reason = next(r for r in result.reasons if r.startswith("release_name_mismatch:"))
+        # Named by its surrogate id - no code is manufactured for it.
+        self.assertIn("uncoded product #231", reason)
+
+    def test_a_reprint_collects_against_its_own_product(self):
+        """F. Staging mapping 88's shape, end to end: the card code's prefix
+        names one product and the print belongs to another."""
+        op03 = ReleaseProduct(
+            id=103, source_catalogue="bandai_jp", official_code="OP-03",
+            display_name="強大な敵", first_seen_name="強大な敵",
+            source_series_id="569003", verification_status="verified",
+        )
+        self.session.add(op03)
+        self.verified_print.release_product_code = "OP-03"
+        self.verified_print.release_product_id = 103
+        self.session.flush()
+
+        extraction = dict(
+            GOOD_EXTRACTION,
+            extracted=dict(
+                GOOD_EXTRACTED,
+                card_code="OP01-001",           # unchanged card code
+                release_product_code="OP-01",   # SNKRDUNK's prefix inference
+                release_text="ブースターパック 強大な敵",  # the real product
+            ),
+        )
+        result = self._write(self.approved_mapping, extraction)
+        self.assertTrue(result.identity_verified, result.identity_reasons)
+        self.assertTrue(result.written)
+        self.assertEqual(result.release_name_match_authority, MATCH_BANDAI_OFFICIAL)
 
 
 class IdentityVersusPriceTests(WriterTestCase):

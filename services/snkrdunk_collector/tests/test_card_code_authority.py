@@ -22,6 +22,7 @@ from snkrdunk_collector.card_code_authority import (
 )
 from snkrdunk_collector.db import Base
 from snkrdunk_collector.models import (
+    ReleaseProduct,
     CanonicalCard,
     Card,
     CardPrint,
@@ -81,9 +82,20 @@ class AuthorityResolutionTestCase(unittest.TestCase):
         self.session.close()
 
     def _print(self, image_url):
+        # Release verification resolves the product from the catalogue, so the
+        # print names a real verified OP-04 row - see release_identity.py.
+        if self.session.get(ReleaseProduct, 104) is None:
+            self.session.add(
+                ReleaseProduct(
+                    id=104, source_catalogue="bandai_jp", official_code="OP-04",
+                    display_name="謀略の王国", first_seen_name="謀略の王国",
+                    source_series_id="569004", verification_status="verified",
+                )
+            )
+            self.session.flush()
         card_print = CardPrint(
             id=18, canonical_card_id=18, language="jp", treatment="normal",
-            release_product_code="OP-04", image_url=image_url,
+            release_product_code="OP-04", release_product_id=104, image_url=image_url,
             verification_status="verified", is_active=True,
         )
         self.session.add(card_print)

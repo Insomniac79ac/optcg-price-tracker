@@ -22,10 +22,10 @@ from unittest.mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from snkrdunk_collector import collect, writer
+from snkrdunk_collector import collect, release_identity
 from snkrdunk_collector.db import Base
-from snkrdunk_collector.release_reference import ReleaseReference
 from snkrdunk_collector.models import (
+    ReleaseProduct,
     CanonicalCard,
     Card,
     CardPrint,
@@ -96,6 +96,24 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
             ]
         )
         session.flush()
+        # Release verification resolves the product from the catalogue via
+        # card_prints.release_product_id, so the fixture holds a real product
+        # row. Its display name is deliberately Bandai's Latin "ROMANCE DAWN";
+        # the fixture page shows SNKRDUNK's katakana, which is accepted only
+        # through the declared source rendering - see
+        # test_real_op01_release_name_resolves_via_source_rendering.
+        session.add(
+            ReleaseProduct(
+                id=101,
+                source_catalogue="bandai_jp",
+                official_code="OP-01",
+                display_name="ROMANCE DAWN",
+                first_seen_name="ROMANCE DAWN",
+                source_series_id="569001",
+                verification_status="verified",
+            )
+        )
+        session.flush()
         session.add(
             CardPrint(
                 id=1,
@@ -103,6 +121,7 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
                 language="jp",
                 treatment="parallel",
                 release_product_code="OP-01",
+                release_product_id=101,
                 artwork_key="abc",
                 image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
                 verification_status="verified",
@@ -150,11 +169,20 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
         test_real_op01_release_name_resolves_via_source_rendering below
         exercises the real table deliberately.
         """
-        double = ReleaseReference(
-            release_product_code="OP-01",
-            bandai_official_name="ロマンスドーン" if release_name_matches else "強大な敵",
-            source_url="https://example.invalid/test-double",
-        )
+        # The double now lives on the PRODUCT ROW, because that is where the
+        # authoritative names come from. The static reference is suppressed
+        # alongside it so OP-01's real katakana rendering cannot rescue the
+        # deliberate-mismatch case through a second route.
+        double_name = "ロマンスドーン" if release_name_matches else "強大な敵"
+
+        setup = self.Session()
+        try:
+            product = setup.get(ReleaseProduct, 101)
+            product.display_name = double_name
+            product.first_seen_name = double_name
+            setup.commit()
+        finally:
+            setup.close()
 
         session = self.Session()
         try:
@@ -162,7 +190,7 @@ class ValidateOnlyNeverWritesTests(unittest.TestCase):
                 patch.object(collect, "sync_playwright", _fake_sync_playwright),
                 patch.object(collect, "goto_and_capture", self._capture),
                 patch.object(collect, "fetch_bytes", lambda page, url: b"image-bytes"),
-                patch.object(writer, "get_release_reference", lambda code: double),
+                patch.object(release_identity, "get_release_reference", lambda code: None),
                 patch.object(
                     collect,
                     "compare_artwork",

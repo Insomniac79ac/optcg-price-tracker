@@ -221,11 +221,16 @@ def extract_product(
     resolved_treatment = parsed_identity.get("treatment")
 
     # The set the *page itself* claims, rendered in the repository's
-    # release_product_code convention. Derived from the card code the page
-    # displays (not from the mapping's expected code), so it still catches a
-    # product whose own code belongs to a different set than the linked
-    # print. The title's release parenthetical is retained alongside it as
-    # independent human-readable evidence - see writer.py.
+    # release_product_code convention, derived from the card code the page
+    # displays.
+    #
+    # EVIDENCE ONLY - IT DECIDES NOTHING. It is an inference from the CARD
+    # code, so it is a fact about the card and never an observation about
+    # which product the item shipped in; for a reprint the two legitimately
+    # differ. Release verification measures the title's release
+    # parenthetical (`release_text`, below) against the authoritative names of
+    # the product the PRINT belongs to - see release_identity.py. This value
+    # is retained because an audit record should show what the page claimed.
     observed_set_token = set_token_from_card_code(resolved_card_code)
     observed_release_product_code = normalize_set_token_to_release_product_code(observed_set_token)
 

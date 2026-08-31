@@ -62,7 +62,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import ReleaseProduct, Source, SourceCardMapping
+from app.models import ReleaseProduct, Source
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.exact_print_approval import (
     ExactPrintApprovalError,
@@ -76,6 +76,8 @@ from app.services.non_target_tcg import identify_non_target_tcg
 from app.services.snkrdunk_candidate_approval import (
     SnkrdunkSourceMissing,
     approve_candidate_onto_print,
+    assert_mapping_may_be_approved,
+    find_mapping_for_listing,
     get_snkrdunk_source,
 )
 from app.services.snkrdunk_urls import (
@@ -103,7 +105,11 @@ REFUSAL_NOT_EXACT = "resolver_verdict_not_exact"
 REFUSAL_NO_SIBLINGS = "card_code_not_in_catalogue"
 REFUSAL_MAPPING_CONFLICT = "existing_mapping_names_another_print"
 REFUSAL_MAPPING_NO_PRINT = "existing_mapping_has_no_card_print"
-REFUSAL_MAPPING_REJECTED = "existing_mapping_was_rejected"
+# The duplicate-listing and rejected-mapping refusals are NOT defined here.
+# They come from app.services.exact_print_approval via the shared guards in
+# snkrdunk_candidate_approval, so the plan reports exactly the code the write
+# path would raise - see REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING and
+# REFUSAL_MAPPING_WAS_REJECTED.
 
 
 class BatchApprovalError(RuntimeError):
@@ -299,45 +305,6 @@ def select_candidates(db: Session, candidate_ids: list[int]) -> list[SnkrdunkCan
     return rows
 
 
-def existing_mappings_for_listing(
-    db: Session, source: Source, candidate: SnkrdunkCandidate
-) -> list[SourceCardMapping]:
-    """Every mapping that already holds this listing, keyed on LISTING IDENTITY.
-
-    NOT `equivalent_listing_urls`, and the difference is not academic.
-    `approve_candidate_onto_print` reuses a mapping by matching `source_url`
-    against the two canonical spellings of the listing, which is correct for
-    the rows it writes because it writes exactly those spellings. It does not
-    find a row stored with the URL DISCOVERY saw. Staging mapping 8 is such a
-    row:
-
-        https://snkrdunk.com/en/trading-cards/94915?slide=right&query_id=9d4a...
-
-    A person quarantined that listing on 2026-08-09 and set the mapping to
-    `rejected`. Approving candidate 2 through the URL-equality lookup finds
-    nothing, creates a SECOND mapping for listing 94915 at the canonical URL -
-    which does not collide with `uq_source_card_mappings_source_url`, because
-    the stored strings genuinely differ - and the human's refusal is
-    overturned by a row nobody looked at.
-
-    So this job asks the question the operator means: is any mapping already
-    about this listing? `listing_id` parses the id out of either path and
-    tolerates the query string, and the LIKE is only a cheap pre-filter - the
-    parsed id is what decides. Returns a LIST because more than one row for
-    one listing is itself a state a batch must refuse rather than pick from.
-    """
-    parsed = listing_id(candidate.source_url)
-    if parsed is None:
-        return []
-    rows = db.scalars(
-        select(SourceCardMapping).where(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.like(f"%{parsed}%"),
-        )
-    ).all()
-    return [m for m in rows if listing_id(m.source_url) == parsed]
-
-
 def plan_candidate(db: Session, source: Source, candidate: SnkrdunkCandidate) -> CandidatePlan:
     """Decide one candidate against the LIVE catalogue. Writes nothing.
 
@@ -462,25 +429,25 @@ def plan_candidate(db: Session, source: Source, candidate: SnkrdunkCandidate) ->
     except ExactPrintApprovalError as exc:
         return refuse(exc.code, exc.detail)
 
-    mappings = existing_mappings_for_listing(db, source, candidate)
-    if len(mappings) > 1:
-        return refuse(
-            REFUSAL_MAPPING_CONFLICT,
-            f"Listing {plan.listing_identity} is already held by {len(mappings)} mappings "
-            f"({sorted(m.id for m in mappings)}). A batch must not choose between them.",
-        )
-    if mappings:
-        mapping = mappings[0]
+    # The SAME listing-identity lookup the human approval paths use - see
+    # app.services.snkrdunk_candidate_approval.find_mapping_for_listing. It
+    # raises when one listing has more than one mapping, which a batch must
+    # never choose between.
+    try:
+        mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    except ExactPrintApprovalError as exc:
+        return refuse(exc.code, exc.detail)
+    if mapping is not None:
         plan.existing_mapping_id = mapping.id
         plan.existing_mapping_print_id = mapping.card_print_id
         plan.existing_mapping_status = mapping.review_status
-        if mapping.review_status == "rejected":
-            return refuse(
-                REFUSAL_MAPPING_REJECTED,
-                f"Mapping {mapping.id} for this listing was REJECTED by a person "
-                f"({(mapping.review_notes or '')[:120]!r}). Re-approving it in a batch would "
-                "overturn a human decision without anyone reading why it was made.",
-            )
+        # The SAME rejected-mapping guard the write path enforces, called here
+        # so the plan REPORTS the refusal instead of only discovering it at
+        # apply time. One definition, two moments.
+        try:
+            assert_mapping_may_be_approved(mapping)
+        except ExactPrintApprovalError as exc:
+            return refuse(exc.code, exc.detail)
         if mapping.card_print_id is None:
             return refuse(
                 REFUSAL_MAPPING_NO_PRINT,

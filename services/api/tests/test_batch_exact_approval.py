@@ -23,13 +23,16 @@ from app.approve_exact_snkrdunk_candidates import (
     CONFIRM_PHRASE,
     REFUSAL_MAPPING_CONFLICT,
     REFUSAL_MAPPING_NO_PRINT,
-    REFUSAL_MAPPING_REJECTED,
     REFUSAL_NOT_EXACT,
     REFUSAL_NOT_ONE_PIECE,
     REFUSAL_NOT_UNMATCHED,
     BatchApprovalError,
     apply_batch,
     plan_batch,
+)
+from app.services.exact_print_approval import (
+    REFUSAL_MAPPING_WAS_REJECTED,
+    REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
 )
 from app.models import (
     CanonicalCard,
@@ -314,7 +317,7 @@ def test_a_rejected_mapping_on_the_same_listing_is_refused(world):
     )
     db.commit()
     plan = plan_batch(db, _ids(world, "solo")).plans[0]
-    assert plan.refusal_code == REFUSAL_MAPPING_REJECTED
+    assert plan.refusal_code == REFUSAL_MAPPING_WAS_REJECTED
     assert plan.existing_mapping_id is not None
 
 
@@ -391,7 +394,7 @@ def test_two_mappings_for_one_listing_are_refused_rather_than_chosen_between(wor
         )
     db.commit()
     plan = plan_batch(db, _ids(world, "solo")).plans[0]
-    assert plan.refusal_code == REFUSAL_MAPPING_CONFLICT
+    assert plan.refusal_code == REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING
     assert "2 mappings" in plan.refusal_reason
 
 

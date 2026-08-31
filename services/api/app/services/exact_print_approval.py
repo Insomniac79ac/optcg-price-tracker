@@ -93,6 +93,13 @@ REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT = "mapping_has_no_card_print"
 # this print's language - see app.services.snkrdunk_urls. A malformed request
 # rather than a judgement call, so it is not a needs_review refusal.
 REFUSAL_SOURCE_URL_NOT_CANONICAL = "source_url_not_canonical"
+# More than one mapping already claims this listing. Whichever one an approval
+# picked would be a guess, and the loser would go on pointing at a print
+# nobody re-examined - so the set is reported and a human resolves it.
+REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING = "multiple_mappings_for_listing"
+# A person rejected this listing. An approval that silently overwrote that
+# decision would erase the only record that it was ever made.
+REFUSAL_MAPPING_WAS_REJECTED = "existing_mapping_was_rejected"
 
 # Refusals that mean "a human needs to look at this", as opposed to "the
 # request was malformed". Callers map these onto review_status='needs_review'.
@@ -103,6 +110,8 @@ NEEDS_REVIEW_REFUSALS = frozenset(
         REFUSAL_EVIDENCE_CONTRADICTS,
         REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
         REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
+        REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
+        REFUSAL_MAPPING_WAS_REJECTED,
     }
 )
 

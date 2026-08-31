@@ -83,6 +83,15 @@ class CardPrint(Base):
     # in the database - this mirror emits no DDL.
     treatment: Mapped[str | None] = mapped_column(String(64), nullable=True)
     release_product_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # THE AUTHORITATIVE PRODUCT LINK, and the reason release verification no
+    # longer stops at `release_product_code`. Bandai ships products with no
+    # code at all (promotional, limited and event products), so a code-keyed
+    # check can never cover them; the surrogate id can, and it is already a
+    # component of the live exact-print identity. Nullable because an
+    # unresolved product must have a safe state - and a verified print with a
+    # NULL here fails release verification closed rather than being waved
+    # through. See release_identity.py.
+    release_product_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     artwork_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Bandai's published rarity for THIS catalogue entry, and the authority
@@ -151,3 +160,48 @@ class PriceObservation(Base):
     )
     source_card_mapping_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class ReleaseProduct(Base):
+    """Read-only mirror of the API-owned `release_products` row.
+
+    THE AUTHORITY FOR WHICH PRODUCT A PRINT BELONGS TO. Before this, the
+    collector answered that question from a five-entry hardcoded table keyed
+    on `release_product_code`, which meant every uncoded product and every
+    product past EB-01 failed release verification closed - 20 of the 30
+    mappings in the 2026-08-31 canary. The catalogue already holds the answer;
+    this mirror lets the collector read it instead of re-declaring it.
+
+    `official_code` is nullable ON PURPOSE and must never be synthesised: an
+    invented code is indistinguishable from a published one once written down.
+    Uncoded products are identified by this row's own id.
+    """
+
+    __tablename__ = "release_products"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_catalogue: Mapped[str] = mapped_column(String(16))
+    official_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    first_seen_name: Mapped[str] = mapped_column(String(255))
+    source_series_id: Mapped[str] = mapped_column(String(16))
+    verification_status: Mapped[str] = mapped_column(String(16))
+
+
+class ReleaseProductAlias(Base):
+    """Read-only mirror of `release_product_aliases` - the names a product is
+    published or rendered under.
+
+    `alias_kind` separates authorities and must stay separated: a
+    `bandai_official` / `bandai_additional` row is a name Bandai publishes,
+    while a `source_rendering` row is a storefront's own spelling. A match
+    against the latter is still a match, but the audit record has to be able
+    to say which one answered - see release_identity.classify_match.
+    """
+
+    __tablename__ = "release_product_aliases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(Integer, index=True)
+    alias_name: Mapped[str] = mapped_column(String(255))
+    alias_kind: Mapped[str] = mapped_column(String(32))

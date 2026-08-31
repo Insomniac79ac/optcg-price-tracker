@@ -19,7 +19,11 @@ from app.services.exact_print_approval import (
     SourceEvidence,
     resolve_exact_print,
 )
-from app.services.snkrdunk_urls import canonical_listing_url, equivalent_listing_urls
+from app.services.snkrdunk_candidate_approval import (
+    assert_mapping_may_be_approved,
+    find_mapping_for_listing,
+)
+from app.services.snkrdunk_urls import canonical_listing_url
 
 router = APIRouter(
     prefix="/snkrdunk", tags=["snkrdunk"], dependencies=[Depends(require_admin_token)]
@@ -156,26 +160,21 @@ def match_candidate(
         candidate.matched_card_id = card.id
     candidate.match_confidence = 1.0
 
-    # Keyed on (source, source_url) - the database's own uniqueness contract
-    # for a listing - not on (card_id, source_id), which pre-dated exact
-    # prints and collapsed every print of a card onto one row.
+    # Keyed on LISTING IDENTITY, not on the stored URL string - the same
+    # contract approve-match and the batch job use, from the same helper, so
+    # the three paths cannot disagree about whether a listing already has a
+    # mapping. See snkrdunk_candidate_approval.find_mapping_for_listing.
     # Same canonicalisation as approve-match, from the same helper - the two
     # endpoints must not disagree about which page the collector fetches.
     try:
         mapping_url = canonical_listing_url(
             candidate.source_url, card_print_language=decision.card_print.language
         )
+        mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+        assert_mapping_may_be_approved(mapping)
     except ExactPrintApprovalError as exc:
         raise approval_http_error(exc) from exc
 
-    mapping = (
-        db.query(SourceCardMapping)
-        .filter(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
-        )
-        .one_or_none()
-    )
     if mapping is None:
         mapping = SourceCardMapping(
             source_id=source.id,

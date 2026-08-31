@@ -35,12 +35,13 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from snkrdunk_collector.card_code_authority import CardCodeAuthority, resolve_expected_card_code
-from snkrdunk_collector.identity import normalize_card_name, release_names_match
-from snkrdunk_collector.release_reference import (
-    RELEASE_NAME_AUTHORITY,
-    classify_release_name_match,
-    get_release_reference,
+from snkrdunk_collector.identity import normalize_card_name
+from snkrdunk_collector.release_identity import (
+    NO_PRODUCT_LINK,
+    ReleaseIdentityResult,
+    resolve_release_identity,
 )
+from snkrdunk_collector.release_reference import RELEASE_NAME_AUTHORITY
 from snkrdunk_collector.models import (
     CanonicalCard,
     CardPrint,
@@ -150,6 +151,7 @@ def validate_identity(
     extraction: dict,
     artwork_comparison: dict | None,
     card_code_authority: CardCodeAuthority | None = None,
+    release: ReleaseIdentityResult | None = None,
 ) -> list[str]:
     """Every check that answers "is the stored product actually the intended
     verified print?" - and nothing that answers "is there a price on it?".
@@ -205,41 +207,40 @@ def validate_identity(
                 f"language_mismatch:displayed={page_language},expected={card_print.language}"
             )
 
-        # Release validation is two INDEPENDENT checks, and both must pass.
+        # RELEASE VALIDATION: the listing's own release NAME, measured against
+        # the authoritative names of the product THE PRINT SAYS IT BELONGS TO.
         #
-        # (A) the set token in the page's own card code vs the print's
-        #     release_product_code, and
-        # (B) the page's own release NAME vs Bandai's authoritative name for
-        #     that release code.
+        # The print's `release_product_id` is the authority - see
+        # release_identity.py. Coded and uncoded products go through the same
+        # path, because the product's identity is its row, not its code.
         #
-        # (A) alone cannot catch a reprint or alternate product carrying an
-        # unchanged card code but belonging to a different release, which is
-        # exactly what (B) exists to detect - so they stay separate reasons.
-        displayed_release = extracted.get("release_product_code")
-        if displayed_release != card_print.release_product_code:
-            reasons.append(
-                f"release_product_mismatch:displayed={displayed_release},"
-                f"expected={card_print.release_product_code},"
-                f"release_text={extracted.get('release_text')}"
-            )
-
-        reference = get_release_reference(card_print.release_product_code)
-        if reference is None:
-            # A release with no authoritative reference must never be waved
-            # through - that is how an OP05+ expansion would silently bypass
-            # this gate entirely.
-            reasons.append(
-                f"authoritative_release_name_missing:release={card_print.release_product_code}"
+        # THE CARD CODE'S SET TOKEN IS DELIBERATELY NOT PART OF THIS, and its
+        # removal is the fix for the canary's 20 reprint failures rather than
+        # a relaxation. `extracted["release_product_code"]` is SNKRDUNK's own
+        # inference from the displayed card code (ST01-012 -> "ST-01"); it is
+        # a fact about the CARD, never an observation about which product the
+        # item shipped in. Comparing it to the print's product asked whether
+        # Atlas agrees with a prefix rule, which no page can fail dishonestly
+        # and every legitimate reprint fails by construction: staging mapping
+        # 88 is ST01-012 printed in OP-03, whose listing release text matched
+        # Bandai's official OP-03 name exactly and was still refused. The
+        # displayed code stays in the extraction record as evidence; it just
+        # no longer decides anything.
+        # Passed in rather than resolved here for the same reason
+        # `card_code_authority` is: this function stays pure and does no
+        # database work, so its callers control the session and its tests can
+        # state the identity directly.
+        if release is None or release.identity is None:
+            reasons.extend(
+                release.refusals if release is not None else (NO_PRODUCT_LINK,)
             )
         else:
             observed_release_text = extracted.get("release_text")
-            if not any(
-                release_names_match(observed_release_text, name)
-                for name in reference.accepted_names()
-            ):
+            if release.identity.classify_match(observed_release_text) is None:
                 reasons.append(
                     f"release_name_mismatch:displayed={observed_release_text},"
-                    f"expected={reference.bandai_official_name},"
+                    f"expected={release.identity.describe()},"
+                    f"accepted={list(release.identity.accepted_names())},"
                     f"authority={RELEASE_NAME_AUTHORITY}"
                 )
 
@@ -303,11 +304,14 @@ def validate_and_write_observation(
         canonical = session.get(CanonicalCard, card_print.canonical_card_id)
 
     card_code_authority = resolve_expected_card_code(session, card_print)
-    release_reference = get_release_reference(
-        card_print.release_product_code if card_print else None
-    )
-    release_name_match = classify_release_name_match(
-        release_reference, extracted.get("release_text"), release_names_match
+    # THE PRODUCT THE PRINT SAYS IT BELONGS TO, resolved from the catalogue
+    # rather than from a code table - see release_identity.py. Resolved here,
+    # where the session lives, and passed in so validate_identity stays pure.
+    release = resolve_release_identity(session, card_print)
+    release_name_match = (
+        release.identity.classify_match(extracted.get("release_text"))
+        if release.identity is not None
+        else None
     )
 
     identity_reasons = validate_identity(
@@ -318,6 +322,7 @@ def validate_and_write_observation(
         extraction=extraction,
         artwork_comparison=artwork_comparison,
         card_code_authority=card_code_authority,
+        release=release,
     )
 
     # A write additionally needs approval state and an actual listed price;
