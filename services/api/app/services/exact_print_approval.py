@@ -300,6 +300,38 @@ def resolve_uncoded_product_id(db: Session, source_name: str, product_label: str
     return unique.pop()
 
 
+# LIKE metacharacters, escaped with this character rather than left to the
+# backend default: PostgreSQL and SQLite disagree about whether a backslash is
+# an escape unless one is named explicitly.
+_LIKE_ESCAPE = "\\"
+
+
+def _subsequence_like_pattern(target: str) -> str:
+    """A LIKE pattern every raw spelling of `target` must match.
+
+    `_norm` only ever DELETES characters ('-', '_', ' ') and upper-cases what
+    is left, so if `_norm(raw) == target` then the characters of `target`
+    appear in `raw`, in order, possibly with other characters between them.
+    Interleaving `%` expresses exactly that necessary condition:
+
+        OP01001  ->  %O%P%0%1%0%0%1%
+
+    It is deliberately a NECESSARY condition and not a sufficient one. The
+    pattern also matches 'OP01-0010', and that is fine - the caller still
+    applies the real `_norm` equality to whatever comes back, so the returned
+    set is unchanged. What matters is the other direction: the pattern can
+    never MISS a row `_norm` would have kept, whatever whitespace or casing
+    oddity the stored code carries, so narrowing here cannot silently shrink
+    the sibling set. A smaller sibling set would make this module LESS
+    cautious - it is how an ambiguity turns into a false exact - so "no false
+    negatives" is the property the optimisation had to preserve.
+    """
+    escaped = [
+        _LIKE_ESCAPE + ch if ch in ("%", "_", _LIKE_ESCAPE) else ch for ch in target
+    ]
+    return "%" + "%".join(escaped) + "%"
+
+
 def sibling_prints_for_card_code(db: Session, card_code: str) -> list[tuple[CardPrint, CanonicalCard]]:
     """Every active, verified print that shares this card code.
 
@@ -308,16 +340,47 @@ def sibling_prints_for_card_code(db: Session, card_code: str) -> list[tuple[Card
     scoped separately, so one code can legitimately reach more than one
     canonical card. Widening the sibling set can only ever make this module
     more cautious, never less.
+
+    WHY THE QUERY IS SHAPED THIS WAY. This used to select EVERY active
+    verified print (4,281 on staging) joined to its canonical card and drop
+    almost all of them in Python. `resolve_exact_print` calls this on every
+    invocation and the approval screen calls `resolve_exact_print` once per
+    sibling, so a single candidate cost several full materialisations of the
+    catalogue and a replay of the candidate corpus cost millions of ORM row
+    constructions - a corpus replay did not finish in 15 minutes.
+
+    The fix is only about WHICH ROWS THE DATABASE SENDS. The decision logic is
+    untouched: the authoritative filter is still `_norm(c.card_code) ==
+    target` in Python, applied to whatever the query returns. The `LIKE` above
+    it is a pre-filter that provably cannot exclude a row that filter would
+    keep (see `_subsequence_like_pattern`), so the returned list - and every
+    verdict computed from it - is identical to the unnarrowed version.
+
+    Nothing is cached. The set is re-read from the session on every call, so a
+    print deactivated or verified a moment ago is reflected immediately.
     """
-    rows = db.execute(
+    target = _norm(card_code)
+    stmt = (
         select(CardPrint, CanonicalCard)
         .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
         .where(
             CardPrint.is_active.is_(True),
             CardPrint.verification_status == "verified",
         )
-    ).all()
-    target = _norm(card_code)
+    )
+    if target is not None:
+        # Case-insensitive because `_norm` upper-cases before comparing, and
+        # the stored spelling is not guaranteed to be upper case.
+        stmt = stmt.where(
+            CanonicalCard.card_code.ilike(
+                _subsequence_like_pattern(target), escape=_LIKE_ESCAPE
+            )
+        )
+    # A blank or absent code (target is None) narrows to nothing and is left
+    # to the Python filter exactly as before - it is not reachable from the
+    # callers, which all guard on a present card code, and inventing a
+    # predicate for it would be inventing behaviour.
+    rows = db.execute(stmt).all()
     return [(p, c) for p, c in rows if _norm(c.card_code) == target]
 
 

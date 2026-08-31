@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
 from app.db import get_db
-from app.models import Card, Source, SourceCardMapping
+from app.models import Card
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.schemas import (
     ApprovalContextOut,
@@ -38,7 +38,6 @@ from app.services.app_logging import record_app_log
 from app.services.card_matching import (
     SUGGESTED_SCORE_THRESHOLD,
     CandidateMatchResult,
-    calculate_candidate_match,
     rank_candidate_matches,
 )
 from app.services.cache import delete_cache_prefix
@@ -53,7 +52,11 @@ from app.services.exact_print_approval import (
     resolve_exact_print,
     special_print_label,
 )
-from app.services.snkrdunk_urls import canonical_listing_url, equivalent_listing_urls
+from app.services.snkrdunk_candidate_approval import (
+    SnkrdunkSourceMissing,
+    approve_candidate_onto_print,
+    get_snkrdunk_source,
+)
 
 router = APIRouter(
     prefix="/admin/snkrdunk-candidates", tags=["admin"], dependencies=[Depends(require_admin_token)]
@@ -72,13 +75,6 @@ def _get_candidate_or_404(db: Session, candidate_id: int) -> SnkrdunkCandidate:
     if candidate is None:
         raise HTTPException(status_code=404, detail="Candidate not found")
     return candidate
-
-
-def _get_snkrdunk_source(db: Session) -> Source:
-    source = db.query(Source).filter_by(name="snkrdunk").one_or_none()
-    if source is None:
-        raise HTTPException(status_code=500, detail="snkrdunk source is not configured")
-    return source
 
 
 def _to_match_out(result: CandidateMatchResult) -> CandidateMatchOut:
@@ -350,20 +346,14 @@ def preview_artwork(candidate_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{candidate_id}/approve-match", response_model=SnkrdunkCandidateOut)
 def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends(get_db)):
-    """Approve a candidate onto an exact printing.
+    """Approve a candidate onto an exact printing - the human approval action.
 
-    THE LEGACY CARD IS OPTIONAL HERE, AND THAT IS THE POINT. What this
-    endpoint writes is a claim about which *printing* was priced, and
-    `card_print_id` carries that claim on its own. `cards` holds 25 rows
-    against 4,281 active verified prints, so for almost every listing there
-    is no legacy row to name - demanding one would mean either refusing to
-    price 98.6% of the catalogue or manufacturing a `cards` row whose
-    identity columns the 2026-08-27 audit showed to be unreliable. Neither is
-    acceptable, so `card_id` is simply left NULL (allowed since
-    c9f31e2a7d04).
-
-    Supplying `card_id` still works exactly as before, and is what the
-    existing legacy mappings continue to do.
+    The write itself lives in `app.services.snkrdunk_candidate_approval` and
+    is shared with the batch approval job, so the two cannot drift about what
+    "approved" means. See that module for why `card_id` is optional and what
+    `manual_verified = True` is asserting. This handler owns only the things
+    that are the endpoint's: turning a refusal into a status code, committing,
+    invalidating the candidate cache, and writing the app log.
     """
     candidate = _get_candidate_or_404(db, candidate_id)
     # A dangling card_id is still a 404 - only *omitting* it is permitted.
@@ -373,120 +363,42 @@ def approve_match(candidate_id: int, body: ApproveMatchIn, db: Session = Depends
         if card is None:
             raise HTTPException(status_code=404, detail="Card not found")
 
-    source = _get_snkrdunk_source(db)
-
-    # THE EXACT-PRINT GATE. Nothing is written until the source's own stored
-    # evidence corroborates the printing the operator named - see
-    # app.services.exact_print_approval. A refusal that needs a human is 409
-    # (the request was well-formed, the evidence was not sufficient); a
-    # malformed or dangling reference is 400/404.
     try:
-        decision = resolve_exact_print(
+        source = get_snkrdunk_source(db)
+    except SnkrdunkSourceMissing as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    # A refusal that needs a human is 409 (the request was well-formed, the
+    # evidence was not sufficient); a malformed or dangling reference is
+    # 400/404.
+    try:
+        result = approve_candidate_onto_print(
             db,
+            candidate=candidate,
             card_print_id=body.card_print_id,
-            evidence=SourceEvidence.from_snkrdunk_candidate(candidate),
+            card=card,
+            review_notes=body.review_notes,
+            source=source,
         )
     except ExactPrintApprovalError as exc:
         raise approval_http_error(exc) from exc
-
-    # Only meaningful against a legacy card: the scorer compares the listing
-    # title to a `cards` row. With no card there is nothing to score, and a
-    # fabricated score would misrepresent how well-evidenced the approval is
-    # - the exact-print decision above is the evidence.
-    match_result = calculate_candidate_match(candidate, card) if card is not None else None
-
-    # THE URL THE COLLECTOR WILL FETCH, not the one discovery happened to see.
-    # SNKRDUNK serves one listing under a Japanese and an English path, and
-    # the collector rejects a page whose <html lang> disagrees with the
-    # print's language - so a jp print approved against the English mirror is
-    # correct about identity and unpriceable. Derived from the listing id
-    # alone; an unrecognised URL is refused, never rewritten on a guess.
-    # See app.services.snkrdunk_urls.
-    try:
-        mapping_url = canonical_listing_url(
-            candidate.source_url, card_print_language=decision.card_print.language
-        )
-    except ExactPrintApprovalError as exc:
-        raise approval_http_error(exc) from exc
-
-    # Looked up by the canonical URL too, so re-approving a listing that was
-    # first approved under the other path updates that row instead of
-    # colliding with uq_source_card_mappings_source_url.
-    mapping = (
-        db.query(SourceCardMapping)
-        .filter(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
-        )
-        .one_or_none()
-    )
-    review_notes = body.review_notes
-    if review_notes is None:
-        # The print, and what proved it, ahead of the card-level score: the
-        # score says how well the title matched a legacy card, which is not
-        # the fact this mapping is asserting.
-        parts = [decision.as_review_note()]
-        if match_result is not None and match_result.explanation.positive:
-            parts.append(
-                f"Card match score={match_result.score} "
-                f"({match_result.confidence_label}): "
-                + "; ".join(match_result.explanation.positive[:3])
-            )
-        review_notes = " ".join(parts)
-    if mapping is None:
-        mapping = SourceCardMapping(
-            source_id=source.id,
-            source_card_id=candidate.detected_card_code or candidate.source_url,
-        )
-        db.add(mapping)
-
-    # Written only when a legacy card was actually supplied. Assigning None
-    # here instead would silently ERASE the legacy pointer on an existing
-    # mapping being re-approved against a corrected print, which is a data
-    # loss this endpoint has no business causing.
-    if card is not None:
-        mapping.card_id = card.id
-    # THE AUTHORITATIVE IDENTITY of the mapping. Unlike card_id above this is
-    # never optional: an approval that cannot name the exact print never
-    # reaches this line - resolve_exact_print raised instead.
-    mapping.card_print_id = decision.card_print.id
-    mapping.source_card_id = candidate.detected_card_code or candidate.source_url
-    mapping.source_url = mapping_url
-    mapping.manual_verified = True
-    mapping.review_status = "approved"
-    mapping.is_active = True
-    mapping.review_notes = review_notes
-    if match_result is not None:
-        mapping.match_confidence = match_result.score
-
-    candidate.match_status = "matched"
-    # Same reasoning as mapping.card_id above - a print-authoritative approval
-    # neither sets nor clears the candidate's legacy card pointer and its
-    # card-level scores. They describe a legacy match that was not made here.
-    if match_result is not None:
-        candidate.matched_card_id = card.id
-        candidate.match_confidence = match_result.score / 100.0
-        candidate.best_match_card_id = card.id
-        candidate.best_match_score = match_result.score
-        candidate.best_match_confidence_label = match_result.confidence_label
-        candidate.match_explanation_json = match_result.explanation.to_dict()
-    candidate.ambiguous_matches_json = None
 
     db.commit()
     db.refresh(candidate)
     delete_cache_prefix("snkrdunk_candidates")
+    match_result = result.match_result
     record_app_log(
         "info",
         "api",
         "snkrdunk_matching",
-        f"Candidate {candidate.id} approved -> card_print_id={decision.card_print.id} "
+        f"Candidate {candidate.id} approved -> card_print_id={result.decision.card_print.id} "
         f"(card_id={card.id if card else None}, "
         f"score={match_result.score if match_result else None}).",
         context={
             "candidate_id": candidate.id,
             "card_id": card.id if card is not None else None,
-            "card_print_id": decision.card_print.id,
-            "evidence_used": decision.evidence_used,
+            "card_print_id": result.decision.card_print.id,
+            "evidence_used": result.decision.evidence_used,
             "score": match_result.score if match_result is not None else None,
         },
         related_entity_type="snkrdunk_candidate",
