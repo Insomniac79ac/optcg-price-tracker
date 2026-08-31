@@ -1632,3 +1632,55 @@ against Railway's remote managed Postgres. For staging, either:
 
 Take a backup before importing a real/large card catalog or watchlist CSV into staging, same as you
 would before a production import.
+
+## Codespaces disk hygiene
+
+The Codespace's `/` and `/workspaces` share one **32 GB** device; `/tmp` is a
+separate 44 GB device. Validation work - Docker builds, throwaway Postgres
+containers, downloaded marketplace images - fills the 32 GB device, and a full
+disk fails in ways that look like something else: a Playwright collector run
+whose disk ran out reports `watchdog_triggered:browser_launch` on every
+mapping, which reads as a source problem and is really no free space.
+
+Treat the Codespace as a scratch environment, never as backup storage.
+
+**Before a large Docker build**
+- Record `df -h /` first. Do not start one below **15 GB free**; the
+  Playwright collector image alone is ~3.8 GB on top of a ~2 GB base.
+- `docker builder prune -f` reclaims build cache only - always regenerable,
+  and usually the largest safe win.
+
+**After any task that created them**
+- Remove throwaway containers and the images built only for that validation.
+- Stop and remove throwaway Postgres containers *and* the anonymous volumes
+  they leave behind (`docker run postgres` without `-v` creates one each
+  time; 34 had accumulated by 2026-08-31, ~4.3 GB).
+- **Never** blanket `docker volume prune`. It removes *named* volumes too, and
+  `optcg-price-tracker_postgres_data`, `optcg-prod_opcg_postgres_data_prod`
+  and `optcg-prod_opcg_redis_data_prod` are the local dev/prod compose
+  databases. Remove anonymous (64-hex-named) volumes explicitly instead.
+
+**What not to accumulate**
+- Do not keep marketplace/listing images downloaded during analysis unless
+  they are an intentional project asset.
+- Do not write large reports, PDFs or PNGs into the repo unless asked. Prefer
+  a small JSON or text summary over an image-heavy evidence pack.
+- Put temporary files under `/tmp` (separate, larger device) and delete them
+  when the task ends.
+- Staging dumps belong in `/home/codespace/backups` only for as long as the
+  task needs them; staging itself is the source of truth.
+
+**Two large directories that are NOT junk**
+- `data/official_snapshots/` (~1 GB, gitignored) is the frozen Bandai
+  catalogue. 951 MB of it is `bandai_jp/current/images`; the catalogue *facts*
+  (`entries.jsonl`, `assets.jsonl`, `series.jsonl`, `manifest.json`,
+  `analysis/`) are only ~25 MB. Every test that reads it skips cleanly when it
+  is absent, and it is re-collectable via
+  `python -m app.collect_official_cardlist_snapshot` - but re-collecting means
+  re-fetching thousands of Bandai pages and images, so delete it only
+  deliberately. Dropping just `bandai_jp/current/images` frees ~951 MB and
+  keeps every alias/membership re-derivation test working.
+- `docs/ui/evidence/` (~147 MB, mostly untracked) is ATLAS-loop before/after
+  screenshots. They are *not* reproducible - they record how a past
+  deployment looked - so archive them outside the Codespace rather than
+  regenerating them.
