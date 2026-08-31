@@ -56,7 +56,14 @@ from snkrdunk_collector.browser import log_event
 from snkrdunk_collector.collect import MappingOutcome, run_one_mapping_detailed
 from snkrdunk_collector.config import settings
 from snkrdunk_collector.db import SessionLocal
-from snkrdunk_collector.run_lock import SKIPPED_LOCKED, collection_lock
+from snkrdunk_collector.run_lock import (
+    LOCK_LOST,
+    SKIPPED_LOCKED,
+    LockLost,
+    assert_lock_owned,
+    collection_lock,
+    pinned_session,
+)
 from snkrdunk_collector.models import CardPrint, Source, SourceCardMapping
 
 SNKRDUNK_SOURCE_NAME = "snkrdunk"
@@ -155,6 +162,13 @@ def _record_attempt(session: Session, mapping_id: int) -> None:
     identity evidence, and it must never be able to fail a mapping that
     otherwise collected correctly.
     """
+    # MUTATION BOUNDARY (stamp). Verified BEFORE the UPDATE, and outside the
+    # try below: the broad handler exists to stop a failed stamp from failing
+    # a mapping that collected correctly, and it must never be able to
+    # downgrade "we no longer own the lock" into a shrug. Its rollback() is
+    # also precisely the gesture that lets a dead connection come back as a
+    # live unlocked one, so ownership is established before we can reach it.
+    assert_lock_owned(session)
     try:
         session.execute(
             update(SourceCardMapping)
@@ -162,6 +176,8 @@ def _record_attempt(session: Session, mapping_id: int) -> None:
             .values(last_collection_attempted_at=datetime.now(timezone.utc))
         )
         session.commit()
+    except LockLost:
+        raise
     except Exception as exc:  # pragma: no cover - defensive
         session.rollback()
         log_event("collection_attempt_stamp_failed", mapping_id=mapping_id, error=str(exc))
@@ -263,6 +279,7 @@ def run_batch(
                 stopped_reason=lock.reason or SKIPPED_LOCKED,
             )
         return _run_batch_locked(
+            lock=lock,
             batch_run_id=batch_run_id,
             started_at=started_at,
             effective_limit=effective_limit,
@@ -277,6 +294,7 @@ def run_batch(
 
 def _run_batch_locked(
     *,
+    lock,
     batch_run_id: str,
     started_at: datetime,
     effective_limit: int | None,
@@ -294,7 +312,12 @@ def _run_batch_locked(
     stopped_reason: str | None = None
     selected_ids: list[int] = []
 
-    session = session_factory()
+    # Every stamp, snapshot and observation in this run goes through the
+    # lock-OWNING connection, so the backend that writes is the backend that
+    # holds the lock. Falls back to the caller's factory when there is no lock
+    # to pin to (validate-only, or a backend without advisory locks).
+    session = pinned_session(lock, session_factory)
+    lock_lost_detail: str | None = None
     try:
         eligible = mapping_selector(
             session,
@@ -320,6 +343,13 @@ def _run_batch_locked(
 
         batch_deadline_at = time.monotonic() + settings.BATCH_TOTAL_TIMEOUT_S
         for index, mapping in enumerate(selected):
+            # MUTATION BOUNDARY (next mapping). Checked before this mapping is
+            # fetched, so a run that lost the lock during the previous one
+            # never touches the source and never stamps this id. Anything
+            # after this point in the iteration is guarded again at its own
+            # boundary - this is the cheap early stop, not the guarantee.
+            assert_lock_owned(session)
+
             if time.monotonic() >= batch_deadline_at:
                 stopped_reason = "batch_total_timeout_exceeded"
                 log_event(
@@ -365,6 +395,24 @@ def _run_batch_locked(
             is_last = index == len(selected) - 1
             if not is_last:
                 time.sleep(_mapping_delay_s())
+    except LockLost as exc:
+        # Stop here. The mapping in hand was NOT stamped or written (every
+        # boundary verifies before it mutates), later mappings are not
+        # attempted, and no attempt is made to retake the lock - another run
+        # may already be working under it. A separate later invocation will
+        # acquire normally.
+        stopped_reason = LOCK_LOST
+        lock_lost_detail = str(exc)
+        log_event(
+            "batch_lock_lost",
+            batch_run_id=batch_run_id,
+            reason=LOCK_LOST,
+            detail=lock_lost_detail,
+            mappings_attempted=len(results),
+            remaining_mapping_ids=[
+                mid for mid in selected_ids if mid not in {r.mapping_id for r in results}
+            ],
+        )
     finally:
         session.close()
 
@@ -399,7 +447,12 @@ def _run_batch_locked(
 
     failures = [r for r in results if not _resolved_ok(r)]
 
-    if any(r.source_denied for r in results):
+    if lock_lost_detail is not None:
+        # Its own status, distinct from partial_failure: a lock-lost run is
+        # not "some mappings failed", it is "this run stopped owning the
+        # right to write". Operators need to see that without reading logs.
+        status, exit_code = "lock_lost", 1
+    elif any(r.source_denied for r in results):
         status, exit_code = "source_wide_failure", 1
     elif stopped_reason is not None or failures:
         status, exit_code = "partial_failure", 2

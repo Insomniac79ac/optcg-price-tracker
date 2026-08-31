@@ -47,6 +47,7 @@ from snkrdunk_collector.release_identity import (
     resolve_release_identity,
 )
 from snkrdunk_collector.release_reference import RELEASE_NAME_AUTHORITY
+from snkrdunk_collector.run_lock import assert_lock_owned
 from snkrdunk_collector.models import (
     CanonicalCard,
     CardPrint,
@@ -422,6 +423,14 @@ def validate_and_write_observation(
             source_card_mapping_id=mapping.id,
         )
 
+    # MUTATION BOUNDARY (snapshot + observation). Everything above this line
+    # is validation and can be redone harmlessly; below it rows exist. A real
+    # run has been pinned to the lock-owning connection, so this asks the very
+    # backend that is about to insert whether it still owns the lock. On a
+    # validate-only run the Session carries no marker and this is a no-op -
+    # the rows it builds are rolled back by the caller either way.
+    assert_lock_owned(session)
+
     content_hash = hashlib.sha256(raw_html.encode("utf-8")).hexdigest()
     observed_at = datetime.now(timezone.utc)
 
@@ -478,7 +487,12 @@ def write_evidence_snapshot(
     used to retain the sales-history page as durable raw evidence (section 5:
     "retain the extracted sold rows inside raw evidence/result metadata")
     without writing any price_observations rows for it. Always succeeds
-    (evidence retention is never fail-closed); caller commits."""
+    (evidence retention is never fail-closed); caller commits.
+
+    "Never fail-closed" is about EVIDENCE quality, not about the right to
+    write at all: this still creates a RawSnapshot row, so it is a mutation
+    boundary and verifies ownership first like every other one."""
+    assert_lock_owned(session)
     content_hash = hashlib.sha256(raw_html.encode("utf-8")).hexdigest()
     snapshot = RawSnapshot(
         source_id=source_id,

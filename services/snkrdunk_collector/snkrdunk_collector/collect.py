@@ -48,6 +48,7 @@ from snkrdunk_collector.browser import (
 )
 from snkrdunk_collector.config import settings
 from snkrdunk_collector.db import SessionLocal
+from snkrdunk_collector.run_lock import LockLost, assert_lock_owned
 from snkrdunk_collector.extractor import extract_product
 from snkrdunk_collector.models import CardPrint, Source, SourceCardMapping
 from snkrdunk_collector.sales_history import find_sales_history_link, parse_sales_history_page
@@ -357,6 +358,12 @@ def run_one_mapping_detailed(
     except DeadlineExceeded as exc:
         log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
         return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"watchdog_triggered:{exc}"])
+    except LockLost:
+        # Must escape. This handler turns a failure into an outcome so the
+        # BATCH can carry on to the next mapping - which is exactly the wrong
+        # response to losing the lock, and its rollback() is what lets a dead
+        # connection silently come back as a live unlocked one.
+        raise
     except Exception as exc:  # never leave a half-written row
         session.rollback()
         log_event("collection_error", mapping_id=mapping_id, error=f"{type(exc).__name__}: {exc}", batch_run_id=batch_run_id)
@@ -481,6 +488,10 @@ def run_one_mapping_detailed(
             parser_version=PARSER_VERSION,
         )
 
+    # MUTATION BOUNDARY (durable write). The rows were built under a verified
+    # lock; this re-verifies at the moment they become permanent, so a lock
+    # lost during the evidence-snapshot work above cannot be committed through.
+    assert_lock_owned(session)
     session.commit()
     log_event(
         "collection_written",
@@ -615,11 +626,25 @@ def main() -> None:
     # the same single-run lock. Validate-only is unlocked: it persists
     # nothing, and an operator must be able to inspect one mapping while a
     # real run is in progress. See run_lock.
-    from snkrdunk_collector.run_lock import SKIPPED_LOCKED, collection_lock
+    from snkrdunk_collector.run_lock import (
+        LOCK_LOST,
+        SKIPPED_LOCKED,
+        collection_lock,
+        pinned_session,
+    )
 
-    session = SessionLocal()
+    # The work Session is built AFTER the lock, from the lock's own
+    # connection, so this single-mapping run writes through the same backend
+    # that holds the lock - identically to a batch. Constructing a Session
+    # opens no connection, so deriving the engine costs nothing.
+    probe = SessionLocal()
     try:
-        with collection_lock(session.get_bind(), enabled=not args.validate_only) as lock:
+        lock_engine = probe.get_bind()
+    finally:
+        probe.close()
+
+    try:
+        with collection_lock(lock_engine, enabled=not args.validate_only) as lock:
             if not lock.acquired:
                 log_event(
                     "run_skipped_locked",
@@ -639,9 +664,27 @@ def main() -> None:
                     flush=True,
                 )
                 sys.exit(0)
-            outcome = run_one_mapping_detailed(session, args.mapping_id, validate_only=args.validate_only)
-    finally:
-        session.close()
+            session = pinned_session(lock, SessionLocal)
+            try:
+                outcome = run_one_mapping_detailed(
+                    session, args.mapping_id, validate_only=args.validate_only
+                )
+            finally:
+                session.close()
+    except LockLost as exc:
+        # Same contract as the batch: stop, do not reacquire, say so plainly.
+        # Nothing was stamped or written after ownership was lost - every
+        # mutation boundary verifies before it mutates.
+        log_event("run_lock_lost", mapping_id=args.mapping_id, reason=LOCK_LOST, detail=str(exc))
+        print(
+            "RESULT_JSON=" + json.dumps(
+                {"mapping_id": args.mapping_id, "stage": "lock_lost",
+                 "written": False, "reason": LOCK_LOST, "detail": str(exc)},
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        sys.exit(1)
 
     log_event("run_complete", **asdict(outcome))
     print("RESULT_JSON=" + json.dumps(asdict(outcome), ensure_ascii=False), flush=True)

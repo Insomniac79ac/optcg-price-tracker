@@ -87,6 +87,8 @@ def test_single_mapping_validate_only_is_not_locked(monkeypatch, capsys):
 
 
 class _FakeSession:
+    info: dict = {}
+
     def get_bind(self):
         return None
 
@@ -107,3 +109,49 @@ def _fake_lock(*, acquired: bool):
             yield LockState(acquired=acquired, reason=None if acquired else SKIPPED_LOCKED)
 
     return _lock
+
+
+def test_single_mapping_real_run_aborts_when_the_lock_is_lost(monkeypatch, capsys):
+    """`--mapping-id N` gets the same fail-closed treatment as a batch: a
+    LockLost raised at a mutation boundary stops the run with a clear
+    lock_lost status and a non-zero exit, and is never swallowed."""
+    from snkrdunk_collector import collect as _collect
+    from snkrdunk_collector.run_lock import LockLost
+
+    monkeypatch.setattr(_collect, "SessionLocal", lambda: _FakeSession())
+    monkeypatch.setattr(
+        "snkrdunk_collector.run_lock.collection_lock", _fake_lock(acquired=True)
+    )
+
+    def _boom(*a, **k):
+        raise LockLost("collection_lock_lost: backend changed under this run")
+
+    monkeypatch.setattr(_collect, "run_one_mapping_detailed", _boom)
+    code = _run_main(monkeypatch, ["--mapping-id", "7"])
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "lock_lost" in out
+    assert '"written": false' in out.lower()
+
+
+def test_single_mapping_validate_only_is_unaffected_by_lock_loss_handling(monkeypatch, capsys):
+    """Validate-only keeps its exact previous lifecycle: unlocked, unpinned,
+    and its session carries no ownership marker to fail on."""
+    from snkrdunk_collector import collect as _collect
+    from snkrdunk_collector.run_lock import LOCK_PID_INFO_KEY
+
+    seen = {}
+
+    def _runner(session, mapping_id, validate_only, **k):
+        seen["marked"] = LOCK_PID_INFO_KEY in getattr(session, "info", {})
+        from snkrdunk_collector.collect import MappingOutcome
+
+        return MappingOutcome(mapping_id=mapping_id, stage="validated_only", written=False)
+
+    monkeypatch.setattr(_collect, "SessionLocal", lambda: _FakeSession())
+    monkeypatch.setattr(
+        "snkrdunk_collector.run_lock.collection_lock", _fake_lock(acquired=True)
+    )
+    monkeypatch.setattr(_collect, "run_one_mapping_detailed", _runner)
+    _run_main(monkeypatch, ["--mapping-id", "7", "--validate-only"])
+    assert seen["marked"] is False
