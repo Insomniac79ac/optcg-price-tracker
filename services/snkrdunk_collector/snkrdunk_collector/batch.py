@@ -8,6 +8,11 @@ Selection (see select_eligible_mappings): a mapping is eligible only if its
 source is "snkrdunk", it is active and review_status="approved", it carries
 a card_print_id (an exact-print mapping, never a legacy-card-only one), and
 that card_print is itself active and verification_status="verified".
+Eligible mappings are then ordered least-recently-attempted first and one
+unscoped run takes at most settings.BATCH_MAX_MAPPINGS_PER_RUN of them, so
+the population can grow without any mapping being starved - see
+select_eligible_mappings and BATCH_MAX_MAPPINGS_PER_RUN for why a bounded
+run plus a fair order is the fix and a larger timeout is not.
 Nothing here is hardcoded per card/mapping id - eligibility is entirely a
 database query, so a newly approved+verified mapping is picked up
 automatically and a rejected/unverified one drops out automatically (see
@@ -44,7 +49,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from snkrdunk_collector.browser import log_event
@@ -64,8 +69,25 @@ def select_eligible_mappings(
 ) -> list[SourceCardMapping]:
     """Every approved, manually-verified, active, verified-print SNKRDUNK
     mapping - discovered from current database state, never a hardcoded id
-    list. Deterministic order (mapping id ascending) so repeated calls
-    against unchanged state always select mappings in the same sequence.
+    list. Deterministic: repeated calls against unchanged state always
+    select mappings in the same sequence.
+
+    FAIR ORDER, not id order. Mappings are drained least-recently-attempted
+    first: never-attempted rows (last_collection_attempted_at IS NULL) come
+    first, then the stalest, with mapping id as a deterministic tie-break.
+
+    WHY NOT id ASCENDING, which this used to do. Collection is serial and a
+    run is bounded, so once the approved population costs more than
+    BATCH_TOTAL_TIMEOUT_S an id-ordered run is truncated at the same point
+    every night and the tail is never collected at all. Ordering by staleness
+    makes truncation harmless: whatever a run does not reach is exactly what
+    the next run reaches first.
+
+    Nothing here consults a previous run's RESULT. A mapping that verified
+    but had no listing, and a mapping that wrote a price, are equally due
+    once they are the stalest - the collector must keep looking at a card
+    nobody is currently selling, or it would stop noticing when someone
+    lists one.
 
     manual_verified=True is required in addition to review_status="approved"
     as defense-in-depth: a mapping must never enter production collection on
@@ -89,7 +111,10 @@ def select_eligible_mappings(
             SourceCardMapping.card_print_id.is_not(None),
             CardPrint.is_active.is_(True),
         )
-        .order_by(SourceCardMapping.id.asc())
+        .order_by(
+            SourceCardMapping.last_collection_attempted_at.asc().nullsfirst(),
+            SourceCardMapping.id.asc(),
+        )
     )
     if require_approved:
         stmt = stmt.where(
@@ -117,6 +142,30 @@ class BatchResult:
     stopped_reason: str | None = None
 
 
+def _record_attempt(session: Session, mapping_id: int) -> None:
+    """Stamp last_collection_attempted_at for one mapping and commit it.
+
+    Committed on its own so it survives whatever the rest of the batch does:
+    a later source-wide denial, a timeout, or a crash must not roll back the
+    record that these mappings were already looked at, or the next run would
+    revisit them ahead of mappings that are genuinely staler.
+
+    Deliberately best-effort. This is scheduling metadata, not pricing or
+    identity evidence, and it must never be able to fail a mapping that
+    otherwise collected correctly.
+    """
+    try:
+        session.execute(
+            update(SourceCardMapping)
+            .where(SourceCardMapping.id == mapping_id)
+            .values(last_collection_attempted_at=datetime.now(timezone.utc))
+        )
+        session.commit()
+    except Exception as exc:  # pragma: no cover - defensive
+        session.rollback()
+        log_event("collection_attempt_stamp_failed", mapping_id=mapping_id, error=str(exc))
+
+
 def _mapping_delay_s() -> float:
     return max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000.0
 
@@ -140,9 +189,18 @@ def run_batch(
     collect.main()'s --allow-unapproved) targets not-yet-approved mappings
     for identity/artwork re-verification without ever writing a row; this
     combination is enforced here too, independent of the CLI, because
-    run_batch is a public function other callers could reach directly."""
+    run_batch is a public function other callers could reach directly.
+
+    `limit` defaults to settings.BATCH_MAX_MAPPINGS_PER_RUN, but ONLY for an
+    unscoped run. A caller that named its own mapping ids has already stated
+    its scope, and silently truncating that list would turn an explicit
+    100-mapping request into a 70-mapping one - so an explicit `limit` wins,
+    and `mapping_ids` suppresses the default entirely."""
     if not require_approved and not validate_only:
         raise ValueError("require_approved=False must always be paired with validate_only=True.")
+    effective_limit = limit
+    if effective_limit is None and mapping_ids is None:
+        effective_limit = settings.BATCH_MAX_MAPPINGS_PER_RUN
     batch_run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
@@ -153,7 +211,12 @@ def run_batch(
     selected_ids: list[int] = []
 
     try:
-        eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids, require_approved=require_approved)
+        eligible = mapping_selector(
+            session,
+            limit=effective_limit,
+            mapping_ids=mapping_ids,
+            require_approved=require_approved,
+        )
         seen: set[int] = set()
         selected: list[SourceCardMapping] = []
         for mapping in eligible:
@@ -184,6 +247,14 @@ def run_batch(
 
             outcome = mapping_runner(session, mapping.id, validate_only=validate_only, batch_run_id=batch_run_id)
             results.append(outcome)
+            # Mark the attempt, whatever the outcome. This is what makes the
+            # next run's order fair, so it must NOT be conditional on success
+            # - a mapping that refuses every night would otherwise stay
+            # "never attempted" and be retried ahead of everything else
+            # forever. A validate-only run is excluded because it persists
+            # nothing by contract.
+            if not validate_only:
+                _record_attempt(session, mapping.id)
             log_event(
                 "batch_mapping_result",
                 batch_run_id=batch_run_id,

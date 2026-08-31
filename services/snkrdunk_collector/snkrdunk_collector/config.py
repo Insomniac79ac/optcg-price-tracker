@@ -39,6 +39,28 @@ class Settings(BaseSettings):
     # mappings at up to 180s each plus inter-mapping delays comfortably fits
     # well under this.
     BATCH_TOTAL_TIMEOUT_S: int = 1800
+    # How many mappings ONE unscoped --approved-mappings run may process.
+    #
+    # WHY A LIMIT IS THE FIX AND A BIGGER TIMEOUT IS NOT. Collection is
+    # serial by design (never parallel SNKRDUNK requests), so a run's cost
+    # grows linearly with the approved population while BATCH_TOTAL_TIMEOUT_S
+    # stays fixed. Once the population outgrows the budget the run is cut off
+    # mid-list, and because selection was id-ordered it was cut off at the
+    # SAME PLACE every night - the tail was never collected at all. Raising
+    # the timeout only moves that cliff; it does not remove it.
+    #
+    # A bounded run plus a fair order removes it: each run takes the least
+    # recently attempted slice, so every mapping is reached within a
+    # predictable number of runs no matter how large the population grows.
+    #
+    # 70 is deliberately conservative against the measured 15.0s/mapping
+    # (1500s for 100 mappings, 2026-08-31): 70 x 15.0s = 1050s, 58% of the
+    # 1800s budget, leaving room for slow pages and retries rather than
+    # targeting the theoretical ~110 maximum.
+    #
+    # Applies ONLY to an unscoped run. An explicit --mapping-ids or --limit
+    # states the caller's own scope and is never silently truncated.
+    BATCH_MAX_MAPPINGS_PER_RUN: int = 70
 
     @field_validator("DATABASE_URL")
     @classmethod

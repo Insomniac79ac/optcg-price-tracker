@@ -107,7 +107,15 @@ class SourceCardMapping(Base):
     __tablename__ = "source_card_mappings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"))
+    # NULLABLE, matching the owning model (services/api/app/models/
+    # source_card_mapping.py). Every print-authoritative mapping has
+    # card_id NULL - the exact-print identity lives in card_print_id - so a
+    # non-nullable mirror contradicted every row this collector actually
+    # reads. The mirror emits no DDL against the real database; the type is
+    # what the mapper and offline tests see.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True
+    )
     source_id: Mapped[int] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
@@ -115,6 +123,12 @@ class SourceCardMapping(Base):
     is_active: Mapped[bool] = mapped_column(Boolean)
     review_status: Mapped[str] = mapped_column(String(32))
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Set after every real collection attempt, whatever the outcome, so the
+    # batch scheduler can drain never-collected mappings first and then the
+    # stalest. NULL = never attempted. Never written by a validate-only run.
+    last_collection_attempted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class RawSnapshot(Base):

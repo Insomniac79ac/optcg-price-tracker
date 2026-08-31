@@ -82,6 +82,16 @@ class SourceCardMapping(Base):
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # When the PRICE COLLECTOR last attempted this mapping, whatever the
+    # outcome - written, refused, or verified-but-nothing-listed. Distinct
+    # from last_verified_at above, which records a HUMAN review, and from
+    # last_match_checked_at below, which the match-confidence service owns.
+    # NULL means never attempted and sorts first in the collector's fair
+    # ordering (see snkrdunk_collector.batch.select_eligible_mappings).
+    last_collection_attempted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Populated by app.services.source_mapping_confidence (see GET/POST
     # /admin/source-mappings/quality|recheck-quality) - the latest automated
     # 0-100 card_matching score for this mapping's (source_card_id/source_url)

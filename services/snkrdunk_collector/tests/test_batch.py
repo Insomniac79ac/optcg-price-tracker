@@ -356,6 +356,9 @@ class BatchExecutionTests(BaseBatchTestCase):
         with patch("snkrdunk_collector.batch.settings") as mock_settings:
             mock_settings.SNKRDUNK_REQUEST_DELAY_MS = 5
             mock_settings.BATCH_TOTAL_TIMEOUT_S = 60
+            # An unscoped run reads the per-run bound too; a MagicMock
+            # attribute would be sliced as a limit and is not an int.
+            mock_settings.BATCH_MAX_MAPPINGS_PER_RUN = 70
             start = time.monotonic()
             run_batch(session_factory=self.Session, mapping_runner=runner)
             elapsed = time.monotonic() - start
