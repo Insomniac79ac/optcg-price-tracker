@@ -611,9 +611,35 @@ def main() -> None:
     run_id_ts = datetime.now(timezone.utc).isoformat()
     log_event("run_start", run_at=run_id_ts, mapping_id=args.mapping_id, validate_only=args.validate_only)
 
+    # A single-mapping REAL run writes exactly like a batch does, so it takes
+    # the same single-run lock. Validate-only is unlocked: it persists
+    # nothing, and an operator must be able to inspect one mapping while a
+    # real run is in progress. See run_lock.
+    from snkrdunk_collector.run_lock import SKIPPED_LOCKED, collection_lock
+
     session = SessionLocal()
     try:
-        outcome = run_one_mapping_detailed(session, args.mapping_id, validate_only=args.validate_only)
+        with collection_lock(session.get_bind(), enabled=not args.validate_only) as lock:
+            if not lock.acquired:
+                log_event(
+                    "run_skipped_locked",
+                    mapping_id=args.mapping_id,
+                    reason=lock.reason or SKIPPED_LOCKED,
+                    detail=(
+                        "another write-capable SNKRDUNK collection run holds the lock; "
+                        "this mapping was not fetched, stamped or written"
+                    ),
+                )
+                print(
+                    "RESULT_JSON=" + json.dumps(
+                        {"mapping_id": args.mapping_id, "stage": "skipped_locked",
+                         "written": False, "reason": lock.reason or SKIPPED_LOCKED},
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
+                sys.exit(0)
+            outcome = run_one_mapping_detailed(session, args.mapping_id, validate_only=args.validate_only)
     finally:
         session.close()
 

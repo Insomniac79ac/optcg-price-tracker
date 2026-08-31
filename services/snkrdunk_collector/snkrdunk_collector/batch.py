@@ -56,6 +56,7 @@ from snkrdunk_collector.browser import log_event
 from snkrdunk_collector.collect import MappingOutcome, run_one_mapping_detailed
 from snkrdunk_collector.config import settings
 from snkrdunk_collector.db import SessionLocal
+from snkrdunk_collector.run_lock import SKIPPED_LOCKED, collection_lock
 from snkrdunk_collector.models import CardPrint, Source, SourceCardMapping
 
 SNKRDUNK_SOURCE_NAME = "snkrdunk"
@@ -178,6 +179,8 @@ def run_batch(
     session_factory=SessionLocal,
     mapping_runner=run_one_mapping_detailed,
     mapping_selector=select_eligible_mappings,
+    lock_factory=collection_lock,
+    lock_engine=None,
 ) -> BatchResult:
     """Runs one bounded batch over every eligible mapping (or, if
     `mapping_ids` is given, the subset of the eligible set matching those
@@ -190,6 +193,12 @@ def run_batch(
     for identity/artwork re-verification without ever writing a row; this
     combination is enforced here too, independent of the CLI, because
     run_batch is a public function other callers could reach directly.
+
+    A write-capable run holds the single-run advisory lock (see run_lock) for
+    its whole duration, taken BEFORE any mapping is selected so a refused run
+    cannot stamp, fetch or write anything. A validate-only run is not locked -
+    it persists nothing. See run_lock for why the lock lives on its own
+    connection rather than on this session.
 
     `limit` defaults to settings.BATCH_MAX_MAPPINGS_PER_RUN, but ONLY for an
     unscoped run. A caller that named its own mapping ids has already stated
@@ -205,11 +214,87 @@ def run_batch(
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
 
-    session = session_factory()
+    # The lock belongs to the same database this run writes to, so it is
+    # derived from the work session's own bind rather than a module-level
+    # engine - a collector pointed at another database must contend there,
+    # not here. Constructing a Session opens no connection, so this costs
+    # nothing when the run is about to be refused.
+    probe_session = session_factory()
+    try:
+        resolved_engine = lock_engine if lock_engine is not None else probe_session.get_bind()
+    finally:
+        probe_session.close()
+
+    # Taken BEFORE anything else touches the database. A refused run must not
+    # select mappings, stamp attempts, fetch listings or write rows, so there
+    # is nothing to undo - it simply never starts.
+    with lock_factory(resolved_engine, enabled=not validate_only) as lock:
+        if not lock.acquired:
+            finished_at = datetime.now(timezone.utc)
+            log_event(
+                "batch_skipped_locked",
+                batch_run_id=batch_run_id,
+                reason=lock.reason or SKIPPED_LOCKED,
+                detail=(
+                    "another write-capable SNKRDUNK collection run holds the lock; "
+                    "no mapping was selected, stamped, fetched or written"
+                ),
+            )
+            log_event(
+                "batch_complete",
+                batch_run_id=batch_run_id,
+                status="skipped_locked",
+                exit_code=0,
+                mappings_selected=0,
+                mappings_attempted=0,
+                mappings_written=0,
+                validate_only=validate_only,
+                stopped_reason=lock.reason or SKIPPED_LOCKED,
+                finished_at=finished_at.isoformat(),
+            )
+            return BatchResult(
+                batch_run_id=batch_run_id,
+                status="skipped_locked",
+                exit_code=0,
+                started_at=started_at.isoformat(),
+                finished_at=finished_at.isoformat(),
+                mappings_selected=[],
+                results=[],
+                stopped_reason=lock.reason or SKIPPED_LOCKED,
+            )
+        return _run_batch_locked(
+            batch_run_id=batch_run_id,
+            started_at=started_at,
+            effective_limit=effective_limit,
+            mapping_ids=mapping_ids,
+            validate_only=validate_only,
+            require_approved=require_approved,
+            session_factory=session_factory,
+            mapping_runner=mapping_runner,
+            mapping_selector=mapping_selector,
+        )
+
+
+def _run_batch_locked(
+    *,
+    batch_run_id: str,
+    started_at: datetime,
+    effective_limit: int | None,
+    mapping_ids: list[int] | None,
+    validate_only: bool,
+    require_approved: bool,
+    session_factory,
+    mapping_runner,
+    mapping_selector,
+) -> BatchResult:
+    """The batch body, run only once the single-run lock is held (or the run
+    is validate-only and needs none). Split out so the lock's scope is
+    literally the whole of it."""
     results: list[MappingOutcome] = []
     stopped_reason: str | None = None
     selected_ids: list[int] = []
 
+    session = session_factory()
     try:
         eligible = mapping_selector(
             session,
