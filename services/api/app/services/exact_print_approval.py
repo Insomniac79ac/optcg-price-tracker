@@ -100,6 +100,35 @@ REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING = "multiple_mappings_for_listing"
 # A person rejected this listing. An approval that silently overwrote that
 # decision would erase the only record that it was ever made.
 REFUSAL_MAPPING_WAS_REJECTED = "existing_mapping_was_rejected"
+# An existing mapping for this listing already names a DIFFERENT print. The
+# listing cannot have priced two printings, so one of the two claims is wrong
+# and an approval must not silently repoint the row.
+REFUSAL_MAPPING_NAMES_ANOTHER_PRINT = "existing_mapping_names_another_print"
+
+# --- discovery provenance (Yuyu-Tei candidates) -------------------------------
+# These four are about whether the CANDIDATE may be approved at all, and they
+# run before the exact-print gate rather than inside it: a candidate the
+# catalogue never resolved to a single print, or one produced by an
+# enumeration that cannot be trusted, is not a print question. They live here
+# with the others so there is exactly one refusal vocabulary and one
+# refusal-code -> HTTP-status mapping (see app.api._mapping_approval).
+#
+# The candidate's own status is not `print_matched`. family_matched,
+# unmatched and identity_conflict each mean the code did not resolve to one
+# printing, and approving any of them would assert the identity that the
+# classification explicitly declined to assert.
+REFUSAL_CANDIDATE_NOT_PRINT_MATCHED = "candidate_not_print_matched"
+# The discovery run that produced this candidate did not finish. Its counts
+# are partial by definition, so nothing measured in it is a complete statement
+# about the source.
+REFUSAL_DISCOVERY_RUN_INCOMPLETE = "discovery_run_incomplete"
+# A later completed enumeration of the same set slug exists, so this candidate
+# is a stale reading. The current listing may have grown a sibling product for
+# the same code, which is exactly what would demote it from print_matched.
+REFUSAL_CANDIDATE_SUPERSEDED = "candidate_superseded_by_newer_run"
+# The slug's enumeration was truncated by the product or page cap, so the
+# source-side "exactly one product with this code" is a floor, not a total.
+REFUSAL_SOURCE_LISTING_TRUNCATED = "source_listing_truncated"
 
 # Refusals that mean "a human needs to look at this", as opposed to "the
 # request was malformed". Callers map these onto review_status='needs_review'.
@@ -112,6 +141,15 @@ NEEDS_REVIEW_REFUSALS = frozenset(
         REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
         REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
         REFUSAL_MAPPING_WAS_REJECTED,
+        REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
+        # All four discovery-provenance refusals are reviewable rather than
+        # malformed: the request named a real candidate and a real print, and
+        # what is missing is evidence a person can go and re-establish (by
+        # re-running discovery, or by reading why the classification refused).
+        REFUSAL_CANDIDATE_NOT_PRINT_MATCHED,
+        REFUSAL_DISCOVERY_RUN_INCOMPLETE,
+        REFUSAL_CANDIDATE_SUPERSEDED,
+        REFUSAL_SOURCE_LISTING_TRUNCATED,
     }
 )
 
@@ -192,6 +230,40 @@ class SourceEvidence:
             rarity=candidate.detected_rarity,
             title=candidate.title,
             product_label=label or None,
+        )
+
+    @classmethod
+    def from_yuyutei_candidate(cls, candidate) -> "SourceEvidence":
+        """The Yuyu-Tei candidate row, read as evidence. Fetches nothing.
+
+        THREE FIELDS ARE DELIBERATELY LEFT ABSENT, and absence here is a
+        statement, not an omission:
+
+          * `set_code` - a Yuyu-Tei listing row names no Atlas release
+            product. Its `set_slug` is the RETAILER's category, which is not
+            the same fact: op01 cross-links products from op09-op17, and
+            discovery filters those out precisely because the category a
+            product is listed under does not establish which product it
+            shipped in. Passing set_slug as set_code would narrow the sibling
+            set on a retailer's shelf label.
+          * `product_label` - nothing in the row names a product, so there is
+            no label to fail to resolve. This is case A ("no label narrows
+            nothing"), never `has_unresolved_product`.
+          * `variant` - the (パラレル) annotation in the JP name distinguishes
+            Yuyu-Tei's own products from each other; it is not an Atlas
+            `official_asset_variant` token and mapping one onto the other
+            would be the inference the candidate classification already
+            refused to make.
+
+        `rarity` and `title` are carried for the audit trail only - neither is
+        a discriminator in `resolve_exact_print`.
+        """
+        return cls(
+            source_name="yuyutei",
+            source_url=candidate.source_url,
+            card_code=candidate.detected_card_code,
+            rarity=candidate.detected_rarity,
+            title=candidate.name_jp,
         )
 
 

@@ -4030,3 +4030,91 @@ class ApprovalContextOut(BaseModel):
     # pre-select, never to auto-approve.
     resolvable_card_print_id: int | None
     ambiguity_reason: str | None
+
+
+class YuyuteiMatchedPrintOut(BaseModel):
+    """The printing a print_matched candidate names, as the reviewer needs to
+    see it: enough to tell WHICH printing this is (code, product, variant,
+    treatment) and whether it is still priceable (active + verified). Not
+    CardPrintSiblingOut, which omits the product and the code and exists for a
+    different screen."""
+
+    card_print_id: int
+    card_code: str | None
+    treatment: str | None
+    language: str
+    release_product_code: str | None
+    official_asset_variant: str | None
+    verification_status: str
+    is_active: bool
+    image_url: str | None
+
+
+class YuyuteiCandidateOut(BaseModel):
+    """One Yuyu-Tei discovery candidate, as the admin review screen reads it.
+
+    `approved` and `mapping_id` are DERIVED, not stored: the candidate table
+    has no approval column and deliberately does not grow one - its
+    `match_status` vocabulary is catalogue cardinality, not review state, so
+    approval is the existence of a mapping for the listing. See
+    app.services.yuyutei_candidate_approval.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    discovery_run_id: int | None
+    set_slug: str
+    product_id: str
+    source_url: str
+    detected_card_code: str | None
+    detected_rarity: str | None
+    name_jp: str | None
+    image_url: str | None
+    price_jpy: int | None
+    availability: str | None
+    match_status: str
+    matched_card_print_id: int | None
+    match_explanation_json: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    # Derived, never columns.
+    approved: bool = False
+    mapping_id: int | None = None
+    matched_print: YuyuteiMatchedPrintOut | None = None
+
+
+class YuyuteiCandidateListOut(BaseModel):
+    items: list[YuyuteiCandidateOut]
+    total: int
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
+class YuyuteiApproveIn(BaseModel):
+    """The approval request carries NO print id, unlike ApproveMatchIn.
+
+    The printing is not the operator's to choose here: discovery wrote
+    `matched_card_print_id` only where the card code resolved to exactly one
+    active print, and a DB check constraint makes any other value
+    unrepresentable. Accepting a print id from the request would open a way to
+    approve a printing the classification never established. The decision
+    being recorded is *whether* to approve, not *what* to approve onto.
+    """
+
+    review_notes: str | None = None
+
+
+class YuyuteiApprovalOut(BaseModel):
+    candidate: YuyuteiCandidateOut
+    mapping_id: int
+    card_print_id: int
+    source_card_id: str
+    source_url: str
+    # False on a repeat approval of a listing that already had a mapping - the
+    # difference between a new priced listing and a no-op.
+    mapping_created: bool
+    review_notes: str | None
+    evidence_used: list[str]

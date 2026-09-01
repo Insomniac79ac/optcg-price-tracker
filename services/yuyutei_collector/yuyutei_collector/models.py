@@ -66,12 +66,42 @@ class CardPrint(Base):
 
 
 class SourceCardMapping(Base):
+    """Mirror of app.models.source_card_mapping - same physical table.
+
+    PRINT-AUTHORITATIVE MAPPINGS CARRY NO LEGACY CARD. `card_id` is nullable
+    in the API-owned schema (since c9f31e2a7d04) and an approval that names an
+    exact printing leaves it NULL: `card_prints` has no link to `cards`, and
+    the legacy table holds 25 rows against 4,316 prints, so for almost every
+    listing there is no legacy row to name. This mirror declared it NOT NULL,
+    which meant this service's own tests could not represent the very shape
+    the Yuyu-Tei approval path now creates - a fidelity gap, not a schema
+    disagreement: the mirror emits no DDL against the real database.
+    """
+
     __tablename__ = "source_card_mappings"
+    __table_args__ = (
+        # The parent key PriceObservation's composite FK below points at.
+        # Without it that FK has no unique target - invalid DDL on Postgres,
+        # and silently unenforced on the SQLite this mirror is actually
+        # created against, which is how the divergence stayed invisible.
+        # card_id is deliberately NOT part of it, exactly as in the API model.
+        UniqueConstraint(
+            "id", "card_print_id", "source_id",
+            name="uq_source_card_mappings_print_lineage_identity",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"))
+    # Nullable, matching the real column. See the class docstring.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True
+    )
     source_id: Mapped[int] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
-    card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # ON DELETE RESTRICT in the real schema: a print that something is priced
+    # against cannot be deleted out from under the observation.
+    card_print_id: Mapped[int | None] = mapped_column(
+        ForeignKey("card_prints.id", ondelete="RESTRICT"), nullable=True
+    )
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean)
@@ -92,23 +122,44 @@ class RawSnapshot(Base):
 
 
 class PriceObservation(Base):
+    """Mirror of app.models.price_observation - same physical table."""
+
     __tablename__ = "price_observations"
     __table_args__ = (
+        # THREE COLUMNS, NOT FOUR. This mirror used to include card_id in the
+        # composite key, which the API model excludes on purpose: Postgres FKs
+        # default to MATCH SIMPLE, so a nullable column in the key switches the
+        # whole check OFF for any row leaving it NULL - precisely the
+        # print-authoritative rows the constraint exists to police. The wrong
+        # arity also named a constraint that does not exist in the real
+        # database.
         ForeignKeyConstraint(
-            ["source_card_mapping_id", "card_print_id", "card_id", "source_id"],
+            ["source_card_mapping_id", "card_print_id", "source_id"],
             [
                 "source_card_mappings.id",
                 "source_card_mappings.card_print_id",
-                "source_card_mappings.card_id",
                 "source_card_mappings.source_id",
             ],
             ondelete="RESTRICT",
-            name="fk_price_observations_mapping_print_card_source",
+            name="fk_price_observations_mapping_print_source",
+        ),
+        # Legacy observations carry neither lineage field; print-linked ones
+        # must carry both together, never just one. Restated here so this
+        # service's tests exercise the real invariant its writer must satisfy.
+        CheckConstraint(
+            "(source_card_mapping_id IS NULL AND card_print_id IS NULL) OR "
+            "(source_card_mapping_id IS NOT NULL AND card_print_id IS NOT NULL)",
+            name="ck_price_observations_lineage_paired",
         ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"))
+    # Nullable, matching the real column: writer.py copies it straight from
+    # the mapping (`card_id=mapping.card_id`), so a print-authoritative
+    # mapping produces a NULL here and this mirror must be able to hold it.
+    card_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cards.id", ondelete="CASCADE"), nullable=True
+    )
     source_id: Mapped[int] = mapped_column(ForeignKey("sources.id", ondelete="CASCADE"))
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     price_type: Mapped[str] = mapped_column(String(32))

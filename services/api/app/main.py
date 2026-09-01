@@ -45,6 +45,7 @@ from app.api.refresh_runs import router as refresh_runs_router
 from app.api.saved_views import router as saved_views_router
 from app.api.search import router as search_router
 from app.api.snkrdunk_candidates import router as snkrdunk_candidates_router
+from app.api.yuyutei_candidates import router as yuyutei_candidates_router
 from app.api.source_mappings import router as source_mappings_router
 from app.api.system_check import router as system_check_router
 from app.api.version import router as version_router
@@ -197,6 +198,7 @@ app.include_router(admin_cards_router)
 app.include_router(admin_card_merge_router)
 app.include_router(admin_catalog_coverage_router)
 app.include_router(admin_snkrdunk_matching_router)
+app.include_router(yuyutei_candidates_router)
 app.include_router(admin_data_retention_router)
 app.include_router(admin_db_backups_router)
 app.include_router(admin_db_index_audit_router)
