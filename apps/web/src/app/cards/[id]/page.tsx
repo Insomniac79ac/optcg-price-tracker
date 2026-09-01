@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -9,22 +8,19 @@ import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { CollectionItemTagsCell } from "@/components/CollectionItemTagsCell";
 import { FormField } from "@/components/FormField";
-import { PriceTypeBadge } from "@/components/PriceTypeBadge";
 import { SourceBadge } from "@/components/SourceBadge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { CardActivityPanel } from "@/components/ui/CardActivityPanel";
 import { CardIdentityBlock } from "@/components/ui/CardIdentityBlock";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
-import { CardPricePanel, type PriceLine } from "@/components/ui/CardPricePanel";
-import { DataTableShell } from "@/components/ui/DataTableShell";
+import {
+  CardPrintingChooser,
+  type PrintingChooserStatus,
+} from "@/components/ui/CardPrintingChooser";
 import { GradingSummaryPanel } from "@/components/ui/GradingSummaryPanel";
-import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { OwnershipSummaryPanel } from "@/components/ui/OwnershipSummaryPanel";
-import { SourceEvidenceBadge } from "@/components/ui/SourceEvidenceBadge";
-import { accentForVariant } from "@/components/ui/VariantBadge";
 import { WishlistSummaryPanel } from "@/components/ui/WishlistSummaryPanel";
-import { StockStatusBadge } from "@/components/StockStatusBadge";
 import {
   COLLECTION_STATUS_OPTIONS,
   WISHLIST_PRIORITIES,
@@ -35,7 +31,6 @@ import {
   type CollectorNote,
   type CollectorTag,
   type PortfolioValuationItem,
-  type PriceObservation,
   type SourceCardMapping,
   type ValuationMode,
   type WishlistItem,
@@ -45,116 +40,36 @@ import {
   createWishlistItem,
   fetchAdminSourceMappings,
   fetchCard,
-  fetchCardPrices,
   fetchCollectionItems,
   fetchCollectionValuation,
   fetchCollectorActivity,
-  fetchCardMarketIndex,
   fetchCollectorNotes,
   fetchCollectorTags,
   fetchWishlistItems,
   unassignCardTag,
-  type MarketIndex,
 } from "@/lib/api";
-import { cardDisplayName, formatDate, formatDateTime, formatJpy } from "@/lib/format";
-
-// Dynamically imported (recharts is a sizeable chunk) so pages that never
-// render a price chart - most of this app - don't pay for it. ssr: false
-// sidesteps recharts' well-known SSR/hydration mismatch (it measures its
-// container via ResizeObserver, which needs a real browser).
-const PriceChart = dynamic(
-  () => import("@/components/PriceChart").then((mod) => mod.PriceChart),
-  { ssr: false, loading: () => <LoadingState>Loading chart…</LoadingState> },
-);
+import { formatDate } from "@/lib/format";
+import {
+  fetchPrintCatalogue,
+  resolveCanonicalPrintIdentity,
+  toPrintUiModel,
+  type CanonicalPrintIdentity,
+  type PrintUiModel,
+} from "@/lib/prints";
 
 type Status = "loading" | "error" | "ready";
-
-interface KeyPriceLine {
-  label: string;
-  source: string;
-  priceType: string;
-}
-
-// Labels spell out what each source price actually is (design brief Phase
-// 9 - "do not present Yuyu-Tei buy as the card's primary value" / "do not
-// present SNKRDUNK floor as a completed sale"): these are supporting detail
-// beneath the Market Index, not the Market Index's own inputs restated.
-// referenceType matches app.services.market_index's reference_type strings,
-// used to look up the matching MarketIndexSourceValue for its evidence
-// badge (see keyPriceLines below).
-const KEY_PRICE_LINES: (KeyPriceLine & { referenceType: string; auxiliary?: boolean })[] = [
-  { label: "Yuyu-Tei sell", source: "yuyutei", priceType: "sell", referenceType: "retail_sell" },
-  {
-    label: "Yuyu-Tei buy (dealer buy / liquidity)",
-    source: "yuyutei",
-    priceType: "buy",
-    referenceType: "dealer_buy",
-    auxiliary: true,
-  },
-  {
-    label: "SNKRDUNK sold (reference)",
-    source: "snkrdunk",
-    priceType: "sold",
-    referenceType: "transaction_median",
-  },
-  {
-    label: "SNKRDUNK floor (listing, not a sale)",
-    source: "snkrdunk",
-    priceType: "floor",
-    referenceType: "listing_floor",
-  },
-];
-
-function keyPriceLines(
-  prices: PriceObservation[],
-  marketIndex: MarketIndex | null,
-): PriceLine[] {
-  return KEY_PRICE_LINES.map((line) => {
-    const observation = latestFor(prices, line.source, line.priceType);
-    const sourceValues = line.auxiliary
-      ? marketIndex?.auxiliary_values
-      : marketIndex?.source_values;
-    const sourceValue = sourceValues?.find(
-      (v) => v.source === line.source && v.reference_type === line.referenceType,
-    );
-
-    return {
-      label: line.label,
-      source: line.source,
-      priceType: line.priceType,
-      valueJpy: observation?.price_jpy ?? null,
-      observedAt: observation?.observed_at ?? null,
-      note: sourceValue ? <SourceEvidenceBadge value={sourceValue} /> : undefined,
-    };
-  });
-}
-
-function latestFor(
-  prices: PriceObservation[],
-  source: string,
-  priceType: string,
-): PriceObservation | null {
-  const matches = prices.filter(
-    (p) => p.source === source && p.price_type === priceType,
-  );
-  if (matches.length === 0) return null;
-  return matches.reduce((latest, p) =>
-    new Date(p.observed_at).getTime() > new Date(latest.observed_at).getTime()
-      ? p
-      : latest,
-  );
-}
 
 export default function CardDetailPage() {
   const params = useParams<{ id: string }>();
   const cardId = params.id;
 
   const [card, setCard] = useState<Card | null>(null);
-  const [prices, setPrices] = useState<PriceObservation[]>([]);
   const [status, setStatus] = useState<Status>("loading");
 
-  const [marketIndex, setMarketIndex] = useState<MarketIndex | null>(null);
-  const [marketIndexStatus, setMarketIndexStatus] = useState<Status>("loading");
+  const [prints, setPrints] = useState<PrintUiModel[]>([]);
+  const [canonicalIdentity, setCanonicalIdentity] =
+    useState<CanonicalPrintIdentity | null>(null);
+  const [printsStatus, setPrintsStatus] = useState<PrintingChooserStatus>("loading");
 
   const [collectionItems, setCollectionItems] = useState<CollectionItem[]>([]);
   const [collectionStatus, setCollectionStatus] = useState<Status>("loading");
@@ -165,14 +80,62 @@ export default function CardDetailPage() {
   const [allTags, setAllTags] = useState<CollectorTag[]>([]);
   const [tagError, setTagError] = useState<string | null>(null);
 
+  /** This card's printings, from the public print catalogue.
+   *
+   * WHY BY CARD CODE. `/cards/{id}` is a LEGACY `cards` row, and
+   * `card_prints.canonical_card_id` points at `canonical_cards`, not at that
+   * table - joining the two is the known way to get silent garbage (see
+   * lib/prints.ts). The API exposes no legacy-id -> canonical-id link and
+   * `/prints` takes no canonical_card_id filter, so the card's own published
+   * `card_code` is the identifier both sides genuinely share.
+   *
+   * `q` is a substring ILIKE over canonical name_en/name_jp/card_code, so the
+   * exact-code filter below is not decoration: it is what turns a search
+   * result into an identity match, and it is the only thing keeping another
+   * card's printing off this page. `card_code` is unique across
+   * `canonical_cards`, so an exact match resolves to exactly one card.
+   *
+   * One request, no pagination: the largest card in the corpus has 9 active
+   * printings against a limit of 100.
+   */
+  useEffect(() => {
+    if (!card?.card_code) return;
+    const cardCode = card.card_code;
+    let cancelled = false;
+    setPrintsStatus("loading");
+    setCanonicalIdentity(null);
+
+    fetchPrintCatalogue({ q: cardCode, limit: 100 })
+      .then((result) => {
+        if (cancelled) return;
+        // PRINT_CATALOGUE_EXACT_CODE_NOTE: `q` is a substring search, so this
+        // exact-code filter is what turns a search result into an identity
+        // match. Everything below - the printings AND the name this page
+        // shows - is derived from these records only.
+        const exact = result.items.filter((item) => item.card_code === cardCode);
+        setPrints(exact.map(toPrintUiModel));
+        setCanonicalIdentity(resolveCanonicalPrintIdentity(exact));
+        setPrintsStatus("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPrints([]);
+        setCanonicalIdentity(null);
+        setPrintsStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [card?.card_code]);
+
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([fetchCard(cardId), fetchCardPrices(cardId)])
-      .then(([cardData, priceData]) => {
+    fetchCard(cardId)
+      .then((cardData) => {
         if (cancelled) return;
         setCard(cardData);
-        setPrices(priceData);
         setStatus("ready");
       })
       .catch(() => {
@@ -180,23 +143,6 @@ export default function CardDetailPage() {
         setStatus("error");
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [cardId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setMarketIndexStatus("loading");
-    fetchCardMarketIndex(cardId)
-      .then((data) => {
-        if (cancelled) return;
-        setMarketIndex(data);
-        setMarketIndexStatus("ready");
-      })
-      .catch(() => {
-        if (!cancelled) setMarketIndexStatus("error");
-      });
     return () => {
       cancelled = true;
     };
@@ -301,12 +247,16 @@ export default function CardDetailPage() {
 
   const gradingSubmissions = collectionItems.flatMap((item) => item.grading_submissions);
 
-  const latestFirst = prices
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime(),
-    );
+  /** The only name this page may show for the card.
+   *
+   * The legacy `cards` row is NOT the authority: 10 of 25 staging rows carry a
+   * `card_code` whose canonical card is a different character, so rendering
+   * `card.name_en` here would label a set of Roronoa Zoro printings "Monkey D.
+   * Luffy". Identity therefore comes from the canonical print records for this
+   * exact code, and falls back to the code alone - never to the legacy name -
+   * whenever those records are missing, still loading, or disagree with one
+   * another. The code is the one thing both sides agree on. */
+  const displayIdentity = canonicalIdentity?.name ?? card?.card_code ?? "";
 
   return (
     <div className="min-h-screen">
@@ -337,32 +287,50 @@ export default function CardDetailPage() {
           // mobile: image/identity, then price source, then ownership panels;
           // admin panel stays lowest-priority on every breakpoint).
           <div className="flex flex-col gap-6">
-            {/* 1. Hero - image + identity + compact metadata grid + effect/trigger text */}
+            {/* 1. Hero - image + identity + compact metadata grid + effect/trigger text.
+                NO rarity and NO variant: this page now stands for a FAMILY of
+                printings, and those printings differ in exactly those two
+                dimensions (OP04-044 spans Super Rare base, Alt Art, Reprint
+                and an SP Card). A single legacy chip up here would describe
+                one of them at most, and would contradict the tiles below - so
+                rarity and variant are stated per printing, on the printing,
+                and nowhere else. Nothing is elected to represent the set. */}
             <div className="panel flex flex-col gap-4 p-4 sm:flex-row">
               <CardImageFrame
                 imageUrl={card.image_url}
-                alt={cardDisplayName(card)}
+                alt={displayIdentity}
                 cardCode={card.card_code}
-                rarity={card.rarity}
                 setCode={card.set_code}
-                accent={accentForVariant(card.variant)}
                 size="lg"
               />
               <div className="flex-1 space-y-3">
                 <CardIdentityBlock
                   cardCode={card.card_code}
-                  name={cardDisplayName(card)}
-                  nameSecondary={card.name_en && card.name_jp ? card.name_jp : null}
-                  rarity={card.rarity}
-                  variant={card.variant}
+                  name={displayIdentity}
+                  // The legacy Japanese name is suppressed for the same reason
+                  // the English one is: it is the same untrusted row.
+                  nameSecondary={null}
                   language={card.language}
                   setCode={card.set_code}
                   asHeading
                 />
-                <MarketIndexSection status={marketIndexStatus} index={marketIndex} />
                 <CardMetadataGrid card={card} />
                 <CardEffectText card={card} />
               </div>
+            </div>
+
+            {/* The page's purpose: pick the exact printing. Shares order-1
+                with the price panel below and precedes it in the DOM, so on
+                mobile a collector reaches the printings before any card-level
+                price - which is card-level precisely because it cannot know
+                which printing they meant. */}
+            <div className="order-1 lg:order-none">
+              <CardPrintingChooser
+                status={printsStatus}
+                prints={prints}
+                cardCode={card.card_code}
+                canonicalName={canonicalIdentity?.name ?? null}
+              />
             </div>
 
             <div className="order-3 rounded-panel border border-border-default bg-bg-surface p-4 lg:order-none">
@@ -423,13 +391,6 @@ export default function CardDetailPage() {
               <GradingSummaryPanel submissions={gradingSubmissions} />
             </div>
 
-            {/* 3. Price source panel - highest-priority data panel on mobile,
-                right after the hero (design brief - "price source panel
-                next"), same position as always on desktop. */}
-            <div className="order-1 lg:order-none">
-              <CardPricePanel lines={keyPriceLines(prices, marketIndex)} />
-            </div>
-
             {/* 5. Notes/activity */}
             <div className="order-5 lg:order-none">
               <CardActivityPanel
@@ -449,62 +410,6 @@ export default function CardDetailPage() {
               </div>
             )}
 
-            <div className="order-7 lg:order-none">
-              <h2 className="mb-2 text-sm font-semibold text-text-primary">
-                Price history
-              </h2>
-              <PriceChart observations={prices} />
-            </div>
-
-            <div className="order-8 lg:order-none">
-              <h2 className="mb-2 text-sm font-semibold text-text-primary">
-                Price observations
-              </h2>
-              <DataTableShell
-                isEmpty={latestFirst.length === 0}
-                emptyLabel="No price observations yet."
-                minWidth={640}
-              >
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Observed at</th>
-                      <th>Source</th>
-                      <th>Type</th>
-                      <th className="text-right">Price</th>
-                      <th>Condition</th>
-                      <th>Stock</th>
-                      <th className="text-right">Listings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {latestFirst.map((obs) => (
-                      <tr key={obs.id}>
-                        <td className="mono tabular text-text-secondary">
-                          {formatDateTime(obs.observed_at)}
-                        </td>
-                        <td>
-                          <SourceBadge source={obs.source} />
-                        </td>
-                        <td>
-                          <PriceTypeBadge priceType={obs.price_type} />
-                        </td>
-                        <td className="mono tabular text-right text-text-primary">
-                          {formatJpy(obs.price_jpy)}
-                        </td>
-                        <td className="text-text-secondary">{obs.condition_label ?? "—"}</td>
-                        <td>
-                          <StockStatusBadge status={obs.stock_status} />
-                        </td>
-                        <td className="mono tabular text-right text-text-secondary">
-                          {obs.listing_count ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </DataTableShell>
-            </div>
           </div>
         )}
       </main>
@@ -901,31 +806,6 @@ const META_FIELDS: { key: keyof Card; label: string }[] = [
  * market prices - it says so in collector language rather than naming the
  * backend's own scraping-mode flag, which is an implementation detail no
  * visitor can act on. */
-function MarketIndexSection({
-  status,
-  index,
-}: {
-  status: Status;
-  index: MarketIndex | null;
-}) {
-  if (status === "loading") {
-    return (
-      <div className="h-12 w-40 animate-pulse rounded-control bg-bg-elevated motion-reduce:animate-none" />
-    );
-  }
-  if (status === "error" || !index) {
-    return <p className="text-xs text-text-muted">Market Index unavailable right now.</p>;
-  }
-  return (
-    <div>
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-text-secondary">
-        Market Index
-      </div>
-      <MarketIndexValue index={index} size="lg" />
-    </div>
-  );
-}
-
 /** Compact metadata grid (cost/power/counter/attribute/color/type/artist/
  * character/release date) - only rendered fields the card actually has
  * (catalog enrichment is sparse; most existing rows have none of this),

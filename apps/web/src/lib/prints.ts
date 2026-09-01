@@ -614,3 +614,64 @@ export function printsNeedingArtOrdinal(prints: PrintUiModel[]): Set<number> {
   }
   return needing;
 }
+
+/** The canonical identity behind a set of exact-code print records, or null.
+ *
+ * WHY THIS EXISTS. The legacy `cards` table disagrees with the canonical print
+ * catalogue: as of 2026-09-01, 10 of 25 staging `cards` rows carry a
+ * `card_code` whose canonical card is a DIFFERENT character (legacy OP01-001
+ * is named "Monkey D. Luffy"; canonically OP01-001 is Roronoa Zoro). Their
+ * `card_code`, rarity and variant agree with canonical - only `name_en` is
+ * wrong - so the code is a sound join key and the legacy NAME is the thing
+ * that must never be shown as the identity of a set of printings.
+ *
+ * FAIL CLOSED, DELIBERATELY. A name is returned only when EVERY record agrees
+ * on one canonical card AND one name. Anything else - no records, two
+ * canonical ids, two spellings - returns null, and the caller shows the card
+ * code alone. The first record is never treated as the authority, and nothing
+ * here does fuzzy matching, normalisation or majority voting: an inconsistent
+ * corpus is a fact to report, not a tie to break.
+ *
+ * `items` must already be filtered to an exact `card_code` (see
+ * PRINT_CATALOGUE_EXACT_CODE_NOTE) - this function does not filter, because a
+ * disagreement is exactly what it is looking for.
+ */
+export interface CanonicalPrintIdentity {
+  canonicalCardId: number;
+  /** English name where the catalogue has one, else the Japanese name. */
+  name: string;
+}
+
+export function resolveCanonicalPrintIdentity(
+  items: PrintCatalogueItem[],
+): CanonicalPrintIdentity | null {
+  if (items.length === 0) return null;
+
+  const canonicalIds = new Set(items.map((item) => item.canonical_card_id));
+  if (canonicalIds.size !== 1) return null;
+
+  // Compared as the catalogue stores them - no trimming, case folding or
+  // punctuation normalisation, so "Portgas D. Ace" and "Portgas.D.Ace" are
+  // treated as the disagreement they are rather than quietly merged.
+  const names = new Set(items.map((item) => item.name_en ?? item.name_jp ?? ""));
+  if (names.size !== 1) return null;
+
+  const [name] = [...names];
+  if (name === "") return null;
+
+  return { canonicalCardId: [...canonicalIds][0], name };
+}
+
+/** Why a caller that searches the print catalogue by card code must still
+ * filter the results by an exact `card_code`.
+ *
+ * `GET /prints?q=` is a substring ILIKE over the canonical `name_en`,
+ * `name_jp` AND `card_code` (see app.services.print_catalogue._apply_filters),
+ * so a code query can return another card's printing - by code prefix, or by a
+ * name that happens to contain the string. The exact-code filter is what turns
+ * a search result into an identity match; it is load-bearing, not defensive
+ * decoration, and it is the only thing keeping a foreign printing off a card's
+ * page. `card_code` is unique across `canonical_cards`, so an exact match
+ * resolves to exactly one card. */
+export const PRINT_CATALOGUE_EXACT_CODE_NOTE =
+  "q is a substring search; results must be filtered to an exact card_code.";
