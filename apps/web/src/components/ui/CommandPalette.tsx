@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchSavedViews, fetchSearch, type SavedView } from "@/lib/api";
+import { fetchSavedViews, type SavedView } from "@/lib/api";
 import { COMMAND_REGISTRY, searchCommands, visibleCommands, type Command } from "@/lib/commandRegistry";
 import {
   MIN_QUERY_LENGTH,
   PUBLIC_CARD_SEARCH_LIMIT,
-  searchPublicPrints,
+  searchPublicCardFamilies,
   type PaletteCardResult,
 } from "@/lib/publicCardSearch";
 import { getRecentWorkflows, recordRecentWorkflow, type RecentWorkflowEntry } from "@/lib/recentWorkflows";
@@ -78,18 +78,33 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const requestId = ++requestIdRef.current;
     setCardStatus("loading");
     const debounceTimer = window.setTimeout(() => {
-      // Signed-out visitors search the public print catalogue - the same
-      // GET /prints the /cards page uses. /api/search stays authenticated.
-      const search = isAuthenticated
-        ? fetchSearch({ q: trimmed, types: ["cards"], limit: PUBLIC_CARD_SEARCH_LIMIT }).then((res) =>
-            res.results.map((result) => ({
-              key: `card-${result.type}-${result.id}`,
-              title: result.title,
-              subtitle: result.subtitle,
-              url: result.url,
-            })),
-          )
-        : searchPublicPrints(trimmed, PUBLIC_CARD_SEARCH_LIMIT);
+      // ONE card search for everybody, signed in or not: the public canonical
+      // catalogue (GET /prints), collapsed to one row per canonical card.
+      //
+      // The authenticated branch used to call /api/search with types:["cards"],
+      // which searches the legacy `cards` table - 25 rows against 2,710
+      // canonical cards, 10 of them naming a different character than their own
+      // card_code resolves to, and 4 codes present twice with conflicting
+      // names. That made a signed-in collector's results both narrower and
+      // wrong: searching "Nami" returned a row titled Nami whose page correctly
+      // reads "Monkey.D.Luffy". Card lookup is catalogue data, identical for
+      // every visitor, so it no longer depends on who is asking.
+      //
+      // WHAT A SIGNED-IN COLLECTOR LOSES, STATED PLAINLY. /api/search ranked
+      // its card results with an ownership bonus and attached
+      // metadata.owned_quantity, so a card you own could sort above one you do
+      // not. That ranking is NOT reproduced here: it is derived from private
+      // collection data, and re-deriving it in the browser would mean fetching
+      // the caller's collection just to order a suggestion list. Ownership-aware
+      // ranking is deferred, not silently reimplemented - what replaces it is
+      // catalogue correctness, which the old path did not have.
+      //
+      // /api/search itself is untouched and still authenticated - it remains
+      // the signed-in command centre over collection, wishlist, grading, notes
+      // and activity, which the /search page still uses. Only this palette's
+      // CARD SUGGESTIONS changed; saved views and command visibility below
+      // still depend on the session exactly as before.
+      const search = searchPublicCardFamilies(trimmed, PUBLIC_CARD_SEARCH_LIMIT);
 
       search
         .then((results) => {
@@ -106,7 +121,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         });
     }, 250);
     return () => window.clearTimeout(debounceTimer);
-  }, [open, query, isAuthenticated]);
+  }, [open, query]);
 
   const filteredCommands = useMemo(
     () => searchCommands(query, { isAuthenticated, isAdmin }),

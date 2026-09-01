@@ -270,43 +270,26 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Saved Views")).toBeInTheDocument();
   });
 
-  it("looks up cards through the authenticated search when signed in", async () => {
+  it("looks up cards through the PUBLIC catalogue even when signed in", async () => {
+    // Card lookup is catalogue data, identical for every visitor. The
+    // authenticated /api/search path searched the legacy `cards` table, whose
+    // rows disagree with the catalogue about which card a code names - a
+    // signed-in collector was getting narrower AND wrong results.
     useSessionMock.mockReturnValue({
       data: { user: { email: "collector@example.com" } },
       status: "authenticated",
     });
-    fetchSearch.mockResolvedValue({
-      ...EMPTY_SEARCH,
-      results: [
-        {
-          type: "cards",
-          id: 1,
-          score: 1,
-          title: "OP01-001 Monkey D. Luffy",
-          subtitle: "Leader",
-          matched_fields: ["card_code"],
-          card_id: 1,
-          card_code: "OP01-001",
-          name_en: "Monkey D. Luffy",
-          name_jp: null,
-          url: "/cards/1",
-          metadata: {},
-        },
-      ],
-    });
-
+    fetchPrintCatalogue.mockResolvedValue(printList([printItem()]));
     render(<CommandPalette open onClose={vi.fn()} />);
     await screen.findByText("Commands");
 
     fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
-      target: { value: "OP01" },
+      target: { value: "kaido" },
     });
 
-    await waitFor(() => expect(fetchSearch).toHaveBeenCalledWith({ q: "OP01", types: ["cards"], limit: 8 }), {
-      timeout: 1000,
-    });
-    await waitFor(() => expect(screen.getByText("OP01-001 Monkey D. Luffy")).toBeInTheDocument());
-    expect(fetchPrintCatalogue).not.toHaveBeenCalled();
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled(), { timeout: 1000 });
+    expect(fetchSearch).not.toHaveBeenCalled();
+    expect(await screen.findByText("Kaido")).toBeInTheDocument();
   });
 
   it("does not call card search for a 1-character query", async () => {
@@ -345,7 +328,7 @@ describe("CommandPalette - public card search (signed out)", () => {
     typeQuery("kaido");
 
     await waitFor(
-      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "kaido", limit: 8 }),
+      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "kaido", limit: 100 }),
       { timeout: 1000 },
     );
     expect(await screen.findByText("Kaido")).toBeInTheDocument();
@@ -357,7 +340,9 @@ describe("CommandPalette - public card search (signed out)", () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await screen.findByText("Commands");
 
-    typeQuery("kaido");
+    fireEvent.change(screen.getByPlaceholderText(/search cards and pages/i), {
+      target: { value: "kaido" },
+    });
 
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled(), { timeout: 1000 });
     expect(fetchSearch).not.toHaveBeenCalled();
@@ -394,15 +379,16 @@ describe("CommandPalette - public card search (signed out)", () => {
     typeQuery("カイドウ");
 
     await waitFor(
-      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "カイドウ", limit: 8 }),
+      () => expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "カイドウ", limit: 100 }),
       { timeout: 1000 },
     );
     expect(await screen.findByText("Kaido")).toBeInTheDocument();
   });
 
-  it("navigates to /prints/{card_print_id}, never a card_id URL", async () => {
-    // canonical_card_id deliberately differs from card_print_id so a mix-up
-    // would be visible rather than coincidentally correct.
+  it("navigates to the canonical family route, never a print or a legacy id", async () => {
+    // A search result stands for a CARD. Sending the collector to one printing
+    // would be choosing for them; the chooser on the family route is where
+    // that choice is made.
     fetchPrintCatalogue.mockResolvedValue(
       printList([printItem({ card_print_id: 13, canonical_card_id: 40 })]),
     );
@@ -412,13 +398,17 @@ describe("CommandPalette - public card search (signed out)", () => {
     typeQuery("kaido");
     fireEvent.click(await screen.findByText("Kaido"));
 
-    expect(push).toHaveBeenCalledWith("/prints/13");
+    expect(push).toHaveBeenCalledWith("/cards/code/OP04-044");
     const pushed = push.mock.calls.map(([route]) => route as string);
-    expect(pushed.some((route) => route.startsWith("/cards/"))).toBe(false);
-    expect(pushed).not.toContain("/prints/40");
+    expect(pushed.some((route) => route.startsWith("/prints/"))).toBe(false);
+    // Never a numeric id from either namespace.
+    expect(pushed.some((route) => /^\/cards\/\d+$/.test(route))).toBe(false);
   });
 
-  it("keeps base and parallel printings of one card distinguishable", async () => {
+  it("H. collapses base and parallel printings of one card into ONE result", async () => {
+    // Previously these were two rows, which made a five-printing card fill the
+    // palette by itself. They are one CARD; telling base from parallel is the
+    // chooser's job on the family route, not the search list's.
     fetchPrintCatalogue.mockResolvedValue(
       printList([
         printItem({ card_print_id: 13, treatment: "parallel" }),
@@ -431,11 +421,9 @@ describe("CommandPalette - public card search (signed out)", () => {
     typeQuery("kaido");
 
     const rows = await screen.findAllByText("Kaido");
-    expect(rows).toHaveLength(2);
-    // The parallel printing names its treatment; the base printing does not,
-    // so the two subtitles differ.
-    expect(screen.getByText(/OP04-044 · OP-04 · parallel/)).toBeInTheDocument();
-    expect(screen.getByText(/^OP04-044 · OP-04$/)).toBeInTheDocument();
+    expect(rows).toHaveLength(1);
+    // The count is what tells the collector a choice is waiting.
+    expect(screen.getByText("OP04-044 · 2 printings")).toBeInTheDocument();
   });
 
   it("shows the truthful empty state when the catalogue genuinely has no match", async () => {
