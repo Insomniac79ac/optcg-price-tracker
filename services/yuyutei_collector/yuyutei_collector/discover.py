@@ -13,7 +13,20 @@ from playwright.sync_api import sync_playwright
 
 from yuyutei_collector.browser import deadline, log_event
 
-CARD_CODE_RE = re.compile(r"\bOP\d{2}-\d{3}\b")
+# Every card-code shape Atlas actually holds, derived from canonical_cards on
+# 2026-09-01 rather than guessed - all 2,710 codes fall into exactly five:
+#
+#   OP##-###   2,033    ST##-###  382    EB##-###  245
+#   PRB##-###     19    P-###      31
+#
+# The previous pattern was OP-only, so an ST, EB, PRB or promo card on a
+# listing page parsed as "no code" and would have been silently dropped from
+# discovery - 677 codes, a quarter of the catalogue.
+#
+# `P-###` is listed last and kept separate because promos carry no two-digit
+# set number; it must not be folded into the ##-### branch. PRB is tried
+# before the P branch so "PRB01-001" can never be read as a promo.
+CARD_CODE_RE = re.compile(r"\b(?:(?:OP|ST|EB|PRB)\d{2}-\d{3}|P-\d{3})\b")
 
 
 def list_category_products(set_slug: str, timeout_s: int = 60) -> list[dict]:
