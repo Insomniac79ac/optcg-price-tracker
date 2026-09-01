@@ -59,9 +59,14 @@ PRODUCT_PATH_RE = re.compile(r"/sell/opc/card/([^/?#]+)/(\d+)")
 # different answer.
 _DENIAL_STATUSES = frozenset({401, 403, 405, 429, 451, 503})
 
-# Hard ceilings. Both are absolute: the probe stops at whichever binds first,
-# so a category with unexpected pagination cannot turn into a large crawl.
-DEFAULT_MAX_PRODUCTS = 200
+# Hard ceilings, both PER SLUG. Every requested slug gets its own product
+# budget rather than drawing on a shared pool, because a shared pool makes the
+# probe's coverage depend on slug ORDER: the first large category eats the
+# budget and every later slug reports zero, which is indistinguishable in the
+# output from a category that genuinely has no products. Per-slug budgets keep
+# each set an independent measurement while still bounding the total crawl at
+# len(slugs) * MAX_PRODUCTS_PER_SLUG.
+DEFAULT_MAX_PRODUCTS_PER_SLUG = 200
 DEFAULT_MAX_PAGES_PER_SLUG = 3
 
 
@@ -224,13 +229,13 @@ def probe_slug(
 def run_probe(
     slugs: list[str],
     *,
-    max_products: int = DEFAULT_MAX_PRODUCTS,
+    max_products_per_slug: int = DEFAULT_MAX_PRODUCTS_PER_SLUG,
     max_pages_per_slug: int = DEFAULT_MAX_PAGES_PER_SLUG,
     timeout_s: int = 90,
 ) -> dict[str, Any]:
     report: dict[str, Any] = {
         "slugs_requested": slugs,
-        "max_products": max_products,
+        "max_products_per_slug": max_products_per_slug,
         "max_pages_per_slug": max_pages_per_slug,
         "request_delay_ms": settings.YUYUTEI_REQUEST_DELAY_MS,
         "sets": [],
@@ -245,9 +250,6 @@ def run_probe(
         page = context.new_page()
         try:
             for slug in slugs:
-                if total >= max_products:
-                    report["stopped_reason"] = "max_products_reached"
-                    break
                 if report["sets"]:
                     time.sleep(settings.YUYUTEI_REQUEST_DELAY_MS / 1000)
                 try:
@@ -255,7 +257,7 @@ def run_probe(
                         page,
                         slug,
                         max_pages=max_pages_per_slug,
-                        remaining_budget=max_products - total,
+                        remaining_budget=max_products_per_slug,
                         timeout_s=timeout_s,
                     )
                 except SourceDenied as exc:
@@ -277,14 +279,16 @@ def run_probe(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Read-only Yuyu-Tei listing probe. Writes nothing.")
     parser.add_argument("--slugs", required=True, help="comma-separated, e.g. op01,op13,eb01")
-    parser.add_argument("--max-products", type=int, default=DEFAULT_MAX_PRODUCTS)
+    parser.add_argument(
+        "--max-products-per-slug", type=int, default=DEFAULT_MAX_PRODUCTS_PER_SLUG
+    )
     parser.add_argument("--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG)
     args = parser.parse_args()
 
     slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
     report = run_probe(
         slugs,
-        max_products=args.max_products,
+        max_products_per_slug=args.max_products_per_slug,
         max_pages_per_slug=args.max_pages_per_slug,
     )
     # A compact summary line per set, then one machine-readable object. Railway

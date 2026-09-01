@@ -8,6 +8,7 @@ probe must stop - never the source's behaviour, which only staging can answer.
 import pytest
 
 from yuyutei_collector.discover import CARD_CODE_RE
+from yuyutei_collector import discovery_probe
 from yuyutei_collector.discovery_probe import (
     PRODUCT_PATH_RE,
     SourceDenied,
@@ -15,6 +16,7 @@ from yuyutei_collector.discovery_probe import (
     _normalize,
     _parse_product,
     probe_slug,
+    run_probe,
 )
 
 
@@ -256,3 +258,167 @@ def test_distinct_codes_and_missing_codes_are_counted_separately():
     assert result["products_discovered"] == 3
     assert result["distinct_card_codes"] == 1  # two products, one code
     assert result["products_without_code"] == 1
+
+
+# --------------------------------------------------------------------------
+# The product budget is PER SLUG
+#
+# A shared pool made coverage depend on slug order: the first big category ate
+# it and every later slug reported zero products - output that is
+# indistinguishable from a category that really is empty. These tests pin the
+# per-slug contract so that regression cannot come back silently.
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def no_delay(monkeypatch):
+    """Skip the inter-request delay. The delay itself is asserted separately by
+    reading settings; sleeping through it here would only slow the suite."""
+    monkeypatch.setattr(discovery_probe.time, "sleep", lambda _s: None)
+
+
+@pytest.fixture
+def fake_playwright(monkeypatch):
+    """Install a FakePage behind run_probe's Playwright bootstrap.
+
+    Returns the page, so a test can inspect exactly which URLs were navigated -
+    the only reliable evidence that a later slug was, or was not, reached.
+    """
+
+    def install(page):
+        class FakeContext:
+            def new_page(self):
+                return page
+
+            def close(self):
+                page.closed = True
+
+        class FakeBrowser:
+            def new_context(self, **kwargs):
+                return FakeContext()
+
+            def close(self):
+                page.browser_closed = True
+
+        class FakePlaywright:
+            chromium = type("C", (), {"launch": staticmethod(lambda **kw: FakeBrowser())})()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        monkeypatch.setattr(discovery_probe, "sync_playwright", lambda: FakePlaywright())
+        return page
+
+    return install
+
+
+def listing(slug):
+    return f"https://yuyu-tei.jp/sell/opc/s/{slug}"
+
+
+def test_a_slug_that_hits_its_cap_does_not_starve_the_next_slug(no_delay, fake_playwright):
+    # The exact failure the shared budget caused: op01 filled the pool and the
+    # remaining slugs were never fetched at all.
+    page = fake_playwright(
+        FakePage(
+            {
+                listing("op01"): {
+                    "anchors": [anchor("op01", str(i), "OP01-001") for i in range(50)],
+                    "pagination": [],
+                },
+                listing("eb01"): {
+                    "anchors": [anchor("eb01", str(i), "EB01-001") for i in range(7)],
+                    "pagination": [],
+                },
+            }
+        )
+    )
+    report = run_probe(["op01", "eb01"], max_products_per_slug=10, max_pages_per_slug=1)
+
+    first, second = report["sets"]
+    assert first["products_discovered"] == 10 and first["budget_exhausted"] is True
+    # The point of the fix: the capped slug did not consume the second slug's
+    # allowance, and the second listing really was fetched.
+    assert second["slug"] == "eb01"
+    assert second["products_discovered"] == 7
+    assert listing("eb01") in page.visited
+    assert report["stopped_reason"] is None
+
+
+def test_each_slug_gets_its_own_cap(no_delay, fake_playwright):
+    # Two slugs, each over the cap: the total is len(slugs) * cap, not cap.
+    fake_playwright(
+        FakePage(
+            {
+                listing("op13"): {
+                    "anchors": [anchor("op13", str(i)) for i in range(30)],
+                    "pagination": [],
+                },
+                listing("eb01"): {
+                    "anchors": [anchor("eb01", str(i)) for i in range(30)],
+                    "pagination": [],
+                },
+            }
+        )
+    )
+    report = run_probe(["op13", "eb01"], max_products_per_slug=5, max_pages_per_slug=1)
+
+    assert [s["products_discovered"] for s in report["sets"]] == [5, 5]
+    assert all(s["budget_exhausted"] for s in report["sets"])
+    assert report["total_products_discovered"] == 10
+
+
+def test_a_denial_still_stops_the_whole_probe_not_just_one_slug(no_delay, fake_playwright):
+    # Per-slug budgets must not turn a denial into a per-slug problem that the
+    # loop shrugs off and carries on past.
+    page = fake_playwright(FakePage({}, status=403))
+    report = run_probe(["op13", "eb01"], max_products_per_slug=200, max_pages_per_slug=3)
+
+    assert report["sets"] == []
+    assert report["stopped_reason"].startswith("source_denied: 403")
+    # One navigation total: the first slug's listing. No retry, and eb01 never
+    # attempted after the source declined.
+    assert page.visited == [listing("op13")]
+
+
+def test_dedupe_is_still_by_series_and_product_id_across_slugs(no_delay, fake_playwright):
+    # Identity is unchanged by the budget fix: duplicates collapse within a
+    # slug, and the same product_id under a different series stays distinct.
+    fake_playwright(
+        FakePage(
+            {
+                listing("op13"): {
+                    "anchors": [
+                        anchor("op13", "77", "OP13-001"),
+                        anchor("op13", "77", "OP13-001"),
+                        anchor("op13", "78", "OP13-002"),
+                    ],
+                    "pagination": [],
+                },
+                listing("eb01"): {
+                    "anchors": [anchor("eb01", "77", "EB01-001")],
+                    "pagination": [],
+                },
+            }
+        )
+    )
+    report = run_probe(["op13", "eb01"], max_products_per_slug=200, max_pages_per_slug=1)
+
+    first, second = report["sets"]
+    assert first["products_discovered"] == 2
+    assert first["duplicate_product_links"] == 1
+    # product_id 77 exists in both categories and is two products, not one.
+    assert second["products_discovered"] == 1
+    assert second["duplicate_product_links"] == 0
+
+
+def test_the_report_records_the_per_slug_budget_it_ran_under(no_delay, fake_playwright):
+    fake_playwright(FakePage({listing("eb01"): {"anchors": [], "pagination": []}}))
+    report = run_probe(["eb01"], max_products_per_slug=42, max_pages_per_slug=1)
+
+    assert report["max_products_per_slug"] == 42
+    assert "max_products" not in report
+
