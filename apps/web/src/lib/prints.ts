@@ -522,6 +522,20 @@ export interface PrintPriceObservation {
   condition_label: string | null;
   listing_count: number | null;
   raw_snapshot_id: number | null;
+  /** Why this stored price may not mean what its number says - the same
+   * vocabulary as `PrintMarketIndexSourceValue.constraint`, decided by
+   * app.services.source_semantics and rendered through @/lib/sourceConstraint.
+   * Optional because an API older than the source-semantics release omits it;
+   * absent and null both read as "nothing to say about this observation". */
+  constraint?: string | null;
+  /** Whether SOURCE SEMANTICS disqualify this observation - NOT whether it
+   * reached the Market Index (staleness and sample minimums live in the
+   * index's own resolvers and are deliberately not applied to history; see
+   * schemas.py PrintPriceObservationOut). Optional for the same
+   * backward-compatibility reason as `constraint`, and absent reads as true:
+   * an API that never classified an observation has not disqualified it. */
+  eligible?: boolean;
+  ineligible_reason?: string | null;
 }
 
 /** One (source, price_type) series' trend inside a print's price history -

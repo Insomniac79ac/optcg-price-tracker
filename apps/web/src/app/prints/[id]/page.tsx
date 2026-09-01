@@ -17,11 +17,17 @@ import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
+import {
+  PrintPriceHistorySection,
+  type PriceHistoryStatus,
+} from "@/components/ui/PrintPriceHistory";
 import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
 import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
+import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
   fetchPrint,
+  fetchPrintPrices,
   sourceDisplayName,
   type PrintDetail,
   type PrintMarketIndex,
@@ -72,10 +78,15 @@ function imageProvenance(print: PrintUiModel): string | null {
  * position.
  *
  * Every value rendered here comes from this print's own `GET /prints/{id}`
- * payload. There is no price history, no trend and no availability in that
- * payload, so there is none on this page - the sections that exist are the
+ * payload, plus `GET /prints/{id}/prices` for the price-history section - both
+ * scoped server-side to this `card_print_id`. The sections that exist are the
  * ones the API can actually fill. Sibling printings are the API's own
  * `siblings` list, never inferred from the catalogue.
+ *
+ * History is fetched separately and deliberately non-blocking: it is
+ * supporting evidence, so the card, its identity and its Market Index render
+ * as soon as the print itself arrives, and a history request that fails simply
+ * leaves that one section out rather than erroring the page.
  */
 export default function PrintDetailPage() {
   const params = useParams<{ id: string }>();
@@ -83,12 +94,18 @@ export default function PrintDetailPage() {
 
   const [print, setPrint] = useState<PrintUiModel | null>(null);
   const [detail, setDetail] = useState<PrintDetail | null>(null);
+  const [history, setHistory] = useState<PriceHistoryView | null>(null);
+  const [historyStatus, setHistoryStatus] = useState<PriceHistoryStatus>("loading");
   const [status, setStatus] = useState<"loading" | "error" | "not_found" | "ready">("loading");
 
   useEffect(() => {
     if (!printId) return;
     let cancelled = false;
     setStatus("loading");
+    // Cleared on every id change so a previous print's history can never be
+    // shown beneath a newly-loaded print while its own request is in flight.
+    setHistory(null);
+    setHistoryStatus("loading");
     fetchPrint(printId)
       .then((result) => {
         if (cancelled) return;
@@ -103,6 +120,24 @@ export default function PrintDetailPage() {
         // link deserves to be told which one happened rather than being
         // offered a Retry that can never succeed.
         setStatus(err instanceof ApiError && err.status === 404 ? "not_found" : "error");
+      });
+    fetchPrintPrices(printId)
+      .then((result) => {
+        if (cancelled) return;
+        // The view model is built against the response's OWN card_print_id, so
+        // the section can only ever describe the print the API answered for.
+        const view = buildPriceHistoryView(result, result.card_print_id);
+        setHistory(view);
+        // A print no source has ever priced has no section to show, and the
+        // placeholder must not sit there forever waiting for one.
+        setHistoryStatus(view.series.length > 0 ? "ready" : "unavailable");
+      })
+      .catch(() => {
+        // Supporting evidence: a history that cannot be loaded is a section
+        // this page does without, not a page-level failure.
+        if (cancelled) return;
+        setHistory(null);
+        setHistoryStatus("unavailable");
       });
     return () => {
       cancelled = true;
@@ -187,6 +222,7 @@ export default function PrintDetailPage() {
                 <Identity print={print} />
                 <MarketIndexBlock print={print} />
                 <SourcePanels sources={print.marketIndex.source_values} />
+                <PrintPriceHistorySection status={historyStatus} view={history} />
                 <AboutThisPrint print={print} detail={detail} />
               </div>
             </div>
