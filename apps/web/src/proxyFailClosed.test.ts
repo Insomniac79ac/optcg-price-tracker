@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GUARD_EVALUATED_HEADER } from "@/lib/proxyGuard";
+import { FULL_MATCHER, GUARD_EVALUATED_HEADER } from "@/lib/proxyGuard";
 
 // How `auth()` should behave for the case under test. Set before importing
 // the proxy, which captures the wrapper at module scope.
@@ -56,11 +56,17 @@ beforeEach(() => {
   authMode = { mode: "session", session: null };
 });
 
+/** /cards/:id became public collector surface on 2026-09-01, so the guard no
+ * longer runs for it at all - which is exactly why no auth failure below can
+ * take the card page down. Asserted on the matcher rather than by invoking the
+ * proxy: production never invokes it for this path. */
+function cardRouteIsUnguarded() {
+  expect(FULL_MATCHER.some((e) => e.startsWith("/cards"))).toBe(false);
+}
+
 describe("normal signed-out visitor", () => {
-  it("gets the branded not-found for the legacy card route", async () => {
-    const res = await get("/cards/1");
-    expect(isNotFoundRewrite(res)).toBe(true);
-    expect(location(res)).toBe("");
+  it("reaches the public card route, which the guard does not match", () => {
+    cardRouteIsUnguarded();
   });
 
   it.each(PROTECTED_TOOLS)("is redirected to sign-in from %s", async (path) => {
@@ -103,8 +109,8 @@ describe("auth evaluation throws (missing or malformed AUTH_SECRET)", () => {
     expect(location(res), path).toBe(`/sign-in?callbackUrl=${encodeURIComponent(path)}`);
   });
 
-  it("keeps the legacy card route on its own not-found policy", async () => {
-    expect(isNotFoundRewrite(await get("/cards/1"))).toBe(true);
+  it("cannot take the public card route down - it is not guarded", () => {
+    cardRouteIsUnguarded();
   });
 
   it("keeps admin routes unavailable", async () => {
@@ -133,8 +139,8 @@ describe("auth hands the guard a truthy value that is not a session", () => {
     );
   });
 
-  it("still answers not-found for the legacy card route", async () => {
-    expect(isNotFoundRewrite(await get("/cards/1"))).toBe(true);
+  it("leaves the public card route alone - it is not guarded", () => {
+    cardRouteIsUnguarded();
   });
 });
 
@@ -148,8 +154,8 @@ describe("auth silently lets the request through without deciding", () => {
     expect(location(res), path).toBe(`/sign-in?callbackUrl=${encodeURIComponent(path)}`);
   });
 
-  it("still answers not-found for the legacy card route", async () => {
-    expect(isNotFoundRewrite(await get("/cards/1"))).toBe(true);
+  it("leaves the public card route alone - it is not guarded", () => {
+    cardRouteIsUnguarded();
   });
 
   it("is what the evaluation marker exists to catch", async () => {

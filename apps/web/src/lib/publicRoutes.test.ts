@@ -46,9 +46,12 @@ describe("public indexable routes", () => {
     }
   });
 
-  it("and the guard does block the legacy card detail route", () => {
+  it("and the guard does block a genuinely private route", () => {
     // Guards the sitemap test above against passing for the wrong reason.
-    expect(isMatched("/cards/1")).toBe(true);
+    // /cards/1 is no longer the example: it became public collector surface
+    // on 2026-09-01 (see proxyGuard.ts).
+    expect(isMatched("/collection")).toBe(true);
+    expect(isMatched("/cards/1")).toBe(false);
   });
 
   it("advertises /cards but never a legacy card-keyed detail URL", () => {

@@ -3,18 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_MATCHER,
   FULL_MATCHER,
-  LEGACY_CARD_DETAIL_MATCHER,
-  NOT_FOUND_REWRITE_PATH,
   PROTECTED_MATCHER,
   failClosedOutcome,
   guardDidEvaluate,
   guardOutcome,
   hasCollectorSession,
-  isLegacyCardDetailPath,
 } from "./proxyGuard";
 
 /** Next's matcher syntax, reduced to the prefix it actually guards:
- * "/collection/:path*" -> "/collection", "/cards/:id+" -> "/cards". */
+ * "/collection/:path*" -> "/collection", "/admin/:path*" -> "/admin". */
 const prefixOf = (entry: string) => entry.replace(/\/:.*$/, "");
 
 /** True when Next's matcher would run the guard for `pathname`.
@@ -31,17 +28,42 @@ function isMatched(pathname: string): boolean {
 }
 
 describe("the public collector surface stays reachable while signed out", () => {
-  it.each(["/", "/cards", "/market/movers", "/prints/1", "/prints/13", "/sign-in"])(
-    "%s is not guarded",
-    (pathname) => {
-      expect(isMatched(pathname)).toBe(false);
-    },
-  );
+  it.each([
+    "/",
+    "/cards",
+    "/market/movers",
+    "/prints/1",
+    "/prints/13",
+    "/sign-in",
+    // Public since 2026-09-01: /cards/:id is a printing chooser carrying no
+    // legacy identity or pricing that could contradict the catalogue.
+    "/cards/1",
+    "/cards/999",
+    "/cards/1/extra",
+  ])("%s is not guarded", (pathname) => {
+    expect(isMatched(pathname)).toBe(false);
+  });
 
-  it("guards the legacy card detail route but never the catalogue", () => {
-    expect(isMatched("/cards")).toBe(false);
-    expect(isMatched("/cards/1")).toBe(true);
-    expect(isMatched("/cards/999")).toBe(true);
+  it("G. lets an anonymous visitor through to the card page", () => {
+    // The mechanism is that the route is not matched at all, so the guard
+    // never runs for it and cannot block a signed-out collector - not that
+    // guardOutcome returns "allow" (it is never consulted for this path).
+    // Its user-specific panels are gated in the page instead, and every
+    // endpoint behind them answers 401 on its own.
+    for (const p of ["/cards/1", "/cards/999", "/cards/1/extra"]) {
+      expect(isMatched(p), `${p} must not be guarded`).toBe(false);
+    }
+    expect(FULL_MATCHER.some((e) => e.startsWith("/cards"))).toBe(false);
+  });
+
+  it("G. keeps every unrelated protected route protected", () => {
+    for (const p of ["/collection", "/wishlist", "/grading", "/dashboard", "/search", "/market/report"]) {
+      expect(isMatched(p)).toBe(true);
+      expect(guardOutcome(p, false)).toEqual({ kind: "redirect-sign-in" });
+      expect(failClosedOutcome(p)).toEqual({ kind: "redirect-sign-in" });
+    }
+    expect(isMatched("/admin/logs")).toBe(true);
+    expect(guardOutcome("/admin/logs", false)).toEqual({ kind: "redirect-admin-login" });
   });
 });
 
@@ -86,37 +108,13 @@ describe("collector-private routes remain guarded", () => {
   });
 });
 
-describe("isLegacyCardDetailPath", () => {
-  it.each(["/cards/1", "/cards/999", "/cards/1/extra"])("is true for %s", (p) => {
-    expect(isLegacyCardDetailPath(p)).toBe(true);
-  });
-
-  it.each(["/cards", "/prints/1", "/", "/market/movers"])("is false for %s", (p) => {
-    expect(isLegacyCardDetailPath(p)).toBe(false);
-  });
-});
-
-describe("the not-found rewrite target", () => {
-  it("is not itself guarded, so the rewrite cannot re-enter the guard", () => {
-    expect(isMatched(NOT_FOUND_REWRITE_PATH)).toBe(false);
-  });
-
-  it("sits outside /cards, whose dynamic segment would otherwise catch it", () => {
-    expect(isLegacyCardDetailPath(NOT_FOUND_REWRITE_PATH)).toBe(false);
-  });
-
-  it("is a root-relative path", () => {
-    expect(NOT_FOUND_REWRITE_PATH.startsWith("/")).toBe(true);
-  });
-});
-
 describe("FULL_MATCHER composition", () => {
-  it("is the three groups in order", () => {
-    expect(FULL_MATCHER).toEqual([
-      ...PROTECTED_MATCHER,
-      ...LEGACY_CARD_DETAIL_MATCHER,
-      ...ADMIN_MATCHER,
-    ]);
+  it("is the two groups in order", () => {
+    expect(FULL_MATCHER).toEqual([...PROTECTED_MATCHER, ...ADMIN_MATCHER]);
+  });
+
+  it("does not guard the card detail route", () => {
+    expect(FULL_MATCHER.some((e) => e.startsWith("/cards"))).toBe(false);
   });
 
   it("has no duplicate entries", () => {
@@ -137,11 +135,6 @@ describe("guardOutcome - signed out", () => {
     ]) {
       expect(guardOutcome(p, false), p).toEqual({ kind: "redirect-sign-in" });
     }
-  });
-
-  it("answers not-found for the legacy card detail route", () => {
-    expect(guardOutcome("/cards/1", false)).toEqual({ kind: "not-found" });
-    expect(guardOutcome("/cards/999", false)).toEqual({ kind: "not-found" });
   });
 
   it("sends admin routes to the admin login, but leaves that login reachable", () => {
@@ -180,9 +173,8 @@ describe("failClosedOutcome - authentication could not be evaluated", () => {
   });
 
   it("keeps each route's own established public behaviour", () => {
-    // Not one blanket response: the legacy card route stays not-found, and
+    // Not one blanket response: an admin route goes to the admin login and
     // ordinary protected tools stay a sign-in redirect.
-    expect(failClosedOutcome("/cards/1")).toEqual({ kind: "not-found" });
     expect(failClosedOutcome("/market/signals")).toEqual({ kind: "redirect-sign-in" });
     expect(failClosedOutcome("/admin/logs")).toEqual({ kind: "redirect-admin-login" });
   });

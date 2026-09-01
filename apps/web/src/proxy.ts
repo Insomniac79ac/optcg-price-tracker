@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
   GUARD_EVALUATED_HEADER,
-  NOT_FOUND_REWRITE_PATH,
   buildAdminLoginRedirect,
   buildSignInRedirect,
   failClosedOutcome,
@@ -30,11 +29,12 @@ import {
 // require a signed-in collector - they expose the caller's own
 // portfolio/wishlist/grading/analytics data. As of the 2026-08-18 MVP launch
 // cleanup /search and the internal market-analytics routes (/market/signals,
-// /market/opportunities, /market/signal-events, /market/report) join them,
-// and /cards/:id+ is matched to answer not-found rather than redirect.
+// /market/opportunities, /market/signal-events, /market/report) join them.
 //
-// The public collector product - /, /cards and /prints/:id - is deliberately
-// NOT matched here and stays reachable while signed out. /market/movers is
+// The public collector product - /, /cards, /cards/:id and /prints/:id - is
+// deliberately NOT matched here and stays reachable while signed out.
+// /cards/:id joined that list on 2026-09-01 when it became a printing chooser
+// carrying no legacy identity or pricing (see proxyGuard.ts). /market/movers is
 // unmatched for the same reason: it is a temporary redirect into
 // /cards?sort=index_desc (tranche 1A), and a public redirect must not be
 // bounced through /sign-in.
@@ -63,8 +63,6 @@ function toResponse(outcome: GuardOutcome, origin: string, pathname: string, sea
       return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search));
     case "redirect-sign-in":
       return NextResponse.redirect(buildSignInRedirect(origin, pathname, search));
-    case "not-found":
-      return NextResponse.rewrite(new URL(NOT_FOUND_REWRITE_PATH, origin));
     case "allow":
       return NextResponse.next();
   }
@@ -98,7 +96,7 @@ const evaluate = auth((req) => {
 // was allowed. Anything else - a thrown error, or a response the guard never
 // marked - falls back to the signed-out policy for that route. No internal
 // error detail reaches the browser; the visitor sees the same sign-in redirect
-// or not-found page a signed-out visitor would.
+// a signed-out visitor would.
 export default async function proxy(
   request: Parameters<typeof evaluate>[0],
   event: Parameters<typeof evaluate>[1],
@@ -121,7 +119,8 @@ export default async function proxy(
 // build fails otherwise: "can't recognize the exported `config` field").
 // This MUST stay identical to src/lib/proxyGuard.ts's FULL_MATCHER (the
 // concatenation of PROTECTED_MATCHER and ADMIN_MATCHER) - proxy.test.ts
-// asserts that equality so the two can't silently drift.
+// asserts that equality so the two can't silently drift. /cards/:id is
+// deliberately absent: it is public collector surface (see proxyGuard.ts).
 export const config = {
   matcher: [
     "/collection/:path*",
@@ -135,7 +134,6 @@ export const config = {
     "/market/opportunities/:path*",
     "/market/signal-events/:path*",
     "/market/report/:path*",
-    "/cards/:id+",
     "/admin/:path*",
   ],
 };

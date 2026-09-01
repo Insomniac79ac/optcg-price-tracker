@@ -136,6 +136,16 @@ function setupDefaultMocks() {
   useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
 }
 
+/** /cards/:id is public, so the DEFAULT session in these tests is anonymous.
+ * Any test about the reader's own collection, wishlist, grading, tags or notes
+ * must say so explicitly - those panels render only for a real session. */
+function signIn(role?: string) {
+  useSessionMock.mockReturnValue({
+    data: { user: { email: "collector@example.com", ...(role ? { role } : {}) } },
+    status: "authenticated",
+  });
+}
+
 describe("CardDetailPage", () => {
   beforeEach(() => {
     setupDefaultMocks();
@@ -160,21 +170,25 @@ describe("CardDetailPage", () => {
   });
 
   it("shows the not-owned empty state when there is no collection item", async () => {
+    signIn();
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByText("Not in collection yet.")).toBeInTheDocument());
   });
 
   it("shows the not-on-wishlist empty state when there is no wishlist item", async () => {
+    signIn();
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByText("Not on wishlist.")).toBeInTheDocument());
   });
 
   it("shows the no-grading-submissions empty state when nothing is graded", async () => {
+    signIn();
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByText("No grading submissions.")).toBeInTheDocument());
   });
 
   it("renders owned collection items with price basis labels, never a bare price", async () => {
+    signIn();
     fetchCollectionItems.mockResolvedValue({
       ...EMPTY_COLLECTION,
       items: [
@@ -220,7 +234,10 @@ describe("CardDetailPage", () => {
     // exact-print scoped. The component itself still exists in the repo.
     render(<CardDetailPage />);
 
-    await waitFor(() => expect(screen.getByText("Card tags")).toBeInTheDocument());
+    // Anchored on public content: "Card tags" is signed-in-only now.
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument(),
+    );
     expect(screen.queryByText(/Yuyu-Tei sell/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Yuyu-Tei buy/)).not.toBeInTheDocument();
     expect(screen.queryByText(/SNKRDUNK sold/)).not.toBeInTheDocument();
@@ -384,6 +401,7 @@ describe("CardDetailPage printings", () => {
   });
 
   it("G. keeps collection, wishlist and grading functionality on the page", async () => {
+    signIn();
     render(<CardDetailPage />);
 
     // Each panel resolves on its own request, so wait for the last of them
@@ -517,6 +535,7 @@ describe("CardDetailPage canonical identity", () => {
   });
 
   it("keeps collection, wishlist, grading and tags after the pricing removal", async () => {
+    signIn();
     withCanonical([ZORO_BASE]);
     render(<CardDetailPage />);
 
@@ -639,5 +658,158 @@ describe("CardDetailPage hero makes no card-level rarity or variant claim", () =
       "/prints/302",
       "/prints/303",
     ]);
+  });
+});
+
+describe("CardDetailPage anonymous access", () => {
+  beforeEach(() => {
+    setupDefaultMocks(); // default session is anonymous
+  });
+
+  const ZORO = {
+    ...printItem(201, "normal", "base", 500),
+    card_code: "OP01-001",
+    canonical_card_id: 7,
+    name_en: "Roronoa Zoro",
+    name_jp: "ロロノア・ゾロ",
+  };
+  const ZORO_ALT = { ...ZORO, card_print_id: 202, treatment: "parallel", official_asset_variant: "p1" };
+
+  function withPrints(items: unknown[]) {
+    fetchPrintCatalogue.mockResolvedValue({
+      items,
+      total: items.length,
+      limit: 100,
+      offset: 0,
+      pagination: {},
+      facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
+    });
+  }
+
+  async function waitForPrintLinks(n: number) {
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("link").filter((l) => l.getAttribute("href")?.startsWith("/prints/")),
+      ).toHaveLength(n),
+    );
+  }
+
+  it("A. anonymous mismatch case shows canonical identity, never the legacy name", async () => {
+    // BASE_CARD is legacy OP01-001 "Monkey D. Luffy"; canonically it is Zoro.
+    withPrints([ZORO, ZORO_ALT]);
+
+    render(<CardDetailPage />);
+    await waitForPrintLinks(2);
+
+    expect(screen.getByRole("heading", { name: "Roronoa Zoro" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Printings of Roronoa Zoro OP01-001/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Monkey D\. Luffy/)).not.toBeInTheDocument();
+  });
+
+  it("B. anonymous multi-print case shows every printing option", async () => {
+    withPrints([ZORO, ZORO_ALT, { ...ZORO, card_print_id: 203, official_asset_variant: "p2" }]);
+
+    render(<CardDetailPage />);
+    await waitForPrintLinks(3);
+
+    expect(
+      screen.getAllByRole("link").map((l) => l.getAttribute("href")).filter((h) => h?.startsWith("/prints/")).sort(),
+    ).toEqual(["/prints/201", "/prints/202", "/prints/203"]);
+  });
+
+  it("C. anonymous single-print card renders one option normally", async () => {
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitForPrintLinks(1);
+
+    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+    const link = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("href")?.startsWith("/prints/"));
+    expect(link).toHaveAttribute("href", "/prints/201");
+  });
+
+  it("D. exposes no private collection, wishlist, grading, tag or note state", async () => {
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitForPrintLinks(1);
+
+    // None of the user-relationship panels render at all - and crucially none
+    // of their empty states, which are claims about the reader.
+    for (const text of [
+      "Not in collection yet.",
+      "Not on wishlist.",
+      "No grading submissions.",
+      "Card tags",
+      "Notes",
+      "No notes yet.",
+      "Failed to load collection status.",
+      "Failed to load wishlist status.",
+    ]) {
+      expect(screen.queryByText(text), text).not.toBeInTheDocument();
+    }
+
+    // And no unauthorized request was even attempted.
+    expect(fetchCollectionItems).not.toHaveBeenCalled();
+    expect(fetchWishlistItems).not.toHaveBeenCalled();
+    expect(fetchCollectionValuation).not.toHaveBeenCalled();
+    expect(fetchCollectorNotes).not.toHaveBeenCalled();
+    expect(fetchCollectorActivity).not.toHaveBeenCalled();
+    expect(fetchCollectorTags).not.toHaveBeenCalled();
+    expect(fetchAdminSourceMappings).not.toHaveBeenCalled();
+
+    // The public parts of the page are unaffected.
+    expect(fetchCard).toHaveBeenCalled();
+    expect(fetchPrintCatalogue).toHaveBeenCalledWith({ q: "OP01-001", limit: 100 });
+  });
+
+  it("E. a signed-in collector still gets the user-specific panels", async () => {
+    signIn();
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitFor(() => expect(screen.getByText("Not on wishlist.")).toBeInTheDocument());
+
+    expect(screen.getByText("Not in collection yet.")).toBeInTheDocument();
+    expect(screen.getByText("No grading submissions.")).toBeInTheDocument();
+    expect(screen.getByText("Card tags")).toBeInTheDocument();
+    expect(fetchCollectionItems).toHaveBeenCalled();
+    expect(fetchWishlistItems).toHaveBeenCalled();
+    // ...and the chooser is still there for them too.
+    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+  });
+
+  it("F. admin content stays admin-only, anonymous included", async () => {
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitForPrintLinks(1);
+    expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
+    expect(fetchAdminSourceMappings).not.toHaveBeenCalled();
+  });
+
+  it("F. a signed-in NON-admin collector still sees no admin content", async () => {
+    signIn();
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitFor(() => expect(screen.getByText("Not on wishlist.")).toBeInTheDocument());
+    expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
+    expect(fetchAdminSourceMappings).not.toHaveBeenCalled();
+  });
+
+  it("F. an admin still gets the admin panel", async () => {
+    signIn("admin");
+    withPrints([ZORO]);
+
+    render(<CardDetailPage />);
+    await waitFor(() =>
+      expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument(),
+    );
+    expect(fetchAdminSourceMappings).toHaveBeenCalled();
   });
 });

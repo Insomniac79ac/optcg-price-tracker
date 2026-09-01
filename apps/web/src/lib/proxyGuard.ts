@@ -40,21 +40,22 @@ export const PROTECTED_MATCHER = [
   "/market/report/:path*",
 ];
 
-// The legacy card-keyed detail route. It is card_id-keyed, not
-// card_print_id-keyed, and its data comes from the legacy `cards` table whose
-// rows do not agree with canonical print identity - /cards/1 renders
-// "OP01-001 Monkey D. Luffy" where the print-centric /prints/1 correctly shows
-// OP01-001 Roronoa Zoro. The public product is print-centric, so a signed-out
-// visitor gets the normal not-found page rather than a wrong-card page.
+// /cards/:id was gated here until 2026-09-01, because the page rendered the
+// legacy `cards` row's own name and price - and those rows disagree with
+// canonical print identity (legacy OP01-001 is named "Monkey D. Luffy"; the
+// canonical card is Roronoa Zoro), so a signed-out visitor would have been
+// shown a wrong-card page.
 //
-// Deliberately NOT a redirect to /prints/:id: card_id and card_print_id are
-// different namespaces and the numbers do not correspond, so a same-id
-// redirect would confidently show the wrong printing.
+// That page no longer exists. /cards/:id is now a printing chooser: its
+// identity is resolved from the canonical print records for the card code
+// (see resolveCanonicalPrintIdentity), it renders no card-level price, rarity
+// or variant, and every printing links to its own print-scoped /prints/:id.
+// There is nothing left on it that could contradict the catalogue, so it
+// belongs with /, /cards and /prints/:id as public collector surface.
 //
-// Handled separately from PROTECTED_MATCHER because the response differs -
-// not-found rather than a /sign-in redirect - and because it must match only
-// /cards/<something>, never the public catalogue at /cards itself.
-export const LEGACY_CARD_DETAIL_MATCHER = ["/cards/:id+"];
+// Its user-specific panels are NOT made public by this: they are gated in the
+// page itself on a real session, and every endpoint behind them independently
+// answers 401 without a bearer token. The guard was never their authorization.
 
 // /admin/:path* matches /admin/login too (it's a subpath of /admin) - proxy.ts
 // explicitly carves that one path back out at request time (see its comment)
@@ -68,11 +69,7 @@ export const LEGACY_CARD_DETAIL_MATCHER = ["/cards/:id+"];
 // be the sole one).
 export const ADMIN_MATCHER = ["/admin/:path*"];
 
-export const FULL_MATCHER = [
-  ...PROTECTED_MATCHER,
-  ...LEGACY_CARD_DETAIL_MATCHER,
-  ...ADMIN_MATCHER,
-];
+export const FULL_MATCHER = [...PROTECTED_MATCHER, ...ADMIN_MATCHER];
 
 /** Builds the redirect target for a signed-out visitor hitting a protected
  * collector route - always /sign-in (never /market/movers), always
@@ -93,19 +90,6 @@ export function buildAdminLoginRedirect(origin: string, pathname: string, search
   return adminLoginUrl;
 }
 
-/** A path with no route of its own, rewritten to when a request must answer
- * with the normal not-found page instead of a redirect. It deliberately sits
- * outside every matcher above (and outside /cards, whose dynamic segment
- * would otherwise swallow it), so the rewrite cannot re-enter the guard or
- * match the very route it is standing in for. */
-export const NOT_FOUND_REWRITE_PATH = "/__not-found__";
-
-/** True for the legacy card-keyed detail route (/cards/<id>...), and false
- * for the public print-centric catalogue at /cards itself. */
-export function isLegacyCardDetailPath(pathname: string): boolean {
-  return pathname.startsWith("/cards/");
-}
-
 /** Whether a path is the admin login page, which must stay reachable while
  * signed out (it is the way back in) - including when auth evaluation itself
  * is broken, where it is the only page that can explain anything. */
@@ -119,8 +103,7 @@ export function isAdminLoginPath(pathname: string): boolean {
 export type GuardOutcome =
   | { kind: "allow" }
   | { kind: "redirect-sign-in" }
-  | { kind: "redirect-admin-login" }
-  | { kind: "not-found" };
+  | { kind: "redirect-admin-login" };
 
 /** The policy for one matched path.
  *
@@ -135,10 +118,6 @@ export function guardOutcome(pathname: string, hasSession: boolean): GuardOutcom
     if (isAdminLoginPath(pathname)) return { kind: "allow" };
     return hasSession ? { kind: "allow" } : { kind: "redirect-admin-login" };
   }
-  if (isLegacyCardDetailPath(pathname)) {
-    // Not a redirect: there is no correct print to send a card_id to.
-    return hasSession ? { kind: "allow" } : { kind: "not-found" };
-  }
   return hasSession ? { kind: "allow" } : { kind: "redirect-sign-in" };
 }
 
@@ -147,11 +126,10 @@ export function guardOutcome(pathname: string, hasSession: boolean): GuardOutcom
  * auth() throw.
  *
  * Such a request must never be treated as authenticated, so this is exactly
- * the signed-out policy: each route keeps its own established public
- * behaviour (not-found for the legacy card route, a sign-in redirect for
- * everything else) rather than every path collapsing to one response. It can
- * never return "allow" for protected content - the only path it lets through
- * is the admin login page, which is not protected content.
+ * the signed-out policy: a sign-in redirect for a collector route and the
+ * admin login for an /admin route, rather than every path collapsing to one
+ * response. It can never return "allow" for protected content - the only path
+ * it lets through is the admin login page, which is not protected content.
  *
  * Public routes are unaffected because they are not matched by the guard at
  * all: an auth outage cannot take the catalogue down.

@@ -63,6 +63,23 @@ export default function CardDetailPage() {
   const params = useParams<{ id: string }>();
   const cardId = params.id;
 
+  /** Whether there is a real signed-in collector.
+   *
+   * /cards/:id is public collector surface (see lib/proxyGuard.ts), so this
+   * component now renders for anonymous visitors. Every user-specific fetch
+   * below is gated on this: not for authorization - each of those endpoints
+   * answers 401 without a bearer token on its own - but because firing six
+   * requests that can only 401 would be pure noise, and because an empty
+   * result from a failed request is indistinguishable from "you own none of
+   * these", which would be a lie told to a signed-out reader.
+   *
+   * "authenticated" specifically, never `Boolean(session)`: during the
+   * "loading" phase there is no token to send yet, and a request made then
+   * would 401 exactly like an anonymous one. */
+  const { data: session, status: sessionStatus } = useSession();
+  const isSignedIn = sessionStatus === "authenticated";
+  const isAdmin = session?.user?.role === "admin";
+
   const [card, setCard] = useState<Card | null>(null);
   const [status, setStatus] = useState<Status>("loading");
 
@@ -149,10 +166,11 @@ export default function CardDetailPage() {
   }, [cardId]);
 
   useEffect(() => {
+    if (!isSignedIn) return;
     fetchCollectorTags()
       .then(setAllTags)
       .catch(() => setAllTags([]));
-  }, []);
+  }, [isSignedIn]);
 
   async function handleAssignTag(tagId: number) {
     setTagError(null);
@@ -175,6 +193,7 @@ export default function CardDetailPage() {
   }
 
   function refreshCollectionItems() {
+    if (!isSignedIn) return;
     fetchCollectionItems({ card_id: Number(cardId) })
       .then((data) => {
         setCollectionItems(data.items);
@@ -186,9 +205,10 @@ export default function CardDetailPage() {
   useEffect(() => {
     refreshCollectionItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardId]);
+  }, [cardId, isSignedIn]);
 
   function refreshWishlistItems(cardCode: string) {
+    if (!isSignedIn) return;
     fetchWishlistItems({ card_code: cardCode })
       .then((data) => {
         setWishlistItems(data.items.filter((i) => i.status !== "removed"));
@@ -200,7 +220,7 @@ export default function CardDetailPage() {
   useEffect(() => {
     if (card) refreshWishlistItems(card.card_code);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.card_code]);
+  }, [card?.card_code, isSignedIn]);
 
   // Ownership valuation (cost basis/current value/P&L) - same source
   // /collection itself uses, so the numbers never disagree.
@@ -208,34 +228,36 @@ export default function CardDetailPage() {
   const [valuationItems, setValuationItems] = useState<PortfolioValuationItem[]>([]);
 
   useEffect(() => {
+    if (!isSignedIn) return;
     fetchCollectionValuation(valuationMode)
       .then((data) => setValuationItems(data.items.filter((i) => i.card_id === Number(cardId))))
       .catch(() => setValuationItems([]));
-  }, [cardId, valuationMode]);
+  }, [cardId, valuationMode, isSignedIn]);
 
   // Notes/activity for this card.
   const [notes, setNotes] = useState<CollectorNote[]>([]);
   const [activity, setActivity] = useState<CollectorActivityEvent[]>([]);
 
   function refreshNotes() {
+    if (!isSignedIn) return;
     fetchCollectorNotes({ card_id: Number(cardId) })
       .then((data) => setNotes(data.items))
       .catch(() => setNotes([]));
   }
 
   useEffect(() => {
+    if (!isSignedIn) return;
     refreshNotes();
     fetchCollectorActivity({ card_id: Number(cardId) })
       .then((data) => setActivity(data.events))
       .catch(() => setActivity([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardId]);
+  }, [cardId, isSignedIn]);
 
   // Admin-only source mappings mini panel - only fetched (and only ever
   // shown) for a role="admin" session, same gate as every other admin-only
-  // UI element in this app (see src/lib/adminSession.ts).
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin";
+  // UI element in this app (see src/lib/adminSession.ts). Unchanged by the
+  // route becoming public: an anonymous visitor is not an admin.
   const [adminMappings, setAdminMappings] = useState<SourceCardMapping[]>([]);
 
   useEffect(() => {
@@ -333,6 +355,7 @@ export default function CardDetailPage() {
               />
             </div>
 
+            {isSignedIn && (
             <div className="order-3 rounded-panel border border-border-default bg-bg-surface p-4 lg:order-none">
               <h2 className="mb-2 text-sm font-semibold text-text-primary">Card tags</h2>
               {tagError && (
@@ -347,8 +370,15 @@ export default function CardDetailPage() {
                 onUnassign={handleUnassignTag}
               />
             </div>
+            )}
 
-            {/* 2. Ownership / wishlist / grading */}
+            {/* 2. Ownership / wishlist / grading - the signed-in collector's own
+                relationship to this card. Rendered only for a real session:
+                these panels' own empty states ("Not in collection yet.") are
+                statements ABOUT THE READER, and showing them to a signed-out
+                visitor would assert something this page cannot know. The
+                header's Sign in is the affordance; nothing is duplicated here. */}
+            {isSignedIn && (
             <div className="order-2 grid grid-cols-1 gap-4 lg:order-none lg:grid-cols-3">
               {collectionStatus === "ready" ? (
                 <OwnershipSummaryPanel
@@ -390,8 +420,11 @@ export default function CardDetailPage() {
 
               <GradingSummaryPanel submissions={gradingSubmissions} />
             </div>
+            )}
 
-            {/* 5. Notes/activity */}
+            {/* 5. Notes/activity - the reader's own notes and their own event
+                history, so same rule as the panels above. */}
+            {isSignedIn && (
             <div className="order-5 lg:order-none">
               <CardActivityPanel
                 cardId={card.id}
@@ -400,6 +433,7 @@ export default function CardDetailPage() {
                 onNoteAdded={refreshNotes}
               />
             </div>
+            )}
 
             {/* 6. Admin mini-panel - only rendered for admin-token holders;
                 lowest-priority panel on mobile (design brief - "admin mini
