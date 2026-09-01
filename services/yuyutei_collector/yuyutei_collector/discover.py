@@ -7,26 +7,18 @@ Bounded to exactly one request per category page, no retries.
 
 import argparse
 import json
-import re
 
 from playwright.sync_api import sync_playwright
 
 from yuyutei_collector.browser import deadline, log_event
+from yuyutei_collector.card_code import CARD_CODE_RE
 
-# Every card-code shape Atlas actually holds, derived from canonical_cards on
-# 2026-09-01 rather than guessed - all 2,710 codes fall into exactly five:
-#
-#   OP##-###   2,033    ST##-###  382    EB##-###  245
-#   PRB##-###     19    P-###      31
-#
-# The previous pattern was OP-only, so an ST, EB, PRB or promo card on a
-# listing page parsed as "no code" and would have been silently dropped from
-# discovery - 677 codes, a quarter of the catalogue.
-#
-# `P-###` is listed last and kept separate because promos carry no two-digit
-# set number; it must not be folded into the ##-### branch. PRB is tried
-# before the P branch so "PRB01-001" can never be read as a promo.
-CARD_CODE_RE = re.compile(r"\b(?:(?:OP|ST|EB|PRB)\d{2}-\d{3}|P-\d{3})\b")
+# Re-exported, not redefined: discovery_listing, discovery_probe and
+# tests/test_discovery_probe.py all import CARD_CODE_RE from here, and the
+# grammar itself now lives in yuyutei_collector.card_code so extraction and
+# discovery cannot drift apart again. Keeping the name importable from this
+# module means none of those callers has to change.
+__all__ = ["CARD_CODE_RE", "list_category_products", "main"]
 
 
 def list_category_products(set_slug: str, timeout_s: int = 60) -> list[dict]:

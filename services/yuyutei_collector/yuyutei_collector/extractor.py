@@ -31,6 +31,11 @@ from datetime import datetime, timezone
 
 from bs4 import BeautifulSoup
 
+# The single card-code grammar this service uses, shared with discovery.
+# This module used to declare its own OP-only copy under the same name;
+# see yuyutei_collector.card_code for what that drift cost.
+from yuyutei_collector.card_code import CARD_CODE_RE
+
 SELECTOR_VERSION = "v3"
 # Historical default for the original single-print vertical slice. Callers
 # should pass their mapping/print's own treatment explicitly (see
@@ -38,7 +43,6 @@ SELECTOR_VERSION = "v3"
 # this - kept only so existing call sites without that argument still work.
 EXPECTED_TREATMENT = "parallel"
 
-CARD_CODE_RE = re.compile(r"\bOP\d{2}-\d{3}\b")
 PRICE_LEAF_RE = re.compile(r"^[¥￥]?\s*([\d,]+)\s*円$")
 PRICE_ANYWHERE_RE = re.compile(r"[¥￥]?[\d,]+\s*円")
 MAIN_CONTAINER_KEYWORD_RE = re.compile(r"product|detail|item|goods", re.IGNORECASE)
