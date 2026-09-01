@@ -41,7 +41,13 @@ import DiscoverPage from "./page";
 /** Shaped on the real `GET /prints` staging payload. `card_print_id` is the
  * only identity this page has, and the only one it may route with. */
 function makePrint(
-  overrides: Partial<PrintCatalogueItem> & { card_print_id: number },
+  // `market_index` is spread over the defaults below, so it takes a PARTIAL
+  // index - the signature said `PrintMarketIndex` while the body treated it as
+  // overrides, which only surfaced once a caller passed one.
+  overrides: Partial<Omit<PrintCatalogueItem, "market_index">> & {
+    card_print_id: number;
+    market_index?: Partial<PrintCatalogueItem["market_index"]>;
+  },
 ): PrintCatalogueItem {
   const { market_index: indexOverrides, ...rest } = overrides;
   return {
@@ -261,20 +267,31 @@ describe("DiscoverPage Recent Finds", () => {
 });
 
 describe("DiscoverPage collection invitation", () => {
-  it("invites a signed-out visitor without promising a working sign-up", async () => {
+  it("G. sends a signed-out visitor into the public catalogue, not to sign-in", async () => {
+    // The public collector product needs no account, so this block's primary
+    // action must continue the journey rather than stop it at a wall.
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
     render(<DiscoverPage />);
-    expect(await screen.findByText(/chart your collection/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /learn about collections/i })).toHaveAttribute(
+
+    expect(await screen.findByText(/start with the cards/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /browse every printing/i })).toHaveAttribute(
+      "href",
+      "/cards",
+    );
+    // Signing in is still offered, as the smaller second step it actually is.
+    // Scoped to this section - the app header carries its own Sign in link.
+    const section = screen.getByText(/start with the cards/i).closest("section")!;
+    expect(within(section).getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
       "href",
       "/sign-in",
     );
+    expect(screen.queryByRole("link", { name: /learn about collections/i })).toBeNull();
   });
 
   it("does not fabricate owned-card counts or completion percentages", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
     render(<DiscoverPage />);
-    await screen.findByText(/chart your collection/i);
+    await screen.findByText(/start with the cards/i);
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/\d+%/);
     expect(text).not.toMatch(/\d+\s+cards owned/i);
@@ -433,5 +450,66 @@ describe("DiscoverPage accessibility and scope", () => {
     await screen.findByTestId("hero-art");
     expect(container.innerHTML).toMatch(/hidden sm:block/);
     expect(container.innerHTML).toMatch(/hidden lg:block/);
+  });
+});
+
+describe("Recent Finds prefers priced prints within the recent population", () => {
+  /** `items` arrives already ordered by the API as updated_at DESC, id ASC -
+   * these fixtures stand in that order, newest first. */
+  const priced = (id: number, jpy: number) =>
+    makePrint({ card_print_id: id, market_index: { index_value_jpy: jpy, source_count: 1, coverage_status: "limited", confidence: "medium" } });
+  const unpriced = (id: number) => makePrint({ card_print_id: id });
+
+  function recentTitles() {
+    return screen
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("href")?.startsWith("/prints/"))
+      .map((l) => l.getAttribute("href"));
+  }
+
+  it("D. still asks the API for RECENT prints, never a priced ranking", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([unpriced(1)]));
+    render(<DiscoverPage />);
+    await screen.findByText(/recent finds/i);
+
+    // The population is unchanged: same sort, same limit, one request.
+    expect(fetchPrintCatalogue).toHaveBeenCalledWith({ sort: "updated", limit: 100 });
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+  });
+
+  it("E. fills the slots with priced recent prints first", async () => {
+    // Newest-first: three unpriced, then two priced. Before this change the
+    // section showed 1,2,3,4 - three of them "Index unavailable".
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([unpriced(1), unpriced(2), unpriced(3), priced(4, 2000), priced(5, 800), unpriced(6)]),
+    );
+    render(<DiscoverPage />);
+    await screen.findByText(/recent finds/i);
+
+    const hrefs = recentTitles();
+    // Priced first, in their own recency order, then the newest unpriced.
+    expect(hrefs.slice(0, 2)).toEqual(["/prints/4", "/prints/5"]);
+    expect(hrefs.slice(2, 4)).toEqual(["/prints/1", "/prints/2"]);
+  });
+
+  it("F. falls back to recent unpriced prints when too few are priced", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([unpriced(1), unpriced(2), unpriced(3), unpriced(4)]),
+    );
+    render(<DiscoverPage />);
+    await screen.findByText(/recent finds/i);
+
+    // Still four cards - the section does not empty itself out.
+    expect(recentTitles()).toEqual(["/prints/1", "/prints/2", "/prints/3", "/prints/4"]);
+  });
+
+  it("never promotes a priced print that is not in the recent population", async () => {
+    // Only recent items are candidates. A ￥66,000 print absent from the
+    // response cannot appear here however expensive it is.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([unpriced(1), unpriced(2)]));
+    render(<DiscoverPage />);
+    await screen.findByText(/recent finds/i);
+
+    expect(recentTitles()).toEqual(["/prints/1", "/prints/2"]);
   });
 });

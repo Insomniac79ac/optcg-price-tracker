@@ -19,11 +19,27 @@ export interface PrintCatalogueFilters {
   sort: PrintCatalogueSort;
 }
 
+/** The catalogue's resting state - what /cards shows with no query string.
+ *
+ * `sort` is "index_desc", not "card_code". Ordered by card code the first page
+ * is EB01-001 onward, and on 2026-09-01 that was 24 of 24 tiles reading
+ * "Index unavailable": a market product whose opening screen showed no market
+ * at all. Roughly 1% of the 4,316 printings carry an eligible price today, so
+ * code order buries every one of them.
+ *
+ * Ordering by Market Index puts the priced printings first WITHOUT hiding
+ * anything - the backend sorts on `(value is null, -value, id)`, so unpriced
+ * prints follow the priced ones instead of being filtered out, and card-code
+ * order stays one selection away in the Sort control.
+ *
+ * This is also the value `buildParams` compares against to decide whether
+ * `sort` belongs in the URL, so the default stays absent from the query string
+ * and any OTHER sort the collector picks is written to it explicitly. */
 export const EMPTY_PRINT_FILTERS: PrintCatalogueFilters = {
   q: "",
   treatment: "",
   rarity: "",
-  sort: "card_code",
+  sort: "index_desc",
 };
 
 export function hasActivePrintFilters(filters: PrintCatalogueFilters): boolean {

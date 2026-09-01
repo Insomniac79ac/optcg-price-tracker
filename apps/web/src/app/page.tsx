@@ -56,6 +56,34 @@ type CatalogueStatus =
  * Prints without an image still render - CardImageFrame already falls back to
  * a branded placeholder - so the composition fills up to HERO_CARD_LIMIT real
  * catalogue entries instead of looking sparse. */
+/** The Recent Finds slots, chosen from the recent population only.
+ *
+ * WHAT "RECENT" MEANS, UNCHANGED. `items` is `GET /prints?sort=updated`, which
+ * the API orders by `CardPrint.updated_at DESC, id ASC`. This function does not
+ * re-query, re-sort by price, or widen the population by one row: the candidate
+ * set is exactly the same recently-updated prints in exactly the same order it
+ * always was. Only WHICH of them fill the four slots changes.
+ *
+ * WHY. The most recently updated printings are the ones the collectors have
+ * just been catalogued, and those are precisely the ones no source has priced
+ * yet - on 2026-09-01 three of the four Recent Finds read "Index unavailable".
+ * A section meant to show a collector something worth looking at was showing
+ * them the least informative rows in the catalogue.
+ *
+ * So priced recent prints are preferred, and unpriced recent prints fill
+ * whatever is left - which keeps the section full when few recent prints carry
+ * a price, and keeps it honestly "recent" either way. This is NOT "most
+ * expensive": a ￥66,000 print that has not been updated lately is not in
+ * `items` at all and cannot appear here.
+ *
+ * Deterministic: both groups keep the API's own order, so the same response
+ * always produces the same four cards. */
+function pickRecentFinds(items: PrintUiModel[], limit: number): PrintUiModel[] {
+  const priced = items.filter((print) => print.marketIndexJpy !== null);
+  const unpriced = items.filter((print) => print.marketIndexJpy === null);
+  return [...priced, ...unpriced].slice(0, limit);
+}
+
 function pickHeroPrints(items: PrintUiModel[]): PrintUiModel[] {
   const withImage = items.filter((p) => p.imageUrl);
   const withoutImage = items.filter((p) => !p.imageUrl);
@@ -95,7 +123,7 @@ export default function DiscoverPage() {
   const isEmpty = status.kind === "ready" && items.length === 0;
 
   const heroCards = pickHeroPrints(items);
-  const recentFinds = items.slice(0, RECENT_FINDS_LIMIT);
+  const recentFinds = pickRecentFinds(items, RECENT_FINDS_LIMIT);
 
   return (
     <div className="min-h-screen">
@@ -357,17 +385,31 @@ function CollectionInvitation({
               </Link>
             </>
           ) : (
+            /* The public collector product no longer needs an account: the
+               catalogue, every card family and every printing's Market Index
+               and price history are open. This block used to send an anonymous
+               visitor straight to /sign-in, which was the one dead end on an
+               otherwise public page - so the primary action now continues into
+               the catalogue, and signing in is offered as the smaller, honest
+               second step it actually is. Collections themselves stay
+               signed-in-only; nothing about that changed. */
             <>
               <h2 className="font-display text-xl font-semibold text-text-primary">
-                Chart your collection.
+                Start with the cards.
               </h2>
               <p className="mt-2 max-w-prose text-sm text-text-secondary">
-                Keep the cards that matter to you together, remember what you own, and keep the
-                ones you&rsquo;re still chasing in sight.
+                Every printing is here to browse, each with its own Market Index and price
+                history &mdash; no account needed.
               </p>
-              <Link href="/sign-in" className={`${PRIMARY_LINK_CLASS} mt-4 inline-flex`}>
-                Learn about collections
+              <Link href="/cards" className={`${PRIMARY_LINK_CLASS} mt-4 inline-flex`}>
+                Browse every printing &rarr;
               </Link>
+              <p className="mt-3 text-xs text-text-muted">
+                <Link href="/sign-in" className="text-accent-teal hover:text-accent-teal-hover">
+                  Sign in
+                </Link>{" "}
+                to keep a collection and a wishlist.
+              </p>
             </>
           )}
         </div>

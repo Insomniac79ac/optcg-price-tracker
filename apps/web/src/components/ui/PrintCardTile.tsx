@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
-import type { PrintUiModel } from "@/lib/prints";
+import { isRedundantSingleSource, type PrintUiModel } from "@/lib/prints";
 import { CardImageFrame } from "./CardImageFrame";
 import { MarketIndexValue } from "./MarketIndexValue";
 
@@ -220,6 +220,13 @@ export function PrintCardTile({
  * number.
  */
 function SourcePrices({ print }: { print: PrintUiModel }) {
+  // A lone eligible, unconstrained source whose value IS the index adds
+  // nothing the gold figure above has not already said - see
+  // isRedundantSingleSource for the four conditions, all of which must hold.
+  // A constrained source, an ineligible one, a differing value, or a second
+  // retailer all keep their rows.
+  if (isRedundantSingleSource(print.marketIndex)) return null;
+
   const rows = [
     { name: "Yuyu-Tei", value: print.yuyuteiJpy },
     { name: "SNKRDUNK", value: print.snkrdunkJpy },

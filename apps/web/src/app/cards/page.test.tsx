@@ -258,18 +258,40 @@ describe("print catalogue page", () => {
     expect(within(tile).getByText("￥1,500")).toBeTruthy();
   });
 
-  it("never lets a one-source index read as a two-source consensus", async () => {
+  it("H. hides a lone source row that only repeats the Market Index", async () => {
+    // SANJI_BASE: index ￥120 from one eligible, unconstrained Yuyu-Tei value
+    // of ￥120. Printing both said the same number twice, so the row goes and
+    // the gold index stands alone.
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_BASE]));
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    // Only the source that reported gets a row. SNKRDUNK contributed no
-    // value for this print, so it must not appear at all - not as a row, not
-    // as a dash, and certainly not as ¥0.
-    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
-    expect(within(tile).getAllByText("￥120").length).toBeGreaterThan(0);
+    expect(within(tile).getAllByText("￥120").length).toBe(1);
+    expect(within(tile).queryByText("Yuyu-Tei")).toBeNull();
+    // A source that reported nothing was never a row and still is not - not a
+    // dash, and certainly not ￥0.
     expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
     expect(tile.textContent).not.toMatch(/￥0\b/);
+  });
+
+  it("keeps a lone source row whose value differs from the Market Index", async () => {
+    // The moment the index is not simply that source's number, the row is the
+    // only thing explaining the difference - so it stays.
+    const differing = {
+      ...SANJI_BASE,
+      market_index: {
+        ...SANJI_BASE.market_index,
+        index_value_jpy: 200,
+        source_values: [sourceValue("yuyutei", 120), sourceValue("snkrdunk", null)],
+      },
+    };
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([differing]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(tile).getAllByText("￥120").length).toBeGreaterThan(0);
+    expect(within(tile).getAllByText("￥200").length).toBeGreaterThan(0);
   });
 
   it("shows no price at all rather than ¥0 when the index is unavailable", async () => {
@@ -719,26 +741,28 @@ describe("clearing the catalogue search", () => {
   });
 
   it("keeps the sort", async () => {
-    await renderWith("q=kaido&sort=index_desc");
+    // card_code, not index_desc: index_desc is the catalogue default now and
+    // a default is deliberately absent from the query string.
+    await renderWith("q=kaido&sort=card_code");
     fireEvent.click(clearButton());
 
-    expect(navigations()).toEqual(["/cards?sort=index_desc"]);
+    expect(navigations()).toEqual(["/cards?sort=card_code"]);
   });
 
   it("keeps every non-q parameter when they are combined", async () => {
-    await renderWith("q=kaido&treatment=parallel&rarity=SR&sort=index_desc");
+    await renderWith("q=kaido&treatment=parallel&rarity=SR&sort=card_code");
     fireEvent.click(clearButton());
 
-    expect(navigations()).toEqual(["/cards?treatment=parallel&rarity=SR&sort=index_desc"]);
+    expect(navigations()).toEqual(["/cards?treatment=parallel&rarity=SR&sort=card_code"]);
   });
 
   it("leaves no empty ?q= behind", async () => {
-    await renderWith("q=kaido&treatment=parallel&sort=index_desc");
+    await renderWith("q=kaido&treatment=parallel&sort=card_code");
     fireEvent.click(clearButton());
 
     const [target] = navigations();
     expect(target).not.toMatch(/[?&]q=/);
-    expect(target).toBe("/cards?treatment=parallel&sort=index_desc");
+    expect(target).toBe("/cards?treatment=parallel&sort=card_code");
   });
 
   it("re-requests the catalogue without q once the URL has changed", async () => {
@@ -886,5 +910,65 @@ describe("catalogue pagination", () => {
   it("keeps the grid to one tile per print, untouched by the pagination change", async () => {
     await renderPage(0);
     expect(screen.getAllByRole("link", { name: /OP0/ })).toHaveLength(CATALOGUE.length);
+  });
+});
+
+describe("A/B/C. the catalogue opens on Market Index", () => {
+  async function renderAt(search: string, items = [SANJI_BASE]) {
+    currentSearch = search;
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(items));
+    const result = render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+    return result;
+  }
+
+  it("A. requests index_desc when the URL carries no sort", async () => {
+    await renderAt("");
+
+    await waitFor(() =>
+      expect(fetchPrintCatalogue).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: "index_desc" }),
+      ),
+    );
+  });
+
+  it("B. an explicitly chosen sort still wins", async () => {
+    await renderAt("sort=card_code");
+
+    await waitFor(() =>
+      expect(fetchPrintCatalogue).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: "card_code" }),
+      ),
+    );
+    expect(fetchPrintCatalogue).not.toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "index_desc" }),
+    );
+  });
+
+  it("C. renders whatever order the backend returned, unpriced included", async () => {
+    // The page never reorders by price itself - the backend's index_desc puts
+    // nulls last, and unpriced prints are shown, not filtered away.
+    const unpriced = {
+      ...SANJI_BASE,
+      card_print_id: 777,
+      card_code: "OP99-999",
+      name_en: "Unpriced Card",
+      market_index: {
+        ...SANJI_BASE.market_index,
+        card_print_id: 777,
+        index_value_jpy: null,
+        source_count: 0,
+        coverage_status: "none" as const,
+        source_values: [],
+      },
+    };
+    await renderAt("", [SANJI_BASE, unpriced]);
+
+    const links = await screen.findAllByRole("link", { name: /Sanji|Unpriced Card/ });
+    expect(links).toHaveLength(2);
+    // Priced first, exactly as received; the unpriced one still renders.
+    expect(links[0].getAttribute("aria-label")).toMatch(/Sanji/);
+    expect(links[1].getAttribute("aria-label")).toMatch(/Unpriced Card/);
+    expect(screen.getByText(/Index unavailable/i)).toBeInTheDocument();
   });
 });
