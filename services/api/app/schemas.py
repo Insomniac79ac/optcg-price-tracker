@@ -651,6 +651,18 @@ class PrintCatalogueItemOut(BaseModel):
     market_index: PrintMarketIndexOut
     source_coverage: list[str]
     latest_observation_at: datetime | None
+    # Movement of the MARKET INDEX itself over exactly seven UTC calendar days
+    # - never a source price compared to an index. Null unless a snapshot
+    # exists at exactly CURRENT_DATE - 7 whose ruleset versions AND eligible
+    # (source, reference_type) contributor set match today's, so a change of
+    # contributing evidence can never be reported as a change of price. See
+    # app.services.market_index_change for every condition and why each exists.
+    #
+    # A genuine 0.0 is a measurement and is returned as 0.0; null means "no
+    # comparable baseline", and the two must never be conflated. Optional with
+    # a None default so a client predating this field parses unchanged - the
+    # same treatment `constraint` and `source_price_range` were given.
+    market_index_change_7d_pct: float | None = None
 
 
 class PrintCatalogueFacetsOut(BaseModel):

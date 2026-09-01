@@ -56,6 +56,7 @@ from app.schemas import (
     PrintMarketIndexOut,
 )
 from app.services.display_image import get_display_images_for_prints
+from app.services.market_index_change import get_index_change_7d_for_prints
 from app.services.print_market_index import get_market_index_for_prints
 from app.services.rarity_facets import facet_values, filter_tokens
 
@@ -177,6 +178,7 @@ def _to_catalogue_item(
     canonical: CanonicalCard,
     market_index: PrintMarketIndexOut,
     display_image: DisplayImageOut | None = None,
+    market_index_change_7d_pct: float | None = None,
 ) -> PrintCatalogueItemOut:
     return PrintCatalogueItemOut(
         card_print_id=print_row.id,
@@ -198,6 +200,7 @@ def _to_catalogue_item(
         market_index=market_index,
         source_coverage=_source_coverage(market_index),
         latest_observation_at=market_index.freshest_observation_at,
+        market_index_change_7d_pct=market_index_change_7d_pct,
     )
 
 
@@ -323,12 +326,18 @@ def list_print_catalogue(
     # One extra mapping query for the whole page - never per item, and never
     # a raw_snapshots read (see app.services.display_image).
     display_by_print = get_display_images_for_prints(db, list(page_prints))
+    # One more page-wide query, in the same batched style as the three above:
+    # the seven-day baselines for this page, keyed off the already-computed
+    # current indices so the comparison's two sides can never be derived from
+    # different values. Never per item.
+    change_by_print = get_index_change_7d_for_prints(db, page_index_by_print)
     items = [
         _to_catalogue_item(
             p,
             canonical_by_id[p.canonical_card_id],
             page_index_by_print[p.id],
             display_by_print.get(p.id),
+            change_by_print.get(p.id),
         )
         for p in page_prints
     ]
