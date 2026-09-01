@@ -100,9 +100,13 @@ def test_reset_dev_db_deletes_dev_data_and_keeps_sources(db_session):
     assert summary.deleted["source_card_mappings"] == 1
     assert summary.deleted["cards"] == 1
 
-    # yuyutei_candidates / yuyutei_discovery_runs don't exist yet in this schema.
-    assert "yuyutei_candidates" in summary.skipped_missing_tables
-    assert "yuyutei_discovery_runs" in summary.skipped_missing_tables
+    # The Yuyu-Tei discovery tables now exist (migration b7d31e5c9a24), so they
+    # are cleared like any other dev table rather than skipped as absent. They
+    # are still reached through OPTIONAL_TABLES, so this test also proves that
+    # path handles a table that IS present.
+    assert summary.skipped_missing_tables == []
+    assert summary.deleted["yuyutei_candidates"] == 0
+    assert summary.deleted["yuyutei_discovery_runs"] == 0
 
 
 def test_reset_dev_db_does_not_delete_user_csv_files(db_session, tmp_path):

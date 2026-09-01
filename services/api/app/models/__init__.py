@@ -34,6 +34,8 @@ from app.models.release_product_alias import ReleaseProductAlias
 from app.models.saved_view import SavedView
 from app.models.search_history import SearchHistory
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
+from app.models.yuyutei_candidate import YuyuteiCandidate
+from app.models.yuyutei_discovery_run import YuyuteiDiscoveryRun
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
 from app.models.source import Source
 from app.models.source_card_mapping import SourceCardMapping
@@ -59,6 +61,8 @@ __all__ = [
     "PortfolioValuationSnapshot",
     "SnkrdunkDiscoveryRun",
     "SnkrdunkCandidate",
+    "YuyuteiDiscoveryRun",
+    "YuyuteiCandidate",
     "AlertEvent",
     "AlertRule",
     "MarketSignalEvent",
