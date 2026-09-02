@@ -1244,7 +1244,7 @@ def test_adding_the_range_did_not_move_any_index_field(client, db_session):
     assert body["confidence"] == "medium"
     assert body["calculation_method"] == "median_of_sources"
     assert body["index_version"] == 2
-    assert body["source_semantics_version"] == 1
+    assert body["source_semantics_version"] == 2
 
 
 # --- Market Index v2: contributor role (Model C) -----------------------------
@@ -1515,12 +1515,17 @@ def test_every_current_source_value_carries_an_explicit_role(db_session):
         assert sv.contributes_to_index in (True, False), sv
 
 
-def test_index_version_is_two_and_source_semantics_version_is_one(db_session):
-    """The combination step moved; source classification did not. The two
-    version fields exist to say exactly that, and a snapshot written under
-    either ruleset has to be able to name the one that produced it."""
+def test_index_version_is_two_and_source_semantics_version_is_two(db_session):
+    """The two version fields move independently, and this now pins them at
+    different times rather than at different values.
+
+    v2 of the combination step arrived first (fallback values stand aside).
+    v2 of source semantics arrived later and separately, with the sale_price
+    classification. That the numbers now coincide is arithmetic, not coupling:
+    a snapshot still records both, and each still names the ruleset that
+    actually produced it."""
     assert INDEX_VERSION == 2
-    assert SOURCE_SEMANTICS_VERSION == 1
+    assert SOURCE_SEMANTICS_VERSION == 2
 
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
@@ -1529,4 +1534,4 @@ def test_index_version_is_two_and_source_semantics_version_is_one(db_session):
     index = get_market_index_for_card(db_session, card.id)
 
     assert index.index_version == 2
-    assert index.source_semantics_version == 1
+    assert index.source_semantics_version == 2

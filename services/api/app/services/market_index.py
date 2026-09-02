@@ -171,7 +171,24 @@ def _resolve_yuyutei_sell(
     days old. Stock state has no effect - a displayed sell price is useful
     market evidence whether or not Yuyu-Tei currently reports the item in
     stock, so an out-of-stock observation is exactly as eligible as an
-    in-stock one of the same age."""
+    in-stock one of the same age.
+
+    A PROMOTIONAL PRICE IS STILL A RETAIL SELL PRICE, and this function's
+    arithmetic says so: when the stored promotion_state is "sale" the only
+    thing that changes is `constraint`. The value, the staleness rule, the
+    eligibility verdict and therefore the index number, source_count,
+    coverage, confidence and source_price_range are all identical to what they
+    would have been without the label. The reason is simple - a discounted
+    asking price is the price the card can actually be bought at, so treating
+    it as anything less than ordinary evidence would make Atlas publish
+    nothing for a card whose current price it knows exactly.
+
+    `eligible` is combined with the semantic verdict the same way
+    _resolve_snkrdunk does it, rather than ignoring it: today Yuyu-Tei's only
+    two possible verdicts are both eligible, so the `and` cannot change any
+    current outcome, but writing it this way means a future Yuyu-Tei rule that
+    genuinely disqualifies an observation is honoured automatically instead of
+    being silently dropped here."""
     if observation is None:
         return _SourceValue(
             source=YUYUTEI,
@@ -189,6 +206,19 @@ def _resolve_yuyutei_sell(
     age = now - _naive_utc(observation.observed_at)
     stale = age > timedelta(days=YUYUTEI_SELL_MAX_AGE_DAYS)
 
+    # What this number *means*, asked of the one module that owns
+    # source-specific rules. The stored price_type and the stored
+    # promotion_state are both passed through as-is - never the API-facing
+    # reference_type below, and never anything derived from the value itself.
+    # An observation predating the promotion_state column carries None there
+    # and classifies exactly as it always did.
+    semantics = classify_observation(
+        YUYUTEI,
+        observation.price_type,
+        observation.price_jpy,
+        promotion_state=observation.promotion_state,
+    )
+
     return _SourceValue(
         source=YUYUTEI,
         reference_type="retail_sell",
@@ -197,9 +227,14 @@ def _resolve_yuyutei_sell(
         observed_at=observation.observed_at,
         sample_size=None,
         stale=stale,
-        eligible=not stale,
+        eligible=not stale and semantics.eligible,
         fallback_used=False,
-        ineligible_reason="stale" if stale else None,
+        # Staleness keeps the reason string when both apply, matching
+        # _resolve_snkrdunk. `sale_price` never supplies one at all - it is
+        # not a reason for exclusion - so a fresh sale observation reports
+        # ineligible_reason=None exactly as an ordinary one does.
+        ineligible_reason="stale" if stale else semantics.ineligible_reason,
+        constraint=semantics.constraint,
     )
 
 

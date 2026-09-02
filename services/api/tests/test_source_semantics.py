@@ -13,6 +13,7 @@ from dataclasses import fields
 from app.services.source_semantics import (
     BELOW_PLATFORM_MINIMUM,
     PLATFORM_FLOOR,
+    SALE_PRICE,
     SNKRDUNK,
     SOURCE_SEMANTICS,
     SOURCE_SEMANTICS_VERSION,
@@ -224,14 +225,25 @@ def test_platform_minimum_lives_only_in_central_config():
     assert rule.platform_minimum_jpy == 1000
 
 
-def test_the_rule_configures_only_the_documented_number():
-    """Task 1C-2D shape: what each side of the minimum MEANS is derived by the
-    classifier, not configured. A field naming one constraint for the whole
+def test_the_rule_never_configures_what_a_value_means():
+    """Task 1C-2D shape, still enforced: what a value MEANS is derived by the
+    classifier, never configured. A field naming one constraint for the whole
     at-or-below range (the old `at_or_below_minimum`) is exactly what let a
-    below-minimum value be described as the floor."""
+    below-minimum value be described as the floor.
+
+    `promotion_aware` was added beside `platform_minimum_jpy` and does not
+    weaken that: it declares which (source, price_type) pairs have a collector
+    that records promotion_state at all, so a stray string in a column shared
+    by every source cannot relabel an unrelated source's observations. It
+    still names no constraint - `sale_price` is chosen by the classifier."""
     rule = SOURCE_SEMANTICS[SNKRDUNK][STORED_FLOOR]
-    assert [f.name for f in fields(rule)] == ["platform_minimum_jpy"]
+    assert [f.name for f in fields(rule)] == ["platform_minimum_jpy", "promotion_aware"]
     assert not hasattr(rule, "at_or_below_minimum")
+    # No rule field is, or is named after, a constraint string.
+    assert not any(
+        getattr(rule, f.name) in (PLATFORM_FLOOR, BELOW_PLATFORM_MINIMUM, SALE_PRICE)
+        for f in fields(rule)
+    )
 
 
 def test_snkrdunk_configures_only_the_stored_floor_price_type():
@@ -241,11 +253,16 @@ def test_snkrdunk_configures_only_the_stored_floor_price_type():
 # --- Version --------------------------------------------------------------
 
 
-def test_source_semantics_version_is_1():
-    """Deliberately NOT bumped by the Task 1C-2D three-way correction.
-    Version 1 has never been pushed or deployed, so no stored or displayed
-    index anywhere was derived under the old `<=` rule - there is no released
-    ruleset for a version 2 to distinguish itself from. Bumping would falsely
-    imply one exists in the wild. The first bump belongs to the first rule
-    change made after a release."""
-    assert SOURCE_SEMANTICS_VERSION == 1
+def test_source_semantics_version_is_2():
+    """Bumped 1 -> 2 by the sale_price classification.
+
+    This is the first bump, and it is the case the counter was built for. The
+    Task 1C-2D three-way correction deliberately did NOT bump, because version
+    1 had never been deployed and no stored index anywhere had been derived
+    under the old `<=` rule - there was no released ruleset to distinguish
+    from. That is no longer true: market_index_snapshots holds rows written
+    under version 1, at a time when a promotional Yuyu-Tei price was
+    indistinguishable from an ordinary one. Without this bump those rows and
+    every future row would claim the same ruleset while meaning different
+    things."""
+    assert SOURCE_SEMANTICS_VERSION == 2

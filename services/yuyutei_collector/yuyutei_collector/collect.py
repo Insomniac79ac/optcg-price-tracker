@@ -218,8 +218,38 @@ def run_one_mapping_detailed(
                             fail_reasons=extraction["fail_reasons"],
                             sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
                             stock_status=(extraction.get("extracted") or {}).get("stock_status"),
+                            promotion_state=(extraction.get("extracted") or {}).get("promotion_state"),
                             batch_run_id=batch_run_id,
                         )
+                        # An indeterminate promotion verdict is a markup
+                        # signal worth seeing, and it is invisible in
+                        # extraction_status by design - it can never fail an
+                        # extraction. Logged on its own so a Yuyu-Tei markup
+                        # change shows up as a run of these lines rather than
+                        # as silence, and only when the two markers actually
+                        # disagreed: "none" and "sale" are both determined
+                        # answers and say nothing worth a second line.
+                        promotion = (
+                            ((extraction.get("raw") or {}).get("dom") or {}).get("promotion") or {}
+                        )
+                        if promotion.get("reason") == "no_product_container":
+                            # Already reported by extraction_fail_diagnostics
+                            # below - the container is missing for the price
+                            # too, so this would only duplicate it.
+                            pass
+                        elif promotion.get("promotion_state") is None:
+                            log_event(
+                                "promotion_state_indeterminate",
+                                mapping_id=mapping.id,
+                                reason=promotion.get("reason"),
+                                sale_badge=promotion.get("sale_badge"),
+                                struck_price_element=promotion.get("struck_price_element"),
+                                # Restated so one line shows that the price
+                                # survived the disagreement, which is the
+                                # whole point of not gating on it.
+                                sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                                batch_run_id=batch_run_id,
+                            )
                         if extraction["extraction_status"] != "extracted":
                             # Diagnostic-only detail (never used to accept a
                             # value) - the raw stock/price element text so a
@@ -342,6 +372,7 @@ def run_one_mapping_detailed(
         source_card_mapping_id=write_result.source_card_mapping_id,
         price_jpy=write_result.price_jpy,
         stock_status=write_result.stock_status,
+        promotion_state=write_result.promotion_state,
         observed_at=write_result.observed_at,
         batch_run_id=batch_run_id,
     )

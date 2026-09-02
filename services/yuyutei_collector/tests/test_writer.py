@@ -201,5 +201,88 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertTrue(any(r.startswith("mapping_not_approved:") for r in result.reasons))
 
 
+class PromotionStatePersistenceTests(WriterTestCase):
+    """promotion_state travels from the extractor onto the row, and never
+    gates the write. The struck former price has no path here at all - there
+    is no field for it, which is the point."""
+
+    def _extraction(self, promotion_state, **overrides):
+        extracted = dict(GOOD_EXTRACTION["extracted"], promotion_state=promotion_state)
+        extracted.update(overrides)
+        return dict(GOOD_EXTRACTION, extracted=extracted)
+
+    def _row(self):
+        return self.session.query(PriceObservation).one()
+
+    def test_sale_is_persisted(self):
+        result = self._write(self.approved_mapping, self._extraction("sale"))
+        self.assertTrue(result.written)
+        self.assertEqual(result.promotion_state, "sale")
+        self.assertEqual(self._row().promotion_state, "sale")
+
+    def test_none_is_persisted_as_the_string_not_as_null(self):
+        """"none" is a measurement - the collector looked and saw no
+        promotion - and must survive to the database as one."""
+        result = self._write(self.approved_mapping, self._extraction("none"))
+        self.assertTrue(result.written)
+        self.assertEqual(self._row().promotion_state, "none")
+        self.assertIsNotNone(self._row().promotion_state)
+
+    def test_indeterminate_is_persisted_as_null_and_still_writes_the_price(self):
+        result = self._write(self.approved_mapping, self._extraction(None))
+        self.assertTrue(result.written)
+        self.assertEqual(result.reasons, [])
+        self.assertIsNone(self._row().promotion_state)
+        self.assertEqual(self._row().price_jpy, 34800)
+
+    def test_promotion_state_never_appears_in_reasons(self):
+        for state in ("sale", "none", None):
+            with self.subTest(state=state):
+                self.setUp()
+                result = self._write(self.approved_mapping, self._extraction(state))
+                self.assertTrue(result.written)
+                self.assertEqual(result.reasons, [])
+
+    def test_extraction_without_the_key_at_all_writes_null(self):
+        """An older caller whose extraction dict predates promotion_state must
+        keep writing normally - landing NULL, which is exactly what NULL
+        means."""
+        self.assertNotIn("promotion_state", GOOD_EXTRACTION["extracted"])
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+        self.assertTrue(result.written)
+        self.assertIsNone(self._row().promotion_state)
+
+    def test_a_sale_write_stores_exactly_one_observation_at_the_current_price(self):
+        """The struck former price must not become a second observation, and
+        must not become the price of the first one."""
+        self._write(self.approved_mapping, self._extraction("sale", sell_price_jpy=120))
+        rows = self.session.query(PriceObservation).all()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].price_jpy, 120)
+        self.assertEqual(rows[0].price_type, "sell")
+
+    def test_no_column_anywhere_holds_a_former_price(self):
+        """Structural: a former/list/was price has nowhere to be stored, so it
+        cannot later be surfaced as a current one by accident."""
+        columns = {c.name for c in PriceObservation.__table__.columns}
+        self.assertEqual(
+            columns & {"former_price_jpy", "list_price_jpy", "was_price_jpy", "struck_price_jpy"},
+            set(),
+        )
+
+    def test_the_database_rejects_a_promotion_state_outside_the_vocabulary(self):
+        """The CHECK constraint, not convention, is what keeps a string
+        source_semantics has no rule for out of the column."""
+        from sqlalchemy.exc import IntegrityError
+
+        self._write(self.approved_mapping, self._extraction("sale"))
+        self.session.commit()
+        row = self._row()
+        row.promotion_state = "clearance"
+        with self.assertRaises(IntegrityError):
+            self.session.commit()
+        self.session.rollback()
+
+
 if __name__ == "__main__":
     unittest.main()

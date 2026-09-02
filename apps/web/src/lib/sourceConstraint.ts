@@ -53,6 +53,25 @@ const SOURCE_CONSTRAINT_COPY: Record<string, SourceConstraintCopy> = {
     tone: "caution",
     statesExclusion: true,
   },
+  // The one constraint that does NOT mean "excluded". A sale price is a real,
+  // current, buyable price and counts toward Market Index exactly like any
+  // other retail price, so it takes the quiet informational tone rather than
+  // the amber caution one, and `statesExclusion` stays false because nothing
+  // is excluded - `eligible` is true, so SourceConstraintNote renders the chip
+  // alone and never adds "Not used in Market Index".
+  //
+  // Says "the source" rather than naming Yuyu-Tei, for the reason in the
+  // module docstring above: the source's identity is already on screen beside
+  // the price, and hardcoding one here would be wrong for every other source
+  // that later starts reporting promotions. It also quotes no number and does
+  // not mention the struck former price, which Atlas deliberately does not
+  // store and must never display as a price.
+  sale_price: {
+    label: "Sale price",
+    explanation: "The source currently marks this listing as on sale.",
+    tone: "informational",
+    statesExclusion: false,
+  },
 };
 
 /** The copy for one `constraint`, or null when there is nothing to say.

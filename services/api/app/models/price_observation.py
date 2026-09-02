@@ -87,6 +87,17 @@ class PriceObservation(Base):
             "(source_card_mapping_id IS NOT NULL AND card_print_id IS NOT NULL)",
             name="ck_price_observations_lineage_paired",
         ),
+        # The vocabulary of promotion_state below, enforced by the database
+        # rather than by convention. NULL stays permitted - it is the
+        # "not determined" state every pre-existing row carries - but a
+        # non-null value outside this set is a collector bug, and letting one
+        # land would put a string into the column that
+        # app.services.source_semantics has no rule for and would silently
+        # treat as unconstrained.
+        CheckConstraint(
+            "promotion_state IS NULL OR promotion_state IN ('none', 'sale')",
+            name="ck_price_observations_promotion_state",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -125,6 +136,38 @@ class PriceObservation(Base):
     # FK tying these two columns to source_card_mappings.
     source_card_mapping_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+
+    # WHAT THE SOURCE SAID ABOUT ITS OWN PRICE, at the moment this observation
+    # was captured. Deliberately generic and source-neutral - it is a property
+    # of the observation, not of Yuyu-Tei - so a second source that displays
+    # promotions can populate it without a schema change or a renamed column.
+    #
+    # THREE-VALUED, AND THE THIRD VALUE IS LOAD-BEARING:
+    #   NULL     the promotion state was not determined. Either the row
+    #            predates this column entirely (every observation written
+    #            before it), or the collector looked and the page's markers
+    #            disagreed. It never means "no promotion".
+    #   "none"   the collector looked and the source displayed no promotion.
+    #   "sale"   the collector looked and the source explicitly displayed its
+    #            own sale state (for Yuyu-Tei: a SALE badge beside a struck
+    #            former price - see yuyutei_collector.extractor).
+    #
+    # Distinguishing NULL from "none" is the whole reason this is not a
+    # boolean. A boolean would force every legacy row to claim "not on sale",
+    # which is a fact Atlas does not have: the 549 Yuyu observations written
+    # before this column existed include known sale-priced ones (prints 4, 12,
+    # 14 and 17 carried a SALE badge on every captured page). No backfill is
+    # performed for exactly that reason - see the accompanying migration.
+    #
+    # WHAT IS NOT HERE. The struck FORMER price is deliberately absent. It is
+    # not an offer and never a current market price, so it is not stored as
+    # one anywhere; the full page HTML that displayed it is retained in
+    # raw_snapshots.raw_content, which is where that evidence belongs.
+    #
+    # Read by app.services.source_semantics.classify_observation, which turns
+    # "sale" into the "sale_price" constraint. That constraint describes the
+    # value; it never makes the observation ineligible.
+    promotion_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # Read-only convenience accessor for the composite lineage FK above -
     # viewonly because the pairing is already fully owned by the plain

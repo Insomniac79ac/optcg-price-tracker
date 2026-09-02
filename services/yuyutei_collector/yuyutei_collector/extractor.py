@@ -152,6 +152,117 @@ def _find_title_container(soup: BeautifulSoup):
 
 STRIKETHROUGH_TAGS = ("del", "s", "strike")
 
+# --- Promotion state -------------------------------------------------------
+#
+# WHAT IS BEING MEASURED. Yuyu-Tei marks a discounted product with two
+# separate elements inside the product container, measured on the live site
+# and on 105 captured product pages between 2026-08-08 and 2026-09-01:
+#
+#     <small class="bg-danger ...">SALE</small>     the badge
+#     <del class="fw-bold ..."> 220 円 </del>       the struck former price
+#     <h4 class="fw-bold text-danger ..."> 120 円</h4>   the current price
+#
+# The two markers co-occurred on 105 of 105 sale pages and on 0 of 444
+# ordinary ones, so each is independent evidence of the same fact and the
+# pair can be required to agree - the same "don't guess" conservatism this
+# module already applies to price and stock.
+#
+# TWO MARKERS, THREE OUTCOMES:
+#     both present     -> "sale"
+#     neither present  -> "none"
+#     exactly one      -> None, i.e. NOT DETERMINED
+#
+# WHY DISAGREEMENT IS NOT A FAILURE. Promotion state never gates the write.
+# It is descriptive metadata about a price, not the price, and the price's own
+# JSON-LD/DOM agreement is untouched by any of this. A markup change at the
+# source that moved or renamed one marker would otherwise stop Atlas pricing
+# the card at all - trading a real, verified price for nothing, to protect a
+# label. So an indeterminate verdict is recorded as None, the evidence behind
+# it is returned for logging, and extraction proceeds exactly as before.
+#
+# THE STRUCK VALUE IS NEVER READ OUT. Only the PRESENCE of a struck price is
+# evidence here. Its number is a former price, not a current offer, and this
+# module does not extract it, return it, or let it reach `extracted`.
+PROMOTION_SALE = "sale"
+PROMOTION_NONE = "none"
+
+# The badge's own word, matched on the element's text rather than on its
+# Bootstrap classes. `bg-danger`/`text-white` are presentation and could be
+# restyled without the product meaning changing; the word is the source's
+# actual statement. Compared case-insensitively against the whole stripped
+# text of a leaf, so a paragraph merely containing "sale" can never match.
+SALE_BADGE_TEXT = "sale"
+
+
+def _find_sale_badge(container) -> dict | None:
+    """The source's own SALE badge inside `container`, or None.
+
+    Leaf elements only, and the leaf's entire text must be the badge word -
+    the same structural discipline `_leaf_price_candidates` uses, and what
+    keeps a description or a title mentioning a sale from counting as one."""
+    for el in container.find_all(True):
+        if el.find(True) is not None:
+            continue
+        text = el.get_text(strip=True)
+        if text.casefold() == SALE_BADGE_TEXT:
+            return {"selector": _describe_element(el), "raw_text": text}
+    return None
+
+
+def _find_struck_price_element(container) -> dict | None:
+    """A struck-through FORMER price inside `container`, or None.
+
+    Requires the struck element to actually hold a 円-suffixed price: a
+    struck word or a struck out-of-stock notice is not a former price, and
+    counting one would report a promotion the source never displayed.
+
+    Returns the element's description only. The struck NUMBER is deliberately
+    not parsed or returned - see the module comment above."""
+    for el in container.find_all(STRIKETHROUGH_TAGS):
+        text = el.get_text(" ", strip=True)
+        if PRICE_ANYWHERE_RE.search(text):
+            return {"selector": _describe_element(el)}
+    return None
+
+
+def _resolve_promotion_state(container) -> dict:
+    """(state, evidence) for one product container, as a plain dict.
+
+    `state` is "sale", "none", or None for not-determined. `container` being
+    None - no product container found at all - is itself not-determined:
+    nothing was inspected, so nothing can be asserted either way."""
+    if container is None:
+        return {
+            "promotion_state": None,
+            "sale_badge": None,
+            "struck_price_element": None,
+            "reason": "no_product_container",
+        }
+
+    badge = _find_sale_badge(container)
+    struck = _find_struck_price_element(container)
+
+    if badge is not None and struck is not None:
+        state, reason = PROMOTION_SALE, None
+    elif badge is None and struck is None:
+        state, reason = PROMOTION_NONE, None
+    else:
+        # Exactly one marker. Recorded, never guessed - and named precisely
+        # enough that a log line says which half was missing.
+        state = None
+        reason = (
+            "sale_badge_without_struck_price"
+            if badge is not None
+            else "struck_price_without_sale_badge"
+        )
+
+    return {
+        "promotion_state": state,
+        "sale_badge": badge,
+        "struck_price_element": struck,
+        "reason": reason,
+    }
+
 
 def _leaf_price_candidates(container) -> list[dict]:
     """Tier 2: every leaf (no element children) descendant of `container`
@@ -387,7 +498,7 @@ def extract_with_agreement(
 
     # ---- DOM side (tiers 2-3, independent of JSON-LD, scoped to the real product container) ----
     container = _find_main_detail_container(soup)
-    dom_raw: dict = {"container": None, "price_candidates": [], "stock_element": None, "card_code_element": None}
+    dom_raw: dict = {"container": None, "price_candidates": [], "stock_element": None, "card_code_element": None, "promotion": None}
     dom_norm: dict = {"price": None, "stock": None, "title": None, "card_code": None}
     dom_price_tier: str | None = None
 
@@ -430,6 +541,15 @@ def extract_with_agreement(
             accepted_selectors["card_code_selector"] = card_code_el["selector"]
     else:
         rejected.append({"reason": "no_product_container_found"})
+
+    # ---- Promotion state: descriptive only, NEVER a gate ----
+    # Computed outside the `if container is not None` block above so the
+    # not-determined verdict is recorded even when no container was found,
+    # and deliberately not appended to `rejected` or `fail_reasons`: nothing
+    # here may influence extraction_status. See the module comment on
+    # PROMOTION_SALE for why a disagreement must not cost Atlas a real price.
+    promotion = _resolve_promotion_state(container)
+    dom_raw["promotion"] = promotion
 
     title_el = _find_title_container(soup)
     dom_norm["title"] = title_el.get_text(strip=True) if title_el else None
@@ -533,6 +653,10 @@ def extract_with_agreement(
             "treatment": treatment,
             "sell_price_jpy": accepted_price,
             "stock_status": accepted_stock,
+            # "sale" / "none" / None-for-not-determined. Persisted verbatim by
+            # writer.py; never consulted by any gate in this module or that
+            # one. No former price accompanies it, by design.
+            "promotion_state": promotion["promotion_state"],
             "product_image_url": jsonld_norm["image_url"],
             "external_product_id": external_id,
             "captured_at": datetime.now(timezone.utc).isoformat(),

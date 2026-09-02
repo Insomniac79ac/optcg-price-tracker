@@ -143,6 +143,13 @@ class PriceObservation(Base):
             ondelete="RESTRICT",
             name="fk_price_observations_mapping_print_source",
         ),
+        # The promotion_state vocabulary, restated here for the same reason as
+        # the lineage pairing below: this service's tests must exercise the
+        # real constraint its writer has to satisfy, not a looser mirror.
+        CheckConstraint(
+            "promotion_state IS NULL OR promotion_state IN ('none', 'sale')",
+            name="ck_price_observations_promotion_state",
+        ),
         # Legacy observations carry neither lineage field; print-linked ones
         # must carry both together, never just one. Restated here so this
         # service's tests exercise the real invariant its writer must satisfy.
@@ -172,6 +179,11 @@ class PriceObservation(Base):
     )
     source_card_mapping_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Mirror of app.models.price_observation.promotion_state - see that
+    # model for the three-valued vocabulary. NULL ("not determined") is what
+    # this service writes whenever the page's promotion markers disagree, and
+    # it is never a substitute for "none".
+    promotion_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
 
 class CanonicalCard(Base):

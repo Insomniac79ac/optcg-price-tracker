@@ -34,6 +34,39 @@ describe("describeSourceConstraint", () => {
     expect(JSON.stringify(copy)).not.toContain("below_platform_minimum");
   });
 
+  it("describes a sale price as informational and NOT excluded", () => {
+    // The one constraint that does not mean "excluded". A sale price is a
+    // real, current, buyable number that counts toward Market Index exactly
+    // like any other retail price, so it must not borrow the amber caution
+    // tone, and statesExclusion must stay false - SourceConstraintNote reads
+    // it together with `eligible` to decide whether to add "Not used in
+    // Market Index", and for a sale price it must not.
+    const copy = describeSourceConstraint("sale_price");
+    expect(copy?.label).toBe("Sale price");
+    expect(copy?.tone).toBe("informational");
+    expect(copy?.statesExclusion).toBe(false);
+    expect(copy?.explanation).toMatch(/on sale/i);
+  });
+
+  it("never shows a former, struck or was-price anywhere in the sale copy", () => {
+    // Atlas does not store the struck former price, so no copy may imply it
+    // has one to show - and no number may appear that a reader could mistake
+    // for a price.
+    const copy = describeSourceConstraint("sale_price")!;
+    const text = `${copy.label} ${copy.explanation}`;
+    expect(text).not.toMatch(/was |before|previously|struck|former|original|regular/i);
+    expect(text).not.toMatch(/[0-9]/);
+    expect(text).not.toMatch(/[¥￥]/);
+    expect(text).not.toMatch(/%|discount|off\b/i);
+  });
+
+  it("says nothing about a sale for the other constraints", () => {
+    for (const constraint of ["platform_floor", "below_platform_minimum"]) {
+      const copy = describeSourceConstraint(constraint)!;
+      expect(`${copy.label} ${copy.explanation}`).not.toMatch(/sale/i);
+    }
+  });
+
   it("says nothing for an unconstrained value", () => {
     expect(describeSourceConstraint(null)).toBeNull();
     expect(describeSourceConstraint(undefined)).toBeNull();
@@ -67,7 +100,11 @@ describe("describeSourceConstraint", () => {
     // The backend owns which platform has which minimum. Any source name or
     // number in this copy would be a second, silently-drifting copy of a rule
     // this app does not own.
-    for (const constraint of ["platform_floor", "below_platform_minimum"]) {
+    for (const constraint of [
+      "platform_floor",
+      "below_platform_minimum",
+      "sale_price",
+    ]) {
       const copy = describeSourceConstraint(constraint)!;
       const text = `${copy.label} ${copy.explanation}`;
       expect(text).not.toMatch(/snkrdunk|yuyutei|bandai/i);

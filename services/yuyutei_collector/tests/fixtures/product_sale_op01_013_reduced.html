@@ -1,0 +1,99 @@
+<!--
+Reduced, hand-trimmed stand-in for the genuine OP01-013 (R Sanji, base
+printing) product page, whose promotional markup is reproduced verbatim from
+the real page Atlas captured and stored on staging as
+raw_snapshots.id=1466 (fetched 2026-09-01 by the scheduled yuyutei-collector
+for source_card_mappings.id=18 -> card_prints.id=4). Same reduction policy as
+product_op01_001_reduced.html: only the real tag hierarchy, id/class names and
+text needed to exercise the extractor's selectors are kept, and every script,
+tracker, cookie, session value, image and unrelated page section is removed.
+
+WHAT MAKES THIS FIXTURE DIFFERENT from product_op01_001_reduced.html is one
+thing only - the `.lhs` price block. On an ordinary page it is:
+
+    <div class="lhs mt-0">
+      <h4 class="fw-bold  d-inline-block"> 34,800 円</h4>
+    </div>
+
+and on a sale page it carries two extra elements around the same h4, which are
+the two markers _resolve_promotion_state requires to agree:
+
+    <small class="bg-danger ...">SALE</small>      the source's own badge
+    <del class="fw-bold ..."> 220 円 </del>        the struck former price
+
+Both were present on 105 of 105 captured sale pages and on 0 of 444 ordinary
+ones (measured across every Yuyu-Tei observation stored on staging,
+2026-08-08 to 2026-09-01).
+
+The struck 220 is here to be IGNORED, and that is most of what this file is
+for. It must never become the extracted price, never reach `extracted`, and
+never be written as an observation - the accepted price is 120, the number
+the card can actually be bought for.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<title>R サンジ 販売 | [OP01]ROMANCE DAWN | ONE PIECEカードゲーム通販ならカードショップ -遊々亭-</title>
+<script type="application/ld+json">{"@context":"http://schema.org","@type":"Product","name":"R サンジ","image":"https://card.yuyu-tei.jp/opc/front/op01/10017.jpg","description":"OP01-013","offers":{"@type":"Offer","price":"120","priceCurrency":"JPY","availability":"InStock"}}</script>
+</head>
+<body>
+
+<div class="brackets game-text position-relative mt-3">
+<h1 class="position-absolute fs-12 fw-bolder text-primary mt-1 ms-4 me-4 top-0 start-0">
+R サンジ | 販売 | [OP01]ROMANCE DAWN | ONE PIECEカードゲーム</h1>
+</div>
+
+<div class="power mt-4" id="power">
+<h3 class="fw-bold ps-3 pt-3 pe-3 pb-3 pb-md-3">  R サンジ</h3>
+</div>
+
+<section class="product-detail" id="product-detail">
+<div class="row my-3">
+<div class="col-lg-5 col-md-4 ps-md-0 mt-4 text-center zo position-relative" style="width: 260px;">
+<div class="position-relative"></div>
+<a href="javascript:;" class="btn btn-sm btn-primary radius1 float-end mt-2 fs-12 fw-bold px-3" data-bs-toggle="modal" data-bs-target="#imageZoom"> ZOOM </a>
+</div>
+<div class="col-lg-7 col-md-8 mt-4 zo1">
+<div class="product-detailing">
+<div class="d-flex justify-content-between">
+<span class="border border-dark py-1 fw-bold px-4 text-center my-2 fs-11 pote">OP01-013</span>
+</div>
+<hr class="mt-2 mb-3 hidden-mobile">
+<div class="d-flex justify-content-between flex-flow-column">
+<div class="lhs mt-0">
+<small class="bg-danger px-4 text-white fs-12 py-1">SALE</small><div class="clearfix"></div>
+<del class="fw-bold d-inline-block me-2"> 220 円 </del><h4 class="fw-bold  text-danger  d-inline-block"> 120 円</h4>
+</div>
+<div class="hidden-desktop">
+<label class="form-check-label fw-bold float-start" id="cart_sell_zaiko_mobile" for="flexRadioDefault5n"> 在庫 :   ◯   </label>
+</div>
+<div class="rhs d-flex justify-content-between align-items-end">
+<div class="hidden-mobile">
+<label class="form-check-label fw-bold float-start" id="cart_sell_zaiko_pc" for="flexRadioDefault5"> 在庫 :   ◯   </label>
+</div>
+</div>
+</div>
+<div class="table-responsive mt-3 hidden-mobile">
+<table class="table table-bordered fw-bold fs-normal w-100 text-center detail-under-li">
+<tbody>
+<tr><th colspan="2">種類</th><td colspan="2">キャラクター</td></tr>
+<tr><th colspan="2">パワー</th><td colspan="2">4000</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<div class="row recommendations">
+<div class="col-md-4" style="height: 240px">
+<a href="https://yuyu-tei.jp/sell/opc/card/op01/10018">
+<p class="pt-1" style="overflow: hidden; height: 38px;">ナミ</p>
+</a>
+<b><strong class="d-block text-end "> 30 円 </strong></b>
+</div>
+</div>
+
+</body>
+</html>

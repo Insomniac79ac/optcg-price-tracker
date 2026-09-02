@@ -308,5 +308,170 @@ class ExpectedTreatmentParameterTests(unittest.TestCase):
         self.assertEqual(result["extraction_status"], "extracted")
 
 
+SALE_FIXTURE = "product_sale_op01_013_reduced.html"
+SALE_URL = "https://yuyu-tei.jp/sell/opc/card/op01/10017"
+SALE_CARD_CODE = "OP01-013"
+# The two markers, exactly as the real captured page carries them. Removed
+# individually below to build the two disagreement cases, so those cases are
+# the genuine fixture minus one marker rather than a hand-written guess at
+# what a half-marked page looks like.
+SALE_BADGE_HTML = '<small class="bg-danger px-4 text-white fs-12 py-1">SALE</small>'
+STRUCK_PRICE_HTML = '<del class="fw-bold d-inline-block me-2"> 220 円 </del>'
+
+
+def sale_html(*, badge: bool = True, struck: bool = True) -> str:
+    """The real sale fixture with either marker optionally removed."""
+    html = load_fixture(SALE_FIXTURE)
+    if not badge:
+        assert SALE_BADGE_HTML in html
+        html = html.replace(SALE_BADGE_HTML, "", 1)
+    if not struck:
+        assert STRUCK_PRICE_HTML in html
+        html = html.replace(STRUCK_PRICE_HTML, "", 1)
+    return html
+
+
+def extract_sale(html: str) -> dict:
+    return extract_with_agreement(html, SALE_URL, SALE_CARD_CODE, expected_treatment="normal")
+
+
+class PromotionStateTests(unittest.TestCase):
+    """The promotion state machine: two independent markers, three outcomes.
+
+    Every test here also asserts what happened to the PRICE, because the
+    entire design rule is that promotion state is descriptive and can never
+    cost Atlas a verified price."""
+
+    def test_both_markers_present_is_sale(self):
+        result = extract_sale(sale_html())
+        self.assertEqual(result["extracted"]["promotion_state"], "sale")
+        self.assertEqual(result["extraction_status"], "extracted")
+
+    def test_neither_marker_present_is_none(self):
+        """The ordinary fixture - no badge, no struck price - is a DETERMINED
+        answer, not an absent one. "none" and NULL are different facts."""
+        result = extract_with_agreement(
+            load_fixture("product_op01_001_reduced.html"), PRODUCT_URL, EXPECTED_CARD_CODE
+        )
+        self.assertEqual(result["extracted"]["promotion_state"], "none")
+        self.assertEqual(result["extraction_status"], "extracted")
+
+    def test_sale_badge_without_struck_price_is_not_determined(self):
+        result = extract_sale(sale_html(struck=False))
+        self.assertIsNone(result["extracted"]["promotion_state"])
+        self.assertEqual(
+            result["raw"]["dom"]["promotion"]["reason"], "sale_badge_without_struck_price"
+        )
+
+    def test_sale_badge_without_struck_price_still_writes_a_valid_price(self):
+        """The whole point of not gating on promotion state."""
+        result = extract_sale(sale_html(struck=False))
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["fail_reasons"], [])
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 120)
+
+    def test_struck_price_without_sale_badge_is_not_determined(self):
+        result = extract_sale(sale_html(badge=False))
+        self.assertIsNone(result["extracted"]["promotion_state"])
+        self.assertEqual(
+            result["raw"]["dom"]["promotion"]["reason"], "struck_price_without_sale_badge"
+        )
+
+    def test_struck_price_without_sale_badge_still_writes_a_valid_price(self):
+        result = extract_sale(sale_html(badge=False))
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["fail_reasons"], [])
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 120)
+
+    def test_promotion_state_never_appears_in_fail_reasons(self):
+        """No disagreement, in either direction, may reach extraction_status."""
+        for html in (sale_html(struck=False), sale_html(badge=False)):
+            result = extract_sale(html)
+            joined = " ".join(result["fail_reasons"])
+            self.assertNotIn("promotion", joined)
+            self.assertNotIn("sale", joined)
+
+    def test_missing_product_container_is_not_determined_and_says_so(self):
+        """Nothing was inspected, so nothing can be asserted either way -
+        never "none"."""
+        result = extract_with_agreement("<html><body>nothing</body></html>", SALE_URL, SALE_CARD_CODE)
+        self.assertIsNone(result["extracted"]["promotion_state"])
+        self.assertEqual(result["raw"]["dom"]["promotion"]["reason"], "no_product_container")
+
+    def test_a_struck_non_price_is_not_a_former_price(self):
+        """A struck word is not evidence of a promotion. Only a struck element
+        actually holding a price counts, so an unrelated <s> elsewhere in the
+        product container cannot invent a sale."""
+        html = load_fixture("product_op01_001_reduced.html").replace(
+            "<hr class=\"mt-2 mb-3 hidden-mobile\">",
+            "<hr class=\"mt-2 mb-3 hidden-mobile\"><s>\u5728\u5eab\u5207\u308c</s>",
+            1,
+        )
+        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extracted"]["promotion_state"], "none")
+
+    def test_the_word_sale_inside_a_sentence_is_not_a_badge(self):
+        """Only a leaf whose WHOLE text is the badge word counts."""
+        html = load_fixture("product_op01_001_reduced.html").replace(
+            "<hr class=\"mt-2 mb-3 hidden-mobile\">",
+            "<hr class=\"mt-2 mb-3 hidden-mobile\"><p>Not on sale right now</p>",
+            1,
+        )
+        result = extract_with_agreement(html, PRODUCT_URL, EXPECTED_CARD_CODE)
+        self.assertEqual(result["extracted"]["promotion_state"], "none")
+
+
+class SalePriceExtractionIsNumericallyUnchangedTests(unittest.TestCase):
+    """A sale page must price exactly like any other page. If any of these
+    move, the promotion work has changed pricing, which it must not."""
+
+    def test_sale_page_accepts_the_current_price_not_the_struck_one(self):
+        result = extract_sale(sale_html())
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 120)
+        self.assertNotEqual(result["extracted"]["sell_price_jpy"], 220)
+
+    def test_struck_former_price_is_never_a_dom_price_candidate(self):
+        result = extract_sale(sale_html())
+        candidates = result["raw"]["dom"]["price_candidates"]
+        self.assertEqual([c["normalized_price"] for c in candidates], [120])
+
+    def test_struck_former_price_appears_nowhere_in_extracted(self):
+        """220 must not leak out under ANY key - there is no former-price
+        field, and adding one by accident is what this pins."""
+        result = extract_sale(sale_html())
+        self.assertNotIn(220, result["extracted"].values())
+        self.assertNotIn("220", [str(v) for v in result["extracted"].values()])
+
+    def test_promotion_evidence_records_presence_but_never_the_struck_number(self):
+        promotion = extract_sale(sale_html())["raw"]["dom"]["promotion"]
+        self.assertIsNotNone(promotion["struck_price_element"])
+        self.assertNotIn("220", str(promotion["struck_price_element"]))
+
+    def test_sale_page_price_agreement_is_normal(self):
+        result = extract_sale(sale_html())
+        self.assertTrue(result["agreement"]["price"]["agree"])
+        self.assertEqual(result["agreement"]["price"]["jsonld_price"], 120)
+        self.assertEqual(result["agreement"]["price"]["dom_price"], 120)
+
+    def test_sale_page_stock_and_treatment_are_normal(self):
+        result = extract_sale(sale_html())
+        self.assertEqual(result["extracted"]["stock_status"], "in_stock")
+        self.assertEqual(result["extracted"]["treatment"], "normal")
+
+    def test_ordinary_page_extraction_is_bit_for_bit_what_it_was(self):
+        """The ordinary path must be untouched. Everything except the newly
+        added promotion_state key is asserted here against the values the
+        pre-existing tests in this file already pin."""
+        result = extract_with_agreement(
+            load_fixture("product_op01_001_reduced.html"), PRODUCT_URL, EXPECTED_CARD_CODE
+        )
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["fail_reasons"], [])
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 34800)
+        self.assertEqual(result["extracted"]["stock_status"], "out_of_stock")
+        self.assertEqual(result["extracted"]["card_code"], "OP01-001")
+        self.assertEqual(result["dom_price_tier"], "leaf_element_scoped")
+
+
 if __name__ == "__main__":
     unittest.main()

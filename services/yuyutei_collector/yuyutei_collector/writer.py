@@ -19,6 +19,15 @@ docs/yuyutei_collector_operations.md "Stock is not required"): a verified
 sell price is written whether or not stock is present, missing, unknown, or
 disagrees between JSON-LD and DOM. stock_status is still persisted on the
 written observation as incidental metadata when the extractor resolved one.
+
+Promotion state is treated identically and for the same reason. What the
+source said about its own price ("sale" / "none" / not-determined) is
+persisted alongside the price, but it never appears in `reasons` and can
+never stop a write: a page whose SALE markers disagree still displayed a
+verified sell price, and losing that price to protect a label would trade
+real market evidence for nothing. The struck FORMER price is never written -
+it is not an offer, so it is not stored as one; the page that displayed it is
+retained whole in raw_snapshots.raw_content.
 """
 
 import hashlib
@@ -42,6 +51,10 @@ class WriteResult:
     source_card_mapping_id: int | None = None
     price_jpy: int | None = None
     stock_status: str | None = None
+    # None here is ambiguous in exactly the way the column is: either the page
+    # markers disagreed, or nothing was written at all. Callers read it only
+    # off a WriteResult whose `written` is True.
+    promotion_state: str | None = None
     observed_at: str | None = None
 
 
@@ -111,6 +124,14 @@ def validate_and_write_observation(
     # Incidental metadata only (see module docstring) - a missing/ambiguous
     # stock_status never gates the write.
     stock_status = extracted.get("stock_status")
+    # Descriptive metadata on exactly the same footing as stock_status, and
+    # for the same reason: what the source said about its own price is worth
+    # recording, but a page whose promotion markers disagree still displayed a
+    # verified sell price, and refusing to store that price would trade real
+    # market evidence for a label. `.get` rather than `[...]` so an older
+    # caller whose extraction dict predates the key still writes normally,
+    # landing NULL - which is exactly what NULL means here.
+    promotion_state = extracted.get("promotion_state")
     if price_jpy is None:
         reasons.append("price_missing_or_ambiguous")
 
@@ -142,6 +163,7 @@ def validate_and_write_observation(
         price_type=price_type,
         price_jpy=price_jpy,
         stock_status=stock_status,
+        promotion_state=promotion_state,
         raw_snapshot_id=raw_snapshot.id,
         source_card_mapping_id=mapping.id,
         card_print_id=mapping.card_print_id,
@@ -159,5 +181,6 @@ def validate_and_write_observation(
         source_card_mapping_id=observation.source_card_mapping_id,
         price_jpy=observation.price_jpy,
         stock_status=observation.stock_status,
+        promotion_state=observation.promotion_state,
         observed_at=observed_at.isoformat(),
     )
