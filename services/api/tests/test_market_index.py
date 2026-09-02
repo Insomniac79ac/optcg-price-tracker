@@ -303,7 +303,11 @@ def test_floor_is_never_transaction_evidence(db_session):
 # --- Index combination --------------------------------------------------------
 
 
-def test_two_source_midpoint(db_session):
+def test_retail_sell_and_a_fallback_floor_no_longer_average(db_session):
+    """v1 published 1350 here - the midpoint of a retail asking price and a
+    marketplace listing floor - and called it full/high. v2 does not: the floor
+    carries fallback_used=true, so it stands aside while a non-fallback source
+    is present. The retail price IS the index; the floor stays visible."""
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
     snkrdunk = make_source(db_session, "snkrdunk")
@@ -312,10 +316,15 @@ def test_two_source_midpoint(db_session):
 
     index = get_market_index_for_card(db_session, card.id)
 
-    assert index.index_value_jpy == 1350
-    assert index.coverage_status == "full"
-    assert index.confidence == "high"
-    assert index.source_count == 2
+    assert index.index_value_jpy == 1200
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+    assert index.source_count == 1
+    # ...and the floor was not deleted, only demoted.
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert floor.value_jpy == 1500
+    assert floor.eligible is True
+    assert floor.contributes_to_index is False
 
 
 def test_midpoint_ending_in_half_rounds_half_up(db_session):
@@ -468,7 +477,7 @@ def test_market_index_endpoint_valid_card(client, db_session):
     assert body["card_id"] == card.id
     assert body["index_value_jpy"] == 1200
     assert body["coverage_status"] == "limited"
-    assert body["index_version"] == 1
+    assert body["index_version"] == 2
     assert body["calculation_method"] == "median_of_sources"
 
 
@@ -996,7 +1005,11 @@ def test_constrained_pricing_result_is_byte_for_byte_unchanged(client, db_sessio
 
 
 def test_unconstrained_pricing_result_is_byte_for_byte_unchanged(client, db_session):
-    """D: the ordinary two-source case, unaffected by any of this."""
+    """D: an unconstrained floor beside a retail sell. Source SEMANTICS still
+    do nothing to it - eligible, no constraint, raw value intact - which is
+    what this test was written to pin. What changed under index v2 is the
+    COMBINATION: the floor no longer joins the aggregate. The two layers moving
+    independently is exactly the separation the two version fields encode."""
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
     snkrdunk = make_source(db_session, "snkrdunk")
@@ -1005,16 +1018,17 @@ def test_unconstrained_pricing_result_is_byte_for_byte_unchanged(client, db_sess
 
     body = client.get(f"/cards/{card.id}/market-index").json()
 
-    assert body["index_value_jpy"] == 1350  # midpoint, unchanged
-    assert body["source_count"] == 2
-    assert body["coverage_status"] == "full"
-    assert body["confidence"] == "high"
+    assert body["index_value_jpy"] == 1200  # was 1350 under index v1
+    assert body["source_count"] == 1
+    assert body["coverage_status"] == "limited"
+    assert body["confidence"] == "medium"
     assert body["index_version"] == INDEX_VERSION
 
     values = {sv["source"]: sv for sv in body["source_values"]}
     assert values["snkrdunk"]["value_jpy"] == 1500
     assert values["snkrdunk"]["eligible"] is True
     assert values["snkrdunk"]["constraint"] is None
+    assert values["snkrdunk"]["contributes_to_index"] is False
 
     assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
 
@@ -1039,9 +1053,10 @@ def test_two_sources_report_their_spread(db_session):
     assert index.source_price_range is not None
     assert index.source_price_range.low_jpy == 24900
     assert index.source_price_range.high_jpy == 29800
-    # The index itself is untouched: still the median of the same two values.
-    assert index.index_value_jpy == 27350
-    assert index.source_count == 2
+    # The RANGE spans admissible evidence, so it is unchanged by index v2 -
+    # but the floor is a fallback, so only the retail price contributed.
+    assert index.index_value_jpy == 29800
+    assert index.source_count == 1
 
 
 def test_range_is_independent_of_source_order(db_session):
@@ -1190,7 +1205,10 @@ def test_range_is_exposed_through_the_api(client, db_session):
     body = client.get(f"/cards/{card.id}/market-index").json()
 
     assert body["source_price_range"] == {"low_jpy": 120, "high_jpy": 1500}
-    assert body["index_value_jpy"] == 810  # unchanged midpoint
+    # The staging control case in miniature: v1 published 810 for a card no
+    # source priced above 120. v2 publishes 120 and still shows the 1500.
+    assert body["index_value_jpy"] == 120
+    assert body["source_count"] == 1
     assert body["index_version"] == INDEX_VERSION
 
 
@@ -1206,8 +1224,12 @@ def test_range_is_null_not_missing_for_a_single_source(client, db_session):
 
 
 def test_adding_the_range_did_not_move_any_index_field(client, db_session):
-    """Regression pin: every pre-existing pricing field on a two-source card
-    holds the value it had before this field existed."""
+    """Regression pin: adding source_price_range still moves no index field.
+
+    The expected values below are index v2's, not v1's - the combination rule
+    is what moved them, and it moved them in a change that carried a version
+    bump. The pin this test exists for is narrower and still holds: computing a
+    range must not, by itself, disturb the number beside it."""
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
     snkrdunk = make_source(db_session, "snkrdunk")
@@ -1216,10 +1238,295 @@ def test_adding_the_range_did_not_move_any_index_field(client, db_session):
 
     body = client.get(f"/cards/{card.id}/market-index").json()
 
-    assert body["index_value_jpy"] == 1350
-    assert body["source_count"] == 2
-    assert body["coverage_status"] == "full"
-    assert body["confidence"] == "high"
+    assert body["index_value_jpy"] == 1200
+    assert body["source_count"] == 1
+    assert body["coverage_status"] == "limited"
+    assert body["confidence"] == "medium"
     assert body["calculation_method"] == "median_of_sources"
-    assert body["index_version"] == 1
+    assert body["index_version"] == 2
     assert body["source_semantics_version"] == 1
+
+
+# --- Market Index v2: contributor role (Model C) -----------------------------
+#
+# v1 combined every eligible value as a co-equal addend. That put a SNKRDUNK
+# listing floor - a marketplace's minimum permitted ask, standing in for a sold
+# median it lacked the sample size to compute - on the same footing as a
+# dealer's displayed retail price, averaged the two, and reported full/high.
+# On staging that published ¥1,310 for a print no source priced above ¥120.
+#
+# v2 splits one question into two. `eligible` still asks "is this admissible
+# evidence?"; the new `contributes_to_index` asks "did it go into the number?".
+# A fallback stands aside when a non-fallback source is present, and stands
+# alone quite happily when it is all there is.
+
+
+def test_a_fallback_floor_alone_still_contributes(db_session):
+    """The rule demotes a fallback, it does not disqualify one. With nothing
+    else admissible, one imperfect number beats no number."""
+    card = make_card(db_session)
+    snkrdunk = make_source(db_session, "snkrdunk")
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert floor.fallback_used is True
+    assert floor.eligible is True
+    assert floor.contributes_to_index is True
+    assert index.index_value_jpy == 1500
+    assert index.source_count == 1
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+
+
+def test_a_non_fallback_source_alone_contributes(db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    sell = find(index.source_values, "yuyutei", "retail_sell")
+    assert sell.fallback_used is False
+    assert sell.contributes_to_index is True
+    assert index.index_value_jpy == 1200
+    assert index.source_count == 1
+
+
+def test_retail_sell_beside_a_fallback_floor_contributes_alone(db_session):
+    """The case the whole change exists for."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=2500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    sell = find(index.source_values, "yuyutei", "retail_sell")
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert sell.contributes_to_index is True
+    assert floor.contributes_to_index is False
+    assert index.index_value_jpy == 120
+    assert index.source_count == 1
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+
+
+def test_a_transaction_median_beside_retail_sell_still_aggregates(db_session):
+    """The reason the rule keys on `fallback_used` and not on reference_type or
+    source name: a real sold median is not a stand-in for anything, so the day
+    the sample reaches its minimum it aggregates exactly as v1 intended."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    for _ in range(SNKRDUNK_SOLD_MIN_SAMPLE):
+        snkrdunk_sold(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    median = find(index.source_values, "snkrdunk", "transaction_median")
+    assert median.fallback_used is False
+    assert median.contributes_to_index is True
+    assert find(index.source_values, "yuyutei", "retail_sell").contributes_to_index is True
+    assert index.index_value_jpy == 1350
+    assert index.source_count == 2
+    assert index.coverage_status == "full"
+    assert index.confidence == "high"
+
+
+def test_two_non_fallback_sources_still_produce_full_high(db_session):
+    """Nothing about ordinary multi-source aggregation was weakened - the
+    ladder still reaches full/high, it just needs contributors to get there."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1000, days_ago=1)
+    for price in (2000, 2000, 2000):
+        snkrdunk_sold(db_session, card, snkrdunk, price_jpy=price, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_count == 2
+    assert index.coverage_status == "full"
+    assert index.confidence == "high"
+    assert index.index_value_jpy == 1500
+    assert index.source_price_range.low_jpy == 1000
+    assert index.source_price_range.high_jpy == 2000
+
+
+def test_a_constrained_fallback_enters_neither_range_nor_contributors(db_session):
+    """Ineligible is still ineligible: a platform-floor value is not admissible
+    evidence, so demotion never gets a chance to promote it into the range."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    minimum = SOURCE_SEMANTICS["snkrdunk"]["floor"].platform_minimum_jpy
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=minimum, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert floor.eligible is False
+    assert floor.constraint == "platform_floor"
+    assert floor.contributes_to_index is False
+    assert floor.value_jpy == minimum  # still shown
+    assert index.source_price_range is None
+    assert index.index_value_jpy == 120
+    assert index.source_count == 1
+
+
+def test_a_stale_fallback_enters_neither_range_nor_contributors(db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    snkrdunk_floor(
+        db_session, card, snkrdunk, price_jpy=2500,
+        days_ago=SNKRDUNK_FLOOR_MAX_AGE_DAYS + 1,
+    )
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert floor.eligible is False
+    assert floor.stale is True
+    assert floor.contributes_to_index is False
+    assert index.source_price_range is None
+    assert index.index_value_jpy == 120
+
+
+def test_an_auxiliary_value_enters_neither_range_nor_contributors(db_session):
+    """Yuyu-Tei dealer buy is not an index candidate at all. It gets an explicit
+    false rather than None: None would mean "unknown", and this is known."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+    yuyutei_buy(db_session, card, yuyutei, price_jpy=600, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    buy = find(index.auxiliary_values, "yuyutei", "dealer_buy")
+    assert buy.contributes_to_index is False
+    assert buy.eligible is False
+    assert index.source_price_range is None
+    assert index.index_value_jpy == 1200
+    assert index.source_count == 1
+
+
+def test_a_demoted_fallback_stays_in_the_source_price_range(db_session):
+    """The disagreement must remain visible. Recomputing the range from
+    contributors would delete the very number that makes the index worth
+    questioning."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=2500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_price_range.low_jpy == 120
+    assert index.source_price_range.high_jpy == 2500
+
+
+def test_source_count_one_with_a_two_endpoint_range_is_valid(db_session):
+    """Intentional and load-bearing: one value contributed, two were
+    admissible. A reader who assumes range implies source_count >= 2 is now
+    wrong, and this pins that."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=580, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=1500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.source_count == 1
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+    assert index.source_price_range is not None
+    assert (index.source_price_range.low_jpy, index.source_price_range.high_jpy) == (580, 1500)
+
+
+def test_demotion_never_rewrites_a_source_value(db_session):
+    """Raw evidence is preserved exactly - value, timestamp, sample size,
+    eligibility and semantics all survive demotion untouched. Only the new role
+    field distinguishes a demoted value from a contributing one."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    stored = snkrdunk_floor(db_session, card, snkrdunk, price_jpy=2500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    floor = find(index.source_values, "snkrdunk", "listing_floor")
+    assert floor.value_jpy == stored.price_jpy == 2500
+    assert floor.observed_at == stored.observed_at
+    assert floor.eligible is True
+    assert floor.ineligible_reason is None
+    assert floor.constraint is None
+    assert floor.evidence_type == "listing"
+    assert floor.sample_size is None
+
+
+def test_contributor_role_is_independent_of_source_order(db_session):
+    """The rule is a partition of a set, not a scan that stops at the first
+    match, so which resolver ran first cannot change any value's role."""
+    card_a = make_card(db_session)
+    card_b = make_card(db_session, card_code="OP01-002")
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    for card in (card_a, card_b):
+        yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+        snkrdunk_floor(db_session, card, snkrdunk, price_jpy=2500, days_ago=1)
+
+    indexes = get_market_index_for_cards(db_session, [card_a.id, card_b.id])
+
+    for index in indexes.values():
+        roles = {(sv.source, sv.reference_type): sv.contributes_to_index
+                 for sv in index.source_values}
+        assert roles == {("yuyutei", "retail_sell"): True,
+                         ("snkrdunk", "listing_floor"): False}
+        assert index.index_value_jpy == 120
+
+    reversed_roles = get_market_index_for_cards(db_session, [card_b.id, card_a.id])
+    assert {k: v.index_value_jpy for k, v in reversed_roles.items()} == \
+        {k: v.index_value_jpy for k, v in indexes.items()}
+
+
+def test_every_current_source_value_carries_an_explicit_role(db_session):
+    """None means "this payload predates the field", never "did not
+    contribute" - so nothing the current resolver emits may leave it unset."""
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=120, days_ago=1)
+    yuyutei_buy(db_session, card, yuyutei, price_jpy=60, days_ago=1)
+    snkrdunk_floor(db_session, card, snkrdunk, price_jpy=2500, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    for sv in list(index.source_values) + list(index.auxiliary_values):
+        assert sv.contributes_to_index in (True, False), sv
+
+
+def test_index_version_is_two_and_source_semantics_version_is_one(db_session):
+    """The combination step moved; source classification did not. The two
+    version fields exist to say exactly that, and a snapshot written under
+    either ruleset has to be able to name the one that produced it."""
+    assert INDEX_VERSION == 2
+    assert SOURCE_SEMANTICS_VERSION == 1
+
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    yuyutei_sell(db_session, card, yuyutei, price_jpy=1200, days_ago=1)
+
+    index = get_market_index_for_card(db_session, card.id)
+
+    assert index.index_version == 2
+    assert index.source_semantics_version == 1

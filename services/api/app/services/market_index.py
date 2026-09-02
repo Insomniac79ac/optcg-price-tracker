@@ -17,10 +17,16 @@ combination step and the API/schema shape are unchanged.
 Compute-on-read, not persisted
 --------------------------------
 Nothing here writes to the database. Every value is recomputed from
-price_observations on each call - there is no market_index_snapshots table
-(see docs/market_index.md "Why compute-on-read"). This keeps the schema free
-to add persisted history later without a migration that has to reconcile
-against already-stored index values.
+price_observations on each call (see docs/market_index.md "Why
+compute-on-read").
+
+The rest of this paragraph used to read "there is no market_index_snapshots
+table". That has not been true since the snapshot job shipped: the table
+exists and holds rows, written by app.snapshot_market_index from THIS module's
+output. Compute-on-read still describes the read path - this module is still
+the only place an index value is derived, and it still writes nothing - but
+the persisted archive is now real, which is exactly why INDEX_VERSION below
+has to move whenever the combination rule does.
 
 Batch-safe by construction
 ----------------------------
@@ -47,7 +53,20 @@ from app.schemas import MarketIndexOut, MarketIndexSourceValueOut, SourcePriceRa
 from app.services.latest_prices import get_latest_price_map
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
 
-INDEX_VERSION = 1
+# Version 2 (was 1): the COMBINATION step changed. An admissible source value
+# whose `fallback_used` is true no longer joins the numerical aggregate while a
+# non-fallback value is present - see _compute_index_fields. Nothing about how
+# an individual observation is classified moved, so SOURCE_SEMANTICS_VERSION is
+# deliberately NOT bumped alongside it; the two version fields exist precisely
+# so a change like this one can say which layer moved.
+#
+# THE BUMP IS LOAD-BEARING, not bookkeeping. market_index_snapshots holds rows
+# written under version 1 whose index_value_jpy is the old midpoint of a retail
+# price and a listing floor. app.services.market_index_change refuses to
+# compare across unequal index_version, so bumping here is what stops a v1
+# baseline being read as movement in a v2 number - the 7d percentage goes null
+# for a week rather than reporting a methodology change as a price change.
+INDEX_VERSION = 2
 CALCULATION_METHOD = "median_of_sources"
 
 YUYUTEI = "yuyutei"
@@ -106,7 +125,18 @@ class _SourceValue:
     # when some other rule is what currently disqualifies it.
     constraint: str | None = None
 
-    def to_schema(self) -> MarketIndexSourceValueOut:
+    def to_schema(self, *, contributes_to_index: bool) -> MarketIndexSourceValueOut:
+        """The API shape for this value, plus the role the COMBINATION step
+        assigned it.
+
+        The role is a parameter rather than a field on this frozen dataclass on
+        purpose: a resolver looks at one source in isolation and cannot know
+        whether a stronger non-fallback source exists elsewhere in the same
+        print's set. Only _compute_index_fields can answer that, so only
+        _compute_index_fields supplies it - and it is required, not defaulted,
+        so a future caller cannot emit a source value whose role was never
+        decided.
+        """
         return MarketIndexSourceValueOut(
             source=self.source,
             reference_type=self.reference_type,
@@ -119,6 +149,7 @@ class _SourceValue:
             fallback_used=self.fallback_used,
             ineligible_reason=self.ineligible_reason,
             constraint=self.constraint,
+            contributes_to_index=contributes_to_index,
         )
 
 
@@ -275,28 +306,67 @@ def _compute_index_fields(
     (card-keyed) and app.services.print_market_index (print-keyed) can build
     their own schema instance from the exact same computation without
     duplicating it."""
-    eligible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
+    # ADMISSIBLE - is this value usable evidence at all? Unchanged from v1, and
+    # `eligible` still means exactly what it always meant. Constrained, stale
+    # and absent values are out, and they stay out of everything below.
+    admissible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
 
-    # How far apart the sources that actually counted are - min/max over the
-    # very same `eligible` list the index is computed from, so the two can
-    # never describe different value sets. min/max are order-independent by
-    # definition, so resolver ordering cannot affect the result, and equal
-    # values still produce a range object (a real, measured zero spread).
-    # Below two eligible sources there is no disagreement to report and the
-    # field is absent rather than a self-referential "X to X".
-    eligible_values: list[int] = [sv.value_jpy for sv in eligible]  # type: ignore[misc]
+    # CONTRIBUTORS - which admissible values go into the number? This is the
+    # whole of the v2 change, and it is a rule about EVIDENCE STRENGTH, not
+    # about source names: nothing here mentions yuyutei or snkrdunk, and a
+    # future source's fallback is handled by the same two lines.
+    #
+    # `fallback_used` is the resolver's own admission that a value is standing
+    # in for the evidence it could not get - today, a SNKRDUNK listing floor
+    # substituting for a sold median it lacked the sample size to compute. A
+    # marketplace's minimum permitted ask and a dealer's displayed retail price
+    # are different quantities, so averaging them produced a number no source
+    # ever reported, and then labelled it `full`/`high`. So:
+    #
+    #   - a fallback stands ASIDE whenever any non-fallback value is admissible;
+    #   - a fallback stands ALONE quite happily when it is all there is, which
+    #     is why it remains eligible rather than being disqualified outright -
+    #     one imperfect number beats no number, as long as it is not dressed up
+    #     as corroboration.
+    #
+    # A SNKRDUNK transaction_median carries fallback_used=False, so the day the
+    # sold sample reaches its minimum it aggregates with Yuyu-Tei exactly as v1
+    # always intended. That case is the reason the rule keys on the flag rather
+    # than on reference_type.
+    non_fallback = [sv for sv in admissible if not sv.fallback_used]
+    contributors = non_fallback if non_fallback else admissible
+    contributor_ids = {id(sv) for sv in contributors}
+
+    # THE RANGE IS DERIVED FROM ADMISSIBLE, BEFORE ROLE FILTERING - deliberately
+    # a different set from `contributors` above. A fallback that stood aside is
+    # still a real measured number that disagrees with the published index, and
+    # this field exists to expose exactly that disagreement; recomputing it from
+    # contributors would hide the thing it was built to show. So `source_count =
+    # 1` beside a two-endpoint range is valid and intended, not a bug.
+    #
+    # min/max are order-independent by definition, so resolver ordering cannot
+    # affect the result, and equal values still produce a range object (a real,
+    # measured zero spread). Below two admissible sources there is no
+    # disagreement to report and the field is absent rather than a
+    # self-referential "X to X".
+    admissible_values: list[int] = [sv.value_jpy for sv in admissible]  # type: ignore[misc]
     source_price_range = (
-        SourcePriceRangeOut(low_jpy=min(eligible_values), high_jpy=max(eligible_values))
-        if len(eligible_values) >= 2
+        SourcePriceRangeOut(
+            low_jpy=min(admissible_values), high_jpy=max(admissible_values)
+        )
+        if len(admissible_values) >= 2
         else None
     )
 
-    if len(eligible) >= 2:
-        index_value = _median_jpy([sv.value_jpy for sv in eligible])  # type: ignore[list-item]
+    # Index, count, coverage and confidence all come from CONTRIBUTORS, so
+    # `confidence` finally describes the evidence behind the number rather than
+    # counting rows beside it.
+    if len(contributors) >= 2:
+        index_value = _median_jpy([sv.value_jpy for sv in contributors])  # type: ignore[list-item]
         coverage_status = "full"
         confidence = "high"
-    elif len(eligible) == 1:
-        index_value = eligible[0].value_jpy
+    elif len(contributors) == 1:
+        index_value = contributors[0].value_jpy
         coverage_status = "limited"
         confidence = "medium"
     else:
@@ -306,7 +376,12 @@ def _compute_index_fields(
 
     all_observed_ats = [sv.observed_at for sv in source_values if sv.observed_at is not None]
     freshest = max(all_observed_ats) if all_observed_ats else None
-    eligible_observed_ats = [sv.observed_at for sv in eligible if sv.observed_at is not None]
+    # Still keyed on ADMISSIBLE, matching this field's name and `eligible`'s
+    # unchanged meaning: it bounds the freshness of the evidence on display, not
+    # of the aggregate alone. Moving it to contributors would silently change
+    # what every already-written market_index_snapshots row's
+    # stalest_eligible_source_at column means.
+    eligible_observed_ats = [sv.observed_at for sv in admissible if sv.observed_at is not None]
     stalest_eligible = min(eligible_observed_ats) if eligible_observed_ats else None
     stale_sources = [sv.source for sv in source_values if sv.stale]
 
@@ -323,11 +398,24 @@ def _compute_index_fields(
         "source_price_range": source_price_range,
         "index_value_jpy": index_value,
         "calculation_method": CALCULATION_METHOD,
-        "source_count": len(eligible),
+        "source_count": len(contributors),
         "coverage_status": coverage_status,
         "confidence": confidence,
-        "source_values": [sv.to_schema() for sv in source_values],
-        "auxiliary_values": [sv.to_schema() for sv in auxiliary_values],
+        # Identity, not equality: two sources can legitimately report the same
+        # value, and `sv in contributors` on a frozen dataclass would then give
+        # both the same role. The set of id()s is built above while every
+        # object is still referenced by `contributors`, so none can be
+        # collected and have its id reused.
+        "source_values": [
+            sv.to_schema(contributes_to_index=id(sv) in contributor_ids)
+            for sv in source_values
+        ],
+        # Auxiliary values are not index candidates at all (Yuyu-Tei dealer buy
+        # is the standing example), so the answer is a flat false - stated
+        # explicitly rather than left None, which would mean "unknown".
+        "auxiliary_values": [
+            sv.to_schema(contributes_to_index=False) for sv in auxiliary_values
+        ],
         "freshest_observation_at": freshest,
         "stalest_eligible_source_at": stalest_eligible,
         "stale_sources": stale_sources,

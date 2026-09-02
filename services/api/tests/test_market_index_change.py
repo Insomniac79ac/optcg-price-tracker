@@ -32,6 +32,12 @@ def source_value(
     eligible: bool = True,
     **overrides,
 ) -> MarketIndexSourceValueOut:
+    """A v2 source value. `contributes_to_index` defaults to `eligible`, which
+    is the ordinary case - an admissible value contributes unless something
+    demoted it - so a test that wants the two to DIFFER (the v2-only case) has
+    to say so explicitly, and is visibly doing something unusual when it does.
+    Pass contributes_to_index=None to model a pre-v2 payload."""
+    contributes = overrides.pop("contributes_to_index", eligible)
     return MarketIndexSourceValueOut(
         source=source,
         reference_type=reference_type,
@@ -41,9 +47,10 @@ def source_value(
         sample_size=None,
         stale=False,
         eligible=eligible,
-        fallback_used=False,
+        fallback_used=overrides.pop("fallback_used", False),
         ineligible_reason=overrides.pop("ineligible_reason", None),
         constraint=overrides.pop("constraint", None),
+        contributes_to_index=contributes,
     )
 
 
@@ -73,14 +80,19 @@ def live_index(
     )
 
 
-def provenance_for(*pairs: tuple[str, str], eligible: bool = True, value_jpy: int | None = 1000):
+def provenance_for(
+    *pairs: tuple[str, str],
+    eligible: bool = True,
+    value_jpy: int | None = 1000,
+    **overrides,
+):
     """A provenance archive exactly as snapshot_market_index writes it: plain
     dicts from `model_dump(mode="json")`, not models."""
     return {
         "source_values": [
-            source_value(source=s, reference_type=r, eligible=eligible, value_jpy=value_jpy).model_dump(
-                mode="json"
-            )
+            source_value(
+                source=s, reference_type=r, eligible=eligible, value_jpy=value_jpy, **overrides
+            ).model_dump(mode="json")
             for s, r in pairs
         ],
         "auxiliary_values": [],
@@ -431,3 +443,132 @@ def test_catalogue_item_exposes_the_field_without_changing_existing_ones(db_sess
     assert item.card_code == "OP01-001"
     assert item.market_index is not None
     assert item.source_coverage == []
+
+
+# --- Market Index v2: contributor identity and the version guard -------------
+
+
+def test_a_v1_snapshot_cannot_produce_movement_against_a_v2_index(db_session):
+    """The bump is what protects the field across the methodology change. Every
+    archived row on staging was written under index v1, where a fallback listing
+    floor was averaged into the number; a v2 index is a different measurement of
+    the same print, and dividing one by the other would report the rule change
+    as a price change."""
+    insert_snapshot(db_session, 1, index_value_jpy=1000, index_version=1)
+
+    assert change_for(db_session, live_index(1, 1100, index_version=2)) is None
+
+
+def test_the_version_guard_is_not_softened_by_matching_contributors(db_session):
+    """Identical contributor sets on both sides must NOT rescue a cross-version
+    comparison - the two guards are independent, and this is the one that would
+    be tempting to relax once contributor identity got stricter."""
+    insert_snapshot(
+        db_session, 1, index_value_jpy=1000, index_version=1,
+        provenance=provenance_for(YUYUTEI),
+    )
+
+    index = live_index(1, 1100, source_values=[source_value()], index_version=2)
+    assert change_for(db_session, index) is None
+    # Same fixture at matching versions still compares, proving the refusal
+    # above came from the version guard and nothing else.
+    assert change_for(db_session, live_index(1, 1100, source_values=[source_value()])) == 10.0
+
+
+def test_contributor_identity_uses_contributes_to_index_not_eligible(db_session):
+    """An eligible-but-demoted fallback is not a contributor. A baseline whose
+    floor contributed and a current index where it merely appears are measuring
+    different things, so the comparison is refused - even though both sides are
+    'eligible' in both payloads."""
+    insert_snapshot(
+        db_session, 1, index_value_jpy=1000,
+        provenance=provenance_for(YUYUTEI, SNKRDUNK),
+    )
+
+    current = live_index(
+        1, 1100,
+        source_values=[
+            source_value(),
+            source_value(
+                source="snkrdunk", reference_type="listing_floor",
+                eligible=True, fallback_used=True, contributes_to_index=False,
+            ),
+        ],
+    )
+
+    assert {sv.eligible for sv in current.source_values} == {True}
+    assert change_for(db_session, current) is None
+
+
+def test_a_demoted_fallback_on_both_sides_compares_normally(db_session):
+    """The mirror image: when both ends agree the floor stood aside, the
+    contributor sets match and the percentage is honest."""
+    insert_snapshot(
+        db_session, 1, index_value_jpy=1000,
+        provenance={
+            "source_values": [
+                source_value().model_dump(mode="json"),
+                source_value(
+                    source="snkrdunk", reference_type="listing_floor",
+                    fallback_used=True, contributes_to_index=False,
+                ).model_dump(mode="json"),
+            ],
+            "auxiliary_values": [],
+        },
+    )
+
+    current = live_index(
+        1, 1100,
+        source_values=[
+            source_value(),
+            source_value(
+                source="snkrdunk", reference_type="listing_floor",
+                fallback_used=True, contributes_to_index=False,
+            ),
+        ],
+    )
+
+    assert change_for(db_session, current) == 10.0
+
+
+def test_provenance_without_a_contributor_role_is_refused(db_session):
+    """Fail closed. A pre-v2 archive cannot prove which values built its number,
+    and inferring 'eligible therefore contributed' is exactly the assumption
+    that stopped being true."""
+    archive = provenance_for(YUYUTEI)
+    for entry in archive["source_values"]:
+        del entry["contributes_to_index"]
+    insert_snapshot(db_session, 1, index_value_jpy=1000, provenance=archive)
+
+    assert eligible_contributor_set(archive["source_values"]) is None
+    assert change_for(db_session, live_index(1, 1100)) is None
+
+
+def test_a_null_contributor_role_is_refused_not_read_as_false(db_session):
+    """None is "this payload predates the field", never "did not contribute" -
+    reading it as false would silently shrink a contributor set to nothing and
+    then compare two empty sets as equal."""
+    archive = provenance_for(YUYUTEI, contributes_to_index=None)
+    insert_snapshot(db_session, 1, index_value_jpy=1000, provenance=archive)
+
+    assert eligible_contributor_set(archive["source_values"]) is None
+    assert change_for(db_session, live_index(1, 1100)) is None
+    # And on the live side too.
+    assert (
+        eligible_contributor_set([source_value(contributes_to_index=None)]) is None
+    )
+
+
+def test_contributor_set_reads_the_role_from_both_shapes(db_session):
+    """Models and archived dicts must answer identically - the whole reason
+    this helper is shared between the live and historical sides."""
+    pair = [
+        source_value(),
+        source_value(
+            source="snkrdunk", reference_type="listing_floor",
+            fallback_used=True, contributes_to_index=False,
+        ),
+    ]
+
+    assert eligible_contributor_set(pair) == {YUYUTEI}
+    assert eligible_contributor_set([sv.model_dump(mode="json") for sv in pair]) == {YUYUTEI}

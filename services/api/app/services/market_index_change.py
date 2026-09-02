@@ -16,6 +16,12 @@ eligible contributor SETS must be identical at both ends, compared by
 (source, reference_type) identity - never by source_count, which cannot tell
 those two one-source cases apart.
 
+Since Market Index v2 the contributor test is `contributes_to_index`, not
+`eligible` - see `eligible_contributor_set`. The two stopped meaning the same
+thing the moment an admissible-but-non-contributing fallback became possible,
+and this module needs the narrower one: it compares the evidence a number was
+BUILT from, not the evidence displayed beside it.
+
 WHAT IS DELIBERATELY ABSENT. There is no nearest-date search, no "latest
 snapshot minus seven", no 24h or 30d fallback, no source-series substitute and
 no stale-observation rescue. The contract is an exact UTC calendar-date match,
@@ -64,20 +70,33 @@ ContributorKey = tuple[str, str]
 def eligible_contributor_set(source_values: list[Any]) -> set[ContributorKey] | None:
     """The (source, reference_type) pairs that actually counted toward an index.
 
-    The predicate is `eligible and value_jpy is not None` - character for
-    character the one app.snapshot_market_index._eligible_contributors and
-    market_index._compute_index_fields both use, so the historical and live
-    sides of a comparison can never silently disagree about what "contributed"
-    means. That is the whole reason this helper exists in one place.
+    THE PREDICATE IS `contributes_to_index is True`, NOT `eligible`. Since
+    Market Index v2 those are different questions (see
+    app.services.market_index._compute_index_fields): an admissible SNKRDUNK
+    listing floor that stood aside for a Yuyu-Tei retail price keeps
+    eligible=true and keeps its raw number, but it did not go into the
+    aggregate. Comparing on `eligible` would call two indexes comparable when
+    one of them rested on evidence the other only displayed - the precise class
+    of mistake this module exists to prevent.
 
     Accepts either Pydantic `MarketIndexSourceValueOut` objects (the live side)
     or the plain dicts `provenance` stores (the historical side), because the
     archive holds `model_dump(mode="json")` output rather than models.
 
-    Returns None - NOT an empty set - when the input cannot be read as a list
-    of source values with the three fields this predicate needs. A caller must
-    treat None as "cannot prove comparability" and refuse the comparison; an
-    empty set would say "nothing contributed", which is a different and much
+    FAILS CLOSED WHEN THE ROLE CANNOT BE PROVEN. `contributes_to_index` is
+    optional in the schema so the field could be added without breaking
+    clients, and its None default means "this payload predates the field" - it
+    never means "did not contribute". So a value carrying None, and a
+    provenance dict lacking the key entirely, both return None here rather than
+    being quietly read as a non-contributor. In practice a v1 archive is
+    already rejected one guard earlier by the index_version equality test in
+    `_change_for`; this is the second lock on the same door, and it is the one
+    that still holds if someone ever relaxes the first.
+
+    Returns None - NOT an empty set - for any input that cannot be read as a
+    list of source values carrying every field this predicate needs. A caller
+    must treat None as "cannot prove comparability" and refuse the comparison;
+    an empty set would say "nothing contributed", which is a different and much
     stronger claim than "the archive did not tell me".
     """
     if not isinstance(source_values, list):
@@ -86,22 +105,26 @@ def eligible_contributor_set(source_values: list[Any]) -> set[ContributorKey] | 
     contributors: set[ContributorKey] = set()
     for entry in source_values:
         if isinstance(entry, MarketIndexSourceValueOut):
-            eligible, value_jpy = entry.eligible, entry.value_jpy
+            contributes, value_jpy = entry.contributes_to_index, entry.value_jpy
             source, reference_type = entry.source, entry.reference_type
         elif isinstance(entry, dict):
             # Every field is required. A provenance row missing any of them is
             # not a contributor whose identity can be proven, and guessing at
             # one would defeat the point of the check.
-            if not {"source", "reference_type", "eligible", "value_jpy"} <= entry.keys():
+            required = {"source", "reference_type", "contributes_to_index", "value_jpy"}
+            if not required <= entry.keys():
                 return None
-            eligible, value_jpy = entry["eligible"], entry["value_jpy"]
+            contributes, value_jpy = entry["contributes_to_index"], entry["value_jpy"]
             source, reference_type = entry["source"], entry["reference_type"]
         else:
             return None
 
         if not isinstance(source, str) or not isinstance(reference_type, str):
             return None
-        if eligible is True and value_jpy is not None:
+        # None is "unknown", not "false" - refuse rather than assume.
+        if contributes is None:
+            return None
+        if contributes is True and value_jpy is not None:
             contributors.add((source, reference_type))
 
     return contributors

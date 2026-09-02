@@ -626,10 +626,20 @@ def test_sibling_prints_report_different_source_counts(client, sanji_two_source)
     parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
     base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
 
-    assert parallel_body["source_count"] == 2
-    assert parallel_body["coverage_status"] == "full"
+    # Index v2: both prints' SNKRDUNK values are fallback listing floors, so
+    # neither joins its aggregate. The two prints still report DIFFERENT
+    # evidence - which is what this test is for - it is now visible through the
+    # per-value role rather than through source_count.
+    assert parallel_body["source_count"] == 1
+    assert parallel_body["coverage_status"] == "limited"
     assert base_body["source_count"] == 1
     assert base_body["coverage_status"] == "limited"
+
+    parallel_floor = [sv for sv in parallel_body["source_values"] if sv["source"] == "snkrdunk"]
+    base_floor = [sv for sv in base_body["source_values"] if sv["source"] == "snkrdunk"]
+    assert parallel_floor[0]["value_jpy"] != base_floor[0]["value_jpy"]
+    assert parallel_body["source_price_range"] is not None
+    assert base_body["source_price_range"] is None
 
 
 def test_the_contaminated_legacy_pairing_never_appears_on_a_print(
@@ -760,9 +770,12 @@ def test_a_constrained_floor_does_not_alter_a_sibling_index(
     assert parallel_body["source_count"] == 1
     assert parallel_body["coverage_status"] == "limited"
 
-    assert base_body["index_value_jpy"] == 810  # midpoint of 120 and 1500
-    assert base_body["source_count"] == 2
-    assert base_body["coverage_status"] == "full"
+    # Index v2: the base's ¥1,500 floor is admissible but is a fallback, so the
+    # index is its Yuyu-Tei value rather than the old ¥810 midpoint. The point
+    # of this test holds - the two siblings still resolve independently.
+    assert base_body["index_value_jpy"] == 120
+    assert base_body["source_count"] == 1
+    assert base_body["coverage_status"] == "limited"
 
 
 def test_a_constrained_sibling_floor_never_appears_on_the_other_print(
@@ -820,12 +833,17 @@ def test_version_metadata_did_not_move_any_print_pricing_value(
     assert parallel["snkrdunk"]["constraint"] == "platform_floor"
     assert parallel["snkrdunk"]["eligible"] is False
 
-    assert base_body["index_value_jpy"] == 810
-    assert base_body["source_count"] == 2
-    assert base_body["coverage_status"] == "full"
+    assert base_body["index_value_jpy"] == 120
+    assert base_body["source_count"] == 1
+    assert base_body["coverage_status"] == "limited"
+    # Source SEMANTICS still say nothing about this floor - unconstrained and
+    # eligible, exactly as Task 1C-2B established. Index v2 changed only
+    # whether it is AGGREGATED, which is the separate question the new role
+    # field answers.
     assert base["snkrdunk"]["value_jpy"] == 1500
     assert base["snkrdunk"]["constraint"] is None
     assert base["snkrdunk"]["eligible"] is True
+    assert base["snkrdunk"]["contributes_to_index"] is False
 
     # ...and both still report the ruleset that produced them.
     assert parallel_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
@@ -893,7 +911,10 @@ def test_a_constrained_sibling_floor_produces_no_range(client, sanji_constrained
     assert parallel_body["source_count"] == 1
     assert parallel_body["source_price_range"] is None
 
-    assert base_body["source_count"] == 2
+    # Index v2: the base has TWO admissible values, so it keeps its range - but
+    # only the retail sell contributed, so source_count is 1. That pairing is
+    # intentional; the range exists to show the disagreement the index does not.
+    assert base_body["source_count"] == 1
     assert base_body["source_price_range"] == {"low_jpy": 120, "high_jpy": 1500}
     # ...and the index still sits inside its own range.
     assert (base_body["source_price_range"]["low_jpy"]
@@ -908,7 +929,13 @@ def test_print_catalogue_items_carry_the_range_field(client, sanji_two_source):
     for item in catalogue["items"]:
         mi = item["market_index"]
         assert "source_price_range" in mi
-        if mi["source_count"] >= 2:
+        # Keyed on ADMISSIBLE values, not on source_count: under index v2 a
+        # print can have one contributor and still carry a two-endpoint range.
+        admissible = [
+            sv for sv in mi["source_values"]
+            if sv["eligible"] and sv["value_jpy"] is not None
+        ]
+        if len(admissible) >= 2:
             assert mi["source_price_range"] is not None
         else:
             assert mi["source_price_range"] is None

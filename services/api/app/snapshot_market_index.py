@@ -195,14 +195,24 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def _eligible_contributors(market_index: PrintMarketIndexOut) -> list:
-    """The source_values that actually counted toward index_value_jpy.
+    """The ADMISSIBLE source_values - every one that is usable evidence.
 
     Predicate is `eligible and value_jpy is not None`, character-for-character
-    the one _compute_index_fields uses to build its own `eligible` list. Asked
-    of the returned payload rather than recomputed from observations, so the
-    contributor set behind a stored freshness bound can never describe a
-    different set of values than the stored source_count and index_value_jpy
-    it sits beside.
+    the one _compute_index_fields uses to build its own `admissible` list.
+    Asked of the returned payload rather than recomputed from observations, so
+    the set behind a stored freshness bound can never describe different values
+    than the stored source_price_range it sits beside.
+
+    NOT the same set as the v2 index contributors, and deliberately so. The two
+    columns this feeds - freshest_eligible_source_at and
+    stalest_eligible_source_at - bound the freshness of the evidence the
+    snapshot DISPLAYS, which is the same set source_price_range spans; that is
+    what their names have always meant and what every already-written row
+    records. Narrowing them to contributors would silently redefine a column
+    across historical rows that no migration touched. Which values actually
+    entered the aggregate is recorded per-value in the provenance archive's
+    `contributes_to_index`, and read from there by
+    app.services.market_index_change.
 
     auxiliary_values are never consulted here: they are by definition never
     eligible for the index (Yuyu-Tei dealer buy is the current example), so

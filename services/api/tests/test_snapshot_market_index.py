@@ -577,10 +577,14 @@ def test_copies_index_fields_verbatim_from_market_index(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
     row = _by_print(db_session)[print_id]
 
-    assert row.index_value_jpy == expected.index_value_jpy == 1740
-    assert row.source_count == expected.source_count == 2
-    assert row.coverage_status == expected.coverage_status == "full"
-    assert row.confidence == expected.confidence == "high"
+    # Index v2: the SNKRDUNK listing floor (1500) is a fallback standing beside
+    # a Yuyu-Tei retail sell (1980), so it no longer joins the aggregate - the
+    # row records 1980, not the old 1740 midpoint. The point of this test is
+    # unchanged: whatever the calculation says, the row copies it verbatim.
+    assert row.index_value_jpy == expected.index_value_jpy == 1980
+    assert row.source_count == expected.source_count == 1
+    assert row.coverage_status == expected.coverage_status == "limited"
+    assert row.confidence == expected.confidence == "medium"
     assert row.calculation_method == expected.calculation_method == CALCULATION_METHOD
     assert row.index_version == expected.index_version == INDEX_VERSION
     assert (
@@ -697,13 +701,22 @@ def test_auxiliary_values_archived_separately(db_session, catalogue):
     assert auxiliary[0]["value_jpy"] == 900
     assert auxiliary[0]["eligible"] is False
 
-    # It must not have leaked into the contributing set or moved the index.
+    # It must not have leaked into the source_values list or moved the index.
     assert {sv["reference_type"] for sv in row.provenance["source_values"]} == {
         "retail_sell",
         "listing_floor",
     }
-    assert row.source_count == 2
-    assert row.index_value_jpy == 1740
+    # An auxiliary value never contributes, and under index v2 neither does the
+    # fallback listing floor beside a retail sell - so the archived roles say so
+    # explicitly rather than leaving a reader to infer them from source_count.
+    assert auxiliary[0]["contributes_to_index"] is False
+    roles = {
+        sv["reference_type"]: sv["contributes_to_index"]
+        for sv in row.provenance["source_values"]
+    }
+    assert roles == {"retail_sell": True, "listing_floor": False}
+    assert row.source_count == 1
+    assert row.index_value_jpy == 1980
 
 
 def test_unpriced_tracked_print_archives_both_ineligible_sources(db_session, catalogue):

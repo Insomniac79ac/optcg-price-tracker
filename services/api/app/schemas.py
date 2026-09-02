@@ -287,27 +287,53 @@ class MarketIndexSourceValueOut(BaseModel):
     # still be displayed with the right caveat. Optional with a None default:
     # every existing client that ignores it is unaffected.
     constraint: str | None = None
+    # Did this value participate in the numerical aggregate? Deliberately a
+    # SECOND field rather than a redefinition of `eligible` above, because the
+    # two answer different questions and Market Index v2 is exactly the point
+    # at which they stopped having the same answer:
+    #
+    #   eligible              - is this value admissible evidence at all?
+    #   contributes_to_index  - did it go into index_value_jpy?
+    #
+    # Under v2 an admissible SNKRDUNK listing floor whose `fallback_used` is
+    # true stands aside when a non-fallback source is present: it keeps
+    # eligible=true, keeps its raw number, stays in source_price_range, and
+    # reports contributes_to_index=false. See
+    # app.services.market_index._compute_index_fields for the rule.
+    #
+    # Optional with a None default so the schema stays additive - an existing
+    # client that ignores it is unaffected, and None means "this payload
+    # predates the field", never "it did not contribute". Every source value
+    # emitted by the current resolver carries an explicit true or false,
+    # including auxiliary ones (always false).
+    contributes_to_index: bool | None = None
 
 
 class SourcePriceRangeOut(BaseModel):
-    """The spread between the cheapest and dearest source values that actually
-    counted toward this Market Index.
+    """The spread between the cheapest and dearest ADMISSIBLE source values -
+    every value that is eligible evidence, whether or not it contributed to the
+    index.
 
     Answers "how far apart are the usable sources?" - the question a single
     index number cannot answer on its own, because with two sources the median
     is their midpoint and a midpoint looks identical whether the sources agreed
     within 5% or disagreed by 1000%.
 
-    Derived from the same eligible set that produced index_value_jpy (see
-    app.services.market_index._compute_index_fields), so it can never describe
-    a different set of values than the index it accompanies. Constrained,
-    stale, and otherwise ineligible values are excluded - they are not part of
-    the index, so they are not part of its range - and auxiliary values (e.g.
-    Yuyu-Tei's dealer buy price) never enter either, because they live in a
-    separate list that is not an index candidate at all. The excluded values
-    all remain visible in source_values with their own reason.
+    DERIVED BEFORE CONTRIBUTOR ROLE IS APPLIED, and that is the whole point
+    under Market Index v2 (see app.services.market_index._compute_index_fields).
+    A SNKRDUNK listing floor that stands aside from the aggregate is still a
+    real, measured number that disagrees with the one Atlas published, and
+    dropping it from the range would hide exactly the disagreement this field
+    exists to expose. So `source_count = 1` alongside a two-endpoint range is a
+    valid, intentional combination: one value contributed, two were admissible.
 
-    Absent (null) below two eligible sources: one source cannot disagree with
+    Constrained, stale, and otherwise ineligible values are excluded - they are
+    not admissible evidence - and auxiliary values (e.g. Yuyu-Tei's dealer buy
+    price) never enter either, because they live in a separate list that is not
+    an index candidate at all. The excluded values all remain visible in
+    source_values with their own reason.
+
+    Absent (null) below two admissible sources: one source cannot disagree with
     itself, and "¥220 - ¥220" states a spread that was never measured."""
 
     low_jpy: int
