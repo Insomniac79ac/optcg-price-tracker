@@ -25,12 +25,12 @@ from importlib.metadata import version as pkg_version
 from playwright.sync_api import sync_playwright
 
 from yuyutei_collector.browser import (
-    HOMEPAGE_EXPECTED_MARKERS,
-    HOMEPAGE_URL,
     DeadlineExceeded,
     deadline,
     goto_and_capture,
+    homepage_session_ok,
     log_event,
+    warm_up_homepage,
 )
 from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
@@ -162,8 +162,11 @@ def run_one_mapping_detailed(
                     context = browser.new_context()
                     page = context.new_page()
 
-                with deadline(settings.HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
-                    homepage_step = goto_and_capture(page, HOMEPAGE_URL, HOMEPAGE_EXPECTED_MARKERS)
+                # Same call discovery makes, so the two cannot drift apart -
+                # see browser.warm_up_homepage, which is this block moved
+                # verbatim (same constants, same helper, same deadline label
+                # and timeout).
+                homepage_step = warm_up_homepage(page)
                 log_event(
                     "homepage_result",
                     mapping_id=mapping.id,
@@ -173,11 +176,7 @@ def run_one_mapping_detailed(
                     batch_run_id=batch_run_id,
                 )
 
-                homepage_ok = (
-                    "error" not in homepage_step
-                    and homepage_step.get("http_status") == 200
-                    and homepage_step.get("classification") == "normal_product"
-                )
+                homepage_ok = homepage_session_ok(homepage_step)
 
                 if not homepage_ok:
                     result_holder["observed_classification"] = homepage_step.get("classification")

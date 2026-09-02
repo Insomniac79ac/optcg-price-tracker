@@ -15,6 +15,7 @@ from pathlib import Path
 
 from playwright.sync_api import Page
 
+from yuyutei_collector.config import settings
 from yuyutei_collector.extractor import classify_page
 
 HOMEPAGE_URL = "https://yuyu-tei.jp/"
@@ -101,6 +102,49 @@ def goto_and_capture(page: Page, url: str, expected_markers: list[str] | None = 
     except Exception as exc:
         elapsed = time.monotonic() - start
         return {"error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(elapsed, 3)}
+
+
+def homepage_session_ok(step: dict) -> bool:
+    """Did the warm-up establish a usable session?
+
+    Extracted from collect.py, which has gated on exactly these three
+    conditions since the collector shipped, so that discovery can ask the same
+    question without restating the expression. All three matter and none is
+    redundant: `error` catches a navigation that never produced a response,
+    the status check refuses anything that is not a plain 200, and the
+    classification check is what rejects a rendered challenge page served WITH
+    a 200 - the case a status check alone cannot see.
+    """
+    return (
+        "error" not in step
+        and step.get("http_status") == 200
+        and step.get("classification") == "normal_product"
+    )
+
+
+def warm_up_homepage(page: Page) -> dict:
+    """Navigate the homepage once, on the CALLER'S OWN page, and return the
+    capture.
+
+    WHY EVERY CALLER MUST DO THIS FIRST. Measured on Railway staging
+    2026-09-02: a cold navigation straight to a listing URL was answered 403,
+    while the same egress minutes earlier reached the homepage and then three
+    listing pages with 200 apiece. The warm-up is therefore not decoration -
+    it is what makes the following navigation a continuation of a session
+    rather than an unheralded deep hit.
+
+    THE PAGE IS THE CALLER'S ON PURPOSE. Whatever session state the homepage
+    establishes lives in the BrowserContext behind that page, so warming a
+    second context would leave the real navigation exactly as cold as before.
+    This function must never create one.
+
+    Posture is unchanged from the collector: one navigation, one wall-clock
+    deadline, no retry, no headers, no cookies, no timing variation. It does
+    not decide anything - `homepage_session_ok` judges the result and the
+    caller chooses what a failure means for it.
+    """
+    with deadline(settings.HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
+        return goto_and_capture(page, HOMEPAGE_URL, HOMEPAGE_EXPECTED_MARKERS)
 
 
 def _write_json_artifact(path: Path, data: dict) -> dict:

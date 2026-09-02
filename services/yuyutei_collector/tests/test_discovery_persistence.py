@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from yuyutei_collector import discovery, discovery_listing, discovery_match, discovery_probe
+from yuyutei_collector.browser import HOMEPAGE_URL
 from yuyutei_collector.db import Base
 from yuyutei_collector.discovery_listing import parse_listing_row
 from yuyutei_collector.discovery_match import classify_card_code
@@ -115,25 +116,64 @@ def sale_row(series, product_id, code, rarity, name, price, former, stock, img="
     )
 
 
-class FakePage:
-    """Stands in for a Playwright page. Records every URL navigated."""
+# A homepage body that classify_page will call `normal_product`: HTTP 200,
+# over 500 bytes, carrying the expected marker and no denial evidence. Built
+# here rather than fetched so these tests stay offline.
+HOMEPAGE_HTML = "<html><body>遊々亭 " + ("トレカ通販 " * 120) + "</body></html>"
 
-    def __init__(self, pages, status=200):
+
+class FakePage:
+    """Stands in for a Playwright page. Records every URL navigated.
+
+    Serves the homepage as a normal page by default, so a test that says
+    nothing about the warm-up gets a successful one and goes on to enumerate -
+    the same shape a real run has. `homepage_status` / `homepage_html` /
+    `homepage_title` let a test refuse it instead.
+    """
+
+    def __init__(
+        self,
+        pages,
+        status=200,
+        homepage_status=200,
+        homepage_html=HOMEPAGE_HTML,
+        homepage_title="遊々亭",
+    ):
         self.pages = pages
         self.status = status
+        self.homepage_status = homepage_status
+        self.homepage_html = homepage_html
+        self.homepage_title = homepage_title
         self.visited = []
         self._current = None
 
     def goto(self, url, **kwargs):
         self.visited.append(url)
         self._current = url
-        status = self.pages.get(url, {}).get("status", self.status)
-        return type("R", (), {"status": status})()
+        if url == HOMEPAGE_URL:
+            status = self.homepage_status
+        else:
+            status = self.pages.get(url, {}).get("status", self.status)
+        # `ok` as Playwright defines it (2xx). `_scrape_listing` only reads
+        # `status`; browser.capture(), which the warm-up goes through, reads
+        # both.
+        return type("R", (), {"status": status, "ok": 200 <= status < 300})()
 
     def wait_for_timeout(self, ms):
         return None
 
+    @property
+    def url(self):
+        # browser.capture() reports the FINAL url of a navigation; nothing here
+        # redirects, so it is the one just requested.
+        return self._current
+
+    def title(self):
+        return self.homepage_title if self._current == HOMEPAGE_URL else ""
+
     def content(self):
+        if self._current == HOMEPAGE_URL:
+            return self.homepage_html
         return "<html></html>"
 
     def eval_on_selector_all(self, selector, script):
@@ -649,8 +689,9 @@ def test_the_page_cap_blocks_an_apparent_1_to_1(session):
     assert metrics["unfetched_pages"] == 1
     assert metrics["enumeration_complete"] is False
     # Only the fetched page was navigated - failing closed is not a reason to
-    # go and fetch more.
-    assert page.visited == [base]
+    # go and fetch more. The homepage warm-up precedes it and is the only
+    # other navigation.
+    assert page.visited == [HOMEPAGE_URL, base]
 
 
 def test_exhausting_the_page_budget_with_nothing_left_is_still_complete(session):
@@ -857,6 +898,183 @@ def test_one_price_node_holding_two_numbers_is_still_refused(session):
 
     assert session.scalars(select(YuyuteiCandidate)).one().price_jpy is None
     assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 1
+
+
+# --------------------------------------------------------------------------
+# Homepage session warm-up
+#
+# Discovery used to open with a cold navigation straight to the first category
+# page. On staging 2026-09-02 that was answered 403 (run 3, denied, zero
+# candidates) while the warmed posture the price collector already used had
+# reached the same pages with 200 minutes earlier. These tests pin the
+# warm-up's position, its session sharing, and both fail-closed paths.
+# --------------------------------------------------------------------------
+
+
+def test_the_homepage_is_navigated_before_any_listing_url(session):
+    # A: order, not merely presence.
+    page = FakePage(
+        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+    )
+    discovery.discover_and_persist(session, page, ["op01"])
+
+    assert page.visited[0] == HOMEPAGE_URL
+    assert page.visited == [HOMEPAGE_URL, listing("op01")]
+
+
+def test_the_warm_up_and_the_listings_share_one_page_and_session(session):
+    # B: the session state the homepage establishes lives in the context behind
+    # THIS page, so a warm-up on any other page would be worthless. Every
+    # navigation must arrive on the object discovery was handed.
+    page = FakePage(
+        {
+            listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]},
+            listing("op13"): {"anchors": [product_row("op13", "2", "OP13-001", "C", "ゾロ", "50", "2 点")]},
+        }
+    )
+    seen_by = []
+    original_goto = page.goto
+
+    def recording_goto(url, **kwargs):
+        seen_by.append(id(page))
+        return original_goto(url, **kwargs)
+
+    page.goto = recording_goto
+    discovery.discover_and_persist(session, page, ["op01", "op13"])
+
+    assert page.visited == [HOMEPAGE_URL, listing("op01"), listing("op13")]
+    assert seen_by == [id(page)] * 3
+
+
+def test_a_successful_warm_up_proceeds_to_normal_enumeration(session):
+    # C + H: everything the run measures is what it measured before; the only
+    # difference is the extra navigation, which `pages_fetched` excludes.
+    page = FakePage(
+        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+    )
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    metrics = report["per_slug"]["op01"]
+    assert report["status"] == "completed"
+    assert metrics["pages_fetched"] == 1
+    assert metrics["own_series_products"] == 1
+    assert metrics["candidates_written"] == 1
+    assert metrics["enumeration_complete"] is True
+    assert report["totals"]["pages_fetched"] == 1
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.price_jpy == 320
+    assert candidate.availability == "in_stock"
+    run = session.scalars(select(YuyuteiDiscoveryRun)).one()
+    assert run.status == "completed"
+    assert run.pages_fetched == 1
+
+
+def test_a_denied_homepage_stops_before_any_listing_url_is_requested(session):
+    # D + E + G: the run is `denied`, no listing was ever requested, nothing was
+    # written, and exactly one navigation happened - no retry of the homepage
+    # and no attempt to proceed anyway.
+    page = FakePage(
+        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}},
+        homepage_status=403,
+    )
+    report = discovery.discover_and_persist(session, page, ["op01", "op13", "eb01"])
+
+    assert page.visited == [HOMEPAGE_URL]
+    assert not any("/sell/opc/s/" in url for url in page.visited)
+    assert report["status"] == "denied"
+    assert report["stopped_reason"] == f"source_denied: 403 at {HOMEPAGE_URL}"
+    assert report["per_slug"] == {}
+    assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
+
+    run = session.scalars(select(YuyuteiDiscoveryRun)).one()
+    assert run.status == "denied"
+    assert run.candidates_written == 0
+    assert run.pages_fetched == 0
+    assert run.finished_at is not None
+
+
+def test_a_challenge_page_served_with_200_is_also_a_denial(session):
+    # The case a status check alone cannot see: HTTP 200 carrying a challenge.
+    page = FakePage(
+        {listing("op01"): {"anchors": []}},
+        homepage_status=200,
+        homepage_html="<html><body>" + ("x" * 600) + " Just a moment... </body></html>",
+        homepage_title="Just a moment...",
+    )
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    assert page.visited == [HOMEPAGE_URL]
+    assert report["status"] == "denied"
+    assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
+
+
+def test_an_unexpected_homepage_is_a_failed_run_not_a_denial(session):
+    # Not a refusal - a fault. It takes the existing unexpected-failure path:
+    # run recorded `failed` with an error_message, and the exception surfaces
+    # rather than being swallowed. Still no listing URL, still nothing written.
+    page = FakePage({listing("op01"): {"anchors": []}}, homepage_status=404)
+
+    with pytest.raises(RuntimeError, match="did not establish a usable session"):
+        discovery.discover_and_persist(session, page, ["op01"])
+
+    assert page.visited == [HOMEPAGE_URL]
+    run = session.scalars(select(YuyuteiDiscoveryRun)).one()
+    assert run.status == "failed"
+    assert run.error_message is not None
+    assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
+
+
+def test_a_listing_denial_after_a_good_warm_up_is_unchanged(session):
+    # F: the pre-existing behaviour. The warm-up succeeds, op01 is refused, the
+    # whole run stops there - eb01 is never attempted and op01 is not retried.
+    page = FakePage(
+        {
+            listing("op01"): {"status": 403, "anchors": []},
+            listing("eb01"): {"anchors": [product_row("eb01", "1", "EB01-001", "C", "ゾロ", "50", "1 点")]},
+        }
+    )
+    report = discovery.discover_and_persist(session, page, ["op01", "eb01"])
+
+    assert page.visited == [HOMEPAGE_URL, listing("op01")]
+    assert report["status"] == "denied"
+    assert report["stopped_reason"].startswith("source_denied: 403")
+    assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
+
+
+def test_discovery_and_the_collector_share_one_warm_up_implementation():
+    # Anti-drift: both callers must go through browser.warm_up_homepage, and
+    # neither may restate the gate. This is the check that would have caught
+    # the original gap - discovery simply had no warm-up at all.
+    import inspect
+
+    from yuyutei_collector import browser, collect
+
+    for module in (discovery, collect):
+        src = inspect.getsource(module)
+        assert "warm_up_homepage(" in src, f"{module.__name__} must use the shared warm-up"
+        assert "homepage_session_ok(" in src, f"{module.__name__} must use the shared gate"
+        # The distinctive opener of the old inline gate. Narrow on purpose:
+        # collect.py still gates the PRODUCT page on its own classification,
+        # which is a different check and must stay.
+        assert '"error" not in homepage_step' not in src, (
+            f"{module.__name__} restates the homepage gate instead of calling "
+            "browser.homepage_session_ok"
+        )
+    assert browser.HOMEPAGE_URL == "https://yuyu-tei.jp/"
+    assert browser.HOMEPAGE_EXPECTED_MARKERS == ["遊々亭"]
+
+
+def test_the_warm_up_creates_no_second_browser_session():
+    # A warm-up on a context of its own would leave the real navigation exactly
+    # as cold as before, so the helper must only ever use the page it is given.
+    import inspect
+
+    from yuyutei_collector import browser
+
+    src = inspect.getsource(browser.warm_up_homepage)
+    for forbidden in ("new_context", "new_page", "chromium", "launch"):
+        assert forbidden not in src, f"warm_up_homepage must not call {forbidden}"
 
 
 # --------------------------------------------------------------------------
@@ -1158,8 +1376,10 @@ def test_a_denial_stops_the_whole_run_and_is_recorded(session):
     assert run.status == "denied"
     assert run.stopped_reason.startswith("source_denied: 403")
     assert run.finished_at is not None
-    # One navigation total: no retry, and eb01 never attempted.
-    assert page.visited == [listing("op01")]
+    # One LISTING navigation: no retry, and eb01 never attempted. The
+    # homepage warm-up succeeded first, which is what makes the 403 that
+    # follows a listing denial rather than a refused session.
+    assert page.visited == [HOMEPAGE_URL, listing("op01")]
     assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
     assert report["status"] == "denied"
 
@@ -1194,7 +1414,9 @@ def test_pagination_is_followed_only_within_the_page_budget(session):
 
     assert report["per_slug"]["op01"]["pages_fetched"] == 2
     assert report["per_slug"]["op01"]["pagination_seen"] is True
-    assert len(page.visited) == 2
+    # Two LISTING navigations within the budget, plus the homepage warm-up.
+    # `pages_fetched` counts listing pages only and is unaffected by it.
+    assert page.visited == [HOMEPAGE_URL, base, f"{base}?page=2"]
 
 
 # --------------------------------------------------------------------------

@@ -41,13 +41,19 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from yuyutei_collector.browser import log_event
+from yuyutei_collector.browser import (
+    HOMEPAGE_URL,
+    homepage_session_ok,
+    log_event,
+    warm_up_homepage,
+)
 from yuyutei_collector.config import settings
 from yuyutei_collector.discovery_listing import ListingProduct, parse_listing_row
 from yuyutei_collector.discovery_match import classify_card_code
 from yuyutei_collector.discovery_probe import (
     CATEGORY_URL,
     DEFAULT_MAX_PAGES_PER_SLUG,
+    _DENIAL_STATUSES,
     SourceDenied,
     _scrape_listing,
 )
@@ -287,6 +293,54 @@ def _slug_metrics(enumeration: SlugEnumeration, statuses: list[str], written: in
     }
 
 
+# A homepage that answers with one of these, or renders one of these, is the
+# source declining - the same judgement `_scrape_listing` already makes about a
+# listing page, so it produces the same `denied` run rather than a new status.
+# `static_403` and `challenge_or_captcha` are classify_page's names for a
+# denial that arrives WITH a 200, which no status check can see.
+DENIAL_CLASSIFICATIONS = frozenset({"static_403", "challenge_or_captcha"})
+
+
+def _warm_up_session(page, *, discovery_run_id: int) -> None:
+    """Establish the session the collector establishes, before any listing URL.
+
+    Returns normally when the homepage gave a usable session. Otherwise raises,
+    and WHICH exception is the whole point:
+
+      * `SourceDenied` when the source declined - caught by the caller and
+        recorded as the existing `denied` run status, identical to a listing
+        denial. No listing URL is requested and nothing is retried.
+      * `RuntimeError` for any other non-normal outcome (a navigation error, an
+        unexpected status). That is not a refusal, it is a fault, so it takes
+        the existing unexpected-failure path: the run is finalised `failed`
+        with an `error_message` and the exception propagates, exactly as any
+        other unexpected error in this function already does.
+
+    Either way enumeration does not begin - there is no path here that warms
+    unsuccessfully and continues.
+    """
+    step = warm_up_homepage(page)
+    log_event(
+        "discovery_homepage_result",
+        discovery_run_id=discovery_run_id,
+        http_status=step.get("http_status"),
+        classification=step.get("classification"),
+        error=step.get("error"),
+    )
+    if homepage_session_ok(step):
+        return
+
+    http_status = step.get("http_status")
+    classification = step.get("classification")
+    if http_status in _DENIAL_STATUSES or classification in DENIAL_CLASSIFICATIONS:
+        raise SourceDenied(f"{http_status} at {HOMEPAGE_URL}")
+    raise RuntimeError(
+        f"homepage did not establish a usable session at {HOMEPAGE_URL}: "
+        f"http_status={http_status!r} classification={classification!r} "
+        f"error={step.get('error')!r}"
+    )
+
+
 def discover_and_persist(
     session: Session,
     page,
@@ -313,7 +367,20 @@ def discover_and_persist(
     capped: list[str] = []
 
     try:
-        for index, slug in enumerate(slugs):
+        # ONE HOMEPAGE NAVIGATION, ON THIS SAME PAGE, BEFORE ANY LISTING URL.
+        # Discovery used to open with a cold hit on the first category page and
+        # was answered 403 on staging (run 3, 2026-09-02) while the warmed
+        # posture the collector already used reached the same pages with 200.
+        # A denial here ends the run before a single listing is requested.
+        try:
+            _warm_up_session(page, discovery_run_id=run.id)
+            session_established = True
+        except SourceDenied as exc:
+            status = "denied"
+            stopped_reason = f"source_denied: {exc}"[:255]
+            session_established = False
+
+        for index, slug in enumerate(slugs if session_established else []):
             if index:
                 time.sleep(settings.YUYUTEI_REQUEST_DELAY_MS / 1000)
             try:
