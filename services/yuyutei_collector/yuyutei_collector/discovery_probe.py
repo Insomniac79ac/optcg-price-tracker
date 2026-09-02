@@ -110,6 +110,29 @@ def _scrape_listing(page, url: str, timeout_s: int) -> dict[str, Any]:
         log_event("probe_source_denied", url=url, http_status=status)
         raise SourceDenied(f"{status} at {url}")
 
+    # `price_texts` is the DOM-scoped current sell price, and it is a LIST on
+    # purpose - see discovery_listing.select_listing_price, which refuses any
+    # count other than one.
+    #
+    # WHY A NODE AND NOT THE FLATTENED TEXT (measured on the live listing,
+    # 2026-09-02, op01/op13/eb01). `card_text` collapses the whole block to a
+    # string, and two different facts are indistinguishable once it has:
+    #   * a SALE row renders the current price in this STRONG and the FORMER
+    #     price in a separate <del>, so the flattened text carries two prices
+    #     and the parser could only guess between them (45 rows);
+    #   * a card whose NAME begins with 円 (OP01-027 円卓) lets a price regex
+    #     span the card code and read "027 円" as a price (1 row).
+    # Reading the price node directly answers both: <del> is never selected,
+    # and the code lives in its own SPAN that this selector cannot match.
+    #
+    # `querySelectorAll`, never `querySelector`: the count is the evidence the
+    # parser fails closed on, so silently taking the first of several would
+    # throw away exactly the signal that makes this safe.
+    #
+    # The class list is matched as a SUBSET - a sale row's node is
+    # `d-block text-end text-danger` and an ordinary one is `d-block text-end`,
+    # so `text-danger` must NOT be in the selector or every non-sale row would
+    # stop producing a price.
     rows = page.eval_on_selector_all(
         "a[href*='/sell/opc/card/']",
         """els => els.map(el => {
@@ -121,6 +144,11 @@ def _scrape_listing(page, url: str, timeout_s: int) -> dict[str, Any]:
                 card_text: card ? (card.textContent || '').trim().replace(/\\s+/g, ' ') : '',
                 img_alt: img ? (img.getAttribute('alt') || '') : '',
                 img_src: img ? (img.getAttribute('src') || '') : '',
+                price_texts: card
+                    ? Array.from(card.querySelectorAll('strong.d-block.text-end'))
+                        .map(n => (n.textContent || '').trim().replace(/\\s+/g, ' '))
+                        .filter(t => t.length > 0)
+                    : [],
             };
         })""",
     )

@@ -20,7 +20,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from yuyutei_collector import discovery, discovery_listing, discovery_match
+from yuyutei_collector import discovery, discovery_listing, discovery_match, discovery_probe
 from yuyutei_collector.db import Base
 from yuyutei_collector.discovery_listing import parse_listing_row
 from yuyutei_collector.discovery_match import classify_card_code
@@ -59,21 +59,33 @@ def listing(slug):
     return f"https://yuyu-tei.jp/sell/opc/s/{slug}"
 
 
-def row(series, product_id, *, label=None, card_text=None, img=None):
-    """One listing anchor in the shape _scrape_listing yields."""
+def row(series, product_id, *, label=None, card_text=None, img=None, price_texts=None):
+    """One listing anchor in the shape _scrape_listing yields.
+
+    `price_texts` is the DOM-scoped current-price node text - one entry per
+    `strong.d-block.text-end` in the product block. It defaults to [] (no
+    price node), which is the fail-closed case, so a test that wants a price
+    has to say which NODE carried it rather than hiding it in `card_text`.
+    """
     return {
         "href": f"https://yuyu-tei.jp/sell/opc/card/{series}/{product_id}",
         "text": label or "",
         "card_text": card_text if card_text is not None else (label or ""),
         "img_alt": "",
         "img_src": img or "",
+        "price_texts": list(price_texts or []),
     }
 
 
 def product_row(series, product_id, code, rarity, name, price, stock, img=""):
     """A row shaped exactly like the real measured ones, e.g.
-    label     'OP13-118 P-SEC モンキー・D・ルフィ(パラレル)'
-    card_text 'OP13-118 モンキー・D・ルフィ(パラレル) 12,800 円 在庫 : 3 点 - + カートへ'
+    label       'OP13-118 P-SEC モンキー・D・ルフィ(パラレル)'
+    card_text   'OP13-118 モンキー・D・ルフィ(パラレル) 12,800 円 在庫 : 3 点 - + カートへ'
+    price_texts ['12,800 円']
+
+    The price appears in BOTH, exactly as on the real page: `card_text` is the
+    flattened block (audit trail) and `price_texts` is the price node the
+    parser actually reads.
     """
     return row(
         series,
@@ -81,6 +93,25 @@ def product_row(series, product_id, code, rarity, name, price, stock, img=""):
         label=f"{code} {rarity} {name}",
         card_text=f"{code} {name} {price} 円 在庫 : {stock} - + カートへ",
         img=img,
+        price_texts=[f"{price} 円"],
+    )
+
+
+def sale_row(series, product_id, code, rarity, name, price, former, stock, img=""):
+    """A SALE row, as measured live on 2026-09-02.
+
+    The block renders the current price in `strong.d-block.text-end.text-danger`
+    and the FORMER price inside a `<del>`. The `<del>` is not matched by
+    PRICE_NODE_SELECTOR, so it never reaches `price_texts` - but it IS part of
+    the flattened block text, which is what used to make these rows ambiguous.
+    """
+    return row(
+        series,
+        product_id,
+        label=f"{code} {rarity} {name}",
+        card_text=f"{code} {name} {price} 円 在庫 : {stock} {former} 円 - + カートへ",
+        img=img,
+        price_texts=[f"{price} 円"],
     )
 
 
@@ -783,15 +814,23 @@ def test_availability_vocabulary_matches_the_source(session, stock, expected):
     assert session.scalars(select(YuyuteiCandidate)).one().availability == expected
 
 
-def test_two_different_prices_on_one_row_store_no_price(session):
-    # A struck former price beside a current one: the row does not say which is
-    # current, so no price is recorded rather than a guessed one.
+def test_two_current_price_nodes_on_one_block_store_no_price(session):
+    # Two CURRENT-price nodes: the block does not say which governs, so no
+    # price is recorded rather than a guessed one.
+    #
+    # This replaces an earlier test that used a struck former price beside a
+    # current one as its example of ambiguity. That example is no longer
+    # ambiguous - the former price sits in a <del> the selector cannot match
+    # (see test_sale_row_takes_the_current_price_not_the_struck_former_one) -
+    # so the ambiguity case is now stated with the shape that genuinely is
+    # ambiguous: more than one matching price node.
     anchors = [
         row(
             "op01",
             "1",
             label="OP01-001 C ルフィ",
             card_text="OP01-001 ルフィ 1,200 円 980 円 在庫 : 3 点",
+            price_texts=["1,200 円", "980 円"],
         )
     ]
     page = FakePage({listing("op01"): {"anchors": anchors}})
@@ -799,6 +838,210 @@ def test_two_different_prices_on_one_row_store_no_price(session):
 
     assert session.scalars(select(YuyuteiCandidate)).one().price_jpy is None
     assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 1
+
+
+def test_one_price_node_holding_two_numbers_is_still_refused(session):
+    # parse_price's own ambiguity branch is still live: DOM scoping narrows
+    # WHICH text is examined, it does not relax the numeric check applied to it.
+    anchors = [
+        row(
+            "op01",
+            "1",
+            label="OP01-001 C ルフィ",
+            card_text="OP01-001 ルフィ 在庫 : 3 点",
+            price_texts=["1,200 円 980 円"],
+        )
+    ]
+    page = FakePage({listing("op01"): {"anchors": anchors}})
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    assert session.scalars(select(YuyuteiCandidate)).one().price_jpy is None
+    assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 1
+
+
+# --------------------------------------------------------------------------
+# DOM-scoped price selection
+#
+# Every shape below was measured on the live listing pages for op01, op13 and
+# eb01 on 2026-09-02 (homepage warm-up + three listing navigations, all 200).
+# The price is read from `strong.d-block.text-end` and from nothing else.
+# --------------------------------------------------------------------------
+
+
+def test_ordinary_one_price_block_is_unchanged(session):
+    # A: the common shape. One price node, one price, no ambiguity - exactly
+    # what this row produced before DOM scoping.
+    page = FakePage(
+        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+    )
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.price_jpy == 320
+    assert report["per_slug"]["op01"]["candidates_with_price"] == 1
+    assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 0
+
+
+def test_sale_row_takes_the_current_price_not_the_struck_former_one(session):
+    # B + F: the 45-row class. `<del>` holds the former price and is not
+    # matched by PRICE_NODE_SELECTOR, so only the current price is offered.
+    # The former price is still visible in raw_listing_text and must never be
+    # the value chosen.
+    page = FakePage(
+        {
+            listing("op01"): {
+                "anchors": [sale_row("op01", "10007", "OP01-004", "R", "ウソップ", "80", "120", "◯")]
+            }
+        }
+    )
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.price_jpy == 80
+    assert "120 円" in candidate.raw_listing_text
+    assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 0
+
+
+def test_price_node_beats_a_yen_initial_card_name_colliding_with_the_code(session):
+    # C: OP01-027 円卓. Flattened, `OP01-027 円卓 80 円 ...` lets PRICE_RE match
+    # "027 円" and the row reads as two prices; the price NODE says 80 and
+    # never contains the code.
+    anchors = [
+        row(
+            "op01",
+            "10035",
+            label="OP01-027 C 円卓",
+            card_text="OP01-027 円卓 80 円 在庫 : 10 点 - + カートへ",
+            price_texts=["80 円"],
+        )
+    ]
+    page = FakePage({listing("op01"): {"anchors": anchors}})
+    discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.price_jpy == 80
+    assert candidate.price_jpy != 27
+    # The collision is still present in the audit trail; it just no longer
+    # reaches the price.
+    assert discovery_listing.parse_price(candidate.raw_listing_text) == (None, True)
+
+
+def test_no_price_node_stores_no_price_even_when_the_text_shows_one(session):
+    # D + the anti-regression guarantee: a perfectly good price in the
+    # flattened text must NOT be used when no price node was scraped. If a
+    # future change reintroduces a flattened-text fallback, this fails.
+    anchors = [
+        row(
+            "op01",
+            "1",
+            label="OP01-001 C ルフィ",
+            card_text="OP01-001 ルフィ 320 円 在庫 : 3 点 - + カートへ",
+            price_texts=[],
+        )
+    ]
+    page = FakePage({listing("op01"): {"anchors": anchors}})
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.price_jpy is None
+    # Absence, not disagreement.
+    assert report["per_slug"]["op01"]["candidates_with_ambiguous_price"] == 0
+    assert candidate.raw_listing_text == "OP01-001 ルフィ 320 円 在庫 : 3 点 - + カートへ"
+
+
+def test_raw_listing_text_is_the_flattened_block_and_is_unchanged(session):
+    # G: the audit trail keeps the whole row verbatim, price node or not.
+    page = FakePage(
+        {
+            listing("op01"): {
+                "anchors": [sale_row("op01", "10007", "OP01-004", "R", "ウソップ", "80", "120", "◯")]
+            }
+        }
+    )
+    discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.raw_listing_text == (
+        "OP01-004 ウソップ 80 円 在庫 : ◯ 120 円 - + カートへ"
+    )
+
+
+def test_a_foreign_series_block_cannot_lend_its_price_to_an_own_series_row(session):
+    # H: price_texts is scoped to the anchor's own block, so a neighbouring
+    # foreign-series product (the shared B>STRONG carousel on every page)
+    # cannot leak a value. The foreign row is filtered out entirely and the
+    # own-series row keeps its own price.
+    anchors = [
+        product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点"),
+        product_row("op17", "10106", "OP17-001", "P-L", "モンキー・D・ルフィ", "9,800", "◯"),
+    ]
+    page = FakePage({listing("op01"): {"anchors": anchors}})
+    report = discovery.discover_and_persist(session, page, ["op01"])
+
+    candidate = session.scalars(select(YuyuteiCandidate)).one()
+    assert candidate.set_slug == "op01"
+    assert candidate.price_jpy == 320
+    assert report["per_slug"]["op01"]["foreign_series_filtered"] == 1
+
+
+def test_select_listing_price_counts_nodes_and_never_picks_one(session):
+    # E, stated directly on the selector so the rule is pinned independently
+    # of the persistence path.
+    select_price = discovery_listing.select_listing_price
+    assert select_price(["320 円"]) == (320, False)
+    assert select_price([]) == (None, False)
+    assert select_price(None) == (None, False)
+    assert select_price(["  "]) == (None, False)
+    # More than one node: refused, and NOT resolved to the first, last,
+    # lowest or highest.
+    assert select_price(["80 円", "120 円"]) == (None, True)
+    assert select_price(["120 円", "80 円"]) == (None, True)
+    assert select_price(["80 円", "120 円", "220 円"]) == (None, True)
+    # Two nodes that agree are still two nodes - the block offered the price
+    # twice and this function does not adjudicate.
+    assert select_price(["80 円", "80 円"]) == (None, True)
+
+
+def test_the_listing_parser_never_scans_flattened_text_for_a_price():
+    # Structural guard. `parse_listing_row` must obtain its price ONLY through
+    # `select_listing_price`; a direct `parse_price(...)` call inside it would
+    # mean some flattened string is being scanned again, which is exactly the
+    # regression that reintroduces 円卓 and the struck former price.
+    source = pathlib.Path(discovery_listing.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    func = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "parse_listing_row"
+    )
+    called = {
+        node.func.id
+        for node in ast.walk(func)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "select_listing_price" in called
+    assert "parse_price" not in called, (
+        "parse_listing_row must not call parse_price directly - the price has to "
+        "come from the DOM-scoped price nodes via select_listing_price, never "
+        "from a flattened row string."
+    )
+
+
+def test_the_scrape_selects_all_price_nodes_not_just_the_first():
+    # The probe side of the contract: querySelectorAll (a count the parser can
+    # act on), the subset class selector, and no `text-danger` in it.
+    source = pathlib.Path(discovery_probe.__file__).read_text(encoding="utf-8")
+    js_selector = "card.querySelectorAll('strong.d-block.text-end')"
+    assert js_selector in source
+    assert "card.querySelector('strong" not in source, (
+        "querySelector would silently take the first of several price nodes and "
+        "destroy the evidence select_listing_price fails closed on."
+    )
+    assert "strong.d-block.text-end.text-danger" not in source, (
+        "text-danger is only on SALE rows; including it would stop pricing "
+        "every ordinary row."
+    )
+    assert discovery_listing.PRICE_NODE_SELECTOR == "strong.d-block.text-end"
 
 
 def test_an_ascii_name_is_not_swallowed_as_a_rarity(session):
