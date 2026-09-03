@@ -55,9 +55,20 @@ def pg():
         pytest.skip(f"No PostgreSQL server reachable at {HOST}:{PORT}")
 
     engine = create_engine(url)
-    # The collector's own minimal metadata is enough: these tests are about
-    # session isolation, not about the API's full schema.
+    # The collector's own minimal metadata, plus the one lifecycle CHECK the
+    # production schema carries. The mirror model deliberately declares no
+    # CHECKs (the migration is their single authority), which means these
+    # tables would otherwise accept rows Postgres rejects in staging - so the
+    # recorder's output would go untested against the rule that matters most.
     Base.metadata.create_all(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE source_collection_attempts ADD CONSTRAINT"
+                " ck_source_collection_attempts_finished_iff_terminal"
+                " CHECK ((status = 'selected') = (finished_at IS NULL))"
+            )
+        )
     Session = sessionmaker(bind=engine, future=True)
 
     with Session() as session:
@@ -199,3 +210,46 @@ def test_the_recorder_commits_independently_of_an_open_caller_transaction(pg):
 
     caller.rollback()
     caller.close()
+
+
+def test_the_recorder_never_writes_a_row_the_real_constraint_rejects(pg):
+    """The recorder's own output, against the production lifecycle rule.
+
+    Each step below would raise (and be swallowed into a False) if it produced
+    a 'selected' row carrying a finish time, or a terminal row without one.
+    """
+    _, Session, subject = pg
+    mapping = subject["mapping_id"]
+
+    # selected: no finish time
+    assert telemetry.record_selected_batch(RUN, subject["source_id"], [mapping]) is True
+    with Session() as s:
+        row = s.execute(select(SourceCollectionAttempt)).scalars().one()
+    assert row.status == "selected" and row.finished_at is None
+
+    # in-flight: still no finish time
+    assert telemetry.mark_attempt_started(RUN, mapping) is True
+    with Session() as s:
+        row = s.execute(select(SourceCollectionAttempt)).scalars().one()
+    assert row.status == "selected" and row.started_at is not None
+    assert row.finished_at is None
+
+    # terminal: finish time present
+    assert telemetry.finish_attempt(RUN, mapping, "written") is True
+    with Session() as s:
+        row = s.execute(select(SourceCollectionAttempt)).scalars().one()
+    assert row.status == "written" and row.finished_at is not None
+
+
+def test_the_recorder_can_skip_without_starting_under_the_real_constraint(pg):
+    """selected -> skipped, started_at NULL, finished_at set - the transition
+    the original CHECK made impossible, now proved against the corrected one."""
+    _, Session, subject = pg
+    mapping = subject["mapping_id"]
+    telemetry.record_selected_batch(RUN, subject["source_id"], [mapping])
+    assert telemetry.finish_attempt(RUN, mapping, "skipped", source_denied=True) is True
+    with Session() as s:
+        row = s.execute(select(SourceCollectionAttempt)).scalars().one()
+    assert row.status == "skipped"
+    assert row.started_at is None
+    assert row.finished_at is not None

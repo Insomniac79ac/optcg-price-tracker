@@ -88,13 +88,16 @@ class SourceCollectionAttempt(Base):
         CheckConstraint(
             _FAILURE_STAGE_CHECK, name="ck_source_collection_attempts_failure_stage"
         ),
-        # A terminal row must say WHEN. 'selected' is the only non-terminal
-        # status - it covers both not-yet-started and in-flight - so it is the
-        # only one allowed to have no finished_at. This is what stops a skipped
-        # mapping being left permanently unfinished.
+        # finished_at is set EXACTLY WHEN the row is terminal - a biconditional,
+        # not an implication. 'selected' is the only non-terminal status, so a
+        # selected row must have no finish time and a terminal row must have
+        # one. The weaker "status = 'selected' OR finished_at IS NOT NULL" it
+        # replaces allowed a selected row stamped with a finish time, which the
+        # lifecycle has no meaning for and which would make "is this attempt
+        # still in flight?" unanswerable from the row alone.
         CheckConstraint(
-            "status = 'selected' OR finished_at IS NOT NULL",
-            name="ck_source_collection_attempts_terminal_is_finished",
+            "(status = 'selected') = (finished_at IS NULL)",
+            name="ck_source_collection_attempts_finished_iff_terminal",
         ),
         # Ordering when both ends are known. Deliberately NOT "finished implies
         # started": a mapping the batch selected and then skipped finishes

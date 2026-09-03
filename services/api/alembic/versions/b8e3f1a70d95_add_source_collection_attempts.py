@@ -63,11 +63,23 @@ FAILURE_STAGE_CHECK = (
     "'homepage', 'product', 'extraction', 'validation', 'write')"
 )
 
-# A row that reached a terminal status must say WHEN. 'selected' is the only
-# non-terminal status (it covers both not-yet-started and in-flight), so it is
-# the only one allowed to have no finished_at. This is what stops a skipped
-# mapping being left permanently unfinished.
-TERMINAL_IS_FINISHED_CHECK = "status = 'selected' OR finished_at IS NOT NULL"
+# finished_at is set EXACTLY WHEN the row is terminal - a biconditional, not an
+# implication. 'selected' is the only non-terminal status (it covers both
+# not-yet-started and in-flight), so:
+#
+#     selected + finished_at NULL   valid
+#     selected + finished_at SET    INVALID - a row cannot be unfinished and
+#                                   carry a finish time
+#     terminal + finished_at SET    valid
+#     terminal + finished_at NULL   INVALID - a skipped mapping must not be
+#                                   left permanently unfinished
+#
+# An earlier draft wrote "status = 'selected' OR finished_at IS NOT NULL",
+# which is only the second half. It caught the unfinished-terminal row but
+# happily accepted a 'selected' row stamped with a finish time - a state the
+# lifecycle has no meaning for, and one that would make "is this attempt still
+# in flight?" unanswerable from the row alone.
+FINISHED_IFF_TERMINAL_CHECK = "(status = 'selected') = (finished_at IS NULL)"
 
 # Ordering, when both ends are known. Deliberately NOT "finished implies
 # started": a mapping the batch selected and then skipped finishes without ever
@@ -164,8 +176,8 @@ def upgrade() -> None:
             FAILURE_STAGE_CHECK, name="ck_source_collection_attempts_failure_stage"
         ),
         sa.CheckConstraint(
-            TERMINAL_IS_FINISHED_CHECK,
-            name="ck_source_collection_attempts_terminal_is_finished",
+            FINISHED_IFF_TERMINAL_CHECK,
+            name="ck_source_collection_attempts_finished_iff_terminal",
         ),
         sa.CheckConstraint(
             FINISHED_AFTER_STARTED_CHECK,

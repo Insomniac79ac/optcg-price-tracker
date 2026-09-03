@@ -307,6 +307,70 @@ def test_a_terminal_row_without_a_finish_is_refused(migrated):
         )
 
 
+# finished_at is set EXACTLY WHEN the row is terminal. All four combinations
+# are asserted together, because the earlier constraint was an implication
+# rather than a biconditional and the one case it wrongly allowed - a
+# 'selected' row carrying a finish time - was the one no test happened to
+# cover.
+@pytest.mark.parametrize(
+    "label, status, finished, valid",
+    [
+        ("selected-unfinished", "selected", None, True),
+        ("selected-finished", "selected", "2026-09-03T03:00:00Z", False),
+        ("terminal-finished", "written", "2026-09-03T03:00:00Z", True),
+        ("terminal-unfinished", "written", None, False),
+    ],
+)
+def test_finished_at_is_set_exactly_when_the_row_is_terminal(
+    migrated, label, status, finished, valid
+):
+    db, subject = migrated
+    started = "2026-09-03T02:59:00Z" if status != "selected" else None
+    kwargs = dict(
+        batch_run_id=f"iff-{label}", status=status,
+        started_at=started, finished_at=finished,
+    )
+    if valid:
+        row_id = _insert(db, subject, **kwargs)
+        with db.engine.connect() as conn:
+            got = conn.execute(
+                text(f"SELECT status, finished_at FROM {TABLE} WHERE id = :i"), {"i": row_id}
+            ).one()
+        assert got.status == status
+        assert (got.finished_at is None) == (status == "selected")
+    else:
+        with pytest.raises(DBAPIError):
+            _insert(db, subject, **kwargs)
+
+
+def test_an_in_flight_row_stays_unfinished(migrated):
+    """status='selected' with a started_at is the in-flight state, and it must
+    still be refused a finish time - otherwise "is this attempt still running?"
+    stops being answerable from the row."""
+    db, subject = migrated
+    _insert(
+        db, subject, batch_run_id="in-flight-ok", status="selected",
+        started_at="2026-09-03T02:59:00Z", finished_at=None,
+    )
+    with pytest.raises(DBAPIError):
+        _insert(
+            db, subject, batch_run_id="in-flight-bad", status="selected",
+            started_at="2026-09-03T02:59:00Z", finished_at="2026-09-03T03:00:00Z",
+        )
+
+
+def test_a_selected_row_cannot_be_stamped_finished_by_update(migrated):
+    """The constraint holds on transitions too, not just on insert."""
+    db, subject = migrated
+    row_id = _insert(db, subject, batch_run_id="iff-update", status="selected",
+                     started_at=None, finished_at=None)
+    with pytest.raises(DBAPIError):
+        with db.engine.begin() as conn:
+            conn.execute(
+                text(f"UPDATE {TABLE} SET finished_at = now() WHERE id = :i"), {"i": row_id}
+            )
+
+
 def test_a_finish_before_its_start_is_refused(migrated):
     db, subject = migrated
     with pytest.raises(DBAPIError):

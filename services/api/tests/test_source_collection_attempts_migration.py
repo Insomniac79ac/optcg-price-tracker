@@ -182,18 +182,27 @@ def test_failure_stage_vocabulary_is_enforced_and_allows_null():
         assert f"'{stage}'" in condition
 
 
-def test_a_terminal_row_must_be_finished():
-    """Replaces the old "finished implies started" rule, which made the
-    intended skipped row - selected, never started, then finished - impossible
-    to represent. What actually matters is that a terminal row says when."""
+def test_finished_at_is_set_exactly_when_the_row_is_terminal():
+    """A biconditional, not an implication. The weaker
+    "status = 'selected' OR finished_at IS NOT NULL" caught an unfinished
+    terminal row but accepted a 'selected' row carrying a finish time - a state
+    the lifecycle has no meaning for."""
     _, _, constraints = _created_table()
     check = next(
         c
         for c in constraints
         if getattr(c, "name", None)
-        == "ck_source_collection_attempts_terminal_is_finished"
+        == "ck_source_collection_attempts_finished_iff_terminal"
     )
-    assert "status = 'selected' OR finished_at IS NOT NULL" in str(check.sqltext)
+    assert "(status = 'selected') = (finished_at IS NULL)" in str(check.sqltext)
+
+
+def test_the_weaker_implication_form_is_gone():
+    _, _, constraints = _created_table()
+    conditions = " ".join(
+        str(getattr(c, "sqltext", "")) for c in constraints
+    )
+    assert "status = 'selected' OR finished_at IS NOT NULL" not in conditions
 
 
 def test_finishing_without_starting_is_not_forbidden():
