@@ -164,6 +164,17 @@ class MarketIndexSnapshot(Base):
     calculation_method: Mapped[str] = mapped_column(String(64), nullable=False)
     source_count: Mapped[int] = mapped_column(Integer, nullable=False)
     coverage_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Archived exactly as computed. `confidence` is contributor-count metadata
+    # and is a strict 1:1 relabelling of coverage_status beside it - it is NOT
+    # a measure of price agreement, market-value accuracy, evidence quality or
+    # reliability, and no analysis over this table may read it as one. See the
+    # contract on app.schemas.MarketIndexOut.confidence and the derivation in
+    # app.services.market_index._compute_index_fields. Source disagreement is
+    # source_price_range_low_jpy/source_price_range_high_jpy below.
+    #
+    # Both columns are NOT NULL with CHECK constraints and every archived row
+    # already carries a value, which is why the field is documented rather than
+    # renamed or narrowed: that would be a migration and an INDEX_VERSION bump.
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
 
     # SourcePriceRangeOut flattened into two columns rather than nested in

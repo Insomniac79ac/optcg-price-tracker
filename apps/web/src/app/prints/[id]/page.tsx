@@ -21,6 +21,7 @@ import {
   PrintPriceHistorySection,
   type PriceHistoryStatus,
 } from "@/components/ui/PrintPriceHistory";
+import { InfoTip } from "@/components/ui/InfoTip";
 import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
 import { SourceContributionNote } from "@/components/ui/SourceContributionNote";
 import { ApiError } from "@/lib/api";
@@ -41,24 +42,45 @@ import {
   type PrintUiModel,
   toPrintUiModel,
 } from "@/lib/prints";
+import { describeSourceEvidence } from "@/lib/sourceEvidence";
 import { getTerm, type Term } from "@/lib/terminology";
 
-/** What each `reference_type` in `market_index.source_values` actually is,
- * in a collector's words.
+/** The evidence type behind one source value: what kind of number this is,
+ * and one sentence saying what it is not.
  *
- * Copied in meaning - never re-interpreted - from the resolvers in
- * services/api/app/services/market_index.py, which are explicit that a floor
- * listing is "never described as a completed sale". A retail sell price, a
- * dealer's buy price, a median of completed sales and the cheapest live
- * listing are four different claims about a card, and the page says which one
- * it is showing rather than flattening them all into "price". An unrecognised
- * type falls through to the API's own string rather than being guessed at. */
-const REFERENCE_TYPE_LABEL: Record<string, string> = {
-  retail_sell: "Retail sell price",
-  dealer_buy: "Dealer buy price",
-  transaction_median: "Median sold price",
-  listing_floor: "Lowest listing",
-};
+ * A retail asking price, a dealer's buy quote, a median of completed sales and
+ * the cheapest live listing are four different claims about a card, and this
+ * page says which one it is showing rather than flattening them all into
+ * "price". The wording lives in @/lib/sourceEvidence so it is written once
+ * and matches whatever the API's `reference_type` says; an unrecognised type
+ * falls through to the API's own string with no explanation rather than being
+ * guessed at.
+ *
+ * NEUTRAL. Under Market Index v3 an eligible current listing counts toward the
+ * index exactly like an eligible sold median, so this line is muted supporting
+ * text in the panel's ordinary colour - no amber, no chip, nothing that reads
+ * as a caveat. It answers "what am I looking at", not "what is wrong with
+ * this". The genuinely excluding states - a platform-minimum listing, a stale
+ * observation - keep their own louder vocabulary in SourceConstraintNote
+ * directly beneath, and this line neither duplicates nor softens them.
+ *
+ * The explanation is a keyboard- and tap-operable disclosure rather than a
+ * hover tooltip: most collectors read this page on a phone, where hover does
+ * not exist. See InfoTip. */
+function EvidenceTypeLine({ value }: { value: PrintMarketIndexSourceValue }) {
+  const copy = describeSourceEvidence(value.reference_type);
+  const label = copy?.label ?? value.reference_type;
+
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-text-secondary">
+      <span>
+        {label}
+        {value.sample_size !== null && ` · ${value.sample_size} sales`}
+      </span>
+      {copy && <InfoTip label={`About ${copy.label}`} text={copy.explanation} />}
+    </p>
+  );
+}
 
 /** Where the artwork on this page came from, when the API said.
  *
@@ -501,10 +523,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
             <div className="mono tabular mt-2 text-xl font-semibold text-text-primary">
               {formatJpy(row.value_jpy)}
             </div>
-            <p className="mt-1.5 text-[11px] text-text-secondary">
-              {REFERENCE_TYPE_LABEL[row.reference_type] ?? row.reference_type}
-              {row.sample_size !== null && ` · ${row.sample_size} sales`}
-            </p>
+            <EvidenceTypeLine value={row} />
             {row.observed_at && (
               <p className="mt-0.5 text-[11px] text-text-faint">
                 Seen {formatDate(row.observed_at)}

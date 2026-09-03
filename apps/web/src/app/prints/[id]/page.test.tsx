@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/react", () => ({
@@ -287,12 +287,13 @@ describe("print detail page", () => {
     const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
     expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(sources).getByText("￥29,800")).toBeTruthy();
-    expect(within(sources).getByText(/Retail sell price/)).toBeTruthy();
+    expect(within(sources).getByText(/Retail price/)).toBeTruthy();
 
     expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
     expect(within(sources).getByText("￥24,000")).toBeTruthy();
-    // A floor listing is never described as a completed sale.
-    expect(within(sources).getByText(/Lowest listing/)).toBeTruthy();
+    // A floor listing is never described as a completed sale - the label says
+    // "Current listing", which is what it is.
+    expect(within(sources).getByText(/Current listing/)).toBeTruthy();
     expect(sources.textContent).not.toMatch(/sold|sale/i);
   });
 
@@ -854,15 +855,333 @@ describe("print detail page", () => {
     expect(within(index).getByText(/Updated/)).toBeTruthy();
     const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
     expect(within(sources).getByText("￥1,500")).toBeTruthy();
-    expect(within(sources).getByText(/Lowest listing/)).toBeTruthy();
+    expect(within(sources).getByText(/Current listing/)).toBeTruthy();
+  });
+});
+
+/** GUARD: the print detail page renders no reliability claim.
+ *
+ * `market_index.confidence` is contributor-count metadata - it reads "high"
+ * the moment two sources contribute, whether they agree to the yen or disagree
+ * by 20x, and it carries no information `coverage_status` does not (see
+ * src/lib/marketIndexConfidence.test.ts for the full contract and the static
+ * scan that enforces it).
+ *
+ * This is the behavioural half of that guard on the page with the most room to
+ * over-explain. What the page SHOULD say about disagreement it already says,
+ * with the field that measures it: "Source range ¥120 – ¥2,500". A grade would
+ * add nothing and would claim something the backend never computed. */
+describe("print detail page - no reliability claim", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** The real ¥120 / ¥2,500 staging shape, at v3: both eligible, both
+   * contributing, 20x apart, and the backend duly reports full/high. */
+  function wideDisagreement() {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 1310,
+        source_count: 2,
+        coverage_status: "full",
+        confidence: "high",
+        source_price_range: { low_jpy: 120, high_jpy: 2500 },
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120, contributes_to_index: true }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 2500,
+            fallback_used: true,
+            contributes_to_index: true,
+          }),
+        ],
+      } as PrintMarketIndex,
+    });
+  }
+
+  it("renders no confidence, quality or reliability language", async () => {
+    fetchPrint.mockResolvedValue(wideDisagreement());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/confidence/i);
+    expect(text).not.toMatch(/reliab|accurate|trustworth|certainty/i);
+    // Nor the coverage vocabulary the confidence value mirrors 1:1.
+    expect(text).not.toMatch(/full coverage|limited coverage|\d+ sources\b/i);
+  });
+
+  it("communicates the disagreement with the field that measures it", async () => {
+    // The honest answer to "how much should I trust ¥1,310?" is the spread it
+    // sits inside, published as a measured fact rather than a grade.
+    fetchPrint.mockResolvedValue(wideDisagreement());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText(/Source range/)).toBeTruthy();
+    expect(screen.getByText("￥120 – ￥2,500")).toBeTruthy();
+    expect(screen.getByText("￥1,310")).toBeTruthy();
+  });
+});
+
+/** Market Index v3: what kind of evidence each source price IS, said neutrally.
+ *
+ * v2 answered a ¥2,500 SNKRDUNK listing beside a ¥120 index by giving the
+ * listing no weight and stamping it "Reference only". v3 counts it, so the
+ * page has to do the harder thing instead: say plainly that a current asking
+ * price is not a completed sale, without implying anything is wrong with it.
+ * That is what these labels and their explanations are for.
+ */
+describe("print detail page - evidence types", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** A v3 payload: BOTH sources eligible, both contributing, the index their
+   * midpoint. Yuyu-Tei asks ¥24,800, SNKRDUNK's cheapest open listing is
+   * ¥20,500, and ¥22,650 is the middle. */
+  function twoAskingSources() {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 22650,
+        source_count: 2,
+        coverage_status: "full",
+        confidence: "high",
+        source_price_range: { low_jpy: 20500, high_jpy: 24800 },
+        source_values: [
+          sourceValue({
+            source: "yuyutei",
+            value_jpy: 24800,
+            contributes_to_index: true,
+          }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 20500,
+            fallback_used: true,
+            contributes_to_index: true,
+          }),
+        ],
+      } as PrintMarketIndex,
+    });
+  }
+
+  it("names each price as the kind of evidence it is", async () => {
+    fetchPrint.mockResolvedValue(twoAskingSources());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText(/Retail price/)).toBeTruthy();
+    expect(within(sources).getByText(/Current listing/)).toBeTruthy();
+  });
+
+  it("says nothing is wrong with a listing that fed the index", async () => {
+    // THE POINT OF v3 ON THIS PAGE. The SNKRDUNK value is an asking price, it
+    // is labelled as one, and it counted - so "Reference only" must be gone
+    // from it. Under v2 this exact row carried that chip.
+    fetchPrint.mockResolvedValue(twoAskingSources());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/not used in Market Index/i);
+    // Both raw prices, and the index between them.
+    expect(screen.getByText("￥24,800")).toBeTruthy();
+    expect(screen.getByText("￥20,500")).toBeTruthy();
+    expect(screen.getByText("￥22,650")).toBeTruthy();
+  });
+
+  it("explains an asking price behind a keyboard- and tap-operable control", async () => {
+    fetchPrint.mockResolvedValue(twoAskingSources());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    // Not a hover tooltip and not a `title` attribute: a real button, which a
+    // phone can tap and a keyboard can reach. See InfoTip.
+    const explain = screen.getByRole("button", { name: "About Current listing" });
+    expect(explain.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(explain);
+
+    expect(
+      screen.getByText(
+        "Lowest current listing observed on this source. Asking prices are not completed sales and may differ from the price a card ultimately sells for.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("describes evidence without colouring it as a problem", async () => {
+    fetchPrint.mockResolvedValue(twoAskingSources());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    // The amber "stale"/caution vocabulary belongs to values that are actually
+    // wrong or excluded. An evidence-type label is neither.
+    const label = within(sources).getByText(/Current listing/);
+    expect(label.className).not.toMatch(/signal-warning|amber|red/);
+    expect(sources.textContent).not.toMatch(/warning|caution|unreliable/i);
+  });
+
+  it("calls a sold median a sales median, and never a listing", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 21000,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({
+              source: "snkrdunk",
+              reference_type: "transaction_median",
+              evidence_type: "transaction",
+              value_jpy: 21000,
+              sample_size: 7,
+              contributes_to_index: true,
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText(/Recent sales median/)).toBeTruthy();
+    // The sample size still rides along with it - seven real sales is the
+    // reason this is the strongest thing any source reports.
+    expect(within(sources).getByText(/7 sales/)).toBeTruthy();
+    expect(sources.textContent).not.toMatch(/Current listing/);
+  });
+
+  it("still says a constrained listing is out of the index", async () => {
+    // v3 widened what COUNTS, not what is admissible. A platform-minimum
+    // listing is still excluded and must still say so - this is the exclusion
+    // communication that the "Reference only" removal must not have weakened.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 24800,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({
+              source: "yuyutei",
+              value_jpy: 24800,
+              contributes_to_index: true,
+            }),
+            sourceValue({
+              source: "snkrdunk",
+              value_jpy: 1000,
+              eligible: false,
+              fallback_used: true,
+              ineligible_reason: "platform_floor",
+              constraint: "platform_floor",
+              contributes_to_index: false,
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("Minimum listing price")).toBeTruthy();
+    expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
+    // The raw number is still shown, and still labelled for what it is.
+    expect(within(sources).getByText("￥1,000")).toBeTruthy();
+    expect(within(sources).getByText(/Current listing/)).toBeTruthy();
+  });
+
+  it("still says a stale price is out of the index", async () => {
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 24800,
+          source_count: 1,
+          coverage_status: "limited",
+          confidence: "medium",
+          source_values: [
+            sourceValue({
+              source: "yuyutei",
+              value_jpy: 24800,
+              contributes_to_index: true,
+            }),
+            sourceValue({
+              source: "snkrdunk",
+              value_jpy: 20500,
+              stale: true,
+              eligible: false,
+              fallback_used: true,
+              ineligible_reason: "stale",
+              contributes_to_index: false,
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("stale")).toBeTruthy();
+    expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
+  });
+
+  it("labels a source it has never heard of with the API's own words", async () => {
+    // Architecture preparation, asserted rather than asserted-to-be-intended:
+    // a source and a reference type this build has no constant for still
+    // render as a real, attributed price - because nothing on this page keys
+    // on either name.
+    fetchPrint.mockResolvedValue(
+      makeDetail({
+        market_index: {
+          index_value_jpy: 22650,
+          source_count: 2,
+          coverage_status: "full",
+          confidence: "high",
+          source_values: [
+            sourceValue({
+              source: "yuyutei",
+              value_jpy: 24800,
+              contributes_to_index: true,
+            }),
+            sourceValue({
+              source: "cardrush",
+              reference_type: "retail_sell",
+              value_jpy: 20500,
+              contributes_to_index: true,
+            }),
+          ],
+        } as PrintMarketIndex,
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("cardrush")).toBeTruthy();
+    expect(within(sources).getByText("￥20,500")).toBeTruthy();
+    expect(within(sources).getAllByText(/Retail price/)).toHaveLength(2);
   });
 });
 
 /** Market Index v2 made "visible" and "counted" two different things: an
- * admissible fallback source keeps its price and its place in the range but
- * stands aside from the aggregate. Before this, print 5998 showed a ¥2,500
- * SNKRDUNK price beside a ¥120 index and said nothing about how both could be
- * true. Every fixture below is shaped on a real staging payload. */
+ * admissible fallback source kept its price and its place in the range but
+ * stood aside from the aggregate. v3 removed that role filter, so a v3 backend
+ * only ever reports `contributes_to_index: false` for a value that is also
+ * INELIGIBLE - constrained, stale or absent.
+ *
+ * The fixtures below therefore now describe two things: what the current
+ * backend emits for an excluded value, and what an older v2 API's payload
+ * still renders as. Both matter. The exclusion vocabulary is the one the
+ * "Reference only" removal must not have weakened, and an Atlas build talking
+ * to a not-yet-redeployed API must keep rendering exactly what it rendered
+ * before rather than silently reinterpreting a `false` it no longer expects.
+ * Every fixture is shaped on a real staging payload. */
 describe("print detail page - source prices that did not feed the index", () => {
   afterEach(() => {
     vi.clearAllMocks();

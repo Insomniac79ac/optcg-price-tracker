@@ -9,7 +9,8 @@ import {
  * did not feed Market Index.
  *
  * Deliberately a separate component from SourceConstraintNote rather than a
- * fourth entry in its vocabulary. A constraint says why a number may not mean
+ * fourth entry in its vocabulary, and a third thing again from the neutral
+ * evidence-type label above it. A constraint says why a number may not mean
  * what it says; this says nothing is wrong with the number at all, only that
  * the index was computed from something else. Folding the two together would
  * have made "stood aside under the v2 role rules" read as a data problem.
@@ -22,6 +23,17 @@ import {
  * Silent when the constraint layer has already said this value is out of the
  * index - an ineligible platform-minimum price keeps its own, more specific
  * explanation instead of gaining a second badge that says less.
+ *
+ * That silence is now the ordinary case rather than the exception. A Market
+ * Index v3 backend excludes a value only by finding it INELIGIBLE, and
+ * sourceConstraintStatesExclusion is true of every ineligible value - so
+ * against a v3 API this component renders nothing at all, and the chip appears
+ * only for a payload from an API still applying v2's role filter. That is the
+ * intended outcome rather than a regression: v3 stopped excluding eligible
+ * asking prices, so there is no longer an eligible price to explain away. What
+ * a collector reads instead is the neutral evidence-type label from
+ * @/lib/sourceEvidence - "Current listing" - which says what the price is
+ * rather than what it failed to be.
  *
  * Neutral by construction: the same quiet chip the `informational` constraint
  * tone uses, 11px supporting text, no amber, no warning. The raw price above

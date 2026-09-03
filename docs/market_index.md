@@ -47,9 +47,36 @@ whether a sell observation counts. Yuyu-Tei dealer buy remains auxiliary-only
 to the latest listing floor if it's <=7 days old (`listing_floor`,
 `fallback_used=true`).
 
-**Combination** - unchanged: 2+ eligible sources → median, `coverage_status
-="full"`; exactly 1 eligible source → that value, `coverage_status="limited"`;
-0 eligible sources → no index value, `coverage_status="none"`.
+**Combination** - 2+ eligible sources → median, `coverage_status="full"`;
+exactly 1 eligible source → that value, `coverage_status="limited"`; 0 eligible
+sources → no index value, `coverage_status="none"`.
+
+**Combination history** (`index_version`, versioned separately from
+`source_semantics_version` - see `app/services/market_index.py`):
+
+- **v1** - every eligible source value was a co-equal addend, as described
+  immediately above.
+- **v2** - an eligible value whose `fallback_used` was true stood aside from
+  the aggregate whenever a non-fallback value was present. Introduced after a
+  SNKRDUNK platform-minimum listing dragged a staging index to ¥1,310 for a
+  print no source priced above ¥120.
+- **v3** (current) - back to "every eligible value contributes", because v2 had
+  diagnosed that defect wrongly. The ¥1,310 case was an *admissibility* failure,
+  and the platform-floor rule in `source_semantics` is what actually fixed it;
+  giving a current asking price **zero** weight was too blunt a remedy for it.
+  Market Index is the consensus of the usable market-facing prices currently
+  observable, and a live listing is weaker and different evidence from a
+  completed sale but is not worth nothing. Each source still exposes at most
+  ONE representative value (SNKRDUNK: a sold median when the sample supports
+  one, its current listing floor otherwise - never both), so no marketplace
+  votes twice, and the combination step names no source. A future Card Rush,
+  Mercado or Cardmarket needs a resolver and nothing else.
+
+Collector-facing surfaces label the evidence type neutrally rather than
+excluding it - "Retail price", "Current listing", "Recent sales median" (see
+`apps/web/src/lib/sourceEvidence.ts`). The louder exclusion wording is reserved
+for values that genuinely are outside the index: platform-minimum listings,
+below-minimum anomalies and stale observations.
 
 ## Image data audit (as of 2026-07-27)
 

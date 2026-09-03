@@ -1,21 +1,40 @@
 /** Which visible source prices actually went into Market Index.
  *
- * Market Index v2 split two questions that used to share one answer: whether
- * a value is admissible evidence (`eligible`) and whether it went into the
- * number (`contributes_to_index`). A SNKRDUNK listing floor whose
- * `fallback_used` is true stays eligible, keeps its raw price and stays
- * inside `source_price_range`, but stands aside from the aggregate whenever a
- * non-fallback source is present. The print page had no way to say that: a
- * ¥2,500 SNKRDUNK price sat beside a ¥120 index with nothing on screen
- * explaining how both could be true at once.
+ * Market Index v2 split two questions that used to share one answer: whether a
+ * value is admissible evidence (`eligible`) and whether it went into the number
+ * (`contributes_to_index`). Under v2 the two could genuinely disagree - an
+ * eligible SNKRDUNK listing floor kept its raw price and its place in
+ * `source_price_range` while standing aside from the aggregate - and this
+ * module exists because the print page had no way to say that: a ¥2,500
+ * SNKRDUNK price sat beside a ¥120 index with nothing on screen explaining how
+ * both could be true at once.
+ *
+ * UNDER v3 THAT DISAGREEMENT NO LONGER ARISES. Every admissible value
+ * contributes, so a v3 backend reports `contributes_to_index: false` only for a
+ * value that is ALSO ineligible - constrained, stale or absent - and those
+ * already carry the more specific explanation in @/lib/sourceConstraint, which
+ * is why the "Reference only" chip is silent for them (see
+ * SourceContributionNote). The result is that an eligible current listing is no
+ * longer marked at all, which is the intended v3 outcome: it counts, so there
+ * is nothing to qualify.
+ *
+ * This module is kept, unchanged in logic, for the two cases where the
+ * distinction still has work to do: an API that predates the v3 deploy and is
+ * still applying the v2 role filter, and any future role the backend may
+ * introduce. Both are handled by reading the published field and nothing else.
  *
  * This is NOT a source constraint. `platform_floor`, `below_platform_minimum`
  * and `sale_price` say why a price may not mean what its number says; they
  * live in @/lib/sourceConstraint and keep their own wording. Contribution
- * answers a different question - did this number feed the index - and a
- * fallback source can be perfectly trustworthy data while still not
- * contributing. The two concepts are therefore kept apart here rather than
- * folded into one badge vocabulary.
+ * answers a different question - did this number feed the index - and under v2
+ * a source could be perfectly trustworthy data while still not contributing.
+ * The two concepts are therefore kept apart here rather than folded into one
+ * badge vocabulary.
+ *
+ * Neither is an EVIDENCE TYPE. "Current listing", "Recent sales median" and
+ * "Retail price" say what kind of number this is; they live in
+ * @/lib/sourceEvidence, they are neutral, and they apply to contributing and
+ * excluded values alike.
  *
  * `contributes_to_index` is the ONLY input. It arrives decided by
  * app.services.market_index and nothing in this module re-derives it from
@@ -39,9 +58,12 @@ export const REFERENCE_ONLY_EXPLANATION =
   "Shown for context; not used in Market Index.";
 
 /** Caption under the source range when the span covers a reference-only
- * price. `source_price_range` is computed from every ADMISSIBLE value, before
- * the contributor filter (see market_index.py), so a one-source index beside
- * a two-endpoint range is correct and this line is what makes it legible. */
+ * price. `source_price_range` is computed from every ADMISSIBLE value, and
+ * under v2 the contributor filter could then remove one of them - so a
+ * one-source index beside a two-endpoint range was correct, and this line is
+ * what made it legible. Under v3 the two sets coincide and the caption does
+ * not appear; it stays for a payload from an API that has not been redeployed
+ * yet. */
 export const REFERENCE_ONLY_RANGE_CAPTION =
   "Includes reference-only source prices.";
 

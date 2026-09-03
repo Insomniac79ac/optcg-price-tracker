@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
+import { type PrintUiModel, sourceDisplayName } from "@/lib/prints";
 import {
-  isRedundantSingleSource,
-  type PrintUiModel,
-  SNKRDUNK,
-  YUYUTEI,
-} from "@/lib/prints";
-import { REFERENCE_ONLY_LABEL } from "@/lib/sourceContribution";
+  displayedSourceValues,
+  isReferenceOnly,
+  REFERENCE_ONLY_LABEL,
+} from "@/lib/sourceContribution";
+import { sourceEvidenceLabel } from "@/lib/sourceEvidence";
 import { CardImageFrame } from "./CardImageFrame";
 import { MarketIndexValue } from "./MarketIndexValue";
 
@@ -198,72 +198,85 @@ export function PrintCardTile({
  * never a sibling's price, never a placeholder for a source that reported
  * nothing.
  *
- * A source only appears when it actually contributed a value, so the rows
- * *are* the coverage statement: two rows is a two-source index, one row is a
- * one-source index and cannot be mistaken for a consensus. When the index
- * itself is unavailable there is nothing to list and the block collapses,
- * leaving MarketIndexValue's "Index unavailable" as the only claim.
+ * SOURCE-AGNOSTIC BY CONSTRUCTION. This function names no source. It maps the
+ * payload's own `source_values`, in the order the API sent them, and asks
+ * `sourceDisplayName` what to call each one - which returns the API's raw key
+ * unchanged for a source this build has never heard of, so a Card Rush or
+ * Cardmarket value added server-side appears here as a real row with a real
+ * price on the day it ships, rather than silently vanishing until someone
+ * remembers to edit this file. It used to read two hardcoded fields, which
+ * meant a third source was a rewrite; the tile is now the same amount of code
+ * for two sources or five.
  *
- * Laid out as a caption-over-price comparison so the two retailers can be
- * read against each other at a glance, with the price the legible half and
- * the retailer name the small one. The column count is the number of sources
- * that actually reported, not a fixed two - a one-source print gets a single
- * column rather than a half-empty grid that would read as a missing figure.
- * A hairline rule separates the sources from the index they produced; there
- * is deliberately no box around either source.
+ * ALWAYS SHOWN. A source that reported a price gets a row even when its value
+ * equals the Market Index above it. That repetition was previously suppressed
+ * as redundant, and the suppression cost more than it saved: a one-source
+ * print then showed a gold figure with no provenance at all, which is exactly
+ * the tile where a collector most needs to know WHOSE price they are looking
+ * at. "Market Index ¥14,000 / Yuyu-Tei ¥14,000 / Retail price" says one number
+ * twice and one fact - which shop - once, and the fact is worth the line.
+ *
+ * A source with `value_jpy: null` still renders nothing: it reported no price,
+ * and no row may invent one. When no source reported at all the block
+ * collapses entirely, leaving MarketIndexValue's "Index unavailable" as the
+ * only claim on the tile.
+ *
+ * Laid out as a caption-over-price comparison so the retailers can be read
+ * against each other at a glance, with the price the legible half and the
+ * retailer name the small one. The column count follows the number of sources
+ * that actually reported, capped at two per row so a third source wraps rather
+ * than crushing the prices into unreadable slivers on a 390px phone.
  *
  * Sizing is deliberately the same at every viewport: the price is 13px and
  * the retailer name 10px on a 390px phone exactly as on a 1440px desktop.
- * These two numbers are the collector information the whole tile exists to
- * carry, and shrinking them on the surface most people browse on is what
- * made them read as footnotes.
+ * These numbers are the collector information the whole tile exists to carry,
+ * and shrinking them on the surface most people browse on is what made them
+ * read as footnotes.
  *
  * The price never truncates. Its column is ~72px on a 390px-wide two-column
  * catalogue, which holds a seven-figure yen value at 13px, and anything
  * somehow wider wraps rather than clips - a half-shown price is a wrong
  * price, which this product must never render. The source *name* may
- * truncate: it is one of two known constants and cannot be misread as a
- * number.
+ * truncate: it is a known constant and cannot be misread as a number.
  */
 function SourcePrices({ print }: { print: PrintUiModel }) {
-  // A lone eligible, unconstrained source whose value IS the index adds
-  // nothing the gold figure above has not already said - see
-  // isRedundantSingleSource for the four conditions, all of which must hold.
-  // A constrained source, an ineligible one, a differing value, or a second
-  // retailer all keep their rows.
-  if (isRedundantSingleSource(print.marketIndex)) return null;
-
-  const rows = [
-    { source: YUYUTEI, name: "Yuyu-Tei", value: print.yuyuteiJpy },
-    { source: SNKRDUNK, name: "SNKRDUNK", value: print.snkrdunkJpy },
-  ].filter(
-    (row): row is { source: string; name: string; value: number } =>
-      row.value !== null,
-  );
-
+  const rows = displayedSourceValues(print.marketIndex.source_values);
   if (rows.length === 0) return null;
 
   return (
     <dl
-      className={`mt-2.5 grid gap-x-2 border-t border-border-muted pt-2 ${
+      className={`mt-2.5 grid gap-x-2 gap-y-2 border-t border-border-muted pt-2 ${
         rows.length > 1 ? "grid-cols-2" : "grid-cols-1"
       }`}
     >
       {rows.map((row) => (
-        <div key={row.name} className="min-w-0">
+        <div key={`${row.source}-${row.reference_type}`} className="min-w-0">
           <dt className="mono truncate text-[10px] uppercase leading-none tracking-[0.08em] text-text-muted">
-            {row.name}
+            {sourceDisplayName(row.source)}
           </dt>
           <dd className="mono tabular mt-1.5 break-words text-[13px] font-medium leading-none text-text-primary">
-            {formatJpy(row.value)}
+            {formatJpy(row.value_jpy)}
           </dd>
-          {/* A price the index was not computed from. Two words at 9px in the
-              muted colour: enough that a ¥2,500 row beside a ¥120 index is not
-              read as disagreement, small enough that it never competes with
-              the price above it. Stacked rather than inline so the ~72px
-              column on a 390px two-column catalogue keeps the price on one
-              line. */}
-          {print.referenceOnlySources.includes(row.source) && (
+          {/* What KIND of price this is - "Retail price", "Current listing",
+              "Recent sales median". Neutral supporting text in the muted
+              colour, never a warning: under Market Index v3 an eligible
+              current listing counts toward the index exactly like a sold
+              median, so this describes the evidence rather than qualifying it.
+              The one-sentence explanation behind each label lives on the print
+              detail page: the whole tile is a single <Link>, and a disclosure
+              button nested inside an anchor is invalid HTML that misbehaves on
+              both keyboard and touch. */}
+          <dd className="mt-1 text-[9px] leading-tight text-text-muted">
+            {sourceEvidenceLabel(row.reference_type)}
+          </dd>
+          {/* A price the index was not computed from. Under v3 this can only
+              be an EXCLUDED value - a platform-minimum listing, a stale
+              observation - because every eligible value now contributes, so
+              the line no longer appears beside perfectly ordinary prices the
+              way it did under v2. Two words at 9px in the muted colour: enough
+              that an excluded row is not read as disagreement with the index,
+              small enough that it never competes with the price above it. */}
+          {isReferenceOnly(row) && (
             <dd className="mt-1 text-[9px] leading-tight text-text-muted">
               {REFERENCE_ONLY_LABEL}
             </dd>

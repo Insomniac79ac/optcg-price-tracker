@@ -697,41 +697,21 @@ export function resolveCanonicalPrintIdentity(
 export const PRINT_CATALOGUE_EXACT_CODE_NOTE =
   "q is a substring search; results must be filtered to an exact card_code.";
 
-/** True when a print's single source row would only repeat the Market Index.
+/* isRedundantSingleSource was here.
  *
- * A tile that prints
+ * It hid a catalogue tile's ONLY source row whenever that row's price equalled
+ * the Market Index above it, on the reasoning that
  *
- *     MARKET INDEX  ￥66,000
- *     SNKRDUNK      ￥66,000
+ *     MARKET INDEX  ￥14,000
+ *     YUYU-TEI      ￥14,000
  *
- * has said one number twice. With a single eligible, unconstrained source the
- * index IS that source's value by construction, so the row carries nothing the
- * gold figure above it did not.
+ * says one number twice. It does - and it also says, exactly once, WHOSE price
+ * that is, which on a one-source print is the single most useful thing the
+ * tile can add to the gold figure. The suppression left the print with the
+ * least corroboration showing the least provenance, which is backwards.
  *
- * DELIBERATELY NARROW. It returns true only when every one of these holds, and
- * any one of them failing keeps the row visible:
- *   - exactly one source value is present at all;
- *   - that source is `eligible` - an ineligible source explains why the index
- *     is not simply its number, which is precisely when the reader needs it;
- *   - it carries no `constraint` - a platform-minimum or below-minimum value
- *     means something its number alone does not say;
- *   - its value equals `index_value_jpy` exactly. A difference means the index
- *     was derived from something other than this row, and hiding it would hide
- *     why.
- *
- * Nothing here re-derives eligibility or inspects a threshold: `eligible` and
- * `constraint` arrive decided by app.services.source_semantics, and this
- * function only compares two numbers the API already sent. Two sources are
- * never suppressed - disagreement between retailers is the single most useful
- * thing a tile can show. */
-export function isRedundantSingleSource(index: PrintMarketIndex): boolean {
-  const withValue = index.source_values.filter((entry) => entry.value_jpy !== null);
-  if (withValue.length !== 1) return false;
-
-  const [only] = withValue;
-  if (!only.eligible) return false;
-  if (only.constraint) return false;
-  if (index.index_value_jpy === null) return false;
-
-  return only.value_jpy === index.index_value_jpy;
-}
+ * Deleted rather than left unused so nothing can quietly call it again. Source
+ * rows on a tile are now rendered straight from `market_index.source_values`
+ * with no equality test of any kind (see PrintCardTile's SourcePrices); a
+ * value of null still renders no row, because that source reported no
+ * price. */

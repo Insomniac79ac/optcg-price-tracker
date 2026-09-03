@@ -443,12 +443,18 @@ def test_snkrdunk_source_value_is_byte_identical_beside_a_sale_price(db_session)
 # --- versions -------------------------------------------------------------
 
 
-def test_source_semantics_version_is_2_and_index_version_is_2(db_session):
-    """The classification ruleset moved; the combination rule did not. Bumping
-    INDEX_VERSION too would make market_index_change refuse every
-    cross-version comparison and blank the 7-day change for a week."""
+def test_source_semantics_version_is_2_and_index_version_is_3(db_session):
+    """The sale-price work moved the classification ruleset to 2 and left the
+    combination rule alone; index v3 later moved the combination rule and left
+    the classification ruleset alone. Neither change touched the other's
+    version, which is the entire reason there are two of them.
+
+    This test is the sale-price side of that pair, and its subject has not
+    changed: a promotional Yuyu-Tei price is still classified `sale_price`,
+    still eligible, still a full participant in the index. Only the number
+    beside INDEX_VERSION has moved."""
     assert SOURCE_SEMANTICS_VERSION == 2
-    assert INDEX_VERSION == 2
+    assert INDEX_VERSION == 3
 
     card = make_card(db_session)
     yuyutei = make_source(db_session, YUYUTEI)
@@ -456,7 +462,7 @@ def test_source_semantics_version_is_2_and_index_version_is_2(db_session):
 
     index = get_market_index_for_card(db_session, card.id)
     assert index.source_semantics_version == 2
-    assert index.index_version == 2
+    assert index.index_version == 3
 
 
 # --- API schema -------------------------------------------------------------
@@ -541,7 +547,7 @@ def test_snapshot_provenance_carries_sale_price(db_session):
     row = build_snapshot_row(index)
 
     assert row["source_semantics_version"] == 2
-    assert row["index_version"] == 2
+    assert row["index_version"] == 3
     assert row["index_value_jpy"] == 120
     yuyu_provenance = next(
         sv for sv in row["provenance"]["source_values"] if sv["source"] == YUYUTEI

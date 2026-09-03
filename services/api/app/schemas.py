@@ -354,6 +354,26 @@ class MarketIndexOut(BaseModel):
     calculation_method: str
     source_count: int
     coverage_status: Literal["full", "limited", "none"]
+    # CONTRIBUTOR-COUNT METADATA, NOT A RELIABILITY SCORE.
+    #
+    # `confidence` is derived from one input only - the number of source values
+    # that contributed to index_value_jpy - and is therefore intentionally
+    # equivalent in information content to `coverage_status` above: 2+
+    # contributors -> full/high, 1 -> limited/medium, 0 -> none/low, a strict
+    # 1:1 relabelling of the same count.
+    #
+    # It does NOT measure price agreement between sources, how closely
+    # index_value_jpy approximates market value, evidence quality, or
+    # reliability. Two eligible sources 20x apart score exactly the same as two
+    # reporting the identical figure.
+    #
+    # `source_price_range` is the field that communicates source disagreement.
+    # Anything that wants to qualify the index must read that one.
+    #
+    # No collector-facing surface renders `confidence` today, and that is
+    # deliberate - see apps/web/src/lib/marketIndexConfidence.test.ts, which
+    # fails if one starts. (Unrelated to the admin ConfidenceBadge vocabulary,
+    # which grades source-mapping matches.)
     confidence: Literal["high", "medium", "low"]
     source_values: list[MarketIndexSourceValueOut]
     auxiliary_values: list[MarketIndexSourceValueOut]
@@ -433,6 +453,26 @@ class PrintMarketIndexOut(BaseModel):
     calculation_method: str
     source_count: int
     coverage_status: Literal["full", "limited", "none"]
+    # CONTRIBUTOR-COUNT METADATA, NOT A RELIABILITY SCORE.
+    #
+    # `confidence` is derived from one input only - the number of source values
+    # that contributed to index_value_jpy - and is therefore intentionally
+    # equivalent in information content to `coverage_status` above: 2+
+    # contributors -> full/high, 1 -> limited/medium, 0 -> none/low, a strict
+    # 1:1 relabelling of the same count.
+    #
+    # It does NOT measure price agreement between sources, how closely
+    # index_value_jpy approximates market value, evidence quality, or
+    # reliability. Two eligible sources 20x apart score exactly the same as two
+    # reporting the identical figure.
+    #
+    # `source_price_range` is the field that communicates source disagreement.
+    # Anything that wants to qualify the index must read that one.
+    #
+    # No collector-facing surface renders `confidence` today, and that is
+    # deliberate - see apps/web/src/lib/marketIndexConfidence.test.ts, which
+    # fails if one starts. (Unrelated to the admin ConfidenceBadge vocabulary,
+    # which grades source-mapping matches.)
     confidence: Literal["high", "medium", "low"]
     source_values: list[MarketIndexSourceValueOut]
     auxiliary_values: list[MarketIndexSourceValueOut]

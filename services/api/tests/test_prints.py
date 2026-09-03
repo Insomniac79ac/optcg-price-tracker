@@ -626,12 +626,13 @@ def test_sibling_prints_report_different_source_counts(client, sanji_two_source)
     parallel_body, _ = _sources(client, sanji_two_source["sanji_parallel"].id)
     base_body, _ = _sources(client, sanji_two_source["sanji_base"].id)
 
-    # Index v2: both prints' SNKRDUNK values are fallback listing floors, so
-    # neither joins its aggregate. The two prints still report DIFFERENT
-    # evidence - which is what this test is for - it is now visible through the
-    # per-value role rather than through source_count.
-    assert parallel_body["source_count"] == 1
-    assert parallel_body["coverage_status"] == "limited"
+    # Index v3: the parallel's eligible SNKRDUNK floor now counts, so the two
+    # siblings differ in source_count once more - which is what this test was
+    # originally written to show. Under v2 both collapsed to 1 and the
+    # difference was only visible through the per-value role; the assertion is
+    # back to its plainest form.
+    assert parallel_body["source_count"] == 2
+    assert parallel_body["coverage_status"] == "full"
     assert base_body["source_count"] == 1
     assert base_body["coverage_status"] == "limited"
 
@@ -762,7 +763,14 @@ def test_a_constrained_floor_does_not_alter_a_sibling_index(
     client, sanji_constrained_floor
 ):
     """The parallel loses its SNKRDUNK contribution and falls back to its
-    Yuyu-Tei value alone; the base keeps both sources."""
+    Yuyu-Tei value alone; the base keeps both sources.
+
+    The two halves are the whole v3 argument side by side, on sibling prints
+    that share a legacy card row. The parallel's ¥1,000 floor sits at SNKRDUNK's
+    platform minimum, so source SEMANTICS disqualify it and it contributes
+    nothing - that exclusion is untouched by v3. The base's ¥1,500 floor is an
+    ordinary current listing, so it contributes, and the base's index is the
+    midpoint of two market-facing prices rather than one of them."""
     parallel_body, _ = _sources(client, sanji_constrained_floor["sanji_parallel"].id)
     base_body, _ = _sources(client, sanji_constrained_floor["sanji_base"].id)
 
@@ -770,12 +778,9 @@ def test_a_constrained_floor_does_not_alter_a_sibling_index(
     assert parallel_body["source_count"] == 1
     assert parallel_body["coverage_status"] == "limited"
 
-    # Index v2: the base's ¥1,500 floor is admissible but is a fallback, so the
-    # index is its Yuyu-Tei value rather than the old ¥810 midpoint. The point
-    # of this test holds - the two siblings still resolve independently.
-    assert base_body["index_value_jpy"] == 120
-    assert base_body["source_count"] == 1
-    assert base_body["coverage_status"] == "limited"
+    assert base_body["index_value_jpy"] == 810
+    assert base_body["source_count"] == 2
+    assert base_body["coverage_status"] == "full"
 
 
 def test_a_constrained_sibling_floor_never_appears_on_the_other_print(
@@ -833,17 +838,18 @@ def test_version_metadata_did_not_move_any_print_pricing_value(
     assert parallel["snkrdunk"]["constraint"] == "platform_floor"
     assert parallel["snkrdunk"]["eligible"] is False
 
-    assert base_body["index_value_jpy"] == 120
-    assert base_body["source_count"] == 1
-    assert base_body["coverage_status"] == "limited"
+    assert base_body["index_value_jpy"] == 810
+    assert base_body["source_count"] == 2
+    assert base_body["coverage_status"] == "full"
     # Source SEMANTICS still say nothing about this floor - unconstrained and
-    # eligible, exactly as Task 1C-2B established. Index v2 changed only
-    # whether it is AGGREGATED, which is the separate question the new role
-    # field answers.
+    # eligible, exactly as Task 1C-2B established, and unchanged through both
+    # index v2 and index v3. All that has moved underneath it is whether it is
+    # AGGREGATED, which is the separate question the role field answers: v2
+    # said no, v3 says yes, and neither touched the semantic verdict above.
     assert base["snkrdunk"]["value_jpy"] == 1500
     assert base["snkrdunk"]["constraint"] is None
     assert base["snkrdunk"]["eligible"] is True
-    assert base["snkrdunk"]["contributes_to_index"] is False
+    assert base["snkrdunk"]["contributes_to_index"] is True
 
     # ...and both still report the ruleset that produced them.
     assert parallel_body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
@@ -911,10 +917,10 @@ def test_a_constrained_sibling_floor_produces_no_range(client, sanji_constrained
     assert parallel_body["source_count"] == 1
     assert parallel_body["source_price_range"] is None
 
-    # Index v2: the base has TWO admissible values, so it keeps its range - but
-    # only the retail sell contributed, so source_count is 1. That pairing is
-    # intentional; the range exists to show the disagreement the index does not.
-    assert base_body["source_count"] == 1
+    # Index v3: the base has TWO admissible values, both of which contribute,
+    # so the range and the count describe the same set. The range still exists
+    # to show how far apart the two agreeing-to-disagree sources are.
+    assert base_body["source_count"] == 2
     assert base_body["source_price_range"] == {"low_jpy": 120, "high_jpy": 1500}
     # ...and the index still sits inside its own range.
     assert (base_body["source_price_range"]["low_jpy"]

@@ -258,25 +258,31 @@ describe("print catalogue page", () => {
     expect(within(tile).getByText("￥1,500")).toBeTruthy();
   });
 
-  it("H. hides a lone source row that only repeats the Market Index", async () => {
+  it("H. shows the only source row even when it repeats the Market Index", async () => {
     // SANJI_BASE: index ￥120 from one eligible, unconstrained Yuyu-Tei value
-    // of ￥120. Printing both said the same number twice, so the row goes and
-    // the gold index stands alone.
+    // of ￥120. This tile used to print the gold index alone, on the grounds
+    // that a row repeating the same number said nothing. It said one thing:
+    // WHOSE number it is - and on a one-source print that provenance is the
+    // most useful fact the tile can add to the figure. So ￥120 now appears
+    // twice, once as the index and once attributed, and the evidence type
+    // names what kind of price produced it.
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_BASE]));
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getAllByText("￥120").length).toBe(1);
-    expect(within(tile).queryByText("Yuyu-Tei")).toBeNull();
-    // A source that reported nothing was never a row and still is not - not a
-    // dash, and certainly not ￥0.
+    expect(within(tile).getAllByText("￥120").length).toBe(2);
+    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(tile).getByText("Retail price")).toBeTruthy();
+    // A source that reported nothing is still not a row - not a dash, and
+    // certainly not ￥0. Showing provenance never means inventing a price.
     expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
     expect(tile.textContent).not.toMatch(/￥0\b/);
   });
 
   it("keeps a lone source row whose value differs from the Market Index", async () => {
-    // The moment the index is not simply that source's number, the row is the
-    // only thing explaining the difference - so it stays.
+    // Unchanged in outcome, and now reached by the same code path as the case
+    // above: the tile makes no equality test of any kind, so agreement and
+    // disagreement between index and source both simply render.
     const differing = {
       ...SANJI_BASE,
       market_index: {
@@ -973,10 +979,164 @@ describe("A/B/C. the catalogue opens on Market Index", () => {
   });
 });
 
-/** A catalogue tile shows the retailers' own prices beside the index, so it
- * inherits the same v2 problem the print page had: a ¥2,500 SNKRDUNK row next
- * to a ¥120 index reads as disagreement unless the tile says the index was
- * not computed from it. Two words, at tile scale. */
+/** GUARD: the /cards tile renders no reliability claim.
+ *
+ * `market_index.confidence` is contributor-count metadata - "high" the moment
+ * two sources contribute, whether they agree to the yen or disagree by 20x
+ * (see src/lib/marketIndexConfidence.test.ts for the full contract). The tile
+ * must therefore say nothing about how much to trust the number.
+ *
+ * The static scan in that file is the primary guard; this is the behavioural
+ * half, on the surface a collector actually looks at. Payload shaped on the
+ * real ¥120 / ¥2,500 staging case. */
+describe("catalogue tiles - no reliability claim", () => {
+  const WIDE_DISAGREEMENT = makePrint({
+    card_print_id: 7100,
+    card_code: "OP01-005",
+    market_index: {
+      index_value_jpy: 1310,
+      source_count: 2,
+      coverage_status: "full",
+      // The backend really does publish this for a 20x spread.
+      confidence: "high",
+      source_price_range: { low_jpy: 120, high_jpy: 2500 },
+      source_values: [
+        { ...sourceValue("yuyutei", 120), contributes_to_index: true },
+        {
+          ...sourceValue("snkrdunk", 2500),
+          fallback_used: true,
+          contributes_to_index: true,
+        },
+      ],
+    } as PrintMarketIndex,
+  });
+
+  it("renders no confidence, quality or reliability language", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([WIDE_DISAGREEMENT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const text = tile.textContent ?? "";
+
+    expect(text).not.toMatch(/confidence/i);
+    expect(text).not.toMatch(/\b(high|medium|low)\b/i);
+    expect(text).not.toMatch(/reliab|accurate|trust|certain|verified price/i);
+    // Nor the coverage vocabulary the confidence value mirrors 1:1.
+    expect(text).not.toMatch(/full coverage|limited coverage|\d+ sources/i);
+  });
+
+  it("still shows both real prices, which is what a collector can act on", async () => {
+    // Suppressing the claim must not suppress the evidence. The tile shows the
+    // index and both source prices; the reader can see the ¥120 and the ¥2,500
+    // and draw their own conclusion, which is more honest than a grade.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([WIDE_DISAGREEMENT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("￥1,310")).toBeTruthy();
+    expect(within(tile).getByText("￥120")).toBeTruthy();
+    expect(within(tile).getByText("￥2,500")).toBeTruthy();
+  });
+});
+
+/** The tile lists source provenance straight from `market_index.source_values`
+ * and names no source of its own.
+ *
+ * It used to read two hardcoded fields, `yuyuteiJpy` and `snkrdunkJpy`, which
+ * meant that adding Card Rush or Cardmarket server-side would have shipped a
+ * catalogue that silently omitted them until someone remembered to edit this
+ * component. These pin the replacement: whatever the payload lists, the tile
+ * renders, with the API's own key as the label for a source this build has
+ * never heard of. */
+describe("catalogue tiles - source provenance", () => {
+  const FUTURE_SOURCE_PRINT = makePrint({
+    card_print_id: 7001,
+    card_code: "OP01-031",
+    market_index: {
+      index_value_jpy: 22650,
+      source_count: 3,
+      coverage_status: "full",
+      confidence: "high",
+      source_values: [
+        { ...sourceValue("yuyutei", 24800), contributes_to_index: true },
+        { ...sourceValue("snkrdunk", 20500), contributes_to_index: true },
+        {
+          // No constant, no resolver, no entry in any mapping this build owns.
+          ...sourceValue("cardrush", 22650),
+          reference_type: "retail_sell",
+          contributes_to_index: true,
+        },
+      ],
+    } as PrintMarketIndex,
+  });
+
+  it("renders a source this build has never heard of, using the API's own key", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([FUTURE_SOURCE_PRINT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
+    expect(within(tile).getByText("SNKRDUNK")).toBeTruthy();
+    // Not "Unknown source", not omitted, not a blank column: the identifier
+    // that exists, beside the price that exists.
+    expect(within(tile).getByText("cardrush")).toBeTruthy();
+    // ¥22,650 twice: it is the median of the three, and it is also what Card
+    // Rush itself asks. The row is shown anyway - see H above.
+    expect(within(tile).getAllByText("￥22,650")).toHaveLength(2);
+    expect(within(tile).getByText("￥24,800")).toBeTruthy();
+    expect(within(tile).getByText("￥20,500")).toBeTruthy();
+  });
+
+  it("names the kind of price each source reported", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([FUTURE_SOURCE_PRINT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    // Two retail asking prices and one marketplace listing floor.
+    expect(within(tile).getAllByText("Retail price")).toHaveLength(2);
+    expect(within(tile).getByText("Current listing")).toBeTruthy();
+  });
+
+  it("keeps every evidence label out of the tile's link name", async () => {
+    // The tile is one big <Link>; its accessible name is the card's identity,
+    // and stuffing three evidence labels into it would make every catalogue
+    // row read like a price list to a screen reader before it read like a
+    // card. The labels are content inside the link, not part of its name.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([FUTURE_SOURCE_PRINT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(tile.getAttribute("aria-label")).not.toMatch(/Retail price|Current listing/);
+  });
+
+  it("nests no button inside the tile's link", async () => {
+    // The one-sentence explanations behind each label live on the print detail
+    // page instead. A <button> inside an <a> is invalid HTML and misbehaves on
+    // both keyboard and touch, so the tile carries the label as plain text.
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([FUTURE_SOURCE_PRINT]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(tile.querySelector("button")).toBeNull();
+  });
+
+  it("renders no row, and no invented price, for a source that reported nothing", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_BASE]));
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+    expect(tile.textContent).not.toMatch(/￥0\b|—|--/);
+  });
+});
+
+/** A catalogue tile shows the retailers' own prices beside the index. Under v2
+ * an eligible SNKRDUNK listing could sit at ¥2,500 beside a ¥120 index without
+ * having fed it, which read as disagreement unless the tile said so; under v3
+ * that no longer happens, and a row marked here is one the backend actually
+ * excluded - a platform-minimum listing, a stale observation. The marker is
+ * the same two words at tile scale, and it must keep working both for those
+ * and for an older API's payload. */
 describe("catalogue tiles - source prices that did not feed the index", () => {
   /** Print 5998's shape, on a tile. */
   const REFERENCE_ONLY_PRINT = makePrint({

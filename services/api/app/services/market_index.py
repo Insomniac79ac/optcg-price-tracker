@@ -1,18 +1,40 @@
-"""Market Index v1 - a single collector-facing JPY value per card, derived
-on read from the latest eligible price_observations across sources. See
+"""Market Index - a single collector-facing JPY value per card, derived on
+read from the latest eligible price_observations across sources. See
 docs/market_index.md for the full product rules this module implements.
+
+What the number MEANS (v3)
+---------------------------
+The consensus of the usable market-facing prices currently observable across
+every source Atlas reads. Not "the sold price", not "the cheapest price", and
+not "the strongest single source's price": the middle of what the market is
+presently asking and paying, taken over all sources that reported something
+usable.
+
+Evidence types are not weighted against each other. A completed-sale median
+and a current asking price are different claims about a card and the payload
+says which is which (`reference_type`, `evidence_type`), so a surface can
+label them honestly - but neither is silently worth zero. See INDEX_VERSION
+for the full argument, including why the v2 rule that zeroed asking prices was
+the wrong fix for the defect it was reacting to.
 
 Source-resolver design
 -----------------------
-Each source contributes zero or more normalized `_SourceValue` objects (one
-per reference_type: "retail_sell", "dealer_buy", "transaction_median",
-"listing_floor"). A resolver only ever looks at that source's own
-observations and returns normalized values with an `eligible` flag - it
-never decides how those values combine into an index. `_combine` is the one
-place that turns eligible source_values into index_value_jpy/coverage_status,
-so adding a third/fourth source (Cardrush, Mercado) later only means adding
-a new resolver function and one line in `_resolve_all_for_card` - the
-combination step and the API/schema shape are unchanged.
+Each source contributes AT MOST ONE primary representative `_SourceValue` to
+source_values (plus any number of auxiliary values, which are never index
+candidates). A resolver only ever looks at that source's own observations, and
+picks the single best representation it can support - SNKRDUNK's resolver
+returns a "transaction_median" when the recent sold sample is sufficient and
+its "listing_floor" otherwise, never both, so one marketplace can never cast
+two votes in the median. The resolver returns that value with an `eligible`
+flag; it never decides how values combine into an index.
+
+`_compute_index_fields` is the one place that turns eligible source_values
+into index_value_jpy/coverage_status, and it is source-agnostic by
+construction - it consults no source name, no reference_type and no evidence
+type. Adding a third/fourth source (Card Rush, Mercado, Cardmarket) later
+means adding a resolver function and one line in the per-card loop; the
+combination step and the API/schema shape are unchanged, and no
+source-specific aggregation rule is needed or permitted.
 
 Compute-on-read, not persisted
 --------------------------------
@@ -53,20 +75,60 @@ from app.schemas import MarketIndexOut, MarketIndexSourceValueOut, SourcePriceRa
 from app.services.latest_prices import get_latest_price_map
 from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
 
-# Version 2 (was 1): the COMBINATION step changed. An admissible source value
-# whose `fallback_used` is true no longer joins the numerical aggregate while a
-# non-fallback value is present - see _compute_index_fields. Nothing about how
-# an individual observation is classified moved, so SOURCE_SEMANTICS_VERSION is
-# deliberately NOT bumped alongside it; the two version fields exist precisely
-# so a change like this one can say which layer moved.
+# Version 3 (was 2, was 1): the COMBINATION step changed again, and in the
+# opposite direction to v2.
+#
+#   v1  every admissible source value was a co-equal addend.
+#   v2  an admissible value whose `fallback_used` is true stood ASIDE from the
+#       aggregate whenever a non-fallback value was present.
+#   v3  every admissible value contributes. Full stop.
+#
+# WHY v2's ROLE FILTER WAS THE WRONG ANSWER. v2 was reacting to a real defect -
+# a ¥1,310 index published for a print no source priced above ¥120 - but it
+# diagnosed the wrong cause. The defect was that a SNKRDUNK *listing floor* was
+# being read as though it were a completed sale, and v2 fixed that by giving
+# the value zero influence. Zero is not what a current asking price is worth. A
+# live listing is weaker evidence than a completed sale, and it is different
+# evidence, but it is still the price at which the card is presently offered on
+# that marketplace, and a "market consensus" that discards every marketplace
+# whose sold sample happens to be thin is not a consensus at all - it is a
+# single-dealer quote wearing the word "Index".
+#
+# The real fix for the ¥1,310 case was never the role filter. It is the
+# admissibility rules that were already tightening in parallel: the platform-
+# floor exclusion (source_semantics), the freshness windows, and the
+# per-resolver rule that a source exposes at most ONE representative value.
+# Those keep junk out. Once they do their job, an eligible number is by
+# definition a usable one, and there is nothing left for a second filter to
+# usefully remove.
+#
+# THE EXTENSIBILITY ARGUMENT, which is the decisive one. Card Rush, Mercado and
+# Cardmarket are all asking-price venues. Under v2 every one of them would have
+# had to arrive with an argument about whether its representative value counts
+# as a "fallback", and the aggregate's meaning would have depended on which
+# sources happened to have sold data this week. Under v3 a new source needs a
+# resolver and nothing else: it publishes one representative value, it says
+# whether that value is eligible, and the combination step - which has never
+# mentioned a source name and still does not - takes it from there.
+#
+# `fallback_used` SURVIVES, and is still set exactly as before. It no longer
+# decides anything numerical; it is now purely descriptive provenance ("this
+# source could not produce a sold median and reported its listing floor
+# instead"), which is a fact a collector-facing surface may legitimately want
+# to say out loud. What it may no longer do is silently zero a source's weight.
+#
+# Nothing about how an individual observation is classified moved, so
+# SOURCE_SEMANTICS_VERSION is deliberately NOT bumped alongside it - the two
+# version fields exist precisely so a change like this one can say which layer
+# moved, and per-source interpretation is not the layer that moved.
 #
 # THE BUMP IS LOAD-BEARING, not bookkeeping. market_index_snapshots holds rows
-# written under version 1 whose index_value_jpy is the old midpoint of a retail
-# price and a listing floor. app.services.market_index_change refuses to
-# compare across unequal index_version, so bumping here is what stops a v1
-# baseline being read as movement in a v2 number - the 7d percentage goes null
-# for a week rather than reporting a methodology change as a price change.
-INDEX_VERSION = 2
+# written under versions 1 and 2 whose index_value_jpy came out of a different
+# combination rule. app.services.market_index_change refuses to compare across
+# unequal index_version, so bumping here is what stops a v2 baseline being read
+# as movement in a v3 number - the 7d percentage goes null for a week rather
+# than reporting a methodology change as a price change.
+INDEX_VERSION = 3
 CALCULATION_METHOD = "median_of_sources"
 
 YUYUTEI = "yuyutei"
@@ -130,12 +192,18 @@ class _SourceValue:
         assigned it.
 
         The role is a parameter rather than a field on this frozen dataclass on
-        purpose: a resolver looks at one source in isolation and cannot know
-        whether a stronger non-fallback source exists elsewhere in the same
-        print's set. Only _compute_index_fields can answer that, so only
+        purpose: a resolver looks at one source in isolation, and whether its
+        value ended up inside the published aggregate is a fact about the whole
+        set. Only _compute_index_fields can answer it, so only
         _compute_index_fields supplies it - and it is required, not defaulted,
         so a future caller cannot emit a source value whose role was never
         decided.
+
+        Under v3 the answer coincides with admissibility for every value the
+        current resolvers emit, but it stays a separate published field rather
+        than something a client re-derives from `eligible`: it is the backend's
+        own statement about its own arithmetic, and it is what keeps a browser
+        from growing a second opinion about the contributor rule.
         """
         return MarketIndexSourceValueOut(
             source=self.source,
@@ -264,6 +332,28 @@ def _resolve_snkrdunk(
     floor_observation: PriceObservation | None,
     now: datetime,
 ) -> _SourceValue:
+    """SNKRDUNK's ONE primary representative value, chosen here and nowhere
+    else.
+
+    The choice is a strict either/or, and it is the reason the combination step
+    can stay source-agnostic:
+
+      - a sufficient recent sold sample -> "transaction_median";
+      - otherwise -> the current eligible listing floor, as "listing_floor".
+
+    Never both. A marketplace gets one vote in the median regardless of how
+    much data it happens to have this month, so a card with plenty of SNKRDUNK
+    sold history cannot outweigh Yuyu-Tei two-to-one while an identical card
+    with a thin sample cannot. Under v3 an eligible listing_floor contributes
+    to the index like any other admissible value, which makes this
+    single-value invariant load-bearing rather than tidy: it is what stops the
+    same source's asking price and sold price both landing in one aggregate.
+
+    `fallback_used` is still set on the floor branch. It no longer changes any
+    number - see INDEX_VERSION - and now serves purely as provenance: it says
+    this source reported an asking price because it could not support a sold
+    median, which is a fact a collector-facing surface may want to state.
+    """
     # Genuine completed sales - never subject to the platform-floor rule
     # applied to the fallback listing below. A sold price at any value is a
     # real transaction, not a platform minimum, and classify_observation
@@ -341,43 +431,45 @@ def _compute_index_fields(
     (card-keyed) and app.services.print_market_index (print-keyed) can build
     their own schema instance from the exact same computation without
     duplicating it."""
-    # ADMISSIBLE - is this value usable evidence at all? Unchanged from v1, and
+    # ADMISSIBLE - is this value usable evidence at all? Unchanged since v1, and
     # `eligible` still means exactly what it always meant. Constrained, stale
     # and absent values are out, and they stay out of everything below.
     admissible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
 
-    # CONTRIBUTORS - which admissible values go into the number? This is the
-    # whole of the v2 change, and it is a rule about EVIDENCE STRENGTH, not
-    # about source names: nothing here mentions yuyutei or snkrdunk, and a
-    # future source's fallback is handled by the same two lines.
+    # CONTRIBUTORS - which admissible values go into the number? In v3, all of
+    # them. This is the whole of the v3 change (see INDEX_VERSION above for why
+    # v2's evidence-role filter was the wrong answer), and it is what makes
+    # Market Index a CONSENSUS of the market-facing prices currently on offer
+    # rather than the opinion of whichever source happened to have the
+    # strongest evidence type this week.
     #
-    # `fallback_used` is the resolver's own admission that a value is standing
-    # in for the evidence it could not get - today, a SNKRDUNK listing floor
-    # substituting for a sold median it lacked the sample size to compute. A
-    # marketplace's minimum permitted ask and a dealer's displayed retail price
-    # are different quantities, so averaging them produced a number no source
-    # ever reported, and then labelled it `full`/`high`. So:
+    # The list comprehension is gone, not replaced by a different predicate.
+    # There is deliberately no second filter here at all: admissibility is now
+    # the single gate, decided per source by the resolvers and by
+    # app.services.source_semantics, and this function's entire job is
+    # arithmetic over what they admitted. A future source cannot be given more
+    # or less weight from this file, because this file cannot see which source
+    # anything came from - no name, no reference_type, no evidence_type and
+    # (since v3) no `fallback_used` is consulted below.
     #
-    #   - a fallback stands ASIDE whenever any non-fallback value is admissible;
-    #   - a fallback stands ALONE quite happily when it is all there is, which
-    #     is why it remains eligible rather than being disqualified outright -
-    #     one imperfect number beats no number, as long as it is not dressed up
-    #     as corroboration.
-    #
-    # A SNKRDUNK transaction_median carries fallback_used=False, so the day the
-    # sold sample reaches its minimum it aggregates with Yuyu-Tei exactly as v1
-    # always intended. That case is the reason the rule keys on the flag rather
-    # than on reference_type.
-    non_fallback = [sv for sv in admissible if not sv.fallback_used]
-    contributors = non_fallback if non_fallback else admissible
+    # A SOURCE APPEARS AT MOST ONCE. That invariant is upheld upstream, by the
+    # resolvers: _resolve_snkrdunk returns its transaction_median when the sold
+    # sample is sufficient and its listing floor otherwise, never both, so a
+    # single marketplace can never cast two votes in the median. If a future
+    # resolver returns several values for one source it will double-count it,
+    # and the fix belongs there rather than in a de-duplication pass here that
+    # would have to start reasoning about source identity.
+    contributors = admissible
     contributor_ids = {id(sv) for sv in contributors}
 
-    # THE RANGE IS DERIVED FROM ADMISSIBLE, BEFORE ROLE FILTERING - deliberately
-    # a different set from `contributors` above. A fallback that stood aside is
-    # still a real measured number that disagrees with the published index, and
-    # this field exists to expose exactly that disagreement; recomputing it from
-    # contributors would hide the thing it was built to show. So `source_count =
-    # 1` beside a two-endpoint range is valid and intended, not a bug.
+    # THE RANGE IS DERIVED FROM ADMISSIBLE, exactly as it always has been. Its
+    # MEANING is unchanged - the spread of the usable evidence - but under v3
+    # the admissible and contributor sets are the same set, so the range is now
+    # always the spread of the numbers the index was actually computed from.
+    # The v2-era case this comment used to warn about (`source_count = 1`
+    # beside a two-endpoint range, because an admissible value had stood aside)
+    # can no longer arise from the role filter; it survives only for payloads
+    # already written under v2, which is precisely why INDEX_VERSION moved.
     #
     # min/max are order-independent by definition, so resolver ordering cannot
     # affect the result, and equal values still produce a range object (a real,
@@ -393,9 +485,46 @@ def _compute_index_fields(
         else None
     )
 
-    # Index, count, coverage and confidence all come from CONTRIBUTORS, so
-    # `confidence` finally describes the evidence behind the number rather than
-    # counting rows beside it.
+    # Index, count, coverage and confidence all come from CONTRIBUTORS. The
+    # median methodology is untouched by v3: one contributor is its own value,
+    # two produce the midpoint _median_jpy already computes for an even count,
+    # three or more the true middle - which is what stops one extreme asking
+    # price from dragging the number, since a median moves by rank and not by
+    # magnitude.
+    #
+    # WHAT `confidence` MEANS, EXACTLY (read this before rendering it anywhere)
+    # -----------------------------------------------------------------------
+    # `confidence` is derived from ONE input: len(contributors). Nothing else
+    # is consulted - not the spread between the values, not their evidence
+    # types, not their freshness, not their sources.
+    #
+    # It is therefore INTENTIONALLY EQUIVALENT IN INFORMATION CONTENT to
+    # `coverage_status` computed immediately beside it: the two are a strict
+    # 1:1 relabelling of the same contributor count (2+ -> full/high,
+    # 1 -> limited/medium, 0 -> none/low), and have been since this module's
+    # first commit. Reading both tells a caller nothing that reading either
+    # one alone does not.
+    #
+    # It does NOT measure, and must never be presented as measuring:
+    #   - price agreement between sources;
+    #   - how closely index_value_jpy approximates market value;
+    #   - evidence quality (a listing and a completed sale score identically);
+    #   - reliability of any kind.
+    #
+    # Two eligible sources 20x apart and two eligible sources reporting the
+    # identical yen figure both produce source_count=2 / full / "high". That is
+    # correct for what the field computes and would be indefensible as a
+    # reliability claim, which is precisely why this comment exists.
+    #
+    # SOURCE DISAGREEMENT IS `source_price_range`, computed above - the field
+    # that actually answers "how far apart are the usable sources?" (see
+    # SourcePriceRangeOut in app.schemas). A caller that wants to say something
+    # about how much to trust the number must read that, never this.
+    #
+    # The field is kept, un-renamed, because it is a NOT NULL column with a
+    # CHECK constraint in market_index_snapshots and every archived row already
+    # carries it. Narrowing or renaming it is a schema change and would need
+    # its own INDEX_VERSION bump; documenting the existing contract is not.
     if len(contributors) >= 2:
         index_value = _median_jpy([sv.value_jpy for sv in contributors])  # type: ignore[list-item]
         coverage_status = "full"

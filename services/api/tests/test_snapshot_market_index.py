@@ -577,14 +577,16 @@ def test_copies_index_fields_verbatim_from_market_index(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
     row = _by_print(db_session)[print_id]
 
-    # Index v2: the SNKRDUNK listing floor (1500) is a fallback standing beside
-    # a Yuyu-Tei retail sell (1980), so it no longer joins the aggregate - the
-    # row records 1980, not the old 1740 midpoint. The point of this test is
-    # unchanged: whatever the calculation says, the row copies it verbatim.
-    assert row.index_value_jpy == expected.index_value_jpy == 1980
-    assert row.source_count == expected.source_count == 1
-    assert row.coverage_status == expected.coverage_status == "limited"
-    assert row.confidence == expected.confidence == "medium"
+    # Index v3: the SNKRDUNK listing floor (1500) is an eligible current
+    # listing beside a Yuyu-Tei retail sell (1980), so it joins the aggregate
+    # and the row records their 1740 midpoint. (v1 recorded 1740; v2 recorded
+    # 1980; v3 records 1740 again for a different reason - see INDEX_VERSION.)
+    # The point of this test is unchanged through all three: whatever the
+    # calculation says, the row copies it verbatim.
+    assert row.index_value_jpy == expected.index_value_jpy == 1740
+    assert row.source_count == expected.source_count == 2
+    assert row.coverage_status == expected.coverage_status == "full"
+    assert row.confidence == expected.confidence == "high"
     assert row.calculation_method == expected.calculation_method == CALCULATION_METHOD
     assert row.index_version == expected.index_version == INDEX_VERSION
     assert (
@@ -706,17 +708,20 @@ def test_auxiliary_values_archived_separately(db_session, catalogue):
         "retail_sell",
         "listing_floor",
     }
-    # An auxiliary value never contributes, and under index v2 neither does the
-    # fallback listing floor beside a retail sell - so the archived roles say so
-    # explicitly rather than leaving a reader to infer them from source_count.
+    # An auxiliary value never contributes - that is the constant this test
+    # guards, and it is true in v1, v2 and v3 alike. A dealer's buy quote is
+    # not a market-facing price, so no change to the contributor rule can
+    # promote it; under v3 BOTH source values contribute and the dealer buy
+    # still does not. The archived roles say so explicitly rather than leaving
+    # a reader to infer them from source_count.
     assert auxiliary[0]["contributes_to_index"] is False
     roles = {
         sv["reference_type"]: sv["contributes_to_index"]
         for sv in row.provenance["source_values"]
     }
-    assert roles == {"retail_sell": True, "listing_floor": False}
-    assert row.source_count == 1
-    assert row.index_value_jpy == 1980
+    assert roles == {"retail_sell": True, "listing_floor": True}
+    assert row.source_count == 2
+    assert row.index_value_jpy == 1740
 
 
 def test_unpriced_tracked_print_archives_both_ineligible_sources(db_session, catalogue):
