@@ -323,6 +323,53 @@ export interface PriceRefreshRunList {
   pagination: PaginationMeta;
 }
 
+export interface CollectionAttempt {
+  id: number;
+  batch_run_id: string;
+  selection_ordinal: number;
+  source_id: number;
+  source_name: string | null;
+  source_card_mapping_id: number;
+  /** False when the mapping this attempt referred to can no longer be found.
+   * The stored ids stay authoritative; the card fields go null rather than
+   * the API inventing an identity for it. */
+  mapping_resolved: boolean;
+  card_print_id: number | null;
+  card_code: string | null;
+  selected_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  /** Derived server-side from started_at/finished_at - null for an attempt
+   * that never started (skipped) or has not finished (in flight). */
+  duration_seconds: number | null;
+  status: string;
+  failure_stage: string | null;
+  failure_reason: string | null;
+  source_denied: boolean;
+  price_observation_id: number | null;
+}
+
+export interface CollectionAttemptSummary {
+  total_attempts: number;
+  started: number;
+  written: number;
+  skipped: number;
+  source_denied: number;
+  still_selected: number;
+  by_status: Record<string, number>;
+  by_failure_stage: Record<string, number>;
+  earliest_selected_at: string | null;
+  latest_finished_at: string | null;
+}
+
+export interface CollectionAttemptList {
+  summary: CollectionAttemptSummary;
+  attempts: CollectionAttempt[];
+  limit: number;
+  offset: number;
+  pagination: PaginationMeta;
+}
+
 export interface AlertEvent {
   id: number;
   created_at: string;
@@ -5847,4 +5894,33 @@ export function clearDefaultSavedView(routePath: string, viewType: string): Prom
     method: "POST",
     body: { route_path: routePath, view_type: viewType },
   });
+}
+
+export function fetchCollectionAttempts(params?: {
+  batch_run_id?: string;
+  status?: string;
+  failure_stage?: string;
+  source_denied?: boolean;
+  source_card_mapping_id?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<CollectionAttemptList> {
+  const query = new URLSearchParams();
+  if (params?.batch_run_id) query.set("batch_run_id", params.batch_run_id);
+  if (params?.status) query.set("status", params.status);
+  if (params?.failure_stage) query.set("failure_stage", params.failure_stage);
+  if (params?.source_denied !== undefined) {
+    query.set("source_denied", String(params.source_denied));
+  }
+  if (params?.source_card_mapping_id !== undefined) {
+    query.set("source_card_mapping_id", String(params.source_card_mapping_id));
+  }
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  if (params?.offset !== undefined) query.set("offset", String(params.offset));
+  const qs = query.toString();
+  // Goes through the Route Handler proxy, not the API directly - same reason
+  // as fetchRefreshRuns: the admin token never reaches the browser.
+  return fetchAdminJson<CollectionAttemptList>(
+    `/api/admin/collection-attempts${qs ? `?${qs}` : ""}`,
+  );
 }

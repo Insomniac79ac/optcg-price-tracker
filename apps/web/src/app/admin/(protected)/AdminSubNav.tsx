@@ -21,6 +21,7 @@ const ADMIN_ROUTES: { href: string; label: string }[] = [
   { href: "/admin/system-check", label: "System Check" },
   { href: "/admin/actions", label: "Actions" },
   { href: "/admin/backup", label: "Backup" },
+  { href: "/admin/collection-attempts", label: "Collection Attempts" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/performance", label: "Performance" },
   { href: "/admin/alerts", label: "Alerts" },

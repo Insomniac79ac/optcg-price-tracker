@@ -3463,6 +3463,61 @@ class AppLogListOut(BaseModel):
     pagination: PaginationMeta
 
 
+class CollectionAttemptOut(BaseModel):
+    """One durable collector attempt.
+
+    The stored ids (source_id, source_card_mapping_id) are always present and
+    authoritative. The resolved context beside them - source_name, card_print_id,
+    card_code - is best-effort: `mapping_resolved` is False and those fields are
+    null when the mapping the attempt referred to can no longer be found, rather
+    than the API inventing an identity for it.
+    """
+
+    id: int
+    batch_run_id: str
+    selection_ordinal: int
+    source_id: int
+    source_name: str | None
+    source_card_mapping_id: int
+    mapping_resolved: bool
+    card_print_id: int | None
+    card_code: str | None
+    selected_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    # Derived at read time from started_at/finished_at - never stored.
+    duration_seconds: float | None
+    status: str
+    failure_stage: str | None
+    failure_reason: str | None
+    source_denied: bool
+    price_observation_id: int | None
+
+
+class CollectionAttemptSummaryOut(BaseModel):
+    """Aggregated over the whole filtered set, not the returned page - so
+    filtering to one batch_run_id answers "what happened in that run?"."""
+
+    total_attempts: int
+    started: int
+    written: int
+    skipped: int
+    source_denied: int
+    still_selected: int
+    by_status: dict[str, int]
+    by_failure_stage: dict[str, int]
+    earliest_selected_at: datetime | None
+    latest_finished_at: datetime | None
+
+
+class CollectionAttemptListOut(BaseModel):
+    summary: CollectionAttemptSummaryOut
+    attempts: list[CollectionAttemptOut]
+    limit: int
+    offset: int
+    pagination: PaginationMeta
+
+
 class AppLogPruneRequestIn(BaseModel):
     older_than_days: int = 30
     dry_run: bool = True
