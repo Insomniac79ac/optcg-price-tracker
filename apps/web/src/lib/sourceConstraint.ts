@@ -94,3 +94,23 @@ export function describeSourceConstraint(
   if (!constraint) return null;
   return SOURCE_CONSTRAINT_COPY[constraint] ?? null;
 }
+
+/** Does the constraint layer, taken as a whole, already tell the reader this
+ * value is outside Market Index?
+ *
+ * True in two ways, and SourceConstraintNote renders both: the copy itself
+ * says so (`statesExclusion`), or the value is ineligible and the note adds
+ * its own "Not used in Market Index" line beneath the chip.
+ *
+ * This exists so a *contribution* note (see @/lib/sourceContribution) can
+ * stay silent where it would only say the same thing a second time. It does
+ * not change what any constraint says, and it is not a contribution test:
+ * an eligible, unconstrained value that merely stood aside from the aggregate
+ * returns false here, because nothing on screen has mentioned it yet. */
+export function sourceConstraintStatesExclusion(value: {
+  eligible: boolean;
+  constraint?: string | null;
+}): boolean {
+  if (!value.eligible) return true;
+  return describeSourceConstraint(value.constraint)?.statesExclusion === true;
+}

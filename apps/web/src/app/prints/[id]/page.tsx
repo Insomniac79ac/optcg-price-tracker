@@ -22,9 +22,15 @@ import {
   type PriceHistoryStatus,
 } from "@/components/ui/PrintPriceHistory";
 import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
+import { SourceContributionNote } from "@/components/ui/SourceContributionNote";
 import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
+import {
+  contributionQualifier,
+  rangeIncludesReferenceOnly,
+  REFERENCE_ONLY_RANGE_CAPTION,
+} from "@/lib/sourceContribution";
 import {
   fetchPrint,
   fetchPrintPrices,
@@ -364,13 +370,46 @@ function MarketIndexBlock({ print }: { print: PrintUiModel }) {
           showCoverage={false}
         />
       </div>
-      <SourcePriceRange range={print.marketIndex.source_price_range} />
+      <SourceContributionQualifier index={print.marketIndex} />
+      <SourcePriceRange
+        range={print.marketIndex.source_price_range}
+        includesReferenceOnly={rangeIncludesReferenceOnly(print.marketIndex.source_values)}
+      />
       {print.latestObservationAt && (
         <p className="mt-2 text-[11px] text-text-faint">
           Updated {formatDate(print.latestObservationAt)}
         </p>
       )}
     </section>
+  );
+}
+
+/** "1 of 2 source prices used" - the one line that reconciles a ¥120 index
+ * sitting beside a visible ¥2,500 source price.
+ *
+ * Since Market Index v2 an admissible fallback source stands aside from the
+ * aggregate whenever a non-fallback value is present, so the panels below can
+ * legitimately show more prices than the index was computed from. Without
+ * this line the page states two numbers and denies the reader any way to see
+ * that both are correct.
+ *
+ * The numerator is the index's own `source_count` - the count it published
+ * for itself - not a tally this page reconstructs from the source rows. See
+ * @/lib/sourceContribution for why: a second implementation of the
+ * contributor rule, running in a browser, is free to disagree with the number
+ * it sits beneath.
+ *
+ * A count, not a judgement: no percentage, no spread, no warning, no claim
+ * about which price is right. It renders only when the two counts actually
+ * differ, so the ordinary two-contributor print gains nothing to read, and it
+ * is 11px metadata beneath the gold figure, which stays the only number on
+ * this page with weight. */
+function SourceContributionQualifier({ index }: { index: PrintMarketIndex }) {
+  const qualifier = contributionQualifier(index);
+  if (!qualifier) return null;
+
+  return (
+    <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">{qualifier}</p>
   );
 }
 
@@ -393,21 +432,37 @@ function MarketIndexBlock({ print }: { print: PrintUiModel }) {
  * real, measured agreement, and "¥1,500 - ¥1,500" would only look broken. */
 function SourcePriceRange({
   range,
+  includesReferenceOnly,
 }: {
   range: PrintMarketIndex["source_price_range"];
+  /** Whether an endpoint of this span is a price that did not feed the index.
+   * Decided by the caller from `contributes_to_index`; this component still
+   * computes nothing. */
+  includesReferenceOnly: boolean;
 }) {
   if (!range) return null;
 
   const { low_jpy, high_jpy } = range;
   return (
-    <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
-      Source range{" "}
-      <span className="mono tabular">
-        {low_jpy === high_jpy
-          ? formatJpy(low_jpy)
-          : `${formatJpy(low_jpy)} – ${formatJpy(high_jpy)}`}
-      </span>
-    </p>
+    <>
+      <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
+        Source range{" "}
+        <span className="mono tabular">
+          {low_jpy === high_jpy
+            ? formatJpy(low_jpy)
+            : `${formatJpy(low_jpy)} – ${formatJpy(high_jpy)}`}
+        </span>
+      </p>
+      {/* The range is built from every ADMISSIBLE value, before the v2
+          contributor filter, so its endpoints can include a price the index
+          did not use. Saying so is what keeps "Source range ¥120 - ¥2,500"
+          beside a ¥120 index from reading as a contradiction. */}
+      {includesReferenceOnly && (
+        <p className="mt-0.5 text-[11px] leading-snug text-text-faint">
+          {REFERENCE_ONLY_RANGE_CAPTION}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -456,6 +511,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
               </p>
             )}
             <SourceConstraintNote value={row} />
+            <SourceContributionNote value={row} />
           </div>
         ))}
       </div>

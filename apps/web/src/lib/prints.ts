@@ -17,6 +17,7 @@
 
 import { apiGet, type PaginationMeta } from "./api";
 import { resolveCardImageUrl } from "./cardImage";
+import { displayedSourceValues, isReferenceOnly } from "./sourceContribution";
 import {
   artOrdinalLabel,
   classifyRarityToken,
@@ -46,6 +47,16 @@ export interface PrintMarketIndexSourceValue {
    * source-semantics release omits the field entirely; absent and null are
    * both "nothing to say about this value". Never rendered raw. */
   constraint?: string | null;
+  /** Did this value go into `index_value_jpy`? A SECOND question from
+   * `eligible`, and since Market Index v2 the two can disagree: a fallback
+   * source stays admissible evidence, keeps its price and stays in
+   * `source_price_range`, yet stands aside from the aggregate. See
+   * schemas.MarketIndexSourceValueOut and @/lib/sourceContribution.
+   *
+   * Optional, and the three states are not two: `false` means "did not
+   * contribute"; absent/null means the API predates the field and must never
+   * be read as an exclusion. */
+  contributes_to_index?: boolean | null;
 }
 
 export interface PrintMarketIndex {
@@ -353,6 +364,12 @@ export interface PrintUiModel {
   /** Display names of the sources that actually contributed a value, e.g.
    * ["Yuyu-Tei"] for a limited-coverage print. */
   contributingSources: string[];
+  /** The API source KEYS (`YUYUTEI`, `SNKRDUNK`) whose visible price did NOT
+   * feed the index - `contributes_to_index === false`, straight from the API.
+   * Keys rather than display names so a consumer matches on the identifier
+   * the payload actually carries. Empty for an API that predates the field,
+   * so an older payload renders exactly as before. */
+  referenceOnlySources: string[];
   latestObservationAt: string | null;
   /** Kept whole so MarketIndexValue/CoverageBadge can read the same
    * print-scoped index object rather than re-deriving it. */
@@ -427,6 +444,9 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
   const contributingSources = index.source_values
     .filter((entry) => entry.value_jpy !== null)
     .map((entry) => sourceDisplayName(entry.source));
+  const referenceOnlySources = displayedSourceValues(index.source_values)
+    .filter(isReferenceOnly)
+    .map((entry) => entry.source);
 
   return {
     cardPrintId: item.card_print_id,
@@ -467,6 +487,7 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     coverageStatus: index.coverage_status,
     confidence: index.confidence,
     contributingSources,
+    referenceOnlySources,
     latestObservationAt:
       "latest_observation_at" in item
         ? item.latest_observation_at

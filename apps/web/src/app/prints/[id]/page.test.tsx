@@ -857,3 +857,288 @@ describe("print detail page", () => {
     expect(within(sources).getByText(/Lowest listing/)).toBeTruthy();
   });
 });
+
+/** Market Index v2 made "visible" and "counted" two different things: an
+ * admissible fallback source keeps its price and its place in the range but
+ * stands aside from the aggregate. Before this, print 5998 showed a ¥2,500
+ * SNKRDUNK price beside a ¥120 index and said nothing about how both could be
+ * true. Every fixture below is shaped on a real staging payload. */
+describe("print detail page - source prices that did not feed the index", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Print 5998 (OP01-005): Yuyu-Tei ¥120 counted, SNKRDUNK ¥2,500 admissible
+   * but standing aside, range spanning both. */
+  function withContribution(overrides: Partial<PrintMarketIndex> = {}) {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 120,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_price_range: { low_jpy: 120, high_jpy: 2500 },
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120, contributes_to_index: true }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 2500,
+            fallback_used: true,
+            contributes_to_index: false,
+          }),
+        ],
+        ...overrides,
+      } as PrintMarketIndex,
+    });
+  }
+
+  it("marks the source price the index was not computed from", async () => {
+    fetchPrint.mockResolvedValue(withContribution());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    expect(within(sources).getByText("Reference only")).toBeTruthy();
+    expect(
+      within(sources).getByText("Shown for context; not used in Market Index."),
+    ).toBeTruthy();
+    // The raw price is still shown in full and is still the loud thing.
+    expect(within(sources).getByText("￥2,500")).toBeTruthy();
+  });
+
+  it("reconciles the index with the number of prices on screen", async () => {
+    fetchPrint.mockResolvedValue(withContribution());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    expect(within(index).getByText("1 of 2 source prices used")).toBeTruthy();
+    // Still the only figure with weight; no spread, no percentage, no warning.
+    expect(within(index).getByText("￥120")).toBeTruthy();
+    expect(index.textContent).not.toMatch(/%|market range|trading range|disagree/i);
+  });
+
+  // The numerator is the backend's published `source_count`. Here every row
+  // claims to have contributed and a client-side tally would read "3 of 3"
+  // and render nothing at all; the index says it was computed from one value,
+  // and the index is the authority for its own input count.
+  it("takes the numerator from source_count, not from the source rows", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        source_count: 1,
+        source_price_range: null,
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120, contributes_to_index: true }),
+          sourceValue({ source: "snkrdunk", value_jpy: 2500, contributes_to_index: true }),
+        ],
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("1 of 2 source prices used")).toBeTruthy();
+  });
+
+  // And the mirror: source_count agrees with what is on screen, so nothing is
+  // qualified however the individual rows are flagged.
+  it("stays silent when source_count matches the prices on screen", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: 810,
+        source_count: 2,
+        source_price_range: { low_jpy: 120, high_jpy: 2500 },
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120, contributes_to_index: false }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 2500,
+            fallback_used: true,
+            contributes_to_index: false,
+          }),
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/source prices used/);
+  });
+
+  // A SNKRDUNK-floor-only print: nothing was admissible, so there is no index
+  // - and "0 of 1" is exactly what explains the visible price beneath it.
+  it("states a zero count beside an unavailable index", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: null,
+        source_count: 0,
+        coverage_status: "none",
+        confidence: "low",
+        source_price_range: null,
+        source_values: [
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 1000,
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+            contributes_to_index: false,
+          }),
+        ],
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("0 of 1 source prices used")).toBeTruthy();
+    expect(screen.getByText("￥1,000")).toBeTruthy();
+  });
+
+  it("says the source range covers a price the index did not use", async () => {
+    fetchPrint.mockResolvedValue(withContribution());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    expect(within(index).getByText("￥120 – ￥2,500")).toBeTruthy();
+    expect(
+      within(index).getByText("Includes reference-only source prices."),
+    ).toBeTruthy();
+  });
+
+  it("leaves the range uncaptioned when every price in it was counted", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: 810,
+        source_count: 2,
+        source_price_range: { low_jpy: 120, high_jpy: 1500 },
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 120, contributes_to_index: true }),
+          sourceValue({ source: "snkrdunk", value_jpy: 1500, contributes_to_index: true }),
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("￥120 – ￥1,500")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Includes reference-only/);
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/source prices used/);
+  });
+
+  /** Print 12 (OP04-001): the platform-floor price is ineligible, so it is
+   * outside the range as well as outside the index. Its own, more specific
+   * explanation is the right thing to read - not a second, vaguer badge. */
+  it("keeps a platform-floor explanation and does not badge it twice", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: 80,
+        source_price_range: null,
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 80, contributes_to_index: true }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 1000,
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+            contributes_to_index: false,
+          }),
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Minimum listing price")).toBeTruthy();
+    expect(screen.getByText("Not used in Market Index")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/Shown for context/);
+    // The count still reconciles two visible prices against a one-source index.
+    expect(screen.getByText("1 of 2 source prices used")).toBeTruthy();
+    // No range at all, so nothing to caption.
+    expect(container.textContent).not.toMatch(/Includes reference-only/);
+  });
+
+  /** Print 5997 (OP01-004): a sale price is a real, buyable price and counts.
+   * SNKRDUNK reported nothing, so it has no panel and no place in any count. */
+  it("leaves a counted sale price alone and ignores a source with no price", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: 80,
+        source_price_range: null,
+        source_values: [
+          sourceValue({
+            source: "yuyutei",
+            value_jpy: 80,
+            constraint: "sale_price",
+            contributes_to_index: true,
+          }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: null,
+            contributes_to_index: false,
+          }),
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Sale price")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/source prices used/);
+  });
+
+  /** Print 6023 (OP01-027): one source, counted, nothing to explain. */
+  it("adds nothing to a print whose every price was counted", async () => {
+    fetchPrint.mockResolvedValue(
+      withContribution({
+        index_value_jpy: 80,
+        source_price_range: null,
+        source_values: [
+          sourceValue({ source: "yuyutei", value_jpy: 80, contributes_to_index: true }),
+        ],
+      }),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getAllByText("￥80").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/source prices used/);
+    expect(container.textContent).not.toMatch(/Includes reference-only/);
+  });
+
+  // The deployed API is the authority and the only input. One that predates
+  // contributes_to_index sends nothing, which is not an exclusion - so no
+  // panel is badged and the range gains no caption. The qualifier reads
+  // source_count, which every API has always sent, and here it agrees with
+  // the two prices on screen.
+  it("stays safe against an API that predates contributes_to_index", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(container.textContent).not.toMatch(/Reference only/);
+    expect(container.textContent).not.toMatch(/source prices used/);
+    expect(container.textContent).not.toMatch(/Includes reference-only/);
+    expect(screen.getAllByText("￥26,900").length).toBeGreaterThan(0);
+  });
+
+  // ...and the same old API on a print whose index counted fewer values than
+  // it shows prices for still gets the qualifier, because source_count alone
+  // decides it.
+  it("qualifies an older API's payload from source_count alone", async () => {
+    const detail = withContribution({ source_price_range: null });
+    for (const sv of detail.market_index.source_values) {
+      delete (sv as unknown as Record<string, unknown>).contributes_to_index;
+    }
+    fetchPrint.mockResolvedValue(detail);
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("1 of 2 source prices used")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Reference only/);
+  });
+});

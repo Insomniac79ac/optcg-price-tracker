@@ -62,6 +62,7 @@ function print(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel 
     coverageStatus: "none",
     confidence: "low",
     contributingSources: [],
+    referenceOnlySources: [],
     latestObservationAt: null,
     marketIndex: { ...EMPTY_INDEX, card_print_id: id },
     ...overrides,

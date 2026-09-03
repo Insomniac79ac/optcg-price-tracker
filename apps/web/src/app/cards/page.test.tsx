@@ -972,3 +972,75 @@ describe("A/B/C. the catalogue opens on Market Index", () => {
     expect(screen.getByText(/Index unavailable/i)).toBeInTheDocument();
   });
 });
+
+/** A catalogue tile shows the retailers' own prices beside the index, so it
+ * inherits the same v2 problem the print page had: a ¥2,500 SNKRDUNK row next
+ * to a ¥120 index reads as disagreement unless the tile says the index was
+ * not computed from it. Two words, at tile scale. */
+describe("catalogue tiles - source prices that did not feed the index", () => {
+  /** Print 5998's shape, on a tile. */
+  const REFERENCE_ONLY_PRINT = makePrint({
+    card_print_id: 5998,
+    card_code: "OP01-005",
+    market_index: {
+      index_value_jpy: 120,
+      source_count: 1,
+      coverage_status: "limited",
+      confidence: "medium",
+      source_values: [
+        { ...sourceValue("yuyutei", 120), contributes_to_index: true },
+        {
+          ...sourceValue("snkrdunk", 2500),
+          fallback_used: true,
+          contributes_to_index: false,
+        },
+      ],
+    } as PrintMarketIndex,
+  });
+
+  it("marks only the source row the index was not computed from", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([REFERENCE_ONLY_PRINT]));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findByText("OP01-005");
+
+    expect(screen.getByText("Reference only")).toBeTruthy();
+    // Both raw prices survive in full - nothing is hidden or rounded away.
+    expect(screen.getByText("￥2,500")).toBeTruthy();
+    expect(screen.getAllByText("￥120").length).toBeGreaterThan(0);
+    // One row is marked, not both.
+    expect(screen.getAllByText("Reference only")).toHaveLength(1);
+    // The tile stays a price comparison, not a warning.
+    expect(container.textContent).not.toMatch(/warning|excluded|disagree/i);
+  });
+
+  it("adds nothing to a tile whose every price was counted", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        makePrint({
+          card_print_id: 6023,
+          card_code: "OP01-027",
+          market_index: {
+            source_values: [
+              { ...sourceValue("yuyutei", 1980), contributes_to_index: true },
+              { ...sourceValue("snkrdunk", 1500), contributes_to_index: true },
+            ],
+          } as PrintMarketIndex,
+        }),
+      ]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findByText("OP01-027");
+
+    expect(container.textContent).not.toMatch(/Reference only/);
+  });
+
+  // The deployed API is the only input; one that predates the field says
+  // nothing, which is not an exclusion.
+  it("stays safe against an API that predates contributes_to_index", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    const { container } = render(<PrintsCataloguePage />);
+    await screen.findByText("OP01-013");
+
+    expect(container.textContent).not.toMatch(/Reference only/);
+  });
+});

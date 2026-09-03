@@ -2,7 +2,13 @@ import Link from "next/link";
 
 import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
-import { isRedundantSingleSource, type PrintUiModel } from "@/lib/prints";
+import {
+  isRedundantSingleSource,
+  type PrintUiModel,
+  SNKRDUNK,
+  YUYUTEI,
+} from "@/lib/prints";
+import { REFERENCE_ONLY_LABEL } from "@/lib/sourceContribution";
 import { CardImageFrame } from "./CardImageFrame";
 import { MarketIndexValue } from "./MarketIndexValue";
 
@@ -228,9 +234,12 @@ function SourcePrices({ print }: { print: PrintUiModel }) {
   if (isRedundantSingleSource(print.marketIndex)) return null;
 
   const rows = [
-    { name: "Yuyu-Tei", value: print.yuyuteiJpy },
-    { name: "SNKRDUNK", value: print.snkrdunkJpy },
-  ].filter((row): row is { name: string; value: number } => row.value !== null);
+    { source: YUYUTEI, name: "Yuyu-Tei", value: print.yuyuteiJpy },
+    { source: SNKRDUNK, name: "SNKRDUNK", value: print.snkrdunkJpy },
+  ].filter(
+    (row): row is { source: string; name: string; value: number } =>
+      row.value !== null,
+  );
 
   if (rows.length === 0) return null;
 
@@ -248,6 +257,17 @@ function SourcePrices({ print }: { print: PrintUiModel }) {
           <dd className="mono tabular mt-1.5 break-words text-[13px] font-medium leading-none text-text-primary">
             {formatJpy(row.value)}
           </dd>
+          {/* A price the index was not computed from. Two words at 9px in the
+              muted colour: enough that a ¥2,500 row beside a ¥120 index is not
+              read as disagreement, small enough that it never competes with
+              the price above it. Stacked rather than inline so the ~72px
+              column on a 390px two-column catalogue keeps the price on one
+              line. */}
+          {print.referenceOnlySources.includes(row.source) && (
+            <dd className="mt-1 text-[9px] leading-tight text-text-muted">
+              {REFERENCE_ONLY_LABEL}
+            </dd>
+          )}
         </div>
       ))}
     </dl>
