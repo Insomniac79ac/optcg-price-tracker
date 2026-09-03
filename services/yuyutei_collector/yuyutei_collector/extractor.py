@@ -576,7 +576,33 @@ def extract_with_agreement(
         fail_reasons.append("price_agreement_indeterminate:missing_jsonld_or_dom_value")
 
     external_id = _external_product_id(source_url)
-    if accepted_price is not None and _price_matches_code_digits(accepted_price, requested_card_code, external_id):
+    # The collision guard exists for a price NOTHING corroborated. It was
+    # written for the historical flattened-text extractor, where a card code
+    # could itself be misread as a price ("OP01" -> 1 JPY), and it asks the
+    # only question available in that world: does this number also appear in
+    # the code? That question is a proxy for "did we harvest a code instead of
+    # a price", never a claim that such a price is impossible - OP13-050 really
+    # is sold for 50 JPY, and EB01-030 for 30.
+    #
+    # Two independent extractors agreeing is strictly better evidence than the
+    # proxy, and it is evidence the old path did not have. A JSON-LD offer
+    # price is structured schema.org data, not text scraped near a code, so it
+    # cannot carry the contamination the proxy detects; when it matches a
+    # DOM-scoped price to the yen, the number is what the page says. Rejecting
+    # it there discards a value BECAUSE both sources confirmed it, which
+    # inverts the fail-closed logic every other gate in this function relies on.
+    #
+    # So the guard now applies only to an uncorroborated price. Today no such
+    # price can be accepted - `accepted_price` is set solely in the agreeing
+    # branch above - which makes this unreachable on the current path, and that
+    # is the correct resting state rather than a reason to delete it: it stays
+    # live for any future path that accepts a single-source price, and it is
+    # the agreement invariant, not the tier taxonomy, that is being trusted.
+    if (
+        accepted_price is not None
+        and not price_agreement["agree"]
+        and _price_matches_code_digits(accepted_price, requested_card_code, external_id)
+    ):
         fail_reasons.append(f"price_matches_card_code_or_id_digits:{accepted_price}")
         price_agreement["agree"] = False
         accepted_price = None

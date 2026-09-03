@@ -214,18 +214,25 @@ class FailClosedUnchangedTests(unittest.TestCase):
         self.assertEqual(result["extraction_status"], "fail_closed")
         self.assertIsNone(result["extracted"]["sell_price_jpy"])
 
-    def test_a_price_equal_to_a_code_digit_group_is_still_refused(self):
-        """The historical "OP01 -> 1 JPY" guard is untouched by the widening
-        and still fires for a non-OP family."""
+    def test_a_corroborated_price_equal_to_a_code_digit_group_is_accepted(self):
+        """Was `..._is_still_refused`, asserting that an agreed 55 for EB01-055
+        must fail closed. That premise is gone: the code-digit rule is a proxy
+        for "we harvested a code instead of a price", and two independent
+        extractors agreeing answers that question directly and better. This
+        page states 55 in the DOM leaf and in the JSON-LD offer, so 55 is the
+        price. The guard itself is unchanged for the uncorroborated case -
+        see test_price_code_collision_corroboration.py."""
         result = extract_with_agreement(
             product_html("EB01-055", "C シャーロット・コンポート", "55"),
             URL,
             "EB01-055",
             expected_treatment=None,
         )
-        self.assertEqual(result["extraction_status"], "fail_closed")
-        self.assertIn("price_matches_card_code_or_id_digits:55", result["fail_reasons"])
-        self.assertIsNone(result["extracted"]["sell_price_jpy"])
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 55)
+        self.assertEqual(
+            [r for r in result["fail_reasons"] if "card_code_or_id_digits" in r], []
+        )
 
     def test_treatment_conflict_still_fails_closed(self):
         result = extract_with_agreement(
