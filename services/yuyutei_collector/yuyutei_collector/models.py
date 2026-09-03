@@ -288,3 +288,89 @@ class YuyuteiCandidate(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+# Status vocabulary for source_collection_attempts. Duplicated from
+# services/api/app/models/source_collection_attempt.py for the same reason the
+# rest of this module is: each Railway service ships its own image and cannot
+# import app.models. The CHECK constraint in the migration is the single
+# authority - these constants only keep the writer honest.
+STATUS_SELECTED = "selected"
+STATUS_WRITTEN = "written"
+STATUS_VALIDATION_FAILED = "validation_failed"
+STATUS_NO_EXTRACTION_ATTEMPTED = "no_extraction_attempted"
+STATUS_OPERATIONAL_ERROR = "operational_error"
+STATUS_MAPPING_LOAD_FAILED = "mapping_load_failed"
+STATUS_SKIPPED = "skipped"
+
+STATUSES = (
+    STATUS_SELECTED,
+    STATUS_WRITTEN,
+    STATUS_VALIDATION_FAILED,
+    STATUS_NO_EXTRACTION_ATTEMPTED,
+    STATUS_OPERATIONAL_ERROR,
+    STATUS_MAPPING_LOAD_FAILED,
+    STATUS_SKIPPED,
+)
+
+FAILURE_STAGES = (
+    "load",
+    "browser_launch",
+    "homepage",
+    "product",
+    "extraction",
+    "validation",
+    "write",
+)
+
+MAX_FAILURE_REASON_LENGTH = 500
+
+
+class SourceCollectionAttempt(Base):
+    """One durable row per (batch_run_id, source_card_mapping_id).
+
+    selected_at is when the mapping entered the batch population; started_at is
+    when processing actually began. A mapping the batch selected and then
+    skipped keeps started_at NULL - that is a real state, not missing data, and
+    filling it in would invent an event that did not happen.
+    """
+
+    __tablename__ = "source_collection_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "batch_run_id",
+            "source_card_mapping_id",
+            name="uq_source_collection_attempts_batch_mapping",
+        ),
+        UniqueConstraint(
+            "batch_run_id",
+            "selection_ordinal",
+            name="uq_source_collection_attempts_batch_ordinal",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    batch_run_id: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    # Plain ids, not foreign keys - see the API model for why this table must
+    # outlive the rows it describes.
+    source_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    source_card_mapping_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    selection_ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    selected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), default=STATUS_SELECTED, server_default=STATUS_SELECTED, nullable=False
+    )
+    failure_stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(
+        String(MAX_FAILURE_REASON_LENGTH), nullable=True
+    )
+    source_denied: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    price_observation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("price_observations.id", ondelete="SET NULL"), nullable=True
+    )

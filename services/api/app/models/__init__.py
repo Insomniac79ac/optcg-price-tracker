@@ -37,6 +37,7 @@ from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.models.yuyutei_candidate import YuyuteiCandidate
 from app.models.yuyutei_discovery_run import YuyuteiDiscoveryRun
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
+from app.models.source_collection_attempt import SourceCollectionAttempt
 from app.models.source import Source
 from app.models.source_card_mapping import SourceCardMapping
 from app.models.user import User
@@ -60,6 +61,7 @@ __all__ = [
     "PriceRefreshRun",
     "PortfolioValuationSnapshot",
     "SnkrdunkDiscoveryRun",
+    "SourceCollectionAttempt",
     "SnkrdunkCandidate",
     "YuyuteiDiscoveryRun",
     "YuyuteiCandidate",
