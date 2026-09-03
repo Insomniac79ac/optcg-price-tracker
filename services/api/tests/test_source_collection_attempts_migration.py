@@ -121,11 +121,13 @@ def test_selected_at_is_not_nullable_but_started_and_finished_are():
     assert columns["finished_at"].nullable is True
 
 
-def test_selection_ordinal_is_nullable():
-    """A single-mapping CLI run has no position in a population; writing 0
-    would be an invented fact."""
+def test_selection_ordinal_is_not_nullable():
+    """Batch-scoped: record_selected_batch is the table's only INSERT, so every
+    row belongs to a population and has a position. The standalone --mapping-id
+    path is deliberately unwired and writes nothing here, which is what removed
+    the last candidate for a NULL."""
     _, columns, _ = _created_table()
-    assert columns["selection_ordinal"].nullable is True
+    assert columns["selection_ordinal"].nullable is False
 
 
 def test_failure_reason_is_length_bounded_not_free_text():
@@ -234,7 +236,8 @@ def test_selection_ordinal_must_be_positive_when_present():
         if getattr(c, "name", None)
         == "ck_source_collection_attempts_selection_ordinal_positive"
     )
-    assert "selection_ordinal IS NULL OR selection_ordinal > 0" in str(check.sqltext)
+    assert "selection_ordinal > 0" in str(check.sqltext)
+    assert "IS NULL" not in str(check.sqltext)
 
 
 def test_one_mapping_per_position_per_run():

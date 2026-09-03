@@ -200,38 +200,32 @@ class MarkAndFinish(TelemetryTestCase):
         row = {r.source_card_mapping_id: r for r in self._rows()}[target]
         self.assertEqual(len(row.failure_reason), 500)
 
-    def test_finish_without_a_prior_row_inserts_one(self):
-        """The single-mapping CLI path never selects a population."""
-        other_run = "solo0001"
-        assert (
-            telemetry.finish_attempt(
-                other_run, self.mapping_ids[0], STATUS_WRITTEN, source_id=self.source_id
-            )
-            is True
+    def test_finish_without_a_prior_row_is_declined(self):
+        """The table is batch-scoped: record_selected_batch is its only INSERT,
+        so an attempt exists exactly when its mapping was part of a recorded
+        population. With no such row there is nothing to finish, and the call
+        declines rather than conjuring an attempt belonging to no run."""
+        before = len(self._rows())
+        self.assertIs(
+            telemetry.finish_attempt("solo0001", self.mapping_ids[0], STATUS_WRITTEN),
+            False,
         )
-        row = [r for r in self._rows() if r.batch_run_id == other_run][0]
-        self.assertEqual(row.status, STATUS_WRITTEN)
-        self.assertIsNone(row.selection_ordinal)
-        self.assertIsNotNone(row.finished_at)
-        # No start is invented. The caller knows whether one happened; the
-        # recorder does not, and guessing is what this correction removed.
-        self.assertIsNone(row.started_at)
+        self.assertEqual(len(self._rows()), before)
+
+    def test_mark_started_without_a_prior_row_is_declined(self):
+        before = len(self._rows())
+        self.assertIs(telemetry.mark_attempt_started("solo0002", self.mapping_ids[0]), False)
+        self.assertEqual(len(self._rows()), before)
 
     def test_a_caller_that_knows_a_start_time_may_supply_it(self):
+        """finish_attempt still accepts an explicit start for a selected row
+        whose start was never separately recorded - it just never invents one."""
         started = datetime.now(timezone.utc) - timedelta(seconds=4)
-        telemetry.finish_attempt(
-            "solo0003", self.mapping_ids[0], STATUS_WRITTEN,
-            source_id=self.source_id, started_at=started,
-        )
-        row = [r for r in self._rows() if r.batch_run_id == "solo0003"][0]
+        target = self.mapping_ids[0]
+        telemetry.finish_attempt(RUN, target, STATUS_WRITTEN, started_at=started)
+        row = {r.source_card_mapping_id: r for r in self._rows()}[target]
         self.assertIsNotNone(row.started_at)
 
-    def test_finish_without_a_prior_row_and_no_source_id_is_refused_quietly(self):
-        """No honest way to guess the source, so it declines - and still does
-        not raise."""
-        self.assertIs(
-            telemetry.finish_attempt("solo0002", self.mapping_ids[0], STATUS_WRITTEN), False
-        )
 
     def test_price_observation_id_is_linked_when_supplied(self):
         with self.Session() as session:
@@ -521,18 +515,66 @@ class SessionIndependence(TelemetryTestCase):
         self.assertEqual(observations[0].price_jpy, 50)
 
 
-class NotYetWiredIn(unittest.TestCase):
-    """This tranche adds storage and the primitive only. Wiring is a separate
-    change, and this test is what makes that boundary explicit rather than
-    merely intended."""
+class IntegrationPoints(unittest.TestCase):
+    """Where the recorder is called from, pinned.
 
-    def test_batch_and_collect_do_not_call_the_recorder_yet(self):
+    Replaces 1A's "not yet wired in" guard. The orchestration layer owns the
+    batch id and the loop, so all three calls live in batch.py; collect.py
+    stays free of telemetry entirely, which is what keeps a single mapping's
+    collection logic unaware of whether anything is recording it."""
+
+    def _source(self, module):
         from pathlib import Path
 
-        package = Path(telemetry.__file__).parent
-        for module in ("batch.py", "collect.py"):
-            source = (package / module).read_text()
-            self.assertNotIn("telemetry", source, f"{module} imports telemetry already")
+        return (Path(telemetry.__file__).parent / module).read_text()
+
+    def test_batch_calls_all_three_primitives(self):
+        source = self._source("batch.py")
+        for primitive in (
+            "telemetry.record_selected_batch",
+            "telemetry.mark_attempt_started",
+            "telemetry.finish_attempt",
+        ):
+            self.assertIn(primitive, source)
+
+    def test_every_telemetry_call_goes_through_the_guard(self):
+        """_record is what makes "a telemetry problem cannot reach the pricing
+        job" true at the CALL SITE, independent of the recorder keeping its own
+        contract. A primitive invoked directly would be a hole in that
+        guarantee, so this asserts the shape with the parser rather than with a
+        substring that reformatting could defeat."""
+        import ast
+
+        tree = ast.parse(self._source("batch.py"))
+        called_directly = []
+        passed_to_record = 0
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            # telemetry.X(...) - a direct invocation
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "telemetry"
+            ):
+                called_directly.append(func.attr)
+            # _record(telemetry.X, ...) - the guarded form
+            if isinstance(func, ast.Name) and func.id == "_record" and node.args:
+                first = node.args[0]
+                if (
+                    isinstance(first, ast.Attribute)
+                    and isinstance(first.value, ast.Name)
+                    and first.value.id == "telemetry"
+                ):
+                    passed_to_record += 1
+
+        self.assertEqual(called_directly, [], "telemetry invoked without _record")
+        # selection, start, finish, and the skipped remainder
+        self.assertEqual(passed_to_record, 4)
+
+    def test_collect_does_not_reference_telemetry(self):
+        self.assertNotIn("telemetry", self._source("collect.py"))
 
 
 if __name__ == "__main__":

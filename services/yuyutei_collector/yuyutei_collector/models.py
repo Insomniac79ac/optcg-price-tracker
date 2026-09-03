@@ -355,7 +355,7 @@ class SourceCollectionAttempt(Base):
     # outlive the rows it describes.
     source_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     source_card_mapping_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    selection_ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    selection_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     selected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -151,23 +151,20 @@ def mark_attempt_started(
     batch_run_id: str,
     source_card_mapping_id: int,
     *,
-    source_id: int | None = None,
     started_at: datetime | None = None,
 ) -> bool:
     """Stamp started_at for one mapping - the moment processing actually began,
     as distinct from selected_at.
 
-    Updates the row record_selected_batch already wrote. If there is none (the
-    single-mapping CLI path never selects a population) one is inserted, which
-    is why `source_id` is accepted: without a prior row there is nothing to
-    read it from. selection_ordinal stays NULL there, because a run of one has
-    no meaningful position.
+    Updates the row record_selected_batch already wrote, and only that: this
+    table is batch-scoped, so an attempt exists exactly when it was part of a
+    recorded population. With no such row there is nothing to start, and the
+    call declines rather than conjuring an attempt with no position in any run.
     """
-    return _upsert(
+    return _update(
         operation="mark_attempt_started",
         batch_run_id=batch_run_id,
         source_card_mapping_id=source_card_mapping_id,
-        source_id=source_id,
         values={"started_at": started_at or _now()},
     )
 
@@ -183,7 +180,6 @@ def finish_attempt(
     source_card_mapping_id: int,
     status: str,
     *,
-    source_id: int | None = None,
     failure_stage: str | None = None,
     failure_reason: str | None = None,
     source_denied: bool = False,
@@ -201,7 +197,7 @@ def finish_attempt(
     genuinely know a start time and have not recorded one may pass it.
 
     An attempt that already reached a terminal status is NOT rewritten, and
-    there is no flag to make it. See _upsert for why the escape hatch was
+    there is no flag to make it. See _update for why the escape hatch was
     removed rather than defaulted off.
 
     `status`, `failure_stage` and `failure_reason` are passed through
@@ -221,28 +217,34 @@ def finish_attempt(
         values["price_observation_id"] = price_observation_id
     if started_at is not None:
         values["started_at"] = started_at
-    return _upsert(
+    return _update(
         operation="finish_attempt",
         batch_run_id=batch_run_id,
         source_card_mapping_id=source_card_mapping_id,
-        source_id=source_id,
         values=values,
     )
 
 
-def _upsert(
+def _update(
     *,
     operation: str,
     batch_run_id: str,
     source_card_mapping_id: int,
-    source_id: int | None,
     values: dict,
 ) -> bool:
-    """Update the row for this (run, mapping), inserting one if it is absent.
+    """Update the row for this (run, mapping). Never inserts one.
+
+    record_selected_batch is this table's only INSERT, which is what makes the
+    table batch-scoped: a row exists exactly when its mapping was part of a
+    recorded population. An earlier draft inserted a row here when none was
+    found, to support a standalone caller, and left selection_ordinal NULL to
+    describe it - but that path was never reachable from run_batch (which
+    supplies no source_id), and selection_ordinal is now NOT NULL, so it could
+    only ever have failed. Declining is the honest version of what it already
+    did.
 
     The unique constraint on (batch_run_id, source_card_mapping_id) is what
-    makes this safe: there is at most one row to find, so 'update else insert'
-    cannot silently fan out into duplicate histories.
+    makes the lookup safe: there is at most one row to find.
 
     TERMINAL ROWS ARE IMMUTABLE HERE, unconditionally. An outcome is recorded
     once; a second write is either a bug in the wiring or a retry, and either
@@ -271,23 +273,19 @@ def _upsert(
         ).scalar_one_or_none()
 
         if row is None:
-            if source_id is None:
-                # Nothing to attach the row to and no honest way to guess the
-                # source. Refuse rather than invent one.
-                raise ValueError(
-                    "no existing attempt row and no source_id supplied for "
-                    f"batch_run_id={batch_run_id} mapping={source_card_mapping_id}"
-                )
-            row = SourceCollectionAttempt(
-                batch_run_id=batch_run_id,
-                source_id=source_id,
-                source_card_mapping_id=source_card_mapping_id,
-                selection_ordinal=None,
-                status=STATUS_SELECTED,
+            logger.warning(
+                "%s: no selected attempt row for batch=%s mapping=%s - nothing to update.",
+                operation, batch_run_id, source_card_mapping_id,
             )
-            session.add(row)
+            _stdout_fallback(
+                operation,
+                batch_run_id=batch_run_id,
+                source_card_mapping_id=source_card_mapping_id,
+                refused="no_selected_row",
+            )
+            return False
 
-        elif _is_terminal(row):
+        if _is_terminal(row):
             logger.warning(
                 "%s: refusing to overwrite terminal attempt (batch=%s mapping=%s status=%s).",
                 operation, batch_run_id, source_card_mapping_id, row.status,

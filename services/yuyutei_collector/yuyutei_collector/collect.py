@@ -63,6 +63,14 @@ class MappingOutcome:
     written: bool = False
     source_denied: bool = False
     classification: str | None = None
+    # Where the attempt stopped, when it stopped badly. Purely descriptive and
+    # never a gate: nothing in this module or batch.py branches on it. It
+    # exists because `stage` alone cannot say WHERE a
+    # "no_extraction_attempted" stopped - a homepage gate failure and a
+    # product gate failure both produce that stage, and both can carry
+    # classification=None when the navigation itself errored. That is exactly
+    # the distinction mapping 413 (homepage timeout) needed and did not have.
+    failure_stage: str | None = None
     reasons: list[str] = field(default_factory=list)
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
@@ -80,6 +88,15 @@ class MappingOutcome:
 # from the single-mapping CLI's point of view, even when no observation was
 # written.
 _NONZERO_EXIT_STAGES = frozenset({"mapping_load_failed", "operational_error"})
+
+# deadline() labels -> the attempt phase they belong to. "total_run" is
+# deliberately absent: a run that blew its overall budget did so somewhere
+# unknown, and naming a phase would be a guess.
+_DEADLINE_LABEL_STAGES = {
+    "browser_launch": "browser_launch",
+    "homepage_navigation": "homepage",
+    "product_navigation": "product",
+}
 
 
 def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, Source | None, list[str]]:
@@ -111,7 +128,12 @@ def run_one_mapping_detailed(
         log_event(
             "mapping_load_failed", mapping_id=mapping_id, reasons=load_reasons, batch_run_id=batch_run_id
         )
-        return MappingOutcome(mapping_id=mapping_id, stage="mapping_load_failed", reasons=load_reasons)
+        return MappingOutcome(
+            mapping_id=mapping_id,
+            stage="mapping_load_failed",
+            failure_stage="load",
+            reasons=load_reasons,
+        )
 
     expected_card_code = mapping.source_card_id
     # Three states, and they are not the same thing:
@@ -151,6 +173,7 @@ def run_one_mapping_detailed(
         "http_status": None,
         "html": None,
         "observed_classification": None,
+        "failure_stage": None,
     }
 
     try:
@@ -180,6 +203,7 @@ def run_one_mapping_detailed(
 
                 if not homepage_ok:
                     result_holder["observed_classification"] = homepage_step.get("classification")
+                    result_holder["failure_stage"] = "homepage"
                     log_event(
                         "homepage_gate_failed",
                         mapping_id=mapping.id,
@@ -203,6 +227,10 @@ def run_one_mapping_detailed(
                     result_holder["classification"] = product_step.get("classification")
                     result_holder["http_status"] = product_step.get("http_status")
                     result_holder["observed_classification"] = product_step.get("classification")
+                    # Provisional: consulted only if the run ends without an
+                    # extraction. Once extraction is attempted the stage is
+                    # decided by the outcome instead (validation / written).
+                    result_holder["failure_stage"] = "product"
 
                     if product_step.get("classification") == "normal_product" and "error" not in product_step:
                         html = product_step["html"]
@@ -272,7 +300,10 @@ def run_one_mapping_detailed(
     except DeadlineExceeded as exc:
         log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
         return MappingOutcome(
-            mapping_id=mapping_id, stage="operational_error", reasons=[f"watchdog_triggered:{exc}"]
+            mapping_id=mapping_id,
+            stage="operational_error",
+            failure_stage=_DEADLINE_LABEL_STAGES.get(str(exc)),
+            reasons=[f"watchdog_triggered:{exc}"],
         )
     except Exception as exc:  # operational error - never leave a half-written row
         session.rollback()
@@ -285,6 +316,7 @@ def run_one_mapping_detailed(
         return MappingOutcome(
             mapping_id=mapping_id,
             stage="operational_error",
+            failure_stage=result_holder["failure_stage"],
             reasons=[f"{type(exc).__name__}: {exc}"],
         )
 
@@ -303,6 +335,7 @@ def run_one_mapping_detailed(
         return MappingOutcome(
             mapping_id=mapping.id,
             stage="no_extraction_attempted",
+            failure_stage=result_holder["failure_stage"],
             classification=observed_classification,
             source_denied=source_denied,
             reasons=reasons,
@@ -356,6 +389,7 @@ def run_one_mapping_detailed(
         return MappingOutcome(
             mapping_id=mapping.id,
             stage="validation_failed",
+            failure_stage="validation",
             classification=observed_classification,
             reasons=write_result.reasons,
         )

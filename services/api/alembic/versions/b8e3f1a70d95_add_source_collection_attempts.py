@@ -88,10 +88,12 @@ FINISHED_AFTER_STARTED_CHECK = (
     "finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at"
 )
 
-# Ordinals are 1-based positions in the selected population. NULL means "not
-# part of a selected population" (the single-mapping CLI path); 0 would be
-# neither, and allowing it would let a missing value masquerade as a position.
-SELECTION_ORDINAL_CHECK = "selection_ordinal IS NULL OR selection_ordinal > 0"
+# Ordinals are 1-based positions in the selected population, and every row has
+# one: this table is batch-scoped, and a row only ever comes into existence as
+# part of a recorded population (record_selected_batch is the sole INSERT). The
+# standalone --mapping-id CLI path is deliberately not wired and writes nothing
+# here, so there is no row left needing "no position" to describe it.
+SELECTION_ORDINAL_CHECK = "selection_ordinal > 0"
 
 
 def upgrade() -> None:
@@ -105,10 +107,9 @@ def upgrade() -> None:
         sa.Column("source_id", sa.Integer(), nullable=False),
         sa.Column("source_card_mapping_id", sa.Integer(), nullable=False),
         # 1-based position within the selected population, so execution order
-        # survives even when most rows never ran. NULL when the attempt was not
-        # part of a selected batch (the single-mapping CLI path has no ordinal,
-        # and writing 0 there would let a missing value look like a position).
-        sa.Column("selection_ordinal", sa.Integer(), nullable=True),
+        # survives even when most rows never ran. NOT NULL: every row belongs to
+        # a population by construction (see SELECTION_ORDINAL_CHECK).
+        sa.Column("selection_ordinal", sa.Integer(), nullable=False),
         sa.Column(
             "selected_at",
             sa.DateTime(timezone=True),
@@ -197,9 +198,8 @@ def upgrade() -> None:
         ),
         # And one mapping per position per run. selection_ordinal exists so
         # exact batch order survives log loss; two mappings claiming position 7
-        # would destroy exactly the fact it was added to preserve. NULLs stay
-        # distinct under the default NULLS DISTINCT, so any number of
-        # populationless rows coexist.
+        # would destroy exactly the fact it was added to preserve. With the
+        # column NOT NULL this is a plain total ordering - no NULL escape.
         sa.UniqueConstraint(
             "batch_run_id",
             "selection_ordinal",

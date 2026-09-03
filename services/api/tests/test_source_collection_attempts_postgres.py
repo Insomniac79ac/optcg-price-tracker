@@ -238,8 +238,8 @@ def test_every_documented_status_is_accepted(migrated, status):
         conn.execute(
             text(
                 f"INSERT INTO {TABLE} (batch_run_id, source_id, source_card_mapping_id, status,"
-                f" started_at, finished_at)"
-                f" VALUES (:b, :s, :m, :st, {started}, {finished})"
+                f" selection_ordinal, started_at, finished_at)"
+                f" VALUES (:b, :s, :m, :st, 1, {started}, {finished})"
             ),
             {"b": f"ok-{status}", "s": subject["source_id"], "m": subject["mapping_id"],
              "st": status},
@@ -509,10 +509,12 @@ def test_selection_order_is_persisted(migrated):
     assert ordinals == [1, 2, 3]
 
 
-def test_selection_ordinal_may_be_null(migrated):
-    """The single-mapping CLI path has no position in a population."""
+def test_selection_ordinal_may_not_be_null(migrated):
+    """Batch-scoped telemetry: every row belongs to a recorded population, so
+    there is no legitimate row without a position."""
     db, subject = migrated
-    _insert(db, subject, batch_run_id="no-ordinal", selection_ordinal=None)
+    with pytest.raises(DBAPIError):
+        _insert(db, subject, batch_run_id="null-ordinal", selection_ordinal=None)
 
 
 def test_a_zero_or_negative_ordinal_is_refused(migrated):
@@ -543,15 +545,19 @@ def test_the_same_position_in_different_runs_is_fine(migrated):
     _insert(db, subject, batch_run_id="pos-run-b", selection_ordinal=7)
 
 
-def test_many_null_ordinals_coexist_in_one_run(migrated):
-    """NULLS DISTINCT: populationless rows must not collide with each other."""
+def test_positions_in_one_run_form_a_total_order(migrated):
+    """With the column NOT NULL the unique constraint is a plain total
+    ordering - no NULL escape hatch through which two rows could share a
+    position."""
     db, subject = migrated
-    second_mapping = _extra_mapping(db, subject)
-    _insert(db, subject, batch_run_id="null-ords", selection_ordinal=None)
-    _insert(
-        db, subject, batch_run_id="null-ords",
-        source_card_mapping_id=second_mapping, selection_ordinal=None,
-    )
+    second = _extra_mapping(db, subject)
+    third = _extra_mapping(db, subject)
+    _insert(db, subject, batch_run_id="total-order", selection_ordinal=1)
+    _insert(db, subject, batch_run_id="total-order",
+            source_card_mapping_id=second, selection_ordinal=2)
+    with pytest.raises(IntegrityError):
+        _insert(db, subject, batch_run_id="total-order",
+                source_card_mapping_id=third, selection_ordinal=2)
 
 
 # --- FK behaviour: the reason this table exists -----------------------------

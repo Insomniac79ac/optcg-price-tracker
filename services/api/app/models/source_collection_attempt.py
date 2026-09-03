@@ -108,7 +108,7 @@ class SourceCollectionAttempt(Base):
             name="ck_source_collection_attempts_finished_after_started",
         ),
         CheckConstraint(
-            "selection_ordinal IS NULL OR selection_ordinal > 0",
+            "selection_ordinal > 0",
             name="ck_source_collection_attempts_selection_ordinal_positive",
         ),
         CheckConstraint(
@@ -125,8 +125,7 @@ class SourceCollectionAttempt(Base):
         ),
         # One mapping per position per run. selection_ordinal exists so exact
         # batch order survives log loss; two mappings claiming position 7 would
-        # destroy the fact it was added to preserve. NULLs stay distinct, so any
-        # number of populationless rows coexist.
+        # destroy the fact it was added to preserve.
         UniqueConstraint(
             "batch_run_id",
             "selection_ordinal",
@@ -160,10 +159,11 @@ class SourceCollectionAttempt(Base):
     source_id: Mapped[int] = mapped_column(Integer, nullable=False)
     source_card_mapping_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # 1-based position within the selected population. NULL when the attempt was
-    # not part of a batch selection (the single-mapping CLI path has no
-    # ordinal); 0 is refused so a missing value cannot look like a position.
-    selection_ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 1-based position within the selected population. NOT NULL: this table is
+    # batch-scoped and record_selected_batch is its only INSERT, so a row cannot
+    # exist without a position. The standalone --mapping-id CLI path is
+    # deliberately unwired and writes nothing here.
+    selection_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Entered the batch population. Always known.
     selected_at: Mapped[datetime] = mapped_column(

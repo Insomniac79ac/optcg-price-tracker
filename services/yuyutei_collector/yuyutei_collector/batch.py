@@ -59,6 +59,7 @@ from sqlalchemy.orm import Session
 
 from yuyutei_collector.browser import log_event
 from yuyutei_collector.collect import MappingOutcome, run_one_mapping_detailed
+from yuyutei_collector import telemetry
 from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import CardPrint, Source, SourceCardMapping
@@ -118,6 +119,41 @@ def _mapping_delay_s() -> float:
     return max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000.0
 
 
+# MappingOutcome.stage already IS the telemetry vocabulary for every outcome a
+# real collection can reach - the two were defined from the same list - so this
+# is a projection, not a translation. "validated_only" has no counterpart by
+# design (see record_telemetry in run_batch), and any unexpected stage is
+# passed through so the database's CHECK rejects it loudly rather than this
+# function quietly relabelling it as something valid.
+def _record(call, *args, **kwargs) -> None:
+    """Every telemetry call from this module goes through here.
+
+    telemetry.* already swallows its own failures and returns a bool, so this
+    is deliberate belt and braces: it makes "a telemetry problem cannot reach
+    the pricing job" true at the CALL SITE, independent of the recorder
+    keeping its contract. Nothing else in run_batch is wrapped - collector
+    errors keep propagating exactly as they did.
+    """
+    try:
+        call(*args, **kwargs)
+    except Exception:  # noqa: BLE001 - a telemetry bug must not stop collection
+        log_event("telemetry_call_failed", call=getattr(call, "__name__", str(call)))
+
+
+def _attempt_telemetry(outcome) -> dict:
+    """The outcome as this batch already computed it, expressed in the
+    telemetry column names. Reads only; invents nothing."""
+    return {
+        "status": outcome.stage,
+        "failure_stage": outcome.failure_stage,
+        "failure_reason": "; ".join(outcome.reasons) if outcome.reasons else None,
+        "source_denied": outcome.source_denied,
+        # Only a written outcome carries one, and it is the id the writer
+        # actually committed - never reconstructed by a lookup here.
+        "price_observation_id": outcome.observation_id if outcome.written else None,
+    }
+
+
 def run_batch(
     limit: int | None = None,
     mapping_ids: list[int] | None = None,
@@ -132,6 +168,13 @@ def run_batch(
     `mapping_selector` are overridable purely for offline testing (see
     tests/test_batch.py) - production callers (collect.main()) never pass
     them."""
+    # A validate-only run navigates but writes nothing - no observation, no
+    # snapshot - so it records no attempt history either. Its stage
+    # ("validated_only") has no telemetry status by design: inventing one would
+    # put dry runs into the same table operators read to find out why real
+    # collection produced nothing.
+    record_telemetry = not validate_only
+
     batch_run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
@@ -162,6 +205,18 @@ def run_batch(
             count=len(selected_ids),
         )
 
+        # Durable population, written before any navigation, so a process that
+        # dies on its first mapping still leaves a record of what it meant to
+        # do. Best-effort by construction: telemetry.* returns False rather
+        # than raising, and nothing below reads the result.
+        if record_telemetry and selected:
+            _record(
+                telemetry.record_selected_batch,
+                batch_run_id,
+                selected[0].source_id,
+                selected_ids,
+            )
+
         batch_deadline_at = time.monotonic() + settings.BATCH_TOTAL_TIMEOUT_S
         for index, mapping in enumerate(selected):
             if time.monotonic() >= batch_deadline_at:
@@ -173,6 +228,11 @@ def run_batch(
                     remaining_mapping_ids=[m.id for m in selected[index:]],
                 )
                 break
+
+            # Immediately before this mapping does any work - never for the
+            # mappings still queued behind it.
+            if record_telemetry:
+                _record(telemetry.mark_attempt_started, batch_run_id, mapping.id)
 
             outcome = mapping_runner(
                 session, mapping.id, validate_only=validate_only, batch_run_id=batch_run_id
@@ -187,6 +247,16 @@ def run_batch(
                 source_denied=outcome.source_denied,
                 reasons=outcome.reasons,
             )
+            # Recorded BEFORE the source-denial break below, so the mapping
+            # that was actually denied keeps its own real terminal outcome
+            # instead of being swept into the skipped set with the rest.
+            if record_telemetry:
+                _record(
+                    telemetry.finish_attempt,
+                    batch_run_id,
+                    mapping.id,
+                    **_attempt_telemetry(outcome),
+                )
 
             if outcome.source_denied:
                 stopped_reason = f"source_denied:{outcome.classification}"
@@ -207,6 +277,20 @@ def run_batch(
             mapping_ids=skipped_ids,
             reason=stopped_reason,
         )
+        # Terminal, but never started: these mappings were selected and the
+        # batch stopped before reaching them. finish_attempt does not invent a
+        # started_at, so started_at stays NULL and the row says exactly that.
+        if record_telemetry:
+            denied = bool(stopped_reason) and stopped_reason.startswith("source_denied")
+            for mapping_id in skipped_ids:
+                _record(
+                    telemetry.finish_attempt,
+                    batch_run_id,
+                    mapping_id,
+                    "skipped",
+                    failure_reason=stopped_reason,
+                    source_denied=denied,
+                )
 
     if any(r.source_denied for r in results):
         status, exit_code = "source_wide_failure", 1
