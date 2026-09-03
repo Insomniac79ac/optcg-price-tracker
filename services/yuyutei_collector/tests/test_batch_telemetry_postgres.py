@@ -46,9 +46,13 @@ DB_NAME = "atlas_batch_telemetry_test"
 
 MAPPING_COUNT = 5
 
-# The constraints the migration installs. Declared here because the collector's
-# mirror model carries no CHECKs (the migration is their single authority), and
-# without them this file would prove nothing SQLite had not already proved.
+# The CHECK constraints the migration installs. Declared here because the
+# collector's mirror model carries no CHECKs (the migration is their single
+# authority), and without them this file would prove nothing SQLite had not
+# already proved. NOT NULL columns and the UNIQUE constraints come from the
+# mirror model itself via create_all - and are asserted below rather than
+# assumed, because this tuple drifting out of step with the migration is
+# exactly the defect that reached a commit once already.
 LIFECYCLE_CONSTRAINTS = (
     "ALTER TABLE source_collection_attempts ADD CONSTRAINT"
     " ck_source_collection_attempts_finished_iff_terminal"
@@ -58,7 +62,7 @@ LIFECYCLE_CONSTRAINTS = (
     " CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at)",
     "ALTER TABLE source_collection_attempts ADD CONSTRAINT"
     " ck_source_collection_attempts_selection_ordinal_positive"
-    " CHECK (selection_ordinal IS NULL OR selection_ordinal > 0)",
+    " CHECK (selection_ordinal > 0)",
     "ALTER TABLE source_collection_attempts ADD CONSTRAINT"
     " ck_source_collection_attempts_status"
     " CHECK (status IN ('selected','written','validation_failed',"
@@ -259,3 +263,50 @@ def test_a_broken_recorder_still_lets_the_batch_finish_under_real_constraints(pg
     assert result.status == "success"
     assert len(runner.calls) == MAPPING_COUNT
     assert _attempts(Session) == []
+
+
+def test_the_fixture_agrees_with_the_final_migration_contract(pg):
+    """Guards the guard.
+
+    This file's whole value is that its table matches production. When the
+    ordinal was tightened to NOT NULL the tuple above kept the old
+    "IS NULL OR > 0" form for a while: harmless in effect, because the mirror
+    model already made the column NOT NULL, but it meant a file claiming to
+    mirror the migration quietly did not. Asserting the shape from the live
+    catalogue makes that drift impossible to miss again.
+    """
+    Session, _ = pg
+    with Session() as session:
+        nullable = session.execute(
+            text(
+                "SELECT is_nullable FROM information_schema.columns"
+                " WHERE table_name = 'source_collection_attempts'"
+                "   AND column_name = 'selection_ordinal'"
+            )
+        ).scalar_one()
+
+        ordinal_check = session.execute(
+            text(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint"
+                " WHERE conname = 'ck_source_collection_attempts_selection_ordinal_positive'"
+            )
+        ).scalar_one()
+
+        uniques = session.execute(
+            text(
+                "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint"
+                " WHERE conrelid = 'source_collection_attempts'::regclass AND contype = 'u'"
+            )
+        ).all()
+
+    assert nullable == "NO"                       # selection_ordinal NOT NULL
+    assert "selection_ordinal > 0" in ordinal_check
+    assert "IS NULL" not in ordinal_check         # the stale form is gone
+
+    unique_defs = {name: definition for name, definition in uniques}
+    assert any(
+        "batch_run_id" in d and "selection_ordinal" in d for d in unique_defs.values()
+    ), f"batch+ordinal uniqueness missing: {unique_defs}"
+    assert any(
+        "batch_run_id" in d and "source_card_mapping_id" in d for d in unique_defs.values()
+    ), f"batch+mapping uniqueness missing: {unique_defs}"
