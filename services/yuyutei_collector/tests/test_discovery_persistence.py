@@ -984,8 +984,21 @@ def test_a_denied_homepage_stops_before_any_listing_url_is_requested(session):
     assert not any("/sell/opc/s/" in url for url in page.visited)
     assert report["status"] == "denied"
     assert report["stopped_reason"] == f"source_denied: 403 at {HOMEPAGE_URL}"
-    assert report["per_slug"] == {}
     assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
+
+    # per_slug used to be empty here. It now carries an explicit unvisited
+    # entry per requested slug, which says the same thing without relying on
+    # absence: nothing was enumerated, and each slug names why. Silence and
+    # "enumerated, found nothing" were indistinguishable before, and with a
+    # catalogue-wide scope that ambiguity is what would let a denial at slug 7
+    # of 60 read as full coverage.
+    assert set(report["per_slug"]) == {"op01", "op13", "eb01"}
+    assert all(m["visited"] is False for m in report["per_slug"].values())
+    assert all(m["outcome"] == "not_visited_session_denied" for m in report["per_slug"].values())
+    assert all(m["candidates_written"] == 0 for m in report["per_slug"].values())
+    assert all(m["enumeration_complete"] is False for m in report["per_slug"].values())
+    assert report["slugs_visited"] == []
+    assert report["slugs_not_visited"] == ["eb01", "op01", "op13"]
 
     run = session.scalars(select(YuyuteiDiscoveryRun)).one()
     assert run.status == "denied"

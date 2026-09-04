@@ -57,6 +57,11 @@ from yuyutei_collector.discovery_probe import (
     SourceDenied,
     _scrape_listing,
 )
+from yuyutei_collector.discovery_scope import (
+    UNRESOLVED_REASON,
+    batch_slugs,
+    catalogue_scope,
+)
 from yuyutei_collector.models import YuyuteiCandidate, YuyuteiDiscoveryRun
 
 # Per slug, never a shared pool: a shared budget makes coverage depend on slug
@@ -290,7 +295,87 @@ def _slug_metrics(enumeration: SlugEnumeration, statuses: list[str], written: in
         "identity_conflict": statuses.count("identity_conflict"),
         "candidates_written": written,
         "budget_exhausted": enumeration.budget_exhausted,
+        # This slug WAS enumerated, and every count above is a measurement of
+        # that enumeration. Its counterpart is _unvisited_metrics below - see
+        # there for why a requested-but-unreached slug is recorded rather than
+        # simply absent.
+        "visited": True,
+        "outcome": "enumerated",
     }
+
+
+# Every key _slug_metrics produces, with a value that means "nothing was
+# measured". Zeros rather than None because _finalize sums these columns onto
+# the run row: a None would raise, and omitting the slug entirely is exactly
+# the ambiguity this exists to remove.
+_UNVISITED_ZEROES: dict[str, Any] = {
+    "pages_fetched": 0,
+    "pagination_seen": False,
+    "raw_product_anchors": 0,
+    "distinct_source_products": 0,
+    "own_series_products": 0,
+    "foreign_series_filtered": 0,
+    "foreign_series_seen": [],
+    "duplicate_products": 0,
+    "enumeration_complete": False,
+    "page_budget_exhausted": False,
+    "unfetched_pages": 0,
+    "parsed_card_codes": 0,
+    "unparseable_codes": 0,
+    "distinct_card_codes": 0,
+    "codes_with_multiple_products": 0,
+    "candidates_with_price": 0,
+    "candidates_with_ambiguous_price": 0,
+    "candidates_with_image": 0,
+    "candidates_with_rarity": 0,
+    "candidates_with_name_jp": 0,
+    "candidates_with_availability": 0,
+    "unmatched": 0,
+    "family_matched": 0,
+    "print_matched": 0,
+    "identity_conflict": 0,
+    "candidates_written": 0,
+    "budget_exhausted": False,
+}
+
+
+def _unvisited_metrics(slug: str, outcome: str) -> dict[str, Any]:
+    """A requested slug that was never enumerated, recorded as such.
+
+    THE ALTERNATIVE WAS SILENCE, AND SILENCE READS AS SUCCESS. Before this, a
+    run denied part-way through simply had no entry for the slugs after the
+    break, which is indistinguishable from a slug that was read and found
+    empty. With 3 slugs an operator could hold the difference in their head;
+    with 60 and a denial in the middle they cannot, and the failure mode is
+    believing a set was covered when its category page was never requested.
+
+    So every requested slug appears in per_slug, and `visited` says which kind
+    of entry this is. `enumeration_complete` is False here for the same reason
+    it is False after a truncated read: nothing proves the set was seen. Every
+    count is zero, so the run-level sums in _finalize are unchanged by an
+    unvisited slug being present - it adds accounting, never arithmetic.
+
+    `outcome` names WHY, and the vocabulary is the run's own: a denial that
+    stopped the loop, a denial at the warm-up before the loop began, or an
+    unexpected failure. None of them is a retry signal - see the module
+    docstring's source posture. A later run may enumerate these slugs; this
+    one did not.
+    """
+    return {"slug": slug, **_UNVISITED_ZEROES, "visited": False, "outcome": outcome}
+
+
+def _record_unvisited(
+    per_slug: dict[str, Any], slugs: list[str], outcome: str
+) -> None:
+    """Fill in every requested slug the loop never reached.
+
+    Order follows the REQUEST order, not the visited order, so reading
+    per_slug top to bottom tells the operator exactly where the run stopped.
+    Slugs already measured are never overwritten - a completed enumeration is
+    a fact, and a later abort does not retract it.
+    """
+    for slug in slugs:
+        per_slug.setdefault(slug, _unvisited_metrics(slug, outcome))
 
 
 # A homepage that answers with one of these, or renders one of these, is the
@@ -379,6 +464,10 @@ def discover_and_persist(
             status = "denied"
             stopped_reason = f"source_denied: {exc}"[:255]
             session_established = False
+            # Not one listing URL was requested. Every slug is unvisited, and
+            # says so, rather than the run reporting an empty per_slug that
+            # could be read as "all sets enumerated, all empty".
+            _record_unvisited(per_slug, slugs, "not_visited_session_denied")
 
         for index, slug in enumerate(slugs if session_established else []):
             if index:
@@ -396,6 +485,10 @@ def discover_and_persist(
                 # and never retry.
                 status = "denied"
                 stopped_reason = f"source_denied: {exc}"[:255]
+                # This slug and every slug after it are unrequested. Recorded
+                # explicitly so a 60-slug batch that stops at slug 7 cannot be
+                # mistaken for one that covered all 60.
+                _record_unvisited(per_slug, slugs, "not_visited_source_denied")
                 break
 
             # Counted across the WHOLE own-series result before anything is
@@ -423,6 +516,10 @@ def discover_and_persist(
     except Exception as exc:  # noqa: BLE001 - recorded on the run, then re-raised
         status = "failed"
         error_message = str(exc)[:2000]
+        # Same rule on the fault path: a slug the loop never reached is
+        # recorded as unreached before the run row is closed, so a failed run
+        # cannot leave a set looking enumerated.
+        _record_unvisited(per_slug, slugs, "not_visited_run_failed")
         _finalize(run, session, status, stopped_reason, error_message, per_slug)
         raise
 
@@ -448,6 +545,12 @@ def discover_and_persist(
             "unparseable_codes": run.unparseable_codes,
         },
         "per_slug": per_slug,
+        # A one-glance answer to "was the scope actually covered?", derived
+        # from per_slug rather than tracked separately so the two can never
+        # disagree. requested_set_slugs above is the scope that was asked for.
+        "slugs_requested": len(slugs),
+        "slugs_visited": sorted(k for k, m in per_slug.items() if m.get("visited")),
+        "slugs_not_visited": sorted(k for k, m in per_slug.items() if not m.get("visited")),
     }
 
 
@@ -476,23 +579,188 @@ def _finalize(
     session.commit()
 
 
+def build_arg_parser() -> argparse.ArgumentParser:
+    """The CLI contract, built separately so tests can exercise argument
+    resolution without importing Playwright or opening a browser."""
+    parser = argparse.ArgumentParser(
+        description="Yuyu-Tei listing discovery. Writes candidates only - never mappings, "
+        "observations or approvals."
+    )
+    # EXACTLY ONE SCOPE, ALWAYS STATED. --slugs keeps its original meaning and
+    # its original behaviour; --from-catalogue is the new, explicitly-chosen
+    # alternative. Neither has a default and the group is required, so the
+    # catalogue-wide scope can never arrive by omission - an existing
+    # invocation that names three slugs still requests exactly those three,
+    # and nobody discovers 60 new category pages by forgetting a flag.
+    scope = parser.add_mutually_exclusive_group(required=True)
+    scope.add_argument("--slugs", help="comma-separated, e.g. op01,op13,eb01")
+    scope.add_argument(
+        "--from-catalogue",
+        action="store_true",
+        help="derive the slug list from the active Atlas catalogue (distinct "
+        "lowercased set prefixes of active card codes, restricted to those in "
+        "a proven Yuyu-Tei category shape; any prefix that is not is reported "
+        "as unresolved and never requested)",
+    )
+    # A partition of the resolved scope, applied by separate invocations. This
+    # is not concurrency: each batch still runs one page at a time, with the
+    # configured delay and no retries.
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=0,
+        help="run the scope in consecutive batches of at most N slugs "
+        "(default 0 = one batch containing the whole scope)",
+    )
+    parser.add_argument(
+        "--batch",
+        type=int,
+        default=1,
+        help="which 1-based batch to run (default 1)",
+    )
+    # THE INSPECTION DOOR. Resolves and prints the scope and exits before a
+    # browser is launched or a single URL is navigated, so a catalogue-wide
+    # list can be read, diffed and argued about at zero source cost. It prints
+    # the WHOLE plan - prefixes, executable scope AND unresolved prefixes with
+    # the reason they were withheld - because a door that showed only the
+    # smaller list would hide exactly the thing worth inspecting.
+    parser.add_argument(
+        "--list-slugs",
+        action="store_true",
+        help="print the resolved plan as JSON - catalogue prefixes, executable "
+        "slugs and unresolved prefixes - and exit, making no source request",
+    )
+    parser.add_argument("--max-products-per-slug", type=int, default=MAX_PRODUCTS_PER_SLUG)
+    parser.add_argument("--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG)
+    return parser
+
+
+def resolve_scope(args, session: Session) -> dict[str, Any]:
+    """Turn parsed arguments into the exact slug list this invocation will run.
+
+    Pure and offline - it reads the catalogue and slices a list, and touches
+    nothing that could make a request. That separation is what lets
+    `--list-slugs` print the identical list the run would use rather than an
+    approximation of it.
+
+    THE PLAN DISTINGUISHES THREE THINGS, AND SO MUST ANY REPORT BUILT ON IT:
+    `prefixes` is what the scope started from, `scope` is what is executable
+    and is the only thing batched or requested, and `unresolved_prefixes` is
+    what was withheld. They reconcile - prefixes = scope + unresolved - so a
+    shrinking scope always has a named cause rather than being a smaller
+    number nobody can account for.
+
+    `--slugs` is parsed exactly as it always was: split on commas, strip, drop
+    empties, preserve the operator's order, and no catalogue lookup at all. A
+    slug the catalogue does not imply stays valid, AND SO DOES ONE THE
+    CATALOGUE DERIVATION WOULD NOT EXECUTE: an operator naming a category
+    directly is making a claim about Yuyu-Tei, not about Atlas, and this
+    function is not the place to overrule it. `--slugs p` therefore still
+    requests exactly `p`, unchanged. The executability rule exists to stop the
+    DERIVATION from inventing a URL, not to stop an operator from testing one
+    deliberately - so nothing is filtered on this path and `unresolved_prefixes`
+    is empty, because nothing was withheld.
+
+    `--from-catalogue` takes the sorted, deduplicated, grammar-validated split
+    from discovery_scope, runs the batch window over the EXECUTABLE list only,
+    and carries the unresolved prefixes through untouched for the report.
+    """
+    if args.from_catalogue:
+        catalogue = catalogue_scope(session)
+        prefixes = list(catalogue.prefixes)
+        scope = list(catalogue.executable)
+        unresolved = list(catalogue.unresolved)
+        scope_source = "catalogue"
+    else:
+        scope = [s.strip() for s in args.slugs.split(",") if s.strip()]
+        prefixes = list(scope)
+        unresolved = []
+        scope_source = "explicit"
+
+    batches = batch_slugs(scope, args.batch_size)
+    selected: list[str] = []
+    if batches:
+        if args.batch < 1 or args.batch > len(batches):
+            raise ValueError(
+                f"--batch {args.batch} is out of range: the scope has "
+                f"{len(batches)} batch(es) at --batch-size {args.batch_size}"
+            )
+        selected = batches[args.batch - 1]
+
+    plan = {
+        "scope_source": scope_source,
+        # Everything the scope started from, before anything was withheld.
+        "prefixes": prefixes,
+        "prefix_count": len(prefixes),
+        # The executable slugs: what is batched, what is requested, what the
+        # per-slug accounting in the run report will cover.
+        "scope": scope,
+        "scope_size": len(scope),
+        # Carried, never dropped. Empty on the explicit path because nothing
+        # was withheld there, not because nothing was looked at.
+        "unresolved_prefixes": unresolved,
+        "unresolved_count": len(unresolved),
+        "batch_size": args.batch_size,
+        "batch": args.batch,
+        "batch_count": len(batches),
+        "slugs": selected,
+        # One category page per slug is the floor, and the only number an
+        # operator can know before fetching; a set that paginates costs more,
+        # bounded by --max-pages-per-slug.
+        "min_category_requests": len(selected),
+        "max_category_requests": len(selected) * args.max_pages_per_slug,
+    }
+    if unresolved:
+        # The exclusion states its own grounds in the same object that states
+        # the smaller number, so the two cannot be read apart.
+        plan["unresolved_reason"] = UNRESOLVED_REASON
+    # The invariant the whole three-way model exists to hold, enforced where
+    # the plan is built rather than trusted downstream. A raise rather than an
+    # `assert`: this must survive `python -O`, which is exactly the mode a
+    # container would run and exactly the moment a lost set would go unnoticed.
+    if plan["prefix_count"] != plan["scope_size"] + plan["unresolved_count"]:
+        raise ValueError(
+            f"scope does not reconcile: {plan['prefix_count']} prefixes != "
+            f"{plan['scope_size']} executable + {plan['unresolved_count']} unresolved"
+        )
+    return plan
+
+
 def main() -> None:
     from playwright.sync_api import sync_playwright
 
     from yuyutei_collector.db import SessionLocal
 
-    parser = argparse.ArgumentParser(
-        description="Yuyu-Tei listing discovery. Writes candidates only - never mappings, "
-        "observations or approvals."
-    )
-    parser.add_argument("--slugs", required=True, help="comma-separated, e.g. op01,op13,eb01")
-    parser.add_argument("--max-products-per-slug", type=int, default=MAX_PRODUCTS_PER_SLUG)
-    parser.add_argument("--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG)
+    parser = build_arg_parser()
     args = parser.parse_args()
 
-    slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
+    # The catalogue read happens on its own session, before anything else, so
+    # --list-slugs never constructs a browser and a scope error is reported
+    # without a source request having been made.
+    scope_session = SessionLocal()
+    try:
+        try:
+            plan = resolve_scope(args, scope_session)
+        except ValueError as exc:
+            parser.error(str(exc))
+    finally:
+        scope_session.close()
+
+    if args.list_slugs:
+        print(json.dumps(plan, ensure_ascii=False, separators=(",", ":")))
+        return
+
+    slugs = plan["slugs"]
     if not slugs:
-        parser.error("--slugs must name at least one category slug")
+        parser.error("the resolved scope names no category slug")
+
+    # The two long lists are summarised by their counts in the same event;
+    # `unresolved_prefixes` is kept in full because it is short and is the
+    # one thing a reader would otherwise have to go and derive.
+    log_event(
+        "discovery_scope_resolved",
+        **{k: v for k, v in plan.items() if k not in ("scope", "prefixes")},
+    )
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
@@ -518,6 +786,7 @@ def main() -> None:
     # Railway ships each stdout line as its own log entry.
     for metrics in report["per_slug"].values():
         log_event("discovery_set_complete", **metrics)
+    report["scope_plan"] = plan
     print(json.dumps(report, ensure_ascii=False, separators=(",", ":")))
 
 
