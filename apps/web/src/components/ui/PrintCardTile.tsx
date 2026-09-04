@@ -4,8 +4,8 @@ import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/compon
 import { formatJpy } from "@/lib/format";
 import { type PrintUiModel, sourceDisplayName } from "@/lib/prints";
 import {
+  describeUnavailableSource,
   isUnavailableSourceValue,
-  SOURCE_PRICE_UNAVAILABLE_LABEL,
   unavailableSourceValues,
 } from "@/lib/sourceAvailability";
 import {
@@ -272,10 +272,18 @@ function SourcePrices({ print }: { print: PrintUiModel }) {
           {/* A statement of absence, written as a sentence and set in the
               muted colour at the ordinary text size - deliberately NOT the
               tabular mono treatment a price gets, so it can never be scanned
-              as a number-shaped thing in the price column. */}
+              as a number-shaped thing in the price column.
+              WHICH sentence comes from @/lib/sourceAvailability, off the
+              backend's published `ineligible_reason`: "No current listing"
+              where SNKRDUNK reported that nothing is on offer, the generic
+              "Price unavailable" everywhere else. The tile carries the label
+              and no disclosure - the whole tile is a single <Link>, and a
+              button nested in an anchor is invalid HTML that misbehaves on
+              keyboard and touch, exactly as for the evidence labels below.
+              The sentence behind the label lives on the print detail page. */}
           {isUnavailableSourceValue(row) ? (
             <dd className="mt-1.5 text-[11px] leading-tight text-text-muted">
-              {SOURCE_PRICE_UNAVAILABLE_LABEL}
+              {describeUnavailableSource(row).label}
             </dd>
           ) : (
             <>

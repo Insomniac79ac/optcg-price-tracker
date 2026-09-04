@@ -1335,3 +1335,173 @@ describe("catalogue tiles - a source with no price", () => {
     expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
   });
 });
+
+/** "No current listing" on the catalogue tile.
+ *
+ * The tile and the print page must say the SAME sentence for the same backend
+ * state, or a collector who browses and then clicks through gets two different
+ * stories about one source. What the tile deliberately does NOT carry is the
+ * disclosure: the whole tile is a single <Link>, a <button> nested in an anchor
+ * is invalid HTML that misbehaves on keyboard and touch, and the explanation
+ * therefore lives on the print detail page - exactly the split the evidence
+ * labels already use. */
+describe("catalogue tiles - no current listing on SNKRDUNK", () => {
+  const NO_LISTING = "No current listing";
+  const UNAVAILABLE = "Price unavailable";
+
+  function tilePrint(
+    source_values: PrintMarketIndexSourceValue[],
+    index: Partial<PrintMarketIndex> = {},
+  ) {
+    return makePrint({
+      card_print_id: 7002,
+      card_code: "OP01-041",
+      market_index: {
+        index_value_jpy: 1980,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_values,
+        ...index,
+      } as PrintMarketIndex,
+    });
+  }
+
+  function rowFor(tile: HTMLElement, name: string): HTMLElement {
+    return within(tile).getByText(name).parentElement as HTMLElement;
+  }
+
+  /** SNKRDUNK looked at the product and found nothing on offer. */
+  function noListing(): PrintMarketIndexSourceValue {
+    return {
+      ...sourceValue("snkrdunk", null),
+      eligible: false,
+      ineligible_reason: "insufficient_sold_and_no_floor",
+    };
+  }
+
+  it("says 'No current listing', not 'Price unavailable'", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), noListing()])]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(rowFor(tile, "SNKRDUNK")).getByText(NO_LISTING)).toBeTruthy();
+    expect(within(rowFor(tile, "Yuyu-Tei")).getByText("￥1,980")).toBeTruthy();
+    // No duplicate or conflicting wording: one claim per row, and the two
+    // sentences never appear together for the same source.
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+    expect(within(tile).getAllByText(NO_LISTING)).toHaveLength(1);
+  });
+
+  it("carries the label but no disclosure button inside the tile's link", async () => {
+    // A <button> inside an <a> is invalid HTML. The tile states the fact; the
+    // print detail page explains it.
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), noListing()])]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).queryByRole("button")).toBeNull();
+    expect(tile.querySelector("button")).toBeNull();
+  });
+
+  it("keeps 'Price unavailable' for a generic null-price source", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        tilePrint([
+          sourceValue("yuyutei", 1980),
+          { ...sourceValue("snkrdunk", null), ineligible_reason: "no_observation" },
+        ]),
+      ]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(rowFor(tile, "SNKRDUNK")).getByText(UNAVAILABLE)).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+  });
+
+  it("leaves the ¥1,000 platform-floor copy completely untouched", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        tilePrint([
+          {
+            ...sourceValue("snkrdunk", 1000),
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+          },
+          sourceValue("yuyutei", null),
+        ]),
+      ]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const snkrdunk = rowFor(tile, "SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥1,000")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Current listing")).toBeTruthy();
+    // The absence beside it is the generic one - Yuyu-Tei said nothing and
+    // gave no reason - and the constrained price is unchanged by any of this.
+    expect(within(rowFor(tile, "Yuyu-Tei")).getByText(UNAVAILABLE)).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+  });
+
+  it("keeps 'Current listing' on a SNKRDUNK row that has a number", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), sourceValue("snkrdunk", 1500)])]),
+    );
+    const { container } = render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const snkrdunk = rowFor(tile, "SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥1,500")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Current listing")).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("adds no source rows to a print no source priced", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        tilePrint([sourceValue("yuyutei", null), noListing()], {
+          index_value_jpy: null,
+          source_count: 0,
+          coverage_status: "none",
+          confidence: "low",
+        }),
+      ]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+    expect(tile.textContent).not.toMatch(NO_LISTING);
+    expect(tile.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("puts no number or dash where the missing price would be, and does not clip", async () => {
+    // "No current listing" is longer than "Price unavailable" and sits in a
+    // ~72px two-column grid cell on a 390px phone. It must wrap, not truncate:
+    // "No current listin…" is worse than saying nothing.
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), noListing()])]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const snkrdunk = rowFor(tile, "SNKRDUNK");
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${NO_LISTING}`);
+    expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
+
+    const line = within(snkrdunk).getByText(NO_LISTING);
+    expect(line.className).not.toMatch(/truncate|overflow-hidden|whitespace-nowrap/);
+    // The source NAME may truncate - it is a known constant and cannot be
+    // misread as a number - but the sentence beneath it never does.
+    expect(within(snkrdunk).getByText("SNKRDUNK").className).toMatch(/truncate/);
+  });
+});

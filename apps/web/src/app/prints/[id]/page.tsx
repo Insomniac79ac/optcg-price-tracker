@@ -28,8 +28,8 @@ import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
+  describeUnavailableSource,
   isUnavailableSourceValue,
-  SOURCE_PRICE_UNAVAILABLE_LABEL,
   unavailableSourceValues,
 } from "@/lib/sourceAvailability";
 import {
@@ -494,6 +494,42 @@ function SourcePriceRange({
   );
 }
 
+/** What one source that reported no price says, in place of the price.
+ *
+ * TWO DIFFERENT CLAIMS, WRITTEN DIFFERENTLY. "Price unavailable" is the honest
+ * default when we do not know why a number is missing. When the backend does
+ * know - `insufficient_sold_and_no_floor`, SNKRDUNK's own verdict that it read
+ * the product and found nothing on offer - the panel says "No current listing"
+ * instead, because that is a fact about the marketplace rather than a fact
+ * about our data, and a collector reads the two very differently. The choice is
+ * made in @/lib/sourceAvailability from the published reason; nothing here
+ * inspects the source's name or infers a state from a null.
+ *
+ * THE DISCLOSURE EXISTS TO STOP A MISREADING. "No current listing" beside a
+ * card that another shop prices could be taken as a verdict on the card's
+ * worth. It is not one - a card can be scarce, expensive and simply not
+ * individually listed today - so the sentence saying so is one tap or one
+ * Enter away, in the same keyboard- and touch-operable disclosure the evidence
+ * labels above use. See InfoTip.
+ *
+ * Still no number, no evidence label, no constraint note and no contribution
+ * note: there is no price here for any of them to describe. */
+function UnavailablePriceLine({ value }: { value: PrintMarketIndexSourceValue }) {
+  const copy = describeUnavailableSource(value);
+
+  return (
+    /* Sentence case in the secondary colour at body scale, not the 20px
+       tabular mono a price gets: the panel must read as a statement about this
+       source, never scan as a figure. */
+    <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-text-secondary">
+      <span>{copy.label}</span>
+      {copy.explanation && (
+        <InfoTip label={`About ${copy.label}`} text={copy.explanation} />
+      )}
+    </p>
+  );
+}
+
 /** The real per-source values behind the index, each labelled with what it
  * actually is - and, beside them, the sources that reported nothing.
  *
@@ -541,12 +577,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
               )}
             </div>
             {isUnavailableSourceValue(row) ? (
-              /* Sentence case in the secondary colour at body scale, not the
-                 20px tabular mono a price gets: the panel must read as a
-                 statement about this source, never scan as a figure. */
-              <p className="mt-2 text-sm text-text-secondary">
-                {SOURCE_PRICE_UNAVAILABLE_LABEL}
-              </p>
+              <UnavailablePriceLine value={row} />
             ) : (
               <>
                 <div className="mono tabular mt-2 text-xl font-semibold text-text-primary">

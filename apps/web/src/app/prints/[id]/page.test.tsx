@@ -1612,3 +1612,252 @@ describe("print detail page - a source with no price", () => {
     expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
   });
 });
+
+/** "No current listing" - the absence SNKRDUNK can actually vouch for.
+ *
+ * "Price unavailable" is true of two different worlds and cannot tell them
+ * apart: one where Atlas has not managed to read a price, and one where the
+ * marketplace itself has nothing on offer. The second is a fact about the
+ * market and is worth saying out loud; the first is a fact about us and is
+ * not. The backend already separates them - `insufficient_sold_and_no_floor`
+ * is _resolve_snkrdunk's own verdict that it looked and found nothing - so
+ * the page says the stronger sentence exactly where that verdict is present
+ * and the generic one everywhere else.
+ *
+ * The disclosure is the other half of the change. "No current listing" beside
+ * a card another shop prices reads, to a collector skimming, like a comment on
+ * the card's worth. It is not one, and the sentence saying so must be reachable
+ * by tap and by keyboard - which is why it is an InfoTip and not a `title=`. */
+describe("print detail page - no current listing on SNKRDUNK", () => {
+  const NO_LISTING = "No current listing";
+  const UNAVAILABLE = "Price unavailable";
+  const EXPLANATION =
+    "No active listing was observed on SNKRDUNK. This does not necessarily " +
+    "mean the card has low value; there may simply be no seller listing it " +
+    "individually right now.";
+
+  function detailWithSources(
+    source_values: PrintMarketIndexSourceValue[],
+    index: Partial<PrintMarketIndex> = {},
+  ) {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 29800,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_price_range: null,
+        source_values,
+        ...index,
+      } as PrintMarketIndex,
+    });
+  }
+
+  function panelFor(name: string): HTMLElement {
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
+  }
+
+  /** The shape this whole change is about: Yuyu-Tei priced it, SNKRDUNK looked
+   * and found nothing on offer. */
+  function noListingDetail() {
+    return detailWithSources([
+      sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+      sourceValue({
+        source: "snkrdunk",
+        value_jpy: null,
+        observed_at: null,
+        eligible: false,
+        ineligible_reason: "insufficient_sold_and_no_floor",
+      }),
+    ]);
+  }
+
+  it("says 'No current listing', not 'Price unavailable'", async () => {
+    fetchPrint.mockResolvedValue(noListingDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(within(panelFor("SNKRDUNK")).getByText(NO_LISTING)).toBeTruthy();
+    // Requirement: no duplicate or conflicting wording. The two sentences make
+    // different claims, so exactly one of them may appear for this row.
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("offers the explanation as a keyboard- and tap-operable disclosure", async () => {
+    fetchPrint.mockResolvedValue(noListingDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const trigger = within(panelFor("SNKRDUNK")).getByRole("button", {
+      name: `About ${NO_LISTING}`,
+    });
+    // Closed until asked for, so it is not announced unprompted.
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText(EXPLANATION)).toBeNull();
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(EXPLANATION)).toBeTruthy();
+  });
+
+  it("says the absence is not a verdict on the card's value", async () => {
+    fetchPrint.mockResolvedValue(noListingDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    fireEvent.click(
+      within(panelFor("SNKRDUNK")).getByRole("button", { name: `About ${NO_LISTING}` }),
+    );
+    const panel = screen.getByText(EXPLANATION);
+    expect(panel.textContent).toMatch(/does not necessarily mean the card has low value/);
+    // It explains an absence; it must not quote or imply a price.
+    expect(panel.textContent).not.toMatch(/￥|\d/);
+  });
+
+  it("keeps 'Price unavailable' for a generic null-price source", async () => {
+    // no_observation means we have not read a price, NOT that nobody is
+    // selling. The weaker sentence is the only honest one.
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+        sourceValue({
+          source: "snkrdunk",
+          value_jpy: null,
+          observed_at: null,
+          eligible: false,
+          ineligible_reason: "no_observation",
+        }),
+      ]),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(within(snkrdunk).getByText(UNAVAILABLE)).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+    // Nothing extra to explain, so no disclosure is offered at all.
+    expect(within(snkrdunk).queryByRole("button")).toBeNull();
+  });
+
+  it("leaves the ¥1,000 platform-floor copy completely untouched", async () => {
+    // A platform-minimum listing HAS a number. It is a priced row with a
+    // constraint and never becomes an absence, whatever this change says.
+    fetchPrint.mockResolvedValue(
+      detailWithSources(
+        [
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 1000,
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+          }),
+          sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+        ],
+        { index_value_jpy: null, source_count: 0, coverage_status: "none", confidence: "low" },
+      ),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥1,000")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Minimum listing price")).toBeTruthy();
+    expect(within(snkrdunk).getByText(/Not used in Market Index/)).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+  });
+
+  it("keeps 'Current listing' on a SNKRDUNK row that has a number", async () => {
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+        sourceValue({ source: "snkrdunk", value_jpy: 24000 }),
+      ]),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥24,000")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Current listing")).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("keeps a stale SNKRDUNK observation exactly as it was", async () => {
+    // Stale means we HAVE a number and it has aged out. Untouched by this
+    // change: it keeps its price, its badge and its own exclusion line.
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+        sourceValue({
+          source: "snkrdunk",
+          value_jpy: 24000,
+          stale: true,
+          eligible: false,
+          ineligible_reason: "stale",
+        }),
+      ]),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥24,000")).toBeTruthy();
+    expect(within(snkrdunk).getByText("stale")).toBeTruthy();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+  });
+
+  it("still shows no source rows at all when NO source reported", async () => {
+    // A fully unpriced print gains nothing from this change: "Index
+    // unavailable" remains the single statement, and there is no row - and so
+    // no "No current listing" - to restate it per source.
+    fetchPrint.mockResolvedValue(
+      detailWithSources(
+        [
+          sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: null,
+            observed_at: null,
+            eligible: false,
+            ineligible_reason: "insufficient_sold_and_no_floor",
+          }),
+        ],
+        { index_value_jpy: null, source_count: 0, coverage_status: "none", confidence: "low" },
+      ),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Index unavailable")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+    expect(container.textContent).not.toMatch(NO_LISTING);
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("puts no number, dash or observation date where the price would be", async () => {
+    fetchPrint.mockResolvedValue(noListingDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    // The label, plus the disclosure trigger's own "?" glyph. Nothing else.
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${NO_LISTING}?`);
+    expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A|Seen/);
+  });
+
+  it("wraps rather than overflows its panel at a narrow viewport", async () => {
+    // The line is longer than "Price unavailable" and shares a row with the
+    // disclosure trigger. It must reflow, never be clipped: a half-shown
+    // sentence about absence is as misleading as a half-shown price.
+    fetchPrint.mockResolvedValue(noListingDetail());
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const line = within(panelFor("SNKRDUNK")).getByText(NO_LISTING).parentElement!;
+    expect(line.className).toMatch(/flex-wrap/);
+    expect(line.className).not.toMatch(/truncate|overflow-hidden|whitespace-nowrap/);
+  });
+});
