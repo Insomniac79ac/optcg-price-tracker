@@ -562,6 +562,197 @@ class PrintPriceHistoryOut(BaseModel):
     series: list[PrintPriceSeriesTrendOut]
 
 
+class PrintSeriesPointOut(BaseModel):
+    """One normalised historical point - see app.services.print_series for the
+    daily-normalisation rule that produces it.
+
+    One model serves both series kinds, and the fields that do not apply to a
+    kind are null rather than absent, so a client can read a point without
+    first branching on its parent series. Which fields are which:
+
+      source points        value_jpy, reference_type, evidence_type,
+                           eligible, constraint, ineligible_reason,
+                           observations_in_day
+      market_index points  value_jpy, index_version,
+                           source_semantics_version, source_count,
+                           coverage_status, source_price_range_*
+
+    `value_jpy` IS NEVER A STAND-IN FOR MISSING DATA. A day with no
+    observation has no point at all - there is no zero, no interpolation and
+    no carried-forward value anywhere in this payload. The only null
+    `value_jpy` is an archived Market Index point whose stored index really was
+    NULL because no source was eligible that day (coverage_status='none'),
+    which is a recorded result rather than an absence.
+    """
+
+    t: datetime
+    day: date
+    value_jpy: int | None
+
+    # --- source points ---
+    #
+    # WHAT the point is, in the vocabulary the rest of the pricing API speaks.
+    # The collector-side `price_observations.price_type` behind it ("sell",
+    # "floor") is deliberately NOT published: a client that branched on it
+    # would break the day a source renamed a stored value, which is the same
+    # coupling the platform-level selector removes from the request side. Both
+    # are null for a source Atlas has no instrument rule for - honestly
+    # unlabelled, never guessed.
+    reference_type: str | None = None
+    evidence_type: str | None = None
+    eligible: bool | None = None
+    constraint: str | None = None
+    ineligible_reason: str | None = None
+    # Null on every point that exists today: no stored observation is an
+    # aggregate of other observations, so there is no sample behind it. The
+    # field is here for a future aggregated instrument rather than being
+    # invented later.
+    sample_size: int | None = None
+    # How many stored rows that UTC day held for this instrument. 1 for a
+    # single nightly reading; higher where a collector polled more than once,
+    # which is precisely the fact daily normalisation hides from the chart and
+    # this field keeps available to a reader.
+    observations_in_day: int | None = None
+
+    # --- market_index points ---
+    index_version: int | None = None
+    source_semantics_version: int | None = None
+    source_count: int | None = None
+    coverage_status: str | None = None
+    source_price_range_low_jpy: int | None = None
+    source_price_range_high_jpy: int | None = None
+
+
+class PrintSeriesSegmentOut(BaseModel):
+    """A run of points measured the same way.
+
+    A segment boundary is an instrument change, never a price change: a source
+    series breaks where the instrument changes (a SNKRDUNK listing floor is not
+    a completed-sale median), and the Market Index series breaks where
+    `index_version` or `source_semantics_version` changes. A client draws one
+    stroke per segment and joins nothing across a boundary.
+
+    Two adjacent segments can BOTH carry a null `reference_type`: for a source
+    Atlas has no instrument rule for, every instrument is unlabelled, and two
+    of them are still two. Unlabelled is not "the same" - the break between
+    them is reported as `instrument_change`, and they must not be joined.
+    """
+
+    reference_type: str | None = None
+    evidence_type: str | None = None
+    index_version: int | None = None
+    source_semantics_version: int | None = None
+    points: list[PrintSeriesPointOut]
+
+
+class PrintSeriesBreakOut(BaseModel):
+    """One boundary between segments, timestamped at the first point AFTER the
+    change so a client can mark it without re-deriving it from the segments.
+
+    `reason` is `reference_type_change`, `instrument_change`,
+    `index_version_change` or `source_semantics_version_change`. The from_/to_
+    fields populated depend on the reason; the rest stay null. A day on which
+    both index versions moved emits one break per changed field rather than one
+    ambiguous break.
+
+    `instrument_change` is the unlabelled case: the instrument changed but
+    Atlas has no name for either side, so from_/to_reference_type are both
+    null. It is a real boundary, not a null-to-null no-op, and joining across
+    it would weld two different measurements into one line.
+    """
+
+    at: datetime
+    reason: str
+    from_reference_type: str | None = None
+    to_reference_type: str | None = None
+    from_index_version: int | None = None
+    to_index_version: int | None = None
+    from_source_semantics_version: int | None = None
+    to_source_semantics_version: int | None = None
+
+
+class PrintSeriesCoverageOut(BaseModel):
+    """Measured facts about what this series holds - NOT a score.
+
+    `covers_7d`/`covers_30d` answer HISTORICAL SPAN: does this series reach
+    back to at least the UTC calendar day N days before `generated_at`? Not
+    "are there enough points to draw a line", which is what an earlier
+    `sufficient_for_*` pair meant and which reported true for 30 days while
+    holding 14. A series covering a window need NOT have a point on every day
+    in it - sparse history spanning the window covers it, and the missing days
+    stay honest gaps.
+
+    `null` means this request cannot answer the question: a `window=7d` request
+    truncates the data at 7 days by construction, so `covers_30d` is null
+    rather than a false that would read as "no 30-day history exists". Ask a
+    wider window to get both.
+
+    Each answer is about THIS response's series, so a window asking about its
+    own width answers about its own edge: `covers_30d` under `window=30d` says
+    whether the returned points reach that window's start instant. Deeper
+    history that the window itself excluded is reported by `window=all`.
+
+    Neither is a confidence, quality, reliability or accuracy measure and
+    neither may be rendered as one. `distinct_days` and `earliest` sit beside
+    them so a thin series is visible rather than smoothed over.
+    """
+
+    earliest: datetime | None
+    latest: datetime | None
+    distinct_days: int
+    point_count: int
+    covers_7d: bool | None
+    covers_30d: bool | None
+
+
+class PrintSeriesOut(BaseModel):
+    """One platform's history: what the collector selected.
+
+    `key` is the selector that produced it (`market_index` or `source:<name>`),
+    echoed so a client can match a response to a request without re-deriving
+    it. Selection is PLATFORM-LEVEL: which instruments a platform contributes
+    is the server's decision and is reported per segment, so no client ever
+    depends on the stored price_type vocabulary.
+
+    `role` is `primary` for market-facing evidence and `auxiliary` for a value
+    that is reported but is not what the card costs - Yuyu-Tei's dealer buy
+    quote is the only one today. Every publicly reachable series is `primary`
+    in this tranche; auxiliary values are excluded from a platform series and
+    have no selector yet, and the field exists so they are distinguishable the
+    day a request-level flag makes one reachable.
+
+    `available` is false in two honest ways, distinguished by
+    `unavailable_reason`: `source_not_configured` (Atlas does not collect this
+    platform) and `no_history_in_window` (it does, and this print has none in
+    this window). Both return a real, empty, named series rather than a 404 or
+    fabricated points.
+    """
+
+    key: str
+    kind: Literal["market_index", "source"]
+    source: str | None
+    role: Literal["primary", "auxiliary"]
+    available: bool
+    unavailable_reason: str | None
+    segments: list[PrintSeriesSegmentOut]
+    breaks: list[PrintSeriesBreakOut]
+    coverage: PrintSeriesCoverageOut
+
+
+class PrintSeriesHistoryOut(BaseModel):
+    """GET /prints/{print_id}/series.
+
+    `window_start` is null for `window="all"`, which returns the real available
+    history and claims nothing about its depth.
+    """
+
+    card_print_id: int
+    window: Literal["7d", "30d", "all"]
+    window_start: datetime | None
+    generated_at: datetime
+    series: list[PrintSeriesOut]
+
+
 class DisplayImageCanvasOut(BaseModel):
     """Intrinsic pixel size of the display image as published by its host."""
 

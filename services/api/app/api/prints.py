@@ -22,6 +22,7 @@ from app.schemas import (
     PrintPriceHistoryOut,
     PrintPriceObservationOut,
     PrintPriceSeriesTrendOut,
+    PrintSeriesHistoryOut,
 )
 from app.services.display_image import get_display_image_for_print
 from app.services.print_catalogue import (
@@ -35,6 +36,13 @@ from app.services.print_market_index import get_market_index_for_print
 from app.services.print_pricing import (
     compute_print_price_series_trends,
     get_price_history_for_print,
+)
+from app.services.print_series import (
+    DEFAULT_WINDOW,
+    WINDOW_DAYS,
+    SeriesKeyError,
+    get_print_series,
+    parse_series_key,
 )
 from app.services.source_semantics import classify_observation
 
@@ -158,3 +166,54 @@ def get_print_prices(print_id: int, db: Session = Depends(get_db)):
     ]
     series = [PrintPriceSeriesTrendOut(**trend) for trend in compute_print_price_series_trends(rows)]
     return PrintPriceHistoryOut(card_print_id=print_id, observations=observations, series=series)
+
+
+@router.get("/{print_id}/series", response_model=PrintSeriesHistoryOut)
+def get_print_series_history(
+    print_id: int,
+    series: list[str] | None = Query(
+        default=None,
+        description=(
+            "Repeatable platform selector: 'market_index' or 'source:<name>'. "
+            "Selection is platform-level - which instruments a platform contributes is "
+            "the server's decision and is reported per segment, so no request depends "
+            "on stored price_type vocabulary. Source names resolve against the sources "
+            "table; there is no allowlist, so a source added later works with no code "
+            "change. Omit to get Market Index plus every source that has observed "
+            "this print."
+        ),
+    ),
+    window: str = Query(
+        default=DEFAULT_WINDOW,
+        description="7d, 30d or all. 90d is not offered yet - see app.services.print_series.",
+    ),
+    db: Session = Depends(get_db),
+):
+    """One print's history, one series per platform the caller selected.
+
+    Everything this endpoint does beyond parsing lives in
+    app.services.print_series: daily normalisation, instrument segmentation,
+    version breaks and coverage. Semantics come from the shipped
+    classify_observation and Market Index history is read verbatim from
+    market_index_snapshots - no index is ever recomputed here.
+
+    A series key naming a source Atlas does not collect is NOT an error: it
+    comes back as an explicitly unavailable series (see PrintSeriesOut). Only
+    an unparseable key or an unsupported window is a 400, because those are
+    client mistakes rather than statements about the data.
+    """
+    _get_print_or_404(db, print_id)
+
+    if window not in WINDOW_DAYS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid window. Must be one of {sorted(WINDOW_DAYS)}",
+        )
+    try:
+        requests = [parse_series_key(key) for key in series] if series else None
+    except SeriesKeyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return PrintSeriesHistoryOut(
+        **get_print_series(db, print_id, series=requests, window=window)
+    )
