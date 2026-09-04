@@ -297,7 +297,10 @@ describe("print detail page", () => {
     expect(sources.textContent).not.toMatch(/sold|sale/i);
   });
 
-  it("shows a single source panel for a one-source print, with no empty second panel", async () => {
+  it("names the source that reported nothing beside the one that did, with no invented price", async () => {
+    // The panel used to be dropped entirely, which left a print Yuyu-Tei
+    // priced and SNKRDUNK did not looking exactly like a print SNKRDUNK had
+    // never been asked about. The absence is now stated.
     fetchPrint.mockResolvedValue(
       makeDetail({
         market_index: {
@@ -317,10 +320,9 @@ describe("print detail page", () => {
 
     const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
     expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
-    expect(within(sources).queryByText("SNKRDUNK")).toBeNull();
+    expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
+    expect(within(sources).getByText("Price unavailable")).toBeTruthy();
     expect(sources.textContent).not.toMatch(/￥0\b/);
-    // One source, one panel - the layout must not reserve a second column.
-    expect(sources.querySelector(".sm\\:grid-cols-2")).toBeNull();
   });
 
   it("gives a base printing no printing badge at all", async () => {
@@ -1459,5 +1461,154 @@ describe("print detail page - source prices that did not feed the index", () => 
 
     expect(screen.getByText("1 of 2 source prices used")).toBeTruthy();
     expect(container.textContent).not.toMatch(/Reference only/);
+  });
+});
+
+/** A source that reported no price is a FACT about this print, and the panel
+ * that names it is the only way the page can state that fact.
+ *
+ * The failure it replaces was silent by construction: a print Yuyu-Tei priced
+ * and SNKRDUNK did not rendered one panel, which is byte-for-byte what a print
+ * only Yuyu-Tei had ever been asked about renders. A collector comparing two
+ * shops could not tell "SNKRDUNK has nothing" from "SNKRDUNK was not consulted"
+ * - and the first is exactly the thing they opened the page to learn.
+ *
+ * These tests pin the honest version and, just as importantly, everything it
+ * must NOT disturb: the constraint copy on a real price, the arithmetic above,
+ * and the empty state where no source reported at all. */
+describe("print detail page - a source with no price", () => {
+  const UNAVAILABLE = "Price unavailable";
+
+  function detailWithSources(
+    source_values: PrintMarketIndexSourceValue[],
+    index: Partial<PrintMarketIndex> = {},
+  ) {
+    return makeDetail({
+      market_index: {
+        index_value_jpy: 24000,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_price_range: null,
+        source_values,
+        ...index,
+      } as PrintMarketIndex,
+    });
+  }
+
+  /** The panel for one named source, whatever it contains. */
+  function panelFor(name: string): HTMLElement {
+    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
+  }
+
+  it("names Yuyu-Tei as unavailable when only SNKRDUNK reported a price", async () => {
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+        sourceValue({ source: "snkrdunk", value_jpy: 24000 }),
+      ]),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(within(panelFor("SNKRDUNK")).getByText("￥24,000")).toBeTruthy();
+    expect(within(panelFor("Yuyu-Tei")).getByText(UNAVAILABLE)).toBeTruthy();
+  });
+
+  it("names SNKRDUNK as unavailable when only Yuyu-Tei reported a price", async () => {
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+        sourceValue({ source: "snkrdunk", value_jpy: null, observed_at: null }),
+      ]),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(within(panelFor("Yuyu-Tei")).getByText("￥29,800")).toBeTruthy();
+    expect(within(panelFor("SNKRDUNK")).getByText(UNAVAILABLE)).toBeTruthy();
+  });
+
+  it("says nothing about availability when both sources reported a price", async () => {
+    fetchPrint.mockResolvedValue(makeDetail());
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(within(panelFor("Yuyu-Tei")).getByText("￥29,800")).toBeTruthy();
+    expect(within(panelFor("SNKRDUNK")).getByText("￥24,000")).toBeTruthy();
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("keeps the plain 'Index unavailable' empty state when no source reported", async () => {
+    // One statement, not one per source. Listing every known source beneath an
+    // unavailable index saying "Price unavailable" restates the same fact as
+    // many times as Atlas happens to have sources.
+    fetchPrint.mockResolvedValue(
+      detailWithSources(
+        [
+          sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+          sourceValue({ source: "snkrdunk", value_jpy: null, observed_at: null }),
+        ],
+        { index_value_jpy: null, source_count: 0, coverage_status: "none", confidence: "low" },
+      ),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    expect(screen.getByText("Index unavailable")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("leaves a constrained source's own copy exactly as it was", async () => {
+    // The unavailable row is additive. A real price at the platform minimum
+    // keeps its chip, its explanation and its "Not used in Market Index" line;
+    // nothing about the new row changes what the priced panel beside it says.
+    fetchPrint.mockResolvedValue(
+      detailWithSources(
+        [
+          sourceValue({
+            source: "snkrdunk",
+            value_jpy: 120,
+            eligible: false,
+            ineligible_reason: "platform_floor",
+            constraint: "platform_floor",
+          }),
+          sourceValue({ source: "yuyutei", value_jpy: null, observed_at: null }),
+        ],
+        { index_value_jpy: null, source_count: 0, coverage_status: "none", confidence: "low" },
+      ),
+    );
+    const { container } = render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥120")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Minimum listing price")).toBeTruthy();
+    expect(within(snkrdunk).getByText(/Not used in Market Index/)).toBeTruthy();
+    // The unavailable panel borrows none of that vocabulary: it has no price
+    // to qualify, so it carries no constraint, evidence or contribution line.
+    const yuyutei = panelFor("Yuyu-Tei");
+    expect(within(yuyutei).getByText(UNAVAILABLE)).toBeTruthy();
+    expect(yuyutei.textContent).not.toMatch(/Minimum listing price|Retail price|Reference only/);
+    expect(container.textContent).not.toMatch(/platform_floor/);
+  });
+
+  it("puts no ¥0, dash or any other number where the missing price would be", async () => {
+    fetchPrint.mockResolvedValue(
+      detailWithSources([
+        sourceValue({ source: "yuyutei", value_jpy: 29800 }),
+        sourceValue({ source: "snkrdunk", value_jpy: null, observed_at: null }),
+      ]),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const snkrdunk = panelFor("SNKRDUNK");
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${UNAVAILABLE}`);
+    // Nothing number-shaped at all: no ￥, no digit, no dash standing in for
+    // one, and no "Seen <date>" for an observation that never happened.
+    expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
   });
 });

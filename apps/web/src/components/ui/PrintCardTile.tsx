@@ -4,6 +4,11 @@ import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/compon
 import { formatJpy } from "@/lib/format";
 import { type PrintUiModel, sourceDisplayName } from "@/lib/prints";
 import {
+  isUnavailableSourceValue,
+  SOURCE_PRICE_UNAVAILABLE_LABEL,
+  unavailableSourceValues,
+} from "@/lib/sourceAvailability";
+import {
   displayedSourceValues,
   isReferenceOnly,
   REFERENCE_ONLY_LABEL,
@@ -216,10 +221,16 @@ export function PrintCardTile({
  * at. "Market Index ¥14,000 / Yuyu-Tei ¥14,000 / Retail price" says one number
  * twice and one fact - which shop - once, and the fact is worth the line.
  *
- * A source with `value_jpy: null` still renders nothing: it reported no price,
- * and no row may invent one. When no source reported at all the block
+ * A source with `value_jpy: null` gets a row that NAMES it and says "Price
+ * unavailable" - never ¥0, never a dash, never a blank cell where a price
+ * goes. Dropping it silently made a one-priced-source tile indistinguishable
+ * from a tile whose second retailer had never been asked, which is the one
+ * thing a collector comparing two shops needs to be able to tell apart. The
+ * absence rows follow the priced ones so the prices stay the top of the block,
+ * and they appear only when some other source on this print did report a
+ * number - see @/lib/sourceAvailability. When NO source reported, the block
  * collapses entirely, leaving MarketIndexValue's "Index unavailable" as the
- * only claim on the tile.
+ * only claim on the tile rather than one negative per source beneath it.
  *
  * Laid out as a caption-over-price comparison so the retailers can be read
  * against each other at a glance, with the price the legible half and the
@@ -240,7 +251,11 @@ export function PrintCardTile({
  * truncate: it is a known constant and cannot be misread as a number.
  */
 function SourcePrices({ print }: { print: PrintUiModel }) {
-  const rows = displayedSourceValues(print.marketIndex.source_values);
+  const sources = print.marketIndex.source_values;
+  // Priced rows first, then the sources that reported nothing. The second
+  // list is empty unless the first one is not - so this collapses to exactly
+  // the old behaviour on a print no source priced.
+  const rows = [...displayedSourceValues(sources), ...unavailableSourceValues(sources)];
   if (rows.length === 0) return null;
 
   return (
@@ -254,32 +269,44 @@ function SourcePrices({ print }: { print: PrintUiModel }) {
           <dt className="mono truncate text-[10px] uppercase leading-none tracking-[0.08em] text-text-muted">
             {sourceDisplayName(row.source)}
           </dt>
-          <dd className="mono tabular mt-1.5 break-words text-[13px] font-medium leading-none text-text-primary">
-            {formatJpy(row.value_jpy)}
-          </dd>
-          {/* What KIND of price this is - "Retail price", "Current listing",
-              "Recent sales median". Neutral supporting text in the muted
-              colour, never a warning: under Market Index v3 an eligible
-              current listing counts toward the index exactly like a sold
-              median, so this describes the evidence rather than qualifying it.
-              The one-sentence explanation behind each label lives on the print
-              detail page: the whole tile is a single <Link>, and a disclosure
-              button nested inside an anchor is invalid HTML that misbehaves on
-              both keyboard and touch. */}
-          <dd className="mt-1 text-[9px] leading-tight text-text-muted">
-            {sourceEvidenceLabel(row.reference_type)}
-          </dd>
-          {/* A price the index was not computed from. Under v3 this can only
-              be an EXCLUDED value - a platform-minimum listing, a stale
-              observation - because every eligible value now contributes, so
-              the line no longer appears beside perfectly ordinary prices the
-              way it did under v2. Two words at 9px in the muted colour: enough
-              that an excluded row is not read as disagreement with the index,
-              small enough that it never competes with the price above it. */}
-          {isReferenceOnly(row) && (
-            <dd className="mt-1 text-[9px] leading-tight text-text-muted">
-              {REFERENCE_ONLY_LABEL}
+          {/* A statement of absence, written as a sentence and set in the
+              muted colour at the ordinary text size - deliberately NOT the
+              tabular mono treatment a price gets, so it can never be scanned
+              as a number-shaped thing in the price column. */}
+          {isUnavailableSourceValue(row) ? (
+            <dd className="mt-1.5 text-[11px] leading-tight text-text-muted">
+              {SOURCE_PRICE_UNAVAILABLE_LABEL}
             </dd>
+          ) : (
+            <>
+              <dd className="mono tabular mt-1.5 break-words text-[13px] font-medium leading-none text-text-primary">
+                {formatJpy(row.value_jpy)}
+              </dd>
+              {/* What KIND of price this is - "Retail price", "Current listing",
+                  "Recent sales median". Neutral supporting text in the muted
+                  colour, never a warning: under Market Index v3 an eligible
+                  current listing counts toward the index exactly like a sold
+                  median, so this describes the evidence rather than qualifying it.
+                  The one-sentence explanation behind each label lives on the print
+                  detail page: the whole tile is a single <Link>, and a disclosure
+                  button nested inside an anchor is invalid HTML that misbehaves on
+                  both keyboard and touch. */}
+              <dd className="mt-1 text-[9px] leading-tight text-text-muted">
+                {sourceEvidenceLabel(row.reference_type)}
+              </dd>
+              {/* A price the index was not computed from. Under v3 this can only
+                  be an EXCLUDED value - a platform-minimum listing, a stale
+                  observation - because every eligible value now contributes, so
+                  the line no longer appears beside perfectly ordinary prices the
+                  way it did under v2. Two words at 9px in the muted colour: enough
+                  that an excluded row is not read as disagreement with the index,
+                  small enough that it never competes with the price above it. */}
+              {isReferenceOnly(row) && (
+                <dd className="mt-1 text-[9px] leading-tight text-text-muted">
+                  {REFERENCE_ONLY_LABEL}
+                </dd>
+              )}
+            </>
           )}
         </div>
       ))}

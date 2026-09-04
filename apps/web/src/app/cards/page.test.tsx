@@ -273,9 +273,11 @@ describe("print catalogue page", () => {
     expect(within(tile).getAllByText("￥120").length).toBe(2);
     expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(tile).getByText("Retail price")).toBeTruthy();
-    // A source that reported nothing is still not a row - not a dash, and
-    // certainly not ￥0. Showing provenance never means inventing a price.
-    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+    // A source that reported nothing is named and told the truth about: it
+    // gets a row saying "Price unavailable", never a dash and certainly never
+    // ￥0. Showing provenance never means inventing a price.
+    expect(within(tile).getByText("SNKRDUNK")).toBeTruthy();
+    expect(within(tile).getByText("Price unavailable")).toBeTruthy();
     expect(tile.textContent).not.toMatch(/￥0\b/);
   });
 
@@ -1120,12 +1122,20 @@ describe("catalogue tiles - source provenance", () => {
     expect(tile.querySelector("button")).toBeNull();
   });
 
-  it("renders no row, and no invented price, for a source that reported nothing", async () => {
+  it("names a source that reported nothing, and invents no price for it", async () => {
+    // SANJI_BASE prices Yuyu-Tei at ￥120 and SNKRDUNK at null. The tile used
+    // to drop SNKRDUNK silently, which made this print indistinguishable from
+    // one SNKRDUNK had never been asked about. It is now named, with a
+    // sentence where its price would be - and the sentence is the ONLY thing
+    // that changed: no ￥0, no dash, no blank cell, no evidence label for a
+    // price that does not exist.
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_BASE]));
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+    const snkrdunk = within(tile).getByText("SNKRDUNK").parentElement!;
+    expect(within(snkrdunk).getByText("Price unavailable")).toBeTruthy();
+    expect(snkrdunk.textContent).not.toMatch(/￥|\d/);
     expect(tile.textContent).not.toMatch(/￥0\b|—|--/);
   });
 });
@@ -1202,5 +1212,126 @@ describe("catalogue tiles - source prices that did not feed the index", () => {
     await screen.findByText("OP01-013");
 
     expect(container.textContent).not.toMatch(/Reference only/);
+  });
+});
+
+/** The same honesty, on the catalogue tile.
+ *
+ * /cards and /prints/[id] must agree about what a missing source price looks
+ * like: a collector who sees "SNKRDUNK / Price unavailable" while browsing and
+ * then opens the print must find the same statement there, not a tile that
+ * quietly omitted the source and a page that named it (or the reverse). These
+ * mirror the print detail page's own suite deliberately. */
+describe("catalogue tiles - a source with no price", () => {
+  const UNAVAILABLE = "Price unavailable";
+
+  function tilePrint(source_values: PrintMarketIndexSourceValue[], index: Partial<PrintMarketIndex> = {}) {
+    return makePrint({
+      card_print_id: 7001,
+      card_code: "OP01-041",
+      market_index: {
+        index_value_jpy: 1500,
+        source_count: 1,
+        coverage_status: "limited",
+        confidence: "medium",
+        source_values,
+        ...index,
+      } as PrintMarketIndex,
+    });
+  }
+
+  /** The one <div> holding a source's caption and whatever sits under it. */
+  function rowFor(tile: HTMLElement, name: string): HTMLElement {
+    return within(tile).getByText(name).parentElement as HTMLElement;
+  }
+
+  it("names Yuyu-Tei as unavailable when only SNKRDUNK reported a price", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", null), sourceValue("snkrdunk", 1500)])]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(rowFor(tile, "SNKRDUNK")).getByText("￥1,500")).toBeTruthy();
+    expect(within(rowFor(tile, "Yuyu-Tei")).getByText(UNAVAILABLE)).toBeTruthy();
+  });
+
+  it("names SNKRDUNK as unavailable when only Yuyu-Tei reported a price", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), sourceValue("snkrdunk", null)])]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(rowFor(tile, "Yuyu-Tei")).getByText("￥1,980")).toBeTruthy();
+    expect(within(rowFor(tile, "SNKRDUNK")).getByText(UNAVAILABLE)).toBeTruthy();
+  });
+
+  it("says nothing about availability when both sources reported a price", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
+    const { container } = render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(rowFor(tile, "Yuyu-Tei")).getByText("￥1,980")).toBeTruthy();
+    expect(within(rowFor(tile, "SNKRDUNK")).getByText("￥1,500")).toBeTruthy();
+    expect(container.textContent).not.toMatch(UNAVAILABLE);
+  });
+
+  it("keeps the bare 'Index unavailable' tile when no source reported", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        tilePrint([sourceValue("yuyutei", null), sourceValue("snkrdunk", null)], {
+          index_value_jpy: null,
+          source_count: 0,
+          coverage_status: "none",
+          confidence: "low",
+        }),
+      ]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    // No source block at all - not one negative row per known source.
+    expect(tile.textContent).not.toMatch(UNAVAILABLE);
+    expect(within(tile).queryByText("Yuyu-Tei")).toBeNull();
+    expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
+  });
+
+  it("leaves a reference-only source's own marker exactly as it was", async () => {
+    // The tile's existing qualifier vocabulary belongs to prices. Adding an
+    // absence row beside a marked price must not move, duplicate or soften it.
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([
+        tilePrint([
+          { ...sourceValue("snkrdunk", 2500), fallback_used: true, contributes_to_index: false },
+          sourceValue("yuyutei", null),
+        ]),
+      ]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const snkrdunk = rowFor(tile, "SNKRDUNK");
+    expect(within(snkrdunk).getByText("￥2,500")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Current listing")).toBeTruthy();
+    expect(within(snkrdunk).getByText("Reference only")).toBeTruthy();
+    // The absence row borrows none of it.
+    const yuyutei = rowFor(tile, "Yuyu-Tei");
+    expect(within(yuyutei).getByText(UNAVAILABLE)).toBeTruthy();
+    expect(yuyutei.textContent).not.toMatch(/Reference only|Retail price/);
+    expect(within(tile).getAllByText("Reference only")).toHaveLength(1);
+  });
+
+  it("puts no ¥0, dash or any other number where the missing price would be", async () => {
+    fetchPrintCatalogue.mockResolvedValue(
+      catalogueResponse([tilePrint([sourceValue("yuyutei", 1980), sourceValue("snkrdunk", null)])]),
+    );
+    render(<PrintsCataloguePage />);
+
+    const tile = await screen.findByRole("link", { name: /Sanji/ });
+    const snkrdunk = rowFor(tile, "SNKRDUNK");
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${UNAVAILABLE}`);
+    expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
   });
 });

@@ -28,7 +28,13 @@ import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
+  isUnavailableSourceValue,
+  SOURCE_PRICE_UNAVAILABLE_LABEL,
+  unavailableSourceValues,
+} from "@/lib/sourceAvailability";
+import {
   contributionQualifier,
+  displayedSourceValues,
   rangeIncludesReferenceOnly,
   REFERENCE_ONLY_RANGE_CAPTION,
 } from "@/lib/sourceContribution";
@@ -489,16 +495,30 @@ function SourcePriceRange({
 }
 
 /** The real per-source values behind the index, each labelled with what it
- * actually is.
+ * actually is - and, beside them, the sources that reported nothing.
  *
- * Only sources that reported a value get a panel, so the panels *are* the
- * coverage statement and a one-source print gets one full-width panel rather
- * than a half-empty pair implying a figure is missing. Nothing is derived: the
- * price, its reference type, when it was observed and its sample size (when
- * the value is a median of sales) all ride on the same `source_values` entry.
+ * The panels *are* the coverage statement, which is why a source with no price
+ * gets one too: it is named, and its panel says "Price unavailable" instead of
+ * a figure. Never ¥0, never a dash, never an empty panel - each of those is a
+ * price-shaped mark standing where a price belongs, and the honest claim here
+ * is a sentence saying there is no price to show. Without it, a print priced by
+ * one shop and not the other looked exactly like a print only one shop had ever
+ * been asked about.
+ *
+ * An unavailable panel appears only when another source on this print did
+ * report a number, so a print no source priced still shows no "Market sources"
+ * section at all and "Index unavailable" above stands as the single statement -
+ * see @/lib/sourceAvailability. Priced panels come first, in the API's order.
+ *
+ * An unavailable panel carries the source name and that one sentence, and
+ * nothing else: the evidence type, the observation date, the constraint note
+ * and the contribution note all describe a NUMBER, and there is no number here
+ * for them to be about. Nothing is derived: the price, its reference type, when
+ * it was observed and its sample size (when the value is a median of sales) all
+ * ride on the same `source_values` entry.
  */
 function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
-  const rows = sources.filter((source) => source.value_jpy !== null);
+  const rows = [...displayedSourceValues(sources), ...unavailableSourceValues(sources)];
   if (rows.length === 0) return null;
 
   return (
@@ -520,17 +540,28 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
                 </span>
               )}
             </div>
-            <div className="mono tabular mt-2 text-xl font-semibold text-text-primary">
-              {formatJpy(row.value_jpy)}
-            </div>
-            <EvidenceTypeLine value={row} />
-            {row.observed_at && (
-              <p className="mt-0.5 text-[11px] text-text-faint">
-                Seen {formatDate(row.observed_at)}
+            {isUnavailableSourceValue(row) ? (
+              /* Sentence case in the secondary colour at body scale, not the
+                 20px tabular mono a price gets: the panel must read as a
+                 statement about this source, never scan as a figure. */
+              <p className="mt-2 text-sm text-text-secondary">
+                {SOURCE_PRICE_UNAVAILABLE_LABEL}
               </p>
+            ) : (
+              <>
+                <div className="mono tabular mt-2 text-xl font-semibold text-text-primary">
+                  {formatJpy(row.value_jpy)}
+                </div>
+                <EvidenceTypeLine value={row} />
+                {row.observed_at && (
+                  <p className="mt-0.5 text-[11px] text-text-faint">
+                    Seen {formatDate(row.observed_at)}
+                  </p>
+                )}
+                <SourceConstraintNote value={row} />
+                <SourceContributionNote value={row} />
+              </>
             )}
-            <SourceConstraintNote value={row} />
-            <SourceContributionNote value={row} />
           </div>
         ))}
       </div>
