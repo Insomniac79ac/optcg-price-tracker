@@ -454,6 +454,82 @@ def test_single_observation_is_insufficient_history(client, five_prints):
     assert series[0]["change_30d_pct"] is None
 
 
+def test_history_observations_carry_the_server_resolved_instrument(
+    client, sanji_two_source
+):
+    """`/prints/{id}/prices` names each row's instrument itself.
+
+    This is the field a client reads instead of mapping a stored `price_type`
+    of its own: SNKRDUNK stores "floor" and Yuyu-Tei stores "sell", and both
+    spellings are Atlas's private storage vocabulary. The endpoint reports
+    `listing_floor`/`retail_sell` - the SAME words /market-index and /series
+    already use - so a collector surface can name a series without ever
+    learning what a `price_type` token means.
+    """
+    parallel_id = sanji_two_source["sanji_parallel"].id
+    observations = client.get(f"/prints/{parallel_id}/prices").json()["observations"]
+
+    by_source = {obs["source"]: obs for obs in observations}
+    assert by_source["snkrdunk"]["price_type"] == "floor"
+    assert by_source["snkrdunk"]["reference_type"] == "listing_floor"
+    assert by_source["snkrdunk"]["evidence_type"] == "listing"
+    assert by_source["yuyutei"]["price_type"] == "sell"
+    assert by_source["yuyutei"]["reference_type"] == "retail_sell"
+    assert by_source["yuyutei"]["evidence_type"] == "listing"
+
+
+def test_history_instrument_matches_the_market_index_for_the_same_source(
+    client, sanji_two_source
+):
+    """One quantity, one name, on both payloads.
+
+    A history row and the Market Index source value for the same source are
+    two views of the same instrument. If they could disagree, a print page
+    would be free to call one series "Current listing" above the chart and
+    something else beneath it - which is precisely the drift these fields
+    exist to make impossible.
+    """
+    parallel_id = sanji_two_source["sanji_parallel"].id
+    _, source_values = _sources(client, parallel_id)
+    observations = client.get(f"/prints/{parallel_id}/prices").json()["observations"]
+
+    for obs in observations:
+        index_value = source_values[obs["source"]]
+        assert obs["reference_type"] == index_value["reference_type"]
+        assert obs["evidence_type"] == index_value["evidence_type"]
+
+
+def test_unconfigured_source_history_is_unnamed_rather_than_guessed(
+    client, db_session, five_prints
+):
+    """A source this build has no instrument rule for is returned UNNAMED.
+
+    Nulls, not an omission, not an error, and above all not a label invented
+    from the token: a future Card Rush / Mercado / Cardmarket observation is
+    still returned in full, with real prices and real semantics, and a client
+    names its series by the platform alone. This is the property that lets a
+    new source ship server-side with no frontend release.
+    """
+    print_row = five_prints["sanji_base"]
+    legacy = five_prints["sanji_legacy"]
+    future_source = make_source(db_session, name="cardrush")
+    mapping = make_mapping(
+        db_session, legacy, future_source, print_row, source_card_id="cr-OP01-013"
+    )
+    make_observation(
+        db_session, legacy, future_source, mapping, print_row,
+        price_type="shop_asking", price_jpy=880, observed_at=NOW,
+    )
+
+    observations = client.get(f"/prints/{print_row.id}/prices").json()["observations"]
+    future = next(obs for obs in observations if obs["source"] == "cardrush")
+
+    assert future["price_jpy"] == 880
+    assert future["price_type"] == "shop_asking"
+    assert future["reference_type"] is None
+    assert future["evidence_type"] is None
+
+
 def test_trend_never_fabricates_change_without_a_real_baseline(client, db_session, five_prints):
     print_row = five_prints["sanji_base"]
     legacy = five_prints["sanji_legacy"]

@@ -44,6 +44,7 @@ from app.services.print_series import (
     get_print_series,
     parse_series_key,
 )
+from app.services.source_instruments import describe_instrument
 from app.services.source_semantics import classify_observation
 
 router = APIRouter(prefix="/prints", tags=["prints"])
@@ -124,17 +125,26 @@ def get_print_market_index(print_id: int, db: Session = Depends(get_db)):
 def _to_price_observation_out(
     print_id: int, obs: PriceObservation, source_name: str
 ) -> PrintPriceObservationOut:
-    """One stored observation, returned verbatim plus its source semantics.
+    """One stored observation, returned verbatim plus its source semantics
+    and its instrument name.
 
     The raw row is copied field for field - nothing is filtered, reordered,
-    rounded or rewritten - and the semantics ride alongside as annotations
-    (see PrintPriceObservationOut). Every source-specific rule is asked of
+    rounded or rewritten - and both annotations ride alongside it (see
+    PrintPriceObservationOut). Every source-specific rule is asked of
     classify_observation, the same classifier market_index's resolvers use, so
     no threshold, source name or platform minimum is restated in this module.
     A future auxiliary price_type flows through the same call and picks up its
     configured semantics automatically, with no branch added here.
+
+    `reference_type`/`evidence_type` come from describe_instrument for the
+    same reason and with the same shape: the stored `price_type` -> public
+    instrument mapping is resolved HERE, once, so no client has to decode a
+    collector's private storage spelling to name what a row measures. No
+    source name and no price_type literal appears in this module - an
+    unconfigured pair yields None for both rather than a guess.
     """
     semantics = classify_observation(source_name, obs.price_type, obs.price_jpy)
+    instrument = describe_instrument(source_name, obs.price_type)
     return PrintPriceObservationOut(
         id=obs.id,
         card_print_id=print_id,
@@ -149,6 +159,8 @@ def _to_price_observation_out(
         constraint=semantics.constraint,
         eligible=semantics.eligible,
         ineligible_reason=semantics.ineligible_reason,
+        reference_type=instrument.reference_type,
+        evidence_type=instrument.evidence_type,
     )
 
 

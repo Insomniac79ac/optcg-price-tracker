@@ -515,7 +515,28 @@ class PrintPriceObservationOut(BaseModel):
     this is a *history* endpoint and an observation that is stale today was
     not stale when it was made. So a fresh-looking eligible=true row may still
     be excluded from today's index. For "what the index actually used", read
-    MarketIndexOut.source_values - never this field."""
+    MarketIndexOut.source_values - never this field.
+
+    Instrument naming (reference_type/evidence_type)
+    ------------------------------------------------
+    The SAME public vocabulary PrintSeriesSegmentOut and
+    MarketIndexSourceValueOut already speak, resolved server-side by
+    app.services.source_instruments.describe_instrument from
+    (source, stored price_type). They are here so a client can name what KIND
+    of price a history row is - "Retail price", "Current listing" - without
+    ever mapping a stored `price_type` itself. That mapping is Atlas's, not a
+    client's: `price_type` is storage identity whose spelling is a collector's
+    private business (SNKRDUNK stores "floor", Yuyu-Tei stores "sell"), and a
+    browser reproducing the table is how the two drift apart the moment a Card
+    Rush or Cardmarket source is added.
+
+    NAMING, NOT VALIDITY. Nothing here can make an observation eligible or
+    ineligible, constrain a value, or move an index number, so neither field
+    is covered by SOURCE_SEMANTICS_VERSION - see source_instruments' module
+    docstring. Both are None for an (source, price_type) pair this build has
+    no rule for, which is the honest answer for a future source: a client
+    names the series by its platform alone rather than being handed an
+    invented instrument."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -535,6 +556,11 @@ class PrintPriceObservationOut(BaseModel):
     constraint: str | None = None
     eligible: bool = True
     ineligible_reason: str | None = None
+    # Defaulted to the unnamed instrument for the same reason as the three
+    # above: a caller that omits them asserts nothing about what this
+    # observation measures.
+    reference_type: str | None = None
+    evidence_type: str | None = None
 
 
 class PrintPriceSeriesTrendOut(BaseModel):
