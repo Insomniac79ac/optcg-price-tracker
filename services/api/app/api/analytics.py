@@ -17,6 +17,8 @@ from app.schemas import (
     BuySourcePreference,
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
+    MarketAnalyticsBasesOut,
+    MarketAnalyticsOverviewOut,
     PortfolioRiskOut,
     SellDecisionAction,
     SellDecisionSupportOut,
@@ -29,12 +31,65 @@ from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.collection_analytics import get_collection_analytics
 from app.services.grading_analytics import get_grading_analytics
+from app.services.market_analytics import (
+    BasisError,
+    build_overview,
+    list_bases,
+    parse_price_basis,
+)
 from app.services.portfolio_risk import get_portfolio_risk
 from app.services.sell_decision_support import get_sell_decision_support
 from app.services.wishlist_analytics import get_wishlist_analytics
 from app.settings import settings
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+# --- current-state market analytics ------------------------------------
+#
+# DELIBERATELY UNAUTHENTICATED, unlike every other endpoint in this router.
+# The rest of /analytics describes what one collector OWNS and must be gated.
+# These two describe the catalogue's own prices, and every number they return
+# is already public and unauthenticated through GET /prints and
+# GET /prints/{id}/market-index - they only count what those already serve.
+# Gating an aggregate of public data would be a lock on the front door of a
+# building with no walls, and would keep the market landscape out of the
+# public product it is being built for.
+
+
+@router.get("/market/bases", response_model=MarketAnalyticsBasesOut)
+def get_market_bases_endpoint(db: Session = Depends(get_db)):
+    """Which price bases a client may select, derived from configuration.
+
+    There is no allowlist here and no source name in this module: the list is
+    the intersection of the `sources` table and the primary instruments
+    declared in app.services.source_instruments, so a newly configured source
+    appears the day it is registered, with no edit to this route, this schema
+    or the frontend."""
+    return MarketAnalyticsBasesOut(bases=list_bases(db))
+
+
+@router.get("/market/overview", response_model=MarketAnalyticsOverviewOut)
+def get_market_overview_endpoint(
+    price_basis: str = Query(default="market_index"),
+    set_code: str | None = Query(default=None, alias="set", max_length=32),
+    rarity: str | None = Query(default=None, max_length=64),
+    db: Session = Depends(get_db),
+):
+    """CURRENT market landscape for one basis and one slice of the catalogue.
+
+    No window parameter, by design: this tranche reports what prices ARE, not
+    how they moved. An unrecognised source is not a 404 - it comes back as an
+    explicitly unavailable basis with truthful zero counts, the same way a
+    print series does, because "Atlas does not price with that" is an answer.
+    """
+    try:
+        basis = parse_price_basis(price_basis)
+    except BasisError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return MarketAnalyticsOverviewOut(
+        **build_overview(db, basis=basis, set_code=set_code, rarity=rarity)
+    )
 
 
 @router.get("/collection", response_model=CollectionAnalyticsOut)

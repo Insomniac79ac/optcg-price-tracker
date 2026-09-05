@@ -482,6 +482,138 @@ class PrintMarketIndexOut(BaseModel):
     calculated_at: datetime
 
 
+class MarketAnalyticsBasisOut(BaseModel):
+    """One selectable price basis.
+
+    NO DISPLAY LABEL IS RETURNED, deliberately. The collector-facing words for
+    a platform and for an instrument already live in exactly one place -
+    apps/web/src/lib/prints.ts `sourceDisplayName` and
+    apps/web/src/lib/sourceEvidence.ts `instrumentLabel` - and every other
+    surface (chart chips, tooltip, price-history rows, Market Index panels)
+    renders through them. Returning a second server-authored label would put
+    the same platform's name in two places that can drift, which is the exact
+    defect Analytics 0C spent a tranche removing. The client is given the
+    server's identity (`source`, `reference_type`, `evidence_type`) and does
+    the wording, as it already does everywhere else.
+
+    `available` is false when this basis can price nothing in the catalogue -
+    an unconfigured source, or a configured one with no eligible value
+    anywhere. The row is still returned with its count: a client may then drop
+    the control rather than render one that answers nothing, while still being
+    able to say how little the platform covers."""
+
+    key: str
+    kind: Literal["market_index", "source"]
+    source: str | None
+    reference_type: str | None
+    evidence_type: str | None
+    available: bool
+    unavailable_reason: str | None
+    usable_priced_prints: int
+
+
+class MarketAnalyticsBasesOut(BaseModel):
+    bases: list[MarketAnalyticsBasisOut]
+
+
+class MarketAnalyticsScopeOut(BaseModel):
+    """What the request was about. `active_prints` is the denominator of
+    `coverage_pct` and is the full active catalogue when no filter is set."""
+
+    active_prints: int
+    set: str | None
+    rarity: str | None
+
+
+class MarketAnalyticsCoverageOut(BaseModel):
+    """Four separate counts, because they answer four separate questions -
+    see app.services.market_analytics for why collapsing them publishes a
+    false number.
+
+    `observed_prints` is null for the Market Index basis: the index is derived
+    from sources rather than observed, so the count has no answer, and 0 would
+    be a claim.
+
+    `excluded_constrained_prints` is likewise null for Market Index (a
+    combination carries no constraint of its own). For a source it counts
+    prints whose current value is INELIGIBLE *because* a source-semantics
+    constraint disqualified it - so it is DISJOINT from
+    `usable_priced_prints`, and a client may safely present it as impaired
+    coverage.
+
+    It is deliberately narrower than "carries a constraint". Of the four
+    verdicts app.services.source_semantics ships, `platform_floor` and
+    `below_platform_minimum` disqualify while `sale_price` does not: a sale
+    price is a real price a collector can pay today. Counting the wider notion
+    would have reported Yuyu-Tei's 36 sale-priced prints as excluded when
+    every one of them is usable. The distinction is derived from the
+    classifier's own `eligible` flag, never from a constraint name, so a
+    future constraint lands on the correct side of it with no edit."""
+
+    observed_prints: int | None
+    usable_priced_prints: int
+    coverage_pct: float | None
+    excluded_constrained_prints: int | None
+    unavailable_prints: int
+
+
+class MarketAnalyticsCurrentPriceOut(BaseModel):
+    """Percentiles over the usable current values only.
+
+    Method is linear interpolation between closest ranks (R type 7 / numpy
+    `linear`), computed server-side and stated in
+    app.services.market_analytics.percentile so two clients cannot disagree
+    about what "p10" meant.
+
+    All three are null with `unavailable_reason` when there is nothing to
+    measure, never 0: `no_usable_prices` when the scope prices nothing, and
+    `insufficient_constituents` when there are too few values for a decile to
+    describe anything (the median still stands in that case, because with n>=1
+    it is a real statement)."""
+
+    constituent_count: int
+    median_jpy: int | None
+    p10_jpy: int | None
+    p90_jpy: int | None
+    unavailable_reason: str | None
+
+
+class MarketAnalyticsBucketOut(BaseModel):
+    """One fixed price band. `upper_jpy` is null on the open-ended top band,
+    so every usable value falls in exactly one bucket and the counts sum to
+    `constituent_count`. Boundaries come from the server and are constant
+    across bases, filters and releases - see PRICE_BUCKETS."""
+
+    lower_jpy: int
+    upper_jpy: int | None
+    label: str
+    count: int
+
+
+class MarketAnalyticsIndexCompositionOut(BaseModel):
+    """How many usable Market Index values rested on one source versus more
+    than one. Null for a source basis, where the concept does not exist: a
+    platform's own price is never a combination of anything."""
+
+    single_source_prints: int
+    multi_source_prints: int
+
+
+class MarketAnalyticsOverviewOut(BaseModel):
+    price_basis: str
+    kind: Literal["market_index", "source"]
+    source: str | None
+    reference_type: str | None
+    evidence_type: str | None
+    available: bool
+    unavailable_reason: str | None
+    scope: MarketAnalyticsScopeOut
+    coverage: MarketAnalyticsCoverageOut
+    current_price: MarketAnalyticsCurrentPriceOut
+    distribution: list[MarketAnalyticsBucketOut]
+    index_composition: MarketAnalyticsIndexCompositionOut | None = None
+
+
 class PrintPriceObservationOut(BaseModel):
     """Print-scoped counterpart to PriceObservationOut - same fields, keyed
     by card_print_id instead of card_id. Deliberately has no stock/inventory
