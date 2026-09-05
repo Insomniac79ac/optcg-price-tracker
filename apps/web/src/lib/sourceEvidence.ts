@@ -89,3 +89,31 @@ export function describeSourceEvidence(
 export function sourceEvidenceLabel(referenceType: string): string {
   return describeSourceEvidence(referenceType)?.label ?? referenceType;
 }
+
+/** A `reference_type` in a collector's words, or null when there is no
+ * instrument to name.
+ *
+ * The nullable counterpart to `sourceEvidenceLabel`, and the one every
+ * *series* label is built from - the chart's chips and legend
+ * (@/lib/printSeries) and the evidence rows beneath it
+ * (@/lib/printPriceHistory) both come here, so one quantity is one word
+ * wherever it appears.
+ *
+ * Null is not a failure. A source whose instrument the server did not name -
+ * absent, empty, or a series whose instrument changed mid-history - has no
+ * single word for what it measures, and the caller names the platform alone
+ * rather than claiming one.
+ *
+ * An instrument this build has never heard of is HUMANISED, not guessed at:
+ * `auction_high` becomes "Auction high", which states the server's own token
+ * without asserting what it measures. Nothing here inspects a source name, a
+ * price, or a stored `price_type`: a future Card Rush / Cardmarket instrument
+ * is labelled by the server's word for it, with no release on this side. */
+export function instrumentLabel(referenceType: string | null | undefined): string | null {
+  if (!referenceType) return null;
+  const known = describeSourceEvidence(referenceType);
+  if (known) return known.label;
+  const opened = referenceType.replace(/_/g, " ").trim();
+  if (opened === "") return null;
+  return opened.charAt(0).toUpperCase() + opened.slice(1);
+}

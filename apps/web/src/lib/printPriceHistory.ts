@@ -11,21 +11,41 @@
  * computes no percentage change: every trend number comes from the backend's
  * own `series` entries, which is why `changes` only ever *filters* them.
  *
+ * IT NO LONGER DRAWS ANYTHING. The section's chart is built by
+ * @/lib/printSeries from `GET /prints/{id}/series`, where the server owns
+ * segmentation, instrument breaks and index-methodology breaks. Two
+ * segmentation authorities is exactly how a line eventually gets stroked
+ * across a boundary one of them knew about and the other did not, so this
+ * module keeps only what it is still the authority on: the per-source EVIDENCE
+ * ROWS beneath the chart, and the backend trend values in them.
+ *
  * The three presentations, and why a series gets each one:
  *
- *   plotted     - eligible observations on at least two distinct dates. Only
- *                 here is a line drawn, because only here is there movement
- *                 to show.
+ *   plotted     - eligible observations on at least two distinct dates, so
+ *                 the backend's change windows describe real movement and the
+ *                 row reports them.
  *   compact     - eligible observations exist, but on a single date. One
- *                 price and its date, no trend line: a chart through one day
- *                 would be a shape invented from a single point.
+ *                 price and its date, and no trend: a change computed across
+ *                 one day would be a shape invented from a single point.
  *   constrained - no eligible observation at all. The source reported, and
  *                 what it reported is not market evidence, so the series is
- *                 explained rather than drawn. The raw values are still
+ *                 explained rather than measured. The raw values are still
  *                 counted and surfaced - never hidden, never plotted.
  *
  * A series with no observations at all does not reach any of these: it is
  * dropped, because a source that never reported is not a fact about the card.
+ *
+ * IT NAMES NO INSTRUMENT EITHER. A row is called "Yuyu-Tei · Retail price"
+ * because the SERVER said that observation's `reference_type` is
+ * `retail_sell`, not because anything here knows what the stored `price_type`
+ * `"sell"` means. There is no price_type -> reference_type table below, and
+ * adding one would recreate the drift this module was already written to
+ * avoid: `price_type` is storage identity in a collector's own spelling, and
+ * a browser that decodes it becomes a second naming authority that disagrees
+ * with the server the moment a Card Rush / Mercado / Cardmarket source ships.
+ * Stored price_types are used here for GROUPING and KEYS only - equality and
+ * concatenation, never interpretation - so a token this build has never seen
+ * segments correctly and is labelled by whatever the server calls it.
  */
 
 import {
@@ -34,26 +54,13 @@ import {
   type PrintPriceObservation,
   type PrintPriceSeriesTrend,
 } from "./prints";
+import { instrumentLabel } from "./sourceEvidence";
 
-/** One eligible observation, ready for an axis. */
+/** One eligible observation. */
 export interface PriceHistoryPoint {
   observationId: number;
   observedAt: string;
-  /** Epoch milliseconds - the chart's x value, so points are spaced by real
-   * elapsed time rather than by array index. */
-  t: number;
   priceJpy: number;
-}
-
-/** A run of eligible observations with nothing disqualified between them.
- *
- * Segments are what stop a line being drawn *through* a constrained
- * observation. Two eligible prices either side of a platform-minimum reading
- * are not a continuous price movement - the source stopped reporting market
- * evidence in between - so they land in different segments and are stroked as
- * separate lines. */
-export interface PriceHistorySegment {
-  points: PriceHistoryPoint[];
 }
 
 export type PriceHistoryMode = "plotted" | "compact" | "constrained";
@@ -65,17 +72,32 @@ export interface PriceHistoryChange {
 }
 
 export interface PriceHistorySeriesView {
-  /** Stable per (source, price_type) - used for React keys and chart dataKeys. */
+  /** Stable per (source, price_type) - used for React keys. */
   key: string;
   source: string;
+  /** The STORED name, kept because it is this row's identity - what grouped
+   * these observations together and what looks their trend up. OPAQUE: never
+   * rendered, never decoded, never branched on. `label` is what the collector
+   * sees. */
   priceType: string;
-  /** Collector-facing name, e.g. "Yuyu-Tei sell", "SNKRDUNK listing floor". */
+  /** The server's `reference_type` for this series - `retail_sell`,
+   * `listing_floor`, or a token a future backend introduces. Null when the
+   * server named no instrument. This, not `priceType`, is what `label` is
+   * built from, and the only field here a caller may pass to
+   * @/lib/sourceEvidence. */
+  referenceType: string | null;
+  /** The server's `evidence_type` - "listing" or "transaction" - saying
+   * whether this series is asking prices or completed trades. Null when the
+   * server named no instrument. Carried for callers that need to distinguish
+   * the two; nothing in this module reads it. */
+  evidenceType: string | null;
+  /** Collector-facing name, e.g. "Yuyu-Tei · Retail price",
+   * "SNKRDUNK · Current listing" - the same words the chart's chips use.
+   * A series with no server-named instrument is the platform alone. */
   label: string;
   mode: PriceHistoryMode;
   /** Every eligible observation, oldest first. Empty for a constrained series. */
   points: PriceHistoryPoint[];
-  /** `points`, split wherever a disqualified observation interrupted them. */
-  segments: PriceHistorySegment[];
   /** How many distinct calendar dates carry an eligible observation - the
    * quantity the plotted/compact decision is made on. */
   distinctDateCount: number;
@@ -107,39 +129,51 @@ export interface PriceHistorySeriesView {
 export interface PriceHistoryView {
   cardPrintId: number;
   series: PriceHistorySeriesView[];
-  /** True when at least one series earned a line - i.e. the section has a
-   * chart to draw at all. */
-  hasChart: boolean;
 }
 
-/** Stored `price_type` values, in a collector's words.
+/** "Yuyu-Tei · Retail price", "SNKRDUNK · Current listing" - the source
+ * panels' own name for the source, then what kind of price this series is, in
+ * the SAME words and the same shape the chart's chips use. Two series from one
+ * source stay distinguishable, and a source is never renamed here.
  *
- * Keyed on what the collector actually stores - SNKRDUNK writes `"floor"`,
- * not the API-facing `"listing_floor"` that appears only on a Market Index
- * `reference_type` (see services/api/app/services/source_semantics.py, "Stored
- * vs API-facing names"). An unrecognised type falls through to its own token
- * with underscores opened up, rather than being guessed at or dropped. */
-const PRICE_TYPE_LABEL: Record<string, string> = {
-  floor: "listing floor",
-  sell: "sell",
-  retail_sell: "retail sell",
-  dealer_buy: "dealer buy",
-  transaction_median: "median sold",
-};
-
-export function priceTypeLabel(priceType: string): string {
-  return PRICE_TYPE_LABEL[priceType] ?? priceType.replace(/_/g, " ");
+ * THE INSTRUMENT ARGUMENT IS THE SERVER'S `reference_type`, NEVER A STORED
+ * `price_type`. There is no table in this file turning `"floor"` into
+ * `listing_floor` or `"sell"` into `retail_sell`, and there must not be: a
+ * stored price_type is the collector's own spelling for a row, and a browser
+ * that decodes it is a second naming authority which will disagree with the
+ * server the day a Card Rush or Cardmarket source ships. The server already
+ * resolves the instrument (app.services.source_instruments) and sends it on
+ * every observation; this function only formats it.
+ *
+ * A series the server named no instrument for is the SOURCE ALONE -
+ * "Cardmarket", not "Cardmarket · shop asking". That is the honest rendering
+ * of a future source: its prices, its platform, and no claim about what the
+ * number measures. */
+export function seriesLabel(source: string, referenceType: string | null): string {
+  const platform = sourceDisplayName(source);
+  const instrument = instrumentLabel(referenceType);
+  return instrument ? `${platform} · ${instrument}` : platform;
 }
 
-/** "Yuyu-Tei sell", "SNKRDUNK listing floor" - the source panels' own name for
- * the source, plus what kind of price this series is. Two series from one
- * source stay distinguishable, and a source is never renamed here. */
-export function seriesLabel(source: string, priceType: string): string {
-  return `${sourceDisplayName(source)} ${priceTypeLabel(priceType)}`;
-}
-
+/** Identity, not meaning. `price_type` is opaque here - it is only ever
+ * compared for equality and concatenated, never read for what it says - which
+ * is exactly what keeps two instruments from one source (Yuyu-Tei's sell and
+ * buy) in separate rows without this module knowing what either word means. */
 export function seriesKey(source: string, priceType: string): string {
   return `${source}:${priceType}`;
+}
+
+/** The one `reference_type` a group's observations agree on, or null.
+ *
+ * A group is one (source, price_type) so the server's answer is normally
+ * constant across it; this is the same "disagreement has no single name" rule
+ * @/lib/printSeries applies across segments, and it is deliberately generic -
+ * whatever the tokens are, agreement is agreement. */
+function agreedReferenceType(rows: PrintPriceObservation[]): string | null {
+  const types = new Set(rows.map((row) => row.reference_type ?? ""));
+  if (types.size !== 1) return null;
+  const [only] = [...types];
+  return only === "" ? null : only;
 }
 
 /** The API's word on whether source semantics disqualified an observation.
@@ -155,7 +189,6 @@ function toPoint(observation: PrintPriceObservation): PriceHistoryPoint {
   return {
     observationId: observation.id,
     observedAt: observation.observed_at,
-    t: new Date(observation.observed_at).getTime(),
     priceJpy: observation.price_jpy,
   };
 }
@@ -176,32 +209,6 @@ function changesFrom(trend: PrintPriceSeriesTrend | undefined): PriceHistoryChan
   return windows
     .filter((entry): entry is [string, number] => entry[1] !== null && entry[1] !== undefined)
     .map(([label, pct]) => ({ label, pct }));
-}
-
-/** Splits a series' observations into runs of eligible points, breaking the
- * run wherever a disqualified observation sits between them.
- *
- * `observations` must already be this series' own rows in chronological
- * order. Leading and trailing disqualified rows simply never open a segment,
- * so a wholly constrained series yields none. */
-function buildSegments(observations: PrintPriceObservation[]): PriceHistorySegment[] {
-  const segments: PriceHistorySegment[] = [];
-  let current: PriceHistoryPoint[] = [];
-
-  for (const observation of observations) {
-    if (isEligible(observation)) {
-      current.push(toPoint(observation));
-      continue;
-    }
-    // A disqualified reading ends the run in progress. The next eligible
-    // observation starts a new one, so nothing is stroked across the gap.
-    if (current.length > 0) {
-      segments.push({ points: current });
-      current = [];
-    }
-  }
-  if (current.length > 0) segments.push({ points: current });
-  return segments;
 }
 
 /** The one constraint name behind a series' disqualified observations, or
@@ -258,15 +265,17 @@ export function buildPriceHistoryView(
       points.length === 0 ? "constrained" : distinctDateCount >= 2 ? "plotted" : "compact";
 
     const newestDisqualified = disqualified.length > 0 ? disqualified[disqualified.length - 1] : null;
+    const referenceType = agreedReferenceType(ordered);
 
     series.push({
       key,
       source: ordered[0].source,
       priceType: ordered[0].price_type,
-      label: seriesLabel(ordered[0].source, ordered[0].price_type),
+      referenceType,
+      evidenceType: ordered[0].evidence_type ?? null,
+      label: seriesLabel(ordered[0].source, referenceType),
       mode,
       points,
-      segments: mode === "plotted" ? buildSegments(ordered) : [],
       distinctDateCount,
       latest: points.length > 0 ? points[points.length - 1] : null,
       constrainedCount: disqualified.length,
@@ -289,42 +298,5 @@ export function buildPriceHistoryView(
   return {
     cardPrintId,
     series,
-    hasChart: series.some((entry) => entry.mode === "plotted"),
   };
-}
-
-/** One row per distinct timestamp across every plotted segment, with each
- * segment's price under its own key.
- *
- * Recharts takes a single data array for the whole chart, so every series
- * shares these rows and simply has no value at a timestamp it did not
- * observe. Each SEGMENT gets its own key (`series:type__s0`, `__s1`, ...)
- * rather than each series, which is what keeps a line from being stroked
- * across a constrained gap: the segments are different lines, so there is
- * nothing to join. Within one segment, absent timestamps are the other
- * source's observations and are connected across (`connectNulls`), because
- * the series genuinely did continue over them.
- */
-export function segmentDataKey(seriesKeyValue: string, segmentIndex: number): string {
-  return `${seriesKeyValue}__s${segmentIndex}`;
-}
-
-export type PriceHistoryChartRow = { t: number } & Record<string, number | undefined>;
-
-export function buildChartRows(series: PriceHistorySeriesView[]): PriceHistoryChartRow[] {
-  const byTimestamp = new Map<number, PriceHistoryChartRow>();
-
-  for (const entry of series) {
-    if (entry.mode !== "plotted") continue;
-    entry.segments.forEach((segment, index) => {
-      const key = segmentDataKey(entry.key, index);
-      for (const point of segment.points) {
-        const row = byTimestamp.get(point.t) ?? { t: point.t };
-        row[key] = point.priceJpy;
-        byTimestamp.set(point.t, row);
-      }
-    });
-  }
-
-  return [...byTimestamp.values()].sort((a, b) => a.t - b.t);
 }

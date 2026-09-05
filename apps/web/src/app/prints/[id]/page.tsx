@@ -28,6 +28,12 @@ import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
+  DEFAULT_PRINT_SERIES_WINDOW,
+  fetchPrintSeries,
+  type PrintSeriesHistory,
+  type PrintSeriesWindow,
+} from "@/lib/printSeries";
+import {
   describeUnavailableSource,
   isUnavailableSourceValue,
   unavailableSourceValues,
@@ -130,6 +136,36 @@ export default function PrintDetailPage() {
   const [detail, setDetail] = useState<PrintDetail | null>(null);
   const [history, setHistory] = useState<PriceHistoryView | null>(null);
   const [historyStatus, setHistoryStatus] = useState<PriceHistoryStatus>("loading");
+  // The chart's window. Changing it RE-ASKS the server rather than slicing a
+  // payload already in hand: a 7D view filtered out of a 30D response would
+  // disagree with that response's own coverage answers, which are computed
+  // against the window that was requested.
+  const [seriesWindow, setSeriesWindow] = useState<PrintSeriesWindow>(
+    DEFAULT_PRINT_SERIES_WINDOW,
+  );
+  // The last `/series` answer, TAGGED with the print and window it answered
+  // for. `loading` is then derived rather than tracked: a flag set beside the
+  // request is a second copy of "which request is outstanding" that drifts
+  // from the payload the moment two window changes overlap, and the tag makes
+  // a stale answer for the previous window unusable by construction. `data:
+  // null` records a request that failed, so a failure resolves rather than
+  // spinning forever.
+  const [seriesResult, setSeriesResult] = useState<{
+    printId: string;
+    window: PrintSeriesWindow;
+    data: PrintSeriesHistory | null;
+  } | null>(null);
+  // Scoped to the PRINT, not the window. A window change keeps the previous
+  // window's chart on screen (dimmed, see PrintPriceHistory) rather than
+  // swapping the plot out for a placeholder and back on every press. A PRINT
+  // change must still clear it, or the previous card's prices would be the
+  // thing left on screen while this one loads.
+  const seriesForPrint =
+    seriesResult !== null && seriesResult.printId === printId ? seriesResult.data : null;
+  const seriesReady =
+    seriesResult !== null &&
+    seriesResult.printId === printId &&
+    seriesResult.window === seriesWindow;
   const [status, setStatus] = useState<"loading" | "error" | "not_found" | "ready">("loading");
 
   useEffect(() => {
@@ -177,6 +213,29 @@ export default function PrintDetailPage() {
       cancelled = true;
     };
   }, [printId]);
+
+  // Separate from the effect above so a window change re-requests the series
+  // alone - the print and its `/prices` rows did not change, and refetching
+  // them would blank the hero to redraw a chart.
+  useEffect(() => {
+    if (!printId) return;
+    let cancelled = false;
+    fetchPrintSeries(printId, seriesWindow)
+      .then((result) => {
+        if (cancelled) return;
+        setSeriesResult({ printId, window: seriesWindow, data: result });
+      })
+      .catch(() => {
+        // Supporting evidence for supporting evidence: a chart that cannot be
+        // loaded costs the section its chart, never its rows and never the
+        // page.
+        if (cancelled) return;
+        setSeriesResult({ printId, window: seriesWindow, data: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [printId, seriesWindow]);
 
   return (
     <div className="min-h-screen">
@@ -256,7 +315,14 @@ export default function PrintDetailPage() {
                 <Identity print={print} />
                 <MarketIndexBlock print={print} />
                 <SourcePanels sources={print.marketIndex.source_values} />
-                <PrintPriceHistorySection status={historyStatus} view={history} />
+                <PrintPriceHistorySection
+                  status={historyStatus}
+                  view={history}
+                  series={seriesForPrint}
+                  seriesLoading={!seriesReady}
+                  window={seriesWindow}
+                  onWindowChange={setSeriesWindow}
+                />
                 <AboutThisPrint print={print} detail={detail} />
               </div>
             </div>

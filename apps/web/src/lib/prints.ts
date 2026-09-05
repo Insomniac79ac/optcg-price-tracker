@@ -557,6 +557,26 @@ export interface PrintPriceObservation {
    * an API that never classified an observation has not disqualified it. */
   eligible?: boolean;
   ineligible_reason?: string | null;
+  /** WHAT KIND of price this row is, in the API's own public vocabulary -
+   * `retail_sell`, `listing_floor`, `transaction_median`, `dealer_buy` - the
+   * same field `PrintMarketIndexSourceValue` and `PrintSeriesSegment` carry,
+   * resolved server-side by app.services.source_instruments.
+   *
+   * THIS, NEVER `price_type`, IS WHAT NAMES A SERIES. `price_type` above is
+   * storage identity in the collector's own spelling ("floor", "sell") and
+   * carries no meaning a client is entitled to interpret; translating one
+   * into the other in the browser is a second naming authority, and the
+   * moment a Card Rush or Cardmarket source ships the two disagree. Render
+   * this through @/lib/sourceEvidence.
+   *
+   * Null/absent means the server has no instrument rule for this row's
+   * (source, price_type) - a future source, honestly unnamed rather than
+   * guessed at. Callers name the platform alone. */
+  reference_type?: string | null;
+  /** "listing" or "transaction" - whether this row is an asking price or a
+   * completed trade. Same provenance and same null rule as
+   * `reference_type`. */
+  evidence_type?: string | null;
 }
 
 /** One (source, price_type) series' trend inside a print's price history -
