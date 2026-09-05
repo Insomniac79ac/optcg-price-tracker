@@ -759,7 +759,7 @@ function SeriesTooltip({
         detailCaveat(detail) ? (
           <p
             key={`caveat:${detail.seriesKey}:${index}`}
-            className="mt-1 text-[10px] leading-snug text-text-faint"
+            className="mt-1 text-[10px] leading-snug text-text-secondary"
           >
             {detailCaveat(detail)}
           </p>
@@ -897,7 +897,7 @@ function ConstrainedSeriesRow({ series }: { series: PriceHistorySeriesView }) {
           {formatJpy(series.constrainedLatestJpy)}
         </span>
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-text-faint">
+      <p className="mt-1 text-[11px] leading-snug text-text-secondary">
         {constrainedSpan(series)}Not treated as a market price
       </p>
     </div>
