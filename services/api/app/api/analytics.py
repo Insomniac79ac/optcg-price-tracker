@@ -18,6 +18,7 @@ from app.schemas import (
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
     MarketAnalyticsBasesOut,
+    MarketAnalyticsFiltersOut,
     MarketAnalyticsOverviewOut,
     PortfolioRiskOut,
     SellDecisionAction,
@@ -35,6 +36,7 @@ from app.services.market_analytics import (
     BasisError,
     build_overview,
     list_bases,
+    list_filter_options,
     parse_price_basis,
 )
 from app.services.portfolio_risk import get_portfolio_risk
@@ -49,9 +51,11 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 #
 # DELIBERATELY UNAUTHENTICATED, unlike every other endpoint in this router.
 # The rest of /analytics describes what one collector OWNS and must be gated.
-# These two describe the catalogue's own prices, and every number they return
+# These three describe the catalogue's own prices, and every number they return
 # is already public and unauthenticated through GET /prints and
 # GET /prints/{id}/market-index - they only count what those already serve.
+# /market/filters likewise only republishes the set codes and rarities already
+# on every public tile.
 # Gating an aggregate of public data would be a lock on the front door of a
 # building with no walls, and would keep the market landscape out of the
 # public product it is being built for.
@@ -67,6 +71,27 @@ def get_market_bases_endpoint(db: Session = Depends(get_db)):
     appears the day it is registered, with no edit to this route, this schema
     or the frontend."""
     return MarketAnalyticsBasesOut(bases=list_bases(db))
+
+
+@router.get("/market/filters", response_model=MarketAnalyticsFiltersOut)
+def get_market_filters_endpoint(db: Session = Depends(get_db)):
+    """Which SET and RARITY values the overview will accept, derived from the
+    active catalogue.
+
+    Unauthenticated for the same reason the two routes around it are: these are
+    the set codes and rarities already printed on every public tile.
+
+    It exists because the alternative was worse in three different ways. The
+    print catalogue's facets publish treatment, rarity, language and
+    verification status but no release product, so a client had no honest
+    source for the SET control: it could sweep /prints and pay 44 requests to
+    rediscover something the database answers in one, read the LEGACY
+    /cards/catalogue whose `set_code` is spelled `OP01` where this filter wants
+    `OP-01` (and whose rows carry legacy card identity - see
+    resolveCanonicalPrintIdentity), or hardcode a list that goes stale the day
+    a set ships. A filter's vocabulary belongs to whoever owns the filter, so
+    it is published here beside the endpoint that accepts it."""
+    return MarketAnalyticsFiltersOut(**list_filter_options(db))
 
 
 @router.get("/market/overview", response_model=MarketAnalyticsOverviewOut)

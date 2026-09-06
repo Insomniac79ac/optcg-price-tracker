@@ -75,7 +75,7 @@ from app.models import CanonicalCard, CardPrint, PriceObservation, Source
 from app.services.print_catalogue import effective_rarity_sql
 from app.services.print_market_index import INDEX_EVIDENCE_PRICE_TYPES
 from app.services.print_series import KIND_MARKET_INDEX, KIND_SOURCE
-from app.services.rarity_facets import filter_tokens
+from app.services.rarity_facets import facet_values, filter_tokens
 from app.services.source_instruments import describe_instrument, primary_price_types
 
 # Percentiles need enough constituents to describe a distribution rather than
@@ -159,6 +159,21 @@ def parse_price_basis(raw: str | None) -> BasisRequest:
     )
 
 
+def _scoped_prints_from():
+    """The FROM/JOIN/WHERE every scoped query in this module starts from.
+
+    Factored out so `scoped_print_ids` and `list_filter_options` cannot drift:
+    an option this module OFFERS has to be an option the overview ACCEPTS, and
+    the only way to guarantee that is for both to read the same population.
+    The inner join is part of that population, not an implementation detail -
+    a print whose canonical card is missing is outside the overview's scope,
+    so it must not contribute a filter value either.
+    """
+    return select(CardPrint).join(
+        CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id
+    ).where(CardPrint.is_active.is_(True))
+
+
 def scoped_print_ids(
     db: Session, *, set_code: str | None = None, rarity: str | None = None
 ) -> list[int]:
@@ -170,11 +185,7 @@ def scoped_print_ids(
     a second answer to "what rarity is this print", which is precisely the
     thing print_catalogue's docstring exists to prevent.
     """
-    stmt = (
-        select(CardPrint.id)
-        .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
-        .where(CardPrint.is_active.is_(True))
-    )
+    stmt = _scoped_prints_from().with_only_columns(CardPrint.id)
     if set_code:
         stmt = stmt.where(CardPrint.release_product_code == set_code)
     if rarity:
@@ -539,6 +550,69 @@ def list_bases(db: Session) -> list[dict]:
             }
         )
     return bases
+
+
+def list_filter_options(db: Session) -> dict:
+    """Every SET and RARITY value `build_overview` will actually accept, in two
+    queries, derived rather than listed.
+
+    THE ONLY CORRECTNESS PROPERTY THAT MATTERS HERE is that this endpoint and
+    `?set=`/`?rarity=` agree. An option that selects nothing is a dead control,
+    and a selectable print whose value is never offered is a slice of the
+    catalogue a collector cannot reach. Both are avoided the same way: the
+    values are read from `_scoped_prints_from()` - the very population
+    `scoped_print_ids` filters - through `effective_rarity_sql()`, the very
+    expression `?rarity=` filters on. There is no list of sets anywhere in this
+    module, and none in the frontend either: a release product that ships next
+    month is offered the day its first active print exists, with no edit here
+    and no release on either side.
+
+    `label` EQUALS `value`, and that is deliberate rather than lazy. These are
+    published catalogue tokens - `OP-01`, `SP CARD` - which are already the
+    words a collector reads on a tile and the words a shared `?set=` URL
+    carries. Returning a *different* server-authored label would put the same
+    token's wording in two places that can drift, which is the defect
+    MarketAnalyticsBasisOut's docstring exists to prevent; the field is present
+    so a future value whose token is genuinely not readable has somewhere to be
+    named, without a client ever having to transform an identifier to render
+    it.
+
+    O(1) IN QUERIES, not in rows: two DISTINCT scans regardless of whether the
+    catalogue holds 4,316 prints or 400,000. Nothing iterates prints.
+
+    NULL contributes no option, the same rule `get_print_catalogue_facets`
+    keeps: a print with no release product is not filterable by one, and no
+    synthetic "Unknown" bucket is invented to hold it - selecting such a bucket
+    could not be expressed as a `?set=` value at all.
+    """
+    set_codes = db.scalars(
+        _scoped_prints_from()
+        .with_only_columns(CardPrint.release_product_code)
+        .where(CardPrint.release_product_code.is_not(None))
+        .distinct()
+        .order_by(CardPrint.release_product_code)
+    ).all()
+
+    # Folded through the SAME alias map `filter_tokens` expands, so `SPカード`
+    # and `SP P` are offered once as `SP CARD` and selecting it reaches both -
+    # exactly as the print catalogue's own rarity facet behaves. Folding after
+    # the DISTINCT is what makes the option count drop without making any print
+    # unreachable.
+    rarity_expr = effective_rarity_sql()
+    stored_rarities = db.scalars(
+        _scoped_prints_from()
+        .with_only_columns(rarity_expr)
+        .where(rarity_expr.is_not(None))
+        .distinct()
+        .order_by(rarity_expr)
+    ).all()
+
+    return {
+        "sets": [{"value": code, "label": code} for code in set_codes],
+        "rarities": [
+            {"value": value, "label": value} for value in facet_values(list(stored_rarities))
+        ],
+    }
 
 
 def _all_indexes(db: Session, print_ids: list[int]) -> dict:

@@ -516,6 +516,34 @@ class MarketAnalyticsBasesOut(BaseModel):
     bases: list[MarketAnalyticsBasisOut]
 
 
+class MarketAnalyticsFilterOptionOut(BaseModel):
+    """One selectable value for a catalogue filter.
+
+    `value` is what goes on the wire as `?set=` / `?rarity=`; `label` is what a
+    collector reads. They are equal for every value Atlas publishes today,
+    because these are already published catalogue tokens (`OP-01`, `SP CARD`) -
+    the same words a tile shows and a shared URL carries. The pair exists so a
+    client never has to DERIVE one from the other: transforming an identifier
+    in the browser is how `OP01` and `OP-01` came to be two spellings of one
+    set in the first place."""
+
+    value: str
+    label: str
+
+
+class MarketAnalyticsFiltersOut(BaseModel):
+    """The SET and RARITY vocabularies `GET /analytics/market/overview` accepts.
+
+    Derived from the active print catalogue on every request, never listed:
+    see app.services.market_analytics.list_filter_options for why an option
+    offered here is guaranteed to be an option the overview accepts, and why a
+    release product that ships next month appears with no code change on either
+    side."""
+
+    sets: list[MarketAnalyticsFilterOptionOut]
+    rarities: list[MarketAnalyticsFilterOptionOut]
+
+
 class MarketAnalyticsScopeOut(BaseModel):
     """What the request was about. `active_prints` is the denominator of
     `coverage_pct` and is the full active catalogue when no filter is set."""

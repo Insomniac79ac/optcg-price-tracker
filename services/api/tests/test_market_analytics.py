@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 import app.services.market_analytics as market_analytics
-from app.models import Source
+from app.models import CardPrint, Source
+from app.services.rarity_facets import ALIAS_MEMBERS, SP_CARD
 from app.services.source_semantics import classify_observation
 from app.services.market_analytics import (
     MIN_PERCENTILE_CONSTITUENTS,
@@ -731,3 +732,267 @@ def test_market_analytics_is_public_like_the_rest_of_the_pricing_surface(client,
     # makes the split data-subject-shaped rather than prefix-shaped.
     assert guarded(analytics_api.router, "/analytics/collection")
     assert guarded(analytics_api.router, "/analytics/portfolio-risk")
+
+
+# --- filter vocabulary (GET /analytics/market/filters) ----------------------
+#
+# The contract these all circle is ONE sentence: an option this endpoint
+# offers must be an option `/analytics/market/overview` accepts, and a slice
+# the overview can express must be offered. Everything below is a way for that
+# to be false.
+
+
+def filters(client):
+    response = client.get("/analytics/market/filters")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_set_options_match_the_overview_filter_vocabulary(client, db_session, five_prints):
+    """Every offered set selects at least one print THROUGH THE OVERVIEW.
+
+    Not "is a plausible set code" and not "is in the database" - the option is
+    fed straight back into `?set=` and the resulting scope must be non-empty.
+    This is what would have caught the legacy /cards/catalogue vocabulary,
+    whose `set_code` is `OP01` where this filter wants `OP-01`: every option
+    would have scoped to zero prints.
+    """
+    make_print(
+        db_session,
+        make_canonical(db_session, card_code="EB01-001", name_en="Oden", rarity="L"),
+        release_product_code="EB-02",
+        artwork_key="oden-eb",
+    )
+
+    options = filters(client)["sets"]
+    assert options, "no set options offered for a populated catalogue"
+
+    for option in options:
+        scope = overview(client, set=option["value"])["scope"]
+        assert scope["set"] == option["value"]
+        assert scope["active_prints"] > 0, f"set option {option['value']!r} selects nothing"
+
+
+def test_every_set_in_scope_is_offered(client, db_session, five_prints):
+    """The other direction: a set a print actually carries must be selectable.
+
+    Without this, an endpoint returning `[]` would pass the test above
+    vacuously - no option, no broken option.
+    """
+    make_print(
+        db_session,
+        make_canonical(db_session, card_code="EB01-001", name_en="Oden", rarity="L"),
+        release_product_code="EB-02",
+        artwork_key="oden-eb",
+    )
+
+    offered = {option["value"] for option in filters(client)["sets"]}
+    in_catalogue = {
+        row.release_product_code
+        for row in db_session.query(CardPrint).filter(CardPrint.is_active.is_(True))
+        if row.release_product_code is not None
+    }
+    assert in_catalogue <= offered
+
+
+def test_rarity_options_match_the_overview_filter_vocabulary(client, five_prints):
+    """Same round trip for rarity, which has the extra hazard of alias folding:
+    `SPカード` and `SP P` are offered once as `SP CARD`, and that single option
+    has to reach both stored tokens through `?rarity=`."""
+    options = filters(client)["rarities"]
+    assert options
+
+    for option in options:
+        scope = overview(client, rarity=option["value"])["scope"]
+        assert scope["rarity"] == option["value"]
+        assert scope["active_prints"] > 0, f"rarity option {option['value']!r} selects nothing"
+
+
+def test_aliased_rarity_is_offered_once_and_reaches_every_stored_token(client, db_session):
+    """The alias case end to end, because it is the one place where "distinct
+    values" and "values the filter accepts" genuinely disagree.
+
+    Two prints carrying the two stored spellings of one collector concept must
+    produce ONE option whose scope covers BOTH prints - not two options, and
+    not one option that reaches half the population."""
+    for i, token in enumerate(ALIAS_MEMBERS[SP_CARD]):
+        canonical = make_canonical(
+            db_session, card_code=f"OP01-1{i:02d}", name_en=f"Special {i}", rarity=token
+        )
+        make_print(db_session, canonical, artwork_key=f"sp-{i}")
+
+    offered = [option["value"] for option in filters(client)["rarities"]]
+    assert offered.count(SP_CARD) == 1
+    for member in ALIAS_MEMBERS[SP_CARD]:
+        assert member not in offered, f"stored token {member!r} offered alongside its alias"
+
+    assert overview(client, rarity=SP_CARD)["scope"]["active_prints"] == len(
+        ALIAS_MEMBERS[SP_CARD]
+    )
+
+
+def test_duplicates_are_removed(client, db_session, five_prints):
+    """Many prints share a set and a rarity; the control offers each once."""
+    for i in range(6):
+        canonical = make_canonical(
+            db_session, card_code=f"OP01-2{i:02d}", name_en=f"Dupe {i}", rarity="C"
+        )
+        make_print(db_session, canonical, release_product_code="OP-01", artwork_key=f"dupe-{i}")
+
+    body = filters(client)
+    for key in ("sets", "rarities"):
+        values = [option["value"] for option in body[key]]
+        assert len(values) == len(set(values)), f"{key} contains duplicates: {values}"
+
+
+def test_inactive_prints_contribute_no_options(client, db_session, five_prints):
+    """An option is a filter a collector can select, and the overview counts
+    ACTIVE prints only - so a set that exists solely on retired prints would be
+    a control that scopes to zero."""
+    retired_canonical = make_canonical(
+        db_session, card_code="ZZ01-001", name_en="Retired", rarity="C"
+    )
+    make_print(
+        db_session,
+        retired_canonical,
+        release_product_code="ZZ-99",
+        artwork_key="retired",
+        is_active=False,
+        verification_status="unverified",
+    )
+
+    offered = {option["value"] for option in filters(client)["sets"]}
+    assert "ZZ-99" not in offered
+    assert overview(client, set="ZZ-99")["scope"]["active_prints"] == 0
+
+
+def test_ordering_is_deterministic_and_sorted(client, db_session, five_prints):
+    """Sorted, and stable across requests - a control whose options reshuffle
+    between two loads is one a collector cannot learn."""
+    for code in ("OP-05", "EB-02", "PRB-01"):
+        canonical = make_canonical(
+            db_session, card_code=f"{code}-x", name_en=f"Card {code}", rarity="R"
+        )
+        make_print(db_session, canonical, release_product_code=code, artwork_key=f"ord-{code}")
+
+    first = filters(client)
+    second = filters(client)
+    assert first == second
+
+    for key in ("sets", "rarities"):
+        values = [option["value"] for option in first[key]]
+        assert values == sorted(values), f"{key} is not sorted: {values}"
+
+
+def test_a_future_set_appears_with_no_code_change(client, db_session, five_prints):
+    """The genericity property, stated as the thing that actually happens: a
+    release product nobody has heard of ships, and the control offers it the
+    day its first active print exists. No allowlist, no release, no edit."""
+    before = {option["value"] for option in filters(client)["sets"]}
+    assert "QQ-01" not in before
+
+    canonical = make_canonical(
+        db_session, card_code="QQ01-001", name_en="Future Set Card", rarity="SEC"
+    )
+    make_print(db_session, canonical, release_product_code="QQ-01", artwork_key="future-set")
+
+    after = {option["value"] for option in filters(client)["sets"]}
+    assert "QQ-01" in after
+    assert before < after
+    assert overview(client, set="QQ-01")["scope"]["active_prints"] == 1
+
+
+def test_labels_never_diverge_from_values(client, five_prints):
+    """`label` is the published token, not a second server-authored wording.
+
+    The moment these differ, the same set has two names that can drift - the
+    defect MarketAnalyticsBasisOut refuses to introduce for platforms. The
+    field exists so a client never has to DERIVE a label from an identifier,
+    not so the server can invent one."""
+    body = filters(client)
+    for key in ("sets", "rarities"):
+        for option in body[key]:
+            assert option["label"] == option["value"]
+            assert option["value"].strip() != ""
+
+
+def test_null_release_product_invents_no_option(client, db_session, five_prints):
+    """A print with no release product contributes nothing - no "Unknown"
+    bucket, because selecting one could not be expressed as a `?set=` value."""
+    canonical = make_canonical(db_session, card_code="NN01-001", name_en="No Product", rarity="C")
+    make_print(
+        db_session,
+        canonical,
+        release_product_code=None,
+        release_product_id=None,
+        artwork_key="no-product",
+        verification_status="unverified",
+    )
+
+    values = [option["value"] for option in filters(client)["sets"]]
+    assert all(value is not None and value != "" for value in values)
+    assert not any(
+        value.lower() in {"unknown", "none", "null", "other"} for value in values
+    )
+
+
+def test_filters_query_count_is_o1_in_catalogue_size(client, db_session, five_prints):
+    """Two DISTINCT scans, whether the catalogue holds five prints or sixty-five.
+
+    This is the guard against the implementation this endpoint exists to
+    replace: anything that enumerates prints to collect their set codes would
+    grow here, and so would a per-option round trip validating each one.
+    """
+    from sqlalchemy import event
+
+    engine = db_session.get_bind()
+
+    def count_queries():
+        seen = []
+        listener = lambda *a, **k: seen.append(1)  # noqa: E731
+        event.listen(engine, "before_cursor_execute", listener)
+        try:
+            response = client.get("/analytics/market/filters")
+        finally:
+            event.remove(engine, "before_cursor_execute", listener)
+        assert response.status_code == 200, response.text
+        return len(seen)
+
+    small = count_queries()
+    small_scope = client.get("/analytics/market/overview").json()["scope"]["active_prints"]
+
+    for i in range(60):
+        canonical = make_canonical(
+            db_session, card_code=f"RR{i:04d}", name_en=f"Bulk {i}", rarity="C"
+        )
+        make_print(
+            db_session,
+            canonical,
+            release_product_code="OP-01" if i % 2 else "OP-05",
+            artwork_key=f"rr-{i}",
+        )
+
+    large_scope = client.get("/analytics/market/overview").json()["scope"]["active_prints"]
+    assert large_scope > small_scope * 10
+    assert count_queries() == small, "filters query count grew with catalogue size"
+
+
+def test_filters_are_public(client, five_prints):
+    """Unauthenticated, like /market/bases and /market/overview beside it -
+    these are the set codes already printed on every public tile."""
+    from fastapi.testclient import TestClient
+    from app.main import app as fastapi_app
+
+    anonymous = TestClient(fastapi_app)
+    response = anonymous.get("/analytics/market/filters")
+    assert response.status_code == 200, response.text
+    assert "sets" in response.json()
+
+
+def test_filters_declare_no_display_vocabulary(client, five_prints):
+    """No collector-facing wording beyond the catalogue's own tokens - the same
+    rule test_no_display_vocabulary_is_served_or_declared keeps for bases."""
+    body = filters(client)
+    serialized = str(body)
+    for word in ("Booster", "Extra Booster", "Starter Deck", "Promo", "Common", "Rare"):
+        assert word not in serialized, f"server-authored display wording {word!r} in filters"
