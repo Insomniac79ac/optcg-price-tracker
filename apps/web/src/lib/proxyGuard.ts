@@ -32,7 +32,25 @@ export const PROTECTED_MATCHER = [
   "/wishlist/:path*",
   "/dashboard/:path*",
   "/activity/:path*",
-  "/analytics/:path*",
+  // `:path+`, NOT `:path*`, and the difference is the whole point: `*` is zero
+  // or more segments and DOES match the bare parent, which was verified at
+  // request time on 2026-09-06 (a signed-out GET /analytics answered 307 to
+  // /sign-in). `+` requires at least one segment, so the seven legacy leaf
+  // pages - /analytics/collection, /wishlist, /grading, /buy-decisions,
+  // /sell-decisions, /portfolio-risk, /digest - stay gated exactly as before,
+  // while /analytics itself is public.
+  //
+  // /analytics is the current market landscape (Analytics 1A-B): catalogue
+  // pricing coverage, price distribution and Market Index composition. It
+  // exposes no collector's own data, and the three endpoints behind it
+  // (/analytics/market/bases, /filters, /overview) are deliberately
+  // unauthenticated server-side for the same reason - every number they return
+  // is already public per-print through /prints.
+  //
+  // The neighbouring entries deliberately KEEP `:path*`, because for them the
+  // bare parent must be protected too: /collection, /wishlist, /grading,
+  // /dashboard and /activity are all real pages showing the caller's own data.
+  "/analytics/:path+",
   "/search/:path*",
   "/market/signals/:path*",
   "/market/opportunities/:path*",

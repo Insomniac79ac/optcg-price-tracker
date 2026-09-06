@@ -128,7 +128,11 @@ export const config = {
     "/wishlist/:path*",
     "/dashboard/:path*",
     "/activity/:path*",
-    "/analytics/:path*",
+    // `:path+` - one or more segments, so the bare /analytics (the public
+    // market landscape) is NOT matched while every legacy /analytics/* leaf
+    // page still is. See proxyGuard.ts for why, and proxy.test.ts for the
+    // equality assertion that keeps this list identical to FULL_MATCHER.
+    "/analytics/:path+",
     "/search/:path*",
     "/market/signals/:path*",
     "/market/opportunities/:path*",

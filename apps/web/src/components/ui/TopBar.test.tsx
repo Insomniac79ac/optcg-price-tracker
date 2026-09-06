@@ -38,8 +38,22 @@ describe("TopBar", () => {
     render(<TopBar />);
     const nav = screen.getByRole("navigation", { name: "Public sections" });
     const hrefs = Array.from(nav.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/", "/cards"]);
+    // /analytics is the current market landscape (Analytics 1A-B) - public,
+    // and backed by three deliberately unauthenticated endpoints.
+    expect(hrefs).toEqual(["/", "/cards", "/analytics"]);
     expect(hrefs).not.toContain("/admin");
+    // The seven legacy collector-data analytics pages gain no entry from it.
+    for (const leaf of [
+      "/analytics/collection",
+      "/analytics/wishlist",
+      "/analytics/grading",
+      "/analytics/buy-decisions",
+      "/analytics/sell-decisions",
+      "/analytics/portfolio-risk",
+      "/analytics/digest",
+    ]) {
+      expect(hrefs).not.toContain(leaf);
+    }
     // Market Index is a value on every card, not a destination: its page was
     // a re-sorted copy of /cards and now redirects there (tranche 1A).
     expect(hrefs).not.toContain("/market/movers");

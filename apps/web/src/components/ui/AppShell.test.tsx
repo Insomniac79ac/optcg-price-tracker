@@ -48,8 +48,11 @@ describe("AppShell navigation rail", () => {
 
     const nav = screen.getByRole("navigation", { name: "Public sections" });
     const hrefs = Array.from(nav.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(["/", "/cards"]);
+    // /analytics joined the public tier on 2026-09-06 (Analytics 1A-B).
+    expect(hrefs).toEqual(["/", "/cards", "/analytics"]);
     expect(hrefs).not.toContain("/admin");
     expect(hrefs).not.toContain("/market/movers");
+    // The legacy collector-data analytics pages stay out of navigation.
+    expect(hrefs).not.toContain("/analytics/collection");
   });
 });

@@ -36,9 +36,25 @@ interface NavGroup {
 // Exported so TopBar's desktop public nav renders exactly this list rather
 // than declaring a second one that could drift (or quietly gain an admin
 // entry) - see components/ui/TopBar.tsx.
+//
+// "Analytics" was added on 2026-09-06 (Analytics 1A-B). It points at
+// /analytics, the current market landscape - coverage, price distribution and
+// index composition over the whole catalogue. It is public because everything
+// on it is: the endpoints behind it (/analytics/market/bases, /filters,
+// /overview) are deliberately unauthenticated, and every number they return is
+// already served unauthenticated per-print through /prints.
+//
+// The seven LEGACY /analytics/* leaf pages (collection, wishlist, grading,
+// buy-decisions, sell-decisions, portfolio-risk, digest) are deliberately NOT
+// exposed here and gain no entry from this: they describe what one collector
+// owns, are gated by /analytics/:path* in proxyGuard, and remain the same
+// unlinked product-debt area they were. /market/movers is likewise untouched -
+// it is still a redirect into /cards?sort=index_desc, and this page is not its
+// replacement (it reports what prices ARE, not how they moved).
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Discover" },
   { href: "/cards", label: "Cards" },
+  { href: "/analytics", label: "Analytics" },
 ];
 
 // Collector tier - only shown once a session exists. Trading/internal pages

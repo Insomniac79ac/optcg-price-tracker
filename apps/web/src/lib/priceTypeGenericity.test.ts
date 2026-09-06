@@ -48,13 +48,41 @@ const LIB_DIR = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(LIB_DIR, "..");
 
 /** Every file the Analytics 0C collector-facing path executes: the two view
- * models, the section component, and the page that mounts it. */
+ * models, the section component, and the page that mounts it.
+ *
+ * Analytics 1A-B (2026-09-06) added the market landscape's four files. They
+ * belong under exactly the same rule and for a sharper reason: this page
+ * aggregates ACROSS platforms, so a single hardcoded token here would not
+ * mislabel one chart line, it would silently drop or misclassify a whole
+ * platform's contribution to a published count. */
 const AUDITED = [
   "lib/printPriceHistory.ts",
   "lib/printSeries.ts",
   "components/ui/PrintPriceHistory.tsx",
   "app/prints/[id]/page.tsx",
+  "lib/marketAnalytics.ts",
+  "components/ui/MarketLandscapeFilters.tsx",
+  "components/ui/MarketLandscapeSections.tsx",
+  "app/analytics/page.tsx",
 ];
+
+/** The market-landscape files only. The SOURCE-NAME rule below applies to
+ * these specifically: `lib/prints.ts` legitimately owns the platform display
+ * names (`sourceDisplayName`), and `app/prints/[id]/page.tsx` predates this
+ * rule, so widening it to the whole audited list would be a different change
+ * from the one this tranche is making. */
+const MARKET_LANDSCAPE = [
+  "lib/marketAnalytics.ts",
+  "components/ui/MarketLandscapeFilters.tsx",
+  "components/ui/MarketLandscapeSections.tsx",
+  "app/analytics/page.tsx",
+];
+
+/** The platform names Atlas has configured today. A future Card Rush does not
+ * need adding: the point is that a developer reaching for one of THESE from
+ * memory is caught, and the behavioural proof that an unknown platform still
+ * renders lives in app/analytics/page.test.tsx. */
+const SOURCE_NAME_TOKENS = ["yuyutei", "snkrdunk", "bandai"];
 
 /** The central presentation-copy module - audited for stored tokens like the
  * rest, exempt from the reference-type check because naming reference types
@@ -135,6 +163,46 @@ describe("Analytics 0C never decodes a stored price_type", () => {
     const copy = read(COPY_MODULE);
     for (const token of REFERENCE_TYPE_TOKENS) {
       expect(copy).toContain(token);
+    }
+  });
+
+  it.each(MARKET_LANDSCAPE)("%s names no platform in executable code", (relativePath) => {
+    // The market landscape must work when a fourth source is configured
+    // server-side, with no release here. A platform name in executable code is
+    // how that stops being true - as an `if`, a lookup key, an ordering rule
+    // or a colour map.
+    //
+    // THIS SCANS ALL EXECUTABLE CODE, NOT ONLY STRING LITERALS, and the
+    // difference is not theoretical: the literal-only form of this test was
+    // written first and a planted `{ snkrdunk: "gold", yuyutei: "teal" }`
+    // colour map passed it clean, because an object KEY is a bare identifier
+    // rather than a string. A tint map is exactly the shape a future
+    // contributor would reach for, so the check has to see identifiers too.
+    // Comments are still stripped - the modules explain this rule at length
+    // and a check that read them would forbid its own documentation.
+    const code = stripComments(read(relativePath));
+    for (const token of SOURCE_NAME_TOKENS) {
+      const pattern = new RegExp(`(^|[^A-Za-z0-9_])${token}([^A-Za-z0-9_]|$)`, "i");
+      expect(pattern.test(code), `${relativePath} names the platform "${token}"`).toBe(false);
+    }
+  });
+
+  it.each(MARKET_LANDSCAPE)("%s never compares a source name", (relativePath) => {
+    // The structural form, for a name this list does not happen to contain.
+    const code = stripComments(read(relativePath));
+    expect(code).not.toMatch(/\bsource\s*[=!]==?\s*["'`]/);
+    expect(code).not.toMatch(/["'`]\s*[=!]==?\s*[A-Za-z0-9_.]*\bsource\b/);
+    expect(code).not.toMatch(/switch\s*\(\s*[A-Za-z0-9_.]*\bsource\b/i);
+    // Branching on `kind` IS allowed and is used - "market_index" vs "source"
+    // is a shape distinction the server publishes, not a platform identity.
+  });
+
+  it("has no allowlist of valid sources or bases in the market landscape", () => {
+    for (const relativePath of MARKET_LANDSCAPE) {
+      const code = stripComments(read(relativePath));
+      expect(code, relativePath).not.toMatch(
+        /(VALID|ALLOWED|KNOWN|SUPPORTED)_(SOURCES|PLATFORMS|BASES)/,
+      );
     }
   });
 

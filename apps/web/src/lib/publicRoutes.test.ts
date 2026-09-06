@@ -25,7 +25,21 @@ function isMatched(pathname: string): boolean {
 
 describe("public indexable routes", () => {
   it("is exactly the public collector surface", () => {
-    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/cards"]);
+    // /analytics joined on 2026-09-06 (Analytics 1A-B): the current market
+    // landscape is a real, stable, parameter-free public page. The seven
+    // legacy /analytics/* leaf pages did NOT join it - they stay excluded by
+    // the "/analytics/" disallow prefix, which is asserted below.
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toEqual(["/", "/analytics", "/cards"]);
+  });
+
+  it("indexes the market landscape without indexing collector analytics", () => {
+    // The trailing slash is what separates them, the same way "/cards/" leaves
+    // "/cards" indexable. Getting this wrong in either direction is a real
+    // failure: no trailing slash would hide the public page, and no prefix at
+    // all would invite a crawler into a signed-in collector's own data.
+    expect([...PUBLIC_INDEXABLE_ROUTES]).toContain("/analytics");
+    expect([...CRAWLER_DISALLOWED_PREFIXES]).toContain("/analytics/");
+    expect([...CRAWLER_DISALLOWED_PREFIXES]).not.toContain("/analytics");
   });
 
   it("never advertises a route that only redirects somewhere else", () => {

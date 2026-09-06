@@ -108,6 +108,51 @@ describe("collector-private routes remain guarded", () => {
   });
 });
 
+describe("the market landscape is public, the collector analytics beneath it are not", () => {
+  // The single most load-bearing distinction in this file, and the one that
+  // was actually wrong before Analytics 1A-B: `/analytics/:path*` matched the
+  // BARE /analytics as well as its children, so the public market landscape
+  // answered 307 to /sign-in (verified at request time against a running dev
+  // server, 2026-09-06). `:path+` requires at least one segment, which splits
+  // the parent from its children exactly where the product needs it.
+
+  it("leaves the bare /analytics reachable signed out", () => {
+    expect(isMatched("/analytics")).toBe(false);
+    // Whatever the URL carries, the page itself is still public: query strings
+    // are not part of matching, and the landscape keeps all of its state there.
+    expect(isMatched("/analytics?basis=source:yuyutei")).toBe(false);
+  });
+
+  it("still guards every legacy collector-data leaf beneath it", () => {
+    for (const leaf of [
+      "/analytics/collection",
+      "/analytics/wishlist",
+      "/analytics/grading",
+      "/analytics/buy-decisions",
+      "/analytics/sell-decisions",
+      "/analytics/portfolio-risk",
+      "/analytics/digest",
+      "/analytics/digest/reports",
+    ]) {
+      expect(isMatched(leaf), `${leaf} must stay guarded`).toBe(true);
+      expect(guardOutcome(leaf, false)).toEqual({ kind: "redirect-sign-in" });
+      expect(failClosedOutcome(leaf)).toEqual({ kind: "redirect-sign-in" });
+    }
+  });
+
+  it("uses :path+ for analytics and :path* for the routes whose parent is private", () => {
+    // The neighbours must NOT be converted along with it: /collection,
+    // /wishlist, /grading, /dashboard and /activity are all real pages showing
+    // the caller's own data, so their bare parent has to stay matched.
+    expect(PROTECTED_MATCHER).toContain("/analytics/:path+");
+    expect(PROTECTED_MATCHER).not.toContain("/analytics/:path*");
+    for (const parent of ["/collection", "/wishlist", "/grading", "/dashboard", "/activity"]) {
+      expect(PROTECTED_MATCHER).toContain(`${parent}/:path*`);
+      expect(isMatched(parent), `${parent} must stay guarded`).toBe(true);
+    }
+  });
+});
+
 describe("FULL_MATCHER composition", () => {
   it("is the two groups in order", () => {
     expect(FULL_MATCHER).toEqual([...PROTECTED_MATCHER, ...ADMIN_MATCHER]);

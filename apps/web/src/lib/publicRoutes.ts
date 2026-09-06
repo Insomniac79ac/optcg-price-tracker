@@ -13,7 +13,15 @@
  * sitemap should only claim pages that answer with a page. It is deliberately
  * NOT added to the disallow list below - a crawler that already knows the URL
  * should be allowed to follow the redirect and find /cards. */
-export const PUBLIC_INDEXABLE_ROUTES = ["/", "/cards"] as const;
+/* /analytics joined this list on 2026-09-06 (Analytics 1A-B). It is the
+ * current market landscape - catalogue-wide pricing coverage, price
+ * distribution and Market Index composition - and it is a real, stable,
+ * parameter-free public page, which is exactly what belongs here. The
+ * "/analytics/" disallow prefix below already carries a trailing slash, so it
+ * continues to exclude the seven legacy collector-data leaf pages beneath it
+ * while leaving this one crawlable - the same shape "/cards/" has against
+ * "/cards". */
+export const PUBLIC_INDEXABLE_ROUTES = ["/", "/analytics", "/cards"] as const;
 
 /** Path prefixes a crawler is asked to stay out of: private collector data,
  * the admin surface, internal market analytics, the API proxy routes, and the
