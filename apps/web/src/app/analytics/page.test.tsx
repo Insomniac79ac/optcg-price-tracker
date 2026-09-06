@@ -55,15 +55,17 @@ function startAt(query: string) {
   window.history.replaceState(null, "", `/analytics${query ? `?${query}` : ""}`);
 }
 
-const { fetchMarketBases, fetchMarketFilters, fetchMarketOverview } = vi.hoisted(() => ({
-  fetchMarketBases: vi.fn(),
-  fetchMarketFilters: vi.fn(),
-  fetchMarketOverview: vi.fn(),
-}));
+const { fetchMarketBases, fetchMarketCards, fetchMarketFilters, fetchMarketOverview } =
+  vi.hoisted(() => ({
+    fetchMarketBases: vi.fn(),
+    fetchMarketCards: vi.fn(),
+    fetchMarketFilters: vi.fn(),
+    fetchMarketOverview: vi.fn(),
+  }));
 vi.mock("@/lib/marketAnalytics", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/marketAnalytics")>("@/lib/marketAnalytics");
-  return { ...actual, fetchMarketBases, fetchMarketFilters, fetchMarketOverview };
+  return { ...actual, fetchMarketBases, fetchMarketCards, fetchMarketFilters, fetchMarketOverview };
 });
 
 import type {
@@ -205,6 +207,13 @@ beforeEach(() => {
   fetchMarketBases.mockResolvedValue({ bases: BASES });
   fetchMarketFilters.mockResolvedValue(FILTERS);
   fetchMarketOverview.mockResolvedValue(overview());
+  // The card strip is exercised in cardsInThisView.test.tsx; here it only has
+  // to stay out of the way of the statistics assertions.
+  fetchMarketCards.mockResolvedValue({
+    items: [], total: 0, limit: 6, offset: 0,
+    pagination: { next_offset: null, prev_offset: null, has_more: false },
+    facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
+  });
 });
 
 afterEach(() => {

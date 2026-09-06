@@ -6,6 +6,8 @@ import { Suspense, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
+import { MarketLandscapeCards, type CardsStatus } from "@/components/ui/MarketLandscapeCards";
+import type { PrintCatalogueItem } from "@/lib/prints";
 import { MarketLandscapeFilters } from "@/components/ui/MarketLandscapeFilters";
 import {
   MarketCoverageComposition,
@@ -16,6 +18,7 @@ import {
 import {
   MARKET_INDEX_BASIS,
   fetchMarketBases,
+  fetchMarketCards,
   fetchMarketFilters,
   fetchMarketOverview,
   isOfferedBasis,
@@ -113,6 +116,22 @@ function MarketLandscapePageInner() {
     overview: MarketOverview | null;
     failed: boolean;
   } | null>(null);
+  /** The "Cards in this view" strip, tagged with the selection it answers -
+   * the same staleness discipline as `settled`, and for a stricter reason.
+   *
+   * The statistics deliberately keep the PREVIOUS scope's numbers on screen
+   * while a new scope loads, because a figure updating in place beats
+   * collapsing a thousand pixels of page. Cards get no such grace: OP01-001's
+   * artwork under an EB-02 heading is not a stale number, it is a specific
+   * false statement about which cards are in this set. So a result whose tag
+   * no longer matches the selection is treated as no result at all, and the
+   * strip shows its placeholder until the right one lands. A slow response
+   * for an abandoned filter can therefore never overwrite a newer one. */
+  const [cards, setCards] = useState<{
+    key: string;
+    items: PrintCatalogueItem[];
+    failed: boolean;
+  } | null>(null);
 
   // The two vocabulary endpoints, once per mount. They describe the catalogue,
   // not the current view, so nothing about changing a filter can invalidate
@@ -174,6 +193,29 @@ function MarketLandscapePageInner() {
     };
   }, [ready, requestKey, selectedBasis, selectedSet, selectedRarity]);
 
+  // The card strip, on the same selection and the same cancellation
+  // discipline. A separate request rather than a field on the overview: the
+  // two answer different questions, and a failure to fetch six pieces of
+  // artwork must not take the statistics down with it.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    fetchMarketCards({
+      priceBasis: selectedBasis,
+      set: selectedSet || undefined,
+      rarity: selectedRarity || undefined,
+    })
+      .then((result) => {
+        if (!cancelled) setCards({ key: requestKey, items: result.items, failed: false });
+      })
+      .catch(() => {
+        if (!cancelled) setCards({ key: requestKey, items: [], failed: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, requestKey, selectedBasis, selectedSet, selectedRarity]);
+
   const current = settled && settled.key === requestKey ? settled : null;
   /** The PREVIOUS selection's result, still on screen while the new one loads.
    *
@@ -192,6 +234,22 @@ function MarketLandscapePageInner() {
       ? "ready"
       : "loading";
   const overview = showing?.overview ?? null;
+
+  /** The strip's own status. Unlike the statistics there is no "previous"
+   * fallback: a result tagged with a superseded selection is not shown. */
+  const currentCards = cards && cards.key === requestKey ? cards : null;
+  const cardsStatus: CardsStatus = currentCards
+    ? currentCards.failed
+      ? "error"
+      : "ready"
+    : "loading";
+  const cardItems = currentCards && !currentCards.failed ? currentCards.items : [];
+  /** Names the scope in the strip's caption, from the SERVER's own tokens, so
+   * it can never claim a scope the request did not ask for. */
+  const scopeLabel =
+    [selectedSet, selectedRarity].filter(Boolean).join(" · ") || null;
+  const selectedBasisRow =
+    vocabulary?.bases.find((row) => row.key === selectedBasis) ?? null;
 
   /** Commits a selection to the URL.
    *
@@ -264,7 +322,13 @@ function MarketLandscapePageInner() {
                   refreshing ? "opacity-60 transition-opacity motion-reduce:transition-none" : ""
                 }
               >
-                <MarketLandscapeBody overview={overview} />
+                <MarketLandscapeBody
+                  overview={overview}
+                  cardItems={cardItems}
+                  cardsStatus={cardsStatus}
+                  basis={selectedBasisRow}
+                  scopeLabel={scopeLabel}
+                />
               </div>
             )}
           </>
@@ -322,7 +386,19 @@ function MarketLandscapeSkeleton() {
  *                         are still shown, because "this platform prices
  *                         nothing here" is an answer worth reading.
  */
-function MarketLandscapeBody({ overview }: { overview: MarketOverview }) {
+function MarketLandscapeBody({
+  overview,
+  cardItems,
+  cardsStatus,
+  basis,
+  scopeLabel,
+}: {
+  overview: MarketOverview;
+  cardItems: PrintCatalogueItem[];
+  cardsStatus: CardsStatus;
+  basis: MarketBasis | null;
+  scopeLabel: string | null;
+}) {
   if (overview.scope.active_prints === 0) {
     return (
       <div className="panel px-4 py-6 text-center">
@@ -338,6 +414,12 @@ function MarketLandscapeBody({ overview }: { overview: MarketOverview }) {
     <>
       {!overview.available && <BasisUnavailableNote overview={overview} />}
       <MarketLandscapeStats overview={overview} />
+      <MarketLandscapeCards
+        items={cardItems}
+        basis={basis}
+        status={cardsStatus}
+        scopeLabel={scopeLabel}
+      />
       <CatalogueLink rarity={overview.scope.rarity} />
       <MarketPriceDistribution overview={overview} />
       <MarketCoverageComposition overview={overview} />

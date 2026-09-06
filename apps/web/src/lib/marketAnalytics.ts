@@ -32,6 +32,7 @@
  */
 
 import { apiGet } from "./api";
+import type { PrintCatalogueItem, PrintCatalogueList } from "./prints";
 import { sourceDisplayName } from "./prints";
 import { instrumentLabel } from "./sourceEvidence";
 
@@ -157,6 +158,63 @@ export function fetchMarketOverview(params: MarketOverviewParams = {}): Promise<
       rarity: params.rarity || undefined,
     },
   });
+}
+
+/** GET /prints, scoped to the analytics selection - the "Cards in this view"
+ * strip.
+ *
+ * WHY THE SERVER DOES THE SELECTING. Every rule that decides WHICH prints
+ * belong in this strip - the set, the rarity, and above all whether the
+ * selected basis actually prices a print - is applied by `/prints` itself
+ * (see app.services.price_basis.usable_basis_value, the same rule the overview
+ * counts with). This client asks a question and renders the answer. It does
+ * not re-filter, re-rank, or sweep the catalogue: a basis-scoped page is a
+ * single request, which is the whole reason the parameters were added.
+ *
+ * `sort=card_code_asc` is a NEUTRAL order, chosen because the honest thing to
+ * say about these cards is "here are some of them", not "here are the best".
+ * The archive cannot support a ranking claim yet, so none is made: no top
+ * cards, no gainers, no randomisation that would make the same view look
+ * different on a refresh. */
+export function fetchMarketCards(params: MarketOverviewParams = {}): Promise<PrintCatalogueList> {
+  return apiGet<PrintCatalogueList>("/prints", {
+    params: {
+      set: params.set || undefined,
+      rarity: params.rarity || undefined,
+      price_basis: params.priceBasis || undefined,
+      sort: "card_code_asc",
+      limit: MARKET_CARD_LIMIT,
+    },
+  });
+}
+
+/** How many cards the strip asks for. Small on purpose - this is a page about
+ * aggregates, and the cards are there to remind a collector that the numbers
+ * describe real cards, not to become the page. */
+export const MARKET_CARD_LIMIT = 6;
+
+/** The number to print on one card, for the basis the page is currently
+ * showing.
+ *
+ * A LOOKUP, NOT A SECOND ELIGIBILITY DECISION. `/prints` has already
+ * guaranteed every item it returned has a usable value for this basis; this
+ * only locates it in the payload. It reads the same two fields the server
+ * decided on (`eligible` and `value_jpy`) purely to pick the right entry out
+ * of `source_values`, and it never consults the stored price_type, a source
+ * name, or any local table of what a platform means.
+ *
+ * NULL IS RENDERED AS UNAVAILABLE, NEVER AS ¥0. Reaching null here would mean
+ * the server returned a print its own filter should have excluded - so the
+ * card says it has no price for this basis rather than inventing one, and
+ * rather than quietly borrowing the number from a platform the collector did
+ * not select. */
+export function cardBasisValue(item: PrintCatalogueItem, basis: MarketBasis | null): number | null {
+  if (!basis || basis.kind === "market_index") return item.market_index.index_value_jpy;
+  for (const value of item.market_index.source_values) {
+    if (value.source !== basis.source) continue;
+    if (value.eligible && value.value_jpy !== null) return value.value_jpy;
+  }
+  return null;
 }
 
 /** The collector-facing name for one basis - "Market Index", "Yuyu-Tei ·
