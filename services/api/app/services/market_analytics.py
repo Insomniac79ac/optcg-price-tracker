@@ -66,14 +66,20 @@ narration, not a census, so the census is taken from price_observations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, CardPrint, PriceObservation, Source
 from app.services.print_catalogue import effective_rarity_sql
 from app.services.print_market_index import INDEX_EVIDENCE_PRICE_TYPES
+from app.services.price_basis import (
+    MARKET_INDEX_BASIS,
+    SOURCE_BASIS_PREFIX,
+    BasisError,
+    BasisRequest,
+    parse_price_basis,
+    usable_basis_value,
+)
 from app.services.print_series import KIND_MARKET_INDEX, KIND_SOURCE
 from app.services.rarity_facets import facet_values, filter_tokens
 from app.services.source_instruments import describe_instrument, primary_price_types
@@ -115,48 +121,18 @@ PRICE_BUCKETS: tuple[tuple[int, int | None, str], ...] = (
     (100000, None, "¥100,000+"),
 )
 
-MARKET_INDEX_BASIS = KIND_MARKET_INDEX
-SOURCE_BASIS_PREFIX = f"{KIND_SOURCE}:"
-
-
-class BasisError(ValueError):
-    """A price_basis string the grammar does not accept."""
-
-
-@dataclass(frozen=True)
-class BasisRequest:
-    """One parsed `price_basis`, in the SAME grammar the print series endpoint
-    already publishes (`market_index` | `source:<name>` - see
-    app.services.print_series.parse_series_key).
-
-    Reusing that grammar rather than inventing an analytics-only one is the
-    whole point: a collector who selected SNKRDUNK on a print page and then
-    opens analytics is selecting the same thing, spelled the same way, and a
-    saved URL means one thing across the product. No source name is validated
-    here - an unconfigured one resolves to an explicitly unavailable answer
-    later, exactly as a series key does.
-    """
-
-    key: str
-    kind: str
-    source_name: str | None = None
-
-
-def parse_price_basis(raw: str | None) -> BasisRequest:
-    """`market_index` (the default) or `source:<name>`. Nothing else."""
-    cleaned = (raw or "").strip()
-    if not cleaned:
-        return BasisRequest(key=MARKET_INDEX_BASIS, kind=KIND_MARKET_INDEX)
-    if cleaned == MARKET_INDEX_BASIS:
-        return BasisRequest(key=MARKET_INDEX_BASIS, kind=KIND_MARKET_INDEX)
-    if cleaned.startswith(SOURCE_BASIS_PREFIX):
-        name = cleaned[len(SOURCE_BASIS_PREFIX) :].strip()
-        if not name:
-            raise BasisError("A source basis must name a source, e.g. source:<name>")
-        return BasisRequest(key=f"{SOURCE_BASIS_PREFIX}{name}", kind=KIND_SOURCE, source_name=name)
-    raise BasisError(
-        f"Invalid price_basis '{cleaned}'. Expected '{MARKET_INDEX_BASIS}' or 'source:<name>'."
-    )
+# The basis grammar and the "is this value usable" rule now live in
+# app.services.price_basis, so this module and GET /prints cannot drift into
+# two different answers about the same basis. Re-exported here because
+# app.api.analytics imports them from this module.
+__all_basis__ = (
+    "MARKET_INDEX_BASIS",
+    "SOURCE_BASIS_PREFIX",
+    "BasisError",
+    "BasisRequest",
+    "parse_price_basis",
+    "usable_basis_value",
+)
 
 
 def _scoped_prints_from():
@@ -360,8 +336,13 @@ def _basis_values(
     single = multi = 0
 
     for index in indexes.values():
+        # ONE definition of "usable", shared with GET /prints - see
+        # app.services.price_basis.usable_basis_value. The counting below is
+        # this module's own (it is what an aggregate needs and a catalogue
+        # filter does not), but which NUMBER counts is decided there, so a
+        # print in this median is exactly a print that basis can price.
+        value = usable_basis_value(index, basis)
         if basis.kind == KIND_MARKET_INDEX:
-            value = index.index_value_jpy
             if value is not None:
                 usable.append(value)
                 # source_count is the resolver's own count of contributors, so
@@ -373,6 +354,8 @@ def _basis_values(
                     single += 1
             continue
 
+        if value is not None:
+            usable.append(value)
         for source_value in index.source_values:
             if source_value.source != basis.source_name:
                 continue
@@ -392,12 +375,6 @@ def _basis_values(
             # a future eligible one is correctly ignored, with no edit.
             if source_value.constraint is not None and not source_value.eligible:
                 excluded_constrained += 1
-            # BOTH conditions: eligible alone is not a price if no number was
-            # reported, and a number alone is not a price if semantics
-            # disqualified it. The ¥1,000 platform floor is exactly the second
-            # case and must never reach `usable`.
-            if source_value.eligible and source_value.value_jpy is not None:
-                usable.append(source_value.value_jpy)
 
     usable.sort()
     if basis.kind == KIND_MARKET_INDEX:

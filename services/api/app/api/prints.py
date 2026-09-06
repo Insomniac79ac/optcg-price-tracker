@@ -25,6 +25,7 @@ from app.schemas import (
     PrintSeriesHistoryOut,
 )
 from app.services.display_image import get_display_image_for_print
+from app.services.price_basis import BasisError, parse_price_basis
 from app.services.print_catalogue import (
     SORT_KEYS,
     get_print_catalogue_facets,
@@ -71,6 +72,8 @@ def get_print_catalogue(
     language: str | None = Query(default=None),
     rarity: str | None = Query(default=None),
     verification_status: str | None = Query(default=None),
+    set_code: str | None = Query(default=None, alias="set", max_length=32),
+    price_basis: str | None = Query(default=None, max_length=64),
     sort: str = Query(default="card_code"),
     limit: int = Query(default=24, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -79,11 +82,32 @@ def get_print_catalogue(
     """The public, paginated print catalogue - each item is one collectible
     print (never a legacy card row), with its own independently-computed
     Market Index. Sibling prints of the same canonical card (e.g. Sanji base
-    and Sanji parallel) each appear as their own separate entry."""
+    and Sanji parallel) each appear as their own separate entry.
+
+    `set` takes the SAME identifiers `/analytics/market/filters` publishes and
+    `/analytics/market/overview?set=` accepts - `OP-01`, `EB-02` - because they
+    are the same catalogue column (`release_product_code`). Until this
+    parameter existed a client that sent `?set=` got HTTP 200 and the whole
+    unfiltered catalogue back, which is worse than an error: the page looked
+    scoped and was not.
+
+    `price_basis` narrows to prints that basis can price RIGHT NOW, in the
+    grammar the print series endpoint already publishes (`market_index` |
+    `source:<name>`). It is a filter, never a substitution: under
+    `source:<name>` a print that source has no usable value for is absent, even
+    when another platform prices it happily, and a constrained reading such as
+    a platform-floor listing does not qualify - see
+    app.services.price_basis.usable_basis_value, which is the same rule the
+    market overview counts with. The item shape is unchanged; this only decides
+    WHICH prints are on the page."""
     if sort not in SORT_KEYS:
         raise HTTPException(
             status_code=400, detail=f"Invalid sort. Must be one of {list(SORT_KEYS)}"
         )
+    try:
+        basis = parse_price_basis(price_basis) if price_basis is not None else None
+    except BasisError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     items, total = list_print_catalogue(
         db,
@@ -92,6 +116,8 @@ def get_print_catalogue(
         language=language,
         rarity=rarity,
         verification_status=verification_status,
+        set_code=set_code,
+        price_basis=basis,
         sort=sort,  # type: ignore[arg-type]
         limit=limit,
         offset=offset,

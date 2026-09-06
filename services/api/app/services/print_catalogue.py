@@ -46,7 +46,7 @@ from typing import Literal
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint
+from app.models import CanonicalCard, CardPrint, PriceObservation, Source
 from app.schemas import (
     CardPrintOut,
     CardPrintSiblingOut,
@@ -57,11 +57,26 @@ from app.schemas import (
 )
 from app.services.display_image import get_display_images_for_prints
 from app.services.market_index_change import get_index_change_7d_for_prints
+from app.services.price_basis import BasisRequest, usable_basis_value
 from app.services.print_market_index import get_market_index_for_prints
+from app.services.print_series import KIND_SOURCE
 from app.services.rarity_facets import facet_values, filter_tokens
 
-SortKey = Literal["card_code", "name", "index_desc", "index_asc", "updated"]
-SORT_KEYS: tuple[SortKey, ...] = ("card_code", "name", "index_desc", "index_asc", "updated")
+SortKey = Literal["card_code", "card_code_asc", "name", "index_desc", "index_asc", "updated"]
+# `card_code_asc` is an explicit ALIAS for the long-standing `card_code`, not a
+# new ordering: same expression, same tie-breakers, same rows in the same
+# sequence. It exists so a caller that needs a neutral, deterministic order can
+# ask for one by a name that says so, instead of relying on `card_code`
+# happening to be ascending. Both spellings are kept because `card_code` is
+# already in saved URLs.
+SORT_KEYS: tuple[SortKey, ...] = (
+    "card_code",
+    "card_code_asc",
+    "name",
+    "index_desc",
+    "index_asc",
+    "updated",
+)
 
 _INDEX_SORTS = {"index_desc", "index_asc"}
 
@@ -221,8 +236,20 @@ def _apply_filters(
     language: str | None,
     rarity: str | None,
     verification_status: str | None,
+    set_code: str | None = None,
 ):
     stmt = stmt.where(CardPrint.is_active.is_(True))
+    # The SAME column and the SAME spelling `/analytics/market/filters`
+    # publishes and `/analytics/market/overview?set=` filters on
+    # (`release_product_code`, e.g. `OP-01`) - never the legacy `cards.set_code`
+    # vocabulary, which spells the same product `OP01` and carries legacy card
+    # identity. One set vocabulary, published in one place, honoured here.
+    #
+    # Equality on an explicit value, so a print with no release product is not
+    # selectable by any set - the same rule the filter endpoint keeps when it
+    # declines to invent an "Unknown" option for NULL.
+    if set_code:
+        stmt = stmt.where(CardPrint.release_product_code == set_code)
     # Only ever an equality match on an explicit value - a NULL treatment can
     # therefore never be returned by a treatment filter, and no filter value
     # selects "unclassified".
@@ -256,6 +283,56 @@ def _apply_filters(
     return stmt
 
 
+def _prints_priced_for_basis(db: Session, base, basis: BasisRequest) -> list[int]:
+    """The ids in `base` that this basis can actually price, right now.
+
+    TWO STEPS, AND THE FIRST IS WHAT KEEPS IT CHEAP. Eligibility is not a
+    stored column - it is decided by source semantics at resolve time - so the
+    only honest way to know whether a basis prices a print is to resolve it.
+    Resolving the whole catalogue to answer that would be 4,316 index objects
+    per request. So the candidate set is first narrowed IN SQL to prints that
+    have an observation the basis could possibly be built from, and only those
+    are resolved.
+
+    WHY THE NARROWING CANNOT HIDE A PRICED PRINT. A Market Index value and a
+    source value are both computed ENTIRELY from observations: a print with
+    none resolves to `index_value_jpy=None` and to source values with no
+    number and `eligible=False`. For a source basis the same holds per source -
+    `fallback_used` is a within-source notion (an alternative INSTRUMENT of the
+    same platform), never a borrowed reading from a neighbour - so a print that
+    source has never observed can have no usable value under it. The narrowing
+    therefore removes only prints that were already going to be excluded.
+
+    It is what makes this O(1) in CATALOGUE size: the work scales with how many
+    prints are observed (~290 on staging today), not with how many exist, and
+    the second step's cost is `get_market_index_for_prints`' own fixed query
+    count regardless of how many ids it is handed.
+    """
+    observed = select(PriceObservation.card_print_id).where(
+        PriceObservation.card_print_id == CardPrint.id
+    )
+    if basis.kind == KIND_SOURCE:
+        # Matched by NAME against the sources table, with no allowlist and no
+        # branch per platform: a source this build has never heard of narrows
+        # to its own observations, and one that is not configured at all
+        # narrows to none - which is the same empty answer the series and
+        # overview endpoints already give it.
+        observed = observed.join(Source, Source.id == PriceObservation.source_id).where(
+            Source.name == basis.source_name
+        )
+    candidates = list(
+        db.scalars(base.with_only_columns(CardPrint.id).where(observed.exists())).all()
+    )
+    if not candidates:
+        return []
+    indexes = get_market_index_for_prints(db, candidates)
+    return [
+        print_id
+        for print_id in candidates
+        if usable_basis_value(indexes[print_id], basis) is not None
+    ]
+
+
 def list_print_catalogue(
     db: Session,
     *,
@@ -264,6 +341,8 @@ def list_print_catalogue(
     language: str | None = None,
     rarity: str | None = None,
     verification_status: str | None = None,
+    set_code: str | None = None,
+    price_basis: BasisRequest | None = None,
     sort: SortKey = "card_code",
     limit: int = 24,
     offset: int = 0,
@@ -276,9 +355,21 @@ def list_print_catalogue(
         language=language,
         rarity=rarity,
         verification_status=verification_status,
+        set_code=set_code,
     )
 
-    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+    if price_basis is not None:
+        # Narrowed to the prints this basis can price, as one more WHERE on the
+        # SAME query the other filters built - so set, rarity and basis compose
+        # into a single intersection rather than three passes, and `total`
+        # counts what the caller can actually page through.
+        priced_ids = _prints_priced_for_basis(db, base, price_basis)
+        if not priced_ids:
+            return [], 0
+        base = base.where(CardPrint.id.in_(priced_ids))
+        total = len(priced_ids)
+    else:
+        total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     if total == 0:
         return [], 0
 
@@ -307,7 +398,7 @@ def list_print_catalogue(
             )
         elif sort == "updated":
             ordered = ordered.order_by(CardPrint.updated_at.desc(), CardPrint.id.asc())
-        else:  # "card_code"
+        else:  # "card_code" / its explicit alias "card_code_asc"
             # NULLS LAST explicitly: an unclassified print sorts after the
             # classified siblings of the same card rather than wherever the
             # engine's default puts it (PostgreSQL puts NULLs last on ASC,
