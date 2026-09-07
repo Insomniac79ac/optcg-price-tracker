@@ -134,6 +134,42 @@ CHANGE_UNAVAILABLE_NO_POINT = "no_published_point_in_window"
 CHANGE_UNAVAILABLE_NO_CONTINUITY = "no_carried_continuity"
 
 
+# --- the frozen v1 seed (methodology sections 6 and 14) ---------------------
+#
+# CONFIGURATION, NOT ARITHMETIC. Nothing in compute_step, chain or build_points
+# may reference this: the estimator is a pure function of the days it is
+# handed, and a date baked into it would make the mechanics unusable for any
+# other scope or era. This constant only tells a CALLER which archive to hand
+# over.
+#
+# `history_start` is 2026-09-03 because that is the first day of the
+# (methodology 1, index 3, semantics 2) era and the first day with a
+# defensible constituent count. The v1/v2 archive before it (2026-08-21 ->
+# 2026-09-02) is retained and queryable but is NOT published in this headline
+# index: it carries 20 constituents, far below MIN_CONSTITUENTS. Feeding it to
+# the builder would make 2026-09-03 a CARRIED base off the v2 era and emit
+# boundary breaks the methodology says do not exist there - the series opens
+# on 2026-09-03, it does not resume there.
+
+
+@dataclass(frozen=True)
+class SeedSpec:
+    """Which scope a replay is for, and where its history begins."""
+
+    scope_kind: str
+    scope_key: str
+    methodology_version: int
+    history_start: date
+
+
+V1_OVERALL_SEED = SeedSpec(
+    scope_kind=SCOPE_OVERALL,
+    scope_key="",
+    methodology_version=METHODOLOGY_VERSION,
+    history_start=date(2026, 9, 3),
+)
+
+
 def _cap() -> Decimal:
     """ln(1.25), at working precision."""
     with localcontext() as ctx:
@@ -840,10 +876,12 @@ __all__ = [
     "SCOPE_SET",
     "STEP_PLACES",
     "ScopeSeries",
+    "SeedSpec",
     "SnapshotDay",
     "StepResult",
     "UNPUBLISHABLE_INSUFFICIENT_CONSTITUENTS",
     "UNPUBLISHABLE_MIXED_VERSION_DAY",
+    "V1_OVERALL_SEED",
     "build_points",
     "chain",
     "compute_change",

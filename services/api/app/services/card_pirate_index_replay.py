@@ -101,7 +101,7 @@ COMPARED_FIELDS = (
 def load_snapshot_days(
     db: Session,
     *,
-    start: date | None = None,
+    history_start: date | None = None,
     end: date | None = None,
     card_print_ids: list[int] | None = None,
 ) -> list[SnapshotDay]:
@@ -110,6 +110,11 @@ def load_snapshot_days(
     Only `index_value_jpy IS NOT NULL` rows are loaded: a NULL value is
     `coverage_status='none'`, which is an absence. Absences are never carried
     forward, so they are simply not here.
+
+    `history_start` is the earliest archive day allowed to PARTICIPATE IN THE
+    CHAIN. It is deliberately not called `start`: in `replay_scope` and
+    `verify_scope` that word means the output/write window, and the two are
+    different questions. See those functions for the full contract.
 
     `card_print_ids` is how a sub-index scope is expressed - a filter on the
     constituent set and nothing else. There is no source name, rarity, price
@@ -125,8 +130,8 @@ def load_snapshot_days(
         MarketIndexSnapshot.provenance,
     ).where(MarketIndexSnapshot.index_value_jpy.is_not(None))
 
-    if start is not None:
-        stmt = stmt.where(MarketIndexSnapshot.snapshot_date >= start)
+    if history_start is not None:
+        stmt = stmt.where(MarketIndexSnapshot.snapshot_date >= history_start)
     if end is not None:
         stmt = stmt.where(MarketIndexSnapshot.snapshot_date <= end)
     if card_print_ids is not None:
@@ -170,15 +175,49 @@ def build_scope_series(
     *,
     scope_kind: str = SCOPE_OVERALL,
     scope_key: str = "",
-    start: date | None = None,
+    history_start: date | None = None,
     end: date | None = None,
     card_print_ids: list[int] | None = None,
 ) -> ScopeSeries:
-    """Read the archive and rebuild one scope's series. Reads only."""
+    """Read the archive and rebuild one scope's series. Reads only.
+
+    `history_start` bounds the archive that constructs the chain; the first
+    publishable day at or after it becomes the scope's clean-start base under
+    the frozen methodology. `None` means "the whole archive", which is the
+    behaviour every existing caller relies on.
+    """
     days = load_snapshot_days(
-        db, start=start, end=end, card_print_ids=card_print_ids
+        db, history_start=history_start, end=end, card_print_ids=card_print_ids
     )
     return build_points(days, scope_kind=scope_kind, scope_key=scope_key)
+
+
+def _validate_boundaries(
+    start: date | None, history_start: date | None, end: date | None
+) -> None:
+    """The two window parameters answer different questions, so an incoherent
+    combination is refused rather than guessed at.
+
+    `history_start` bounds what BUILDS the chain. `start` bounds what is
+    WRITTEN or COMPARED. A `start` earlier than `history_start` asks for rows
+    the chain was never allowed to construct, and silently returning fewer
+    rows than requested would hide that. Neither is ever inferred from the
+    other: inferring `history_start` from `start` is precisely the conflation
+    that would let a windowed replay fabricate a clean-start base.
+    """
+    if start is not None and history_start is not None and start < history_start:
+        raise ValueError(
+            f"start={start} is earlier than history_start={history_start}: the "
+            "output window cannot begin before the chain's own history does. "
+            "Widen history_start, or move start forward."
+        )
+    if end is not None and history_start is not None and end < history_start:
+        raise ValueError(
+            f"end={end} is earlier than history_start={history_start}: the "
+            "requested range is empty."
+        )
+    if start is not None and end is not None and end < start:
+        raise ValueError(f"end={end} is earlier than start={start}.")
 
 
 # --- writing (INSERT only) --------------------------------------------------
@@ -203,6 +242,7 @@ def replay_scope(
     scope_kind: str = SCOPE_OVERALL,
     scope_key: str = "",
     start: date | None = None,
+    history_start: date | None = None,
     end: date | None = None,
     card_print_ids: list[int] | None = None,
     calculated_at: datetime | None = None,
@@ -215,19 +255,39 @@ def replay_scope(
     disagrees with the rebuild, this function leaves it exactly as it is -
     `verify_scope` is what surfaces the disagreement, and a human decides.
 
+    TWO WINDOWS, TWO QUESTIONS. They are never inferred from one another.
+
+      `history_start`  the earliest archive day allowed to BUILD the chain.
+                       The first publishable day at or after it becomes the
+                       scope's clean-start base, carrying nothing, exactly as
+                       the frozen methodology's clean-start rule requires.
+                       `None` - the default - means the whole archive, which
+                       is the pre-existing behaviour byte for byte.
+
+      `start`          the earliest day WRITTEN. It does not, and must not,
+                       truncate the history the chain is built from.
+
     `dry_run` computes and reports without touching the session at all.
     """
-    # THE CHAIN IS A FUNCTION OF THE WHOLE HISTORY, so `start` filters what is
+    _validate_boundaries(start, history_start, end)
+
+    # THE CHAIN IS A FUNCTION OF ITS WHOLE HISTORY, so `start` filters what is
     # WRITTEN, never what is computed. Building from a windowed archive would
     # make the window's first day look like the scope's first day, and
     # build_points would open an INITIAL base at 1000 there - fabricating a
     # reset, inventing a discontinuity the market never had, and silently
     # destroying the carry the methodology requires. Compute from the
     # beginning; restrict only the write.
+    #
+    # `history_start` is the ONLY thing that may narrow the constructing
+    # history, and it does so deliberately: it declares where this series'
+    # history begins, which is a methodology decision rather than a windowing
+    # convenience. It is never derived from `start`.
     series = build_scope_series(
         db,
         scope_kind=scope_kind,
         scope_key=scope_key,
+        history_start=history_start,
         end=end,
         card_print_ids=card_print_ids,
     )
@@ -251,6 +311,22 @@ def replay_scope(
             )
         )
     }
+
+    if history_start is not None:
+        # Structurally guaranteed - history before the boundary was never
+        # loaded, so no draft can reference it - but asserted rather than
+        # assumed, because a carry reaching behind the declared start of the
+        # series would silently reintroduce the era the methodology excluded.
+        stray = [
+            p.point_date
+            for p in series.points
+            if p.carried_from_key is not None and p.carried_from_key < history_start
+        ]
+        if stray:
+            raise ValueError(
+                f"carry target(s) before history_start={history_start} for "
+                f"{scope_kind}/{scope_key or '-'}: {stray}"
+            )
 
     inserted = 0
     already = 0
@@ -408,6 +484,7 @@ def verify_scope(
     scope_kind: str = SCOPE_OVERALL,
     scope_key: str = "",
     start: date | None = None,
+    history_start: date | None = None,
     end: date | None = None,
     card_print_ids: list[int] | None = None,
 ) -> VerifyResult:
@@ -429,13 +506,18 @@ def verify_scope(
          time, and never close a cycle. These are the guarantees the schema
          cannot make (section 8.6 finding 4), so they are made here instead.
     """
-    # Same rule as replay: the rebuild spans the whole history, and start/end
-    # narrow only what is COMPARED. Verifying against a windowed rebuild would
-    # report a fabricated initial base as correct.
+    # Same rule as replay: `start`/`end` narrow only what is COMPARED, while
+    # `history_start` declares where the chain's history begins. Verifying
+    # against a `start`-windowed rebuild would report a fabricated initial
+    # base as correct - which is the failure this separation exists to
+    # prevent. A verification must be given the SAME history_start the replay
+    # was given, or it is comparing two different series.
+    _validate_boundaries(start, history_start, end)
     expected = build_scope_series(
         db,
         scope_kind=scope_kind,
         scope_key=scope_key,
+        history_start=history_start,
         end=end,
         card_print_ids=card_print_ids,
     )

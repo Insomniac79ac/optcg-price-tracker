@@ -17,7 +17,7 @@ and a non-increasing carry chronology, which section 8.6 records as reachable
 by a hand-written UPDATE.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -303,6 +303,166 @@ def _snapshot_rows(db):
             select(CardPirateIndexPoint).order_by(CardPirateIndexPoint.point_date)
         )
     ]
+
+
+# --- history_start vs start: two windows, two questions ---------------------
+#
+# The dry run against real staging surfaced the ambiguity these tests pin.
+# `start` had to keep meaning "what gets written" - narrowing the constructing
+# history with it would make the window's first day look like the series'
+# first day and fabricate a clean-start base. But the frozen methodology also
+# needs to say "this series' history begins on 2026-09-03", which is a
+# different statement. One parameter could not honestly carry both meanings.
+
+
+def _two_era_archive(db):
+    """An archive with a v1 era, then a v3 era - the shape real staging has.
+
+    Day D3 belongs to the LATER era, so it is both "the first day of the new
+    era" and "a day with prior history", which is exactly the case where the
+    two window parameters disagree.
+    """
+    seed_snapshots(db, {D3 - timedelta(days=2): {i: 100 for i in range(50)},
+                        D3 - timedelta(days=1): {i: 100 for i in range(50)}},
+                   iv=1, ssv=1)
+    seed_snapshots(db, {D3: {i: 100 for i in range(50)},
+                        D4: {i: 110 for i in range(50)},
+                        D5: {i: 110 for i in range(50)}}, iv=3, ssv=2)
+
+
+def test_start_alone_preserves_prior_history_and_invents_no_base(db_session):
+    """A. `start` is still only an output filter.
+
+    The chain must still be built from the whole archive, so D3 remains a
+    CARRIED base off the v1 era - not a fabricated clean start.
+    """
+    _two_era_archive(db_session)
+    _, series = replay_scope(db_session, start=D3, dry_run=True)
+    dates = [p.point_date for p in series.points]
+    assert dates[0] == D3 - timedelta(days=2), "prior history was truncated"
+
+    d3 = next(p for p in series.points if p.point_date == D3)
+    assert d3.is_base is True
+    assert d3.carried_from_key is not None, "a carry was replaced by a fabricated base"
+    assert d3.carried_from_key < D3
+
+
+def test_history_start_makes_the_boundary_day_a_clean_base(db_session):
+    """B. `history_start` excludes the earlier era from construction.
+
+    D3 becomes the clean-start base: carrying nothing, at BASE_VALUE, with no
+    invented methodology break.
+    """
+    _two_era_archive(db_session)
+    _, series = replay_scope(db_session, history_start=D3, dry_run=True)
+    dates = [p.point_date for p in series.points]
+    assert dates == [D3, D4, D5], dates
+
+    base = series.points[0]
+    assert base.is_base is True
+    assert base.carried_from_key is None
+    assert base.index_value == BASE_VALUE
+    assert series.breaks == (), "a break was invented at the clean start"
+
+
+def test_history_start_with_a_later_start_keeps_the_chain(db_session):
+    """C. Both together: build from D3, write from D5.
+
+    D5 must keep its chain-derived level - it is mid-segment and must NOT
+    become a base just because it is the first row written.
+    """
+    _two_era_archive(db_session)
+    _, series = replay_scope(db_session, history_start=D3, start=D5, dry_run=True)
+    # the SERIES still spans the full declared history
+    assert [p.point_date for p in series.points] == [D3, D4, D5]
+
+    d5 = next(p for p in series.points if p.point_date == D5)
+    assert d5.is_base is False
+    assert d5.carried_from_key is None
+    assert d5.prior_point_date == D4
+    # chain-derived, not the base value
+    assert d5.index_value != BASE_VALUE
+    assert d5.index_value == next(p for p in series.points if p.point_date == D4).index_value
+
+
+def test_history_start_written_rows_begin_at_start(db_session):
+    """C, the write half: only rows at/after `start` are inserted."""
+    _two_era_archive(db_session)
+    replay_scope(db_session, history_start=D3, start=D4)
+    stored = db_session.scalars(
+        select(CardPirateIndexPoint).order_by(CardPirateIndexPoint.point_date)
+    ).all()
+    assert [r.point_date for r in stored] == [D4, D5]
+    assert all(r.carried_from_point_id is None for r in stored)
+
+
+@pytest.mark.parametrize(
+    "kwargs,message",
+    [
+        ({"start": D3, "history_start": D4}, "earlier than history_start"),
+        ({"history_start": D5, "end": D4}, "earlier than history_start"),
+        ({"start": D5, "end": D4}, "earlier than start"),
+    ],
+)
+def test_invalid_boundary_combinations_are_refused(db_session, kwargs, message):
+    """D. An incoherent combination fails loudly rather than being guessed at.
+
+    Silently returning fewer rows than asked for would hide the mistake, and
+    inferring one boundary from the other is the exact conflation that caused
+    the ambiguity in the first place.
+    """
+    _two_era_archive(db_session)
+    with pytest.raises(ValueError, match=message):
+        replay_scope(db_session, dry_run=True, **kwargs)
+    with pytest.raises(ValueError, match=message):
+        verify_scope(db_session, **kwargs)
+
+
+def test_history_start_defaults_to_full_history(db_session):
+    """E. The default is byte-for-byte the pre-existing behaviour."""
+    _two_era_archive(db_session)
+    _, explicit = replay_scope(db_session, history_start=None, dry_run=True)
+    _, implicit = replay_scope(db_session, dry_run=True)
+
+    def sig(pts):
+        return [(p.natural_key, p.index_value, p.is_base, p.carried_from_key,
+                 p.prior_point_date, p.step_days, p.chain_link_log_return,
+                 p.constituent_count, p.eligible_print_count, p.movers_up,
+                 p.movers_down, p.movers_flat, p.capped_count,
+                 p.unpublishable_reason) for p in pts]
+    assert sig(explicit.points) == sig(implicit.points)
+    assert explicit.points[0].point_date == D3 - timedelta(days=2)
+
+
+def test_no_carry_may_reach_behind_history_start(db_session):
+    """The declared start of a series is a floor for its carries too - a carry
+    reaching behind it would silently reintroduce the excluded era."""
+    _two_era_archive(db_session)
+    _, series = replay_scope(db_session, history_start=D3, dry_run=True)
+    for p in series.points:
+        assert p.carried_from_key is None or p.carried_from_key >= D3
+
+
+def test_verify_must_be_given_the_same_history_start(db_session):
+    """A verification run against a different history is comparing two
+    different series, and says so rather than reporting a false mismatch."""
+    _two_era_archive(db_session)
+    replay_scope(db_session, history_start=D3)
+    assert verify_scope(db_session, history_start=D3).ok
+
+    mismatched = verify_scope(db_session)   # full history - a different series
+    assert not mismatched.ok
+
+
+def test_the_v1_seed_is_configuration_not_arithmetic(db_session):
+    """The frozen seed names a scope and a history boundary, and nothing in
+    the estimator may depend on it."""
+    from app.services.card_pirate_index import V1_OVERALL_SEED
+
+    assert V1_OVERALL_SEED.scope_kind == SCOPE_OVERALL
+    assert V1_OVERALL_SEED.scope_key == ""
+    assert V1_OVERALL_SEED.methodology_version == 1
+    assert V1_OVERALL_SEED.history_start == date(2026, 9, 3)
 
 
 # --- determinism ------------------------------------------------------------
