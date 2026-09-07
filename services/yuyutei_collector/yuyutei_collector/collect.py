@@ -22,6 +22,7 @@ import sys
 from dataclasses import dataclass, field
 from importlib.metadata import version as pkg_version
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
 from yuyutei_collector.browser import (
@@ -71,6 +72,14 @@ class MappingOutcome:
     # classification=None when the navigation itself errored. That is exactly
     # the distinction mapping 413 (homepage timeout) needed and did not have.
     failure_stage: str | None = None
+    # True only when the failure was the browser plumbing itself (a launch
+    # that never completed, or a Playwright call that escaped the guarded
+    # navigation helpers - see run_one_mapping_detailed's PlaywrightError
+    # handler). It is NOT set for a mapping whose page merely timed out or
+    # failed to parse: those leave a perfectly usable browser behind. Batch
+    # orchestration uses it to tell "this URL is bad" apart from "this
+    # container can no longer drive a browser".
+    browser_unusable: bool = False
     reasons: list[str] = field(default_factory=list)
     observation_id: int | None = None
     raw_snapshot_id: int | None = None
@@ -97,6 +106,50 @@ _DEADLINE_LABEL_STAGES = {
     "homepage_navigation": "homepage",
     "product_navigation": "product",
 }
+
+
+def _release_browser_objects(page, context, browser, *, mapping_id, batch_run_id) -> None:
+    """Close this mapping's Playwright objects - always, and quietly.
+
+    WHY THIS EXISTS. Until A12 the two close() calls sat inline on the
+    homepage-gate and post-extraction paths, so every exception route skipped
+    them: the three deadline() watchdogs, and any Playwright error outside the
+    guarded navigation helpers. `sync_playwright().__exit__` then ran
+    `p.stop()` with a browser still alive and, in the browser_launch case, a
+    launch still in flight - which is where A11's
+    "Future exception was never retrieved / TargetClosedError" pairs came
+    from: driver futures resolving against objects nobody was left holding.
+
+    Three rules, and each one is load-bearing:
+
+    1. **Innermost first.** page, then context, then browser. Closing the
+       browser out from under a page with an in-flight navigation is what
+       leaves the Chromium process resolving a URL nobody will read.
+    2. **Each handle is independent.** A raise closing the page must not cost
+       us the context and browser closes - that is how one leaked page became
+       a leaked browser process in A11.
+    3. **Teardown is bounded and terminal.** It runs inside a finally, often
+       while an exception is already propagating, so it may not hang and it
+       may not raise. Failures are logged and consumed; the caller's original
+       outcome is what survives.
+    """
+    for label, handle in (("page", page), ("context", context), ("browser", browser)):
+        if handle is None:
+            continue
+        try:
+            with deadline(settings.BROWSER_TEARDOWN_TIMEOUT_S, "browser_teardown"):
+                handle.close()
+        except Exception as exc:
+            # Consumed on purpose. A teardown failure is worth seeing and is
+            # never worth propagating: the mapping's real outcome has already
+            # been decided by the time we get here.
+            log_event(
+                "browser_teardown_error",
+                mapping_id=mapping_id,
+                handle=label,
+                error=f"{type(exc).__name__}: {exc}",
+                batch_run_id=batch_run_id,
+            )
 
 
 def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, Source | None, list[str]]:
@@ -180,130 +233,175 @@ def run_one_mapping_detailed(
         with deadline(settings.TOTAL_RUN_TIMEOUT_S, "total_run"):
             with sync_playwright() as p:
                 log_event("playwright_ready", playwright_version=pkg_version("playwright"))
-                with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
-                    browser = p.chromium.launch(headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000)
-                    context = browser.new_context()
-                    page = context.new_page()
-
-                # Same call discovery makes, so the two cannot drift apart -
-                # see browser.warm_up_homepage, which is this block moved
-                # verbatim (same constants, same helper, same deadline label
-                # and timeout).
-                homepage_step = warm_up_homepage(page)
-                log_event(
-                    "homepage_result",
-                    mapping_id=mapping.id,
-                    http_status=homepage_step.get("http_status"),
-                    classification=homepage_step.get("classification"),
-                    error=homepage_step.get("error"),
-                    batch_run_id=batch_run_id,
-                )
-
-                homepage_ok = homepage_session_ok(homepage_step)
-
-                if not homepage_ok:
-                    result_holder["observed_classification"] = homepage_step.get("classification")
-                    result_holder["failure_stage"] = "homepage"
-                    log_event(
-                        "homepage_gate_failed",
-                        mapping_id=mapping.id,
-                        reason=homepage_step.get("classification", "navigation_error"),
-                        batch_run_id=batch_run_id,
-                    )
-                    context.close()
-                    browser.close()
-                else:
-                    with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                        product_step = goto_and_capture(page, mapping.source_url, product_expected_markers)
-                    log_event(
-                        "product_result",
-                        mapping_id=mapping.id,
-                        http_status=product_step.get("http_status"),
-                        classification=product_step.get("classification"),
-                        error=product_step.get("error"),
-                        batch_run_id=batch_run_id,
-                    )
-
-                    result_holder["classification"] = product_step.get("classification")
-                    result_holder["http_status"] = product_step.get("http_status")
-                    result_holder["observed_classification"] = product_step.get("classification")
-                    # Provisional: consulted only if the run ends without an
-                    # extraction. Once extraction is attempted the stage is
-                    # decided by the outcome instead (validation / written).
-                    result_holder["failure_stage"] = "product"
-
-                    if product_step.get("classification") == "normal_product" and "error" not in product_step:
-                        html = product_step["html"]
-                        result_holder["html"] = html
-                        extraction = extract_with_agreement(
-                            html, mapping.source_url, expected_card_code, expected_treatment
+                # Bound before the launch so the finally below can close
+                # whatever actually came into existence - a launch that dies
+                # part-way leaves some of these set and the rest None.
+                browser = None
+                context = None
+                page = None
+                try:
+                    with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+                        browser = p.chromium.launch(
+                            headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
                         )
-                        result_holder["extraction"] = extraction
+                        context = browser.new_context()
+                        page = context.new_page()
+
+                    # Same call discovery makes, so the two cannot drift apart -
+                    # see browser.warm_up_homepage, which is this block moved
+                    # verbatim (same constants, same helper, same deadline label
+                    # and timeout).
+                    homepage_step = warm_up_homepage(page)
+                    log_event(
+                        "homepage_result",
+                        mapping_id=mapping.id,
+                        http_status=homepage_step.get("http_status"),
+                        classification=homepage_step.get("classification"),
+                        error=homepage_step.get("error"),
+                        batch_run_id=batch_run_id,
+                    )
+
+                    homepage_ok = homepage_session_ok(homepage_step)
+
+                    if not homepage_ok:
+                        result_holder["observed_classification"] = homepage_step.get("classification")
+                        result_holder["failure_stage"] = "homepage"
                         log_event(
-                            "extraction_result",
+                            "homepage_gate_failed",
                             mapping_id=mapping.id,
-                            extraction_status=extraction["extraction_status"],
-                            fail_reasons=extraction["fail_reasons"],
-                            sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
-                            stock_status=(extraction.get("extracted") or {}).get("stock_status"),
-                            promotion_state=(extraction.get("extracted") or {}).get("promotion_state"),
+                            reason=homepage_step.get("classification", "navigation_error"),
                             batch_run_id=batch_run_id,
                         )
-                        # An indeterminate promotion verdict is a markup
-                        # signal worth seeing, and it is invisible in
-                        # extraction_status by design - it can never fail an
-                        # extraction. Logged on its own so a Yuyu-Tei markup
-                        # change shows up as a run of these lines rather than
-                        # as silence, and only when the two markers actually
-                        # disagreed: "none" and "sale" are both determined
-                        # answers and say nothing worth a second line.
-                        promotion = (
-                            ((extraction.get("raw") or {}).get("dom") or {}).get("promotion") or {}
+                    else:
+                        with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
+                            product_step = goto_and_capture(page, mapping.source_url, product_expected_markers)
+                        log_event(
+                            "product_result",
+                            mapping_id=mapping.id,
+                            http_status=product_step.get("http_status"),
+                            classification=product_step.get("classification"),
+                            error=product_step.get("error"),
+                            batch_run_id=batch_run_id,
                         )
-                        if promotion.get("reason") == "no_product_container":
-                            # Already reported by extraction_fail_diagnostics
-                            # below - the container is missing for the price
-                            # too, so this would only duplicate it.
-                            pass
-                        elif promotion.get("promotion_state") is None:
-                            log_event(
-                                "promotion_state_indeterminate",
-                                mapping_id=mapping.id,
-                                reason=promotion.get("reason"),
-                                sale_badge=promotion.get("sale_badge"),
-                                struck_price_element=promotion.get("struck_price_element"),
-                                # Restated so one line shows that the price
-                                # survived the disagreement, which is the
-                                # whole point of not gating on it.
-                                sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
-                                batch_run_id=batch_run_id,
-                            )
-                        if extraction["extraction_status"] != "extracted":
-                            # Diagnostic-only detail (never used to accept a
-                            # value) - the raw stock/price element text so a
-                            # fail-closed disagreement can be root-caused
-                            # without re-fetching the page.
-                            dom = (extraction.get("raw") or {}).get("dom") or {}
-                            jsonld = (extraction.get("raw") or {}).get("jsonld") or {}
-                            log_event(
-                                "extraction_fail_diagnostics",
-                                mapping_id=mapping.id,
-                                dom_stock_element=dom.get("stock_element"),
-                                dom_price_candidates=dom.get("price_candidates"),
-                                jsonld_availability=jsonld.get("offers_availability"),
-                                jsonld_price=jsonld.get("offers_price"),
-                                batch_run_id=batch_run_id,
-                            )
 
-                    context.close()
-                    browser.close()
+                        result_holder["classification"] = product_step.get("classification")
+                        result_holder["http_status"] = product_step.get("http_status")
+                        result_holder["observed_classification"] = product_step.get("classification")
+                        # Provisional: consulted only if the run ends without an
+                        # extraction. Once extraction is attempted the stage is
+                        # decided by the outcome instead (validation / written).
+                        result_holder["failure_stage"] = "product"
+
+                        if product_step.get("classification") == "normal_product" and "error" not in product_step:
+                            html = product_step["html"]
+                            result_holder["html"] = html
+                            extraction = extract_with_agreement(
+                                html, mapping.source_url, expected_card_code, expected_treatment
+                            )
+                            result_holder["extraction"] = extraction
+                            log_event(
+                                "extraction_result",
+                                mapping_id=mapping.id,
+                                extraction_status=extraction["extraction_status"],
+                                fail_reasons=extraction["fail_reasons"],
+                                sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                                stock_status=(extraction.get("extracted") or {}).get("stock_status"),
+                                promotion_state=(extraction.get("extracted") or {}).get("promotion_state"),
+                                batch_run_id=batch_run_id,
+                            )
+                            # An indeterminate promotion verdict is a markup
+                            # signal worth seeing, and it is invisible in
+                            # extraction_status by design - it can never fail an
+                            # extraction. Logged on its own so a Yuyu-Tei markup
+                            # change shows up as a run of these lines rather than
+                            # as silence, and only when the two markers actually
+                            # disagreed: "none" and "sale" are both determined
+                            # answers and say nothing worth a second line.
+                            promotion = (
+                                ((extraction.get("raw") or {}).get("dom") or {}).get("promotion") or {}
+                            )
+                            if promotion.get("reason") == "no_product_container":
+                                # Already reported by extraction_fail_diagnostics
+                                # below - the container is missing for the price
+                                # too, so this would only duplicate it.
+                                pass
+                            elif promotion.get("promotion_state") is None:
+                                log_event(
+                                    "promotion_state_indeterminate",
+                                    mapping_id=mapping.id,
+                                    reason=promotion.get("reason"),
+                                    sale_badge=promotion.get("sale_badge"),
+                                    struck_price_element=promotion.get("struck_price_element"),
+                                    # Restated so one line shows that the price
+                                    # survived the disagreement, which is the
+                                    # whole point of not gating on it.
+                                    sell_price_jpy=(extraction.get("extracted") or {}).get("sell_price_jpy"),
+                                    batch_run_id=batch_run_id,
+                                )
+                            if extraction["extraction_status"] != "extracted":
+                                # Diagnostic-only detail (never used to accept a
+                                # value) - the raw stock/price element text so a
+                                # fail-closed disagreement can be root-caused
+                                # without re-fetching the page.
+                                dom = (extraction.get("raw") or {}).get("dom") or {}
+                                jsonld = (extraction.get("raw") or {}).get("jsonld") or {}
+                                log_event(
+                                    "extraction_fail_diagnostics",
+                                    mapping_id=mapping.id,
+                                    dom_stock_element=dom.get("stock_element"),
+                                    dom_price_candidates=dom.get("price_candidates"),
+                                    jsonld_availability=jsonld.get("offers_availability"),
+                                    jsonld_price=jsonld.get("offers_price"),
+                                    batch_run_id=batch_run_id,
+                                )
+
+                finally:
+                    # The one guaranteed step. Reached by every route out
+                    # of the block above: clean completion, the homepage
+                    # gate, any of the three deadline watchdogs, and any
+                    # Playwright error - so `sync_playwright().__exit__`
+                    # below can never again run `p.stop()` against a live
+                    # browser or an in-flight launch.
+                    _release_browser_objects(
+                        page,
+                        context,
+                        browser,
+                        mapping_id=mapping_id,
+                        batch_run_id=batch_run_id,
+                    )
     except DeadlineExceeded as exc:
         log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
         return MappingOutcome(
             mapping_id=mapping_id,
             stage="operational_error",
             failure_stage=_DEADLINE_LABEL_STAGES.get(str(exc)),
+            # A launch that never returned says nothing about this mapping and
+            # everything about the container: the next mapping will ask the
+            # same runtime for the same thing. Only this one label qualifies -
+            # a homepage or product watchdog leaves the browser fine.
+            browser_unusable=str(exc) == "browser_launch",
             reasons=[f"watchdog_triggered:{exc}"],
+        )
+    except PlaywrightError as exc:
+        # Reached only by a Playwright call OUTSIDE the guarded navigation
+        # helpers: goto_and_capture already absorbs every navigation error
+        # (including page.title/page.content) into an {"error": ...} result,
+        # and teardown is consumed by _release_browser_objects. What is left -
+        # launch, new_context, new_page, and the TargetClosedError A11 raised
+        # once its browser had gone - is by elimination the plumbing itself.
+        session.rollback()
+        log_event(
+            "collection_error",
+            mapping_id=mapping_id,
+            error=f"{type(exc).__name__}: {exc}",
+            batch_run_id=batch_run_id,
+        )
+        return MappingOutcome(
+            mapping_id=mapping_id,
+            stage="operational_error",
+            failure_stage=result_holder["failure_stage"],
+            browser_unusable=True,
+            reasons=[f"{type(exc).__name__}: {exc}"],
         )
     except Exception as exc:  # operational error - never leave a half-written row
         session.rollback()

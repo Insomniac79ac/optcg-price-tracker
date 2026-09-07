@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     HOMEPAGE_NAV_TIMEOUT_S: int = 35
     PRODUCT_NAV_TIMEOUT_S: int = 35
     ARTIFACT_WRITE_TIMEOUT_S: int = 15
+    # Per-handle budget for closing one page/context/browser. Teardown now
+    # runs in a finally, which means it also runs while an exception is
+    # already propagating - so it must be the one step that cannot itself
+    # hang. Small on purpose: a close that has not returned in this long is
+    # a browser that is already gone, and waiting longer only spends the
+    # batch's budget on a corpse.
+    BROWSER_TEARDOWN_TIMEOUT_S: int = 10
     TOTAL_RUN_TIMEOUT_S: int = 180
     # Wall-clock budget for an entire --approved-mappings batch (see
     # yuyutei_collector.batch) - independent of, and larger than, a single

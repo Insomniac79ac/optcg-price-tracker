@@ -103,6 +103,27 @@ def select_eligible_mappings(
     return mappings
 
 
+# How many CONSECUTIVE browser-level failures end the batch.
+#
+# A11's tail is the case this bounds: once chromium.launch() stopped
+# returning, mappings 542-545 each burned the full 30s launch watchdog to
+# learn the same thing, and the run would have kept doing that for every
+# mapping still queued. A12 makes each of those failures leave clean state
+# behind, but clean state does not conjure a working browser out of a
+# container that has run out of room for one.
+#
+# So this is a circuit breaker, not a retry limit. Three is deliberately more
+# than one: a single launch failure is exactly the transient a fresh browser
+# per mapping is supposed to absorb, and stopping on it would turn a blip
+# into a lost batch. Three in a row is no longer a blip.
+#
+# The remaining mappings are recorded as `skipped` by the existing
+# stopped_reason machinery - the same shape a source denial produces - which
+# is the honest record: they were never attempted, and marking them
+# operational_error would claim 30s of evidence that was never gathered.
+MAX_CONSECUTIVE_BROWSER_FAILURES = 3
+
+
 @dataclass
 class BatchResult:
     batch_run_id: str
@@ -183,6 +204,7 @@ def run_batch(
     results: list[MappingOutcome] = []
     stopped_reason: str | None = None
     selected_ids: list[int] = []
+    consecutive_browser_failures = 0
 
     try:
         eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids)
@@ -260,6 +282,25 @@ def run_batch(
 
             if outcome.source_denied:
                 stopped_reason = f"source_denied:{outcome.classification}"
+                break
+
+            # Counted AFTER the outcome is recorded, so a mapping that trips
+            # the breaker still keeps its own terminal row. Any non-browser
+            # outcome - written, validation failure, a page that timed out -
+            # resets the count: those prove the browser still works.
+            if outcome.browser_unusable:
+                consecutive_browser_failures += 1
+            else:
+                consecutive_browser_failures = 0
+
+            if consecutive_browser_failures >= MAX_CONSECUTIVE_BROWSER_FAILURES:
+                stopped_reason = "browser_unavailable"
+                log_event(
+                    "batch_browser_unavailable",
+                    batch_run_id=batch_run_id,
+                    consecutive_failures=consecutive_browser_failures,
+                    remaining_mapping_ids=[m.id for m in selected[index + 1 :]],
+                )
                 break
 
             is_last = index == len(selected) - 1
