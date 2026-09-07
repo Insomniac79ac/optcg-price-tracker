@@ -6,6 +6,7 @@ from app.models.app_log_event import AppLogEvent
 from app.models.canonical_card import CanonicalCard
 from app.models.card import Card
 from app.models.card_alias import CardAlias
+from app.models.card_pirate_index_point import CardPirateIndexPoint
 from app.models.card_print import CardPrint
 from app.models.card_tag import CardTag
 from app.models.collection_item import CollectionItem
@@ -69,6 +70,7 @@ __all__ = [
     "AlertRule",
     "MarketSignalEvent",
     "MarketIndexSnapshot",
+    "CardPirateIndexPoint",
     "MarketIntelligenceReport",
     "MarketReportDigestSend",
     "MarketWorkflowRun",
