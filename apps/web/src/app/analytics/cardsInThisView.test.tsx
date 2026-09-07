@@ -54,7 +54,7 @@ vi.mock("@/lib/marketAnalytics", async () => {
 });
 
 import { formatJpy } from "@/lib/format";
-import type { MarketBasis } from "@/lib/marketAnalytics";
+import { MARKET_CARD_LIMIT, type MarketBasis } from "@/lib/marketAnalytics";
 import type { PrintCatalogueItem } from "@/lib/prints";
 
 import MarketLandscapePage from "./page";
@@ -568,5 +568,74 @@ describe("the artwork is the card, whole", () => {
       // And no platform may be branched on.
       expect(code.toLowerCase()).not.toMatch(/if\s*\(.*(yuyutei|snkrdunk)/);
     }
+  });
+});
+
+// --- E. the loading placeholder holds the loaded row's geometry -------------
+
+/** THE REGRESSION THESE GUARD. The first version of the strip reserved space
+ * for the incoming cards with a hand-set `h-[218px]` box. A real row is 282px
+ * on desktop and 272px on mobile, so the page grew by 54-64px the moment the
+ * cards landed - on EVERY basis/set/rarity change, because the strip enters
+ * `loading` on each one, not only on first paint.
+ *
+ * A pixel number cannot be asserted in jsdom, and asserting one here would
+ * just re-create the original bug in a second place. What is checked instead
+ * is the property that made the height correct: the placeholder is built from
+ * the SAME container and the SAME tile shell as the loaded row, so the browser
+ * derives one height for both. */
+describe("the loading placeholder reserves the loaded row's geometry", () => {
+  /** Renders with the cards request deliberately still in flight. */
+  async function renderLoading() {
+    fetchMarketCards.mockReturnValue(new Promise(() => {}));
+    const view = render(<MarketLandscapePage />);
+    await waitFor(() => expect(screen.queryByText("Loading market landscape…")).toBeNull());
+    const busy = within(strip()).getByRole("list", { busy: true });
+    return { view, busy };
+  }
+
+  it("does not reserve space with a hand-set height", async () => {
+    const { busy } = await renderLoading();
+    // `h-[218px]` and every other literal height: the placeholder's height must
+    // come from its own content, never from a number typed next to it.
+    expect(busy.className).not.toMatch(/\bh-\[/);
+    expect(busy.querySelector("[class*='h-[']")).toBeNull();
+  });
+
+  it("reserves one card-shaped shell per card the request asks for", async () => {
+    const { busy } = await renderLoading();
+    const shells = busy.querySelectorAll("li");
+    expect(shells).toHaveLength(MARKET_CARD_LIMIT);
+    expect(busy.style.gridTemplateColumns).toContain(`repeat(${MARKET_CARD_LIMIT},`);
+    // The artwork's own aspect ratio is what makes the shell the right height.
+    for (const shell of shells) {
+      expect(shell.querySelector("[class*='aspect-[63/88]']")).not.toBeNull();
+      // ...and three caption lines under it, so the text block is reserved too.
+      expect(shell.querySelectorAll("span")).toHaveLength(3);
+    }
+  });
+
+  it("builds the placeholder from the same container and tile as the loaded row", async () => {
+    const { view, busy } = await renderLoading();
+    const loadingList = busy.className;
+    const loadingTile = (busy.querySelector("li") as HTMLElement).className;
+    view.unmount();
+
+    fetchMarketCards.mockResolvedValue(
+      cardsResponse([item(1, "OP01-001", "Luffy", { sourceValues: [YUYU] })]),
+    );
+    await renderPage();
+    const tile = (await within(strip()).findAllByRole("listitem"))[0];
+    expect(loadingTile).toBe(tile.className);
+    expect(loadingList).toBe((tile.parentElement as HTMLElement).className);
+  });
+
+  it("announces itself as busy without claiming any cards exist yet", async () => {
+    const { busy } = await renderLoading();
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    // The shells are shapes, not results. A screen reader must not be told the
+    // page has six cards before a single one has been fetched.
+    expect(within(strip()).queryAllByRole("listitem")).toHaveLength(0);
+    expect(within(strip()).queryByText(jpy(0))).toBeNull();
   });
 });

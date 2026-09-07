@@ -35,6 +35,7 @@
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { formatJpy } from "@/lib/format";
 import {
+  MARKET_CARD_LIMIT,
   cardBasisValue,
   basisPlatformLabel,
   type MarketBasis,
@@ -43,6 +44,37 @@ import { toPrintUiModel, type PrintCatalogueItem } from "@/lib/prints";
 import { instrumentLabel } from "@/lib/sourceEvidence";
 
 export type CardsStatus = "loading" | "error" | "ready";
+
+/** THE STRIP'S GEOMETRY, DECLARED ONCE.
+ *
+ * The loading placeholder used to be a flat `h-[218px]` box guessed by hand,
+ * and a hand-guessed height is wrong the moment anything about a tile changes.
+ * It was already wrong on arrival: a real row is 282px on desktop and 272px on
+ * mobile, so every filter change grew the page by 50-64px the instant the
+ * cards landed - and the strip enters `loading` on EVERY scope change, not
+ * just first paint, so the jolt was the normal experience of using the page.
+ *
+ * These three constants are the fix. Both states build their container and
+ * their tiles from the same values, so the reserved height is derived from the
+ * real geometry rather than restated next to it, and the two cannot drift. */
+const STRIP_CLASS =
+  "-mx-1 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:grid sm:overflow-visible sm:px-0";
+const TILE_CLASS = "flex w-[148px] shrink-0 flex-col sm:w-auto";
+/** ONE TRACK PER CARD, EACH CAPPED AT 168px - and a grid rather than a
+ * wrapping flex row, because the two obvious alternatives each break a
+ * different case. A fixed six-track grid left four empty tracks open on a
+ * two-card result, which read as a page still loading. Replacing it with a
+ * WRAPPING flex row fixed that but broke the common case: six 168px cards do
+ * not fit the content column at 1440px, so the sixth wrapped onto a row of its
+ * own - on the default unfiltered view, which is the first thing anyone sees.
+ *
+ * A grid never wraps, so deriving the track count from the item count (capped
+ * at six) ends the row exactly where the data ends, and `minmax(0, 168px)`
+ * stops two cards from ballooning to half the page. The inline value is inert
+ * at mobile, where the container is still the horizontal scroller. */
+const stripColumns = (count: number) => ({
+  gridTemplateColumns: `repeat(${Math.min(count, MARKET_CARD_LIMIT)}, minmax(0, 168px))`,
+});
 
 /** One card. Compact by construction: artwork, who it is, and the one number
  * the current basis reports. No badge row, no chart, no per-card platform
@@ -65,7 +97,7 @@ function MarketCard({
   const rarity = print.rarityTerm?.label ?? print.specialPrint?.label ?? print.unknownRarityToken;
 
   return (
-    <li className="flex w-[148px] shrink-0 flex-col sm:w-auto">
+    <li className={TILE_CLASS}>
       <CardImageFrame
         imageUrl={print.imageUrl}
         alt={`${print.displayName} (${print.cardCode})`}
@@ -149,16 +181,53 @@ export function MarketLandscapeCards({
       </p>
 
       {status === "loading" && (
-        // A fixed-height placeholder rather than the previous scope's cards.
-        // The statistics above deliberately keep their last good answer while
-        // refreshing, because a number updating in place is honest; CARDS are
-        // not, because a card from the previous set would be a specific false
-        // claim about this one. So the strip empties and reloads.
-        <div
+        // A placeholder rather than the previous scope's cards. The statistics
+        // above deliberately keep their last good answer while refreshing,
+        // because a number updating in place is honest; CARDS are not, because
+        // a card from the previous set would be a specific false claim about
+        // this one. So the strip empties and reloads - and the placeholder
+        // below holds open exactly the space the real row will need, so that
+        // honesty costs the reader no jolt.
+        //
+        // It is the SAME container and the SAME tile shell as the loaded
+        // state, filled with blank shapes instead of cards: one track per card
+        // the request asks for, `aspect-[63/88]` where the artwork goes (what
+        // CardImageFrame's own frame uses), and three empty lines standing in
+        // for name, code and price. Its height is therefore computed from the
+        // real geometry by the browser, not asserted by a number here.
+        <ul
           aria-busy="true"
           aria-live="polite"
-          className="mt-3 h-[218px] rounded-panel border border-border-muted bg-bg-elevated/40"
-        />
+          style={stripColumns(MARKET_CARD_LIMIT)}
+          className={STRIP_CLASS}
+        >
+          {Array.from({ length: MARKET_CARD_LIMIT }, (_, i) => (
+            // Hidden from the accessibility tree: these are shapes, not cards.
+            // A screen reader hearing six list items here would be told the
+            // page has six results before anything has been fetched, which is
+            // the one thing this strip must never do. The `aria-busy` on the
+            // list says the honest thing instead.
+            <li key={i} aria-hidden="true" className={TILE_CLASS}>
+              <div className="aspect-[63/88] w-full rounded-panel bg-bg-elevated/40" />
+              <div className="flex flex-col gap-1 px-0.5 pt-2">
+                {/* `&nbsp;` and `text-transparent` rather than a fixed pixel
+                    height: each line then occupies the line box its own font
+                    size and leading produce - the same ones the real caption
+                    uses - so editing a caption's type moves the placeholder
+                    with it automatically. */}
+                <span className="w-3/4 rounded bg-bg-elevated/40 text-[13px] font-semibold leading-snug text-transparent">
+                  &nbsp;
+                </span>
+                <span className="w-1/2 rounded bg-bg-elevated/40 text-[10px] leading-none text-transparent">
+                  &nbsp;
+                </span>
+                <span className="w-1/3 rounded bg-bg-elevated/40 text-[13px] font-semibold leading-none text-transparent">
+                  &nbsp;
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
 
       {status === "error" && (
@@ -179,27 +248,10 @@ export function MarketLandscapeCards({
         // Horizontal scroll on mobile (about two cards visible, swipe for the
         // rest), a plain grid from `sm` up. The scroller is what keeps a
         // six-card row off the page's own horizontal axis at 390px - the
-        // overflow belongs to this strip, never to the document.
-        // ONE TRACK PER CARD, EACH CAPPED AT 168px - and a grid rather than a
-        // wrapping flex row, because the two obvious alternatives each break a
-        // different case. A fixed six-track grid left four empty tracks open on
-        // a two-card result, which read as a page still loading. Replacing it
-        // with a WRAPPING flex row fixed that but broke the common case: six
-        // 168px cards do not fit the content column at 1440px, so the sixth
-        // wrapped onto a row of its own - on the default unfiltered view, which
-        // is the first thing anyone sees.
-        //
-        // A grid never wraps, so deriving the track count from the item count
-        // (capped at six) ends the row exactly where the data ends, and
-        // `minmax(0, 168px)` stops two cards from ballooning to half the page.
-        // The inline value is inert at mobile, where the container is still the
-        // horizontal scroller.
-        <ul
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(items.length, 6)}, minmax(0, 168px))`,
-          }}
-          className="-mx-1 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:grid sm:overflow-visible sm:px-0"
-        >
+        // overflow belongs to this strip, never to the document. Container and
+        // track sizing come from the shared constants at the top of this file,
+        // which the loading placeholder builds from too.
+        <ul style={stripColumns(items.length)} className={STRIP_CLASS}>
           {items.map((item) => (
             <MarketCard key={item.card_print_id} item={item} basis={basis} />
           ))}
