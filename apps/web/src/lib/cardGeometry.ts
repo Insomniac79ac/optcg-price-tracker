@@ -100,3 +100,30 @@ export function placeCardBox(
 
   return { widthPct, leftPct, topPct };
 }
+
+/** Whether the canvas carries any margin outside the verified card box.
+ *
+ * This is the question that decides whether bounded placement has a job to do
+ * at all. The composited assets this module was written for leave the card as
+ * a sub-rectangle of a bigger canvas, and contain-fitting that canvas shrinks
+ * the card to ~43% of the frame - the defect bounded placement corrects.
+ *
+ * A mirrored tight crop (box == canvas, which every verified asset in the
+ * catalogue currently is) has no such margin. Both paths fit such an asset the
+ * same way, so bounded placement buys nothing - it only bypasses the frame's
+ * `padded` inset, which the contain path alone applies, and so renders the
+ * card flush while its neighbours sit inset. Callers use this to keep one
+ * framing language across every tile.
+ *
+ * Assumes `isValidGeometry`, which has already established the box lies within
+ * the canvas.
+ */
+export function hasCanvasPadding(geometry: CardBoxGeometry): boolean {
+  const { canvas_px: canvas, card_bbox_px: box } = geometry;
+  return (
+    box.x > 0 ||
+    box.y > 0 ||
+    box.x + box.width < canvas.width ||
+    box.y + box.height < canvas.height
+  );
+}

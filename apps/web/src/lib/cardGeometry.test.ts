@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  hasCanvasPadding,
   isValidGeometry,
   matchesNaturalSize,
   placeCardBox,
@@ -171,5 +172,39 @@ describe("placeCardBox", () => {
     expect(card.width).toBeLessThanOrEqual(card.frameW + 1e-6);
     expect(card.height).toBeLessThan(card.frameH);
     expect(card.width / card.frameW).toBeGreaterThan(0.98);
+  });
+});
+
+describe("hasCanvasPadding", () => {
+  it("is false for a tight crop - the box is the whole canvas", () => {
+    expect(
+      hasCanvasPadding({
+        canvas_px: { width: 600, height: 838 },
+        card_bbox_px: { x: 0, y: 0, width: 600, height: 838 },
+      }),
+    ).toBe(false);
+  });
+
+  it("is true for a card composited onto a bigger canvas", () => {
+    expect(
+      hasCanvasPadding({
+        canvas_px: { width: 856, height: 625 },
+        card_bbox_px: { x: 241, y: 51, width: 374, height: 523 },
+      }),
+    ).toBe(true);
+  });
+
+  it("is true for margin on any single edge", () => {
+    const edges = [
+      { x: 1, y: 0, width: 599, height: 838 }, // left
+      { x: 0, y: 1, width: 600, height: 837 }, // top
+      { x: 0, y: 0, width: 599, height: 838 }, // right
+      { x: 0, y: 0, width: 600, height: 837 }, // bottom
+    ];
+    for (const card_bbox_px of edges) {
+      expect(hasCanvasPadding({ canvas_px: { width: 600, height: 838 }, card_bbox_px })).toBe(
+        true,
+      );
+    }
   });
 });

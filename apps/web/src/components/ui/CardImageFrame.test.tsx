@@ -139,3 +139,155 @@ describe("CardImageFrame fallback paths", () => {
     expect(screen.getByText("OP01-013")).toBeTruthy();
   });
 });
+
+/** The shape the mirrored R2 display images actually have on staging: a tight
+ * crop, so the verified card box *is* the whole canvas. These are the prints
+ * that used to render edge-to-edge while every other tile in the same grid sat
+ * inset, because `padded` reached only the contain path. */
+const FULL_CANVAS_GEOMETRY: CardBoxGeometry = {
+  canvas_px: { width: 600, height: 838 },
+  card_bbox_px: { x: 0, y: 0, width: 600, height: 838 },
+};
+
+describe("CardImageFrame framing consistency", () => {
+  it("takes the contain path for a tight crop, so `padded` still applies", () => {
+    const { container } = render(
+      <CardImageFrame
+        imageUrl={SNKRDUNK}
+        alt="Sanji (OP01-013)"
+        cardCode="OP01-013"
+        geometry={FULL_CANVAS_GEOMETRY}
+        padded
+      />,
+    );
+    const img = loadAndSettle([600, 838]);
+
+    // Bounded placement has nothing to correct here, so it must not engage:
+    // engaging it is exactly what dropped the inset on these prints.
+    expect(img.className).toContain("object-contain");
+    expect(img.className).toContain("p-1.5");
+    expect(img.style.width).toBe("");
+    expect(container.querySelector(".vault-frame")!.className).toContain("overflow-hidden");
+  });
+
+  it("frames a tight-crop print and a plain print identically", () => {
+    // Equivalent inputs - same tile, same `padded` - must reach the same
+    // classes, which is the same rendered gutter.
+    const withGeometry = render(
+      <CardImageFrame
+        imageUrl={SNKRDUNK}
+        alt="Sanji (OP01-013)"
+        cardCode="OP01-013"
+        geometry={FULL_CANVAS_GEOMETRY}
+        size="full"
+        padded
+      />,
+    );
+    const geometryClasses = loadAndSettle([600, 838]).className;
+    withGeometry.unmount();
+
+    const plain = render(
+      <CardImageFrame
+        imageUrl={BANDAI}
+        alt="Sanji (OP01-013)"
+        cardCode="OP01-013"
+        size="full"
+        padded
+      />,
+    );
+    const plainClasses = (plain.container.querySelector("img") as HTMLImageElement).className;
+
+    expect(geometryClasses).toBe(plainClasses);
+  });
+
+  it("still corrects an asset that really is composited onto a bigger canvas", () => {
+    // The guard must not disarm bounded placement where it earns its keep -
+    // GEOMETRY's card box is a strict sub-rectangle of its canvas.
+    render(boundedUi);
+    const img = loadAndSettle([856, 625]);
+
+    expect(parseFloat(img.style.width)).toBeGreaterThan(200);
+    expect(img.className).not.toContain("object-contain");
+  });
+
+  it("keeps the whole card visible, never cropped or filled", () => {
+    const tight = render(
+      <CardImageFrame
+        imageUrl={SNKRDUNK}
+        alt="Sanji (OP01-013)"
+        cardCode="OP01-013"
+        geometry={FULL_CANVAS_GEOMETRY}
+        padded
+      />,
+    );
+    const tightImg = loadAndSettle([600, 838]);
+    expect(tightImg.className).toContain("object-contain");
+    expect(tightImg.className).not.toContain("object-cover");
+    expect(tightImg.className).not.toContain("object-fill");
+    tight.unmount();
+
+    const plain = render(
+      <CardImageFrame imageUrl={BANDAI} alt="Sanji (OP01-013)" cardCode="OP01-013" padded />,
+    );
+    const plainImg = plain.container.querySelector("img") as HTMLImageElement;
+    expect(plainImg.className).toContain("object-contain");
+    expect(plainImg.className).not.toContain("object-cover");
+    expect(plainImg.className).not.toContain("object-fill");
+  });
+
+  it("renders the supplied URL verbatim - no client-side source rewriting", () => {
+    const tight = render(
+      <CardImageFrame
+        imageUrl={SNKRDUNK}
+        alt="Sanji (OP01-013)"
+        cardCode="OP01-013"
+        geometry={FULL_CANVAS_GEOMETRY}
+        padded
+      />,
+    );
+    expect(loadAndSettle([600, 838]).getAttribute("src")).toBe(SNKRDUNK);
+    tight.unmount();
+
+    const plain = render(
+      <CardImageFrame imageUrl={BANDAI} alt="Sanji (OP01-013)" cardCode="OP01-013" padded />,
+    );
+    expect((plain.container.querySelector("img") as HTMLImageElement).getAttribute("src")).toBe(
+      BANDAI,
+    );
+  });
+});
+
+describe("collector surfaces share this component", () => {
+  const consumers = [
+    // /cards - the public catalogue grid tile.
+    "src/components/ui/PrintCardTile.tsx",
+    // Analytics - the "Cards in this view" strip.
+    "src/components/ui/MarketLandscapeCards.tsx",
+  ];
+
+  it.each(consumers)("%s renders CardImageFrame rather than its own <img>", async (path) => {
+    const fs = await import("fs/promises");
+    const source = await fs.readFile(path, "utf8");
+
+    expect(source).toMatch(/from "(\.\/|@\/components\/ui\/)CardImageFrame"/);
+    expect(source).toContain("<CardImageFrame");
+    // No consumer may hand-roll artwork: the framing contract is the shared
+    // component's to keep, which is the whole point of this tranche.
+    expect(source).not.toMatch(/<img\b/);
+  });
+
+  it.each(consumers)("%s asks for the same padded framing", async (path) => {
+    const fs = await import("fs/promises");
+    const source = await fs.readFile(path, "utf8");
+    const frameProps = source.slice(
+      source.indexOf("<CardImageFrame"),
+      source.indexOf("/>", source.indexOf("<CardImageFrame")),
+    );
+
+    // Identical framing inputs on both surfaces, so /cards and Analytics
+    // cannot drift back into two different card-image presentations.
+    expect(frameProps).toContain("padded");
+    expect(frameProps).toContain('size="full"');
+    expect(frameProps).toContain("geometry={print.imageGeometry}");
+  });
+});

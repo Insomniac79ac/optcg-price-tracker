@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 
 import { RarityBadge } from "@/components/RarityBadge";
 import {
+  hasCanvasPadding,
   isValidGeometry,
   matchesNaturalSize,
   placeCardBox,
@@ -70,7 +71,16 @@ export function CardImageFrame({
   // plain contain path below renders instead.
   const [bounded, setBounded] = useState(false);
 
-  const usableGeometry = isValidGeometry(geometry) ? geometry! : null;
+  /** Bounded placement exists for one job: undo the padding an asset added by
+   * compositing the card onto a larger canvas. Geometry whose box already IS
+   * the whole canvas describes a tight crop, so there is nothing to undo - and
+   * routing it through bounded placement anyway is what made those prints
+   * render edge-to-edge while every other tile in the same grid sat inset,
+   * because only the contain path applies `padded`. Contain fits such an asset
+   * exactly the same way; it simply keeps the frame's inset and centres the
+   * card. */
+  const usableGeometry =
+    isValidGeometry(geometry) && hasCanvasPadding(geometry!) ? geometry! : null;
 
   /** The mandatory guard: geometry is honoured only for the exact asset it
    * describes. A host that silently reshapes its image makes the card render
