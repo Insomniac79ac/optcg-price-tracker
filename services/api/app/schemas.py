@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -625,6 +626,74 @@ class MarketAnalyticsIndexCompositionOut(BaseModel):
 
     single_source_prints: int
     multi_source_prints: int
+
+
+class CardPirateIndexPointOut(BaseModel):
+    """One published point. Deliberately carries no surrogate id: point ids
+    are not stable across a rebuild, so they are never part of this contract."""
+
+    date: date
+    value: Decimal
+    is_base: bool
+    prior_point_date: date | None = None
+    step_days: int | None = None
+    chain_link_log_return: Decimal | None = None
+    constituent_count: int
+    eligible_print_count: int
+    movers_up: int | None = None
+    movers_down: int | None = None
+    movers_flat: int | None = None
+    capped_count: int | None = None
+
+
+class CardPirateIndexChangeOut(BaseModel):
+    """Change between two PUBLISHED endpoints, per methodology section 5.6.
+
+    `spans_break` declares that the span crosses a methodology boundary: the
+    levels are chain-linked and the figure is a linked-index return, not a
+    claim that the underlying per-print measurements were comparable across
+    it."""
+
+    absolute: Decimal
+    pct: Decimal
+    from_date: date
+    to_date: date
+    spans_break: bool
+
+
+class CardPirateIndexOut(BaseModel):
+    """The published Card Pirate Index over one window.
+
+    Served entirely from `card_pirate_index_points`. No estimator runs on this
+    path, so every number here is the number that was published, not one
+    re-derived at read time.
+
+    There is no `average_value`: the methodology defines no mean level, and an
+    unweighted mean over points disagrees with a step_days-weighted mean over
+    time the moment a snapshot gap exists. Publishing either would invent a
+    second definition."""
+
+    scope_kind: str
+    scope_key: str
+    methodology_version: int
+    index_version: int | None = None
+    source_semantics_version: int | None = None
+
+    requested_window: str
+    window_start: date | None = None
+    available_from: date | None = None
+    available_to: date | None = None
+    covers_requested_window: bool
+
+    points: list[CardPirateIndexPointOut]
+
+    starting_value: Decimal | None = None
+    current_value: Decimal | None = None
+    low_value: Decimal | None = None
+    high_value: Decimal | None = None
+
+    change: CardPirateIndexChangeOut | None = None
+    change_unavailable_reason: str | None = None
 
 
 class MarketAnalyticsOverviewOut(BaseModel):

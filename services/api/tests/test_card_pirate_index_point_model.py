@@ -234,6 +234,52 @@ def _python_sources():
 # here is a new writer nobody reviewed - a route, a job, a scheduler - which
 # is exactly what this list exists to catch. Extend it deliberately, with a
 # reason, or not at all.
+def _references_the_table(source: str) -> bool:
+    """Does this module USE the table, as opposed to merely mentioning it?
+
+    Checks executable code only - identifiers and string literals that are not
+    docstrings are both meaningful, but comments and docstrings are not. Two
+    false positives made this necessary rather than optional:
+
+      * `CardPirateIndexPointOut`, the response DTO, CONTAINS the model's name
+        as a substring while being a different class that never touches the
+        ORM;
+      * `schemas.py` names the table in a docstring explaining where the data
+        comes from.
+
+    Both would have been "fixed" by widening the allowlist, which would have
+    quietly blunted the guard for every module after them. Matching on what
+    the code does keeps it sharp.
+    """
+    import io
+    import tokenize
+
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(source).readline))
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return TABLE in source or "CardPirateIndexPoint" in source
+
+    docstring_positions = set()
+    prev_meaningful = None
+    for tok in tokens:
+        if tok.type in (tokenize.NL, tokenize.NEWLINE, tokenize.COMMENT,
+                        tokenize.INDENT, tokenize.DEDENT):
+            continue
+        if tok.type == tokenize.STRING and prev_meaningful in (None, ":", ""):
+            docstring_positions.add(tok.start)
+        prev_meaningful = tok.string
+    for tok in tokens:
+        if tok.type == tokenize.COMMENT:
+            continue
+        if tok.type == tokenize.STRING and tok.start in docstring_positions:
+            continue
+        if tok.type == tokenize.NAME and tok.string == "CardPirateIndexPoint":
+            return True
+        if tok.type == tokenize.STRING and TABLE in tok.string:
+            return True
+    return False
+
+
 ALLOWED_REFERENCES = {
     # the model itself
     "models/card_pirate_index_point.py",
@@ -244,7 +290,16 @@ ALLOWED_REFERENCES = {
     # the sole writer - INSERT only, via ON CONFLICT DO NOTHING - and the
     # read-only verifier
     "services/card_pirate_index_replay.py",
+    # the read path: SELECTs published points, runs no estimator, writes
+    # nothing (its own suite proves the absence of every write verb)
+    "services/card_pirate_index_read.py",
 }
+# NOTE: api/analytics.py is deliberately NOT listed. The read route reaches the
+# index through the read service and the response DTO, never through the ORM
+# class or the table name, so it is not a reference at all. Listing it anyway
+# would exempt it in advance from the write guard below - the day someone adds
+# an INSERT there, the import that made it work would flip it to a reference
+# and the guard must be free to catch that.
 
 
 def test_only_reviewed_modules_reference_this_table():
@@ -260,7 +315,7 @@ def test_only_reviewed_modules_reference_this_table():
         relative = str(path.relative_to(API_ROOT))
         if relative in ALLOWED_REFERENCES:
             continue
-        if "CardPirateIndexPoint" in source or TABLE in source:
+        if _references_the_table(source):
             offenders.append(relative)
     assert offenders == [], (
         "the Card Pirate Index table is referenced by an unreviewed module: "
@@ -269,20 +324,43 @@ def test_only_reviewed_modules_reference_this_table():
 
 
 def test_no_route_or_job_writes_points_yet():
-    """The rollout order: steps 4-5 (estimator, replay) are in; steps 7-8
-    (scheduling, API) are not. A route or job naming this table means the
-    tranche boundary was crossed without a review."""
-    offenders = [
-        str(path.relative_to(API_ROOT))
-        for path, source in _python_sources()
-        if ("CardPirateIndexPoint" in source or TABLE in source)
-        and (
-            str(path.relative_to(API_ROOT)).startswith("api/")
-            or str(path.relative_to(API_ROOT)).startswith("snapshot_")
-            or "celery" in str(path.relative_to(API_ROOT))
-        )
-    ]
-    assert offenders == [], f"a route or job already writes the index: {offenders}"
+    """Routes may READ the index; nothing outside the replay service may WRITE
+    it, and no job or scheduler may touch it at all.
+
+    Tightened when the read endpoint landed. The earlier form asserted that no
+    `api/` module so much as NAMED the table, which was the right guard while
+    the API tranche was still ahead of us and the wrong one the moment a
+    read-only route existed. What still earns its place is the narrower claim:
+    a route that INSERTs, UPDATEs or DELETEs a point - or any job, scheduler or
+    Celery module reaching the table at all - is a tranche boundary crossed
+    without review.
+    """
+    import re
+
+    write_verbs = re.compile(
+        r"\.add\(|\.add_all\(|\.delete\(|\.merge\(|"
+        r"insert\s*\(\s*CardPirateIndexPoint|"
+        r"update\s*\(\s*CardPirateIndexPoint|"
+        r"delete\s*\(\s*CardPirateIndexPoint|"
+        r"(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+)?card_pirate_index_points",
+        re.IGNORECASE,
+    )
+    routes_that_write = []
+    jobs_touching_at_all = []
+    for path, source in _python_sources():
+        relative = str(path.relative_to(API_ROOT))
+        names_table = _references_the_table(source)
+        if not names_table:
+            continue
+        if relative.startswith("api/") and write_verbs.search(source):
+            routes_that_write.append(relative)
+        if relative.startswith("snapshot_") or "celery" in relative or "worker" in relative:
+            jobs_touching_at_all.append(relative)
+
+    assert routes_that_write == [], f"a route writes the index: {routes_that_write}"
+    assert jobs_touching_at_all == [], (
+        f"a job or scheduler already touches the index: {jobs_touching_at_all}"
+    )
 
 
 def test_no_update_writer_exists_for_this_table():

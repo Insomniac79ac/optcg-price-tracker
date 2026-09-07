@@ -15,6 +15,9 @@ from app.schemas import (
     BuyDecisionPriorityFilter,
     BuyDecisionSupportOut,
     BuySourcePreference,
+    CardPirateIndexChangeOut,
+    CardPirateIndexOut,
+    CardPirateIndexPointOut,
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
     MarketAnalyticsBasesOut,
@@ -30,6 +33,11 @@ from app.services.analytics_digest import build_analytics_digest
 from app.services.buy_decision_support import get_buy_decision_support
 from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
+from app.services.card_pirate_index_read import (
+    DEFAULT_WINDOW,
+    UnknownWindowError,
+    get_index_series,
+)
 from app.services.collection_analytics import get_collection_analytics
 from app.services.grading_analytics import get_grading_analytics
 from app.services.market_analytics import (
@@ -114,6 +122,89 @@ def get_market_overview_endpoint(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return MarketAnalyticsOverviewOut(
         **build_overview(db, basis=basis, set_code=set_code, rarity=rarity)
+    )
+
+
+@router.get("/index", response_model=CardPirateIndexOut)
+def get_card_pirate_index_endpoint(
+    response: Response,
+    window: str = Query(default=DEFAULT_WINDOW, max_length=8),
+    db: Session = Depends(get_db),
+):
+    """The published Card Pirate Index over one window.
+
+    DELIBERATELY UNAUTHENTICATED, on exactly the argument the three
+    /market/* routes above already make: every number here is an aggregate of
+    values that are already public through GET /prints and
+    GET /prints/{id}/market-index. Gating an aggregate of public data would be
+    a lock on the front door of a building with no walls.
+
+    READ-ONLY BY CONSTRUCTION. This serves `card_pirate_index_points` and
+    runs no estimator: the level for a date is the level that was published on
+    that date, not one re-derived now. That is the same immutability argument
+    the points table itself was created for - a read-time recomputation would
+    let a later change to the cap or to MIN_CONSTITUENTS silently rewrite a
+    number a collector already screenshotted.
+
+    The window narrows which stored rows are returned and nothing else. There
+    is no forward-fill, no interpolation and no padding: a request reaching
+    further back than the archive goes is answered with the archive that
+    exists, and `covers_requested_window` reports the shortfall rather than
+    the response disguising it.
+    """
+    try:
+        series = get_index_series(db, window=window)
+    except UnknownWindowError as exc:
+        # 400, not 422: the token is a value this endpoint knows it does not
+        # support, and the message names the supported grammar so a client is
+        # never left guessing.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    set_cache_headers(response, hit=False, ttl_seconds=300, cache_key=None)
+    return CardPirateIndexOut(
+        scope_kind=series.scope_kind,
+        scope_key=series.scope_key,
+        methodology_version=series.methodology_version,
+        index_version=series.index_version,
+        source_semantics_version=series.source_semantics_version,
+        requested_window=series.requested_window,
+        window_start=series.window_start,
+        available_from=series.available_from,
+        available_to=series.available_to,
+        covers_requested_window=series.covers_requested_window,
+        points=[
+            CardPirateIndexPointOut(
+                date=p.point_date,
+                value=p.index_value,
+                is_base=p.is_base,
+                prior_point_date=p.prior_point_date,
+                step_days=p.step_days,
+                chain_link_log_return=p.chain_link_log_return,
+                constituent_count=p.constituent_count,
+                eligible_print_count=p.eligible_print_count,
+                movers_up=p.movers_up,
+                movers_down=p.movers_down,
+                movers_flat=p.movers_flat,
+                capped_count=p.capped_count,
+            )
+            for p in series.points
+        ],
+        starting_value=series.starting_value,
+        current_value=series.current_value,
+        low_value=series.low_value,
+        high_value=series.high_value,
+        change=(
+            CardPirateIndexChangeOut(
+                absolute=series.change.absolute,
+                pct=series.change.pct,
+                from_date=series.change.from_date,
+                to_date=series.change.to_date,
+                spans_break=series.change.spans_break,
+            )
+            if series.change is not None
+            else None
+        ),
+        change_unavailable_reason=series.change_unavailable_reason,
     )
 
 
