@@ -230,24 +230,59 @@ def _python_sources():
         yield path, path.read_text()
 
 
-def test_no_writer_touches_this_table_yet():
-    """This tranche is the persistence FOUNDATION: schema only. No service,
-    job or route may write a point until the estimator lands, and this is what
-    makes "no writer exists" a checked claim rather than a hopeful one."""
-    # The model's own module, and the package that re-exports it so
-    # Base.metadata sees it. Neither is a writer.
-    allowed = {"models/card_pirate_index_point.py", "models/__init__.py"}
+# Every module allowed to name this table, and why. Anything else appearing
+# here is a new writer nobody reviewed - a route, a job, a scheduler - which
+# is exactly what this list exists to catch. Extend it deliberately, with a
+# reason, or not at all.
+ALLOWED_REFERENCES = {
+    # the model itself
+    "models/card_pirate_index_point.py",
+    # the package that re-exports it so Base.metadata sees it
+    "models/__init__.py",
+    # the estimator: names the table only in prose, never touches the ORM
+    "services/card_pirate_index.py",
+    # the sole writer - INSERT only, via ON CONFLICT DO NOTHING - and the
+    # read-only verifier
+    "services/card_pirate_index_replay.py",
+}
+
+
+def test_only_reviewed_modules_reference_this_table():
+    """No route, job or scheduler may reach the table.
+
+    Superseded the stricter "nothing references it at all" form when the
+    estimator and replay layers landed: those are the reviewed writers, and
+    the guard that still earns its place is the allowlist. A cron, an API
+    route or a frontend proxy appearing here fails this test.
+    """
     offenders = []
     for path, source in _python_sources():
         relative = str(path.relative_to(API_ROOT))
-        if relative in allowed:
+        if relative in ALLOWED_REFERENCES:
             continue
         if "CardPirateIndexPoint" in source or TABLE in source:
             offenders.append(relative)
     assert offenders == [], (
-        "the Card Pirate Index table is referenced outside its own model: "
-        f"{offenders}. This tranche persists the schema only."
+        "the Card Pirate Index table is referenced by an unreviewed module: "
+        f"{offenders}"
     )
+
+
+def test_no_route_or_job_writes_points_yet():
+    """The rollout order: steps 4-5 (estimator, replay) are in; steps 7-8
+    (scheduling, API) are not. A route or job naming this table means the
+    tranche boundary was crossed without a review."""
+    offenders = [
+        str(path.relative_to(API_ROOT))
+        for path, source in _python_sources()
+        if ("CardPirateIndexPoint" in source or TABLE in source)
+        and (
+            str(path.relative_to(API_ROOT)).startswith("api/")
+            or str(path.relative_to(API_ROOT)).startswith("snapshot_")
+            or "celery" in str(path.relative_to(API_ROOT))
+        )
+    ]
+    assert offenders == [], f"a route or job already writes the index: {offenders}"
 
 
 def test_no_update_writer_exists_for_this_table():
@@ -262,7 +297,8 @@ def test_no_update_writer_exists_for_this_table():
     """
     pattern = re.compile(
         r"update\s*\(\s*CardPirateIndexPoint|"
-        r"UPDATE\s+card_pirate_index_points",
+        r"UPDATE\s+card_pirate_index_points|"
+        r"on_conflict_do_update",
         re.IGNORECASE,
     )
     offenders = [

@@ -886,7 +886,7 @@ under a chart could show a print the chart never counted."*
                "covers_requested_window":true,
                "shortfall_reason":null},
 
-  "change": {"absolute":0.9577,"pct":0.095765,
+  "change": {"absolute":0.9577,"pct":0.095770,
              "from_date":"2026-09-03","to_date":"2026-09-06",
              "spans_break":false},
   "change_unavailable_reason": null    // §5.6: "no_published_point_in_window"
@@ -954,7 +954,7 @@ change are **separate questions**: a window can be available and still return
 | `all` | Latest published point vs. the chain's earliest published point. This is the "Since launch" figure. | `true` iff the series contains at least one boundary |
 
 Today every window except `all` is unavailable, `all` gives
-`+0.095765 %`, and `spans_break` is `false` everywhere because the series has
+`+0.095770 %`, and `spans_break` is `false` everywhere because the series has
 no boundary yet.
 
 Three cases where change is `null` rather than a number, restated because they
@@ -1153,7 +1153,22 @@ fingerprint (all six checks PASS; `canonical_cards=2710`, `card_prints=4316`,
 | 2026-09-05 | **1000.9577** | +0.000116689761 | **+0.011670 %** | 281 | 1 | 0 | 280 | **0** | 296 | 1 |
 | 2026-09-06 | **1000.9577** | +0.000000000000 | **0.000000 %** | 296 | 0 | 0 | 296 | **0** | 297 | 1 |
 
-**Cumulative since launch: 1000.0000 → 1000.9577, +0.095765 %** over four days.
+**Cumulative since launch: 1000.0000 → 1000.9577, +0.095770 %** over four days.
+
+That percentage is `(1000.9577 / 1000.0000 − 1) × 100`, computed from the two
+**published** levels exactly as §5.6 rule 4 requires. It is not
+`+0.095765 %`, which an earlier draft of this section reported: that figure
+comes from the *pre-quantized* internal chain value `1000.9576502…`, which is
+never published, never stored, and never an endpoint of a change calculation.
+The distinction matters because §8.4 stores the level as `Numeric(12,4)` and
+the carry rule turns on a base row's level being *exactly* its source point's
+— so the published 4-decimal level is the only level the index has, and any
+change quoted between two of them must be derived from those, not from the
+intermediate arithmetic that produced them.
+
+Note this is a different quantity from the **step (%)** column above, which is
+`exp(step_log_return) − 1` — a property of one step, not a ratio between two
+published endpoints. Those values are unaffected.
 
 Zero constituents excluded by version mismatch (§3 rule 3) and zero by
 contributor-set churn (§3 rule 4) on any step — the guards cost nothing today
