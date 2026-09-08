@@ -661,6 +661,60 @@ class CardPirateIndexChangeOut(BaseModel):
     spans_break: bool
 
 
+class CardPirateIndexWindowOut(BaseModel):
+    """One row of the methodology's section 12.1 `windows` map.
+
+    Section 12.2 rule 3: this map is what lets a client render an unreachable
+    timeframe as a DISABLED button with a reason, instead of as a clickable
+    path into a chart that cannot answer it. Rule 4 fixes `available` as a span
+    test - the history must reach back past the window's start - so sparse
+    history that spans a window still covers it, and rule 5 adds that a
+    methodology break never makes a window unavailable.
+
+    Published as an ordered LIST rather than a JSON object because the display
+    order 2W/1M/3M/6M/1Y/2Y/All is part of the frozen grammar, and a client
+    re-imposing it from a mapping's keys would be re-deciding a rule the
+    document already made."""
+
+    token: str
+    available: bool
+    covered_days: int
+    required_days: int | None = None
+
+
+class CardPirateIndexBreakOut(BaseModel):
+    """One boundary in the returned series - section 12.1's `breaks` entry.
+
+    Server-authored on purpose. Every fact here is read off the persisted
+    points' own columns, so a client never has to decide from dates, levels or
+    pixel positions where the measurement changed.
+
+    Two kinds, rendered differently by section 13.4. A version change is
+    CONTINUOUS: the level carries across it (section 5.1 rule 4), so the line
+    is drawn straight through and the marker names what changed. A
+    `snapshot_gap` is missing data, so the join is dashed and the tooltip names
+    the missing days - which is why `carried`/`carried_level` are null there,
+    exactly as the document requires ("it is a cadence fact, not a methodology
+    one").
+
+    `carried: false` on a version boundary is a RESET rather than a carry, and
+    is what makes section 5.6 rule 5 withhold a change figure across it."""
+
+    at: date
+    reason: str
+    from_methodology_version: int | None = None
+    to_methodology_version: int | None = None
+    from_index_version: int | None = None
+    to_index_version: int | None = None
+    from_source_semantics_version: int | None = None
+    to_source_semantics_version: int | None = None
+    carried: bool | None = None
+    carried_level: Decimal | None = None
+    carried_from_point_date: date | None = None
+    prior_point_date: date | None = None
+    step_days: int | None = None
+
+
 class CardPirateIndexOut(BaseModel):
     """The published Card Pirate Index over one window.
 
@@ -694,6 +748,17 @@ class CardPirateIndexOut(BaseModel):
 
     change: CardPirateIndexChangeOut | None = None
     change_unavailable_reason: str | None = None
+
+    # --- section 12.1 server-authored metadata -------------------------------
+    # Added by TASK INDEX 2A-B, additively: every field above keeps its meaning
+    # and its spelling, so a client written against the earlier payload is
+    # unaffected. These three exist so that the SERVER remains the single
+    # authority for which window tokens exist, which one a surface opens on,
+    # and where the measurement changed - none of which a client can decide
+    # without becoming a second authority on the methodology.
+    windows: list[CardPirateIndexWindowOut] = []
+    default_window: str
+    breaks: list[CardPirateIndexBreakOut] = []
 
 
 class MarketAnalyticsOverviewOut(BaseModel):

@@ -15,9 +15,11 @@ from app.schemas import (
     BuyDecisionPriorityFilter,
     BuyDecisionSupportOut,
     BuySourcePreference,
+    CardPirateIndexBreakOut,
     CardPirateIndexChangeOut,
     CardPirateIndexOut,
     CardPirateIndexPointOut,
+    CardPirateIndexWindowOut,
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
     MarketAnalyticsBasesOut,
@@ -34,7 +36,6 @@ from app.services.buy_decision_support import get_buy_decision_support
 from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
 from app.services.card_pirate_index_read import (
-    DEFAULT_WINDOW,
     UnknownWindowError,
     get_index_series,
 )
@@ -128,7 +129,7 @@ def get_market_overview_endpoint(
 @router.get("/index", response_model=CardPirateIndexOut)
 def get_card_pirate_index_endpoint(
     response: Response,
-    window: str = Query(default=DEFAULT_WINDOW, max_length=8),
+    window: str | None = Query(default=None, max_length=8),
     db: Session = Depends(get_db),
 ):
     """The published Card Pirate Index over one window.
@@ -151,6 +152,19 @@ def get_card_pirate_index_endpoint(
     further back than the archive goes is answered with the archive that
     exists, and `covers_requested_window` reports the shortfall rather than
     the response disguising it.
+
+    OMITTING `?window=` MEANS "the server's own default", not a fixed token.
+    The route used to fall back to `3m` here while the payload's
+    `default_window` said `all`, so a client that wanted the product default
+    had to know the two disagreed and ask for something else - the frontend
+    carried a `BOOTSTRAP_WINDOW` constant to do exactly that. There is now one
+    notion of default: section 13.1's ladder, resolved server-side against the
+    archive's real extent. The day three months of history exists, a request
+    with no window starts returning `3m` with no client change.
+
+    An implicit request is otherwise indistinguishable from the explicit
+    request for the same token: `requested_window` names the window actually
+    selected, and every field beside it describes that window.
     """
     try:
         series = get_index_series(db, window=window)
@@ -205,6 +219,38 @@ def get_card_pirate_index_endpoint(
             else None
         ),
         change_unavailable_reason=series.change_unavailable_reason,
+        # Section 12.1's server-authored metadata. Passed through exactly as
+        # the read service decided it - the route neither re-derives the ladder
+        # nor filters the break list, because either would put a second copy of
+        # a frozen rule on this side of the boundary.
+        windows=[
+            CardPirateIndexWindowOut(
+                token=w.token,
+                available=w.available,
+                covered_days=w.covered_days,
+                required_days=w.required_days,
+            )
+            for w in series.windows
+        ],
+        default_window=series.default_window,
+        breaks=[
+            CardPirateIndexBreakOut(
+                at=b.at,
+                reason=b.reason,
+                from_methodology_version=b.from_methodology_version,
+                to_methodology_version=b.to_methodology_version,
+                from_index_version=b.from_index_version,
+                to_index_version=b.to_index_version,
+                from_source_semantics_version=b.from_source_semantics_version,
+                to_source_semantics_version=b.to_source_semantics_version,
+                carried=b.carried,
+                carried_level=b.carried_level,
+                carried_from_point_date=b.carried_from_point_date,
+                prior_point_date=b.prior_point_date,
+                step_days=b.step_days,
+            )
+            for b in series.breaks
+        ],
     )
 
 

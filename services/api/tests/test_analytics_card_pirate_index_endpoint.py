@@ -24,7 +24,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models.card_pirate_index_point import CardPirateIndexPoint
-from app.services.card_pirate_index_read import DEFAULT_WINDOW, WINDOW_DAYS
+from app.services.card_pirate_index_read import WINDOW_DAYS
 
 STAMP = datetime(2026, 9, 7, 13, 55, 49, tzinfo=timezone.utc)
 D3, D4, D5, D6 = (date(2026, 9, d) for d in (3, 4, 5, 6))
@@ -138,9 +138,18 @@ def test_no_surrogate_ids_anywhere_in_the_payload(client, seeded):
 # --- windows ---------------------------------------------------------------
 
 
-def test_default_window_is_3m(client, seeded):
-    assert DEFAULT_WINDOW == "3m"
-    assert client.get("/analytics/index").json()["requested_window"] == "3m"
+def test_a_request_with_no_window_takes_the_servers_default(client, seeded):
+    """TASK INDEX 2A-C replaced this test's original assertion, and the
+    replacement is the point.
+
+    It used to assert `DEFAULT_WINDOW == "3m"` and that an implicit request
+    returned `3m` - a transport default that disagreed with the payload's own
+    `default_window` of `all`. There is now one default: section 13.1's ladder.
+    On this four-day fixture that is `all`, and the implicit request returns
+    exactly it."""
+    body = client.get("/analytics/index").json()
+    assert body["default_window"] == "all"
+    assert body["requested_window"] == "all"
 
 
 @pytest.mark.parametrize("token", sorted(WINDOW_DAYS))

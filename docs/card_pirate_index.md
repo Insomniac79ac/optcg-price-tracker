@@ -818,7 +818,7 @@ belongs beneath a movement chart, and they repurpose byte-identical.
 ## 12. API contract
 
 ```
-GET /analytics/index?window=2w|1m|3m|6m|1y|2y|all[&set=OP-01][&rarity=SR]
+GET /analytics/index[?window=2w|1m|3m|6m|1y|2y|all][&set=OP-01][&rarity=SR]
 ```
 
 Unauthenticated, on exactly the argument already written at
@@ -826,6 +826,13 @@ Unauthenticated, on exactly the argument already written at
 public through `GET /prints` and `GET /prints/{id}/market-index`. Cached via
 the existing `get_or_set_cache` / `set_cache_headers` pair; TTL can be long,
 since data changes once daily at 20:00 UTC.
+
+**`?window=` is optional, and its absence is not a synonym for any token.**
+An omitted parameter means *"answer with the server's own default"* — §13.1's
+ladder, resolved against the archive's real extent at request time. There is
+no separate transport-layer fallback: an implicit request and the explicit
+request for the same token return identical payloads. A supplied-but-illegal
+token is still a `400`; the empty string is a supplied value, not an absence.
 
 **Scope grammar: reuse `/analytics/market/overview`'s existing `?set=` /
 `?rarity=`.** Do not introduce a `?scope=set:OP-01` form.
@@ -982,8 +989,28 @@ are easy to get wrong at the call site:
 - Unavailable timeframe buttons **remain visible but disabled**, never hidden
   and never clickable.
 
-The server publishes `default_window` so the rule lives in one place and is
-contract-testable; the client must not re-derive it.
+**The server is the single authority for the window contract, and this is not
+advisory.** Concretely:
+
+1. **The server publishes `windows`** — the whole token vocabulary, each with
+   its `available` / `covered_days` / `required_days`. A client renders its
+   control from that list and never from a token set of its own.
+2. **The server publishes `default_window`**, resolved from the ladder above
+   and read off the same `windows` map it publishes, so the two can never
+   disagree.
+3. **Absence of `?window=` means "use the server's default."** A client asks
+   for the default by naming nothing, not by naming a token. There is no
+   transport-layer fallback anywhere in the stack.
+4. **The client must not re-derive the default** — not from dates, not from
+   point counts, not by probing a window and inspecting
+   `covers_requested_window`, and not via a bootstrap constant of its own.
+
+The consequence is the point of the rule: the day three months of history
+exists, the same unqualified request begins returning `3m`, with no frontend
+change, no redeploy and no second round trip. `requested_window` continues to
+name the window the payload is actually about — it equals `default_window` on
+a first load by construction, and diverges the moment a reader picks another
+window — so it, not `default_window`, is what a surface presses.
 
 ### 13.2 Home — the market snapshot panel
 
