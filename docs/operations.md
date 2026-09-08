@@ -1399,6 +1399,56 @@ lock changed hands) always logs again. `GET /admin/performance/summary` also sur
 an informational active-lock count, a warning if any active lock is past its `expires_at`, and a
 warning specifically if the `market_workflow` lock (the longest-running one) is stuck past its TTL.
 
+## Scheduled index jobs (Railway cron)
+
+The Market Index snapshot and the Card Pirate Index writer are **one Railway cron service**, not
+two. `market-index-snapshot` runs on the API image at `0 20 * * *` UTC with restart policy `NEVER`,
+and its start command chains both jobs in a single container run:
+
+```
+python -m app.snapshot_market_index && python -m app.card_pirate_index_writer
+```
+
+**Why one service and not two crons.** The index must observe the *same day's* snapshot. One
+process guarantees that ordering; two crons twenty minutes apart merely hope for it - the snapshot's
+own completion has drifted between 20:00:47 and 20:04:59 UTC across recent runs, almost all of it
+Railway cron dispatch and image cold start rather than the job itself, which finishes in under a
+second. This is `docs/card_pirate_index.md` §15 step 7, and it is the reason there is no
+`card-pirate-index-writer` service to look for.
+
+**What the `&&` buys.** `app.snapshot_market_index` exits non-zero on any failure (uncaught
+exception → 1; `market_index_snapshot` lock already held → 2), so a failed or skipped snapshot
+short-circuits the chain and the writer never starts. It commits its transaction before the process
+exits, so the writer - a separate process on a separate connection - reads a fully committed
+archive day, never a half-written one.
+
+**The failure modes are all safe, and none of them need a human at 20:00.**
+
+| What happened | What the chain does |
+| --- | --- |
+| Snapshot succeeds with a new day | Writer appends exactly that day's point. |
+| Snapshot re-runs on a day it already archived | `ON CONFLICT DO NOTHING`, exit 0; the writer finds its point already stored and inserts 0. |
+| Snapshot fails | Non-zero exit; writer never runs; nothing is written by either job. |
+| Snapshot archives nothing (no priced prints) | Exit 0 with `prints_selected: 0`; the writer finds no new archive day and inserts 0. |
+| `card_pirate_index` lock still held | Writer prints `Job already running: card_pirate_index` and exits 2 rather than overlapping. |
+| The job did not run for several days | The chain is not a reset. The writer rebuilds from `history_start` and appends every missing day in ascending order, so a catch-up run writes exactly the points the daily runs would have. |
+
+The writer is forward-only and insert-only: it refuses to run at all unless the already-persisted
+series reconciles against a fresh replay, and it verifies the whole scope in-transaction before
+committing. A missed day therefore stays a real gap in the record (`step_days > 1`) rather than
+becoming a flat repeat of yesterday.
+
+**Inspecting without writing.** Both read-only paths take no job lock, so they are safe to point at
+canonical staging through the read-only tunnel described under "Staging operations":
+
+```
+python -m app.card_pirate_index_writer --dry-run   # what would be written, and why
+python -m app.card_pirate_index_writer --verify    # replay the whole scope, report drift
+```
+
+`--verify` exits non-zero only on a fault in what is already *stored*; a day the archive supports
+that has not been written yet is reported as pending, not as an error.
+
 ## Reverse proxy troubleshooting
 
 See "Production deployment behind HTTPS reverse proxy" in `docs/deployment.md` for initial setup
