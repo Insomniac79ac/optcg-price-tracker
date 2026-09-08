@@ -948,3 +948,98 @@ describe("the index establishes the page hierarchy", () => {
     expect(hero.compareDocumentPosition(landscape) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+// --- J. downloading the chart on screen -------------------------------------
+//
+// TASK INDEX 2A-E. The rasterisation is jsdom's blind spot (no 2D context), so
+// the file's CONTENT is pinned in lib/indexChartExport.test.ts and what is
+// asserted here is the part only the page can answer: that the action is
+// reachable, that it names what it saves, that it exports the window on screen
+// WITHOUT going back to the API, and that a refusal to encode leaves the page
+// standing.
+
+describe("the chart can be downloaded", () => {
+  it("offers a real button with an accessible name that says which chart", async () => {
+    await renderPage();
+    const button = screen.getByTestId("index-export");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.getAttribute("aria-label")).toBe(
+      "Download the Card Pirate Index chart for All as a PNG image",
+    );
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("names the window the reader actually selected", async () => {
+    stubIndex({}, { windows: ALL_AVAILABLE, defaultWindow: "all" });
+    await renderPage();
+    fireEvent.click(windowButton("1Y"));
+    await waitFor(() =>
+      expect(screen.getByTestId("index-export").getAttribute("aria-label")).toBe(
+        "Download the Card Pirate Index chart for 1Y as a PNG image",
+      ),
+    );
+  });
+
+  it("does NOT issue a second index request when pressed", async () => {
+    await renderPage();
+    const before = indexCalls().length;
+    fireEvent.click(screen.getByTestId("index-export"));
+    await waitFor(() => expect(indexCalls().length).toBe(before));
+    // And the one call it did make was still the implicit bootstrap.
+    expect(indexCalls()).toEqual(["(no window)"]);
+  });
+
+  it("is unavailable, and says why, when there is genuinely nothing drawable", async () => {
+    stubIndex({ all: series({ points: [], change: null }) });
+    render(<MarketLandscapePage />);
+    await waitFor(() => expect(screen.getByTestId("index-chart-empty")).toBeTruthy());
+    const button = screen.getByTestId("index-export");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.getAttribute("aria-label")).toContain("no published index history");
+    // aria-disabled, NOT the native attribute - it has to stay reachable for
+    // the reader who cannot hover to find out why (the 2A-B finding).
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect((button as HTMLButtonElement).tabIndex).toBeGreaterThanOrEqual(0);
+  });
+
+  it("does nothing at all when pressed with nothing drawable", async () => {
+    stubIndex({ all: series({ points: [], change: null }) });
+    render(<MarketLandscapePage />);
+    await waitFor(() => expect(screen.getByTestId("index-chart-empty")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("index-export"));
+    // No "Saving…", no failure notice - the click is guarded, not attempted.
+    await waitFor(() => expect(screen.getByTestId("index-export").textContent).toBe("Download chart"));
+    expect(screen.queryByTestId("index-export-error")).toBeNull();
+  });
+
+  it("survives a browser that refuses to encode the canvas", async () => {
+    // jsdom's canvas has no 2D context at all, so this is the real failure
+    // path rather than a simulated one: the click must not throw, and the
+    // page must still be standing afterwards.
+    await renderPage();
+    fireEvent.click(screen.getByTestId("index-export"));
+    await waitFor(() => expect(screen.getByTestId("index-export-error")).toBeTruthy());
+    expect(screen.getByTestId("index-level").textContent).toBe("1,000.11");
+    expect(screen.getByTestId("index-chart")).toBeTruthy();
+  });
+
+  it("leaves the timeframe control exactly as it was", async () => {
+    await renderPage();
+    const labels = within(screen.getByTestId("index-window"))
+      .getAllByRole("button")
+      .map((b) => b.textContent);
+    expect(labels).toEqual(["2W", "1M", "3M", "6M", "1Y", "2Y", "All"]);
+    expect(windowButton("All").getAttribute("aria-pressed")).toBe("true");
+    // The download action is not inside the window group, so it can never be
+    // mistaken for an eighth timeframe.
+    expect(within(screen.getByTestId("index-window")).queryByTestId("index-export")).toBeNull();
+  });
+
+  it("sits below the chart, not above it", async () => {
+    await renderPage();
+    const chart = screen.getByTestId("index-chart");
+    const action = screen.getByTestId("index-export");
+    expect(chart.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

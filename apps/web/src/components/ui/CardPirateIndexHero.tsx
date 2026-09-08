@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -28,6 +29,11 @@ import {
   type IndexSeries,
   type IndexWindowRow,
 } from "@/lib/cardPirateIndex";
+import {
+  buildIndexExport,
+  downloadIndexExport,
+  resolveExportFonts,
+} from "@/lib/indexChartExport";
 
 /** The Card Pirate Index, at the top of /analytics.
  *
@@ -102,6 +108,7 @@ export function CardPirateIndexHero({
         >
           <IndexHeadline series={series} />
           <IndexChart series={series} />
+          <IndexExportAction series={series} />
           <IndexFootnotes series={series} window={window} />
         </div>
       )}
@@ -703,6 +710,83 @@ function IndexFootnotes({ series, window }: { series: IndexSeries; window: strin
         the coverage statistics, not this. It is not a price, and it is not
         investment advice.
       </p>
+    </div>
+  );
+}
+
+/** "Download chart" - the visible half of the PNG export.
+ *
+ * DELIBERATELY QUIET, AND DELIBERATELY BELOW THE CHART. The window control is
+ * how a reader changes what they are looking at and the chart is what they
+ * came for; a save action is neither, so it takes the footnote tier's type
+ * scale and sits after the plot rather than competing with the H1. It is one
+ * button - no share sheet, no social targets - because a file the reader owns
+ * is the whole ask, and anything more would be a second feature wearing this
+ * one's clothes.
+ *
+ * WHAT IT EXPORTS IS WHAT IS ON SCREEN. The plan is built from the `series`
+ * this component was handed - the same object the chart above is drawing - so
+ * pressing it cannot refetch, cannot re-slice, and cannot produce a picture of
+ * a window the reader is not looking at.
+ *
+ * UNAVAILABLE ONLY WHEN THERE IS NOTHING DRAWABLE - `buildIndexExport`
+ * returning null, which happens exactly when the window published no point.
+ * It is `aria-disabled` rather than natively `disabled`, for the reason the
+ * window control already learned in 2A-B: a natively disabled button leaves
+ * the tab order entirely and its `title` never fires on touch, so the one
+ * reader most likely to wonder why nothing happens is the one who cannot find
+ * out. The reason travels in the accessible name instead, and the click is
+ * guarded in the handler.
+ *
+ * The accessible name names the window, because "Download chart" alone does
+ * not say WHICH chart when seven timeframes are one keypress away.
+ */
+function IndexExportAction({ series }: { series: IndexSeries }) {
+  const [state, setState] = useState<"idle" | "working" | "failed">("idle");
+  const plan = buildIndexExport(series);
+  const label = windowLabel(series.requested_window);
+  const unavailable = plan === null;
+
+  return (
+    <div className="mt-2 flex items-center justify-end gap-3">
+      {state === "failed" && (
+        <span className="text-[12px] leading-relaxed text-text-muted" data-testid="index-export-error" role="status">
+          The chart could not be saved. Please try again.
+        </span>
+      )}
+      <button
+        type="button"
+        data-testid="index-export"
+        aria-label={
+          unavailable
+            ? "Download chart — there is no published index history to save yet"
+            : `Download the Card Pirate Index chart for ${label} as a PNG image`
+        }
+        title={unavailable ? "There is no published index history to save yet." : undefined}
+        aria-disabled={unavailable || undefined}
+        aria-busy={state === "working" || undefined}
+        disabled={state === "working"}
+        onClick={() => {
+          // The guard the omitted `disabled` attribute would have provided.
+          if (unavailable || plan === null) return;
+          setState("working");
+          // The fonts the page actually loaded, read off a live element -
+          // next/font names are hashed, so the canvas cannot guess them.
+          const fonts = resolveExportFonts(
+            typeof document === "undefined" ? null : document.documentElement,
+          );
+          void downloadIndexExport(plan, { fonts }).then((ok) => {
+            setState(ok ? "idle" : "failed");
+          });
+        }}
+        className={`mono rounded-[4px] border border-border-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed ${
+          unavailable
+            ? "cursor-not-allowed opacity-[0.65]"
+            : "hover:text-text-secondary"
+        }`}
+      >
+        {state === "working" ? "Saving…" : "Download chart"}
+      </button>
     </div>
   );
 }
