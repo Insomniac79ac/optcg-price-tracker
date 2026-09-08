@@ -1312,6 +1312,7 @@ genuinely crashed job doesn't block its lock forever.
 | `price_refresh`              | 30 min  | `worker.jobs.refresh_prices` (manual CLI, scheduled Yuyu-Tei refresh, on-demand via admin) |
 | `market_workflow`            | 60 min  | `worker.jobs.run_market_workflow` (scheduled/manual), and `POST /admin/actions/full-market-refresh` |
 | `portfolio_snapshot`         | 10 min  | `app.snapshot_portfolio_valuation` (CLI + admin action)   |
+| `card_pirate_index`          | 10 min  | `app.card_pirate_index_writer` (CLI). Runs after `market_index_snapshot`, reads the day it archived, and inserts only the index points missing from the head. `--dry-run` and `--verify` take no lock, so they are safe against a read-only session. |
 | `market_signal_snapshot`     | 10 min  | `app.services.market_signal_events.snapshot_market_signals` (CLI + admin action) |
 | `market_report_generation`   | 10 min  | `app.services.market_report.generate_market_report` (CLI + admin action) |
 | `analytics_digest_generation` | 10 min | `app.services.analytics_digest.generate_analytics_digest` (CLI + admin action + best-effort after a market workflow run) |

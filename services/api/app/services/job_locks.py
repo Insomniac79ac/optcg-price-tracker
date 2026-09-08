@@ -74,6 +74,11 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     "market_workflow": 60 * 60,
     "portfolio_snapshot": 10 * 60,
     "market_index_snapshot": 10 * 60,
+    # Runs immediately after market_index_snapshot in the same container,
+    # reads the day it just archived, and inserts at most a handful of
+    # rows - so it is sized to match its predecessor rather than its own
+    # (much shorter) runtime.
+    "card_pirate_index": 10 * 60,
     "market_signal_snapshot": 10 * 60,
     "market_report_generation": 10 * 60,
     "analytics_digest_generation": 10 * 60,

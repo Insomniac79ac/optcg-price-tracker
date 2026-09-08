@@ -293,6 +293,10 @@ ALLOWED_REFERENCES = {
     # the read path: SELECTs published points, runs no estimator, writes
     # nothing (its own suite proves the absence of every write verb)
     "services/card_pirate_index_read.py",
+    # the daily job: reads the persisted head and the pre/post-write
+    # fingerprint, and inserts only through card_pirate_index_replay. Its own
+    # suite proves it has no UPDATE, no DELETE and exactly one commit.
+    "card_pirate_index_writer.py",
 }
 # NOTE: api/analytics.py is deliberately NOT listed. The read route reaches the
 # index through the read service and the response DTO, never through the ORM
