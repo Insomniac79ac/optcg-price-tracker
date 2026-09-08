@@ -304,6 +304,80 @@ class StepResult:
         )
 
 
+# Why a print was NOT a constituent for a step. These are the ONLY three
+# reasons, and they are the section 3 rules in the order compute_step applies
+# them.
+EXCLUDED_ENTRANT = "entrant"
+EXCLUDED_VERSION_MISMATCH = "version_mismatch"
+EXCLUDED_CONTRIBUTOR_CHURN = "contributor_churn"
+
+
+def constituent_exclusion(
+    before: ConstituentObservation | None,
+    observation: ConstituentObservation,
+) -> str | None:
+    """Why this print contributes no return this step, or None if it does.
+
+    THE SINGLE DEFINITION OF CONSTITUENCY. Extracted from `compute_step`'s
+    loop so that anything else needing the constituent SET - the composition
+    read path, for one - asks this function rather than restating section 3's
+    rules in its own words. A second predicate that agreed today would be free
+    to disagree after the next methodology change, and the disagreement would
+    surface as a rarity chart that quietly contradicted the constituent count
+    printed beside it.
+
+    Pure, and deliberately says nothing about arithmetic: it decides
+    membership only. `compute_step` still owns the returns, the cap and the
+    mean, and its behaviour is unchanged by this extraction - the three
+    branches below are the three `continue`s it used to spell out inline.
+    """
+    if before is None:
+        # An entrant: no value on the prior day, so no return exists.
+        return EXCLUDED_ENTRANT
+
+    # Section 3 rule 3 - pairwise per print, never against a segment
+    # constant. A (3,2) value and a (1,1) value are different measurements
+    # and no arithmetic relating them is publishable.
+    if (observation.index_version, observation.source_semantics_version) != (
+        before.index_version,
+        before.source_semantics_version,
+    ):
+        return EXCLUDED_VERSION_MISMATCH
+
+    # Section 3 rule 4 - contributor-set-identical. A print that lost a
+    # Yuyu-Tei retail price and gained a SNKRDUNK listing floor keeps
+    # source_count = 1 while the number underneath switches instrument;
+    # reporting that as movement is a category error. None on either side
+    # means "cannot prove comparability", which excludes rather than assumes.
+    if (
+        observation.contributors is None
+        or before.contributors is None
+        or observation.contributors != before.contributors
+    ):
+        return EXCLUDED_CONTRIBUTOR_CHURN
+
+    return None
+
+
+def constituent_print_ids(
+    prior: SnapshotDay, current: SnapshotDay
+) -> tuple[int, ...]:
+    """The print ids that produced a return for this step, ascending.
+
+    The set behind `StepResult.constituent_count`, exposed for read paths that
+    need to describe the constituents rather than count them. Same predicate,
+    same order (`sorted` by print id) as `compute_step`, so
+    `len(constituent_print_ids(p, c)) == compute_step(p, c).constituent_count`
+    holds by construction rather than by coincidence.
+    """
+    prior_by_print = prior.by_print()
+    return tuple(
+        o.card_print_id
+        for o in sorted(current.observations, key=lambda o: o.card_print_id)
+        if constituent_exclusion(prior_by_print.get(o.card_print_id), o) is None
+    )
+
+
 def compute_step(prior: SnapshotDay, current: SnapshotDay) -> StepResult:
     """The frozen estimator, and nothing else (methodology section 2.1).
 
@@ -340,33 +414,19 @@ def compute_step(prior: SnapshotDay, current: SnapshotDay) -> StepResult:
         # determinism requirement, not a stylistic one.
         for observation in sorted(current.observations, key=lambda o: o.card_print_id):
             before = prior_by_print.get(observation.card_print_id)
-            if before is None:
-                # An entrant: no value on the prior day, so no return exists.
+            # Section 3's membership rules, in one place - see
+            # `constituent_exclusion`. The three outcomes below are the three
+            # inline `continue`s this loop used to carry.
+            exclusion = constituent_exclusion(before, observation)
+            if exclusion is EXCLUDED_ENTRANT:
                 continue
-
-            # Section 3 rule 3 - pairwise per print, never against a segment
-            # constant. A (3,2) value and a (1,1) value are different
-            # measurements and no arithmetic relating them is publishable.
-            if (observation.index_version, observation.source_semantics_version) != (
-                before.index_version,
-                before.source_semantics_version,
-            ):
+            if exclusion is EXCLUDED_VERSION_MISMATCH:
                 excluded_version += 1
                 continue
-
-            # Section 3 rule 4 - contributor-set-identical. A print that lost
-            # a Yuyu-Tei retail price and gained a SNKRDUNK listing floor
-            # keeps source_count = 1 while the number underneath switches
-            # instrument; reporting that as movement is a category error.
-            # None on either side means "cannot prove comparability", which
-            # excludes rather than assumes.
-            if (
-                observation.contributors is None
-                or before.contributors is None
-                or observation.contributors != before.contributors
-            ):
+            if exclusion is EXCLUDED_CONTRIBUTOR_CHURN:
                 excluded_churn += 1
                 continue
+            assert before is not None  # exclusion is None => before exists
 
             current_value = Decimal(observation.index_value_jpy)
             prior_value = Decimal(before.index_value_jpy)
@@ -868,6 +928,9 @@ __all__ = [
     "ConstituentObservation",
     "LEVEL_PLACES",
     "METHODOLOGY_VERSION",
+    "EXCLUDED_CONTRIBUTOR_CHURN",
+    "EXCLUDED_ENTRANT",
+    "EXCLUDED_VERSION_MISMATCH",
     "MIN_CONSTITUENTS",
     "PointDraft",
     "SCOPE_KINDS",
@@ -886,4 +949,6 @@ __all__ = [
     "chain",
     "compute_change",
     "compute_step",
+    "constituent_exclusion",
+    "constituent_print_ids",
 ]

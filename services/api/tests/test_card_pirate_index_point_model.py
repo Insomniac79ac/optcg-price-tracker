@@ -293,6 +293,14 @@ ALLOWED_REFERENCES = {
     # the read path: SELECTs published points, runs no estimator, writes
     # nothing (its own suite proves the absence of every write verb)
     "services/card_pirate_index_read.py",
+    # the composition read path: SELECTs one published point to learn its two
+    # dates and its constituent_count, then reconstructs that day's constituent
+    # set from the archived snapshots through the estimator's own membership
+    # predicate. Reads the table, never writes it, and runs no estimator
+    # arithmetic - its own suite proves the absence of every write verb, and
+    # that it fails closed rather than publishing a composition that
+    # contradicts the point it read.
+    "services/card_pirate_index_composition.py",
     # the daily job: reads the persisted head and the pre/post-write
     # fingerprint, and inserts only through card_pirate_index_replay. Its own
     # suite proves it has no UPDATE, no DELETE and exactly one commit.

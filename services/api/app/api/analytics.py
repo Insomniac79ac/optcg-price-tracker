@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,8 +19,10 @@ from app.schemas import (
     BuySourcePreference,
     CardPirateIndexBreakOut,
     CardPirateIndexChangeOut,
+    CardPirateIndexCompositionOut,
     CardPirateIndexOut,
     CardPirateIndexPointOut,
+    CardPirateIndexRarityBucketOut,
     CardPirateIndexWindowOut,
     CollectionAnalyticsOut,
     GradingAnalyticsOut,
@@ -35,6 +39,10 @@ from app.services.analytics_digest import build_analytics_digest
 from app.services.buy_decision_support import get_buy_decision_support
 from app.services.cache import get_or_set_cache
 from app.services.cache_headers import set_cache_headers
+from app.services.card_pirate_index_composition import (
+    CompositionIntegrityError,
+    get_index_composition,
+)
 from app.services.card_pirate_index_read import (
     UnknownWindowError,
     get_index_series,
@@ -253,6 +261,79 @@ def get_card_pirate_index_endpoint(
         ],
     )
 
+
+
+@router.get("/index/composition", response_model=CardPirateIndexCompositionOut)
+def get_card_pirate_index_composition_endpoint(
+    response: Response,
+    date_: date | None = Query(default=None, alias="date"),
+    db: Session = Depends(get_db),
+):
+    """What was in the Card Pirate Index on one published day, by rarity.
+
+    UNAUTHENTICATED for the same reason the index itself is: this is an
+    aggregate over prints whose rarity is already public at GET /prints, and
+    it names none of them.
+
+    READ-ONLY AND ARCHIVE-ONLY. The constituent set is reconstructed from the
+    archived `market_index_snapshots` for the selected point's own two days,
+    through the estimator's own membership predicate. No live resolver runs,
+    no price is recomputed, and `price_observations` is never read - so this
+    answers "what was in the index on that day", not "what would be in it if
+    it were computed now".
+
+    A SUPPLIED `?date=` SELECTS EXACTLY THAT DAY, and 404s when no published
+    point exists for it. It never falls back to the nearest published day: a
+    caller who asked for 2026-09-05 and silently received 2026-09-04's
+    composition would caption someone else's numbers with their own date, and
+    nothing in the payload would let them notice.
+
+    SEPARATE FROM `/analytics/index` ON PURPOSE. The composition does not vary
+    with `?window=`, so folding it into that payload would make all seven
+    window presses pay a two-day snapshot rescan that cannot change the
+    answer.
+    """
+    try:
+        composition = get_index_composition(db, on=date_)
+    except CompositionIntegrityError as exc:
+        # 500, not a degraded 200. The derivation disagreeing with the
+        # published point means one of the two is wrong, and this endpoint has
+        # no way to know which - so it publishes neither.
+        raise HTTPException(
+            status_code=500,
+            detail=f"index composition failed its integrity check: {exc}",
+        ) from exc
+
+    if composition is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"no published Card Pirate Index point for {date_.isoformat()}"
+                if date_ is not None
+                else "no published Card Pirate Index point"
+            ),
+        )
+
+    # A real key, not None. `set_cache_headers` stamps X-Cache-Key only in a
+    # development environment, and its parameter is typed `str` - passing None
+    # crashes there while looking fine everywhere else, which is exactly the
+    # kind of defect that reaches a developer's console and nobody else's.
+    set_cache_headers(
+        response,
+        hit=False,
+        ttl_seconds=300,
+        cache_key=f"analytics:index:composition:{composition.as_of.isoformat()}",
+    )
+    return CardPirateIndexCompositionOut(
+        as_of=composition.as_of,
+        constituent_count=composition.constituent_count,
+        rarity=[
+            CardPirateIndexRarityBucketOut(
+                key=b.key, label=b.label, count=b.count, pct=float(b.pct)
+            )
+            for b in composition.rarity
+        ],
+    )
 
 @router.get("/collection", response_model=CollectionAnalyticsOut)
 def get_collection_analytics_endpoint(

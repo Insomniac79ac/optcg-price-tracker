@@ -715,6 +715,55 @@ class CardPirateIndexBreakOut(BaseModel):
     step_days: int | None = None
 
 
+class CardPirateIndexRarityBucketOut(BaseModel):
+    """One rarity's share of the constituent set.
+
+    `key` is the catalogue-facing rarity token, folded through the same
+    `rarity_facets` aliasing the print catalogue's `?rarity=` filter uses - so
+    this bucket and that filter select the same prints. `UNKNOWN` is the one
+    key that is not a Bandai token: it holds constituents whose effective
+    rarity is absent, which is published rather than dropped so that the
+    counts always sum to `constituent_count`.
+
+    `pct` is DISPLAY METADATA - `count / constituent_count * 100`, rounded to
+    two places independently per bucket. The column may therefore total 99.99
+    or 100.01; no bucket is nudged to absorb the residue, because a nudged
+    bucket would print a share that disagrees with its own count."""
+
+    key: str
+    label: str
+    count: int
+    # A FLOAT, not a Decimal, and deliberately unlike `CardPirateIndexPointOut.
+    # value`. Decimals serialise as JSON strings, which is right for an index
+    # level - "1000.1065" must not go near binary floating point on its way to
+    # a chart. A percentage already rounded to two places is display metadata
+    # with no such precision claim, and shipping it as "45.27" would make every
+    # consumer parse a string back into the number it is about to draw. The
+    # rounding still happens in Decimal, deterministically, before it gets
+    # here.
+    pct: float
+
+
+class CardPirateIndexCompositionOut(BaseModel):
+    """What was IN the index on one published day, by rarity.
+
+    The population is the constituent set behind that day's published point -
+    the prints that actually produced a return - reconstructed from the
+    archived snapshots for the point's own two days. It is NOT the active
+    catalogue and NOT the set of currently-priced prints; on 2026-09-07 those
+    three populations were 4,316, 305 and 296.
+
+    Deliberately carries no breadth, no eligible or mover counts and no price
+    statistics: breadth already belongs to the points in
+    `CardPirateIndexOut`, and duplicating it here would create a second place
+    for it to be right. Carries no surrogate ids either, for the same reason
+    `CardPirateIndexPointOut` does not."""
+
+    as_of: date
+    constituent_count: int
+    rarity: list[CardPirateIndexRarityBucketOut] = []
+
+
 class CardPirateIndexOut(BaseModel):
     """The published Card Pirate Index over one window.
 
