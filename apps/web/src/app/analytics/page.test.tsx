@@ -55,17 +55,29 @@ function startAt(query: string) {
   window.history.replaceState(null, "", `/analytics${query ? `?${query}` : ""}`);
 }
 
-const { fetchMarketBases, fetchMarketCards, fetchMarketFilters, fetchMarketOverview } =
-  vi.hoisted(() => ({
-    fetchMarketBases: vi.fn(),
-    fetchMarketCards: vi.fn(),
-    fetchMarketFilters: vi.fn(),
-    fetchMarketOverview: vi.fn(),
-  }));
+const { fetchMarketBases, fetchMarketFilters, fetchMarketOverview } = vi.hoisted(() => ({
+  fetchMarketBases: vi.fn(),
+  fetchMarketFilters: vi.fn(),
+  fetchMarketOverview: vi.fn(),
+}));
 vi.mock("@/lib/marketAnalytics", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/marketAnalytics")>("@/lib/marketAnalytics");
-  return { ...actual, fetchMarketBases, fetchMarketCards, fetchMarketFilters, fetchMarketOverview };
+  return { ...actual, fetchMarketBases, fetchMarketFilters, fetchMarketOverview };
+});
+
+/** The Card Pirate Index hero is exercised in indexHero.test.tsx; here it only
+ * has to stay out of the way of the coverage-statistics assertions - and be
+ * mocked at all, because the page fetches it on mount and an unmocked module
+ * would reach the network from jsdom. */
+const { fetchIndexDefault, fetchIndexSeries } = vi.hoisted(() => ({
+  fetchIndexDefault: vi.fn(),
+  fetchIndexSeries: vi.fn(),
+}));
+vi.mock("@/lib/cardPirateIndex", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/cardPirateIndex")>("@/lib/cardPirateIndex");
+  return { ...actual, fetchIndexDefault, fetchIndexSeries };
 });
 
 import type {
@@ -202,18 +214,64 @@ function snkrdunkOverview(partial: Partial<MarketOverview> = {}): MarketOverview
   });
 }
 
+/** Staging's real five-day series, so the hero on this page renders the same
+ * numbers a reader would actually see. Its own behaviour is asserted in
+ * indexHero.test.tsx. */
+const INDEX_SERIES = {
+  scope_kind: "overall",
+  scope_key: "",
+  methodology_version: 1,
+  index_version: 3,
+  source_semantics_version: 2,
+  requested_window: "all",
+  window_start: null,
+  available_from: "2026-09-03",
+  available_to: "2026-09-07",
+  covers_requested_window: true,
+  points: [
+    {
+      date: "2026-09-03", value: "1000.0000", is_base: true, prior_point_date: null,
+      step_days: null, chain_link_log_return: null, constituent_count: 0,
+      eligible_print_count: 231, movers_up: null, movers_down: null,
+      movers_flat: null, capped_count: null,
+    },
+    {
+      date: "2026-09-07", value: "1000.1065", is_base: false,
+      prior_point_date: "2026-09-06", step_days: 1,
+      chain_link_log_return: "-0.000850790688", constituent_count: 296,
+      eligible_print_count: 305, movers_up: 1, movers_down: 3, movers_flat: 292,
+      capped_count: 2,
+    },
+  ],
+  starting_value: "1000.0000",
+  current_value: "1000.1065",
+  low_value: "1000.0000",
+  high_value: "1000.9577",
+  change: {
+    absolute: "0.1065", pct: "0.010650", from_date: "2026-09-03",
+    to_date: "2026-09-07", spans_break: false,
+  },
+  change_unavailable_reason: null,
+  windows: [
+    { token: "2w", available: false, covered_days: 5, required_days: 14 },
+    { token: "1m", available: false, covered_days: 5, required_days: 30 },
+    { token: "3m", available: false, covered_days: 5, required_days: 90 },
+    { token: "6m", available: false, covered_days: 5, required_days: 180 },
+    { token: "1y", available: false, covered_days: 5, required_days: 365 },
+    { token: "2y", available: false, covered_days: 5, required_days: 730 },
+    { token: "all", available: true, covered_days: 5, required_days: null },
+  ],
+  default_window: "all",
+  breaks: [],
+};
+
 beforeEach(() => {
   startAt("");
   fetchMarketBases.mockResolvedValue({ bases: BASES });
   fetchMarketFilters.mockResolvedValue(FILTERS);
   fetchMarketOverview.mockResolvedValue(overview());
-  // The card strip is exercised in cardsInThisView.test.tsx; here it only has
-  // to stay out of the way of the statistics assertions.
-  fetchMarketCards.mockResolvedValue({
-    items: [], total: 0, limit: 6, offset: 0,
-    pagination: { next_offset: null, prev_offset: null, has_more: false },
-    facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
-  });
+  fetchIndexDefault.mockResolvedValue(INDEX_SERIES);
+  fetchIndexSeries.mockResolvedValue(INDEX_SERIES);
 });
 
 afterEach(() => {
@@ -747,29 +805,32 @@ describe("the page is not a dead end", () => {
   });
 });
 
-describe("the movement section is honestly empty", () => {
-  it("states there is not enough history, with no chart and no zero percentages", async () => {
+describe("the page no longer says movement cannot be answered", () => {
+  /** The section this replaces existed for one reason: to state that the
+   * archive could not compare a card against its own past. The Card Pirate
+   * Index compares the whole priced catalogue against its own past, and it is
+   * now the first thing on the page. Leaving the old paragraph below it would
+   * have put a flat denial directly under the chart that refutes it. */
+  it("the 'not enough history' section is gone", async () => {
     await renderPage();
-    const section = screen.getByText("Price movement").closest("section")!;
-    expect(within(section).getByText("Not enough comparable price history yet.")).toBeTruthy();
-    expect(section.textContent).not.toMatch(/%/);
-    expect(section.textContent).not.toMatch(/0\.00/);
-    expect(section.querySelector("svg")).toBeNull();
-    expect(within(section).queryAllByRole("button")).toHaveLength(0);
+    expect(screen.queryByText("Price movement")).toBeNull();
+    expect(screen.queryByText("Not enough comparable price history yet.")).toBeNull();
   });
 
-  it("offers no window control anywhere on the page", async () => {
-    await renderPage();
-    for (const window of ["24h", "7D", "30D", "7d", "30d"]) {
-      expect(screen.queryByRole("button", { name: window })).toBeNull();
-    }
-  });
-
-  it("shows no movers, gainers, losers or rankings", async () => {
+  it("still shows no movers, gainers, losers or rankings", async () => {
     await renderPage();
     expect(document.body.textContent).not.toMatch(
       /gainer|loser|top movers|trending|sentiment|market cap/i,
     );
+  });
+
+  it("offers no window control the index API does not publish", async () => {
+    await renderPage();
+    // The print page's 7D/30D grammar is NOT this endpoint's; offering one
+    // here would send a token the index API answers with a 400.
+    for (const label of ["24H", "7D", "30D", "90D", "5Y"]) {
+      expect(screen.queryByRole("button", { name: label })).toBeNull();
+    }
   });
 });
 

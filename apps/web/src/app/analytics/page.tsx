@@ -6,19 +6,22 @@ import { Suspense, useEffect, useState } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
-import { MarketLandscapeCards, type CardsStatus } from "@/components/ui/MarketLandscapeCards";
-import type { PrintCatalogueItem } from "@/lib/prints";
+import { CardPirateIndexHero, type IndexStatus } from "@/components/ui/CardPirateIndexHero";
 import { MarketLandscapeFilters } from "@/components/ui/MarketLandscapeFilters";
 import {
   MarketCoverageComposition,
   MarketLandscapeStats,
-  MarketMovementUnavailable,
   MarketPriceDistribution,
 } from "@/components/ui/MarketLandscapeSections";
 import {
+  fetchIndexDefault,
+  fetchIndexSeries,
+  pressedWindow,
+  type IndexSeries,
+} from "@/lib/cardPirateIndex";
+import {
   MARKET_INDEX_BASIS,
   fetchMarketBases,
-  fetchMarketCards,
   fetchMarketFilters,
   fetchMarketOverview,
   isOfferedBasis,
@@ -31,14 +34,19 @@ import {
 
 /** /analytics - the current market landscape.
  *
- * WHAT THIS PAGE ANSWERS, and the boundary it keeps: how much of the catalogue
- * Atlas can price right now, what that price landscape looks like, and how
- * both change when read through the Market Index versus one platform, or
- * narrowed to a set or a rarity. It is explicitly NOT a movers dashboard -
- * there are no gainers, no losers, no rankings, no percentage changes and no
- * sentiment, because the archive behind this product cannot yet answer a
- * movement question honestly. The one section that names movement says exactly
- * that instead of drawing an empty chart.
+ * WHAT THIS PAGE ANSWERS. Where the One Piece market stands today and how it
+ * has moved - the Card Pirate Index, which leads the page and owns its
+ * hierarchy - and then how much of the catalogue Atlas can price to say so,
+ * and how that coverage changes when read through the Market Index versus one
+ * platform, or narrowed to a set or a rarity.
+ *
+ * It is still NOT a movers dashboard: no gainers, no losers, no rankings, no
+ * per-card sentiment. The index is an aggregate over the whole priced
+ * catalogue, and the one movement figure on the page is the server's own
+ * published change across a window the reader selected. Until this tranche the
+ * page carried a section whose entire content was that the archive could not
+ * answer a movement question; the index answers it, so that section is gone
+ * rather than left standing beside a chart that contradicts it.
  *
  * STATE LIVES IN THE URL, the same convention /cards keeps, so a view a
  * collector arrives at is a view they can share and return to. Every value
@@ -55,20 +63,25 @@ export default function MarketLandscapePage() {
   );
 }
 
+/** THE INDEX OWNS THE TOP OF THIS PAGE, and the frame is what makes that true
+ * rather than merely stated.
+ *
+ * Before this tranche the frame opened with a display-weight "Current market
+ * landscape" H1 and the coverage tiles beneath it. The index hero now sits
+ * immediately under the eyebrow and carries the page's H1, and "Current
+ * market landscape" has become an H2 introducing the coverage section further
+ * down - which is what it always described. Leaving the old H1 in place would
+ * have put a heading above the chart claiming the page was about something
+ * else. */
 function PageFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-5">
-        <header className="mb-4">
-          <p className="mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent-teal">
-            Atlas market analytics
-          </p>
-          <h1 className="mt-2 font-display text-[26px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[30px]">
-            Current market landscape
-          </h1>
-          {children}
-        </header>
+        <p className="mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent-teal">
+          Atlas market analytics
+        </p>
+        {children}
       </main>
     </div>
   );
@@ -77,10 +90,16 @@ function PageFrame({ children }: { children: React.ReactNode }) {
 function MarketLandscapeFallback() {
   return (
     <PageFrame>
-      <p className="mt-1.5 text-sm text-text-secondary">
-        Pricing coverage and distribution across the current One Piece Card Game catalogue.
-      </p>
-      <div className="mt-4">
+      <div className="mt-2">
+        <CardPirateIndexHero
+          series={null}
+          status="loading"
+          refreshing={false}
+          window=""
+          onWindowChange={() => {}}
+        />
+      </div>
+      <div className="mt-6">
         <MarketLandscapeSkeleton />
       </div>
     </PageFrame>
@@ -116,23 +135,26 @@ function MarketLandscapePageInner() {
     overview: MarketOverview | null;
     failed: boolean;
   } | null>(null);
-  /** The "Cards in this view" strip, tagged with the selection it answers -
-   * the same staleness discipline as `settled`, and for a stricter reason.
+  /** The index series, tagged with the WINDOW it answers.
    *
-   * The statistics deliberately keep the PREVIOUS scope's numbers on screen
-   * while a new scope loads, because a figure updating in place beats
-   * collapsing a thousand pixels of page. Cards get no such grace: OP01-001's
-   * artwork under an EB-02 heading is not a stale number, it is a specific
-   * false statement about which cards are in this set. So a result whose tag
-   * no longer matches the selection is treated as no result at all, and the
-   * strip shows its placeholder until the right one lands. A slow response
-   * for an abandoned filter can therefore never overwrite a newer one. */
-  const [cards, setCards] = useState<{
-    key: string;
-    items: PrintCatalogueItem[];
+   * Same staleness discipline as `settled`, and it matters more here: the
+   * windows all return within a few hundred milliseconds of each other, so a
+   * reader pressing 2W then ALL can easily have the 2W response land second.
+   * Comparing the tag against the current window during render means a result
+   * for a window the reader has moved on from is, by definition, still
+   * loading - and can never overwrite the newer selection's chart. */
+  const [index, setIndex] = useState<{
+    window: string;
+    series: IndexSeries | null;
     failed: boolean;
   } | null>(null);
-
+  /** Null until the server has published its `default_window`.
+   *
+   * The page does not have an opinion about which window to open on and never
+   * had a right to one: section 13.1's ladder is the server's, and before
+   * TASK INDEX 2A-B this client re-implemented it by probing `3m` and reading
+   * `covers_requested_window` off the answer. That probe is gone. */
+  const [indexWindow, setIndexWindow] = useState<string | null>(null);
   // The two vocabulary endpoints, once per mount. They describe the catalogue,
   // not the current view, so nothing about changing a filter can invalidate
   // them.
@@ -193,28 +215,66 @@ function MarketLandscapePageInner() {
     };
   }, [ready, requestKey, selectedBasis, selectedSet, selectedRarity]);
 
-  // The card strip, on the same selection and the same cancellation
-  // discipline. A separate request rather than a field on the overview: the
-  // two answer different questions, and a failure to fetch six pieces of
-  // artwork must not take the statistics down with it.
+  // The index, once per mount, requested with NO window at all.
+  //
+  // ONE REQUEST, and the server decides which window it answers. There is no
+  // bootstrap token and no ladder on this side: TASK INDEX 2A-C moved the
+  // `?window=` fallback and the published `default_window` into one rule, so
+  // "give me the default" is expressed by naming nothing. The response's
+  // `requested_window` says which window came back, and that is the button
+  // that lights up.
+  //
+  // The page therefore does not know - and must not learn - which window is
+  // the product default. The day three months of history exists this same
+  // request returns `3m`, with no frontend change and no second round trip.
   useEffect(() => {
-    if (!ready) return;
     let cancelled = false;
-    fetchMarketCards({
-      priceBasis: selectedBasis,
-      set: selectedSet || undefined,
-      rarity: selectedRarity || undefined,
-    })
-      .then((result) => {
-        if (!cancelled) setCards({ key: requestKey, items: result.items, failed: false });
+    fetchIndexDefault()
+      .then((series) => {
+        if (cancelled) return;
+        const opened = pressedWindow(series);
+        setIndexWindow(opened);
+        setIndex({ window: opened, series, failed: false });
       })
       .catch(() => {
-        if (!cancelled) setCards({ key: requestKey, items: [], failed: true });
+        if (cancelled) return;
+        // No window to name, because none was chosen and none was returned.
+        // The hero renders its error state; the control stays empty rather
+        // than claiming a selection nothing was requested for.
+        setIndex({ window: "", series: null, failed: true });
+        setIndexWindow("");
       });
     return () => {
       cancelled = true;
     };
-  }, [ready, requestKey, selectedBasis, selectedSet, selectedRarity]);
+  }, []);
+
+  // Every later window change is its own server request for that token. No
+  // window is ever answered by slicing a longer one already in hand: the
+  // change, the high and the low are the server's for the window it was asked
+  // about, and re-deriving them from a wider series is how a client starts
+  // publishing a second index.
+  useEffect(() => {
+    if (indexWindow === null || indexWindow === "") return;
+    // The first response already answers its own window; re-fetching it here
+    // would double every first paint.
+    if (index && index.window === indexWindow) return;
+    let cancelled = false;
+    fetchIndexSeries(indexWindow)
+      .then((series) => {
+        if (!cancelled) setIndex({ window: indexWindow, series, failed: false });
+      })
+      .catch(() => {
+        if (!cancelled) setIndex({ window: indexWindow, series: null, failed: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // `index` is deliberately not a dependency: it is written by this effect,
+    // and reading it here is a guard against the duplicate first fetch, not a
+    // trigger for another one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indexWindow]);
 
   const current = settled && settled.key === requestKey ? settled : null;
   /** The PREVIOUS selection's result, still on screen while the new one loads.
@@ -235,21 +295,23 @@ function MarketLandscapePageInner() {
       : "loading";
   const overview = showing?.overview ?? null;
 
-  /** The strip's own status. Unlike the statistics there is no "previous"
-   * fallback: a result tagged with a superseded selection is not shown. */
-  const currentCards = cards && cards.key === requestKey ? cards : null;
-  const cardsStatus: CardsStatus = currentCards
-    ? currentCards.failed
-      ? "error"
-      : "ready"
-    : "loading";
-  const cardItems = currentCards && !currentCards.failed ? currentCards.items : [];
-  /** Names the scope in the strip's caption, from the SERVER's own tokens, so
-   * it can never claim a scope the request did not ask for. */
-  const scopeLabel =
-    [selectedSet, selectedRarity].filter(Boolean).join(" · ") || null;
-  const selectedBasisRow =
-    vocabulary?.bases.find((row) => row.key === selectedBasis) ?? null;
+  /** The index's own status, on the same tagged-result discipline.
+   *
+   * `indexCurrent` is the result for the window on screen; `indexPrevious` is
+   * the last good one for a window the reader has moved on from, kept
+   * rendered (dimmed, aria-busy) so pressing a window does not collapse the
+   * tallest object on the page and snap it back. A FAILED previous result is
+   * not kept - a chart that is both stale and wrong is worse than a skeleton. */
+  const indexCurrent = index && index.window === indexWindow ? index : null;
+  const indexPrevious =
+    index && index.window !== indexWindow && !index.failed ? index : null;
+  const indexShowing = indexCurrent ?? indexPrevious;
+  const indexStatus: IndexStatus = indexCurrent?.failed
+    ? "error"
+    : indexShowing?.series
+      ? "ready"
+      : "loading";
+  const indexRefreshing = indexCurrent === null && indexPrevious !== null;
 
   /** Commits a selection to the URL.
    *
@@ -280,9 +342,27 @@ function MarketLandscapePageInner() {
 
   return (
     <PageFrame>
-      <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-text-secondary">
-        {description}
-      </p>
+      <div className="mt-2">
+        <CardPirateIndexHero
+          series={indexShowing?.series ?? null}
+          status={indexStatus}
+          refreshing={indexRefreshing}
+          window={indexWindow ?? ""}
+          onWindowChange={setIndexWindow}
+        />
+      </div>
+
+      <section className="mt-8" aria-labelledby="market-landscape-heading">
+        <h2
+          id="market-landscape-heading"
+          className="font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[23px]"
+        >
+          Current market landscape
+        </h2>
+        <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-text-secondary">
+          {description}
+        </p>
+      </section>
 
       <div className="mt-4 space-y-3">
         {vocabularyFailed ? (
@@ -322,13 +402,7 @@ function MarketLandscapePageInner() {
                   refreshing ? "opacity-60 transition-opacity motion-reduce:transition-none" : ""
                 }
               >
-                <MarketLandscapeBody
-                  overview={overview}
-                  cardItems={cardItems}
-                  cardsStatus={cardsStatus}
-                  basis={selectedBasisRow}
-                  scopeLabel={scopeLabel}
-                />
+                <MarketLandscapeBody overview={overview} />
               </div>
             )}
           </>
@@ -386,19 +460,7 @@ function MarketLandscapeSkeleton() {
  *                         are still shown, because "this platform prices
  *                         nothing here" is an answer worth reading.
  */
-function MarketLandscapeBody({
-  overview,
-  cardItems,
-  cardsStatus,
-  basis,
-  scopeLabel,
-}: {
-  overview: MarketOverview;
-  cardItems: PrintCatalogueItem[];
-  cardsStatus: CardsStatus;
-  basis: MarketBasis | null;
-  scopeLabel: string | null;
-}) {
+function MarketLandscapeBody({ overview }: { overview: MarketOverview }) {
   if (overview.scope.active_prints === 0) {
     return (
       <div className="panel px-4 py-6 text-center">
@@ -414,16 +476,9 @@ function MarketLandscapeBody({
     <>
       {!overview.available && <BasisUnavailableNote overview={overview} />}
       <MarketLandscapeStats overview={overview} />
-      <MarketLandscapeCards
-        items={cardItems}
-        basis={basis}
-        status={cardsStatus}
-        scopeLabel={scopeLabel}
-      />
       <CatalogueLink rarity={overview.scope.rarity} />
       <MarketPriceDistribution overview={overview} />
       <MarketCoverageComposition overview={overview} />
-      <MarketMovementUnavailable />
     </>
   );
 }
