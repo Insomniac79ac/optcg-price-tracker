@@ -301,6 +301,13 @@ ALLOWED_REFERENCES = {
     # that it fails closed rather than publishing a composition that
     # contradicts the point it read.
     "services/card_pirate_index_composition.py",
+    # the movers read path: SELECTs one published point for its two dates, its
+    # constituent_count and its chain_link_log_return, then reconstructs that
+    # day's per-constituent returns from the archived snapshots through the
+    # estimator's own membership predicate. Reads the table, never writes it,
+    # and refuses rather than publishing a movers list whose contributions sum
+    # to a different step than the point published.
+    "services/card_pirate_index_movers.py",
     # the daily job: reads the persisted head and the pre/post-write
     # fingerprint, and inserts only through card_pirate_index_replay. Its own
     # suite proves it has no UPDATE, no DELETE and exactly one commit.

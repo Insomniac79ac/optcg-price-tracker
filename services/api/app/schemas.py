@@ -744,6 +744,108 @@ class CardPirateIndexRarityBucketOut(BaseModel):
     pct: float
 
 
+class CardPirateIndexMoverOut(BaseModel):
+    """One constituent that moved between two published index points.
+
+    IDENTITY IS `card_print_id`, NOT `card_code`. OP01-016 has seven prints in
+    the catalogue and exactly one of them moved on 2026-09-07; a row keyed by
+    the code would be ambiguous across all seven. `display_image_url` is part
+    of the contract for the same reason - `treatment` is frequently null even
+    on parallel printings, so the artwork is the only reliable visual
+    disambiguator.
+
+    ARCHIVED vs CURRENT. `prior_value_jpy` and `current_value_jpy` are the
+    archived Market Index values for the two point dates, read as stored.
+    `card_code`, `name`, `rarity` and `display_image_url` are CURRENT catalogue
+    metadata. A rarity correction therefore moves a historical mover's label
+    and never its prices.
+
+    `raw_pct` is the card's own move, from the two archived integers. It is
+    deliberately NOT derived from `capped_log_return`: the cap is an index
+    rule, not a claim about what the card did.
+
+    `capped_log_return` is that move after the methodology's unconditional
+    +/-25 % daily cap (section 2.1). When `was_capped` is true the index
+    counted less movement than the card actually had.
+
+    `contribution_log_return` is CANONICAL AND EXACT: `capped_log_return`
+    divided by the constituent count, which is the quantity that literally
+    entered the published mean. Summed over every constituent it equals
+    `chain_link_log_return` exactly, and the service asserts that at runtime.
+
+    `approx_index_points` is DISPLAY ASSISTANCE ONLY - `prior_index_value *
+    contribution_log_return`. It does NOT sum to the actual level change,
+    because the index chains multiplicatively in level space and a
+    multiplicative process has no exact additive decomposition in level units;
+    on 2026-09-07 the residual is 0.0004 of a 0.85-point move. Never use it to
+    reconcile anything and never rank by it - `impact_rank` is computed from
+    `contribution_log_return`.
+
+    RANKS ARE SERVER-AUTHORITATIVE so no client re-derives methodology.
+    `move_rank` orders by |raw_pct| descending, tie-broken by card_print_id.
+    `impact_rank` orders by |contribution_log_return| descending, tie-broken by
+    |raw_pct| then card_print_id - which matters: two cards capped in the same
+    direction have identical contributions and would otherwise be unordered."""
+
+    card_print_id: int
+    card_code: str | None = None
+    name: str | None = None
+    rarity: str | None = None
+    display_image_url: str | None = None
+    treatment: str | None = None
+    language: str | None = None
+
+    prior_value_jpy: int
+    current_value_jpy: int
+
+    direction: Literal["up", "down"]
+    raw_pct: float
+
+    capped_log_return: Decimal
+    was_capped: bool
+    contribution_log_return: Decimal
+    approx_index_points: Decimal
+
+    move_rank: int
+    impact_rank: int
+
+
+class CardPirateIndexMoversOut(BaseModel):
+    """What moved the Card Pirate Index on one published day.
+
+    `movers` carries NON-FLAT ACTUAL CONSTITUENTS ONLY. Entrants, leavers,
+    version-mismatch prints and contributor-set churn are excluded by the
+    frozen membership rules and can never appear - which matters more than it
+    sounds: on 2026-09-07 the single largest raw move in the archive belonged
+    to a print excluded for contributor churn, and publishing it would have put
+    a +40 % "gain" at the top of a list of things that moved the index by
+    exactly zero.
+
+    Flat constituents are omitted rather than listed with a zero; they are
+    reported as `unchanged_count`, and
+    `movers_count + unchanged_count == constituent_count` always holds over the
+    FULL set, before any truncation.
+
+    A base point answers 200 with an empty list, `constituent_count: 0` and a
+    null `prior_point_date`: it opened a segment and had nothing to move
+    against. That is distinct from a quiet day, which has a full constituent
+    count and an empty list - 2026-09-06 is exactly that.
+
+    `truncated` says the day had more movers than the payload carries. The
+    integrity arithmetic and both rank sequences are computed over every
+    constituent first, so a truncated payload still carries true ranks rather
+    than positions within the visible slice."""
+
+    as_of: date
+    prior_point_date: date | None = None
+    constituent_count: int
+    movers_count: int
+    unchanged_count: int
+    chain_link_log_return: Decimal | None = None
+    movers: list[CardPirateIndexMoverOut] = []
+    truncated: bool = False
+
+
 class CardPirateIndexCompositionOut(BaseModel):
     """What was IN the index on one published day, by rarity.
 

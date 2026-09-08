@@ -20,6 +20,8 @@ from app.schemas import (
     CardPirateIndexBreakOut,
     CardPirateIndexChangeOut,
     CardPirateIndexCompositionOut,
+    CardPirateIndexMoverOut,
+    CardPirateIndexMoversOut,
     CardPirateIndexOut,
     CardPirateIndexPointOut,
     CardPirateIndexRarityBucketOut,
@@ -42,6 +44,10 @@ from app.services.cache_headers import set_cache_headers
 from app.services.card_pirate_index_composition import (
     CompositionIntegrityError,
     get_index_composition,
+)
+from app.services.card_pirate_index_movers import (
+    MoversIntegrityError,
+    get_index_movers,
 )
 from app.services.card_pirate_index_read import (
     UnknownWindowError,
@@ -332,6 +338,94 @@ def get_card_pirate_index_composition_endpoint(
                 key=b.key, label=b.label, count=b.count, pct=float(b.pct)
             )
             for b in composition.rarity
+        ],
+    )
+
+
+@router.get("/index/movers", response_model=CardPirateIndexMoversOut)
+def get_card_pirate_index_movers_endpoint(
+    response: Response,
+    date_: date | None = Query(default=None, alias="date"),
+    db: Session = Depends(get_db),
+):
+    """Which constituents moved the Card Pirate Index on one published day.
+
+    UNAUTHENTICATED and READ-ONLY, on the same argument as the two routes
+    above: every price here is an archived Market Index value that is already
+    public through GET /prints/{id}/market-index, and the aggregate is the
+    index this product publishes.
+
+    ARCHIVE-ONLY. The constituent set is reconstructed from
+    `market_index_snapshots` for the selected point's own two days, through
+    the estimator's own membership predicate. No live resolver runs, no price
+    is recomputed, and `price_observations` is never read - so this answers
+    "what moved the index that day", not "what would move it if it were
+    computed now".
+
+    A SUPPLIED `?date=` SELECTS EXACTLY THAT DAY and 404s when no published
+    point exists for it, never falling back to the nearest one.
+
+    TWO RANKINGS, BOTH THE SERVER'S. `move_rank` answers "which card moved
+    most" and `impact_rank` answers "which card moved the index most". They
+    are different orders whenever the daily cap binds, and the client sorts
+    nothing.
+    """
+    try:
+        movers = get_index_movers(db, on=date_)
+    except MoversIntegrityError as exc:
+        # 500, not a degraded 200: a reconstruction that disagrees with the
+        # published point means one of the two is wrong and this endpoint
+        # cannot know which, so it publishes neither.
+        raise HTTPException(
+            status_code=500,
+            detail=f"index movers failed their integrity check: {exc}",
+        ) from exc
+
+    if movers is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"no published Card Pirate Index point for {date_.isoformat()}"
+                if date_ is not None
+                else "no published Card Pirate Index point"
+            ),
+        )
+
+    set_cache_headers(
+        response,
+        hit=False,
+        ttl_seconds=300,
+        cache_key=f"analytics:index:movers:{movers.as_of.isoformat()}",
+    )
+    return CardPirateIndexMoversOut(
+        as_of=movers.as_of,
+        prior_point_date=movers.prior_point_date,
+        constituent_count=movers.constituent_count,
+        movers_count=movers.movers_count,
+        unchanged_count=movers.unchanged_count,
+        chain_link_log_return=movers.chain_link_log_return,
+        truncated=movers.truncated,
+        movers=[
+            CardPirateIndexMoverOut(
+                card_print_id=m.card_print_id,
+                card_code=m.card_code,
+                name=m.name,
+                rarity=m.rarity,
+                display_image_url=m.display_image_url,
+                treatment=m.treatment,
+                language=m.language,
+                prior_value_jpy=m.prior_value_jpy,
+                current_value_jpy=m.current_value_jpy,
+                direction=m.direction,
+                raw_pct=float(m.raw_pct),
+                capped_log_return=m.capped_log_return,
+                was_capped=m.was_capped,
+                contribution_log_return=m.contribution_log_return,
+                approx_index_points=m.approx_index_points,
+                move_rank=m.move_rank,
+                impact_rank=m.impact_rank,
+            )
+            for m in movers.movers
         ],
     )
 
