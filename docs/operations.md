@@ -1406,8 +1406,20 @@ two. `market-index-snapshot` runs on the API image at `0 20 * * *` UTC with rest
 and its start command chains both jobs in a single container run:
 
 ```
-python -m app.snapshot_market_index && python -m app.card_pirate_index_writer
+/bin/sh -c "python -m app.snapshot_market_index && exec python -m app.card_pirate_index_writer"
 ```
+
+**Why the explicit `/bin/sh -c` wrapper.** Railway runs a Start Command override on a
+Dockerfile-built service in **exec form**, not through a shell. An unwrapped
+`python -m app.snapshot_market_index && python -m app.card_pirate_index_writer` therefore has no
+process to interpret `&&`: the operator is not shell syntax to `python`, so it is either passed
+through as literal argv or rejected outright, and in neither case does it mean "run the second job
+only if the first succeeded". Wrapping the chain in `/bin/sh -c "..."` puts a real shell in PID 1
+and restores the conditional. The image is `python:3.12-slim`, whose `/bin/sh` is dash - the same
+shell the Dockerfile's own `CMD ["sh", "-c", ...]` already relies on to expand `${PORT}` - so this
+adds no dependency the image did not already have. The trailing `exec` replaces the shell with the
+writer for the final leg, so the writer's exit status is the container's exit status rather than
+something the shell relays.
 
 **Why one service and not two crons.** The index must observe the *same day's* snapshot. One
 process guarantees that ordering; two crons twenty minutes apart merely hope for it - the snapshot's
