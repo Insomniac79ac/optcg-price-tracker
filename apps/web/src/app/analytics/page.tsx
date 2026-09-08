@@ -7,6 +7,8 @@ import { Suspense, useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
 import { CardPirateIndexHero, type IndexStatus } from "@/components/ui/CardPirateIndexHero";
+import { IndexCompositionPanel } from "@/components/ui/IndexCompositionPanel";
+import { MarketBreadthPanel } from "@/components/ui/MarketBreadthPanel";
 import { MarketLandscapeFilters } from "@/components/ui/MarketLandscapeFilters";
 import {
   MarketCoverageComposition,
@@ -14,9 +16,11 @@ import {
   MarketPriceDistribution,
 } from "@/components/ui/MarketLandscapeSections";
 import {
+  fetchIndexComposition,
   fetchIndexDefault,
   fetchIndexSeries,
   pressedWindow,
+  type IndexComposition,
   type IndexSeries,
 } from "@/lib/cardPirateIndex";
 import {
@@ -155,6 +159,20 @@ function MarketLandscapePageInner() {
    * TASK INDEX 2A-B this client re-implemented it by probing `3m` and reading
    * `covers_requested_window` off the answer. That probe is gone. */
   const [indexWindow, setIndexWindow] = useState<string | null>(null);
+  /** The composition, fetched ONCE per mount and never per window.
+   *
+   * It describes the newest published point, which is the same point whether
+   * the chart above is showing two weeks or everything - so this deliberately
+   * lives outside the window state entirely rather than being memoised against
+   * it. There is no window in `fetchIndexComposition`'s signature to pass.
+   *
+   * Its failure is panel-local: `status: "error"` renders a quiet unavailable
+   * line inside the composition panel, while Market Breadth beside it keeps
+   * rendering from the index series and the rest of the page is untouched. */
+  const [composition, setComposition] = useState<{
+    data: IndexComposition | null;
+    status: "loading" | "ready" | "error";
+  }>({ data: null, status: "loading" });
   // The two vocabulary endpoints, once per mount. They describe the catalogue,
   // not the current view, so nothing about changing a filter can invalidate
   // them.
@@ -227,6 +245,32 @@ function MarketLandscapePageInner() {
   // The page therefore does not know - and must not learn - which window is
   // the product default. The day three months of history exists this same
   // request returns `3m`, with no frontend change and no second round trip.
+  // The composition, once per mount. No window parameter, so a timeframe
+  // change cannot reach it.
+  useEffect(() => {
+    let cancelled = false;
+    fetchIndexComposition()
+      .then((data) => {
+        if (cancelled) return;
+        // VALIDATED AT THE TRUST BOUNDARY. A response without a usable
+        // `rarity` array is not a composition, and treating it as one puts an
+        // undefined through the panel's own length check - a render-time throw
+        // that React escalates into a blank Analytics page. A malformed
+        // payload is a failure, and failures here are panel-local by design.
+        if (!data || !Array.isArray(data.rarity)) {
+          setComposition({ data: null, status: "error" });
+          return;
+        }
+        setComposition({ data, status: "ready" });
+      })
+      .catch(() => {
+        if (!cancelled) setComposition({ data: null, status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     fetchIndexDefault()
@@ -336,6 +380,13 @@ function MarketLandscapePageInner() {
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
+  // The newest point of whatever series is on screen. Breadth is a property
+  // of the latest published day, and every window's response ends on that
+  // same day, so this is stable across timeframe changes rather than being
+  // another thing the window control moves.
+  const points = indexShowing?.series?.points ?? [];
+  const newestIndexPoint = points.length > 0 ? points[points.length - 1] : null;
+
   const description = overview
     ? `Read through ${overviewBasisLabel(overview)}. Pricing coverage and distribution across the current One Piece Card Game catalogue.`
     : "Pricing coverage and distribution across the current One Piece Card Game catalogue.";
@@ -350,6 +401,22 @@ function MarketLandscapePageInner() {
           window={indexWindow ?? ""}
           onWindowChange={setIndexWindow}
         />
+      </div>
+
+      {/* SECONDARY ANALYSIS, and sized to say so. Two panels of similar weight
+          below the hero, stacking on mobile. The breadth panel reads the
+          newest point off the series the hero is already holding - no request
+          of its own - and the composition panel holds a response that does not
+          vary with the window control above it. */}
+      <div
+        className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2"
+        data-testid="index-analytics-row"
+      >
+        <IndexCompositionPanel
+          composition={composition.data}
+          status={composition.status}
+        />
+        <MarketBreadthPanel point={newestIndexPoint} />
       </div>
 
       <section className="mt-8" aria-labelledby="market-landscape-heading">

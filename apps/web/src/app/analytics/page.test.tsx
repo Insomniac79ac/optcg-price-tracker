@@ -667,27 +667,33 @@ describe("price distribution", () => {
 
 // --- E. coverage and composition --------------------------------------------
 
-describe("Market Index composition", () => {
-  it("reports single- and multi-source prints without calling either confidence", async () => {
+describe("the page states the index's composition exactly once", () => {
+  it("no longer carries a source-count section calling itself the index's makeup", async () => {
+    // TASK INDEX 2B-C2. This block used to render "What the index is made of"
+    // - the live-resolver split of priced prints by SOURCE COUNT. It was
+    // accurate, and it was removed because /analytics now opens with an Index
+    // Composition panel of nearly the same name answering a different
+    // question, and the two printed overlapping numbers from unrelated
+    // populations.
     await renderPage();
-    const section = screen.getByText("What the index is made of").closest("section")!;
-    expect(within(section).getByText("288")).toBeTruthy();
-    expect(within(section).getByText("One source")).toBeTruthy();
-    expect(within(section).getByText("8")).toBeTruthy();
-    expect(within(section).getByText("Two or more sources")).toBeTruthy();
-    // `source_count` counts contributors. Calling that a confidence score
-    // would invent a quality claim the resolver never made.
-    expect(section.textContent).not.toMatch(/confidence/i);
+    expect(screen.queryByText("What the index is made of")).toBeNull();
+    expect(screen.queryByText("Two or more sources")).toBeNull();
+    expect(screen.queryByText("One source")).toBeNull();
+    // The removed bar's own total label. Asserted as the exact string rather
+    // than the loose phrase: "priced prints in this view" also appears in the
+    // Price distribution caption, which is unrelated and stays.
+    expect(document.body.textContent).not.toContain("296 priced prints in this view");
   });
 
-  it("never describes the index's total as observed", async () => {
-    // `observed_prints` is null for this basis precisely because nobody
-    // observes a derived value, so an "observed" total here would state the
-    // one thing the API explicitly refuses to claim.
+  it("keeps every other market-overview section it did not own", async () => {
+    // The overview response has four other consumers on this page, so the
+    // request stays and so do they. Removing the section is not removing the
+    // basis.
     await renderPage();
-    const section = screen.getByText("What the index is made of").closest("section")!;
-    expect(section.textContent).toContain("296 priced prints in this view");
-    expect(section.textContent).not.toMatch(/observed/i);
+    expect(screen.getByText("Priced prints")).toBeTruthy();
+    expect(screen.getByText("Catalogue coverage")).toBeTruthy();
+    expect(screen.getByText("Price distribution")).toBeTruthy();
+    expect(screen.getByText("Browse the card catalogue →")).toBeTruthy();
   });
 });
 
@@ -851,9 +857,27 @@ describe("refreshing does not collapse the page", () => {
     fireEvent.click(screen.getByRole("button", { name: "SNKRDUNK · Current listing" }));
 
     // Still rendered, and still the OLD numbers - not a spinner, not zeroes.
-    await waitFor(() => expect(document.querySelector("[aria-busy='true']")).toBeTruthy());
+    //
+    // SCOPED TO THE LANDSCAPE'S OWN BUSY REGION. A bare document-wide query
+    // used to be unambiguous because this was the page's only `aria-busy`
+    // element; the index hero's skeleton and the composition panel's are both
+    // legitimately busy too, so the query has to name which region it means or
+    // it silently starts asserting about a different one.
+    // On a REFRESH the landscape keeps its content, so it is identified by
+    // the stat it is still showing rather than by a loading caption it does
+    // not have.
+    const landscapeBusy = () =>
+      [...document.querySelectorAll("[aria-busy='true']")].find((el) =>
+        el.contains(screen.getByText("Priced prints")),
+      );
+    await waitFor(() => expect(landscapeBusy()).toBeTruthy());
     expect(screen.getByText("Priced prints")).toBeTruthy();
-    expect(screen.getByText("296")).toBeTruthy();
+    // The STAT TILE's 296, not any 296 on the page - Market Breadth prints the
+    // same constituent count, so a bare text query is ambiguous. Same scoping
+    // the SNKRDUNK assertion below already uses for exactly this reason.
+    const pricedTile = () =>
+      screen.getByText("Priced prints").closest("div")!.parentElement!;
+    expect(within(pricedTile()).getByText("296")).toBeTruthy();
     expect(screen.queryByText("Loading market landscape…")).toBeNull();
 
     release(snkrdunkOverview());
@@ -863,14 +887,19 @@ describe("refreshing does not collapse the page", () => {
       const priced = screen.getByText("Priced prints").closest("div")!.parentElement!;
       expect(within(priced).getByText("25")).toBeTruthy();
     });
-    expect(document.querySelector("[aria-busy='true']")).toBeNull();
+    expect(landscapeBusy()).toBeUndefined();
   });
 
   it("shows a page-shaped placeholder on first paint, not a small box", async () => {
     fetchMarketOverview.mockReturnValue(new Promise<MarketOverview>(() => {}));
     render(<MarketLandscapePage />);
     await waitFor(() => expect(screen.getByText("Loading market landscape…")).toBeTruthy());
-    const busy = document.querySelector("[aria-busy='true']")!;
+    // The LANDSCAPE's placeholder specifically - the index hero and the
+    // composition panel have busy skeletons of their own, so a document-wide
+    // `[aria-busy]` query would now pick up whichever renders first.
+    const busy = screen
+      .getByText("Loading market landscape…")
+      .closest("[aria-busy='true']")!;
     // Four stat placeholders and a chart-sized block, so the first frame is
     // roughly the height the real content will be.
     expect(busy.querySelectorAll(".panel")).toHaveLength(5);
@@ -901,8 +930,8 @@ describe("a section with nothing to say is omitted, not padded with zeroes", () 
       }),
     );
     await renderPage();
-    // "0 from one source, 0 from two" is not a finding, and the stats above
-    // have already said 0.
+    // The section is gone for every Market Index view now, not only for an
+    // empty one - see "the page states the index's composition exactly once".
     expect(screen.queryByText("What the index is made of")).toBeNull();
     // The stats themselves still report the real zero.
     expect(screen.getByText("Catalogue coverage")).toBeTruthy();

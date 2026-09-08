@@ -219,46 +219,29 @@ export function MarketPriceDistribution({ overview }: { overview: MarketOverview
  *                  that number being a price.
  */
 export function MarketCoverageComposition({ overview }: { overview: MarketOverview }) {
-  const { coverage, index_composition: composition } = overview;
+  const { coverage } = overview;
 
-  if (overview.kind === "market_index") {
-    if (!composition) return null;
-    const total = composition.single_source_prints + composition.multi_source_prints;
-    // Nothing priced means nothing to decompose. "0 from one source, 0 from
-    // two" is not a finding, and the stats above have already said 0 - so the
-    // section is omitted rather than padded out with zeroes.
-    if (total === 0) return null;
-    return (
-      <SectionShell
-        title="What the index is made of"
-        caption="Every priced print, by how many sources contributed to its Market Index."
-        tone="supporting"
-      >
-        <SegmentedBar
-          segments={[
-            {
-              key: "multi",
-              label: "Two or more sources",
-              count: composition.multi_source_prints,
-              className: "bg-accent-teal/80",
-            },
-            {
-              key: "single",
-              label: "One source",
-              count: composition.single_source_prints,
-              className: "bg-accent-teal/35",
-            },
-          ]}
-          total={total}
-          // PRICED, not "observed". `observed_prints` is null for this basis
-          // precisely because nobody observes a derived value, so a total
-          // described as observed here would state the one thing the API
-          // explicitly refuses to claim.
-          totalLabel={`${total.toLocaleString()} priced prints in this view`}
-        />
-      </SectionShell>
-    );
-  }
+  // MARKET INDEX RENDERS NOTHING HERE ANY MORE.
+  //
+  // This branch used to show "What the index is made of" - every priced print
+  // split by how many SOURCES contributed to its Market Index. It was accurate
+  // and it is now removed, because /analytics gained a panel of the same name
+  // that answers a different question, and the two could not share a page.
+  //
+  // The collision was not merely verbal. On 2026-09-07 this section printed
+  // `9 / 296 / 305` while the Index Composition panel above printed a
+  // constituent count of 296 out of 305 priced - the same three numbers, from
+  // unrelated populations. This section split the CURRENT live-resolver
+  // prints by source count; the panel above splits the ARCHIVED constituents
+  // of the newest published index point by rarity. The 296s are not the same
+  // 296: only one print is in both the multi-source set and the
+  // non-constituent set. A reader had no way to tell those apart, and the
+  // upper panel is the one that actually describes the index.
+  //
+  // The source-basis branch below is untouched: "What this source reports" is
+  // about a platform's own coverage, collides with nothing, and is still the
+  // only place a collector learns that a constrained listing is not a price.
+  if (overview.kind === "market_index") return null;
 
   // A source basis. `observed_prints` is null only for Market Index, so
   // reaching here without it means the server declined to answer - which is

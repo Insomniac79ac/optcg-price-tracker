@@ -338,6 +338,62 @@ export function formatIndexDay(day: string): string {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(parsed);
 }
 
+// --- composition -----------------------------------------------------------
+
+/** One rarity's share of the constituent set - see CardPirateIndexRarityBucketOut.
+ *
+ * `pct` arrives as a NUMBER already rounded to two places by the server, and
+ * is used exactly as sent. Recomputing it here from `count` would be a second
+ * opinion about a figure the server already published, and forcing the column
+ * to total 100 would make a bucket's printed share disagree with its own
+ * count. `UNKNOWN` is the one key that is not a Bandai token - it holds
+ * constituents whose catalogue rarity is absent, and it is published rather
+ * than dropped so the counts always sum to `constituent_count`. */
+export interface IndexRarityBucket {
+  key: string;
+  label: string;
+  count: number;
+  pct: number;
+}
+
+/** GET /analytics/index/composition - what the index is MADE OF on one day.
+ *
+ * The population is the constituent set behind the newest published point:
+ * the prints that actually produced a return. It is emphatically NOT the
+ * active catalogue and NOT the set of currently-priced prints - on
+ * 2026-09-07 those three populations were 4,316, 305 and 296. Nothing in
+ * this client may reconstruct it: membership is a pairwise property of two
+ * archived snapshot days, decided on the server by the estimator's own
+ * predicate. */
+export interface IndexComposition {
+  as_of: string;
+  constituent_count: number;
+  rarity: IndexRarityBucket[];
+}
+
+/** Fetched ONCE per page load, and deliberately not per window.
+ *
+ * The composition describes the newest published point, which does not change
+ * when a reader presses 2W or 1Y - so re-requesting it on a window change
+ * would spend a round trip to receive the identical answer, and would make
+ * the panel flicker for no reason. The window control and this request are
+ * unrelated by construction, not by discipline: this function takes no
+ * window argument to pass one. */
+export function fetchIndexComposition(): Promise<IndexComposition> {
+  return apiGet<IndexComposition>("/analytics/index/composition");
+}
+
+/** A share of a total, for DISPLAY ONLY, as a percentage 0-100.
+ *
+ * Used for the breadth bar's geometry, where the server publishes counts and
+ * no percentage. Returns 0 for a zero or non-finite total rather than NaN -
+ * a base point has no constituents, and a bar of width NaN renders as a
+ * broken element rather than as an absent one. */
+export function breadthShare(count: number | null, total: number): number {
+  if (count === null || !Number.isFinite(total) || total <= 0) return 0;
+  return (count / total) * 100;
+}
+
 /** One contiguous run of days, and whether a real gap precedes it.
  *
  * `step_days > 1` means the archive genuinely holds nothing between two
