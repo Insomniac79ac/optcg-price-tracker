@@ -66,8 +66,16 @@ from app.services.print_series import build_print_series
 CHANGE_UNAVAILABLE_NO_VALUE = "no_archived_value_in_window"
 CHANGE_UNAVAILABLE_SINGLE_POINT = "single_point_window"
 
+# The refusal a per-series change falls back to when the two ends sit in
+# different segments but no break between them can be named. Structurally
+# unreachable - segments are contiguous, so a boundary always has a break - and
+# kept as a fail-closed default: an unnameable boundary must still refuse the
+# comparison rather than publish one.
+CHANGE_UNAVAILABLE_SEGMENT_BOUNDARY = "segment_boundary"
+
 __all__ = [
     "CHANGE_UNAVAILABLE_NO_VALUE",
+    "CHANGE_UNAVAILABLE_SEGMENT_BOUNDARY",
     "CHANGE_UNAVAILABLE_SINGLE_POINT",
     "WINDOW_TOKENS",
     "get_print_analytics",
@@ -345,6 +353,201 @@ def _headline(snapshots: list[MarketIndexSnapshot]) -> dict:
     }
 
 
+def _plotted_points(series: dict) -> list[tuple[int, dict]]:
+    """Every point of one series this chart can draw, tagged with its segment.
+
+    THE SAME PLOTTABILITY RULE THE CHART USES, and the reason the rule lives
+    with the points rather than with the caller: a statistic taken over a
+    different set from the one on screen would be a number the reader cannot
+    find on the plot. Two ways a point is not drawable, and neither is missing
+    data:
+
+      * `value_jpy is None` - an archived Market Index day on which no source
+        was eligible. A recorded result, and never a zero, a low, or a point to
+        measure between.
+      * `eligible is False` - source semantics disqualified the reading (a
+        platform-minimum listing, say). The number is real and stays in the
+        payload for the tooltip; it is not a price this card traded at.
+
+    The segment index travels with each point because it is what makes the
+    change rule below break-aware without a second definition of "break".
+    """
+    out: list[tuple[int, dict]] = []
+    for index, segment in enumerate(series.get("segments") or []):
+        for point in segment.get("points") or []:
+            if point.get("value_jpy") is None:
+                continue
+            if point.get("eligible") is False:
+                continue
+            out.append((index, point))
+    return out
+
+
+def _series_change(
+    series: dict,
+    plotted: list[tuple[int, dict]],
+) -> tuple[dict | None, str | None]:
+    """Movement between one series' first and last drawable points, or the
+    reason there is none.
+
+    BREAK-AWARENESS COMES FROM THE SHIPPED SEGMENTS, NOT A SECOND RULE. The
+    series arrives already split wherever its measurement changed - by
+    index_version and source_semantics_version for the Market Index, by
+    reference_type/evidence_type for a source - and a break is recorded at
+    every one of those boundaries. So the test is simply whether the two ends
+    sit in the SAME segment. If they do not, the endpoints were taken under
+    different methodologies or different instruments, and subtracting one from
+    the other would report a definition change as a price movement.
+
+    The refusal NAMES THE BOUNDARY, using the server's own break vocabulary
+    (`index_version_change`, `source_semantics_version_change`,
+    `reference_type_change`, `instrument_change`), so a client can explain the
+    refusal rather than just report it.
+
+    A PLAIN MISSING DAY IS NOT A BOUNDARY. A day Atlas simply did not record
+    splits no segment and emits no break, so it neither refuses the comparison
+    nor gets a point invented to fill it - the two real ends are compared and
+    `observed_days` counts only the days that exist.
+    """
+    if len(plotted) == 1:
+        return None, CHANGE_UNAVAILABLE_SINGLE_POINT
+
+    (start_segment, start_point) = plotted[0]
+    (end_segment, end_point) = plotted[-1]
+
+    if start_segment != end_segment:
+        reason = _boundary_reason(series, start_point, end_point)
+        return None, reason
+
+    baseline = start_point["value_jpy"]
+    current = end_point["value_jpy"]
+    if baseline is None or current is None or baseline <= 0:
+        # A non-positive baseline cannot carry a percentage, and the shipped
+        # index guard refuses the same case rather than dividing by it.
+        return None, CHANGE_UNAVAILABLE_SEGMENT_BOUNDARY if baseline is None else "non_positive_baseline"
+
+    return (
+        {
+            "absolute_jpy": current - baseline,
+            # Not rounded and not classified - the schema serialises a float
+            # and the client decides how to present it, exactly as the headline
+            # change does. A genuine 0.0 is a measurement (the series is where
+            # it started) and is published as 0.0, never collapsed into the
+            # null that means "not comparable".
+            "pct": ((current - baseline) / baseline) * 100.0,
+            "from_date": start_point["day"],
+            "to_date": end_point["day"],
+            # Structurally False whenever a change is published: same-segment
+            # ends have no boundary between them. Computed rather than
+            # hardcoded so a segmentation bug shows up here instead of being
+            # asserted away.
+            "spans_break": _spans_break(series, start_point, end_point),
+        },
+        None,
+    )
+
+
+def _boundary_reason(series: dict, start_point: dict, end_point: dict) -> str:
+    """Which boundary made the two ends incomparable, in the server's own
+    break vocabulary.
+
+    The EARLIEST break between them, because that is the first thing that
+    changed and the one a reader is being told about. A day on which two
+    fields moved emits one break per field, and taking the earliest keeps this
+    deterministic rather than dependent on emission order.
+    """
+    between = [
+        entry
+        for entry in (series.get("breaks") or [])
+        if start_point["t"] < entry["at"] <= end_point["t"]
+    ]
+    if not between:
+        return CHANGE_UNAVAILABLE_SEGMENT_BOUNDARY
+    return min(between, key=lambda entry: entry["at"])["reason"]
+
+
+def _spans_break(series: dict, start_point: dict, end_point: dict) -> bool:
+    return any(
+        start_point["t"] < entry["at"] <= end_point["t"]
+        for entry in (series.get("breaks") or [])
+    )
+
+
+def _series_stats(series_payload: list[dict], headline: dict) -> list[dict]:
+    """One summary per series the chart actually draws.
+
+    WHY THIS IS BUILT FROM THE SERIES PAYLOAD AND NOT FROM A SECOND QUERY. The
+    invariant that matters is that every figure here can be found on the plot
+    beside it, and the only way to guarantee that is to compute it from the
+    very objects the plot is drawn from. A parallel query would be a second
+    definition of the window, of plottability and of ordering, free to disagree
+    with the first.
+
+    NOTHING IS RESOLVED, RECOMPUTED, AVERAGED, INTERPOLATED OR FORWARD-FILLED.
+    Every published number is an integer JPY value lifted from one archived
+    observation, and every date is that observation's own day. There is no mean
+    anywhere: the only combination rule Atlas owns is a same-day median across
+    sources, so an average over time would be inventing methodology.
+
+    A SERIES WITH NOTHING DRAWABLE GETS NO ROW. An unconfigured platform, a
+    platform with no history in this window, and a platform whose every reading
+    was disqualified all produce no entry rather than a row of nulls - a
+    zero-filled summary would assert a measurement that was never taken. This
+    is also why the list is not keyed by a fixed set of platform names.
+
+    THE MARKET INDEX DEFERS TO THE HEADLINE FOR ITS CHANGE. The headline is the
+    same archived series over the same window, and it applies one guard this
+    payload cannot see: whether the SET OF SOURCES behind the number changed
+    between the two ends (`market_index_snapshots` carries the contributors;
+    the series points do not). Publishing a movement here that the headline
+    refuses would put two contradictory answers about one number on one page,
+    so the segment test below runs first and the headline's verdict is applied
+    on top of it. Neither can license what the other declined.
+    """
+    stats: list[dict] = []
+    for series in series_payload:
+        plotted = _plotted_points(series)
+        if not plotted:
+            continue
+
+        points = [point for _, point in plotted]
+        # Earliest occurrence on a tie, for both ends of the range: `min`/`max`
+        # over an already date-ordered list return the FIRST extreme they meet,
+        # which is the rule stated in the contract.
+        low = min(points, key=lambda point: point["value_jpy"])
+        high = max(points, key=lambda point: point["value_jpy"])
+
+        change, reason = _series_change(series, plotted)
+        if series.get("key") == "market_index" and change is not None:
+            # The headline's own verdict, applied on top - see above.
+            change, reason = headline.get("change"), headline.get(
+                "change_unavailable_reason"
+            )
+
+        stats.append(
+            {
+                "series_key": series["key"],
+                "kind": series["kind"],
+                "source": series.get("source"),
+                "starting_value_jpy": points[0]["value_jpy"],
+                "starting_as_of": points[0]["day"],
+                "current_value_jpy": points[-1]["value_jpy"],
+                "current_as_of": points[-1]["day"],
+                "low_value_jpy": low["value_jpy"],
+                "low_as_of": low["day"],
+                "high_value_jpy": high["value_jpy"],
+                "high_as_of": high["day"],
+                # DISTINCT DRAWABLE DAYS. Not sales, trades, volume, listings
+                # or a sample size - Atlas records no transaction anywhere, and
+                # holds no such figure for any source.
+                "observed_days": len({point["day"] for point in points}),
+                "change": change,
+                "change_unavailable_reason": reason,
+            }
+        )
+    return stats
+
+
 def get_print_analytics(
     db: Session,
     print_id: int,
@@ -432,6 +635,20 @@ def get_print_analytics(
         if window_start_day is None or row.snapshot_date >= window_start_day
     ]
 
+    headline = _headline(snapshots)
+    # The shipped series builder, over exactly this window. Segments, breaks,
+    # gaps, instrument semantics, eligibility and per-series coverage all
+    # arrive as `/prints/{id}/series` produces them - and the payload below is
+    # handed to the stats builder UNCHANGED, so `series` is byte-for-byte what
+    # it was before this field existed.
+    series_payload = build_print_series(
+        db,
+        print_id,
+        start=start,
+        window_days=days,
+        now=now,
+    )
+
     return {
         "card_print_id": print_id,
         "requested_window": token,
@@ -447,15 +664,9 @@ def get_print_analytics(
             }
             for row in windows
         ],
-        "headline": _headline(snapshots),
-        # The shipped series builder, over exactly this window. Segments,
-        # breaks, gaps, instrument semantics, eligibility and per-series
-        # coverage all arrive as `/prints/{id}/series` produces them.
-        "series": build_print_series(
-            db,
-            print_id,
-            start=start,
-            window_days=days,
-            now=now,
-        ),
+        "headline": headline,
+        "series": series_payload,
+        # Derived from `series_payload` above and from nothing else, so every
+        # figure here is findable on the plot beside it.
+        "series_stats": _series_stats(series_payload, headline),
     }

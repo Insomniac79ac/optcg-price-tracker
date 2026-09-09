@@ -1307,6 +1307,63 @@ class PrintAnalyticsHeadlineOut(BaseModel):
     coverage_status: str | None
 
 
+class PrintSeriesStatsOut(BaseModel):
+    """One drawn series, summarised - so a browser never has to compute a
+    financial statistic from chart points.
+
+    ONE ROW PER SERIES THE CHART ACTUALLY DRAWS, and no row at all for one it
+    does not. An unconfigured platform, a platform with no history in this
+    window, and a platform whose every reading was disqualified each produce
+    NO entry rather than a row of nulls: a zero-filled summary would assert a
+    measurement that was never taken, and a fixed set of platform keys would
+    force exactly that. `series_key` matches the `key` of the series in
+    `series[]` it describes, so the two are joined without guessing.
+
+    EVERY FIGURE IS AN ARCHIVED OBSERVATION, LIFTED WHOLE. Starting and current
+    are the first and last DRAWABLE points in the window; low and high are the
+    minimum and maximum among them, taking the EARLIEST occurrence on a tie.
+    Nothing is resolved at request time, nothing is recomputed, and nothing is
+    averaged, interpolated or forward-filled - so `low_value_jpy <=
+    starting_value_jpy, current_value_jpy <= high_value_jpy` always holds, and
+    every value can be found on the plot beside it.
+
+    `observed_days` IS DISTINCT DRAWABLE DAYS AND NOTHING ELSE. It is not
+    sales, trades, transactions, volume, liquidity, listings or a sample size.
+    Atlas records no transaction anywhere in the system and holds no such
+    figure for any source, so there is none to publish - and there is
+    deliberately no average price, because the only combination rule Atlas owns
+    is a same-day median across sources.
+
+    THESE ARE NOT THREE COMPARABLE PRICES. `kind` and `source` are carried so a
+    client keeps each series' own meaning: the Market Index is Card Pirate's
+    own derived index, Yuyu-Tei is a dealer's retail asking price, and SNKRDUNK
+    is a marketplace's current listing floor. Summarising them in one shape
+    does not make them one measurement, and nothing here should be presented as
+    if it did.
+    """
+
+    series_key: str
+    kind: str
+    source: str | None
+    starting_value_jpy: int
+    starting_as_of: date
+    current_value_jpy: int
+    current_as_of: date
+    low_value_jpy: int
+    low_as_of: date
+    high_value_jpy: int
+    high_as_of: date
+    observed_days: int
+    # The SAME shape as the headline's change, deliberately: one renderer, one
+    # set of rules, and no way for the two to drift apart in presentation.
+    change: PrintAnalyticsChangeOut | None
+    # Why there is no change, in the server's own break vocabulary -
+    # `index_version_change`, `source_semantics_version_change`,
+    # `reference_type_change`, `instrument_change`, `single_point_window`, or a
+    # refusal the Market Index headline raised. Null when `change` is present.
+    change_unavailable_reason: str | None
+
+
 class PrintAnalyticsOut(BaseModel):
     """GET /prints/{print_id}/analytics.
 
@@ -1349,6 +1406,9 @@ class PrintAnalyticsOut(BaseModel):
     windows: list[PrintAnalyticsWindowOut]
     headline: PrintAnalyticsHeadlineOut
     series: list[PrintSeriesOut]
+    # Server-derived summaries of the series above, one per DRAWN series. The
+    # `series` payload itself is unchanged by their presence.
+    series_stats: list[PrintSeriesStatsOut]
 
 
 class DisplayImageCanvasOut(BaseModel):
