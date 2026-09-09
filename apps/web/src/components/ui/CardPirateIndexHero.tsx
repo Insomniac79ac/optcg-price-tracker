@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { AtlasMark } from "@/components/brand/AtlasMark";
+import { WindowTokenControl } from "@/components/ui/WindowTokenControl";
 import {
   VERSION_BREAK_REASONS,
   formatAbsoluteChange,
@@ -85,11 +86,14 @@ export function CardPirateIndexHero({
         <h1 className="font-display text-[22px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[26px]">
           Card Pirate Index
         </h1>
-        <IndexWindowControl
+        <WindowTokenControl
           window={window}
           windows={series?.windows ?? []}
           onChange={onWindowChange}
           disabled={status === "error"}
+          shortfallFor={windowShortfall}
+          label="Index window"
+          testId="index-window"
         />
       </div>
 
@@ -242,66 +246,6 @@ function windowShortfall(row: IndexWindowRow): string | null {
   if (row.available || row.required_days === null) return null;
   const days = row.covered_days === 1 ? "1 day" : `${row.covered_days} days`;
   return `Atlas has ${days} of index history; this window needs ${row.required_days}.`;
-}
-
-function IndexWindowControl({
-  window,
-  windows,
-  onChange,
-  disabled,
-}: {
-  window: string;
-  windows: IndexWindowRow[];
-  onChange: (window: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div
-      // The height is reserved from the first frame. The control is rendered
-      // from the SERVER's window list, so it is genuinely empty until the
-      // first response lands - and without a floor the H1 beside it would jump
-      // when the buttons appear.
-      className="flex min-h-[22px] items-center gap-0.5 rounded-control border border-border-muted p-0.5"
-      role="group"
-      aria-label="Index window"
-      data-testid="index-window"
-    >
-      {windows.map((row) => {
-        const active = row.token === window;
-        const shortfall = windowShortfall(row);
-        const unreachable = !row.available;
-        const label = windowLabel(row.token);
-        return (
-          <button
-            key={row.token}
-            type="button"
-            onClick={() => {
-              // The guard the removed `disabled` attribute used to provide.
-              if (unreachable) return;
-              onChange(row.token);
-            }}
-            aria-pressed={active}
-            aria-disabled={unreachable || undefined}
-            aria-label={shortfall ? `${label} — ${shortfall}` : undefined}
-            title={shortfall ?? undefined}
-            // `disabled` only for the whole-control error state, where there
-            // is nothing to explain and nothing to focus.
-            disabled={disabled}
-            // ONE dimming step, not two. `text-text-muted` is already the
-            // second-quietest tier (docs/brand.md "Contrast decisions"), and
-            // stacking a 40 % opacity on top of it turned six ghost labels
-            // beside one solid pill into a control that read as half-broken -
-            // the opposite of the honest-about-short-history message intended.
-            className={`mono rounded-[4px] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed disabled:opacity-40 sm:px-2 ${
-              active ? "bg-bg-card text-text-primary" : "text-text-muted hover:text-text-secondary"
-            } ${unreachable ? "cursor-not-allowed opacity-[0.65] hover:text-text-muted" : ""}`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 /** The chart. The largest object on the page, and the reason it exists.

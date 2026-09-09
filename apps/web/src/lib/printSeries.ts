@@ -254,7 +254,13 @@ export function isDefaultSelected(series: PrintSeries): boolean {
  * answers, but neither gives the reader anything to toggle, and a dead control
  * beside three live ones reads as a platform that is broken rather than one
  * that is quiet. */
-export function selectableSeries(history: PrintSeriesHistory | null): PrintSeries[] {
+export function selectableSeries(
+  /** Anything carrying a `series` list. Widened from `PrintSeriesHistory` when
+   * `/prints/{id}/analytics` began embedding the same series payload under its
+   * own envelope: the rule below reads nothing but `series`, so narrowing it to
+   * one endpoint's wrapper would force a second copy of that rule. */
+  history: { series: PrintSeries[] } | null,
+): PrintSeries[] {
   if (!history) return [];
   return history.series.filter((series) => series.available && series.segments.length > 0);
 }
@@ -426,7 +432,10 @@ function strokesForSegment(
  * selection survive a window change that dropped a platform.
  */
 export function buildSeriesChartModel(
-  history: PrintSeriesHistory | null,
+  /** Widened for the same reason as `selectableSeries` above: the analytics
+   * endpoint embeds this exact series payload under its own envelope, and the
+   * model below reads nothing outside `series`. */
+  history: { series: PrintSeries[] } | null,
   selected: ReadonlySet<string>,
 ): SeriesChartModel {
   const empty: SeriesChartModel = {

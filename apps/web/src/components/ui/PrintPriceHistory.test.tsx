@@ -10,16 +10,19 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { PrintPriceHistory, PrintPriceHistorySection } from "./PrintPriceHistory";
+import {
+  hasChartableSeries,
+  PrintPriceSeriesRows,
+  PrintSeriesChartPanel,
+} from "./PrintPriceHistory";
 import { buildPriceHistoryView } from "@/lib/printPriceHistory";
 import type {
   PrintSeries,
   PrintSeriesHistory,
   PrintSeriesPoint,
   PrintSeriesSegment,
-  PrintSeriesWindow,
 } from "@/lib/printSeries";
 import type { PrintPriceHistory as PrintPriceHistoryPayload, PrintPriceObservation } from "@/lib/prints";
 
@@ -50,18 +53,11 @@ function observation(
   };
 }
 
-/** The evidence rows on their own - no `/series` payload, which is the state
- * the page is in while the chart request is still out. */
+/** The evidence rows on their own. They live in the page's "Live market"
+ * section now - they describe the LIVE source values, not the archived index
+ * the chart plots - and are rendered independently of any `/series` payload. */
 function renderHistory(payload: PrintPriceHistoryPayload, cardPrintId = 11) {
-  return render(
-    <PrintPriceHistory
-      view={buildPriceHistoryView(payload, cardPrintId)}
-      series={null}
-      seriesLoading={false}
-      window="30d"
-      onWindowChange={() => {}}
-    />,
-  );
+  return render(<PrintPriceSeriesRows view={buildPriceHistoryView(payload, cardPrintId)} />);
 }
 
 describe("PrintPriceHistory", () => {
@@ -86,7 +82,6 @@ describe("PrintPriceHistory", () => {
       ],
     });
 
-    expect(screen.getByRole("heading", { name: "Price history" })).toBeInTheDocument();
     expect(screen.getAllByText("Yuyu-Tei · Retail price").length).toBeGreaterThan(0);
     expect(screen.getByText("￥9,980")).toBeInTheDocument();
   });
@@ -179,13 +174,17 @@ describe("PrintPriceHistory", () => {
     // stay; the chart's absence is stated as the chart's problem, because
     // "no recorded price history" would be a claim about the card that these
     // very rows contradict.
-    renderHistory({
-      card_print_id: 11,
-      observations: [
-        observation({ observed_at: "2026-08-01T00:00:00Z", price_jpy: 7980 }),
-        observation({ observed_at: "2026-08-02T00:00:00Z", price_jpy: 9980 }),
-      ],
-      series: [],
+    // The page's own pairing: rows from /prices, chart from a payload that
+    // never arrived.
+    renderChart(null, {
+      prices: {
+        card_print_id: 11,
+        observations: [
+          observation({ observed_at: "2026-08-01T00:00:00Z", price_jpy: 7980 }),
+          observation({ observed_at: "2026-08-02T00:00:00Z", price_jpy: 9980 }),
+        ],
+        series: [],
+      },
     });
 
     expect(screen.getByTestId("price-history-empty")).toHaveTextContent(
@@ -234,47 +233,10 @@ describe("PrintPriceHistory", () => {
   });
 });
 
-describe("PrintPriceHistorySection", () => {
-  it("reserves the section's space while history is still loading", () => {
-    // The print and its history are two requests. Without a placeholder the
-    // real section drops in afterwards and shoves the rest of the page down.
-    const { container } = render(
-      <PrintPriceHistorySection
-        status="loading"
-        view={null}
-        series={null}
-        seriesLoading
-        window="30d"
-        onWindowChange={() => {}}
-      />,
-    );
-
-    // Queried by text, not by role: the placeholder is aria-hidden on purpose,
-    // so a screen reader is never handed an empty skeleton to announce.
-    expect(screen.getByText("Price history")).toBeInTheDocument();
-    expect(container.querySelector("section")).toHaveAttribute("aria-hidden", "true");
-    // Mute: it claims something is coming, and nothing about what.
-    expect(container.textContent).not.toMatch(/￥|%|More history/);
-  });
-
-  it("renders nothing once history is known to be unavailable", () => {
-    const { container } = render(
-      <PrintPriceHistorySection
-        status="unavailable"
-        view={null}
-        series={null}
-        seriesLoading={false}
-        window="30d"
-        onWindowChange={() => {}}
-      />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
+describe("price series rows", () => {
   it("reports how long a source has been at its constrained value", () => {
     render(
-      <PrintPriceHistorySection
-        status="ready"
+      <PrintPriceSeriesRows
         view={buildPriceHistoryView(
           {
             card_print_id: 11,
@@ -306,10 +268,6 @@ describe("PrintPriceHistorySection", () => {
           },
           11,
         )}
-        series={null}
-        seriesLoading={false}
-        window="30d"
-        onWindowChange={() => {}}
       />,
     );
 
@@ -379,10 +337,10 @@ const RETAIL_INSTRUMENT = { reference_type: "retail_sell", evidence_type: "listi
 const FLOOR_INSTRUMENT = { reference_type: "listing_floor", evidence_type: "listing" };
 
 /** Market Index + Yuyu-Tei + SNKRDUNK, all with movement. */
-function threePlatformSeries(window: PrintSeriesWindow = "30d"): PrintSeriesHistory {
+function threePlatformSeries(): PrintSeriesHistory {
   return {
     card_print_id: 11,
-    window,
+    window: "30d",
     window_start: "2026-08-06T00:00:00Z",
     generated_at: "2026-09-05T00:00:00Z",
     series: [
@@ -430,20 +388,21 @@ function threePlatformSeries(window: PrintSeriesWindow = "30d"): PrintSeriesHist
 function renderChart(
   series: PrintSeriesHistory | null,
   overrides: {
-    window?: PrintSeriesWindow;
-    onWindowChange?: (window: PrintSeriesWindow) => void;
     seriesLoading?: boolean;
     prices?: PrintPriceHistoryPayload;
   } = {},
 ) {
   return render(
-    <PrintPriceHistory
-      view={overrides.prices ? buildPriceHistoryView(overrides.prices, 11) : null}
-      series={series}
-      seriesLoading={overrides.seriesLoading ?? false}
-      window={overrides.window ?? "30d"}
-      onWindowChange={overrides.onWindowChange ?? (() => {})}
-    />,
+    <>
+      <PrintSeriesChartPanel
+        series={series}
+        loading={overrides.seriesLoading ?? false}
+        chartHeightClass="h-[300px]"
+      />
+      {overrides.prices && (
+        <PrintPriceSeriesRows view={buildPriceHistoryView(overrides.prices, 11)} />
+      )}
+    </>,
   );
 }
 
@@ -559,46 +518,16 @@ describe("series selector", () => {
   });
 });
 
-describe("time window control", () => {
-  it("offers 7D, 30D and All - and never 90D", () => {
-    renderChart(threePlatformSeries());
-    const control = screen.getByTestId("price-history-window");
-
-    expect(Array.from(control.querySelectorAll("button")).map((b) => b.textContent)).toEqual([
-      "7D",
-      "30D",
-      "All",
-    ]);
-    expect(control.textContent).not.toMatch(/90/);
-  });
-
-  it("defaults to 30D", () => {
-    renderChart(threePlatformSeries());
-    expect(screen.getByRole("button", { name: "30D" })).toHaveAttribute("aria-pressed", "true");
-  });
-
+describe("loading behaviour", () => {
   it("keeps the chart on screen while the next window loads", () => {
     // Swapping the plot for a placeholder unmounts Recharts' responsive
     // container, which repaints empty on remount - so the section visibly
     // collapses and re-inflates under a control meant to read as a filter.
-    renderChart(threePlatformSeries(), { window: "7d", seriesLoading: true });
+    renderChart(threePlatformSeries(), { seriesLoading: true });
 
     const chart = screen.getByTestId("price-history-chart");
     expect(chart).toBeInTheDocument();
     expect(chart).toHaveAttribute("aria-busy", "true");
-    // ...and the control already shows what was asked for.
-    expect(screen.getByRole("button", { name: "7D" })).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("asks the caller to re-request rather than filtering what it already has", () => {
-    const onWindowChange = vi.fn();
-    renderChart(threePlatformSeries(), { onWindowChange });
-
-    fireEvent.click(screen.getByRole("button", { name: "7D" }));
-    expect(onWindowChange).toHaveBeenCalledWith("7d");
-
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
-    expect(onWindowChange).toHaveBeenCalledWith("all");
   });
 });
 
@@ -642,7 +571,6 @@ describe("empty and thin history", () => {
         ],
       },
       {
-        window: "7d",
         prices: {
           card_print_id: 11,
           observations: [
@@ -757,17 +685,21 @@ describe("empty and thin history", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders no section at all when neither payload has anything", () => {
-    const { container } = renderChart(null);
-    expect(container).toBeEmptyDOMElement();
+  it("tells the page there is nothing to chart, rather than deciding alone", () => {
+    // The "this section should not exist" decision belongs to the page, so the
+    // panel exports the fact instead of acting on it - and a caller must not
+    // reimplement the rule by reaching into the payload itself.
+    expect(hasChartableSeries(null)).toBe(false);
+    expect(hasChartableSeries({ series: [] })).toBe(false);
+    expect(hasChartableSeries(threePlatformSeries())).toBe(true);
   });
 
-  it("keeps the section alive on the chart alone when /prices gave nothing", () => {
-    // Archived index history with no surviving observations: a section with a
-    // chart and no rows beats no section at all.
+  it("keeps the chart alive on its own when /prices gave nothing", () => {
+    // Archived index history with no surviving observations: a chart and no
+    // rows beats no chart at all.
     renderChart(threePlatformSeries());
-    expect(screen.getByRole("heading", { name: "Price history" })).toBeInTheDocument();
     expect(screen.getByTestId("price-history-chart")).toBeInTheDocument();
+    expect(screen.queryByText(/24H/)).not.toBeInTheDocument();
   });
 });
 

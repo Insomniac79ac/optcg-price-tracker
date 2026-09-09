@@ -17,8 +17,9 @@ import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
+import { PrintAnalyticsSection } from "@/components/ui/PrintAnalyticsSection";
 import {
-  PrintPriceHistorySection,
+  PrintPriceSeriesRows,
   type PriceHistoryStatus,
 } from "@/components/ui/PrintPriceHistory";
 import { InfoTip } from "@/components/ui/InfoTip";
@@ -28,11 +29,10 @@ import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
-  DEFAULT_PRINT_SERIES_WINDOW,
-  fetchPrintSeries,
-  type PrintSeriesHistory,
-  type PrintSeriesWindow,
-} from "@/lib/printSeries";
+  fetchPrintAnalytics,
+  pressedAnalyticsWindow,
+  type PrintAnalytics,
+} from "@/lib/printAnalytics";
 import {
   describeUnavailableSource,
   isUnavailableSourceValue,
@@ -136,36 +136,48 @@ export default function PrintDetailPage() {
   const [detail, setDetail] = useState<PrintDetail | null>(null);
   const [history, setHistory] = useState<PriceHistoryView | null>(null);
   const [historyStatus, setHistoryStatus] = useState<PriceHistoryStatus>("loading");
-  // The chart's window. Changing it RE-ASKS the server rather than slicing a
-  // payload already in hand: a 7D view filtered out of a 30D response would
-  // disagree with that response's own coverage answers, which are computed
-  // against the window that was requested.
-  const [seriesWindow, setSeriesWindow] = useState<PrintSeriesWindow>(
-    DEFAULT_PRINT_SERIES_WINDOW,
-  );
-  // The last `/series` answer, TAGGED with the print and window it answered
+  // The analytics window the client is ASKING FOR, and `null` is a real value
+  // meaning "the server decides". The first request therefore names no window
+  // at all, which is the only way `default_window` can be the server's answer
+  // rather than something this page believes about it - and it keeps the case
+  // where the two differ visible instead of papering over it.
+  //
+  // Changing it RE-ASKS the server rather than slicing a payload already in
+  // hand: the headline, the availability map and the series all belong to the
+  // window that produced them, and a locally narrowed copy would disagree with
+  // every one of them.
+  const [analyticsWindow, setAnalyticsWindow] = useState<string | null>(null);
+  // The last `/analytics` answer, TAGGED with the print and window it answered
   // for. `loading` is then derived rather than tracked: a flag set beside the
   // request is a second copy of "which request is outstanding" that drifts
   // from the payload the moment two window changes overlap, and the tag makes
   // a stale answer for the previous window unusable by construction. `data:
   // null` records a request that failed, so a failure resolves rather than
   // spinning forever.
-  const [seriesResult, setSeriesResult] = useState<{
+  const [analyticsResult, setAnalyticsResult] = useState<{
     printId: string;
-    window: PrintSeriesWindow;
-    data: PrintSeriesHistory | null;
+    window: string | null;
+    data: PrintAnalytics | null;
   } | null>(null);
   // Scoped to the PRINT, not the window. A window change keeps the previous
-  // window's chart on screen (dimmed, see PrintPriceHistory) rather than
-  // swapping the plot out for a placeholder and back on every press. A PRINT
-  // change must still clear it, or the previous card's prices would be the
-  // thing left on screen while this one loads.
-  const seriesForPrint =
-    seriesResult !== null && seriesResult.printId === printId ? seriesResult.data : null;
-  const seriesReady =
-    seriesResult !== null &&
-    seriesResult.printId === printId &&
-    seriesResult.window === seriesWindow;
+  // window's chart and headline on screen (dimmed) rather than swapping them
+  // for a placeholder and back on every press. A PRINT change must still clear
+  // them, or the previous card's figures would be what is left on screen while
+  // this one loads.
+  const analyticsForPrint =
+    analyticsResult !== null && analyticsResult.printId === printId
+      ? analyticsResult.data
+      : null;
+  const analyticsReady =
+    analyticsResult !== null &&
+    analyticsResult.printId === printId &&
+    analyticsResult.window === analyticsWindow;
+  // The pressed token is the SERVER's echo of what it answered, never the
+  // local request state - which is null on the opening view and would leave
+  // the control with nothing pressed.
+  const pressedAnalytics = analyticsForPrint
+    ? pressedAnalyticsWindow(analyticsForPrint)
+    : (analyticsWindow ?? "");
   const [status, setStatus] = useState<"loading" | "error" | "not_found" | "ready">("loading");
 
   useEffect(() => {
@@ -214,28 +226,30 @@ export default function PrintDetailPage() {
     };
   }, [printId]);
 
-  // Separate from the effect above so a window change re-requests the series
-  // alone - the print and its `/prices` rows did not change, and refetching
-  // them would blank the hero to redraw a chart.
+  // Separate from the effect above so a window change re-requests the analytics
+  // alone - the print and its live source values did not change, and refetching
+  // them would blank the identity band to redraw a chart.
   useEffect(() => {
     if (!printId) return;
     let cancelled = false;
-    fetchPrintSeries(printId, seriesWindow)
+    // `?? undefined` is what turns the opening view into a request with NO
+    // window parameter. It is the difference between asking the server which
+    // window to open on and telling it.
+    fetchPrintAnalytics(printId, analyticsWindow ?? undefined)
       .then((result) => {
         if (cancelled) return;
-        setSeriesResult({ printId, window: seriesWindow, data: result });
+        setAnalyticsResult({ printId, window: analyticsWindow, data: result });
       })
       .catch(() => {
-        // Supporting evidence for supporting evidence: a chart that cannot be
-        // loaded costs the section its chart, never its rows and never the
-        // page.
+        // Historical analytics that cannot be loaded costs the page its
+        // analytics band, never its identity and never its live prices.
         if (cancelled) return;
-        setSeriesResult({ printId, window: seriesWindow, data: null });
+        setAnalyticsResult({ printId, window: analyticsWindow, data: null });
       });
     return () => {
       cancelled = true;
     };
-  }, [printId, seriesWindow]);
+  }, [printId, analyticsWindow]);
 
   return (
     <div className="min-h-screen">
@@ -303,8 +317,21 @@ export default function PrintDetailPage() {
                 identity beside it stay above the fold rather than being
                 pushed down by a pedestal. One column below `lg`, in the
                 stacking order a phone should read it in. */}
-            <div className="grid gap-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-10">
-              <CardStage print={print} />
+            <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-10">
+              {/* The card follows the reader down the analytics band.
+                  The right column was always taller than the artwork; the
+                  380px chart made it ~330px taller still, which left a dead
+                  gutter under the card for most of a desktop scroll and broke
+                  the two-column rhythm. Sticking the card to the top of the
+                  viewport keeps the thing the page is ABOUT in view while its
+                  history is read - which is the collector-first ordering, not
+                  a workaround for it. Nothing about the artwork itself
+                  changes: same frame, same contain fit, same geometry.
+                  `lg:` only, because the phone layout is one column and has no
+                  gutter to close. */}
+              <div className="lg:sticky lg:top-6">
+                <CardStage print={print} />
+              </div>
 
               {/* Everything a collector reads about this print lives in one
                   column, metadata included. The card is much taller than the
@@ -313,15 +340,16 @@ export default function PrintDetailPage() {
                   the lower half of the artwork. */}
               <div className="min-w-0">
                 <Identity print={print} />
-                <MarketIndexBlock print={print} />
-                <SourcePanels sources={print.marketIndex.source_values} />
-                <PrintPriceHistorySection
-                  status={historyStatus}
-                  view={history}
-                  series={seriesForPrint}
-                  seriesLoading={!seriesReady}
-                  window={seriesWindow}
-                  onWindowChange={setSeriesWindow}
+                <PrintAnalyticsSection
+                  analytics={analyticsForPrint}
+                  pressed={pressedAnalytics}
+                  loading={!analyticsReady}
+                  onWindowChange={setAnalyticsWindow}
+                />
+                <LiveMarket
+                  print={print}
+                  history={history}
+                  historyStatus={historyStatus}
                 />
                 <AboutThisPrint print={print} detail={detail} />
               </div>
@@ -438,42 +466,86 @@ function Identity({ print }: { print: PrintUiModel }) {
   );
 }
 
-/** The monetary focal point: the same caption-over-gold-value language the
- * catalogue tile established, one size up because this page has the room.
+/** What this print costs RIGHT NOW, on each platform and as one index.
+ *
+ * THE LIVE HALF OF A DELIBERATE PAIR. Everything here is resolved at request
+ * time from `GET /prints/{id}` and `GET /prints/{id}/prices`. The analytics
+ * band above it is the ARCHIVED half - the newest value Atlas wrote down,
+ * stamped with the day it belongs to - and the two are different numbers that
+ * may legitimately differ, because the archive is written once daily and a
+ * source that moves this morning appears here first. That is why the index
+ * below is on a row that names itself rather than standing as a bare figure:
+ * an unlabelled second "Market Index" on this page would read as a
+ * contradiction of the one above.
+ *
+ * NOTHING HERE IS RECOMPUTED. The index, the per-source values, the range and
+ * the change windows all arrive decided by the backend; this section chooses
+ * where they sit and what they are called, and derives no price of its own.
  *
  * Coverage is stated by the source panels directly below - one panel per
  * source that actually reported, named and priced - rather than by a chip, so
  * a one-source index can never read as a two-source consensus and the page
  * keeps to the collector palette instead of the operational green/amber one.
- * `MarketIndexValue` still renders its own
- * stale warning, and a null index still says "Index unavailable" rather than
- * ¥0. There is no change figure, arrow or chart, because the payload carries
- * no history to draw one from.
+ * `MarketIndexValue` still renders its own stale warning, and a null index
+ * still says "Index unavailable" rather than ¥0.
  */
-function MarketIndexBlock({ print }: { print: PrintUiModel }) {
+function LiveMarket({
+  print,
+  history,
+  historyStatus,
+}: {
+  print: PrintUiModel;
+  history: PriceHistoryView | null;
+  historyStatus: PriceHistoryStatus;
+}) {
   return (
-    <section className="mt-7 border-t border-border-muted pt-5">
+    <section className="mt-7 border-t border-border-muted pt-5" data-testid="live-market">
       <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Market Index
+        Live market
       </h2>
-      <div className="mt-2">
-        <MarketIndexValue
-          index={print.marketIndex}
-          size="lg"
-          tone="gold"
-          showCoverage={false}
-        />
+
+      {/* THE LIVE INDEX, AND IT SAYS SO. This number is resolved at request
+          time; the gold figure in the analytics band above is the newest value
+          Atlas ARCHIVED, stamped with the day it belongs to. They agree most
+          days and are not required to - the archive is written once daily, so
+          a source that moves this morning shows up here first. Labelling both
+          is what keeps that from reading as a contradiction, and it is why
+          neither may appear as a bare "Market Index" figure. */}
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border-muted/60 pb-3">
+        <span className="text-[12px] text-text-secondary">Market Index</span>
+        <div className="text-right">
+          <MarketIndexValue
+            index={print.marketIndex}
+            size="md"
+            tone="gold"
+            showCoverage={false}
+          />
+        </div>
       </div>
       <SourceContributionQualifier index={print.marketIndex} />
-      <SourcePriceRange
-        range={print.marketIndex.source_price_range}
-        includesReferenceOnly={rangeIncludesReferenceOnly(print.marketIndex.source_values)}
-      />
+      {/* When the LIVE values above were last observed. It belongs here and
+          only here: it describes the live index, and the archived headline in
+          the analytics band carries its own `As of <day>` provenance instead.
+          Putting a freshness line on that one would misread a once-daily
+          archive as a stale reading. */}
       {print.latestObservationAt && (
         <p className="mt-2 text-[11px] text-text-faint">
           Updated {formatDate(print.latestObservationAt)}
         </p>
       )}
+
+      <SourcePanels sources={print.marketIndex.source_values} />
+
+      <SourcePriceRange
+        range={print.marketIndex.source_price_range}
+        includesReferenceOnly={rangeIncludesReferenceOnly(print.marketIndex.source_values)}
+      />
+
+      {/* Per-source readings and the backend's own change windows. Unchanged
+          from where they used to sit under the chart - they describe the LIVE
+          source values above them, not the archived index, so this is the
+          section they belong in. */}
+      {historyStatus === "ready" && <PrintPriceSeriesRows view={history} />}
     </section>
   );
 }
@@ -624,11 +696,11 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <section className="mt-5">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Market sources
-      </h2>
-      <div className={`mt-3 grid gap-3 ${rows.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+    // No heading of its own any more: these panels sit inside "Live market"
+    // directly, beneath the live index they are the sources for, and a second
+    // heading between the two would split one statement into two sections.
+    <div className="mt-3">
+      <div className={`grid gap-3 ${rows.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
         {rows.map((row) => (
           <div
             key={`${row.source}-${row.reference_type}`}
@@ -662,7 +734,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 

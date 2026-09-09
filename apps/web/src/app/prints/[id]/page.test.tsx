@@ -275,8 +275,10 @@ describe("print detail page", () => {
 
     expect(screen.getByText("Index unavailable")).toBeTruthy();
     expect(container.textContent).not.toMatch(/￥0\b/);
-    // No source reported, so there is no source panel to show either.
-    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+    // No source reported, so there is no source PANEL - but the live-market
+    // section still exists to carry the "Index unavailable" statement.
+    const live = screen.getByTestId("live-market");
+    expect(within(live).queryByText(/Retail price|Current listing/)).toBeNull();
   });
 
   it("names what each source price actually is, never reinterpreting one for another", async () => {
@@ -284,7 +286,7 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(sources).getByText("￥29,800")).toBeTruthy();
     expect(within(sources).getByText(/Retail price/)).toBeTruthy();
@@ -318,7 +320,7 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
     expect(within(sources).getByText("Price unavailable")).toBeTruthy();
@@ -517,19 +519,21 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const index = screen.getByRole("heading", { name: "Market Index" });
-    const sources = screen.getByRole("heading", { name: "Market sources" });
+    const live = screen.getByRole("heading", { name: "Live market" });
     const about = screen.getByRole("heading", { name: "About this print" });
     const others = screen.getByRole("heading", { name: "Other printings" });
 
-    // One reading order at every width: identity, money, sources, then the
-    // print's own attributes.
+    // One reading order at every width: identity, the archived index and its
+    // chart, THEN the live source values, then the print's own attributes.
+    // The source panels used to sit between the index and its own history,
+    // which split one subject across two sections.
     const order = (el: Element) => [...document.querySelectorAll("h1, h2")].indexOf(el);
-    expect(order(index)).toBeLessThan(order(sources));
-    expect(order(sources)).toBeLessThan(order(about));
+    expect(order(index)).toBeLessThan(order(live));
+    expect(order(live)).toBeLessThan(order(about));
 
     // The attributes share the column the prices are in, so the column runs
     // the height of the card beside it rather than stopping short.
-    const column = sources.closest("div.min-w-0")!;
+    const column = live.closest("div.min-w-0")!;
     expect(column.contains(about)).toBe(true);
     // Other printings is about other prints, so it stays outside that column.
     expect(column.contains(others)).toBe(false);
@@ -639,7 +643,7 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
 
     // The index and both raw prices are all still on the page: the ¥1,000 is
     // explained, never hidden, and the index is the backend's own ¥220.
@@ -697,7 +701,7 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("￥999")).toBeTruthy();
     expect(within(sources).getByText("Source data anomaly")).toBeTruthy();
     expect(
@@ -734,7 +738,7 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     // The price survives, no invented meaning, no leaked identifier - and the
     // one thing we do know (it did not count) is still said.
     expect(within(sources).getByText("￥1,234")).toBeTruthy();
@@ -747,7 +751,7 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("￥29,800")).toBeTruthy();
     expect(within(sources).getByText("￥24,000")).toBeTruthy();
     expect(container.textContent).not.toMatch(/Minimum listing price|Source data anomaly/);
@@ -782,7 +786,7 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    const index = screen.getByTestId("live-market");
     expect(within(index).getByText(/Source range/)).toBeTruthy();
     expect(within(index).getByText("￥120 – ￥1,500")).toBeTruthy();
     // The index itself is untouched and still the loudest figure.
@@ -796,10 +800,11 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
-    // Twice inside the block on purpose: the index value itself, and the range
+    const index = screen.getByTestId("live-market");
+    // Three times inside the section on purpose: the live index value, the
+    // range, and the SNKRDUNK panel the section now contains. The range
     // line stating the single figure both sources agreed on.
-    expect(within(index).getAllByText("￥1,500")).toHaveLength(2);
+    expect(within(index).getAllByText("￥1,500")).toHaveLength(3);
     expect(within(index).getByText(/Source range/)).toBeTruthy();
     // Never "￥1,500 – ￥1,500".
     expect(container.textContent).not.toMatch(/￥1,500 – ￥1,500/);
@@ -846,18 +851,21 @@ describe("print detail page", () => {
     expect(screen.getByText("￥810")).toBeTruthy();
   });
 
-  it("leaves the existing Market Index block otherwise unchanged", async () => {
+  it("moves the live Market Index block into Live market unchanged", async () => {
     fetchPrint.mockResolvedValue(withRange({ low_jpy: 120, high_jpy: 1500 }));
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
-    // Index, its date caption and the source panels all still render.
-    expect(within(index).getByText("￥810")).toBeTruthy();
-    expect(within(index).getByText(/Updated/)).toBeTruthy();
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
-    expect(within(sources).getByText("￥1,500")).toBeTruthy();
-    expect(within(sources).getByText(/Current listing/)).toBeTruthy();
+    // The live index, its date caption and the source panels all still render -
+    // together, in the section that now names them as live.
+    const live = screen.getByTestId("live-market");
+    expect(within(live).getByText("￥810")).toBeTruthy();
+    expect(within(live).getByText(/Updated/)).toBeTruthy();
+    expect(within(live).getByText("￥1,500")).toBeTruthy();
+    expect(within(live).getByText(/Current listing/)).toBeTruthy();
+    // ...and it is LABELLED live, so it cannot be read as the archived figure
+    // in the analytics band above.
+    expect(within(live).getByText("Market Index")).toBeTruthy();
   });
 });
 
@@ -972,7 +980,7 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText(/Retail price/)).toBeTruthy();
     expect(within(sources).getByText(/Current listing/)).toBeTruthy();
   });
@@ -1017,7 +1025,7 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     // The amber "stale"/caution vocabulary belongs to values that are actually
     // wrong or excluded. An evidence-type label is neither.
     const label = within(sources).getByText(/Current listing/);
@@ -1049,7 +1057,7 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText(/Recent sales median/)).toBeTruthy();
     // The sample size still rides along with it - seven real sales is the
     // reason this is the strongest thing any source reports.
@@ -1090,7 +1098,7 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("Minimum listing price")).toBeTruthy();
     expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
     // The raw number is still shown, and still labelled for what it is.
@@ -1128,8 +1136,11 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
-    expect(within(sources).getByText("stale")).toBeTruthy();
+    const sources = screen.getByTestId("live-market");
+    // Twice in scope: MarketIndexValue's own stale warning on the live index,
+    // and the source panel's chip. Both are unchanged behaviour that simply
+    // now shares one section.
+    expect(within(sources).getAllByText("stale")).toHaveLength(2);
     expect(within(sources).getByText("Not used in Market Index")).toBeTruthy();
   });
 
@@ -1164,7 +1175,7 @@ describe("print detail page - evidence types", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("cardrush")).toBeTruthy();
     expect(within(sources).getByText("￥20,500")).toBeTruthy();
     expect(within(sources).getAllByText(/Retail price/)).toHaveLength(2);
@@ -1218,7 +1229,7 @@ describe("print detail page - source prices that did not feed the index", () => 
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("Reference only")).toBeTruthy();
     expect(
       within(sources).getByText("Shown for context; not used in Market Index."),
@@ -1232,10 +1243,12 @@ describe("print detail page - source prices that did not feed the index", () => 
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    const index = screen.getByTestId("live-market");
     expect(within(index).getByText("1 of 2 source prices used")).toBeTruthy();
     // Still the only figure with weight; no spread, no percentage, no warning.
-    expect(within(index).getByText("￥120")).toBeTruthy();
+    // Twice in scope now: the live index and the one source panel it was
+    // computed from, which this section contains.
+    expect(within(index).getAllByText("￥120")).toHaveLength(2);
     expect(index.textContent).not.toMatch(/%|market range|trading range|disagree/i);
   });
 
@@ -1319,7 +1332,7 @@ describe("print detail page - source prices that did not feed the index", () => 
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" }).parentElement!;
+    const index = screen.getByTestId("live-market");
     expect(within(index).getByText("￥120 – ￥2,500")).toBeTruthy();
     expect(
       within(index).getByText("Includes reference-only source prices."),
@@ -1498,7 +1511,7 @@ describe("print detail page - a source with no price", () => {
 
   /** The panel for one named source, whatever it contains. */
   function panelFor(name: string): HTMLElement {
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
   }
 
@@ -1557,7 +1570,11 @@ describe("print detail page - a source with no price", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     expect(screen.getByText("Index unavailable")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+    // The section stays (it carries the live index, unavailable and all); what
+    // must not appear is a source row for a source that reported nothing.
+    expect(
+      within(screen.getByTestId("live-market")).queryByText(/Retail price|Current listing/),
+    ).toBeNull();
     expect(container.textContent).not.toMatch(UNAVAILABLE);
   });
 
@@ -1654,7 +1671,7 @@ describe("print detail page - no current listing on SNKRDUNK", () => {
   }
 
   function panelFor(name: string): HTMLElement {
-    const sources = screen.getByRole("heading", { name: "Market sources" }).parentElement!;
+    const sources = screen.getByTestId("live-market");
     return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
   }
 
@@ -1832,7 +1849,9 @@ describe("print detail page - no current listing on SNKRDUNK", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     expect(screen.getByText("Index unavailable")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Market sources" })).toBeNull();
+    expect(
+      within(screen.getByTestId("live-market")).queryByText(/Retail price|Current listing/),
+    ).toBeNull();
     expect(container.textContent).not.toMatch(NO_LISTING);
     expect(container.textContent).not.toMatch(UNAVAILABLE);
   });

@@ -18,16 +18,13 @@ import {
   buildSeriesChartModel,
   formatSeriesDay,
   isDefaultSelected,
-  PRINT_SERIES_WINDOWS,
   selectableSeries,
   seriesDisplayLabel,
   seriesInstrumentLabel,
   seriesPaintOrder,
   seriesPlatformLabel,
-  WINDOW_LABEL,
   type PrintSeries,
   type PrintSeriesHistory,
-  type PrintSeriesWindow,
   type SeriesChartRow,
   type SeriesPointDetail,
 } from "@/lib/printSeries";
@@ -95,88 +92,34 @@ function seriesColorFor(series: { kind: string; source: string | null }, index: 
  * is what `loading` exists to absorb - see PrintPriceHistorySection. */
 export type PriceHistoryStatus = "loading" | "ready" | "unavailable";
 
-export interface PrintPriceHistorySectionProps {
-  status: PriceHistoryStatus;
-  view: PriceHistoryView | null;
-  /** The `/series` payload for `window`, or null while it is in flight or
-   * after it failed. The chart is supporting evidence for supporting
-   * evidence: its absence costs the section its chart, never the rows. */
-  series: PrintSeriesHistory | null;
-  seriesLoading: boolean;
-  window: PrintSeriesWindow;
-  onWindowChange: (window: PrintSeriesWindow) => void;
-}
-
-/** The section, including the space it occupies before it has anything to say.
+/** The chart cluster on its own: platform chips, the plot, and the captions
+ * that explain what the plot is not showing.
  *
- * WHY A PLACEHOLDER AND NOT JUST `null`. History is fetched separately from
- * the print, so rendering nothing until it resolves would drop a heading, a
- * chart and two rows into the middle of the page a moment after the card
- * appears, shoving "About this print" and "Other printings" down under the
- * reader's eyes. The placeholder holds approximately the room the real section
- * takes, so the page settles once rather than twice.
+ * EXTRACTED SO ONE CHART SERVES TWO GRAMMARS. `/prints/{id}/series` (7d/30d/
+ * all) and `/prints/{id}/analytics` (2w...all) publish the SAME series shape,
+ * built by the same server function. Giving each its own chart would be two
+ * implementations of segmentation, break drawing, chip selection and the
+ * "nothing to plot" wording, free to disagree about the same card. This
+ * component is the single one; the window grammar stays with the caller,
+ * which is the only part that genuinely differs.
  *
- * It is deliberately mute - a heading and empty surfaces, no shimmer, no
- * spinner, no invented number. It claims that something is coming, which is
- * true, and nothing about what.
- *
- * `unavailable` renders nothing at all: a print no source has ever priced, or
- * a history request that failed, is a page without this section rather than a
- * page with an apology in it. A `/series` payload that DID arrive keeps the
- * section alive on its own, so a print with archived index history but no
- * surviving observations still charts.
+ * It owns the CHIP SELECTION, because that is chart state rather than page
+ * state: which platforms are switched on has to survive a window change, and
+ * the exclusion/inclusion pair below is what makes that true in both
+ * directions.
  */
-export function PrintPriceHistorySection({
-  status,
-  view,
+export function PrintSeriesChartPanel({
   series,
-  seriesLoading,
-  window,
-  onWindowChange,
-}: PrintPriceHistorySectionProps) {
-  const chartable = selectableSeries(series).length > 0;
-  if (status === "loading") return <PriceHistoryPlaceholder />;
-  if ((status === "unavailable" || !view) && !chartable) return null;
-  return (
-    <PrintPriceHistory
-      view={view}
-      series={series}
-      seriesLoading={seriesLoading}
-      window={window}
-      onWindowChange={onWindowChange}
-    />
-  );
-}
-
-function PriceHistoryPlaceholder() {
-  return (
-    <section className="mt-7 border-t border-border-muted pt-5" aria-hidden="true">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Price history
-      </h2>
-      <div className="mt-2.5 h-[168px] rounded-panel border border-border-muted/60 bg-bg-elevated/30" />
-      <div className="mt-3 grid gap-2.5">
-        <div className="h-[58px] rounded-panel border border-border-muted/60 bg-bg-elevated/30" />
-        <div className="h-[58px] rounded-panel border border-border-muted/60 bg-bg-elevated/30" />
-      </div>
-    </section>
-  );
-}
-
-export function PrintPriceHistory({
-  view,
-  series,
-  seriesLoading,
-  window,
-  onWindowChange,
+  loading,
+  chartHeightClass,
 }: {
-  view: PriceHistoryView | null;
-  series: PrintSeriesHistory | null;
-  seriesLoading: boolean;
-  window: PrintSeriesWindow;
-  onWindowChange: (window: PrintSeriesWindow) => void;
+  series: PrintSeriesHistory | { series: PrintSeries[] } | null;
+  loading: boolean;
+  /** How tall the plot is. Passed in because prominence is a decision about
+   * the SECTION - a footnote chart and the analytical centre of a page are the
+   * same component at two sizes. */
+  chartHeightClass: string;
 }) {
-  const rows = view?.series ?? [];
   const available = useMemo(() => selectableSeries(series), [series]);
 
   // WHY EXCLUSIONS RATHER THAN A SELECTION SET. The chip set changes under the
@@ -243,19 +186,8 @@ export function PrintPriceHistory({
     });
   }
 
-  // A print nothing has ever priced and nothing has ever indexed has no
-  // section - not an empty-state box.
-  if (rows.length === 0 && available.length === 0 && !seriesLoading) return null;
-
   return (
-    <section className="mt-7 border-t border-border-muted pt-5">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-          Price history
-        </h2>
-        <WindowControl window={window} onChange={onWindowChange} />
-      </div>
-
+    <>
       {available.length > 0 && (
         <SeriesSelector
           series={available}
@@ -268,66 +200,43 @@ export function PrintPriceHistory({
 
       <SeriesChartArea
         model={model}
-        loading={seriesLoading}
+        loading={loading}
         hasPayload={series !== null}
         hasSelectableSeries={available.length > 0}
         selectedCount={selectedKeys.size}
+        heightClass={chartHeightClass}
       />
-
-      {rows.length > 0 && (
-        <div className="mt-3 grid gap-2.5">
-          {rows.map((entry) => (
-            <SeriesRow key={entry.key} series={entry} />
-          ))}
-        </div>
-      )}
-    </section>
+    </>
   );
 }
 
-/** 7D / 30D / All.
+/** Whether the chart cluster has anything at all to render.
  *
- * Three windows, because three are what the backend implements. There is
- * deliberately no 90D: offering one would either send a window the API
- * rejects or quietly show ALL under a label promising 90 days, and "All" is
- * already the honest name for whatever history exists - it claims a span of
- * exactly nothing. */
-function WindowControl({
-  window,
-  onChange,
-}: {
-  window: PrintSeriesWindow;
-  onChange: (window: PrintSeriesWindow) => void;
-}) {
+ * Exported beside the panel because the decision "this section should not
+ * exist" belongs to the section, not to the chart - and a caller must not
+ * reimplement it by reaching into the payload itself. */
+export function hasChartableSeries(
+  series: PrintSeriesHistory | { series: PrintSeries[] } | null,
+): boolean {
+  return selectableSeries(series).length > 0;
+}
+
+/** Per-source readings and their backend-computed change windows, from
+ * `/prints/{id}/prices`.
+ *
+ * Split out of the old Price History section so it can sit with the LIVE
+ * market values it describes rather than under a historical chart. Every
+ * figure and every percentage here is the backend's; nothing is recomputed,
+ * and in particular no percentage is derived from the chart's points. */
+export function PrintPriceSeriesRows({ view }: { view: PriceHistoryView | null }) {
+  const rows = view?.series ?? [];
+  if (rows.length === 0) return null;
+
   return (
-    <div
-      className="flex items-center gap-0.5 rounded-control border border-border-muted p-0.5"
-      role="group"
-      aria-label="History window"
-      data-testid="price-history-window"
-    >
-      {PRINT_SERIES_WINDOWS.map((value) => {
-        const active = value === window;
-        return (
-          <button
-            key={value}
-            type="button"
-            onClick={() => onChange(value)}
-            aria-pressed={active}
-            // An inactive window is a control the reader is meant to be able
-            // to read and press, not a disabled one: text-faint is 3.12:1 on
-            // this ground (docs/brand.md "Contrast decisions"), which is a
-            // caption weight, not a control weight.
-            className={`mono rounded-[4px] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 ${
-              active
-                ? "bg-bg-card text-text-primary"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            {WINDOW_LABEL[value]}
-          </button>
-        );
-      })}
+    <div className="mt-3 grid gap-2.5">
+      {rows.map((entry) => (
+        <SeriesRow key={entry.key} series={entry} />
+      ))}
     </div>
   );
 }
@@ -444,24 +353,32 @@ function SeriesChartArea({
   hasPayload,
   hasSelectableSeries,
   selectedCount,
+  heightClass,
 }: {
   model: ReturnType<typeof buildSeriesChartModel>;
   loading: boolean;
   hasPayload: boolean;
   hasSelectableSeries: boolean;
   selectedCount: number;
+  /** A Tailwind height class, passed rather than chosen here. The plot, the
+   * loading box and the empty box must all be the SAME height or the section
+   * changes size as data arrives - so one value reaches all three, and the
+   * caller that knows how prominent this chart is supposed to be picks it. */
+  heightClass: string;
 }) {
   // A chart already on screen STAYS on screen while the next window loads,
   // dimmed rather than replaced. Swapping it for the placeholder would flash
   // plot -> grey box -> plot on every press of a control that is meant to read
   // as a filter, and would unmount and remount Recharts' responsive container
   // each time for a payload that usually differs by a handful of points.
-  if (model.hasPoints) return <SeriesChart model={model} dimmed={loading} />;
+  if (model.hasPoints) {
+    return <SeriesChart model={model} dimmed={loading} heightClass={heightClass} />;
+  }
 
   if (loading) {
     return (
       <div
-        className="mt-2 h-[168px] rounded-panel border border-border-muted/60 bg-bg-elevated/30"
+        className={`mt-2 rounded-panel border border-border-muted/60 bg-bg-elevated/30 ${heightClass}`}
         aria-hidden="true"
       />
     );
@@ -472,6 +389,7 @@ function SeriesChartArea({
       hasPayload={hasPayload}
       hasSelectableSeries={hasSelectableSeries}
       selectedCount={selectedCount}
+      heightClass={heightClass}
     />
   );
 }
@@ -494,10 +412,12 @@ function EmptyChartState({
   hasPayload,
   hasSelectableSeries,
   selectedCount,
+  heightClass,
 }: {
   hasPayload: boolean;
   hasSelectableSeries: boolean;
   selectedCount: number;
+  heightClass: string;
 }) {
   const message = !hasPayload
     ? "Price chart unavailable right now."
@@ -509,7 +429,7 @@ function EmptyChartState({
 
   return (
     <div
-      className="mt-2 flex h-[168px] items-center justify-center rounded-panel border border-border-muted/60 bg-bg-elevated/20 px-4 text-center"
+      className={`mt-2 flex items-center justify-center rounded-panel border border-border-muted/60 bg-bg-elevated/20 px-4 text-center ${heightClass}`}
       data-testid="price-history-empty"
     >
       {/* The PRIMARY line of an empty state, so it takes the same weight
@@ -544,9 +464,11 @@ function EmptyChartState({
 function SeriesChart({
   model,
   dimmed,
+  heightClass,
 }: {
   model: ReturnType<typeof buildSeriesChartModel>;
   dimmed: boolean;
+  heightClass: string;
 }) {
   const colorByStroke = new Map<string, string>();
   const colorBySeries = new Map<string, string>();
@@ -584,7 +506,7 @@ function SeriesChart({
         // loud, and off-brand beside the teal ring the chips and the window
         // control use. Same ring, applied to whatever inside actually takes
         // focus.
-        className={`mt-2 h-[168px] w-full transition-opacity [&_*:focus]:outline-none [&_*:focus-visible]:rounded-panel [&_*:focus-visible]:outline-none [&_*:focus-visible]:ring-2 [&_*:focus-visible]:ring-accent-teal/60 ${dimmed ? "opacity-50" : ""}`}
+        className={`mt-2 w-full transition-opacity [&_*:focus]:outline-none [&_*:focus-visible]:rounded-panel [&_*:focus-visible]:outline-none [&_*:focus-visible]:ring-2 [&_*:focus-visible]:ring-accent-teal/60 ${heightClass} ${dimmed ? "opacity-50" : ""}`}
         aria-busy={dimmed || undefined}
         data-testid="price-history-chart"
       >
