@@ -149,44 +149,113 @@ def _percent_change(baseline: int, current: int) -> float:
     return ((current - baseline) / baseline) * 100.0
 
 
-def _change_for(
-    snapshot: MarketIndexSnapshot | None, market_index: PrintMarketIndexOut
-) -> float | None:
-    """The strict comparison for one print, or None. Every guard below is a
-    reason a percentage would have been misleading."""
-    if snapshot is None:
-        return None
+# Why a comparison was refused. These are the guards below, named, so a caller
+# that must EXPLAIN the absence (the exact-print analytics headline) can say
+# which rule bit instead of publishing a bare null. The two version tokens are
+# deliberately the same strings app.services.print_series publishes as segment
+# BREAK reasons, so one vocabulary describes a boundary whether a client meets
+# it on the chart or in the headline.
+NOT_COMPARABLE_NO_BASELINE = "no_comparable_baseline"
+NOT_COMPARABLE_NON_POSITIVE_BASELINE = "non_positive_baseline"
+NOT_COMPARABLE_NULL_VALUE = "null_archived_value"
+NOT_COMPARABLE_INDEX_VERSION = "index_version_change"
+NOT_COMPARABLE_SOURCE_SEMANTICS_VERSION = "source_semantics_version_change"
+NOT_COMPARABLE_CONTRIBUTORS = "contributor_set_changed"
 
-    baseline_value = snapshot.index_value_jpy
-    if baseline_value is None or baseline_value <= 0:
+
+def comparability_refusal(
+    *,
+    baseline_value: int | None,
+    baseline_index_version: int,
+    baseline_source_semantics_version: int,
+    baseline_source_values: Any,
+    current_value: int | None,
+    current_index_version: int,
+    current_source_semantics_version: int,
+    current_source_values: Any,
+) -> str | None:
+    """THE comparability rule for two per-print Market Index values, in one
+    place. Returns the reason a comparison must be refused, or None when the
+    two ends may legitimately be compared.
+
+    Every guard here was already in `_change_for`; this function is that
+    function's test list lifted out unchanged so a second caller cannot grow a
+    second, subtly different definition of "comparable". `_change_for` now asks
+    it, and so does the window comparison in
+    app.services.print_analytics - there is no third copy.
+
+    The per-print Market Index is NOT chain-linked. Unlike the aggregate Card
+    Pirate Index, whose carried segments let a linked return be reported across
+    a boundary, a print's index is a raw JPY combination whose ruleset can
+    change underneath it. So a version boundary here is not a break to be
+    reported alongside a number - it is a reason there is no number.
+    """
+    if baseline_value is None or current_value is None:
+        return NOT_COMPARABLE_NULL_VALUE
+    if baseline_value <= 0:
         # <= 0 rather than == 0: a non-positive baseline is not a denominator,
         # and a negative one would silently flip the sign of the result.
-        return None
-    if market_index.index_value_jpy is None:
-        return None
+        return NOT_COMPARABLE_NON_POSITIVE_BASELINE
 
     # A number produced under a different ruleset is not comparable to one
     # produced under this one, however close the two look.
-    if snapshot.index_version != market_index.index_version:
-        return None
-    if snapshot.source_semantics_version != market_index.source_semantics_version:
-        return None
+    if baseline_index_version != current_index_version:
+        return NOT_COMPARABLE_INDEX_VERSION
+    if baseline_source_semantics_version != current_source_semantics_version:
+        return NOT_COMPARABLE_SOURCE_SEMANTICS_VERSION
 
-    provenance = snapshot.provenance
-    if not isinstance(provenance, dict):
-        return None
-    baseline_set = eligible_contributor_set(provenance.get("source_values"))
-    current_set = eligible_contributor_set(market_index.source_values)
+    baseline_set = eligible_contributor_set(baseline_source_values)
+    current_set = eligible_contributor_set(current_source_values)
     if baseline_set is None or current_set is None:
-        return None
+        return NOT_COMPARABLE_CONTRIBUTORS
     # A real, non-empty set on both sides. An index resting on nothing is not a
     # thing to measure movement in, and two empty sets must not compare equal.
     if not baseline_set or not current_set:
-        return None
+        return NOT_COMPARABLE_CONTRIBUTORS
     if baseline_set != current_set:
+        return NOT_COMPARABLE_CONTRIBUTORS
+    return None
+
+
+def snapshot_source_values(snapshot: MarketIndexSnapshot) -> Any:
+    """The archived `source_values` list, or None when the archive cannot be
+    read as one. Never a guess and never an empty list standing in for an
+    unreadable archive - `comparability_refusal` must be able to tell "nothing
+    contributed" from "the archive did not say"."""
+    provenance = snapshot.provenance
+    if not isinstance(provenance, dict):
+        return None
+    return provenance.get("source_values")
+
+
+def _change_for(
+    snapshot: MarketIndexSnapshot | None, market_index: PrintMarketIndexOut
+) -> float | None:
+    """The strict comparison for one print, or None.
+
+    The guards live in `comparability_refusal`; this function is the 7-day
+    live-vs-archived caller of them.
+    """
+    if snapshot is None:
         return None
 
-    return _percent_change(baseline_value, market_index.index_value_jpy)
+    refusal = comparability_refusal(
+        baseline_value=snapshot.index_value_jpy,
+        baseline_index_version=snapshot.index_version,
+        baseline_source_semantics_version=snapshot.source_semantics_version,
+        baseline_source_values=snapshot_source_values(snapshot),
+        current_value=market_index.index_value_jpy,
+        current_index_version=market_index.index_version,
+        current_source_semantics_version=market_index.source_semantics_version,
+        current_source_values=market_index.source_values,
+    )
+    if refusal is not None:
+        return None
+
+    # Narrowed by the guards above; asserted for the type checker only.
+    assert snapshot.index_value_jpy is not None
+    assert market_index.index_value_jpy is not None
+    return _percent_change(snapshot.index_value_jpy, market_index.index_value_jpy)
 
 
 def get_index_change_7d_for_prints(

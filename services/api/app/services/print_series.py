@@ -469,7 +469,7 @@ def _segment_index_points(points: list[_Point]) -> tuple[list[_Segment], list[di
     return segments, breaks
 
 
-def _coverage(points: list[_Point], now: datetime, window: str) -> dict:
+def _coverage(points: list[_Point], now: datetime, window_days: int | None) -> dict:
     """Measured facts about what this series holds. Never a score.
 
     `covers_7d`/`covers_30d` ANSWER SPAN, NOT VOLUME. Each asks exactly one
@@ -499,13 +499,17 @@ def _coverage(points: list[_Point], now: datetime, window: str) -> dict:
     the window was never in this response to be measured, and `window=all`
     is where the unbounded answer lives.
 
+    TAKES A DAY COUNT, NOT A TOKEN. The rule is "a window narrower than the
+    span being asked about cannot answer it", which is arithmetic on a number
+    of days and has nothing to do with which vocabulary named it. Passing the
+    count lets the seven-token analytics window reuse this function verbatim
+    rather than restate the rule; `None` still means unbounded.
+
     Still not a confidence, quality or reliability measure, and still nothing
     to do with market_index_snapshots.confidence - which is a 1:1 relabelling
     of coverage_status, carried through verbatim on index points and given no
     interpretation here.
     """
-    window_days = WINDOW_DAYS[window]
-
     def covers(day_count: int) -> bool | None:
         # A window narrower than the span being asked about cannot answer it.
         if window_days is not None and window_days < day_count:
@@ -559,7 +563,7 @@ def _series_payload(
     breaks: list[dict],
     points: list[_Point],
     now: datetime,
-    window: str,
+    window_days: int | None,
     unavailable_reason: str | None,
 ) -> dict:
     return {
@@ -580,7 +584,7 @@ def _series_payload(
             for seg in segments
         ],
         "breaks": breaks,
-        "coverage": _coverage(points, now, window),
+        "coverage": _coverage(points, now, window_days),
     }
 
 
@@ -647,7 +651,7 @@ def _build_source_series(
     request: SeriesRequest,
     source_ids: dict[str, int],
     observations_by_source: dict[int, list[PriceObservation]],
-    window: str,
+    window_days: int | None,
     now: datetime,
 ) -> dict:
     """One platform series, built from already-fetched rows.
@@ -673,7 +677,7 @@ def _build_source_series(
             breaks=[],
             points=[],
             now=now,
-            window=window,
+            window_days=window_days,
             unavailable_reason=UNAVAILABLE_SOURCE_NOT_CONFIGURED,
         )
 
@@ -692,13 +696,18 @@ def _build_source_series(
         breaks=breaks,
         points=points,
         now=now,
-        window=window,
+        window_days=window_days,
         unavailable_reason=None if points else UNAVAILABLE_NO_HISTORY,
     )
 
 
 def _build_market_index_series(
-    db: Session, *, print_id: int, start: datetime | None, now: datetime, window: str
+    db: Session,
+    *,
+    print_id: int,
+    start: datetime | None,
+    now: datetime,
+    window_days: int | None,
 ) -> dict:
     """Archived Market Index values, read verbatim.
 
@@ -730,7 +739,7 @@ def _build_market_index_series(
         breaks=breaks,
         points=points,
         now=now,
-        window=window,
+        window_days=window_days,
         unavailable_reason=None if points else UNAVAILABLE_NO_HISTORY,
     )
 
@@ -783,29 +792,35 @@ def default_series_requests(observed_sources: list[str]) -> list[SeriesRequest]:
     return [parse_series_key(key) for key in keys]
 
 
-def get_print_series(
+def build_print_series(
     db: Session,
     print_id: int,
     *,
     series: list[SeriesRequest] | None = None,
-    window: str = DEFAULT_WINDOW,
-    now: datetime | None = None,
-) -> dict:
-    """The whole payload for one print, as plain dicts for the schema layer.
+    start: datetime | None,
+    window_days: int | None,
+    now: datetime,
+) -> list[dict]:
+    """Every requested platform series for one print, over an explicit span.
+
+    THE WINDOW VOCABULARY IS THE CALLER'S, NOT THIS MODULE'S. Everything below
+    the token is arithmetic on a start instant and a day count, so this
+    function takes those two directly and knows no token at all. That is what
+    lets `/prints/{id}/series` keep its own 7d/30d/all grammar and the
+    seven-token analytics endpoint reuse this builder verbatim, with ONE
+    definition of segmentation, breaks, semantics and coverage between them.
+    Extracted from `get_print_series`, which now delegates to it - the series
+    payload is byte-for-byte what that function always produced.
 
     Requested order is preserved, and a duplicate key is returned once: a
     client repeating a selector gets one series, not two identical lines.
-    """
-    if window not in WINDOW_DAYS:
-        raise SeriesKeyError(f"Unsupported window {window!r}")
-    now = now or datetime.now(timezone.utc)
-    start = window_start(window, now)
 
-    # THREE queries for a full request, regardless of how many platforms were
-    # selected and regardless of whether the caller named any: the source
-    # catalogue once (ids plus which sources have history for this print),
-    # every requested platform's observations once, and the snapshot archive
-    # once if Market Index was asked for.
+    THREE queries for a full request, regardless of how many platforms were
+    selected and regardless of whether the caller named any: the source
+    catalogue once (ids plus which sources have history for this print),
+    every requested platform's observations once, and the snapshot archive
+    once if Market Index was asked for.
+    """
     source_ids, observed_sources = load_source_catalogue(db, print_id)
 
     requests = series if series is not None else default_series_requests(observed_sources)
@@ -828,27 +843,54 @@ def get_print_series(
         db, print_id=print_id, sources=requested_sources, start=start
     )
 
-    payload_series = [
+    return [
         _build_market_index_series(
-            db, print_id=print_id, start=start, now=now, window=window
+            db, print_id=print_id, start=start, now=now, window_days=window_days
         )
         if request.kind == KIND_MARKET_INDEX
         else _build_source_series(
             request=request,
             source_ids=source_ids,
             observations_by_source=observations_by_source,
-            window=window,
+            window_days=window_days,
             now=now,
         )
         for request in ordered
     ]
+
+
+def get_print_series(
+    db: Session,
+    print_id: int,
+    *,
+    series: list[SeriesRequest] | None = None,
+    window: str = DEFAULT_WINDOW,
+    now: datetime | None = None,
+) -> dict:
+    """The whole payload for one print, as plain dicts for the schema layer.
+
+    This endpoint's own window grammar is 7d/30d/all and is unchanged; the
+    series themselves are built by `build_print_series`, which the analytics
+    endpoint shares so neither can drift from the other.
+    """
+    if window not in WINDOW_DAYS:
+        raise SeriesKeyError(f"Unsupported window {window!r}")
+    now = now or datetime.now(timezone.utc)
+    start = window_start(window, now)
 
     return {
         "card_print_id": print_id,
         "window": window,
         "window_start": start,
         "generated_at": now,
-        "series": payload_series,
+        "series": build_print_series(
+            db,
+            print_id,
+            series=series,
+            start=start,
+            window_days=WINDOW_DAYS[window],
+            now=now,
+        ),
     }
 
 
@@ -868,6 +910,7 @@ __all__ = [
     "WINDOW_DAYS",
     "SeriesKeyError",
     "SeriesRequest",
+    "build_print_series",
     "default_series_requests",
     "load_observations_for_sources",
     "load_source_catalogue",

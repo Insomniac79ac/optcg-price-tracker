@@ -17,6 +17,7 @@ from app.db import get_db
 from app.models import CanonicalCard, CardPrint, PriceObservation
 from app.schemas import (
     CardPrintOut,
+    PrintAnalyticsOut,
     PrintCatalogueListOut,
     PrintMarketIndexOut,
     PrintPriceHistoryOut,
@@ -32,6 +33,11 @@ from app.services.print_catalogue import (
     get_siblings,
     list_print_catalogue,
     to_print_out,
+)
+from app.services.print_analytics import (
+    WINDOW_TOKENS,
+    get_print_analytics,
+    is_supported_window,
 )
 from app.services.print_market_index import get_market_index_for_print
 from app.services.print_pricing import (
@@ -255,3 +261,47 @@ def get_print_series_history(
     return PrintSeriesHistoryOut(
         **get_print_series(db, print_id, series=requests, window=window)
     )
+
+
+@router.get("/{print_id}/analytics", response_model=PrintAnalyticsOut)
+def get_print_analytics_endpoint(
+    print_id: int,
+    window: str | None = Query(
+        default=None,
+        description=(
+            "2w, 1m, 3m, 6m, 1y, 2y or all - the same window grammar the Card "
+            "Pirate Index publishes. Omit to take the server-selected "
+            "`default_window`, which is `all` until three months of this "
+            "print's history exists and `3m` from then on. A valid token whose "
+            "span this print's history does not reach is answered honestly - "
+            "`windows[]` reports it unavailable and the real data for that span "
+            "is returned - never silently substituted with another token."
+        ),
+    ),
+    db: Session = Depends(get_db),
+):
+    """One exact print's HISTORICAL analytics: window map, Market Index
+    headline, and the shipped multi-platform series.
+
+    READ-ONLY, AND RECOMPUTES NOTHING. Every published figure is read off rows
+    Atlas already archived in `market_index_snapshots` and `price_observations`.
+    No resolver runs, no index is recalculated, no current price is derived,
+    and nothing is averaged, interpolated or forward-filled. See
+    app.services.print_analytics.
+
+    SCOPE IS DELIBERATELY NARROW. Print identity remains `GET /prints/{id}` and
+    current source prices remain `GET /prints/{id}/prices`; neither is folded
+    in here, so no two endpoints can disagree about the same card.
+
+    An unsupported window token is a 400 because it is a client mistake, not a
+    statement about the data - the same reasoning `/prints/{id}/series` applies.
+    """
+    _get_print_or_404(db, print_id)
+
+    if window is not None and not is_supported_window(window):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid window. Must be one of {sorted(WINDOW_TOKENS)}",
+        )
+
+    return PrintAnalyticsOut(**get_print_analytics(db, print_id, window=window))

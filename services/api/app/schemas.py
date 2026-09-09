@@ -1224,6 +1224,133 @@ class PrintSeriesHistoryOut(BaseModel):
     series: list[PrintSeriesOut]
 
 
+class PrintAnalyticsWindowOut(BaseModel):
+    """One row of the exact-print `windows` map.
+
+    THE SAME GRAMMAR AND THE SAME TEST as the aggregate Card Pirate Index's
+    window map (CardPirateIndexWindowOut), built by the same function - the
+    tokens, their order and the span definition of `available` are shared so a
+    print's timeframe control and the Index's cannot drift apart.
+
+    `available` is a SPAN test against THIS print's own history, not a point
+    count: sparse history that spans a window still covers it. It is derived
+    from every series the print has, so a print with a month of Yuyu-Tei
+    history and a week of Market Index history reports 1M available - and
+    discloses the difference in each series' own `coverage` block, which is the
+    only place that difference can be stated without lying about one series to
+    be true about another.
+
+    Published as an ordered LIST rather than a mapping because the display
+    order 2W/1M/3M/6M/1Y/2Y/All is part of the contract, and a client
+    re-imposing it from a mapping's keys would be re-deciding a server rule.
+    """
+
+    token: str
+    available: bool
+    covered_days: int
+    required_days: int | None = None
+
+
+class PrintAnalyticsChangeOut(BaseModel):
+    """Movement in the archived Market Index across the requested window.
+
+    PUBLISHED ONLY WHERE THE TWO ENDS ARE COMPARABLE. The guards are the
+    shipped per-print ones (app.services.market_index_change), so a window
+    crossing an index_version bump, a source_semantics_version bump, or a
+    change in which sources built the number yields no change at all and the
+    parent's `change_unavailable_reason` names which. A naive first-vs-last
+    would report a methodology change as a price change.
+
+    `spans_break` states that a methodology boundary lies inside the window. It
+    can be true beside a published change (the ends were still comparable) and
+    it is reported on a refusal too, because the fact is true either way.
+    """
+
+    absolute_jpy: int
+    pct: float
+    from_date: date
+    to_date: date
+    spans_break: bool
+
+
+class PrintAnalyticsHeadlineOut(BaseModel):
+    """The Card Pirate Market Index headline for one print and one window.
+
+    THE MARKET INDEX ONLY - never a source price and never a blend. Every field
+    is read from archived `market_index_snapshots` rows; nothing is resolved,
+    recomputed, averaged, interpolated or forward-filled, and a NULL archived
+    value (a day on which no source was eligible) is excluded from every
+    statistic rather than counted as ¥0.
+
+    `observed_days` IS DISTINCT HISTORICAL DAYS CARRYING A USABLE ARCHIVED
+    MARKET INDEX VALUE. It is not sales, trades, volume, listings or a sample
+    size, and no such figure exists anywhere in Atlas to publish: nothing
+    recorded here is a transaction. There is deliberately no average price -
+    the only combination rule the system owns is a same-day median across
+    sources, so a mean over time would be inventing methodology.
+
+    Every value field is nullable because a print with no archived index has no
+    headline, and null is the honest answer rather than a zero.
+    """
+
+    current_value_jpy: int | None
+    current_as_of: date | None
+    starting_value_jpy: int | None
+    starting_as_of: date | None
+    low_value_jpy: int | None
+    low_as_of: date | None
+    high_value_jpy: int | None
+    high_as_of: date | None
+    change: PrintAnalyticsChangeOut | None
+    change_unavailable_reason: str | None
+    observed_days: int
+    coverage_status: str | None
+
+
+class PrintAnalyticsOut(BaseModel):
+    """GET /prints/{print_id}/analytics.
+
+    HISTORICAL ANALYTICS ONLY. Print identity stays on `GET /prints/{id}` and
+    current source prices stay on `GET /prints/{id}/prices`; this endpoint
+    neither repeats nor replaces them, so no two endpoints can disagree about
+    the same card.
+
+    IDENTITY IS `card_print_id`. A card code is a family name - 955 codes in
+    the catalogue carry more than one print and one carries nine - so nothing
+    in this response is selected, grouped or joined by code.
+
+    `series` is the SHIPPED `/prints/{id}/series` shape, unchanged and built by
+    the same function: segments, breaks, gaps, reference_type/evidence_type,
+    eligibility and per-series coverage all arrive exactly as that endpoint
+    produces them. There is no second series DTO.
+
+    `window_start` is null for `all`, which returns the real available history
+    and claims nothing about its depth. `requested_window` always echoes the
+    token that was asked for - an unavailable window is answered honestly with
+    its own (possibly empty) data, never substituted with another token's.
+
+    `windows[].available` AND `default_window` ANSWER DIFFERENT QUESTIONS AND
+    HAVE DIFFERENT AUTHORITIES. Availability spans every series, because the
+    chart draws them all and a reader with three months of Yuyu-Tei history
+    must be able to ask for 3M. The default spans the MARKET INDEX alone -
+    its usable, non-null days - because the view the page opens on is the
+    primary performance view and every figure in `headline` is a Market Index
+    figure. A long source-only history therefore makes 3M SELECTABLE while
+    `default_window` stays `all`; that pairing is intended, and the per-series
+    `coverage` blocks are what tell a reader which series actually fills the
+    frame they chose.
+    """
+
+    card_print_id: int
+    requested_window: str
+    window_start: date | None
+    default_window: str
+    generated_at: datetime
+    windows: list[PrintAnalyticsWindowOut]
+    headline: PrintAnalyticsHeadlineOut
+    series: list[PrintSeriesOut]
+
+
 class DisplayImageCanvasOut(BaseModel):
     """Intrinsic pixel size of the display image as published by its host."""
 
