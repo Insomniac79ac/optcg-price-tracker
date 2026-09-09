@@ -455,3 +455,104 @@ export function indexDomain(series: IndexSeries): [number, number] | null {
   const hi = Math.max(centre * 1.01, ...values);
   return [lo, hi];
 }
+
+// --- movers -----------------------------------------------------------------
+
+/** One constituent that moved between two published points - see
+ * schemas.CardPirateIndexMoverOut.
+ *
+ * TWO DIFFERENT QUANTITIES, AND THIS MODULE MERGES NEITHER. `raw_pct` is what
+ * the CARD did, from two archived integers. `contribution_log_return` is what
+ * the card did to the INDEX, after the methodology's unconditional +/-25 %
+ * daily cap and a division by the constituent count. On a capped day they
+ * disagree by design - on 2026-09-07 two cards that fell 41.18 % and 25.00 %
+ * contributed exactly the same amount - so a UI that showed one number would
+ * have to discard a true statement.
+ *
+ * IDENTITY IS `card_print_id`. `card_code` does not identify a print:
+ * OP01-016 has seven of them and one moved. The display image is part of the
+ * contract for the same reason, `treatment` being frequently null even on
+ * parallel printings.
+ *
+ * Decimal fields arrive as strings and stay strings. Nothing here parses
+ * `contribution_log_return` - the client has no use for its value, only for
+ * the server's own rendering of it. */
+export interface IndexMover {
+  card_print_id: number;
+  card_code: string | null;
+  name: string | null;
+  rarity: string | null;
+  display_image_url: string | null;
+  treatment: string | null;
+  language: string | null;
+  prior_value_jpy: number;
+  current_value_jpy: number;
+  direction: "up" | "down";
+  raw_pct: number;
+  capped_log_return: string;
+  was_capped: boolean;
+  contribution_log_return: string;
+  approx_index_points: string;
+  move_rank: number;
+  impact_rank: number;
+}
+
+/** GET /analytics/index/movers - WHICH constituents moved on one published day.
+ *
+ * `movers` carries non-flat actual constituents only, already ordered by the
+ * server's `move_rank`. Flat constituents are reported as `unchanged_count`
+ * rather than listed, and `movers_count + unchanged_count === constituent_count`
+ * holds over the FULL set - `movers_count` is therefore the honest count of
+ * what moved even when `truncated` says the payload carries fewer rows.
+ *
+ * A base point answers with `prior_point_date: null` and
+ * `constituent_count: 0`: it opened a segment and had nothing to move against.
+ * That is a different state from a quiet day, which has a full constituent
+ * count and an empty list. */
+export interface IndexMovers {
+  as_of: string;
+  prior_point_date: string | null;
+  constituent_count: number;
+  movers_count: number;
+  unchanged_count: number;
+  chain_link_log_return: string | null;
+  movers: IndexMover[];
+  truncated: boolean;
+}
+
+/** Fetched ONCE per page load, and deliberately not per window.
+ *
+ * Same rule as `fetchIndexComposition`, and it matters more here because the
+ * answer looks like it belongs to the chart: it does not. Movers describe the
+ * NEWEST published point, so pressing 2W or 1Y cannot change which day this
+ * answers. The function takes no window argument to pass one, and it takes no
+ * date either - the surface asks for the newest point and renders the `as_of`
+ * that comes back rather than aligning it to the chart's last plotted day. */
+export function fetchIndexMovers(): Promise<IndexMovers> {
+  return apiGet<IndexMovers>("/analytics/index/movers");
+}
+
+/** `approx_index_points` as the server sent it, with an explicit sign.
+ *
+ * A SIGNED RENDERING, NOT A RECOMPUTATION. The magnitude and its four decimal
+ * places are the server's; this only chooses the leading glyph, and uses a
+ * real minus sign rather than a hyphen so it lines up in a tabular column.
+ * Returns null for a value that is not a finite number, so a malformed payload
+ * drops the figure instead of printing "NaN" beside a real price. */
+export function formatIndexPoints(value: string): string | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const body = Math.abs(n).toFixed(4);
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${body}`;
+}
+
+/** The card's OWN move, as the server sent it, signed.
+ *
+ * `raw_pct` arrives already in percent units and already rounded to two
+ * places by the estimator - "-41.18" is -41.18 %, not -0.4118. It is never
+ * derived here from the two prices, and never from the capped log return: the
+ * cap is an index rule, not a claim about what the card did. */
+export function formatRawPct(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(2)}%`;
+}

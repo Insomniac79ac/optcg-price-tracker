@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
 import { CardPirateIndexHero, type IndexStatus } from "@/components/ui/CardPirateIndexHero";
 import { IndexCompositionPanel } from "@/components/ui/IndexCompositionPanel";
+import { IndexMoversPanel } from "@/components/ui/IndexMoversPanel";
 import { MarketBreadthPanel } from "@/components/ui/MarketBreadthPanel";
 import { MarketLandscapeFilters } from "@/components/ui/MarketLandscapeFilters";
 import {
@@ -18,9 +19,11 @@ import {
 import {
   fetchIndexComposition,
   fetchIndexDefault,
+  fetchIndexMovers,
   fetchIndexSeries,
   pressedWindow,
   type IndexComposition,
+  type IndexMovers,
   type IndexSeries,
 } from "@/lib/cardPirateIndex";
 import {
@@ -173,6 +176,21 @@ function MarketLandscapePageInner() {
     data: IndexComposition | null;
     status: "loading" | "ready" | "error";
   }>({ data: null, status: "loading" });
+  /** What moved the index, fetched ONCE per mount and never per window.
+   *
+   * Exactly the composition's discipline, and for exactly the same reason: it
+   * describes the newest published point, which does not change when a reader
+   * presses 2W or 1Y. `fetchIndexMovers` takes no window argument to pass one,
+   * so the timeframe control cannot reach this request even by accident.
+   *
+   * Its failure is section-local: `status: "error"` renders one quiet
+   * unavailable line inside the movers panel while the hero, the chart, the
+   * composition and the breadth panel - all built from other responses - keep
+   * rendering untouched. */
+  const [movers, setMovers] = useState<{
+    data: IndexMovers | null;
+    status: "loading" | "ready" | "error";
+  }>({ data: null, status: "loading" });
   // The two vocabulary endpoints, once per mount. They describe the catalogue,
   // not the current view, so nothing about changing a filter can invalidate
   // them.
@@ -265,6 +283,32 @@ function MarketLandscapePageInner() {
       })
       .catch(() => {
         if (!cancelled) setComposition({ data: null, status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The movers, once per mount. No window parameter, so a timeframe change
+  // cannot reach it.
+  useEffect(() => {
+    let cancelled = false;
+    fetchIndexMovers()
+      .then((data) => {
+        if (cancelled) return;
+        // VALIDATED AT THE TRUST BOUNDARY, the same way the composition is. A
+        // response without a usable `movers` array is not a movers payload,
+        // and mapping over an undefined is a render-time throw that React
+        // escalates into a blank Analytics page - so a malformed body is a
+        // failure here, and failures here are section-local by design.
+        if (!data || !Array.isArray(data.movers)) {
+          setMovers({ data: null, status: "error" });
+          return;
+        }
+        setMovers({ data, status: "ready" });
+      })
+      .catch(() => {
+        if (!cancelled) setMovers({ data: null, status: "error" });
       });
     return () => {
       cancelled = true;
@@ -418,6 +462,13 @@ function MarketLandscapePageInner() {
         />
         <MarketBreadthPanel point={newestIndexPoint} />
       </div>
+
+      {/* THE THIRD LAYER, and sized to say so. Breadth counts how many moved;
+          this names them. It follows the row rather than joining it because a
+          list of cards is a different shape from two summary panels, and it
+          stays at the panels' own heading weight so it reads as their
+          continuation rather than as a second hero. */}
+      <IndexMoversPanel movers={movers.data} status={movers.status} />
 
       <section className="mt-8" aria-labelledby="market-landscape-heading">
         <h2
