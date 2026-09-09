@@ -342,6 +342,16 @@ export default function PrintDetailPage() {
                 <Identity print={print} />
                 <PrintAnalyticsSection
                   analytics={analyticsForPrint}
+                  // The export's title block. Identity comes from the print
+                  // payload, never from the analytics response - that endpoint
+                  // deliberately carries none, so no two endpoints can
+                  // disagree about what this card is called.
+                  identity={{
+                    cardCode: print.cardCode,
+                    displayName: print.displayName,
+                    printingLabel: print.printingType?.label ?? null,
+                    releaseCode: print.releaseCode,
+                  }}
                   pressed={pressedAnalytics}
                   loading={!analyticsReady}
                   onWindowChange={setAnalyticsWindow}

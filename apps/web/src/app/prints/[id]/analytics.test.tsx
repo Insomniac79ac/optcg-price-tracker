@@ -56,6 +56,21 @@ import type { PrintSeries, PrintSeriesPoint } from "@/lib/printSeries";
 
 import PrintDetailPage from "./page";
 
+const { downloadPrintChartExport } = vi.hoisted(() => ({
+  downloadPrintChartExport:
+    vi.fn<(plan: Record<string, unknown>, options?: unknown) => Promise<boolean>>(() =>
+      Promise.resolve(true),
+    ),
+}));
+vi.mock("@/lib/printChartExport", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/printChartExport")>("@/lib/printChartExport");
+  // Only the browser half is stubbed - jsdom has no 2D context. The PLAN is
+  // still built by the real `buildPrintChartExport`, so these assert what the
+  // page actually hands to the encoder.
+  return { ...actual, downloadPrintChartExport };
+});
+
 // --- fixtures ---------------------------------------------------------------
 
 function makeDetail(): PrintDetail {
@@ -225,6 +240,134 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+// --- the PNG export ---------------------------------------------------------
+
+describe("downloading the chart", () => {
+  it("issues no request at all", async () => {
+    await renderPage();
+    expect(fetchPrintAnalytics).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId("print-export"));
+
+    await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalledTimes(1));
+    // The plan is built from the response the page is already holding, so
+    // saving a picture of it cannot cost a round trip.
+    expect(fetchPrintAnalytics).toHaveBeenCalledTimes(1);
+    expect(fetchPrint).toHaveBeenCalledTimes(1);
+    expect(fetchPrintPrices).toHaveBeenCalledTimes(1);
+  });
+
+  it("exports the window currently on screen, not the default", async () => {
+    fetchPrintAnalytics
+      .mockResolvedValueOnce(analytics())
+      .mockResolvedValueOnce(analytics({ requested_window: "2w" }));
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "2W" }));
+    await waitFor(() => expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByTestId("print-export"));
+    await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalled());
+
+    const plan = downloadPrintChartExport.mock.calls[0][0] as unknown as {
+      windowToken: string;
+      filename: string;
+    };
+    expect(plan.windowToken).toBe("2w");
+    expect(plan.filename).toContain("-2w-");
+  });
+
+  it("carries the exact print's identity and the series on screen", async () => {
+    await renderPage();
+    fireEvent.click(screen.getByTestId("print-export"));
+    await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalled());
+
+    const plan = downloadPrintChartExport.mock.calls[0][0] as unknown as {
+      title: string;
+      subtitle: string;
+      printRef: string;
+      series: { label: string }[];
+      current: string | null;
+    };
+    expect(plan.title).toBe("Roronoa Zoro");
+    expect(plan.subtitle).toContain("OP01-001");
+    expect(plan.printRef).toBe("#1");
+    expect(plan.series.map((s) => s.label)).toEqual(
+      expect.arrayContaining(["Market Index", "Yuyu-Tei", "SNKRDUNK"]),
+    );
+    // The headline in the file is the one on the screen.
+    expect(plan.current).toBe("￥22,900");
+  });
+
+  it("names the card and the timeframe in its accessible name", async () => {
+    await renderPage();
+
+    const button = screen.getByTestId("print-export");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("aria-label")).toContain("Roronoa Zoro");
+    expect(button.getAttribute("aria-label")).toContain("OP01-001");
+    expect(button.getAttribute("aria-label")).toContain("All");
+  });
+
+  it("stays quiet and does nothing when there is nothing chartable", async () => {
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series: [],
+        headline: headline({ current_value_jpy: null, observed_days: 0 }),
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByTestId("print-analytics");
+
+    const button = await screen.findByTestId("print-export");
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    // Focusable, so the reason in the accessible name is reachable.
+    expect(button).not.toBeDisabled();
+
+    fireEvent.click(button);
+    expect(downloadPrintChartExport).not.toHaveBeenCalled();
+  });
+
+  it("says so quietly instead of crashing when the encode fails", async () => {
+    downloadPrintChartExport.mockResolvedValueOnce(false);
+    await renderPage();
+
+    fireEvent.click(screen.getByTestId("print-export"));
+
+    expect(await screen.findByTestId("print-export-error")).toHaveTextContent(
+      /could not be saved/i,
+    );
+    // The page is still there.
+    expect(screen.getByTestId("print-analytics-current")).toBeInTheDocument();
+  });
+
+  it("leaves the on-screen timeframe controls untouched", async () => {
+    await renderPage();
+    const before = windowButtons().map((b) => [b.textContent, b.getAttribute("aria-pressed")]);
+
+    fireEvent.click(screen.getByTestId("print-export"));
+    await waitFor(() => expect(downloadPrintChartExport).toHaveBeenCalled());
+
+    expect(windowButtons().map((b) => [b.textContent, b.getAttribute("aria-pressed")])).toEqual(
+      before,
+    );
+  });
+
+  it("draws the brand mark inside the plot, behind the data", async () => {
+    await renderPage();
+
+    const watermark = screen.getByTestId("print-chart-watermark");
+    expect(watermark).toBeInTheDocument();
+    // Decoration: no chart meaning, so a screen reader must not announce it.
+    expect(watermark).toHaveAttribute("aria-hidden", "true");
+    // Behind the lines and out of the tooltip's hit-testing.
+    expect(watermark.className).toContain("z-0");
+    expect(watermark.className).toContain("pointer-events-none");
+    // Inside the plot container, not a second logo beside it.
+    expect(screen.getByTestId("price-history-chart").contains(watermark)).toBe(true);
+  });
 });
 
 // --- the server decides the opening view ------------------------------------

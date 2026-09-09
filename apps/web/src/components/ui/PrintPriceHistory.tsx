@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { AtlasMark } from "@/components/brand/AtlasMark";
 import { formatDate, formatJpy } from "@/lib/format";
 import { type PriceHistorySeriesView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
@@ -440,6 +441,39 @@ function EmptyChartState({
   );
 }
 
+/** The Atlas mark, inside the plot, as a watermark.
+ *
+ * Reused from `@/components/brand/AtlasMark` rather than redrawn - there is
+ * one Atlas mark and this is it, and `lib/chartExport` replays the same path
+ * data onto the canvas so the exported PNG carries the identical geometry.
+ * `title={null}` renders it `aria-hidden`, which is the correct treatment for
+ * decoration: it carries no chart meaning, so a screen reader announcing it
+ * would be reading out furniture.
+ *
+ * LOWER-LEFT AND SMALL, for the reasons the Index chart's watermark already
+ * established. The tooltip for the newest point renders over the RIGHT of the
+ * plot and the newest day is what a collector hovers most, so a mark parked
+ * there spends its time hidden under an opaque box exactly when it is most
+ * likely to be looked at. Down here it sits in the quadrant a series leaves
+ * empty.
+ *
+ * BEHIND THE DATA AND OUT OF THE WAY OF IT: `z-0` puts it under the plotted
+ * lines, `pointer-events-none` keeps it out of the tooltip's hit-testing, and
+ * it is inset from both axes so it never sits under a tick label. Sized in
+ * percent, so it shrinks with the plot on a phone rather than crowding it.
+ */
+function PrintChartWatermark() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute bottom-[30px] left-[62px] right-3 top-0 z-0 flex items-end justify-start"
+      data-testid="print-chart-watermark"
+    >
+      <AtlasMark title={null} className="h-[24%] w-auto opacity-[0.07]" />
+    </div>
+  );
+}
+
 /** One line per STROKE, not per series.
  *
  * That is the whole mechanism behind "never draw across a boundary". A series
@@ -506,10 +540,11 @@ function SeriesChart({
         // loud, and off-brand beside the teal ring the chips and the window
         // control use. Same ring, applied to whatever inside actually takes
         // focus.
-        className={`mt-2 w-full transition-opacity [&_*:focus]:outline-none [&_*:focus-visible]:rounded-panel [&_*:focus-visible]:outline-none [&_*:focus-visible]:ring-2 [&_*:focus-visible]:ring-accent-teal/60 ${heightClass} ${dimmed ? "opacity-50" : ""}`}
+        className={`relative mt-2 w-full transition-opacity [&_*:focus]:outline-none [&_*:focus-visible]:rounded-panel [&_*:focus-visible]:outline-none [&_*:focus-visible]:ring-2 [&_*:focus-visible]:ring-accent-teal/60 ${heightClass} ${dimmed ? "opacity-50" : ""}`}
         aria-busy={dimmed || undefined}
         data-testid="price-history-chart"
       >
+        <PrintChartWatermark />
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={model.rows} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--border-muted)" vertical={false} />

@@ -20,11 +20,14 @@
  * and `change.pct` passed through the same formatters the headline uses;
  * nothing here divides, multiplies or accumulates a price.
  *
- * NO NEW DEPENDENCY. The whole path is `document.createElement("canvas")`,
- * `Path2D`, `canvas.toBlob` and an object URL - all browser primitives. A
- * DOM-to-image library would have been a large dependency to redraw a chart
- * whose geometry we already have in hand, and it would have rasterised the
- * page's background and layout into the file, which requirement 4 forbids.
+ * WHAT LIVES IN `./chartExport` INSTEAD. The canvas setup, the palette, the
+ * Atlas mark's geometry, font resolution, filename hygiene and the blob
+ * download are shared with the exact-print chart export - they are properties
+ * of "a Card Pirate chart as a PNG" rather than of this chart. What stays here
+ * is everything that knows what the Card Pirate Index IS: its plan shape, its
+ * headline fields, and the §13.4 rule that a snapshot gap is drawn as a dashed
+ * join between two real endpoints. That last one is the opposite of the
+ * exact-print chart's rule, which is why neither renderer is shared.
  */
 
 import {
@@ -40,46 +43,31 @@ import {
   splitRuns,
   windowLabel,
 } from "./cardPirateIndex";
+import {
+  DEFAULT_EXPORT_FONTS,
+  EXPORT_COLORS,
+  EXPORT_HEIGHT,
+  EXPORT_SCALE,
+  EXPORT_WIDTH,
+  createExportCanvas,
+  dayStamp,
+  downloadCanvasPng,
+  drawAtlasMark,
+  resolveExportFonts,
+  safeFilenameToken,
+  type ExportFonts,
+} from "./chartExport";
 
-/** The exported canvas, in CSS pixels before `scale`. 16:9 so the file drops
- * into a post or a slide without either axis being cropped. */
-export const EXPORT_WIDTH = 1200;
-export const EXPORT_HEIGHT = 675;
-/** Rasterised at 2x, so the type is still crisp when the image is opened at
- * full size rather than as a thumbnail. */
-export const EXPORT_SCALE = 2;
-
-/** Brand tokens, resolved to literals ON PURPOSE.
- *
- * The file must not depend on the page it came from (requirement 4), and a
- * canvas cannot read a CSS custom property anyway - `ctx.fillStyle =
- * "var(--accent-gold)"` is silently ignored and leaves the previous colour.
- * These are the same values `docs/interface_design_system.md` defines, so the
- * export is the app's palette rather than a second one. */
-export const EXPORT_COLORS = {
-  background: "#171717", // --bg-page
-  panel: "#1F1F21",
-  grid: "#2E2E31", // --border-muted
-  textPrimary: "#F4F0E8",
-  textSecondary: "#BDB6A8",
-  textMuted: "#8C877D",
-  parchment: "#E8DEC7",
-  gold: "#C79A4B", // --accent-gold
-} as const;
-
-/** Font stacks with real fallbacks. The hero passes the families actually
- * loaded on the page (next/font generates hashed names, so they cannot be
- * hardcoded); these are what a caller gets if it passes nothing. */
-export interface ExportFonts {
-  display: string;
-  sans: string;
-  mono: string;
-}
-
-export const DEFAULT_EXPORT_FONTS: ExportFonts = {
-  display: 'Fraunces, Georgia, "Times New Roman", serif',
-  sans: 'Manrope, "Helvetica Neue", Arial, sans-serif',
-  mono: '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace',
+// Re-exported so existing callers and tests keep one import site while the
+// definitions live in the neutral module.
+export {
+  DEFAULT_EXPORT_FONTS,
+  EXPORT_COLORS,
+  EXPORT_HEIGHT,
+  EXPORT_SCALE,
+  EXPORT_WIDTH,
+  resolveExportFonts,
+  type ExportFonts,
 };
 
 /** One stroke of the plotted series.
@@ -130,10 +118,6 @@ export interface IndexExportPlan {
 
 const CHANGE_UNAVAILABLE_COPY = "Change not available across this period";
 
-function dayStamp(now: Date): string {
-  return now.toISOString().slice(0, 10);
-}
-
 /** `card-pirate-index-all-2026-09-08.png`.
  *
  * The window token names WHICH chart this is, and the date is when the file
@@ -141,8 +125,8 @@ function dayStamp(now: Date): string {
  * in a folder. The token is squeezed through the same character class as the
  * rest of the grammar so an unexpected value can never travel into a path. */
 export function indexExportFilename(windowToken: string, now: Date): string {
-  const token = windowToken.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `card-pirate-index-${token || "window"}-${dayStamp(now)}.png`;
+  const token = safeFilenameToken(windowToken, "window");
+  return `card-pirate-index-${token}-${dayStamp(now)}.png`;
 }
 
 function breakLabel(entry: IndexBreak): string {
@@ -232,48 +216,6 @@ function toPoint(date: string, value: string): { date: string; t: number; value:
 
 // --- rendering ---------------------------------------------------------------
 
-/** The Atlas mark's own path data, lifted verbatim from
- * `components/brand/AtlasMark.tsx`.
- *
- * There is one Atlas mark and this is it - the strings below are the same
- * `d` attributes that component renders, replayed through `Path2D` because a
- * canvas cannot mount a React SVG. Copying the GEOMETRY rather than inventing
- * a second mark is the point; if the mark changes, these change with it.
- * viewBox is 32x40. */
-const ATLAS_PATHS = {
-  card: "M6 2 L24 2 L28 6 L28 34 A2 2 0 0 1 26 36 L6 36 A2 2 0 0 1 4 34 L4 4 A2 2 0 0 1 6 2 Z",
-  fold: "M21.5 4 L25.5 7.5",
-  route: "M8 30 Q9 22 14 19",
-  north: "M16 10 L18.5 19 L13.5 19 Z",
-  south: "M16 28 L18.5 19 L13.5 19 Z",
-} as const;
-
-function drawAtlasMark(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  opacity: number,
-): void {
-  ctx.save();
-  ctx.globalAlpha = opacity;
-  ctx.translate(x, y);
-  ctx.scale(size / 32, size / 32);
-  ctx.lineWidth = 1.6;
-  ctx.strokeStyle = EXPORT_COLORS.parchment;
-  ctx.stroke(new Path2D(ATLAS_PATHS.card));
-  ctx.lineWidth = 1;
-  ctx.stroke(new Path2D(ATLAS_PATHS.fold));
-  ctx.setLineDash([1.4, 2.6]);
-  ctx.stroke(new Path2D(ATLAS_PATHS.route));
-  ctx.setLineDash([]);
-  ctx.fillStyle = EXPORT_COLORS.gold;
-  ctx.fill(new Path2D(ATLAS_PATHS.north));
-  ctx.fillStyle = "#4F8D86";
-  ctx.fill(new Path2D(ATLAS_PATHS.south));
-  ctx.restore();
-}
-
 /** Plot insets. `top` clears the stat row AND the break glyph that is drawn
  * just above the plot boundary - at the first value the topmost y-axis label
  * and the diamond both landed inside the START/HIGH/LOW row. */
@@ -286,18 +228,7 @@ export function renderIndexExport(
 ): HTMLCanvasElement {
   const doc = options.document ?? document;
   const fonts = options.fonts ?? DEFAULT_EXPORT_FONTS;
-  const canvas = doc.createElement("canvas");
-  canvas.width = plan.width * plan.scale;
-  canvas.height = plan.height * plan.scale;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas 2d context unavailable");
-  ctx.scale(plan.scale, plan.scale);
-
-  // SELF-CONTAINED: an opaque ground of its own, so the file never borrows
-  // the page's background and never arrives with a transparent bed that a
-  // dark viewer turns into unreadable text.
-  ctx.fillStyle = plan.background;
-  ctx.fillRect(0, 0, plan.width, plan.height);
+  const { canvas, ctx } = createExportCanvas(plan, doc);
 
   const plotX = PLOT.left;
   const plotY = PLOT.top;
@@ -485,42 +416,8 @@ export async function downloadIndexExport(
   const doc = options.document ?? document;
   try {
     const canvas = renderIndexExport(plan, { ...options, document: doc });
-    if (typeof canvas.toBlob !== "function") return false;
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((result) => resolve(result), "image/png");
-    });
-    if (!blob) return false;
-    const url = URL.createObjectURL(blob);
-    const anchor = doc.createElement("a");
-    anchor.href = url;
-    anchor.download = plan.filename;
-    doc.body.appendChild(anchor);
-    anchor.click();
-    doc.body.removeChild(anchor);
-    // Revoked on the next turn so the navigation the click started has
-    // already taken its reference to the blob.
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-    return true;
+    return await downloadCanvasPng(canvas, plan.filename, doc);
   } catch {
     return false;
   }
-}
-
-/** The font families ACTUALLY loaded on the page.
- *
- * `next/font` generates hashed family names (`__Fraunces_1a2b3c`), so the
- * export cannot name them; it reads them off a live element instead and falls
- * back to the generic stacks when there is no DOM to read (SSR, tests).
- */
-export function resolveExportFonts(element: Element | null): ExportFonts {
-  if (!element || typeof getComputedStyle !== "function") return DEFAULT_EXPORT_FONTS;
-  const style = getComputedStyle(element);
-  const display = style.getPropertyValue("--font-display").trim();
-  const sans = style.getPropertyValue("--font-sans").trim();
-  const mono = style.getPropertyValue("--font-mono").trim();
-  return {
-    display: display || DEFAULT_EXPORT_FONTS.display,
-    sans: sans || DEFAULT_EXPORT_FONTS.sans,
-    mono: mono || DEFAULT_EXPORT_FONTS.mono,
-  };
 }

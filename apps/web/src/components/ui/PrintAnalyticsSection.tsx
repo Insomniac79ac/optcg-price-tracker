@@ -1,11 +1,20 @@
 "use client";
 
+import { useState } from "react";
+
 import { PrintSeriesChartPanel } from "@/components/ui/PrintPriceHistory";
 import { WindowTokenControl } from "@/components/ui/WindowTokenControl";
 import { formatDate, formatJpy } from "@/lib/format";
+import { resolveExportFonts } from "@/lib/chartExport";
+import {
+  buildPrintChartExport,
+  downloadPrintChartExport,
+  type PrintExportIdentity,
+} from "@/lib/printChartExport";
 import {
   changeUnavailableCopy,
   coverageQualifier,
+  windowLabel,
   windowShortfall,
   type PrintAnalytics,
   type PrintAnalyticsChange,
@@ -40,6 +49,7 @@ import {
  */
 export function PrintAnalyticsSection({
   analytics,
+  identity,
   pressed,
   loading,
   onWindowChange,
@@ -47,6 +57,11 @@ export function PrintAnalyticsSection({
   /** The most recent successful response, or null before the first lands.
    * Kept on screen while the next window is in flight - see `loading`. */
   analytics: PrintAnalytics | null;
+  /** The card's own identity, for the export's title block. It comes from
+   * `GET /prints/{id}` rather than from the analytics response, because that
+   * endpoint deliberately carries no identity fields - print identity has one
+   * home and this is not it. */
+  identity: PrintExportIdentity;
   /** The token the control shows as pressed: the server's own echo. */
   pressed: string;
   loading: boolean;
@@ -98,7 +113,95 @@ export function PrintAnalyticsSection({
           </p>
         )}
       </div>
+
+      <PrintChartExportAction analytics={analytics} identity={identity} />
     </section>
+  );
+}
+
+/** "Download chart" - the visible half of the PNG export.
+ *
+ * DELIBERATELY QUIET, AND DELIBERATELY BELOW THE CHART. The timeframe control
+ * is how a reader changes what they are looking at and the chart is what they
+ * came for; a save action is neither, so it takes the footnote tier's type
+ * scale and sits after both rather than competing with them.
+ *
+ * WHAT IT EXPORTS IS WHAT IS ON SCREEN, AND IT COSTS NOTHING TO PRESS. The
+ * plan is built from the `analytics` object this component is already
+ * rendering, so the file is a picture of the window the reader is looking at
+ * and the click issues NO request - there is no network state to report and so
+ * no spinner beyond the momentary "Saving…" the encode itself takes.
+ *
+ * UNAVAILABLE ONLY WHEN THERE IS NOTHING DRAWABLE - `buildPrintChartExport`
+ * returning null, which happens exactly when no selected series has a
+ * plottable point in this window. It is `aria-disabled` rather than natively
+ * `disabled`, for the reason the window control already learned: a natively
+ * disabled button leaves the tab order entirely and its `title` never fires on
+ * touch, so the one reader most likely to wonder why nothing happens is the
+ * one who cannot find out.
+ *
+ * The accessible name names the CARD and the WINDOW, because "Download chart"
+ * alone says neither which card nor which of seven timeframes it saved.
+ */
+function PrintChartExportAction({
+  analytics,
+  identity,
+}: {
+  analytics: PrintAnalytics | null;
+  identity: PrintExportIdentity;
+}) {
+  const [state, setState] = useState<"idle" | "working" | "failed">("idle");
+  const plan = buildPrintChartExport(analytics, identity);
+  const unavailable = plan === null;
+  const label = analytics ? windowLabel(analytics.requested_window) : "";
+
+  return (
+    <div className="mt-2 flex items-center justify-end gap-3">
+      {state === "failed" && (
+        <span
+          className="text-[12px] leading-relaxed text-text-muted"
+          data-testid="print-export-error"
+          role="status"
+        >
+          The chart could not be saved. Please try again.
+        </span>
+      )}
+      <button
+        type="button"
+        data-testid="print-export"
+        aria-label={
+          unavailable
+            ? "Download chart — there is no recorded price history to save for this print yet"
+            : `Download the ${identity.displayName} (${identity.cardCode}) price chart for ${label} as a PNG image`
+        }
+        title={
+          unavailable
+            ? "There is no recorded price history to save for this print yet."
+            : undefined
+        }
+        aria-disabled={unavailable || undefined}
+        aria-busy={state === "working" || undefined}
+        disabled={state === "working"}
+        onClick={() => {
+          // The guard the omitted `disabled` attribute would have provided.
+          if (unavailable || plan === null) return;
+          setState("working");
+          // The fonts the page actually loaded, read off a live element -
+          // next/font names are hashed, so the canvas cannot guess them.
+          const fonts = resolveExportFonts(
+            typeof document === "undefined" ? null : document.documentElement,
+          );
+          void downloadPrintChartExport(plan, { fonts }).then((ok) => {
+            setState(ok ? "idle" : "failed");
+          });
+        }}
+        className={`mono rounded-[4px] border border-border-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed ${
+          unavailable ? "cursor-not-allowed opacity-[0.65]" : "hover:text-text-secondary"
+        }`}
+      >
+        {state === "working" ? "Saving…" : "Download chart"}
+      </button>
+    </div>
   );
 }
 
