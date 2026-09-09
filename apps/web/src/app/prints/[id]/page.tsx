@@ -18,6 +18,7 @@ import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
 import { PrintAnalyticsSection } from "@/components/ui/PrintAnalyticsSection";
+import { PrintWindowPerformance } from "@/components/ui/PrintWindowPerformance";
 import {
   PrintPriceSeriesRows,
   type PriceHistoryStatus,
@@ -355,6 +356,14 @@ export default function PrintDetailPage() {
                   pressed={pressedAnalytics}
                   loading={!analyticsReady}
                   onWindowChange={setAnalyticsWindow}
+                />
+                {/* Between the chart and the live section, and subordinate to
+                    both: it describes the SELECTED HISTORICAL WINDOW, which is
+                    the chart's subject, while Live market below describes what
+                    the sources say right now. */}
+                <PrintWindowPerformance
+                  analytics={analyticsForPrint}
+                  loading={!analyticsReady}
                 />
                 <LiveMarket
                   print={print}

@@ -113,6 +113,9 @@ function analytics(over: Partial<PrintAnalytics> = {}): PrintAnalytics {
       { token: "all", available: true, covered_days: 33, required_days: null },
     ],
     headline: headline(),
+    // The export reads `series`, never `series_stats` - an empty list here is
+    // the honest fixture for that.
+    series_stats: [],
     series: [
       series("market_index", null, [
         { points: [point("2026-09-06", 23000), point("2026-09-07", 23500)] },

@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/api";
 import { windowLabel } from "@/lib/cardPirateIndex";
+import { formatJpy } from "@/lib/format";
 import type { PrintSeries } from "@/lib/printSeries";
 
 /** GET /prints/{id}/analytics - one exact print's HISTORICAL analytics.
@@ -83,6 +84,46 @@ export interface PrintAnalyticsHeadline {
   coverage_status: string | null;
 }
 
+/** One drawn series, summarised by the SERVER - see PrintSeriesStatsOut.
+ *
+ * THE WHOLE POINT IS THAT THE BROWSER COMPUTES NONE OF THIS. Every figure
+ * below is an archived observation the server selected and, where a change is
+ * published, arithmetic the server performed. A client that recomputed any of
+ * it from the chart's points would disagree with the server the moment a point
+ * was disqualified, a day carried a null, or the window's ends sat either side
+ * of a methodology boundary - which is exactly when a reader most needs the
+ * number to be right.
+ *
+ * ONE ROW PER SERIES THE CHART ACTUALLY DRAWS, and none at all for a platform
+ * with nothing to show. `series_key` matches the `key` of the entry in
+ * `series[]` it describes, so the two are joined without guessing - which is
+ * how this row gets its display name without a second naming rule.
+ *
+ * `observed_days` IS DISTINCT DRAWABLE DAYS. Not observations, samples,
+ * trades, sales or volume: Atlas records no transaction anywhere, so there is
+ * no such figure to render and no wording here may imply one.
+ */
+export interface PrintSeriesStats {
+  series_key: string;
+  kind: "market_index" | "source";
+  source: string | null;
+  starting_value_jpy: number;
+  starting_as_of: string;
+  current_value_jpy: number;
+  current_as_of: string;
+  low_value_jpy: number;
+  low_as_of: string;
+  high_value_jpy: number;
+  high_as_of: string;
+  observed_days: number;
+  /** The SAME shape as the headline's change - one renderer, one set of
+   * rules. Null where the server declined to subtract. */
+  change: PrintAnalyticsChange | null;
+  /** Why there is no change, in the server's break vocabulary. Rendered
+   * through `changeUnavailableCopy`; the raw token is never shown. */
+  change_unavailable_reason: string | null;
+}
+
 export interface PrintAnalytics {
   card_print_id: number;
   /** Always echoes the token that was asked for. An unavailable window is
@@ -101,6 +142,9 @@ export interface PrintAnalytics {
   headline: PrintAnalyticsHeadline;
   /** The `/prints/{id}/series` shape, unchanged. */
   series: PrintSeries[];
+  /** Server-derived summaries of the series above, one per DRAWN series, in
+   * the server's own order. Absent platforms simply have no row. */
+  series_stats: PrintSeriesStats[];
 }
 
 /** Fetch one print's analytics.
@@ -157,10 +201,18 @@ export function windowShortfall(row: PrintAnalyticsWindowRow): string | null {
  * WHY EVERY REASON GETS ITS OWN WORDING. These are not interchangeable
  * apologies. Two of them say Atlas changed how it measures and therefore
  * refuses to subtract across the boundary; one says the sources behind the
- * number changed; the rest say the window simply has nothing, or only one
- * thing, to compare. Collapsing them into "change unavailable" would throw
- * away the only explanation the reader has for why a chart with a visible
- * slope reports no movement.
+ * number changed; two say a SOURCE changed what it was quoting; the rest say
+ * the window simply has nothing, or only one thing, to compare. Collapsing
+ * them into "change unavailable" would throw away the only explanation the
+ * reader has for why a chart with a visible slope reports no movement.
+ *
+ * WHO CHANGED WHAT IS THE DISTINCTION THAT MATTERS. The first three say ATLAS
+ * changed - its own calculation, its own reading of source prices, its own set
+ * of contributors - and they speak for the Market Index. The two series-break
+ * reasons say THE SOURCE changed what it was quoting, and are the only refusals
+ * a per-source row can carry. Wording them as Atlas changing something would
+ * blame the wrong party for the boundary; wording them as a price change would
+ * be worse.
  *
  * An unrecognised reason returns null rather than a guess: the server may name
  * a refusal this build has never heard of, and inventing prose for it would be
@@ -173,6 +225,16 @@ export function changeUnavailableCopy(reason: string | null): string | null {
       return "Atlas changed how source prices are read inside this window, so its two ends are not comparable.";
     case "contributor_set_changed":
       return "Different sources built the Market Index at each end of this window, so the two are not comparable.";
+    // The two SERIES break reasons, which reach here on a per-source row.
+    // `reference_type_change` is the named case - Atlas knows the instrument on
+    // both sides of the boundary - and `instrument_change` is the unlabelled
+    // one, where the source changed instrument and Atlas has a name for
+    // neither. Both are a real boundary and neither is a price movement, so
+    // they read alike and differ only in how specific the server could be.
+    case "reference_type_change":
+      return "This source changed the type of price reference inside this window, so its two ends are not comparable.";
+    case "instrument_change":
+      return "This source changed the price instrument inside this window, so its two ends are not comparable.";
     case "no_archived_value_in_window":
       return "Atlas has no archived Market Index value in this window.";
     case "single_point_window":
@@ -186,6 +248,31 @@ export function changeUnavailableCopy(reason: string | null): string | null {
     default:
       return null;
   }
+}
+
+/** The server's own absolute change, signed for display.
+ *
+ * ONE FORMATTER, THREE SURFACES. The archived headline, the per-series window
+ * performance rows and the PNG export all print the same server field, and
+ * three inline copies of "put a sign in front of the magnitude" is three
+ * chances for one of them to render a fall as a rise. The sign comes from the
+ * server's value; only its presentation happens here.
+ *
+ * A minus sign, not a hyphen: this is a number being read, not a token.
+ */
+export function formatSignedJpy(value: number): string {
+  const sign = value > 0 ? "+" : value < 0 ? "\u2212" : "";
+  return `${sign}${formatJpy(Math.abs(value))}`;
+}
+
+/** The server's own percentage, signed and fixed to two places.
+ *
+ * A genuine 0 is formatted as `0.00%` and carries NO sign, because it is a
+ * measurement - the series is where it started - and is a different statement
+ * from "no comparable change", which has no percentage at all. */
+export function formatSignedPct(value: number): string {
+  const sign = value > 0 ? "+" : value < 0 ? "\u2212" : "";
+  return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
 
 /** `coverage_status` as a short qualifier, or null where it adds nothing.

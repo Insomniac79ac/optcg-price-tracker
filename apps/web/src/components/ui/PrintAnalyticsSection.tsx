@@ -14,6 +14,8 @@ import {
 import {
   changeUnavailableCopy,
   coverageQualifier,
+  formatSignedJpy,
+  formatSignedPct,
   windowLabel,
   windowShortfall,
   type PrintAnalytics,
@@ -360,25 +362,16 @@ function ChangeLine({ headline }: { headline: PrintAnalyticsHeadline }) {
 }
 
 function PublishedChange({ change }: { change: PrintAnalyticsChange }) {
-  const rising = change.absolute_jpy > 0;
-  const flat = change.absolute_jpy === 0;
-  const sign = rising ? "+" : flat ? "" : "−";
-  const absolute = formatJpy(Math.abs(change.absolute_jpy));
-  const pct = Math.abs(change.pct).toFixed(2);
+  const absolute = formatSignedJpy(change.absolute_jpy);
+  const pct = formatSignedPct(change.pct);
 
   return (
     <p
       className="mono tabular mt-2 text-[13px] leading-snug text-text-primary"
       data-testid="print-analytics-change"
     >
-      <span>
-        {sign}
-        {absolute}
-      </span>
-      <span className="ml-2 text-text-secondary">
-        ({sign}
-        {pct}%)
-      </span>
+      <span>{absolute}</span>
+      <span className="ml-2 text-text-secondary">({pct})</span>
       <span className="mono ml-2 text-[10px] font-normal text-text-faint">
         {formatDate(change.from_date)} → {formatDate(change.to_date)}
       </span>

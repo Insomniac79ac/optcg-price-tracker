@@ -44,6 +44,8 @@ import {
 } from "./printSeries";
 import {
   changeUnavailableCopy,
+  formatSignedJpy,
+  formatSignedPct,
   windowLabel,
   type PrintAnalytics,
 } from "./printAnalytics";
@@ -302,8 +304,8 @@ export function buildPrintChartExport(
     start: head.starting_value_jpy === null ? null : formatJpy(head.starting_value_jpy),
     high: head.high_value_jpy === null ? null : formatJpy(head.high_value_jpy),
     low: head.low_value_jpy === null ? null : formatJpy(head.low_value_jpy),
-    absoluteChange: head.change ? signedJpy(head.change.absolute_jpy) : null,
-    pctChange: head.change ? signedPct(head.change.pct) : null,
+    absoluteChange: head.change ? formatSignedJpy(head.change.absolute_jpy) : null,
+    pctChange: head.change ? formatSignedPct(head.change.pct) : null,
     changeUnavailable: head.change
       ? null
       : (changeUnavailableCopy(head.change_unavailable_reason) ??
@@ -330,17 +332,6 @@ export function buildPrintChartExport(
 
 function isoDay(t: number): string {
   return new Date(t).toISOString().slice(0, 10);
-}
-
-/** The server's own absolute change, signed for display. Never computed. */
-function signedJpy(value: number): string {
-  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
-  return `${sign}${formatJpy(Math.abs(value))}`;
-}
-
-function signedPct(value: number): string {
-  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
-  return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
 
 // --- rendering ---------------------------------------------------------------

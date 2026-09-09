@@ -51,6 +51,7 @@ import type {
   PrintAnalytics,
   PrintAnalyticsHeadline,
   PrintAnalyticsWindowRow,
+  PrintSeriesStats,
 } from "@/lib/printAnalytics";
 import type { PrintSeries, PrintSeriesPoint } from "@/lib/printSeries";
 
@@ -131,6 +132,14 @@ function point(day: string, value: number | null): PrintSeriesPoint {
   } as unknown as PrintSeriesPoint;
 }
 
+/** SNKRDUNK quotes a listing floor and Yuyu-Tei a retail asking price. They
+ * are different measurements of a card, and a fixture that gave both the same
+ * `reference_type` would let a component mislabel one of them and still pass. */
+const REFERENCE_TYPE: Record<string, string> = {
+  yuyutei: "retail_sell",
+  snkrdunk: "listing_floor",
+};
+
 function series(key: string, source: string | null, days: string[]): PrintSeries {
   return {
     key,
@@ -141,7 +150,7 @@ function series(key: string, source: string | null, days: string[]): PrintSeries
     unavailable_reason: null,
     segments: [
       {
-        reference_type: source ? "retail_sell" : null,
+        reference_type: source ? (REFERENCE_TYPE[source] ?? "retail_sell") : null,
         evidence_type: source ? "listing" : null,
         index_version: 3,
         source_semantics_version: 2,
@@ -200,6 +209,84 @@ function headline(overrides: Partial<PrintAnalyticsHeadline> = {}): PrintAnalyti
   };
 }
 
+/** `series_stats` shaped on print 1's real ALL-window staging figures.
+ *
+ * The Market Index row deliberately carries a REFUSED change, because that is
+ * what staging actually returns for every print today (the index version
+ * bumped 1->2->3 inside even the shortest window) and it is the state the UI
+ * most easily gets wrong. The two source rows carry published changes, so one
+ * fixture exercises both branches at once.
+ */
+function seriesStats(
+  overrides: Partial<PrintSeriesStats>[] | null = null,
+): PrintSeriesStats[] {
+  if (overrides !== null) {
+    return overrides as PrintSeriesStats[];
+  }
+  return [
+    {
+      series_key: "market_index",
+      kind: "market_index",
+      source: null,
+      starting_value_jpy: 27400,
+      starting_as_of: "2026-08-21",
+      current_value_jpy: 22900,
+      current_as_of: "2026-09-08",
+      low_value_jpy: 22650,
+      low_as_of: "2026-09-01",
+      high_value_jpy: 27400,
+      high_as_of: "2026-08-21",
+      observed_days: 19,
+      change: null,
+      change_unavailable_reason: "index_version_change",
+    },
+    {
+      series_key: "source:snkrdunk",
+      kind: "source",
+      source: "snkrdunk",
+      starting_value_jpy: 24500,
+      starting_as_of: "2026-08-09",
+      current_value_jpy: 21000,
+      current_as_of: "2026-09-09",
+      low_value_jpy: 20500,
+      low_as_of: "2026-09-01",
+      high_value_jpy: 25000,
+      high_as_of: "2026-08-13",
+      observed_days: 31,
+      change: {
+        absolute_jpy: -3500,
+        pct: -14.285714285714286,
+        from_date: "2026-08-09",
+        to_date: "2026-09-09",
+        spans_break: false,
+      },
+      change_unavailable_reason: null,
+    },
+    {
+      series_key: "source:yuyutei",
+      kind: "source",
+      source: "yuyutei",
+      starting_value_jpy: 34800,
+      starting_as_of: "2026-08-08",
+      current_value_jpy: 24800,
+      current_as_of: "2026-09-08",
+      low_value_jpy: 24800,
+      low_as_of: "2026-08-24",
+      high_value_jpy: 34800,
+      high_as_of: "2026-08-08",
+      observed_days: 32,
+      change: {
+        absolute_jpy: -10000,
+        pct: -28.735632183908045,
+        from_date: "2026-08-08",
+        to_date: "2026-09-08",
+        spans_break: false,
+      },
+      change_unavailable_reason: null,
+    },
+  ];
+}
+
 function analytics(overrides: Partial<PrintAnalytics> = {}): PrintAnalytics {
   return {
     card_print_id: 1,
@@ -211,6 +298,7 @@ function analytics(overrides: Partial<PrintAnalytics> = {}): PrintAnalytics {
     generated_at: "2026-09-09T08:00:00Z",
     windows: windows(),
     headline: headline(),
+    series_stats: seriesStats(),
     series: [
       series("market_index", null, ["2026-09-06", "2026-09-07", "2026-09-08"]),
       series("source:yuyutei", "yuyutei", ["2026-09-06", "2026-09-07", "2026-09-08"]),
@@ -745,5 +833,516 @@ describe("archived versus live", () => {
 
     expect(screen.getByTestId("print-analytics-current")).toHaveTextContent("￥22,900");
     expect(within(screen.getByTestId("live-market")).getByText("￥25,500")).toBeInTheDocument();
+  });
+});
+
+// --- window performance ------------------------------------------------------
+
+describe("window performance", () => {
+  function rowFor(key: string): HTMLElement {
+    const section = screen.getByTestId("window-performance");
+    return within(section).getByTestId(`move-${key}`).closest("li") as HTMLElement;
+  }
+
+  it("renders print 1's ALL window from the server's own figures", async () => {
+    await renderPage();
+    const section = screen.getByTestId("window-performance");
+
+    // Market Index: the ends are shown even though the change is refused,
+    // because the observations are real - only the subtraction was declined.
+    const index = rowFor("market_index");
+    expect(index).toHaveTextContent("Market Index");
+    expect(index).toHaveTextContent("￥27,400");
+    expect(index).toHaveTextContent("￥22,900");
+    // TWO WORDS HERE, NOT THE SENTENCE. The full explanation belongs to the
+    // archived headline above; repeating it verbatim a few rows down was
+    // duplication, not reinforcement.
+    const refusal = within(section).getByTestId("move-unavailable-market_index");
+    expect(refusal).toHaveTextContent("Not comparable");
+    expect(refusal.textContent).not.toMatch(/changed how the Market Index is calculated/i);
+    // ...but the server's own words are still REACHABLE, because a source
+    // series' refusal has no counterpart in the headline above it.
+    expect(refusal.getAttribute("title")).toMatch(
+      /changed how the Market Index is calculated/i,
+    );
+    expect(refusal.getAttribute("aria-label")).toMatch(/^Not comparable — /);
+    // The raw token never reaches the screen, the title or the accessible name.
+    expect(section.textContent).not.toMatch(/index_version_change/);
+    expect(refusal.getAttribute("title")).not.toMatch(/index_version_change/);
+    expect(refusal.getAttribute("aria-label")).not.toMatch(/index_version_change/);
+
+    // The long sentence is on the page EXACTLY ONCE - in the headline.
+    const sentence = /Atlas changed how the Market Index is calculated inside this window/g;
+    expect(document.body.textContent!.match(sentence) ?? []).toHaveLength(1);
+    expect(
+      screen.getByTestId("print-analytics-change-unavailable"),
+    ).toHaveTextContent(sentence);
+    expect(index).toHaveTextContent("￥22,650 – ￥27,400");
+    expect(index).toHaveTextContent("19 days");
+
+    const yuyu = rowFor("source:yuyutei");
+    expect(yuyu).toHaveTextContent("Yuyu-Tei");
+    expect(yuyu).toHaveTextContent("Retail price");
+    expect(yuyu).toHaveTextContent("￥34,800");
+    expect(yuyu).toHaveTextContent("￥24,800");
+    expect(yuyu).toHaveTextContent("−￥10,000");
+    expect(yuyu).toHaveTextContent("−28.74%");
+
+    const snkr = rowFor("source:snkrdunk");
+    expect(snkr).toHaveTextContent("SNKRDUNK");
+    expect(snkr).toHaveTextContent("Current listing");
+    expect(snkr).toHaveTextContent("￥24,500");
+    expect(snkr).toHaveTextContent("￥21,000");
+    expect(snkr).toHaveTextContent("−￥3,500");
+    expect(snkr).toHaveTextContent("−14.29%");
+  });
+
+  it("updates from the window's own response, not by slicing", async () => {
+    fetchPrintAnalytics.mockResolvedValueOnce(analytics()).mockResolvedValueOnce(
+      analytics({
+        requested_window: "2w",
+        series_stats: seriesStats([
+          {
+            series_key: "market_index", kind: "market_index", source: null,
+            starting_value_jpy: 24900, starting_as_of: "2026-08-26",
+            current_value_jpy: 22900, current_as_of: "2026-09-08",
+            low_value_jpy: 22650, low_as_of: "2026-09-01",
+            high_value_jpy: 24900, high_as_of: "2026-08-26",
+            observed_days: 14, change: null,
+            change_unavailable_reason: "index_version_change",
+          },
+          {
+            series_key: "source:yuyutei", kind: "source", source: "yuyutei",
+            starting_value_jpy: 24800, starting_as_of: "2026-08-26",
+            current_value_jpy: 24800, current_as_of: "2026-09-08",
+            low_value_jpy: 24800, low_as_of: "2026-08-26",
+            high_value_jpy: 24800, high_as_of: "2026-08-26",
+            observed_days: 14,
+            change: {
+              absolute_jpy: 0, pct: 0, from_date: "2026-08-26",
+              to_date: "2026-09-08", spans_break: false,
+            },
+            change_unavailable_reason: null,
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+    expect(rowFor("market_index")).toHaveTextContent("￥27,400");
+
+    fireEvent.click(screen.getByRole("button", { name: "2W" }));
+
+    await waitFor(() => expect(rowFor("market_index")).toHaveTextContent("￥24,900"));
+    expect(rowFor("market_index")).toHaveTextContent("14 days");
+
+    // A GENUINE FLAT MOVE IS A RESULT, not an absence. It must render as a
+    // published change, materially different from the refused state above it.
+    const yuyu = rowFor("source:yuyutei");
+    expect(yuyu).toHaveTextContent("￥0");
+    expect(yuyu).toHaveTextContent("0.00%");
+    expect(
+      screen.queryByTestId("move-unavailable-source:yuyutei"),
+    ).not.toBeInTheDocument();
+    // A flat move is a MEASUREMENT. It must never be dressed as the refusal,
+    // which says something entirely different.
+    expect(yuyu).not.toHaveTextContent("Not comparable");
+    // ...while the Market Index beside it, in the same window, is refused.
+    expect(rowFor("market_index")).toHaveTextContent("Not comparable");
+  });
+
+  it("explains a SOURCE refusal, which the headline above never speaks for", async () => {
+    // The headline is the Market Index's statement about itself. A SNKRDUNK
+    // instrument change has no counterpart up there, so its "Not comparable"
+    // would be unexplained anywhere on the page if the sentence were simply
+    // dropped rather than moved onto the accessible name.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+            starting_value_jpy: 30000, starting_as_of: "2026-08-09",
+            current_value_jpy: 21000, current_as_of: "2026-09-09",
+            low_value_jpy: 21000, low_as_of: "2026-09-09",
+            high_value_jpy: 30000, high_as_of: "2026-08-09",
+            observed_days: 12, change: null,
+            change_unavailable_reason: "reference_type_change",
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const refusal = screen.getByTestId("move-unavailable-source:snkrdunk");
+    expect(refusal).toHaveTextContent("Not comparable");
+    // THE SERIES BREAK VOCABULARY IS NOW WORDED. `reference_type_change` is the
+    // NAMED case - the source moved between two instruments Atlas can name - and
+    // it gets a sentence that says THE SOURCE changed, not that Atlas did.
+    expect(refusal.getAttribute("title")).toBe(
+      "This source changed the type of price reference inside this window, so its two ends are not comparable.",
+    );
+    expect(refusal.getAttribute("aria-label")).toBe(
+      "Not comparable — This source changed the type of price reference inside this window, so its two ends are not comparable.",
+    );
+    // It must not be worded as ATLAS changing something: that is the Market
+    // Index's refusal, and this one belongs to the source.
+    expect(refusal.getAttribute("title")).not.toMatch(/^Atlas changed/);
+    expect(refusal.getAttribute("title")).not.toMatch(/reference_type_change/);
+    expect(refusal.getAttribute("aria-label")).not.toMatch(/reference_type_change/);
+    // ...and the raw token never reaches the screen either.
+    expect(
+      screen.getByTestId("window-performance").textContent,
+    ).not.toMatch(/reference_type_change/);
+    // The ends still show - the observations are real, only the subtraction
+    // was declined.
+    expect(rowFor("source:snkrdunk")).toHaveTextContent("￥30,000");
+    expect(rowFor("source:snkrdunk")).toHaveTextContent("￥21,000");
+  });
+
+  it("words the UNLABELLED instrument change as its own case", async () => {
+    // `instrument_change` is the boundary Atlas can see but cannot name: an
+    // unconfigured source's two price_types both describe as reference_type
+    // null, so the server reports the change without either side's label. It
+    // still gets its own sentence rather than the named one's - claiming a
+    // "type of price reference" changed would assert a distinction the server
+    // explicitly said it could not draw.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+            starting_value_jpy: 30000, starting_as_of: "2026-08-09",
+            current_value_jpy: 21000, current_as_of: "2026-09-09",
+            low_value_jpy: 21000, low_as_of: "2026-09-09",
+            high_value_jpy: 30000, high_as_of: "2026-08-09",
+            observed_days: 12, change: null,
+            change_unavailable_reason: "instrument_change",
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const refusal = screen.getByTestId("move-unavailable-source:snkrdunk");
+    expect(refusal.getAttribute("title")).toBe(
+      "This source changed the price instrument inside this window, so its two ends are not comparable.",
+    );
+    expect(refusal.getAttribute("aria-label")).toBe(
+      "Not comparable — This source changed the price instrument inside this window, so its two ends are not comparable.",
+    );
+    expect(refusal.getAttribute("title")).not.toMatch(/instrument_change/);
+    expect(refusal.getAttribute("aria-label")).not.toMatch(/instrument_change/);
+  });
+
+  it("says only `Not comparable` on screen, whichever reason it is", async () => {
+    // THE EXPLANATION LIVES IN THE TITLE AND THE ACCESSIBLE NAME, AND NOWHERE
+    // ELSE. Wiring copy for the two source reasons must not have put the
+    // sentence back into the body as a second block of prose - that repetition
+    // is exactly what this section removed.
+    for (const reason of ["reference_type_change", "instrument_change"]) {
+      fetchPrintAnalytics.mockResolvedValue(
+        analytics({
+          series_stats: seriesStats([
+            {
+              series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+              starting_value_jpy: 30000, starting_as_of: "2026-08-09",
+              current_value_jpy: 21000, current_as_of: "2026-09-09",
+              low_value_jpy: 21000, low_as_of: "2026-09-09",
+              high_value_jpy: 30000, high_as_of: "2026-08-09",
+              observed_days: 12, change: null,
+              change_unavailable_reason: reason,
+            },
+          ]),
+        }),
+      );
+      const view = render(<PrintDetailPage />);
+      await screen.findByTestId("window-performance");
+
+      const refusal = screen.getByTestId("move-unavailable-source:snkrdunk");
+      // The visible text of the refusal element is the two words, exactly.
+      expect(refusal.textContent).toBe("Not comparable");
+      // And the sentence appears NOWHERE in the section's rendered text.
+      const section = screen.getByTestId("window-performance");
+      expect(section.textContent).not.toMatch(/not comparable\./i);
+      expect(section.textContent).not.toMatch(/inside this window/i);
+      view.unmount();
+    }
+  });
+
+  it("falls back safely for a reason this build has never heard of", async () => {
+    // A refusal token from a newer backend. Inventing prose for it would be
+    // asserting a meaning we do not know, so the row keeps the neutral line -
+    // and, above all, never prints the token.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+            starting_value_jpy: 30000, starting_as_of: "2026-08-09",
+            current_value_jpy: 21000, current_as_of: "2026-09-09",
+            low_value_jpy: 21000, low_as_of: "2026-09-09",
+            high_value_jpy: 30000, high_as_of: "2026-08-09",
+            observed_days: 12, change: null,
+            change_unavailable_reason: "some_future_boundary_v9",
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const refusal = screen.getByTestId("move-unavailable-source:snkrdunk");
+    expect(refusal.textContent).toBe("Not comparable");
+    expect(refusal.getAttribute("title")).toBe(
+      "No comparable change to report for this window.",
+    );
+    expect(refusal.getAttribute("title")).not.toMatch(/some_future_boundary_v9/);
+    expect(
+      screen.getByTestId("window-performance").textContent,
+    ).not.toMatch(/some_future_boundary_v9/);
+    // The ends are still published - the observations were never in doubt.
+    expect(rowFor("source:snkrdunk")).toHaveTextContent("￥30,000");
+    expect(rowFor("source:snkrdunk")).toHaveTextContent("￥21,000");
+  });
+
+  it("keeps the Market Index headline refusal to a single appearance", async () => {
+    // The headline is the ONE place the Market Index's own sentence is spelt
+    // out. Now that source rows carry sentences of their own, the risk is a
+    // second copy of the index's sentence appearing in the row beside it.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "market_index", kind: "market_index", source: null,
+            starting_value_jpy: 27400, starting_as_of: "2026-08-21",
+            current_value_jpy: 22900, current_as_of: "2026-09-08",
+            low_value_jpy: 22650, low_as_of: "2026-09-01",
+            high_value_jpy: 27400, high_as_of: "2026-08-21",
+            observed_days: 19, change: null,
+            change_unavailable_reason: "index_version_change",
+          },
+          {
+            series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+            starting_value_jpy: 30000, starting_as_of: "2026-08-09",
+            current_value_jpy: 21000, current_as_of: "2026-09-09",
+            low_value_jpy: 21000, low_as_of: "2026-09-09",
+            high_value_jpy: 30000, high_as_of: "2026-08-09",
+            observed_days: 12, change: null,
+            change_unavailable_reason: "instrument_change",
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const sentence = /Atlas changed how the Market Index is calculated inside this window/g;
+    expect(document.body.textContent!.match(sentence) ?? []).toHaveLength(1);
+    expect(
+      screen.getByTestId("print-analytics-change-unavailable"),
+    ).toHaveTextContent(sentence);
+    // The source row's own sentence is reachable but never a second paragraph.
+    expect(
+      screen.getByTestId("move-unavailable-source:snkrdunk").getAttribute("title"),
+    ).toMatch(/^This source changed the price instrument/);
+    expect(document.body.textContent).not.toMatch(/This source changed the price instrument/);
+  });
+
+  it("still publishes a genuine zero as a measurement, not a refusal", async () => {
+    // The refusal copy and the flat-move branch sit either side of one `if`.
+    // A zero must stay on the published side of it: ¥0 (0.00%), no sign, and
+    // no "Not comparable" anywhere near it.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "source:yuyutei", kind: "source", source: "yuyutei",
+            starting_value_jpy: 24800, starting_as_of: "2026-08-26",
+            current_value_jpy: 24800, current_as_of: "2026-09-08",
+            low_value_jpy: 24800, low_as_of: "2026-08-26",
+            high_value_jpy: 24800, high_as_of: "2026-09-08",
+            observed_days: 14,
+            change: {
+              absolute_jpy: 0,
+              pct: 0,
+              from_date: "2026-08-26",
+              to_date: "2026-09-08",
+              spans_break: false,
+            },
+            change_unavailable_reason: null,
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const yuyu = rowFor("source:yuyutei");
+    expect(yuyu).toHaveTextContent("￥0");
+    expect(yuyu).toHaveTextContent("0.00%");
+    // No sign on either half: a flat move is neither a rise nor a fall.
+    expect(yuyu.textContent).not.toMatch(/[+−]￥0/);
+    expect(yuyu.textContent).not.toMatch(/[+−]0\.00%/);
+    expect(yuyu).not.toHaveTextContent("Not comparable");
+    expect(
+      screen.queryByTestId("move-unavailable-source:yuyutei"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("omits a platform with no stats row rather than inventing one", async () => {
+    // Print 5686's shape: Market Index + SNKRDUNK only.
+    fetchPrintAnalytics.mockResolvedValue(
+      analytics({
+        series_stats: seriesStats([
+          {
+            series_key: "market_index", kind: "market_index", source: null,
+            starting_value_jpy: 14000, starting_as_of: "2026-08-31",
+            current_value_jpy: 13000, current_as_of: "2026-09-08",
+            low_value_jpy: 10000, low_as_of: "2026-09-07",
+            high_value_jpy: 17000, high_as_of: "2026-09-04",
+            observed_days: 9, change: null,
+            change_unavailable_reason: "index_version_change",
+          },
+          {
+            series_key: "source:snkrdunk", kind: "source", source: "snkrdunk",
+            starting_value_jpy: 14000, starting_as_of: "2026-08-31",
+            current_value_jpy: 13000, current_as_of: "2026-09-09",
+            low_value_jpy: 10000, low_as_of: "2026-09-07",
+            high_value_jpy: 17000, high_as_of: "2026-09-04",
+            observed_days: 10,
+            change: {
+              absolute_jpy: -1000, pct: -7.142857142857143,
+              from_date: "2026-08-31", to_date: "2026-09-09", spans_break: false,
+            },
+            change_unavailable_reason: null,
+          },
+        ]),
+      }),
+    );
+    await renderPage();
+
+    const section = screen.getByTestId("window-performance");
+    expect(section).toHaveTextContent("Market Index");
+    expect(section).toHaveTextContent("SNKRDUNK");
+    // No row, no "N/A", no zeros, no placeholder.
+    expect(section.textContent).not.toMatch(/Yuyu-Tei/);
+    expect(section.textContent).not.toMatch(/N\/A|—\s*—/);
+    expect(within(section).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("disappears without breaking the page when there are no stats", async () => {
+    fetchPrintAnalytics.mockResolvedValue(analytics({ series_stats: [] }));
+    await renderPage();
+
+    expect(screen.queryByTestId("window-performance")).not.toBeInTheDocument();
+    // The chart and the headline above it are untouched.
+    expect(screen.getByTestId("price-history-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("print-analytics-current")).toHaveTextContent("￥22,900");
+    expect(screen.getByTestId("live-market")).toBeInTheDocument();
+  });
+
+  it("costs no request of its own", async () => {
+    await renderPage();
+
+    // The section renders from the response the band above already holds.
+    expect(screen.getByTestId("window-performance")).toBeInTheDocument();
+    expect(fetchPrintAnalytics).toHaveBeenCalledTimes(1);
+    expect(fetchPrintPrices).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "1M" }));
+    await waitFor(() => expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2));
+    // Exactly one for the window change, and still only the one /prices call
+    // made at page load - these statistics never reach for it.
+    expect(fetchPrintPrices).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /^3M/ }));
+    expect(fetchPrintAnalytics).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the server's order and re-sorts nothing", async () => {
+    await renderPage();
+
+    const keys = within(screen.getByTestId("window-performance"))
+      .getAllByRole("listitem")
+      .map((li) => li.querySelector("[data-testid^='move-']")?.getAttribute("data-testid"));
+    // Exactly the order `series_stats` arrived in - not alphabetical, not by
+    // size of move, not index-first-by-rule.
+    expect(keys).toEqual([
+      "move-market_index",
+      "move-source:snkrdunk",
+      "move-source:yuyutei",
+    ]);
+  });
+
+  it("recomputes nothing: a server figure that disagrees with the points wins", async () => {
+    // The plotted points top out at ￥20,200 and span 3 days. If this section
+    // derived its own high or day count from them it would print those.
+    await renderPage();
+
+    const index = rowFor("market_index");
+    expect(index).toHaveTextContent("￥27,400");
+    expect(index).toHaveTextContent("19 days");
+    expect(index).not.toHaveTextContent("￥20,200");
+    expect(index).not.toHaveTextContent("3 days");
+  });
+
+  it("carries no sale, transaction, average or volume wording", async () => {
+    await renderPage();
+
+    const section = screen.getByTestId("window-performance");
+    expect(section.textContent).not.toMatch(
+      /sale|sold|transaction|traded|average|mean|volume|sample|market price/i,
+    );
+    // ...and each platform keeps its own instrument.
+    expect(section).toHaveTextContent("Retail price");
+    expect(section).toHaveTextContent("Current listing");
+  });
+
+  it("holds its room while analytics is still in flight", async () => {
+    // The print and its analytics are two independent requests, and the page
+    // becomes `ready` on the print alone. Without a reserved skeleton the
+    // sections BELOW this one sit high and then jump down a whole section when
+    // the analytics land.
+    let release!: (value: PrintAnalytics) => void;
+    fetchPrintAnalytics.mockReturnValueOnce(
+      new Promise<PrintAnalytics>((resolve) => {
+        release = resolve;
+      }),
+    );
+    render(<PrintDetailPage />);
+    await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
+
+    const skeleton = await screen.findByTestId("window-performance-skeleton");
+    expect(skeleton).toBeInTheDocument();
+    // Mute: it claims something is coming, and nothing about what.
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    expect(skeleton.textContent).not.toMatch(/￥|%|days/);
+
+    release(analytics());
+
+    await waitFor(() => expect(screen.getByTestId("window-performance")).toBeInTheDocument());
+    expect(screen.queryByTestId("window-performance-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("stamps the archived end value with its own day", async () => {
+    // A short scroll below, Live market shows ￥21,000 for SNKRDUNK under the
+    // identical instrument label. These are different facts - the archive's
+    // last day in this window, and the price resolved at request time - and
+    // the row has to say which it is.
+    await renderPage();
+
+    expect(rowFor("source:snkrdunk")).toHaveTextContent("Sep 9, 2026");
+    expect(rowFor("market_index")).toHaveTextContent("Sep 8, 2026");
+  });
+
+  it("sits between the chart and the live market section", async () => {
+    await renderPage();
+
+    const order = [...document.querySelectorAll("h1, h2")];
+    const index = order.indexOf(screen.getByRole("heading", { name: "Market Index" }));
+    const perf = order.indexOf(screen.getByRole("heading", { name: "Window performance" }));
+    const live = order.indexOf(screen.getByRole("heading", { name: "Live market" }));
+    expect(index).toBeLessThan(perf);
+    expect(perf).toBeLessThan(live);
+    // Two separate sections - archived window vs current resolver state.
+    expect(screen.getByTestId("window-performance")).not.toContainElement(
+      screen.getByTestId("live-market"),
+    );
   });
 });
