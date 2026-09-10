@@ -15,6 +15,14 @@ approved Yuyu-Tei mapping from the database and processes them one at a
 time, sequentially, stopping the whole batch immediately on a source-wide
 denial signal (403/429/CAPTCHA/challenge) - see that module's docstring for
 the full batch-safety contract.
+
+    python -m yuyutei_collector.collect --approved-mappings \
+        --shard-index 0 --shard-count 9
+
+selects only the eligible mappings where `id % 9 == 0`, so nine such runs
+sweep the population exactly once between them. Sharding narrows WHICH
+eligible mappings a run takes; it changes nothing about pacing, retries,
+denial handling or what gets written.
 """
 
 import argparse
@@ -572,10 +580,30 @@ def main() -> None:
             "Ids outside the eligible set are silently excluded, never force-included."
         ),
     )
+    parser.add_argument(
+        "--shard-index",
+        type=int,
+        default=None,
+        help=(
+            "--approved-mappings only: zero-based shard K of --shard-count N. "
+            "Selects the eligible mappings where id %% N == K."
+        ),
+    )
+    parser.add_argument(
+        "--shard-count",
+        type=int,
+        default=None,
+        help=(
+            "--approved-mappings only: total number of shards N (>= 2). N is a fixed "
+            "deployment constant - changing it re-assigns every mapping to a different "
+            "shard, so a sweep spanning a change of N would double-collect some "
+            "mappings and miss others."
+        ),
+    )
     args = parser.parse_args()
 
     if args.approved_mappings:
-        from yuyutei_collector.batch import run_batch  # local import avoids a top-level cycle
+        from yuyutei_collector.batch import run_batch, validate_shard  # local import avoids a top-level cycle
 
         mapping_ids = None
         if args.mapping_ids:
@@ -584,8 +612,37 @@ def main() -> None:
             except ValueError:
                 parser.error("--mapping-ids must be a comma-separated list of integers")
 
-        result = run_batch(limit=args.limit, mapping_ids=mapping_ids, validate_only=args.validate_only)
+        # Refused rather than intersected. Both narrow the eligible set, so
+        # combining them would silently collect the intersection - a set the
+        # operator named neither of, and one that makes the shard's membership
+        # depend on an id list instead of on `id % N`. The partition invariant
+        # (every eligible mapping in exactly one shard) would no longer hold.
+        if (args.shard_index is not None or args.shard_count is not None) and mapping_ids is not None:
+            parser.error(
+                "--mapping-ids cannot be combined with --shard-index/--shard-count: "
+                "both narrow the eligible set, so the shard's membership would be ambiguous."
+            )
+
+        # Same rule the selector enforces, surfaced here as a clean CLI error
+        # instead of a traceback.
+        try:
+            validate_shard(args.shard_index, args.shard_count)
+        except ValueError as exc:
+            parser.error(str(exc))
+
+        result = run_batch(
+            limit=args.limit,
+            mapping_ids=mapping_ids,
+            validate_only=args.validate_only,
+            shard_index=args.shard_index,
+            shard_count=args.shard_count,
+        )
         sys.exit(result.exit_code)
+
+    # Never silently ignored: a shard request on the single-mapping path means
+    # the operator expected a subset selection that this path does not have.
+    if args.shard_index is not None or args.shard_count is not None:
+        parser.error("--shard-index/--shard-count apply to --approved-mappings only.")
 
     sys.exit(run_one_mapping(args.mapping_id, validate_only=args.validate_only))
 

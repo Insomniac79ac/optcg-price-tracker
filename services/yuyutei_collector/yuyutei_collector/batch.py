@@ -45,10 +45,19 @@ writing a freshly-approved group of mappings without also touching every
 other already-collected mapping), never a hardcoded id list in this module.
 `--validate-only` runs the identical navigation/extraction/lineage checks
 without writing anything, same as the single-mapping CLI.
+
+`--shard-index K --shard-count N` narrows the eligible set to `id % N == K`,
+so N scheduled runs between them sweep the whole population exactly once with
+no mapping collected twice - see select_eligible_mappings for why the key is
+modulo-on-id rather than a range or an offset, and why N is a fixed constant.
+Sharding changes WHICH eligible mappings a run takes and nothing else: the
+ordering, pacing, retry posture, denial handling, watchdog and writer are all
+untouched, and an unsharded run behaves exactly as it did before.
 """
 
 from __future__ import annotations
 
+import hashlib
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -67,8 +76,37 @@ from yuyutei_collector.models import CardPrint, Source, SourceCardMapping
 YUYUTEI_SOURCE_NAME = "yuyutei"
 
 
+def validate_shard(shard_index: int | None, shard_count: int | None) -> bool:
+    """Check a shard request and say whether one was made at all.
+
+    Returns True when a shard was requested and is valid, False when neither
+    argument was given. Raises ValueError otherwise - never silently falls
+    back to the whole population, because a typo that quietly collected
+    everything is exactly the failure a shard exists to prevent.
+
+    Lives here rather than in the CLI so the rule cannot be bypassed by any
+    other caller of select_eligible_mappings; collect.main() catches the same
+    ValueError to render it as a clean argparse error.
+    """
+    if shard_index is None and shard_count is None:
+        return False
+    if (shard_index is None) != (shard_count is None):
+        raise ValueError("--shard-index and --shard-count must be given together.")
+    if shard_count < 2:
+        raise ValueError(f"--shard-count must be >= 2 (got {shard_count}).")
+    if not 0 <= shard_index < shard_count:
+        raise ValueError(
+            f"--shard-index must satisfy 0 <= K < N (got K={shard_index}, N={shard_count})."
+        )
+    return True
+
+
 def select_eligible_mappings(
-    session: Session, limit: int | None = None, mapping_ids: list[int] | None = None
+    session: Session,
+    limit: int | None = None,
+    mapping_ids: list[int] | None = None,
+    shard_index: int | None = None,
+    shard_count: int | None = None,
 ) -> list[SourceCardMapping]:
     """Every approved, active, verified-print Yuyu-Tei mapping - discovered
     from current database state, never a hardcoded id list. Deterministic
@@ -80,7 +118,36 @@ def select_eligible_mappings(
     silently excluded, not force-included). Meant for one-off operational
     batches (e.g. a filtered manual run right after approving a batch of new
     mappings) - a runtime argument the caller supplies, never a hardcoded id
-    list in this function itself."""
+    list in this function itself.
+
+    `shard_index`/`shard_count` (K of N) narrow the SAME eligible population
+    to `id % N == K`. It is a filter over what the query above already
+    allowed, applied as one extra WHERE clause, so a sharded run can never
+    reach a mapping an unsharded run would have refused.
+
+    WHY MODULO ON id, AND NOT A RANGE OR AN OFFSET. A shard must be
+    deterministic and must not silently change membership as the population
+    grows. `id % N` gives both: a mapping's residue is a property of its own
+    id, so an existing mapping can NEVER move between shards when new ones
+    are approved - new ids simply distribute across the N residues. An id
+    RANGE would need re-cutting every time the population grew, and an OFFSET
+    into an ordered list would re-shuffle every existing member the moment a
+    row was inserted or became ineligible.
+
+    N IS THEREFORE A FIXED DEPLOYMENT CONSTANT, not a tuning knob. Changing N
+    re-assigns every mapping to a different shard, so a sweep that spans a
+    change of N would collect some mappings twice and others not at all - see
+    the partition invariant in tests/test_batch_sharding.py.
+
+    ORDERING AND `limit` ARE DELIBERATELY UNCHANGED. The result stays ordered
+    by mapping id ascending, and `limit` remains a PREFIX cap applied last -
+    so with a shard it caps that shard's own id-ascending prefix, not the
+    global population. `limit` is a debugging/one-off cap and using it with a
+    shard means the shard is not fully swept; it is not a second sharding
+    mechanism.
+    """
+    sharded = validate_shard(shard_index, shard_count)
+
     stmt = (
         select(SourceCardMapping)
         .join(Source, Source.id == SourceCardMapping.source_id)
@@ -97,6 +164,8 @@ def select_eligible_mappings(
     )
     if mapping_ids is not None:
         stmt = stmt.where(SourceCardMapping.id.in_(mapping_ids))
+    if sharded:
+        stmt = stmt.where(SourceCardMapping.id % shard_count == shard_index)
     mappings = list(session.scalars(stmt).all())
     if limit is not None:
         mappings = mappings[:limit]
@@ -175,10 +244,25 @@ def _attempt_telemetry(outcome) -> dict:
     }
 
 
+def _membership_digest(mapping_ids: list[int]) -> str:
+    """A short, stable fingerprint of exactly which mappings a run selected.
+
+    Order-sensitive on purpose: the selection order IS part of the contract
+    (id ascending), so a digest that ignored it could not tell a re-ordered
+    sweep from an identical one. Two runs of the same shard against unchanged
+    state print the same digest, which is what makes the partition invariant
+    checkable from the logs alone - no database access required.
+    """
+    joined = ",".join(str(mid) for mid in mapping_ids)
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
+
+
 def run_batch(
     limit: int | None = None,
     mapping_ids: list[int] | None = None,
     validate_only: bool = False,
+    shard_index: int | None = None,
+    shard_count: int | None = None,
     session_factory=SessionLocal,
     mapping_runner=run_one_mapping_detailed,
     mapping_selector=select_eligible_mappings,
@@ -196,6 +280,10 @@ def run_batch(
     # collection produced nothing.
     record_telemetry = not validate_only
 
+    # Raised here, before a batch_run_id or any telemetry exists, so an
+    # invalid shard request can never look like a run that selected nothing.
+    sharded = validate_shard(shard_index, shard_count)
+
     batch_run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
     log_event("batch_start", batch_run_id=batch_run_id, started_at=started_at.isoformat())
@@ -207,7 +295,15 @@ def run_batch(
     consecutive_browser_failures = 0
 
     try:
-        eligible = mapping_selector(session, limit=limit, mapping_ids=mapping_ids)
+        # The shard kwargs are passed ONLY when a shard was actually
+        # requested, so an unsharded run makes byte-for-byte the same call it
+        # always made - including to a caller-supplied test selector that
+        # knows nothing about sharding.
+        selector_kwargs = {"limit": limit, "mapping_ids": mapping_ids}
+        if sharded:
+            selector_kwargs["shard_index"] = shard_index
+            selector_kwargs["shard_count"] = shard_count
+        eligible = mapping_selector(session, **selector_kwargs)
         # Dedupe defensively, preserving order - a single mapping id must
         # never be handed to mapping_runner twice within one batch_run_id,
         # regardless of what the selector returns.
@@ -225,6 +321,29 @@ def run_batch(
             batch_run_id=batch_run_id,
             mapping_ids=selected_ids,
             count=len(selected_ids),
+        )
+
+        # One line an operator can read to know WHICH slice of the catalogue
+        # this run is responsible for, without reading 294 per-mapping lines.
+        # `eligible_total` is re-derived from the same selector with the shard
+        # filter removed, so it is the real denominator this shard was cut
+        # from rather than a number carried in from configuration. Only
+        # computed for a sharded run: unsharded, the total IS the selection.
+        eligible_total = len(selected_ids)
+        if sharded:
+            eligible_total = len(mapping_selector(session, limit=limit, mapping_ids=mapping_ids))
+        log_event(
+            "batch_shard_scope",
+            batch_run_id=batch_run_id,
+            sharded=sharded,
+            shard_index=shard_index,
+            shard_count=shard_count,
+            eligible_total=eligible_total,
+            selected_count=len(selected_ids),
+            first_mapping_id=selected_ids[0] if selected_ids else None,
+            last_mapping_id=selected_ids[-1] if selected_ids else None,
+            membership_digest=_membership_digest(selected_ids),
+            limit=limit,
         )
 
         # Durable population, written before any navigation, so a process that
