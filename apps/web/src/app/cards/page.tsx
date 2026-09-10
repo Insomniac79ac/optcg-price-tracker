@@ -85,8 +85,22 @@ function PrintsCataloguePageFallback() {
         {/* Same intro as the real page so the Suspense fallback doesn't
             reflow the whole top of the catalogue once the URL is readable -
             with no count and no card fan, because there is no response to
-            draw either from yet. */}
-        <CatalogueIntro query="" onSearch={() => {}} totalPrints={null} filtered={false} />
+            draw either from yet.
+
+            `heroPending` is what makes that promise true on a phone. This
+            fallback IS the prerendered HTML for /cards (the page reads
+            useSearchParams, so the real component is client-only), so it is
+            what a visitor actually sees first. Without it the hero paints
+            fan-less at 312px and then jumps to 498px the moment the
+            catalogue lands - measured, +186px - taking the toolbar, the
+            legend and the whole grid with it. */}
+        <CatalogueIntro
+          query=""
+          onSearch={() => {}}
+          totalPrints={null}
+          filtered={false}
+          heroPending
+        />
         <div className="mt-4">
           <CardGridSkeleton />
         </div>
@@ -207,6 +221,10 @@ function PrintsCataloguePageInner() {
           // fan picks three of these for today and keeps them while the
           // visitor searches, filters and sorts.
           heroPrints={heroPool ?? []}
+          // Only the FIRST load: once a pool is latched the fan is already
+          // drawn and later filter navigations re-enter "loading" without ever
+          // removing it, so there is nothing to reserve.
+          heroPending={status === "loading" && heroPool === null}
         />
 
         {/* Straight from the intro into the real controls. The compass

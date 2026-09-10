@@ -8,8 +8,12 @@ import { selectHeroFanPrints, utcDayKey } from "@/lib/heroFan";
 import type { PrintUiModel } from "@/lib/prints";
 import { CardImageFrame } from "./CardImageFrame";
 
-/** Below this width the intro drops the card fan and shortens the search
- * placeholder. Matches Tailwind's `sm` breakpoint. */
+/** Below this width the intro shortens the search placeholder. Matches
+ * Tailwind's `sm` breakpoint.
+ *
+ * It no longer gates the card fan: the fan is drawn at every width and
+ * changes shape in CSS alone (see FAN_SLOTS), so artwork is part of the
+ * first impression on a phone as well as a desktop. */
 const NARROW_QUERY = "(max-width: 639px)";
 
 function subscribeToNarrow(onChange: () => void): () => void {
@@ -36,8 +40,14 @@ function useIsNarrow(): boolean {
  * Deliberately a *section*, not a hero: it is short enough that real card
  * artwork is still the dominant thing on the page at 1440x900, and it sits
  * inside the catalogue's own surface rather than above it as a marketing
- * band. Its job is to say what market this indexes and put the search box
- * under the visitor's cursor.
+ * band. Its job is to show a card, say what this catalogue is, and put the
+ * search box under the visitor's cursor.
+ *
+ * The fan is drawn at every width - two cards stacked above the copy on
+ * phone/tablet, three beside it from lg. Before, it was `hidden lg:block`,
+ * so the most common viewport met this product with a headline and a search
+ * box and no card at all, which inverts the collector-first hierarchy the
+ * whole surface is judged on.
  *
  * The only number it can show is `totalPrints`, which comes straight from
  * `GET /prints`'s `total` for the query currently in the URL - so it is the
@@ -57,6 +67,7 @@ export function CatalogueIntro({
   totalPrints,
   filtered,
   heroPrints = [],
+  heroPending = false,
 }: {
   /** The committed search term from the URL - the single source of truth. */
   query: string;
@@ -67,9 +78,14 @@ export function CatalogueIntro({
   filtered: boolean;
   /** The catalogue pool the page has *already* loaded, latched so it does not
    * track the current filter/sort (see cards/page.tsx). Used only as
-   * atmosphere in the desktop fan - this component never fetches, and it
-   * never receives a hand-picked list. */
+   * atmosphere in the fan - this component never fetches, and it never
+   * receives a hand-picked list. The same ranking feeds every width, so the
+   * front card on a phone is the front card on a desktop. */
   heroPrints?: PrintUiModel[];
+  /** True only while the FIRST catalogue response is still in flight, so the
+   * fan's space can be held from the first frame. False once a response has
+   * arrived (whatever it contained) and false on failure. */
+  heroPending?: boolean;
 }) {
   const narrow = useIsNarrow();
   // Read once per mount, so the fan cannot change under a visitor who is
@@ -113,22 +129,51 @@ export function CatalogueIntro({
         <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(23,23,23,0.9)_0%,rgba(23,23,23,0.78)_38%,rgba(23,23,23,0.28)_100%)]" />
       </div>
 
-      <div className="flex items-center gap-10 px-5 py-4 sm:px-8 sm:py-6">
-        <div className="min-w-0 flex-1">
-          <p className="mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent-teal sm:text-[11px]">
-            Japanese One Piece card market
+      {/* Cards first in the DOM so the artwork band sits above the copy on a
+          phone; `lg:order-2` puts it back on the right at desktop, where the
+          existing composition is unchanged. The fan is aria-hidden, so DOM
+          order costs a screen reader nothing. */}
+      <div className="flex flex-col gap-2.5 px-5 py-4 sm:px-8 sm:py-6 lg:flex-row lg:items-center lg:gap-10">
+        {fanPrints.length > 0 ? (
+          <HeroCardFan prints={fanPrints} />
+        ) : heroPending ? (
+          // Space only - never a shell, a skeleton card or a repeat.
+          //
+          // Before this tranche the fan was `hidden lg:block`, so on a phone it
+          // occupied no height in ANY load state and the hero could not shift.
+          // Now that it draws at every width, rendering it only once the
+          // catalogue response lands would grow the hero ~186px after first
+          // paint and push the toolbar, legend and grid down with it. Holding
+          // the box from the first frame is what keeps that from happening.
+          //
+          // Deliberately NOT rendered when the response has arrived and simply
+          // had nothing drawable: that is a settled state, and reserving space
+          // for a fan that will never come would leave a dead band above the
+          // empty-catalogue message.
+          <div aria-hidden className={FAN_BOX_CLASS} />
+        ) : null}
+
+        <div className="order-2 min-w-0 flex-1 lg:order-1">
+          <p className="text-[11px] font-medium tracking-normal text-accent-teal sm:text-xs">
+            Japanese One Piece singles
           </p>
 
           <h1
             id="catalogue-intro-heading"
-            className="mt-2.5 font-display text-[26px] font-semibold leading-[1.1] tracking-tight text-text-primary sm:text-[33px]"
+            // `text-balance` so the first sentence does not leave "print."
+            // orphaned on a line of its own at 390px. The <br> still forces the
+            // payoff onto its own line; balancing only redistributes the words
+            // before it, and is a no-op at desktop where it already fits.
+            className="mt-1.5 text-balance font-display text-[26px] font-semibold leading-[1.1] tracking-tight text-text-primary sm:text-[33px]"
           >
-            Navigate the market.
+            Same code. Different print.
             <br />
-            <span className="text-parchment">Collect with confidence.</span>
+            <span className="text-parchment">Different price.</span>
           </h1>
 
-          <p className="mt-2 text-sm text-text-secondary sm:text-[15px]">Two markets. One index.</p>
+          <p className="mt-2 text-sm text-text-secondary sm:text-[15px]">
+            Base, parallel and alt art don&apos;t get lumped together.
+          </p>
 
           <CatalogueSearchField query={query} narrow={narrow} onSearch={onSearch} />
 
@@ -139,16 +184,12 @@ export function CatalogueIntro({
                   {totalPrints.toLocaleString()}
                 </span>{" "}
                 {filtered
-                  ? `matching ${totalPrints === 1 ? "print" : "prints"}`
-                  : `tracked ${totalPrints === 1 ? "print" : "prints"}`}
+                  ? `matching ${totalPrints === 1 ? "printing" : "printings"}`
+                  : `${totalPrints === 1 ? "printing" : "printings"} in the Atlas`}
               </p>
             )}
-            {totalPrints !== null && <span aria-hidden className="hidden sm:inline">·</span>}
-            <p>Every printing is its own card here — base and parallel are collected separately.</p>
           </div>
         </div>
-
-        {fanPrints.length > 0 && <HeroCardFan prints={fanPrints} />}
       </div>
     </section>
   );
@@ -338,24 +379,55 @@ function CatalogueSearchField({
  * is `SLOT_ORDER`'s business, and no card's identity influences either. */
 const FAN_SLOTS: Record<number, readonly { position: string; className: string }[]> = {
   3: [
-    { position: "back-left", className: "left-0 top-7 w-[132px] -rotate-[9deg] opacity-85" },
-    { position: "back-right", className: "right-0 top-5 w-[132px] rotate-[9deg] opacity-85" },
-    { position: "front", className: "left-1/2 top-0 w-[158px] -translate-x-1/2 -rotate-[2deg]" },
+    {
+      position: "back-left",
+      className:
+        "left-1/2 top-4 w-[96px] -translate-x-[103px] -rotate-[11deg] opacity-85 " +
+        "lg:left-0 lg:top-7 lg:w-[132px] lg:translate-x-0 lg:-rotate-[9deg]",
+    },
+    {
+      // The third card is desktop-only: at 390px a two-card cluster is the
+      // most artwork that fits without cropping or crowding the headline.
+      //
+      // `hidden` still DOWNLOADS this image on mobile - measured, naturalWidth
+      // 600 at 390px. That is not a regression (the whole fan was
+      // `hidden lg:block` before, so mobile already paid for three images and
+      // drew none of them) and it is why this is one fan with a hidden slot
+      // rather than two fans, which would have cost a fourth and fifth image.
+      // Skipping the fetch outright needs a viewport-conditional render, and
+      // that trades a fixed cost for a hydration pop in the hero - not a
+      // trade this tranche is making.
+      position: "back-right",
+      className:
+        "hidden lg:block lg:right-0 lg:top-5 lg:w-[132px] lg:rotate-[9deg] lg:opacity-85",
+    },
+    {
+      position: "front",
+      className:
+        "left-1/2 top-0 w-[110px] -translate-x-[7px] -rotate-[3deg] " +
+        "lg:top-0 lg:w-[158px] lg:-translate-x-1/2 lg:-rotate-[2deg]",
+    },
   ],
   2: [
     {
       position: "back-left",
-      className: "left-1/2 top-8 w-[132px] -translate-x-[118px] -rotate-[9deg] opacity-85",
+      className:
+        "left-1/2 top-4 w-[96px] -translate-x-[103px] -rotate-[11deg] opacity-85 " +
+        "lg:top-8 lg:w-[132px] lg:-translate-x-[118px] lg:-rotate-[9deg]",
     },
     {
       position: "front",
-      className: "left-1/2 top-3 w-[158px] -translate-x-[40px] -rotate-[2deg]",
+      className:
+        "left-1/2 top-0 w-[110px] -translate-x-[7px] -rotate-[3deg] " +
+        "lg:top-3 lg:w-[158px] lg:-translate-x-[40px] lg:-rotate-[2deg]",
     },
   ],
   1: [
     {
       position: "front",
-      className: "left-1/2 top-3.5 w-[158px] -translate-x-1/2 -rotate-[2deg]",
+      className:
+        "left-1/2 top-0 w-[110px] -translate-x-[55px] -rotate-[3deg] " +
+        "lg:top-3.5 lg:w-[158px] lg:-translate-x-1/2 lg:-rotate-[2deg]",
     },
   ],
 };
@@ -364,6 +436,14 @@ const FAN_SLOTS: Record<number, readonly { position: string; className: string }
  * composition, the next two sit behind it. Unchanged by the fan's size - a
  * two-card fan is the same front card with one supporter instead of two. */
 const SLOT_ORDER: Record<string, number> = { front: 0, "back-left": 1, "back-right": 2 };
+
+/** The fan's own box, shared by the drawn fan and by the space reserved for
+ * it while the catalogue request is still in flight. One constant, because a
+ * reservation that does not match the thing it reserves for is worse than no
+ * reservation at all. */
+const FAN_BOX_CLASS =
+  "pointer-events-none relative order-1 h-[158px] w-full shrink-0 " +
+  "lg:order-2 lg:h-[248px] lg:w-[336px]";
 
 function HeroCardFan({ prints }: { prints: PrintUiModel[] }) {
   const slots = FAN_SLOTS[prints.length];
@@ -374,7 +454,11 @@ function HeroCardFan({ prints }: { prints: PrintUiModel[] }) {
     <div
       data-hero-fan=""
       aria-hidden
-      className="pointer-events-none relative hidden h-[248px] w-[336px] shrink-0 lg:block"
+      // Full-width band above the copy on phone/tablet, fixed-size panel
+      // beside it from lg. The height is the tallest card plus its offset
+      // (110px x 88/63 = 154px, front card at top-0), reserved from the
+      // first frame so the search box never jumps when the images decode.
+      className={FAN_BOX_CLASS}
     >
       {slots.map((slot) => (
         <FanCard
