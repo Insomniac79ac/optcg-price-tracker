@@ -73,7 +73,7 @@ export function PrintAnalyticsSection({
 
   return (
     <section className="mt-7 border-t border-border-muted pt-5" data-testid="print-analytics">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
+      <h2 className="text-base font-semibold leading-snug text-text-primary">
         Market Index
       </h2>
 
@@ -197,7 +197,7 @@ function PrintChartExportAction({
             setState(ok ? "idle" : "failed");
           });
         }}
-        className={`mono rounded-[4px] border border-border-muted px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed ${
+        className={`rounded-[4px] border border-border-muted px-2 py-1 text-xs font-medium text-text-muted transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed ${
           unavailable ? "cursor-not-allowed opacity-[0.65]" : "hover:text-text-secondary"
         }`}
       >
@@ -228,7 +228,7 @@ function AnalyticsHeadline({ headline }: { headline: PrintAnalyticsHeadline }) {
   if (headline.current_value_jpy === null) {
     return (
       <div className="mt-2">
-        <p className="mono tabular text-2xl font-semibold price-muted">Index unavailable</p>
+        <p className="text-base font-medium price-muted">Index unavailable</p>
         <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
           Atlas has not archived a Market Index for this print yet.
         </p>
@@ -242,7 +242,7 @@ function AnalyticsHeadline({ headline }: { headline: PrintAnalyticsHeadline }) {
     <div className="mt-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span
-          className="mono tabular text-[30px] font-semibold leading-none text-accent-gold sm:text-4xl"
+          className="tabular text-[30px] font-semibold leading-none text-accent-gold sm:text-4xl"
           data-testid="print-analytics-current"
         >
           {formatJpy(headline.current_value_jpy)}
@@ -289,7 +289,7 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="mono text-[9px] uppercase leading-none tracking-[0.14em] text-text-faint">
+      <dt className="text-[11px] leading-snug text-text-muted">
         {label}
       </dt>
       <dd className="mono tabular mt-1 text-sm font-medium text-text-primary">
@@ -315,7 +315,7 @@ function Stat({
 function ObservedDays({ days }: { days: number }) {
   return (
     <div>
-      <dt className="mono text-[9px] uppercase leading-none tracking-[0.14em] text-text-faint">
+      <dt className="text-[11px] leading-snug text-text-muted">
         Observed
       </dt>
       <dd className="mono tabular mt-1 text-sm font-medium text-text-primary">

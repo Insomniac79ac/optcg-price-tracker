@@ -359,7 +359,7 @@ export default function PrintDetailPage() {
                 />
                 {/* Between the chart and the live section, and subordinate to
                     both: it describes the SELECTED HISTORICAL WINDOW, which is
-                    the chart's subject, while Live market below describes what
+                    the chart's subject, while Current prices below describes what
                     the sources say right now. */}
                 <PrintWindowPerformance
                   analytics={analyticsForPrint}
@@ -519,8 +519,8 @@ function LiveMarket({
 }) {
   return (
     <section className="mt-7 border-t border-border-muted pt-5" data-testid="live-market">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Live market
+      <h2 className="text-base font-semibold leading-snug text-text-primary">
+        Current prices
       </h2>
 
       {/* THE LIVE INDEX, AND IT SAYS SO. This number is resolved at request
@@ -715,7 +715,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
   if (rows.length === 0) return null;
 
   return (
-    // No heading of its own any more: these panels sit inside "Live market"
+    // No heading of its own any more: these panels sit inside "Current prices"
     // directly, beneath the live index they are the sources for, and a second
     // heading between the two would split one statement into two sections.
     <div className="mt-3">
@@ -725,7 +725,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
             key={`${row.source}-${row.reference_type}`}
             className="rounded-panel border border-border-muted bg-bg-elevated/70 px-3.5 py-3"
           >
-            <div className="mono flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-text-muted">
+            <div className="flex items-center gap-2 text-xs font-medium text-text-secondary">
               <span>{sourceDisplayName(row.source)}</span>
               {row.stale && (
                 <span className="rounded bg-signal-warning/15 px-1 py-px text-[9px] normal-case tracking-normal text-signal-warning">
@@ -737,7 +737,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
               <UnavailablePriceLine value={row} />
             ) : (
               <>
-                <div className="mono tabular mt-2 text-xl font-semibold text-text-primary">
+                <div className="tabular mt-2 text-xl font-semibold text-text-primary">
                   {formatJpy(row.value_jpy)}
                 </div>
                 <EvidenceTypeLine value={row} />
@@ -776,7 +776,7 @@ function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
 
   return (
     <section className="mt-10 border-t border-border-muted pt-6">
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
+      <h2 className="text-base font-semibold leading-snug text-text-primary">
         Other printings
       </h2>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -784,7 +784,7 @@ function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
           <Link
             key={sibling.card_print_id}
             href={`/prints/${sibling.card_print_id}`}
-            className="mono rounded-control border border-border-default bg-bg-elevated px-2.5 py-1.5 text-xs lowercase text-text-secondary transition-colors hover:border-accent-teal/50 hover:text-text-primary"
+            className="rounded-control border border-border-default bg-bg-elevated px-2.5 py-1.5 text-xs lowercase text-text-secondary transition-colors hover:border-accent-teal/50 hover:text-text-primary"
           >
             {sibling.treatment}
           </Link>
@@ -852,7 +852,7 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
   return (
     <section className="mt-7 border-t border-border-muted pt-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
+        <h2 className="text-base font-semibold leading-snug text-text-primary">
           About this print
         </h2>
         {/* The same key as the catalogue, on the page where a collector is

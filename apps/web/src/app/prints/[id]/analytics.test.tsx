@@ -804,11 +804,11 @@ describe("archived versus live", () => {
     await renderPage();
 
     // One heading, on the archived band. The live figure below it sits on a
-    // row that names itself, inside a section that names itself "Live market".
+    // row that names itself, inside a section that names itself "Current prices".
     expect(screen.getAllByRole("heading", { name: "Market Index" })).toHaveLength(1);
     const live = screen.getByTestId("live-market");
     expect(within(live).getByText("Market Index")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Live market" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Current prices" })).toBeInTheDocument();
   });
 
   it("keeps the archived headline free of any freshness wording", async () => {
@@ -843,6 +843,23 @@ describe("window performance", () => {
     const section = screen.getByTestId("window-performance");
     return within(section).getByTestId(`move-${key}`).closest("li") as HTMLElement;
   }
+
+  it("makes the comparison refusal available through a keyboard/touch disclosure", async () => {
+    await renderPage();
+    const row = rowFor("market_index");
+    const trigger = within(row).getByRole("button", {
+      name: "Why this change is not comparable",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(within(row).getByRole("note")).toHaveTextContent(
+      "Atlas changed how the Market Index is calculated inside this window",
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+  });
 
   it("renders print 1's ALL window from the server's own figures", async () => {
     await renderPage();
@@ -1321,7 +1338,7 @@ describe("window performance", () => {
   });
 
   it("stamps the archived end value with its own day", async () => {
-    // A short scroll below, Live market shows ￥21,000 for SNKRDUNK under the
+    // A short scroll below, Current prices shows ￥21,000 for SNKRDUNK under the
     // identical instrument label. These are different facts - the archive's
     // last day in this window, and the price resolved at request time - and
     // the row has to say which it is.
@@ -1336,8 +1353,8 @@ describe("window performance", () => {
 
     const order = [...document.querySelectorAll("h1, h2")];
     const index = order.indexOf(screen.getByRole("heading", { name: "Market Index" }));
-    const perf = order.indexOf(screen.getByRole("heading", { name: "Window performance" }));
-    const live = order.indexOf(screen.getByRole("heading", { name: "Live market" }));
+    const perf = order.indexOf(screen.getByRole("heading", { name: "Price changes" }));
+    const live = order.indexOf(screen.getByRole("heading", { name: "Current prices" }));
     expect(index).toBeLessThan(perf);
     expect(perf).toBeLessThan(live);
     // Two separate sections - archived window vs current resolver state.

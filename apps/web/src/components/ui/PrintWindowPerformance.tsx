@@ -1,6 +1,7 @@
 "use client";
 
 import { formatDate, formatJpy } from "@/lib/format";
+import { InfoTip } from "@/components/ui/InfoTip";
 import {
   changeUnavailableCopy,
   formatSignedJpy,
@@ -84,18 +85,18 @@ export function PrintWindowPerformance({
       className="mt-7 border-t border-border-muted pt-5"
       data-testid="window-performance"
     >
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Window performance
+      <h2 className="text-base font-semibold leading-snug text-text-primary">
+        Price changes
       </h2>
 
       {/* Column headings on desktop only. On a phone each row carries its own
           labels, because a four-column table at 390px is either a horizontal
           scroller or four columns of truncation. */}
       <div className="mt-3 hidden border-b border-border-muted/60 pb-1.5 sm:grid sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1.75fr)_minmax(0,1.15fr)_auto] sm:gap-x-5">
-        {["Instrument", "Window move", "Range", "Observed"].map((label) => (
+        {["Price series", "Change", "Range", "Observed"].map((label) => (
           <span
             key={label}
-            className="mono text-[9px] uppercase leading-none tracking-[0.14em] text-text-faint"
+            className="text-[11px] leading-snug text-text-muted"
           >
             {label}
           </span>
@@ -111,9 +112,8 @@ export function PrintWindowPerformance({
         ))}
       </ul>
 
-      <p className="mt-3 text-[10px] leading-snug text-text-faint">
-        Figures describe the selected window of Atlas&rsquo;s recorded history. Current
-        source prices are below.
+      <p className="mt-3 text-[11px] leading-snug text-text-muted">
+        Recorded history for the selected period. Current source prices are below.
       </p>
     </section>
   );
@@ -135,8 +135,8 @@ function WindowPerformanceSkeleton() {
       aria-hidden="true"
       data-testid="window-performance-skeleton"
     >
-      <h2 className="mono text-[10px] font-medium uppercase leading-none tracking-[0.16em] text-text-muted">
-        Window performance
+      <h2 className="text-base font-semibold leading-snug text-text-primary">
+        Price changes
       </h2>
       <div className="mt-3 h-[22px] border-b border-border-muted/60" />
       <div className="divide-y divide-border-muted/60">
@@ -175,7 +175,7 @@ function PerformanceRow({
       <WindowMove row={row} />
 
       <Cell label="Range">
-        <span className="mono tabular whitespace-nowrap text-[12px] text-text-secondary">
+        <span className="tabular whitespace-nowrap text-[12px] text-text-secondary">
           {/* The observed low and high of THIS series in THIS window. It is not
               a claim that every value between them was seen, or traded. */}
           {formatJpy(row.low_value_jpy)} – {formatJpy(row.high_value_jpy)}
@@ -183,7 +183,7 @@ function PerformanceRow({
       </Cell>
 
       <Cell label="Observed">
-        <span className="mono tabular whitespace-nowrap text-[12px] text-text-secondary">
+        <span className="tabular whitespace-nowrap text-[12px] text-text-secondary">
           {/* DAYS. Not observations, samples, trades, sales or volume - Atlas
               records no transaction anywhere, so there is none to report. */}
           {row.observed_days} {row.observed_days === 1 ? "day" : "days"}
@@ -221,7 +221,7 @@ function WindowMove({ row }: { row: PrintSeriesStats }) {
   // the same way the headline stamps its own figures.
   const ends = (
     <>
-      <span className="mono tabular whitespace-nowrap text-[12px] text-text-secondary">
+      <span className="tabular whitespace-nowrap text-[12px] text-text-secondary">
         {formatJpy(row.starting_value_jpy)} → {formatJpy(row.current_value_jpy)}
       </span>{" "}
       {/* OUTSIDE the nowrap span on purpose. Held inside it, the stamp made
@@ -239,10 +239,10 @@ function WindowMove({ row }: { row: PrintSeriesStats }) {
 
   if (row.change) {
     return (
-      <Cell label="Window move">
+      <Cell label="Change">
         <span className="block" data-testid={`move-${row.series_key}`}>
           {ends}
-          <span className="mono tabular ml-2 inline-block whitespace-nowrap text-[12px] text-text-primary">
+          <span className="tabular ml-2 inline-block whitespace-nowrap text-[12px] text-text-primary">
             {formatSignedJpy(row.change.absolute_jpy)}
             <span className="ml-1.5 text-text-muted">
               ({formatSignedPct(row.change.pct)})
@@ -267,23 +267,30 @@ function WindowMove({ row }: { row: PrintSeriesStats }) {
   // THE EXPLANATION IS STILL REACHABLE, because a source series' refusal has
   // no counterpart above it: the headline speaks only for the Market Index, so
   // a SNKRDUNK instrument change would otherwise be an unexplained "Not
-  // comparable". The server's own sentence rides on the title and the
-  // accessible name rather than as a second block of body copy.
+  // comparable". The same explanation is available by keyboard or touch in
+  // InfoTip, as well as through the title and accessible name.
   const copy =
     changeUnavailableCopy(row.change_unavailable_reason) ??
     "No comparable change to report for this window.";
   return (
-    <Cell label="Window move">
-      <span className="block" data-testid={`move-${row.series_key}`}>
+    <Cell label="Change">
+      <span className="relative block" data-testid={`move-${row.series_key}`}>
         {ends}
         <span
-          className="mono ml-2 whitespace-nowrap text-[12px] text-text-muted"
+          className="ml-2 whitespace-nowrap text-[12px] text-text-muted"
           data-testid={`move-unavailable-${row.series_key}`}
           title={copy}
           aria-label={`Not comparable — ${copy}`}
         >
           Not comparable
         </span>
+        {/* Anchor the explanation to this row, not the icon at its right
+            edge, so the open disclosure fits the column on a phone. */}
+        <InfoTip
+          className="!static ml-1 [&>[role=note]]:max-w-full"
+          label="Why this change is not comparable"
+          text={copy}
+        />
       </span>
     </Cell>
   );
@@ -297,7 +304,7 @@ function WindowMove({ row }: { row: PrintSeriesStats }) {
 function Cell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-2 sm:block">
-      <span className="mono w-[74px] shrink-0 text-[9px] uppercase leading-none tracking-[0.14em] text-text-faint sm:hidden">
+      <span className="w-[74px] shrink-0 text-[11px] leading-snug text-text-muted sm:hidden">
         {label}
       </span>
       <span className="min-w-0">{children}</span>

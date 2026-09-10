@@ -519,7 +519,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const index = screen.getByRole("heading", { name: "Market Index" });
-    const live = screen.getByRole("heading", { name: "Live market" });
+    const live = screen.getByRole("heading", { name: "Current prices" });
     const about = screen.getByRole("heading", { name: "About this print" });
     const others = screen.getByRole("heading", { name: "Other printings" });
 
@@ -851,7 +851,7 @@ describe("print detail page", () => {
     expect(screen.getByText("￥810")).toBeTruthy();
   });
 
-  it("moves the live Market Index block into Live market unchanged", async () => {
+  it("moves the live Market Index block into Current prices unchanged", async () => {
     fetchPrint.mockResolvedValue(withRange({ low_jpy: 120, high_jpy: 1500 }));
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
