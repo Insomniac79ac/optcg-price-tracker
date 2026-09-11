@@ -12,9 +12,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
-from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, MarketSignalEvent, WishlistItem
+from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, GradingSubmission, MarketSignalEvent, WishlistItem
 from app.schemas import OpportunitiesResponseOut, OpportunitiesSummaryOut, OpportunityOut
-from app.services.collector import get_groups_for_cards, get_tags_for_cards
+from app.services.collector import get_groups_for_cards, get_groups_for_collection_items, get_tags_for_cards
+from app.services.search_ownership import require_user_id, signal_owned_by
 from app.services.grading import build_grading_info, get_submissions_for_cards, latest_submission
 
 # Dismissed/resolved events are noise for a "what should I look at" ranking -
@@ -355,15 +356,92 @@ def get_opportunities(
     # Not scoped to a single user - this admin-facing ranking view surfaces
     # whichever wishlist item(s) exist for a card across everyone using this
     # deployment, same as owned_quantity's cross-user aggregate above.
-    wishlist_target_hit_card_ids = {
-        e.card_id for e in events if e.signal_type == "wishlist_target_hit" and e.card_id is not None
-    }
-
     owned_card_ids = {cid for cid, qty in owned_quantities.items() if qty > 0}
     tags_by_card = get_tags_for_cards(db, owned_card_ids)
     groups_by_card = get_groups_for_cards(db, owned_card_ids)
     grading_by_card = get_submissions_for_cards(db, owned_card_ids)
 
+    return _rank_opportunities(
+        events, cards_by_id, owned_quantities, wishlist_by_card,
+        tags_by_card, groups_by_card, grading_by_card,
+        category=category, owned=owned, min_score=min_score, limit=limit, offset=offset,
+    )
+
+
+def get_personal_opportunities(
+    db: Session, *, user_id: int, limit: int = 100, offset: int = 0
+) -> OpportunitiesResponseOut:
+    """Personal inputs only; the global/admin entry point above is never used."""
+    require_user_id(user_id)
+    events = db.scalars(
+        select(MarketSignalEvent).where(
+            signal_owned_by(user_id), MarketSignalEvent.status.in_(INCLUDED_STATUSES)
+        )
+    ).all()
+    if not events:
+        return _empty_response(limit, offset)
+    card_ids = {e.card_id for e in events if e.card_id is not None}
+    cards = {c.id: c for c in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()}
+    items = db.scalars(
+        select(CollectionItem).where(
+            CollectionItem.user_id == user_id, CollectionItem.card_id.in_(card_ids)
+        )
+    ).all()
+    quantities: dict[int, int] = {}
+    for item in items:
+        quantities[item.card_id] = quantities.get(item.card_id, 0) + item.quantity
+    wishes = _best_wishlist_item_by_card(
+        db.scalars(
+            select(WishlistItem).where(
+                WishlistItem.user_id == user_id,
+                WishlistItem.card_id.in_(card_ids),
+                WishlistItem.status != "removed",
+            )
+        ).all()
+    )
+    # Output enrichments must be scoped too, even when two users own the same card.
+    groups_by_item = get_groups_for_collection_items(db, {i.id for i in items})
+    grouped: dict[int, dict[int, CollectorGroup]] = {}
+    grading: dict[int, list[GradingSubmission]] = {}
+    for item in items:
+        for group in groups_by_item.get(item.id, []):
+            if group.user_id == user_id:
+                grouped.setdefault(item.card_id, {})[group.id] = group
+    groups = {card_id: list(by_id.values()) for card_id, by_id in grouped.items()}
+    submissions = db.execute(
+        select(CollectionItem.card_id, GradingSubmission)
+        .join(GradingSubmission, GradingSubmission.collection_item_id == CollectionItem.id)
+        .where(CollectionItem.user_id == user_id, CollectionItem.card_id.in_(card_ids))
+        .order_by(GradingSubmission.id.desc())
+    ).all()
+    for card_id, submission in submissions:
+        grading.setdefault(card_id, []).append(submission)
+    return _rank_opportunities(
+        events, cards, quantities, wishes,
+        get_tags_for_cards(db, card_ids, user_id=user_id), groups, grading,
+        category=None, owned=None, min_score=None, limit=limit, offset=offset,
+    )
+
+
+def _rank_opportunities(
+    events: list[MarketSignalEvent],
+    cards_by_id: dict[int, Card],
+    owned_quantities: dict[int, int],
+    wishlist_by_card: dict[int, WishlistItem],
+    tags_by_card: dict[int, list[CollectorTag]],
+    groups_by_card: dict[int, list[CollectorGroup]],
+    grading_by_card: dict[int, list[GradingSubmission]],
+    *,
+    category: str | None,
+    owned: bool | None,
+    min_score: int | None,
+    limit: int,
+    offset: int,
+) -> OpportunitiesResponseOut:
+    """Pure ranking of already-authorized inputs; no database access."""
+    wishlist_target_hit_card_ids = {
+        e.card_id for e in events if e.signal_type == "wishlist_target_hit" and e.card_id is not None
+    }
     scored = [
         _score_event(
             e, cards_by_id.get(e.card_id), owned_quantities.get(e.card_id, 0), wishlist_by_card.get(e.card_id)

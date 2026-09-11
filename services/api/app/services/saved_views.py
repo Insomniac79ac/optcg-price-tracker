@@ -1,7 +1,4 @@
-"""Single-user saved filter/sort/column presets for dense list pages. See
-app.models.saved_view for why this table has no user_id (one shared, global
-preset store - this app has no multi-user accounts to scope by).
-"""
+"""Personal saved presets; legacy ownerless rows are never selected."""
 
 from __future__ import annotations
 
@@ -14,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.pagination import pagination_response
 from app.models.saved_view import SAVED_VIEW_DENSITIES, SAVED_VIEW_SCOPES, SavedView
 from app.schemas import PaginationMeta
+from app.services.search_ownership import require_user_id
 
 # Key-name substrings that must never appear in a saved filter/sort/column
 # payload - the primary defense is that no page's filter-serialization code
@@ -59,8 +57,12 @@ def _validate_density(density: str) -> None:
         raise SavedViewValidationError(f"Invalid density: {density}")
 
 
-def _get_saved_view_or_404(db: Session, view_id: int) -> SavedView:
-    view = db.get(SavedView, view_id)
+def _get_saved_view_or_404(db: Session, view_id: int, *, user_id: int) -> SavedView:
+    view = db.scalar(
+        select(SavedView).where(
+            SavedView.id == view_id, SavedView.user_id == require_user_id(user_id)
+        )
+    )
     if view is None:
         raise SavedViewNotFoundError(f"Saved view {view_id} not found")
     return view
@@ -69,6 +71,7 @@ def _get_saved_view_or_404(db: Session, view_id: int) -> SavedView:
 def list_saved_views(
     db: Session,
     *,
+    user_id: int,
     route_path: str | None = None,
     view_type: str | None = None,
     scope: str | None = None,
@@ -78,7 +81,7 @@ def list_saved_views(
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[SavedView], PaginationMeta]:
-    filters = []
+    filters = [SavedView.user_id == require_user_id(user_id)]
     if route_path is not None:
         filters.append(SavedView.route_path == route_path)
     if view_type is not None:
@@ -105,11 +108,11 @@ def list_saved_views(
     return list(items), pagination_response(items, total, limit, offset)
 
 
-def get_saved_view(db: Session, view_id: int) -> SavedView:
-    return _get_saved_view_or_404(db, view_id)
+def get_saved_view(db: Session, view_id: int, *, user_id: int) -> SavedView:
+    return _get_saved_view_or_404(db, view_id, user_id=user_id)
 
 
-def create_saved_view(db: Session, payload) -> SavedView:
+def create_saved_view(db: Session, payload, *, user_id: int) -> SavedView:
     _validate_scope(payload.scope)
     _validate_density(payload.density)
     _validate_json_field("filters_json", payload.filters_json)
@@ -117,6 +120,7 @@ def create_saved_view(db: Session, payload) -> SavedView:
     _validate_json_field("columns_json", payload.columns_json)
 
     view = SavedView(
+        user_id=require_user_id(user_id),
         name=payload.name,
         description=payload.description,
         route_path=payload.route_path,
@@ -135,14 +139,14 @@ def create_saved_view(db: Session, payload) -> SavedView:
     db.refresh(view)
 
     if payload.is_default:
-        set_default_saved_view(db, view.id)
+        set_default_saved_view(db, view.id, user_id=user_id)
         db.refresh(view)
 
     return view
 
 
-def update_saved_view(db: Session, view_id: int, payload) -> SavedView:
-    view = _get_saved_view_or_404(db, view_id)
+def update_saved_view(db: Session, view_id: int, payload, *, user_id: int) -> SavedView:
+    view = _get_saved_view_or_404(db, view_id, user_id=user_id)
     updates = payload.model_dump(exclude_unset=True)
 
     if "density" in updates and updates["density"] is not None:
@@ -160,7 +164,7 @@ def update_saved_view(db: Session, view_id: int, payload) -> SavedView:
     db.refresh(view)
 
     if make_default:
-        set_default_saved_view(db, view.id)
+        set_default_saved_view(db, view.id, user_id=user_id)
         db.refresh(view)
     elif make_default is False:
         view.is_default = False
@@ -170,14 +174,14 @@ def update_saved_view(db: Session, view_id: int, payload) -> SavedView:
     return view
 
 
-def delete_saved_view(db: Session, view_id: int) -> None:
-    view = _get_saved_view_or_404(db, view_id)
+def delete_saved_view(db: Session, view_id: int, *, user_id: int) -> None:
+    view = _get_saved_view_or_404(db, view_id, user_id=user_id)
     db.delete(view)
     db.commit()
 
 
-def mark_saved_view_used(db: Session, view_id: int) -> SavedView:
-    view = _get_saved_view_or_404(db, view_id)
+def mark_saved_view_used(db: Session, view_id: int, *, user_id: int) -> SavedView:
+    view = _get_saved_view_or_404(db, view_id, user_id=user_id)
     view.usage_count += 1
     view.last_used_at = datetime.now(timezone.utc)
     db.commit()
@@ -185,12 +189,13 @@ def mark_saved_view_used(db: Session, view_id: int) -> SavedView:
     return view
 
 
-def set_default_saved_view(db: Session, view_id: int) -> SavedView:
-    """Only one default saved view per (route_path, view_type) - unsets any
+def set_default_saved_view(db: Session, view_id: int, *, user_id: int) -> SavedView:
+    """Only one default saved view per owner and (route_path, view_type) - unsets any
     other row sharing that pair before setting this one."""
-    view = _get_saved_view_or_404(db, view_id)
+    view = _get_saved_view_or_404(db, view_id, user_id=user_id)
 
     db.query(SavedView).filter(
+        SavedView.user_id == require_user_id(user_id),
         SavedView.route_path == view.route_path,
         SavedView.view_type == view.view_type,
         SavedView.id != view.id,
@@ -203,8 +208,9 @@ def set_default_saved_view(db: Session, view_id: int) -> SavedView:
     return view
 
 
-def clear_default_saved_view(db: Session, route_path: str, view_type: str) -> None:
+def clear_default_saved_view(db: Session, route_path: str, view_type: str, *, user_id: int) -> None:
     db.query(SavedView).filter(
+        SavedView.user_id == require_user_id(user_id),
         SavedView.route_path == route_path,
         SavedView.view_type == view_type,
         SavedView.is_default.is_(True),

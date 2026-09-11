@@ -7,13 +7,12 @@ app/services/activity_timeline.py, rather than building one giant
 cross-table SQL query - this app's tables are personal-collector-scale, and
 scoring (tiered field matches + bonuses) is much simpler to express and test
 in Python than in SQL. Opportunities specifically delegates to
-opportunity_scoring.get_opportunities() so its ranking formula is never
+opportunity_scoring.get_personal_opportunities() so its ranking formula is never
 duplicated here.
 """
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -26,7 +25,6 @@ from app.models import (
     CollectorActivityEvent,
     CollectorNote,
     GradingSubmission,
-    MarketIntelligenceReport,
     MarketSignalEvent,
     SearchHistory,
     WishlistItem,
@@ -36,7 +34,8 @@ from app.services.collector import (
     get_groups_for_collection_items,
     get_tags_for_collection_items,
 )
-from app.services.opportunity_scoring import get_opportunities
+from app.services.opportunity_scoring import get_personal_opportunities
+from app.services.search_ownership import linked_owned_by, owned_grading_ids, require_user_id, signal_owned_by
 
 SEARCH_TYPES: tuple[str, ...] = (
     "cards",
@@ -130,9 +129,9 @@ def _clamp_score(score: int) -> int:
     return max(0, min(100, score))
 
 
-def _owned_card_ids(db: Session) -> dict[int, int]:
+def _owned_card_ids(db: Session, *, user_id: int) -> dict[int, int]:
     rows = db.execute(
-        select(CollectionItem.card_id, CollectionItem.quantity)
+        select(CollectionItem.card_id, CollectionItem.quantity).where(CollectionItem.user_id == require_user_id(user_id))
     ).all()
     totals: dict[int, int] = {}
     for card_id, quantity in rows:
@@ -198,7 +197,7 @@ def _finalize(results: list[_ScoredResult]) -> list[SearchResultOut]:
 # --- cards -----------------------------------------------------------------
 
 
-def _search_cards(db: Session, q_lower: str, owned_by_card: dict[int, int]) -> list[_ScoredResult]:
+def _search_cards(db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int) -> list[_ScoredResult]:
     cards = db.scalars(select(Card)).all()
     out: list[_ScoredResult] = []
     for card in cards:
@@ -242,9 +241,9 @@ def _search_cards(db: Session, q_lower: str, owned_by_card: dict[int, int]) -> l
 
 
 def _search_collection(
-    db: Session, q_lower: str, owned_by_card: dict[int, int]
+    db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int
 ) -> list[_ScoredResult]:
-    items = db.scalars(select(CollectionItem)).all()
+    items = db.scalars(select(CollectionItem).where(CollectionItem.user_id == require_user_id(user_id))).all()
     if not items:
         return []
     card_ids = {i.card_id for i in items}
@@ -256,8 +255,8 @@ def _search_collection(
     out: list[_ScoredResult] = []
     for item in items:
         card = cards_by_id.get(item.card_id)
-        tag_names = " ".join(t.name for t in tags_by_item.get(item.id, []))
-        group_names = " ".join(g.name for g in groups_by_item.get(item.id, []))
+        tag_names = " ".join(t.name for t in tags_by_item.get(item.id, []) if t.user_id == user_id)
+        group_names = " ".join(g.name for g in groups_by_item.get(item.id, []) if g.user_id == user_id)
         scored = _score_fields(
             [
                 ("card_code", card.card_code if card else None, "code"),
@@ -308,9 +307,9 @@ def _search_collection(
 
 
 def _search_wishlist(
-    db: Session, q_lower: str, owned_by_card: dict[int, int]
+    db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int
 ) -> list[_ScoredResult]:
-    items = db.scalars(select(WishlistItem)).all()
+    items = db.scalars(select(WishlistItem).where(WishlistItem.user_id == require_user_id(user_id))).all()
     if not items:
         return []
     cards_by_id = _cards_by_id(db, {i.card_id for i in items})
@@ -365,14 +364,14 @@ def _search_wishlist(
 
 
 def _search_grading(
-    db: Session, q_lower: str, owned_by_card: dict[int, int]
+    db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int
 ) -> list[_ScoredResult]:
-    submissions = db.scalars(select(GradingSubmission)).all()
+    submissions = db.scalars(select(GradingSubmission).where(GradingSubmission.id.in_(owned_grading_ids(user_id)))).all()
     if not submissions:
         return []
     item_ids = {s.collection_item_id for s in submissions}
     items_by_id = {
-        i.id: i for i in db.scalars(select(CollectionItem).where(CollectionItem.id.in_(item_ids))).all()
+        i.id: i for i in db.scalars(select(CollectionItem).where(CollectionItem.id.in_(item_ids), CollectionItem.user_id == user_id)).all()
     }
     cards_by_id = _cards_by_id(db, {i.card_id for i in items_by_id.values()})
 
@@ -431,8 +430,8 @@ def _search_grading(
 # --- notes -----------------------------------------------------------------
 
 
-def _search_notes(db: Session, q_lower: str, owned_by_card: dict[int, int]) -> list[_ScoredResult]:
-    notes = db.scalars(select(CollectorNote)).all()
+def _search_notes(db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int) -> list[_ScoredResult]:
+    notes = db.scalars(select(CollectorNote).where(linked_owned_by(CollectorNote, user_id))).all()
     if not notes:
         return []
     cards_by_id = _cards_by_id(db, {n.card_id for n in notes if n.card_id is not None})
@@ -479,9 +478,9 @@ def _search_notes(db: Session, q_lower: str, owned_by_card: dict[int, int]) -> l
 
 
 def _search_activity(
-    db: Session, q_lower: str, owned_by_card: dict[int, int], now: datetime
+    db: Session, q_lower: str, owned_by_card: dict[int, int], now: datetime, *, user_id: int
 ) -> list[_ScoredResult]:
-    events = db.scalars(select(CollectorActivityEvent)).all()
+    events = db.scalars(select(CollectorActivityEvent).where(linked_owned_by(CollectorActivityEvent, user_id))).all()
     if not events:
         return []
     cards_by_id = _cards_by_id(db, {e.card_id for e in events if e.card_id is not None})
@@ -533,9 +532,9 @@ def _search_activity(
 
 
 def _search_signals(
-    db: Session, q_lower: str, owned_by_card: dict[int, int], now: datetime
+    db: Session, q_lower: str, owned_by_card: dict[int, int], now: datetime, *, user_id: int
 ) -> list[_ScoredResult]:
-    events = db.scalars(select(MarketSignalEvent)).all()
+    events = db.scalars(select(MarketSignalEvent).where(signal_owned_by(user_id))).all()
     if not events:
         return []
     cards_by_id = _cards_by_id(db, {e.card_id for e in events if e.card_id is not None})
@@ -588,13 +587,13 @@ def _search_signals(
 
 
 def _search_opportunities(
-    db: Session, q: str, q_lower: str
+    db: Session, q: str, q_lower: str, *, user_id: int
 ) -> list[_ScoredResult]:
-    """Reuses opportunity_scoring.get_opportunities() for the ranked set and
+    """Reuses opportunity_scoring.get_personal_opportunities() for the ranked set and
     only filters the results by the query text here - the score/ranking
     formula for opportunities themselves is never recomputed or duplicated
     in this module."""
-    response = get_opportunities(db, limit=10_000)
+    response = get_personal_opportunities(db, user_id=user_id, limit=10_000)
 
     out: list[_ScoredResult] = []
     for opp in response.opportunities:
@@ -641,57 +640,23 @@ def _search_opportunities(
 # --- reports -----------------------------------------------------------------
 
 
-def _search_reports(db: Session, q: str, q_lower: str) -> list[_ScoredResult]:
-    reports = db.scalars(select(MarketIntelligenceReport)).all()
-    if not reports:
-        return []
-
-    out: list[_ScoredResult] = []
-    for report in reports:
-        payload = report.report_payload_json or {}
-        summary_lines = " ".join(payload.get("deterministic_summary_lines") or [])
-        payload_text = json.dumps(payload, default=str)
-        scored = _score_fields(
-            [
-                ("report_date", report.report_date.isoformat(), "meta"),
-                ("deterministic_summary_lines", summary_lines or None, "text"),
-                ("payload", payload_text, "meta"),
-            ],
-            q_lower,
-        )
-        if scored is None:
-            continue
-        base_score, matched_fields = scored
-        out.append(
-            _ScoredResult(
-                type="reports",
-                id=report.id,
-                score=_clamp_score(base_score),
-                title=f"Market report - {report.report_date.isoformat()}",
-                subtitle=f"{report.total_opportunities} opportunities, avg score {report.average_score or 0}",
-                matched_fields=matched_fields,
-                card_id=None,
-                card_code=None,
-                name_en=None,
-                name_jp=None,
-                url="/market/report",
-                metadata={"report_date": report.report_date.isoformat()},
-                sort_time=report.created_at,
-            )
-        )
-    return out
+def _search_reports(db: Session, q: str, q_lower: str, *, user_id: int) -> list[_ScoredResult]:
+    # Reports contain deployment-wide portfolio enrichment without ownership.
+    # Preserve the type contract, but never read these rows for personal search.
+    require_user_id(user_id)
+    return []
 
 
 _SEARCH_FUNCS = {
-    "cards": lambda db, q, q_lower, owned, now: _search_cards(db, q_lower, owned),
-    "collection": lambda db, q, q_lower, owned, now: _search_collection(db, q_lower, owned),
-    "wishlist": lambda db, q, q_lower, owned, now: _search_wishlist(db, q_lower, owned),
-    "grading": lambda db, q, q_lower, owned, now: _search_grading(db, q_lower, owned),
-    "notes": lambda db, q, q_lower, owned, now: _search_notes(db, q_lower, owned),
-    "activity": lambda db, q, q_lower, owned, now: _search_activity(db, q_lower, owned, now),
-    "signals": lambda db, q, q_lower, owned, now: _search_signals(db, q_lower, owned, now),
-    "opportunities": lambda db, q, q_lower, owned, now: _search_opportunities(db, q, q_lower),
-    "reports": lambda db, q, q_lower, owned, now: _search_reports(db, q, q_lower),
+    "cards": lambda db, q, q_lower, owned, now, user_id: _search_cards(db, q_lower, owned, user_id=user_id),
+    "collection": lambda db, q, q_lower, owned, now, user_id: _search_collection(db, q_lower, owned, user_id=user_id),
+    "wishlist": lambda db, q, q_lower, owned, now, user_id: _search_wishlist(db, q_lower, owned, user_id=user_id),
+    "grading": lambda db, q, q_lower, owned, now, user_id: _search_grading(db, q_lower, owned, user_id=user_id),
+    "notes": lambda db, q, q_lower, owned, now, user_id: _search_notes(db, q_lower, owned, user_id=user_id),
+    "activity": lambda db, q, q_lower, owned, now, user_id: _search_activity(db, q_lower, owned, now, user_id=user_id),
+    "signals": lambda db, q, q_lower, owned, now, user_id: _search_signals(db, q_lower, owned, now, user_id=user_id),
+    "opportunities": lambda db, q, q_lower, owned, now, user_id: _search_opportunities(db, q, q_lower, user_id=user_id),
+    "reports": lambda db, q, q_lower, owned, now, user_id: _search_reports(db, q, q_lower, user_id=user_id),
 }
 
 
@@ -717,19 +682,21 @@ def search(
     db: Session,
     q: str,
     *,
+    user_id: int,
     types: list[str] | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> SearchOutcome:
+    require_user_id(user_id)
     active_types = list(types) if types else list(SEARCH_TYPES)
     q_lower = q.lower()
     now = datetime.now(timezone.utc)
-    owned_by_card = _owned_card_ids(db)
+    owned_by_card = _owned_card_ids(db, user_id=user_id)
 
     all_results: list[_ScoredResult] = []
     for t in active_types:
         func_ = _SEARCH_FUNCS[t]
-        all_results.extend(func_(db, q, q_lower, owned_by_card, now))
+        all_results.extend(func_(db, q, q_lower, owned_by_card, now, user_id))
 
     by_type: dict[str, int] = {t: 0 for t in SEARCH_TYPES}
     for r in all_results:
@@ -746,12 +713,13 @@ def search(
     )
 
 
-def record_search_history(db: Session, q: str, result_count: int) -> None:
+def record_search_history(db: Session, q: str, result_count: int, *, user_id: int) -> None:
     """Best-effort: a failure here must never break the search response
     itself, since this is just a log of past queries, not load-bearing
     data."""
+    require_user_id(user_id)
     try:
-        db.add(SearchHistory(query=q, result_count=result_count))
+        db.add(SearchHistory(user_id=user_id, query=q, result_count=result_count))
         db.commit()
     except Exception:
         db.rollback()
@@ -763,9 +731,9 @@ def record_search_history(db: Session, q: str, result_count: int) -> None:
 SUGGESTIONS_PER_SOURCE = 10
 
 
-def _recent_searched_card_codes(db: Session, limit: int) -> list[SearchSuggestionOut]:
+def _recent_searched_card_codes(db: Session, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
     rows = db.scalars(
-        select(SearchHistory.query)
+        select(SearchHistory.query).where(SearchHistory.user_id == require_user_id(user_id))
         .order_by(SearchHistory.created_at.desc())
         .limit(limit * 3)
     ).all()
@@ -792,8 +760,8 @@ def _recent_searched_card_codes(db: Session, limit: int) -> list[SearchSuggestio
     return suggestions
 
 
-def _top_owned_cards(db: Session, limit: int) -> list[SearchSuggestionOut]:
-    totals = _owned_card_ids(db)
+def _top_owned_cards(db: Session, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
+    totals = _owned_card_ids(db, user_id=user_id)
     owned_ids = sorted(
         (cid for cid, qty in totals.items() if qty > 0),
         key=lambda cid: totals[cid],
@@ -807,10 +775,10 @@ def _top_owned_cards(db: Session, limit: int) -> list[SearchSuggestionOut]:
     ]
 
 
-def _wishlist_grails(db: Session, limit: int) -> list[SearchSuggestionOut]:
+def _wishlist_grails(db: Session, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
     items = db.scalars(
         select(WishlistItem)
-        .where(WishlistItem.priority.in_(HIGH_WISHLIST_PRIORITIES), WishlistItem.status != "removed")
+        .where(WishlistItem.user_id == require_user_id(user_id), WishlistItem.priority.in_(HIGH_WISHLIST_PRIORITIES), WishlistItem.status != "removed")
         .order_by(WishlistItem.created_at.desc())
         .limit(limit)
     ).all()
@@ -823,8 +791,8 @@ def _wishlist_grails(db: Session, limit: int) -> list[SearchSuggestionOut]:
     return suggestions
 
 
-def _recent_opportunities(db: Session, limit: int) -> list[SearchSuggestionOut]:
-    response = get_opportunities(db, limit=limit)
+def _recent_opportunities(db: Session, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
+    response = get_personal_opportunities(db, user_id=user_id, limit=limit)
     return [
         SearchSuggestionOut(
             label=f"{opp.card_code or 'Unlisted'} - {opp.category} (score {opp.score})",
@@ -835,9 +803,9 @@ def _recent_opportunities(db: Session, limit: int) -> list[SearchSuggestionOut]:
     ]
 
 
-def _recent_notes(db: Session, limit: int) -> list[SearchSuggestionOut]:
+def _recent_notes(db: Session, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
     notes = db.scalars(
-        select(CollectorNote).order_by(CollectorNote.created_at.desc()).limit(limit)
+        select(CollectorNote).where(linked_owned_by(CollectorNote, user_id)).order_by(CollectorNote.created_at.desc()).limit(limit)
     ).all()
     cards_by_id = _cards_by_id(db, {n.card_id for n in notes if n.card_id is not None})
     suggestions = []
@@ -849,14 +817,15 @@ def _recent_notes(db: Session, limit: int) -> list[SearchSuggestionOut]:
     return suggestions
 
 
-def get_suggestions(db: Session, q: str | None, limit: int) -> list[SearchSuggestionOut]:
+def get_suggestions(db: Session, q: str | None, limit: int, *, user_id: int) -> list[SearchSuggestionOut]:
+    require_user_id(user_id)
     per_source = min(limit, SUGGESTIONS_PER_SOURCE)
     combined: list[SearchSuggestionOut] = []
-    combined.extend(_recent_searched_card_codes(db, per_source))
-    combined.extend(_top_owned_cards(db, per_source))
-    combined.extend(_wishlist_grails(db, per_source))
-    combined.extend(_recent_opportunities(db, per_source))
-    combined.extend(_recent_notes(db, per_source))
+    combined.extend(_recent_searched_card_codes(db, per_source, user_id=user_id))
+    combined.extend(_top_owned_cards(db, per_source, user_id=user_id))
+    combined.extend(_wishlist_grails(db, per_source, user_id=user_id))
+    combined.extend(_recent_opportunities(db, per_source, user_id=user_id))
+    combined.extend(_recent_notes(db, per_source, user_id=user_id))
 
     if q:
         q_lower = q.lower()

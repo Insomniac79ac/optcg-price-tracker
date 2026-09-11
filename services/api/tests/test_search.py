@@ -237,10 +237,12 @@ def test_grading_search_by_company_and_status(client, db_session):
 
 def test_notes_search_by_body_and_title(client, db_session):
     card = make_card(db_session)
+    item = make_item(db_session, card)
     db_session.add(
         CollectorNote(
             note_type="card",
             card_id=card.id,
+            collection_item_id=item.id,
             title="Keep an eye on this",
             body="Considering grading this copy soon",
         )
@@ -261,11 +263,13 @@ def test_notes_search_by_body_and_title(client, db_session):
 
 def test_activity_search_by_type_and_message_with_recent_bonus(client, db_session):
     card = make_card(db_session)
+    item = make_item(db_session, card)
     db_session.add(
         CollectorActivityEvent(
             event_type="collection_item_added",
             event_source="collection",
             card_id=card.id,
+            collection_item_id=item.id,
             title="Added to collection",
             message="Quantity: 1",
             created_at=datetime.now(timezone.utc),
@@ -277,7 +281,7 @@ def test_activity_search_by_type_and_message_with_recent_bonus(client, db_sessio
     data = response.json()
     results = results_by_type(data, "activity")
     assert len(results) == 1
-    assert results[0]["score"] == 35 + 5  # meta match + recent bonus (owned bonus not applicable, no collection item)
+    assert results[0]["score"] == 35 + 5 + 5  # metadata, recency, and own collection
 
 
 # --- signals -----------------------------------------------------------------
@@ -286,11 +290,13 @@ def test_activity_search_by_type_and_message_with_recent_bonus(client, db_sessio
 def test_signals_search_by_signal_type_and_status(client, db_session):
     card = make_card(db_session)
     now = datetime.now(timezone.utc)
+    item = make_item(db_session, card)
     db_session.add(
         MarketSignalEvent(
             signal_type="owned_above_target_sell",
             dedupe_key="test-dedupe-1",
             card_id=card.id,
+            collection_item_id=item.id,
             status="open",
             suggested_action="review_sell_opportunity",
             message="Price is above your target sell",
@@ -306,7 +312,7 @@ def test_signals_search_by_signal_type_and_status(client, db_session):
     data = response.json()
     results = results_by_type(data, "signals")
     assert len(results) == 1
-    assert results[0]["score"] == 35 + 5  # meta + recent bonus
+    assert results[0]["score"] == 35 + 5 + 5  # metadata, recency, and own collection
 
 
 # --- opportunities -------------------------------------------------------
@@ -315,11 +321,13 @@ def test_signals_search_by_signal_type_and_status(client, db_session):
 def test_opportunities_search_filters_by_card_code(client, db_session):
     card = make_card(db_session, card_code="OP01-001")
     now = datetime.now(timezone.utc)
+    item = make_item(db_session, card)
     db_session.add(
         MarketSignalEvent(
             signal_type="owned_above_target_sell",
             dedupe_key="test-dedupe-2",
             card_id=card.id,
+            collection_item_id=item.id,
             status="open",
             suggested_action="review_sell_opportunity",
             message="Above target",
@@ -339,7 +347,7 @@ def test_opportunities_search_filters_by_card_code(client, db_session):
 # --- reports -----------------------------------------------------------------
 
 
-def test_reports_search_by_summary_line(client, db_session):
+def test_ownerless_reports_are_not_searched_by_summary_line(client, db_session):
     db_session.add(
         MarketIntelligenceReport(
             report_date=date(2026, 7, 1),
@@ -353,11 +361,11 @@ def test_reports_search_by_summary_line(client, db_session):
     response = client.get("/search", params={"q": "top ranked opportunity", "types": "reports"})
     data = response.json()
     results = results_by_type(data, "reports")
-    assert len(results) == 1
-    assert "deterministic_summary_lines" in results[0]["matched_fields"]
+    assert results == []
+    assert data["summary"]["by_type"]["reports"] == 0
 
 
-def test_reports_search_by_date(client, db_session):
+def test_ownerless_reports_are_not_searched_by_date(client, db_session):
     db_session.add(
         MarketIntelligenceReport(
             report_date=date(2026, 7, 1),
@@ -368,7 +376,7 @@ def test_reports_search_by_date(client, db_session):
 
     response = client.get("/search", params={"q": "2026-07-01", "types": "reports"})
     data = response.json()
-    assert len(results_by_type(data, "reports")) == 1
+    assert results_by_type(data, "reports") == []
 
 
 # --- search history --------------------------------------------------------

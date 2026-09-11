@@ -38,10 +38,11 @@ def get_saved_views(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     items, pagination = list_saved_views(
         db,
+        user_id=user.id,
         route_path=route_path,
         view_type=view_type,
         scope=scope,
@@ -58,10 +59,10 @@ def get_saved_views(
 def post_saved_view(
     body: SavedViewCreateIn,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        return create_saved_view(db, body)
+        return create_saved_view(db, body, user_id=user.id)
     except SavedViewValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -70,10 +71,10 @@ def post_saved_view(
 def get_saved_view_by_id(
     view_id: int,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        return get_saved_view(db, view_id)
+        return get_saved_view(db, view_id, user_id=user.id)
     except SavedViewNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -83,10 +84,10 @@ def patch_saved_view(
     view_id: int,
     body: SavedViewUpdateIn,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        return update_saved_view(db, view_id, body)
+        return update_saved_view(db, view_id, body, user_id=user.id)
     except SavedViewNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SavedViewValidationError as exc:
@@ -97,10 +98,10 @@ def patch_saved_view(
 def delete_saved_view_by_id(
     view_id: int,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        delete_saved_view(db, view_id)
+        delete_saved_view(db, view_id, user_id=user.id)
     except SavedViewNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return None
@@ -110,10 +111,10 @@ def delete_saved_view_by_id(
 def post_use_saved_view(
     view_id: int,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        return mark_saved_view_used(db, view_id)
+        return mark_saved_view_used(db, view_id, user_id=user.id)
     except SavedViewNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -122,10 +123,10 @@ def post_use_saved_view(
 def post_set_default_saved_view(
     view_id: int,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     try:
-        return set_default_saved_view(db, view_id)
+        return set_default_saved_view(db, view_id, user_id=user.id)
     except SavedViewNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -134,7 +135,7 @@ def post_set_default_saved_view(
 def post_clear_default_saved_view(
     body: ClearDefaultSavedViewIn,
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
-    clear_default_saved_view(db, body.route_path, body.view_type)
+    clear_default_saved_view(db, body.route_path, body.view_type, user_id=user.id)
     return None

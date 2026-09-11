@@ -53,7 +53,7 @@ def search_endpoint(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     q_clean = q.strip()
     if not q_clean:
@@ -66,8 +66,8 @@ def search_endpoint(
 
     active_types = _parse_types(types)
 
-    outcome = search(db, q_clean, types=active_types, limit=limit, offset=offset)
-    record_search_history(db, q_clean, outcome.total_results)
+    outcome = search(db, q_clean, user_id=user.id, types=active_types, limit=limit, offset=offset)
+    record_search_history(db, q_clean, outcome.total_results, user_id=user.id)
 
     return SearchResponseOut(
         query=outcome.query,
@@ -85,17 +85,17 @@ def search_suggestions_endpoint(
     q: str | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
     db: Session = Depends(get_db),
-    _user: User = Depends(require_current_user),
+    user: User = Depends(require_current_user),
 ):
     q_clean = q.strip() if q else None
 
-    cache_key = f"search_suggestions:{q_clean}:{limit}"
+    cache_key = f"search_suggestions:v2:{user.id}:{q_clean}:{limit}"
     ttl = SEARCH_SUGGESTIONS_TTL_SECONDS
     value, hit = get_or_set_cache(
         cache_key,
         ttl,
         lambda: SearchSuggestionsResponseOut(
-            suggestions=get_suggestions(db, q_clean or None, limit)
+            suggestions=get_suggestions(db, q_clean or None, limit, user_id=user.id)
         ).model_dump(mode="json"),
     )
     set_cache_headers(response, hit=hit, ttl_seconds=ttl, cache_key=cache_key)
