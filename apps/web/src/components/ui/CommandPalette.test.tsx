@@ -125,7 +125,9 @@ describe("CommandPalette", () => {
   it("renders static public commands when open, grouped under Commands", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     await screen.findByText("Commands");
-    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Market")).toBeInTheDocument();
+    expect(screen.queryByText("Discover")).not.toBeInTheDocument();
     expect(screen.getByText("Commands")).toBeInTheDocument();
   });
 
@@ -138,7 +140,7 @@ describe("CommandPalette", () => {
     });
 
     await waitFor(() => expect(screen.getByText("Cards")).toBeInTheDocument());
-    expect(screen.queryByText("Discover")).not.toBeInTheDocument();
+    expect(screen.queryByText("Home")).not.toBeInTheDocument();
   });
 
   it("navigates and closes when a command is selected", async () => {
@@ -146,11 +148,21 @@ describe("CommandPalette", () => {
     render(<CommandPalette open onClose={onClose} />);
     await screen.findByText("Commands");
 
-    fireEvent.click(screen.getByText("Discover"));
+    fireEvent.click(screen.getByText("Home"));
 
     expect(push).toHaveBeenCalledWith("/");
     expect(onClose).toHaveBeenCalled();
   });
+
+  it.each([["Home", "/"], ["Cards", "/cards"], ["Market", "/analytics"]])(
+    "opens the public %s destination without a lookup",
+    async (label, destination) => {
+      render(<CommandPalette open onClose={vi.fn()} />);
+      fireEvent.click(await screen.findByText(label));
+      expect(push).toHaveBeenCalledWith(destination);
+      expect(fetchPrintCatalogue).not.toHaveBeenCalled();
+    },
+  );
 
   it("closes on Escape", async () => {
     const onClose = vi.fn();
@@ -452,7 +464,9 @@ describe("CommandPalette - public card search (signed out)", () => {
   it("still offers the public page commands", async () => {
     render(<CommandPalette open onClose={vi.fn()} />);
     expect(await screen.findByText("Commands")).toBeInTheDocument();
-    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Market")).toBeInTheDocument();
+    expect(screen.queryByText("Discover")).not.toBeInTheDocument();
     expect(screen.getByText("Cards")).toBeInTheDocument();
   });
 

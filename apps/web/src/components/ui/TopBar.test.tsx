@@ -41,6 +41,8 @@ describe("TopBar", () => {
     // /analytics is the current market landscape (Analytics 1A-B) - public,
     // and backed by three deliberately unauthenticated endpoints.
     expect(hrefs).toEqual(["/", "/cards", "/analytics"]);
+    expect(Array.from(nav.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Home", "Cards", "Market"]);
+    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
     expect(hrefs).not.toContain("/admin");
     // The seven legacy collector-data analytics pages gain no entry from it.
     for (const leaf of [

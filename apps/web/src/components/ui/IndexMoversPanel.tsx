@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { RarityBadge } from "@/components/RarityBadge";
 import { resolveCardImageUrl } from "@/lib/cardImage";
@@ -169,36 +171,42 @@ function MoverIdentity({ mover }: { mover: IndexMover }) {
 function MoverRow({ mover }: { mover: IndexMover }) {
   return (
     <li
-      className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-x-3 gap-y-3 border-t border-border-muted py-3 first:border-t-0 first:pt-0 sm:grid-cols-[64px_minmax(0,1fr)_auto] sm:items-center sm:gap-x-4"
+      className="group border-t border-border-muted first:border-t-0"
       data-testid="index-mover"
       data-card-print-id={mover.card_print_id}
     >
-      {/* CONTAIN, NEVER COVER, and no geometry prop: the movers payload
-          publishes none, so CardImageFrame takes its plain object-contain path
-          and the whole card stays visible inside the 63:88 frame. The URL goes
-          through the app's existing same-origin rewrite - Bandai's host sends
-          Cross-Origin-Resource-Policy: same-site and would otherwise render
-          nothing but the placeholder. */}
-      {/* `size="full"` inside a wrapper of the grid track's own width, NOT the
-          fixed `sm` size: `sm` is `w-20` (80px) with `shrink-0`, which
-          overflowed this row's 56px track and rendered the frame on top of the
-          card name beside it. Letting the frame fill a track-width wrapper
-          keeps the two in step at both breakpoints. */}
-      <div className="row-span-2 w-[56px] sm:row-span-1 sm:w-[64px]">
-        <CardImageFrame
-          imageUrl={resolveCardImageUrl(mover.display_image_url)}
-          alt={`${mover.name ?? mover.card_code ?? "Card"} (${mover.card_code ?? "unknown print"})`}
-          cardCode={mover.card_code ?? "—"}
-          rarity={mover.rarity}
-          size="full"
-          padded
-        />
-      </div>
-      <MoverIdentity mover={mover} />
-      <div className="col-start-2 flex items-start gap-5 sm:col-start-3 sm:gap-6">
-        <PriceMove mover={mover} />
-        <IndexImpact mover={mover} />
-      </div>
+      <Link
+        href={`/prints/${mover.card_print_id}`}
+        prefetch={false}
+        className="grid grid-cols-[56px_minmax(0,1fr)] items-start gap-x-3 gap-y-3 rounded-control py-3 transition-colors group-first:pt-0 hover:bg-bg-elevated active:bg-bg-elevated focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-teal sm:grid-cols-[64px_minmax(0,1fr)_auto] sm:items-center sm:gap-x-4"
+      >
+        {/* CONTAIN, NEVER COVER, and no geometry prop: the movers payload
+            publishes none, so CardImageFrame takes its plain object-contain path
+            and the whole card stays visible inside the 63:88 frame. The URL goes
+            through the app's existing same-origin rewrite - Bandai's host sends
+            Cross-Origin-Resource-Policy: same-site and would otherwise render
+            nothing but the placeholder. */}
+        {/* `size="full"` inside a wrapper of the grid track's own width, NOT the
+            fixed `sm` size: `sm` is `w-20` (80px) with `shrink-0`, which
+            overflowed this row's 56px track and rendered the frame on top of the
+            card name beside it. Letting the frame fill a track-width wrapper
+            keeps the two in step at both breakpoints. */}
+        <div className="row-span-2 w-[56px] sm:row-span-1 sm:w-[64px]">
+          <CardImageFrame
+            imageUrl={resolveCardImageUrl(mover.display_image_url)}
+            alt={`${mover.name ?? mover.card_code ?? "Card"} (${mover.card_code ?? "unknown print"})`}
+            cardCode={mover.card_code ?? "—"}
+            rarity={mover.rarity}
+            size="full"
+            padded
+          />
+        </div>
+        <MoverIdentity mover={mover} />
+        <div className="col-start-2 flex items-start gap-5 sm:col-start-3 sm:gap-6">
+          <PriceMove mover={mover} />
+          <IndexImpact mover={mover} />
+        </div>
+      </Link>
     </li>
   );
 }
@@ -256,9 +264,10 @@ export function IndexMoversPanel({
 
   return (
     <section
+      id="latest-moves"
       aria-labelledby="index-movers-heading"
       data-testid="index-movers"
-      className="mt-5 rounded-panel border border-border-muted bg-bg-surface p-4 sm:p-5"
+      className="mt-5 scroll-mt-[calc(var(--header-h)+1rem)] rounded-panel border border-border-muted bg-bg-surface p-4 sm:p-5"
     >
       <h3
         id="index-movers-heading"

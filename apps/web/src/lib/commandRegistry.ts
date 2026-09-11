@@ -53,7 +53,7 @@ export const COMMAND_REGISTRY: Command[] = [
   // --- Public ------------------------------------------------------------
   cmd({
     id: "nav-discover",
-    label: "Discover",
+    label: "Home",
     description: "Public landing page",
     group: "Navigate",
     route_path: "/",
@@ -67,6 +67,15 @@ export const COMMAND_REGISTRY: Command[] = [
     group: "Cards",
     route_path: "/cards",
     keywords: ["find", "lookup", "browse", "catalogue"],
+    scope: "public",
+  }),
+  cmd({
+    id: "nav-market",
+    label: "Market",
+    description: "Latest index moves and the wider card market",
+    group: "Market",
+    route_path: "/analytics",
+    keywords: ["market", "analytics", "index", "movement", "movers"],
     scope: "public",
   }),
   // --- Collector -----------------------------------------------------------

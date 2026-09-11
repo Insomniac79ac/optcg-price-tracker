@@ -149,6 +149,9 @@ export default function DiscoverPage() {
               <Link href="/cards" className={PRIMARY_LINK_CLASS}>
                 Explore the Atlas
               </Link>
+              <Link href="/analytics#latest-moves" prefetch={false} className={SECONDARY_LINK_CLASS}>
+                See what moved
+              </Link>
             </div>
           </div>
 

@@ -30,10 +30,14 @@ describe("SidebarNav - signed out", () => {
     useSessionMock.mockReturnValue({ data: null, status: "unauthenticated" });
   });
 
-  it("shows only Discover and Cards", () => {
+  it("shows only Home, Cards and Market", () => {
     render(<SidebarNav />);
-    expect(screen.getByText("Discover")).toBeInTheDocument();
-    expect(screen.getByText("Cards")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Cards" })).toHaveAttribute("href", "/cards");
+    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/analytics");
+    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Search" })).not.toBeInTheDocument();
   });
 
   it("no longer offers the retired Market Index page", () => {
@@ -79,8 +83,12 @@ describe("SidebarNav - signed in (collector session)", () => {
 
   it("still shows the public tier", () => {
     render(<SidebarNav />);
-    expect(screen.getByText("Discover")).toBeInTheDocument();
-    expect(screen.getByText("Cards")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Cards" })).toHaveAttribute("href", "/cards");
+    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/analytics");
+    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Search" })).not.toBeInTheDocument();
     expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });
 

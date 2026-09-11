@@ -52,9 +52,9 @@ interface NavGroup {
 // it is still a redirect into /cards?sort=index_desc, and this page is not its
 // replacement (it reports what prices ARE, not how they moved).
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Discover" },
+  { href: "/", label: "Home" },
   { href: "/cards", label: "Cards" },
-  { href: "/analytics", label: "Analytics" },
+  { href: "/analytics", label: "Market" },
 ];
 
 // Collector tier - only shown once a session exists. Trading/internal pages

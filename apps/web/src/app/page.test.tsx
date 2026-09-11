@@ -12,7 +12,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
-const { fetchSavedViews, fetchCardsCatalogue } = vi.hoisted(() => ({
+const { fetchSavedViews, fetchCardsCatalogue, apiGet } = vi.hoisted(() => ({
+  apiGet: vi.fn(),
   fetchSavedViews: vi.fn().mockResolvedValue({
     items: [],
     pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
@@ -24,7 +25,7 @@ const { fetchSavedViews, fetchCardsCatalogue } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, fetchSavedViews, fetchCardsCatalogue };
+  return { ...actual, fetchSavedViews, fetchCardsCatalogue, apiGet };
 });
 
 const { fetchPrintCatalogue } = vi.hoisted(() => ({ fetchPrintCatalogue: vi.fn() }));
@@ -221,8 +222,10 @@ describe("DiscoverPage Recent Finds", () => {
     render(<DiscoverPage />);
 
     await screen.findAllByRole("link", { name: /test card 1/i });
+    expect(screen.getByRole("link", { name: "See what moved" })).toHaveAttribute("href", "/analytics#latest-moves");
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
     expect(fetchPrintCatalogue).toHaveBeenCalledWith(expect.objectContaining({ sort: "updated" }));
+    expect(apiGet).not.toHaveBeenCalled();
   });
 
   it("shows fewer than 4 when the catalogue has fewer printings", async () => {

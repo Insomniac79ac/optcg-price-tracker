@@ -368,6 +368,27 @@ describe("normal rendering", () => {
 });
 
 describe("exact print identity", () => {
+  it("links every row directly to the supplied printing, including shared or absent card codes", async () => {
+    stub({ mov: movers({ movers: [
+      { ...LAW, card_print_id: 101, card_code: "OP01-001" },
+      { ...LAW, card_print_id: 202, card_code: "OP01-001" },
+      { ...LAW, card_print_id: 303, card_code: null },
+    ] }) });
+    await renderPage();
+    const links = rows().map((row) => within(row).getByRole("link"));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/prints/101", "/prints/202", "/prints/303",
+    ]);
+    for (const link of links) {
+      expect(link.querySelector("img")).toBeTruthy();
+      expect(link.querySelector("a, button, input, select, textarea")).toBeNull();
+      fireEvent.focus(link);
+      fireEvent.mouseEnter(link);
+    }
+    expect(apiGet).toHaveBeenCalledTimes(6);
+    expect(apiGet.mock.calls.some(([path]) => path.startsWith("/prints"))).toBe(false);
+  });
+
   it("keys and distinguishes rows by card_print_id, not card_code", async () => {
     await renderPage();
     // Two rows are both named "Nami" and are different prints. Identity has to
@@ -634,6 +655,7 @@ describe("placement and mobile structure", () => {
     await renderPage();
     const row = screen.getByTestId("index-analytics-row");
     const panel = screen.getByTestId("index-movers");
+    expect(panel.id).toBe("latest-moves");
     // Node.DOCUMENT_POSITION_FOLLOWING === 4
     expect(screen.getByTestId("index-hero").compareDocumentPosition(panel) & 4).toBeTruthy();
     expect(panel.compareDocumentPosition(row) & 4).toBeTruthy();
@@ -655,7 +677,7 @@ describe("placement and mobile structure", () => {
     // what stops a long card name pushing the metric columns off a 390px
     // viewport - a grid track defaults to `min-content` and would not shrink.
     for (const row of rows()) {
-      expect(row.className).toContain("minmax(0,1fr)");
+      expect(within(row).getByRole("link").className).toContain("minmax(0,1fr)");
     }
     const identity = rows()[0].querySelector(".truncate");
     expect(identity).toBeTruthy();
