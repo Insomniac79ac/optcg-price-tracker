@@ -23,6 +23,7 @@ export interface PaletteCardResult {
   key: string;
   title: string;
   subtitle: string;
+  preview?: { imageUrl: string | null; cardCode: string; context: string };
   /** Where the row goes. A canonical family row points at
    * /cards/code/{card_code}; the older print row points at
    * /prints/{card_print_id}.
@@ -55,6 +56,7 @@ export function printToPaletteResult(item: PrintCatalogueItem): PaletteCardResul
     title: model.displayName,
     subtitle: parts.join(" · "),
     url: `/prints/${model.cardPrintId}`,
+    preview: { imageUrl: model.imageUrl, cardCode: model.cardCode, context: parts.slice(1).join(" · ") || "Printing" },
   };
 }
 
@@ -73,9 +75,9 @@ export async function searchPublicPrints(
 // ---------------------------------------------------------------------------
 //
 // WHY FAMILIES, NOT PRINTS. A print row per result makes one card appear five
-// times (OP04-044 Kaido has five printings), and picking one of them to stand
-// for the card would be inventing a "representative printing" the catalogue
-// does not have. A collector searching "Kaido" is looking for the CARD; which
+// times (OP04-044 Kaido has five printings). Preview artwork is labelled as
+// one returned printing; it does not determine the destination.
+// A collector searching "Kaido" is looking for the CARD; which
 // printing they own is the next question, and the printing chooser at
 // /cards/code/{card_code} is the surface that asks it.
 //
@@ -93,7 +95,8 @@ export interface CanonicalFamilyResult {
   cardCode: string;
   /** The canonical name, or null when the family's own records disagree. */
   name: string | null;
-  /** How many active printings this family has in the catalogue. */
+  preview?: PaletteCardResult["preview"];
+  /** Number of printings in this fetched page, not a catalogue total. */
   printingCount: number;
   /** Always /cards/code/{card_code} - never a single print, because a family
    * result must not choose a printing on the collector's behalf. */
@@ -145,6 +148,7 @@ export function groupPrintsIntoFamilies(
       cardCode,
       name: resolveCanonicalPrintIdentity(group)?.name ?? null,
       printingCount: group.length,
+      preview: printToPaletteResult(group.find((item) => toPrintUiModel(item).imageUrl) ?? group[0]).preview,
       url: familyRouteFor(cardCode),
     });
     if (families.length >= limit) break;
@@ -152,16 +156,10 @@ export function groupPrintsIntoFamilies(
   return families;
 }
 
-/** One canonical family as a palette row.
- *
- * No image: a family has no single artwork, and choosing one printing's art to
- * represent the card is exactly the invented "representative printing" this
- * design refuses. The printing count is what tells a collector there is a
- * choice waiting.
- */
+/** A family stays a family; artwork is explicitly a returned printing preview. */
 export function familyToPaletteResult(family: CanonicalFamilyResult): PaletteCardResult {
   const parts = [family.cardCode];
-  if (family.printingCount > 1) parts.push(`${family.printingCount} printings`);
+  parts.push("Card family · Choose printing");
 
   return {
     key: family.key,
@@ -170,6 +168,7 @@ export function familyToPaletteResult(family: CanonicalFamilyResult): PaletteCar
     title: family.name ?? family.cardCode,
     subtitle: parts.join(" · "),
     url: family.url,
+    preview: family.preview,
   };
 }
 

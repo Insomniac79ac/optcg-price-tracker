@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSavedViews, type SavedView } from "@/lib/api";
-import { COMMAND_REGISTRY, searchCommands, visibleCommands, type Command } from "@/lib/commandRegistry";
+import { COMMAND_REGISTRY, searchCommands, type Command } from "@/lib/commandRegistry";
 import {
   MIN_QUERY_LENGTH,
   PUBLIC_CARD_SEARCH_LIMIT,
@@ -13,6 +13,8 @@ import {
   type PaletteCardResult,
 } from "@/lib/publicCardSearch";
 import { getRecentWorkflows, recordRecentWorkflow, type RecentWorkflowEntry } from "@/lib/recentWorkflows";
+
+import { CardImageFrame } from "./CardImageFrame";
 
 import { Badge } from "./Badge";
 import { ConfirmActionModal } from "./ConfirmActionModal";
@@ -47,10 +49,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [pendingDangerous, setPendingDangerous] = useState<Command | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
+    // Opening the externally controlled dialog resets its ephemeral input.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery("");
     setSelectedIndex(0);
     setRecent(getRecentWorkflows());
@@ -69,13 +72,16 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     const trimmed = query.trim();
     if (trimmed.length < MIN_QUERY_LENGTH) {
+      // Clear suggestions immediately when the query becomes invalid.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCardResults([]);
       setCardStatus("idle");
       return;
     }
-    const requestId = ++requestIdRef.current;
+    setCardResults([]);
     setCardStatus("loading");
     const debounceTimer = window.setTimeout(() => {
       // ONE card search for everybody, signed in or not: the public canonical
@@ -108,19 +114,22 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
       search
         .then((results) => {
-          if (requestIdRef.current !== requestId) return;
+          if (cancelled) return;
           setCardResults(results);
           setCardStatus("ready");
         })
         .catch(() => {
-          if (requestIdRef.current !== requestId) return;
+          if (cancelled) return;
           // Never fall through to "No matches" - that would claim a search
           // succeeded and found nothing.
           setCardResults([]);
           setCardStatus("error");
         });
     }, 250);
-    return () => window.clearTimeout(debounceTimer);
+    return () => {
+      window.clearTimeout(debounceTimer);
+      cancelled = true;
+    };
   }, [open, query]);
 
   const filteredCommands = useMemo(
@@ -129,15 +138,21 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   );
 
   const filteredSavedViews = useMemo(() => {
+    if (!isAuthenticated) return [];
     const q = query.trim().toLowerCase();
     if (!q) return savedViews.filter((v) => v.pinned || v.is_default).slice(0, 6);
     return savedViews.filter((v) => v.name.toLowerCase().includes(q)).slice(0, 6);
-  }, [savedViews, query]);
+  }, [savedViews, query, isAuthenticated]);
 
   const items: PaletteItem[] = useMemo(() => {
-    const out: PaletteItem[] = [];
+    const out: PaletteItem[] = cardResults.map((result) => ({ kind: "card", key: result.key, result }));
     if (!query.trim()) {
-      for (const entry of recent) {
+      for (const entry of recent.filter((entry) => {
+        if (entry.route_path.startsWith("/admin") || entry.item_type === "admin_action") return isAuthenticated && isAdmin;
+        if (isAuthenticated) return true;
+        if (entry.item_type === "card") return /^\/(cards\/(code\/[^/?#]+|\d+)|prints\/\d+)$/.test(entry.route_path);
+        return entry.item_type === "route" && COMMAND_REGISTRY.some((command) => command.scope === "public" && command.route_path === entry.route_path && command.label === entry.label);
+      })) {
         out.push({ kind: "recent", key: `recent-${entry.item_type}-${entry.route_path}-${entry.label}`, entry });
       }
     }
@@ -147,13 +162,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     for (const command of filteredCommands) {
       out.push({ kind: "command", key: `command-${command.id}`, command });
     }
-    for (const result of cardResults) {
-      out.push({ kind: "card", key: result.key, result });
-    }
     return out;
-  }, [query, recent, filteredSavedViews, filteredCommands, cardResults]);
+  }, [query, recent, filteredSavedViews, filteredCommands, cardResults, isAuthenticated, isAdmin]);
 
   useEffect(() => {
+    // A new result list starts keyboard selection at its first row.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0);
   }, [items.length, query]);
 
@@ -222,38 +236,43 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       setSelectedIndex((i) => (items.length === 0 ? 0 : (i - 1 + items.length) % items.length));
       return;
     }
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && e.target === inputRef.current) {
       e.preventDefault();
       const item = items[selectedIndex];
       if (item) activate(item);
     }
   }
 
+  useEffect(() => {
+    if (open) document.querySelector("[data-palette-active='true']")?.scrollIntoView?.({ block: "nearest" });
+  }, [open, selectedIndex]);
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[10vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-2 pt-[4dvh] sm:p-4 sm:pt-[10vh]"
       onClick={onClose}
     >
       <div
         role="dialog"
-        aria-label="Command palette"
+        aria-label="Search cards"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
-        className="max-h-[70vh] w-full max-w-xl overflow-hidden rounded-modal border border-border-default bg-bg-elevated shadow-xl"
+        className="flex max-h-[85dvh] flex-col sm:max-h-[70vh] w-full max-w-xl overflow-hidden rounded-modal border border-border-default bg-bg-elevated shadow-xl"
       >
         <div className="border-b border-border-default p-3">
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cards and pages…"
-            className="w-full rounded-control border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-faint"
+            aria-label="Search by name or code"
+            placeholder="Search by name or code"
+            className="min-h-11 w-full rounded-control border border-border-default bg-bg-surface px-3 py-2 text-base sm:text-sm text-text-primary placeholder:text-text-faint"
           />
         </div>
 
-        <div className="max-h-[52vh] overflow-y-auto p-2">
+        <div className="min-h-0 overflow-y-auto overscroll-contain p-2">
           {items.length === 0 && (
             <div className="px-3 py-6 text-center text-xs text-text-muted">
               {cardStatus === "loading"
@@ -264,17 +283,23 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             </div>
           )}
 
+          {renderGroup("Cards", items, "card", selectedIndex, activate)}
           {renderGroup("Recent", items, "recent", selectedIndex, activate)}
           {renderGroup("Saved Views", items, "saved_view", selectedIndex, activate)}
-          {renderGroup("Commands", items, "command", selectedIndex, activate)}
-          {renderGroup("Cards", items, "card", selectedIndex, activate)}
+          {renderGroup("Pages", items, "command", selectedIndex, activate)}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border-default px-3 py-2 text-[11px] text-text-faint">
-          <span>↑↓ navigate · Enter select · Esc close</span>
-          <span className="mono">
-            {visibleCommands(COMMAND_REGISTRY, { isAuthenticated, isAdmin }).length} commands
-          </span>
+        <div className="shrink-0 border-t border-border-default p-2">
+          {query.trim().length >= MIN_QUERY_LENGTH && (
+            <a href={`/cards?q=${encodeURIComponent(query.trim())}`} onClick={onClose}
+              className="flex min-h-11 items-center justify-center rounded-control bg-bg-surface text-sm font-semibold text-text-primary">
+              View all results
+            </a>
+          )}
+          <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
+            <span className="hidden sm:inline">↑↓ navigate · Enter select · Esc close</span>
+            <button type="button" onClick={onClose} className="min-h-11 px-3 sm:min-h-8">Close search</button>
+          </div>
         </div>
       </div>
 
@@ -336,14 +361,14 @@ function PaletteRow({
   active: boolean;
   onClick: () => void;
 }) {
-  const rowClass = `flex w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-sm transition-colors ${
+  const rowClass = `flex min-h-11 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-left text-sm transition-colors ${
     active ? "bg-bg-surface text-text-primary" : "text-text-secondary hover:bg-bg-surface/60"
   }`;
 
   if (item.kind === "command") {
     const { command } = item;
     return (
-      <button type="button" onClick={onClick} className={rowClass}>
+      <button type="button" data-palette-active={active} onClick={onClick} className={rowClass}>
         <span className="min-w-0">
           <span className="block truncate">{command.label}</span>
           <span className="block truncate text-[11px] text-text-muted">{command.description}</span>
@@ -360,7 +385,7 @@ function PaletteRow({
 
   if (item.kind === "saved_view") {
     return (
-      <button type="button" onClick={onClick} className={rowClass}>
+      <button type="button" data-palette-active={active} onClick={onClick} className={rowClass}>
         <span className="min-w-0">
           <span className="block truncate">{item.view.name}</span>
           <span className="block truncate text-[11px] text-text-muted">{item.view.route_path}</span>
@@ -372,7 +397,7 @@ function PaletteRow({
 
   if (item.kind === "recent") {
     return (
-      <button type="button" onClick={onClick} className={rowClass}>
+      <button type="button" data-palette-active={active} onClick={onClick} className={rowClass}>
         <span className="min-w-0">
           <span className="block truncate">{item.entry.label}</span>
           <span className="block truncate text-[11px] text-text-muted">{item.entry.route_path}</span>
@@ -383,12 +408,19 @@ function PaletteRow({
   }
 
   return (
-    <button type="button" onClick={onClick} className={rowClass}>
-      <span className="min-w-0">
+    <button type="button" data-palette-active={active} onClick={onClick} className={rowClass}>
+      {item.result.preview && (
+        <span className="w-14 shrink-0">
+          <CardImageFrame imageUrl={item.result.preview.imageUrl} cardCode={item.result.preview.cardCode}
+            alt={`${item.result.preview.cardCode} printing preview — ${item.result.preview.context}`} size="full" padded />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
         <span className="block truncate">{item.result.title}</span>
         <span className="block truncate text-[11px] text-text-muted">{item.result.subtitle}</span>
+        {item.result.preview && <span className="block text-[11px] text-text-muted">Preview: {item.result.preview.context}</span>}
       </span>
-      <Badge label="CARD" className="shrink-0" />
+
     </button>
   );
 }

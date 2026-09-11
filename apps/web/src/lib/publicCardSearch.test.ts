@@ -159,13 +159,13 @@ describe("A/H. canonical family grouping", () => {
     });
   });
 
-  it("says how many printings are waiting, but only when there is a choice", () => {
+  it("labels families without claiming a complete printing count", () => {
     expect(familyToPaletteResult(groupPrintsIntoFamilies(KAIDO)[0]).subtitle).toBe(
-      "OP04-044 · 5 printings",
+      "OP04-044 · Card family · Choose printing",
     );
-    // B. a single-printing family states no count - there is nothing to choose.
+    // A single returned printing still does not establish a complete family.
     expect(familyToPaletteResult(groupPrintsIntoFamilies([VIVI_SINGLE])[0]).subtitle).toBe(
-      "OP04-118",
+      "OP04-118 · Card family · Choose printing",
     );
   });
 
@@ -252,3 +252,13 @@ describe("C-G. query shapes reach the public catalogue unchanged", () => {
     expect(results).toHaveLength(PUBLIC_CARD_SEARCH_LIMIT);
   });
 });
+
+ it("uses artwork from a returned printing without changing family identity", () => {
+   const item = printItem({ image_url: "https://example.com/actual-print.png" });
+   const family = familyToPaletteResult(groupPrintsIntoFamilies([item])[0]);
+   const exact = printToPaletteResult(item);
+   expect(family.preview).toEqual(exact.preview);
+   expect(family.preview?.imageUrl).toBe("https://example.com/actual-print.png");
+   expect(family.url).toBe("/cards/code/OP04-044");
+   expect(exact.url).toBe(`/prints/${item.card_print_id}`);
+ });
