@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
@@ -35,9 +35,9 @@ vi.mock("@/lib/prints", async () => {
 });
 
 import type { PrintCatalogueItem } from "@/lib/prints";
-import { useSession } from "next-auth/react";
+import type { IndexMover, IndexMovers } from "@/lib/cardPirateIndex";
 
-import DiscoverPage from "./page";
+import HomePage, { buildCardsSearchHref } from "./page";
 
 /** Shaped on the real `GET /prints` staging payload. `card_print_id` is the
  * only identity this page has, and the only one it may route with. */
@@ -95,424 +95,149 @@ const catalogueResponse = (items: PrintCatalogueItem[]) => ({
   facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
 });
 
-const mockedUseSession = vi.mocked(useSession);
 
-afterEach(() => {
-  vi.clearAllMocks();
-  mockedUseSession.mockReturnValue({ data: null, status: "unauthenticated" } as ReturnType<typeof useSession>);
+const mover = (id: number, overrides: Partial<IndexMover> = {}): IndexMover => ({
+  card_print_id: id, card_code: "OP01-001", name: `Mover ${id}`, rarity: "SR",
+  display_image_url: `https://www.onepiece-cardgame.com/images/${id}.png`,
+  treatment: "parallel", language: "jp", prior_value_jpy: 100, current_value_jpy: 200,
+  direction: "up", raw_pct: 30.77, capped_log_return: "0.2231", was_capped: true,
+  contribution_log_return: "0.0001", approx_index_points: "0.1000", move_rank: id, impact_rank: id,
+  ...overrides,
 });
-
-describe("DiscoverPage hero", () => {
-  it("renders the hero heading and collector-voiced copy", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(screen.getByText(/your collection has a story/i)).toBeInTheDocument();
-    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
-  });
-
-  it("links to /cards as the primary Explore the Atlas action", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(screen.getByRole("link", { name: /explore the atlas/i })).toHaveAttribute("href", "/cards");
-  });
-
-  it("no longer offers a Market Index page action", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    const { container } = render(<DiscoverPage />);
-    expect(screen.queryByRole("link", { name: /view market index/i })).not.toBeInTheDocument();
-    const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
-    expect(hrefs).not.toContain("/market/movers");
-  });
-
-  it("shows real card artwork in the hero when the catalogue has images, capped at 3", async () => {
-    const cards = [1, 2, 3, 4, 5].map((id) => makePrint({ card_print_id: id, image_url: `https://example.test/card-${id}.jpg` }));
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(cards));
-    render(<DiscoverPage />);
-
-    const hero = await screen.findByTestId("hero-art");
-    // { hidden: true } - the composition is intentionally aria-hidden
-    // (decorative, see HeroArt's own comment), which excludes it from
-    // getAllByRole's default accessibility-tree-only search.
-    expect(within(hero).getAllByRole("img", { hidden: true })).toHaveLength(3);
-  });
-
-  it("prioritises printings with artwork over printings without", async () => {
-    const cards = [
-      makePrint({ card_print_id: 1, image_url: null }),
-      makePrint({ card_print_id: 2, image_url: "https://example.test/card-2.jpg" }),
-      makePrint({ card_print_id: 3, image_url: null }),
-    ];
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(cards));
-    render(<DiscoverPage />);
-
-    const hero = await screen.findByTestId("hero-art");
-    expect(within(hero).getAllByRole("img", { hidden: true })).toHaveLength(1);
-  });
-
-  it("falls back to the branded placeholder (not a broken image) when nothing has artwork", async () => {
-    const cards = [makePrint({ card_print_id: 1, image_url: null, card_code: "OP01-099" })];
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(cards));
-    render(<DiscoverPage />);
-
-    const hero = await screen.findByTestId("hero-art");
-    expect(within(hero).queryByRole("img", { hidden: true })).not.toBeInTheDocument();
-    expect(within(hero).getByText("OP01-099")).toBeInTheDocument();
-  });
-
-  it("shows a stable skeleton (not a blank gap) while the catalogue loads", () => {
-    fetchPrintCatalogue.mockReturnValue(new Promise(() => {})); // never resolves
-    render(<DiscoverPage />);
-    expect(screen.getByTestId("hero-art-loading")).toBeInTheDocument();
-  });
+const moves = (overrides: Partial<IndexMovers> = {}): IndexMovers => ({
+  as_of: "2026-09-10", prior_point_date: "2026-09-09", constituent_count: 100,
+  movers_count: 2, unchanged_count: 98, chain_link_log_return: "0.001", truncated: false,
+  movers: [mover(88), mover(2)], ...overrides,
 });
-
-describe("DiscoverPage Recent Finds", () => {
-  it("shows a maximum of 4 prints, linking each to its exact print detail", async () => {
-    const prints = [1, 2, 3, 4, 5, 6].map((id) => makePrint({ card_print_id: id }));
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(prints));
-    render(<DiscoverPage />);
-
-    const links = await screen.findAllByRole("link", { name: /test card \d/i });
-    expect(links).toHaveLength(4);
-    expect(links[0]).toHaveAttribute("href", "/prints/1");
-  });
-
-  it("routes every find by card_print_id, never by a canonical card id", async () => {
-    // canonical_card_id is deliberately a different number from
-    // card_print_id in this fixture (900 + n), so a mix-up cannot pass
-    // silently - it would produce /prints/901 rather than /prints/1.
-    const prints = [1, 2, 3, 4].map((id) => makePrint({ card_print_id: id }));
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(prints));
-    render(<DiscoverPage />);
-
-    const links = await screen.findAllByRole("link", { name: /test card \d/i });
-    const hrefs = links.map((l) => l.getAttribute("href") ?? "");
-    expect(hrefs).toEqual(["/prints/1", "/prints/2", "/prints/3", "/prints/4"]);
-    expect(hrefs.some((h) => h.startsWith("/cards/"))).toBe(false);
-  });
-
-  it("keeps sibling printings of one card code distinct", async () => {
-    const prints = [
-      makePrint({ card_print_id: 3, card_code: "OP01-013", treatment: "parallel" }),
-      makePrint({ card_print_id: 4, card_code: "OP01-013", treatment: "normal" }),
-    ];
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(prints));
-    render(<DiscoverPage />);
-
-    const links = await screen.findAllByRole("link", { name: /test card \d/i });
-    const hrefs = links.map((l) => l.getAttribute("href"));
-    expect(hrefs).toEqual(["/prints/3", "/prints/4"]);
-    expect(new Set(hrefs).size).toBe(2);
-  });
-
-  it("does not read the legacy canonical-card catalogue at all", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 1 })]));
-    render(<DiscoverPage />);
-
-    await screen.findAllByRole("link", { name: /test card 1/i });
-    expect(fetchCardsCatalogue).not.toHaveBeenCalled();
-  });
-
-  it("covers the whole page with a single print-catalogue request", async () => {
-    // Hero art, Recent Finds and the invitation stack all derive from one
-    // response - no per-section refetch.
-    fetchPrintCatalogue.mockResolvedValue(
-      catalogueResponse([1, 2, 3].map((id) => makePrint({ card_print_id: id }))),
-    );
-    render(<DiscoverPage />);
-
-    await screen.findAllByRole("link", { name: /test card 1/i });
-    expect(screen.getByRole("link", { name: "See what moved" })).toHaveAttribute("href", "/analytics#latest-moves");
-    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
-    expect(fetchPrintCatalogue).toHaveBeenCalledWith(expect.objectContaining({ sort: "updated" }));
-    expect(apiGet).not.toHaveBeenCalled();
-  });
-
-  it("shows fewer than 4 when the catalogue has fewer printings", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 1 })]));
-    render(<DiscoverPage />);
-
-    expect(await screen.findAllByRole("link", { name: /test card 1/i })).toHaveLength(1);
-  });
-
-  it("never uses unsupported popularity/trending/hot wording", async () => {
-    const cards = [1, 2, 3].map((id) => makePrint({ card_print_id: id }));
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(cards));
-    render(<DiscoverPage />);
-    await screen.findAllByRole("link", { name: /test card \d/i });
-
-    const text = document.body.textContent ?? "";
-    expect(text).not.toMatch(/\btrending\b/i);
-    expect(text).not.toMatch(/\bpopular\b/i);
-    expect(text).not.toMatch(/\bhot\b/i);
-    expect(text).not.toMatch(/\branking\b/i);
-  });
-
-  it("shows the 'waiting to be mapped' empty state when the catalogue is empty", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(await screen.findByText(/the atlas is waiting to be mapped/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/cards");
-  });
-
-  it("shows a concise error state with a working retry action, no stack trace", async () => {
-    fetchPrintCatalogue.mockRejectedValueOnce(new Error("boom: internal db pool exhausted at 10.0.0.4"));
-    render(<DiscoverPage />);
-
-    const retry = await screen.findByRole("button", { name: /try again/i });
-    const text = document.body.textContent ?? "";
-    expect(text).not.toMatch(/boom|10\.0\.0\.4|internal db/i);
-
-    fetchPrintCatalogue.mockResolvedValueOnce(catalogueResponse([makePrint({ card_print_id: 1 })]));
-    fireEvent.click(retry);
-    expect(await screen.findByRole("link", { name: /test card 1/i })).toBeInTheDocument();
-  });
+beforeEach(() => {
+  apiGet.mockReset().mockResolvedValue(moves());
+  fetchPrintCatalogue.mockReset().mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 9 })]));
 });
+afterEach(() => vi.clearAllMocks());
+async function ready() {
+  render(<HomePage />);
+  await screen.findByText("Mover 88");
+  await screen.findByText("Test Card 9");
+}
+const moveSection = () => screen.getByRole("region", { name: "Cards on the move" });
+const recentSection = () => screen.getByRole("region", { name: "Recently updated printings" });
 
-describe("DiscoverPage collection invitation", () => {
-  it("G. sends a signed-out visitor into the public catalogue, not to sign-in", async () => {
-    // The public collector product needs no account, so this block's primary
-    // action must continue the journey rather than stop it at a wall.
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-
-    expect(await screen.findByText(/start with the cards/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /browse every printing/i })).toHaveAttribute(
-      "href",
-      "/cards",
-    );
-    // Signing in is still offered, as the smaller second step it actually is.
-    // Scoped to this section - the app header carries its own Sign in link.
-    const section = screen.getByText(/start with the cards/i).closest("section")!;
-    expect(within(section).getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
-      "href",
-      "/sign-in",
-    );
-    expect(screen.queryByRole("link", { name: /learn about collections/i })).toBeNull();
+describe("Home discovery", () => {
+  it("has one catalogue action, compact search and an editorial Market entry", async () => {
+    await ready();
+    const main = within(screen.getByRole("main"));
+    expect(main.getByRole("heading", { level: 1 })).toHaveTextContent("Find your next card.");
+    expect(main.getAllByRole("link").filter((a) => a.getAttribute("href") === "/cards")).toHaveLength(1);
+    expect(main.getByRole("link", { name: "Browse all cards" })).toHaveAttribute("href", "/cards");
+    expect(main.getByRole("link", { name: "See what moved" })).toHaveAttribute("href", "/analytics#latest-moves");
+    expect(main.getByRole("link", { name: "View Market →" })).toHaveAttribute("href", "/analytics");
+    expect(main.getByRole("heading", { name: "Card Pirate Index" })).toBeInTheDocument();
+    expect(main.queryByRole("table")).not.toBeInTheDocument();
+    expect(main.queryByText(/Trending|Hot|Opportunities|Newly added|Explore the Atlas|Browse every printing|View full catalogue/)).not.toBeInTheDocument();
   });
-
-  it("does not fabricate owned-card counts or completion percentages", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    await screen.findByText(/start with the cards/i);
-    const text = document.body.textContent ?? "";
-    expect(text).not.toMatch(/\d+%/);
-    expect(text).not.toMatch(/\d+\s+cards owned/i);
+  it("renders four movers at most, preserving supplied order rather than sorting ranks or prices", async () => {
+    apiGet.mockResolvedValue(moves({ movers: [mover(88), mover(2), mover(91), mover(7), mover(1)] }));
+    await ready();
+    const links = within(moveSection()).getAllByRole("listitem").map((li) => within(li).getByRole("link"));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/prints/88", "/prints/2", "/prints/91", "/prints/7"]);
   });
-
-  it("shows the signed-in collection prompt instead when a session exists", async () => {
-    mockedUseSession.mockReturnValue({
-      data: { user: { name: "Test User" }, expires: "" },
-      status: "authenticated",
-    } as ReturnType<typeof useSession>);
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    // Sidebar nav also renders a plain "My Collection" link once
-    // authenticated - match the invitation section's arrow-suffixed link
-    // text specifically, not just any "My Collection" link on the page.
-    expect(await screen.findByRole("link", { name: /my collection →/i })).toHaveAttribute(
-      "href",
-      "/collection",
-    );
-    expect(screen.queryByText(/chart your collection/i)).not.toBeInTheDocument();
-  });
-});
-
-describe("DiscoverPage Market Index preview", () => {
-  it("is brief and links onward, with no dense table or chart", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(await screen.findByText(/a clearer view of the market/i)).toBeInTheDocument();
-    // Into the catalogue ordered by index, not to a retired standalone page.
-    expect(screen.getByRole("link", { name: /cards by market index/i })).toHaveAttribute(
-      "href",
-      "/cards?sort=index_desc",
-    );
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-  });
-});
-
-describe("DiscoverPage card search", () => {
-  function searchField() {
-    return screen.getByRole("searchbox", { name: /search cards by name or code/i });
-  }
-
-  async function renderDiscover() {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    await screen.findByText(/your collection has a story/i);
-  }
-
-  it("puts a labelled card search in the hero", async () => {
-    await renderDiscover();
-    expect(searchField()).toBeInTheDocument();
-    // Examples, so a first-time visitor can see what the field accepts.
-    expect(searchField()).toHaveAttribute("placeholder", expect.stringContaining("OP01-001"));
-  });
-
-  it("submits an English name to the catalogue on Enter", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "kaido" } });
-    fireEvent.submit(searchField().closest("form")!);
-
-    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
-  });
-
-  it("submits from the visible Search action too", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "kaido" } });
-    fireEvent.click(within(searchField().closest("form")!).getByRole("button", { name: "Search" }));
-
-    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
-  });
-
-  it("encodes a card code", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "OP01-001" } });
-    fireEvent.submit(searchField().closest("form")!);
-
-    expect(push).toHaveBeenCalledWith("/cards?q=OP01-001");
-  });
-
-  it("encodes a Japanese name", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "カイドウ" } });
-    fireEvent.submit(searchField().closest("form")!);
-
-    expect(push).toHaveBeenCalledWith(`/cards?q=${encodeURIComponent("カイドウ")}`);
-  });
-
-  it("trims whitespace around the term before building q", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "  kaido  " } });
-    fireEvent.submit(searchField().closest("form")!);
-
-    // The padding never reaches the URL - no %20 on either end, and the
-    // catalogue receives the same term it would from a clean entry.
-    expect(push).toHaveBeenCalledWith("/cards?q=kaido");
-  });
-
-  it("never builds a meaningless q from an empty or whitespace query", async () => {
-    await renderDiscover();
-    fireEvent.submit(searchField().closest("form")!);
-    expect(push).toHaveBeenCalledWith("/cards");
-
-    push.mockClear();
-    fireEvent.change(searchField(), { target: { value: "   " } });
-    fireEvent.submit(searchField().closest("form")!);
-    expect(push).toHaveBeenCalledWith("/cards");
-  });
-
-  it("queries nothing itself - it is an entry point, not a second search", async () => {
-    await renderDiscover();
-    const callsBefore = fetchPrintCatalogue.mock.calls.length;
-
-    fireEvent.change(searchField(), { target: { value: "kaido" } });
-    fireEvent.change(searchField(), { target: { value: "kaidou" } });
-
-    // No suggestion request, no results dropdown, no authenticated /api/search.
-    expect(fetchPrintCatalogue.mock.calls.length).toBe(callsBefore);
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  });
-
-  it("routes only into /cards, never at a print or legacy card id", async () => {
-    await renderDiscover();
-    fireEvent.change(searchField(), { target: { value: "kaido" } });
-    fireEvent.submit(searchField().closest("form")!);
-
-    for (const [target] of push.mock.calls) {
-      expect(target).toMatch(/^\/cards(\?|$)/);
+  it("keeps duplicate card codes on distinct exact print links and uses payload artwork", async () => {
+    await ready();
+    for (const id of [88, 2]) {
+      const link = within(moveSection()).getByRole("link", { name: new RegExp(`Mover ${id}`) });
+      expect(link).toHaveAttribute("href", `/prints/${id}`);
+      expect(within(link).getByRole("img")).toHaveAttribute("src", `/api/card-image?u=${encodeURIComponent(`https://www.onepiece-cardgame.com/images/${id}.png`)}`);
+      expect(within(link).getByRole("img")).toHaveClass("object-contain");
+      expect(link).toHaveClass("focus-visible:outline-2");
+      expect(link.querySelector("button, a")).toBeNull();
     }
   });
+  it("does not need a card code to open an exact printing", async () => {
+    apiGet.mockResolvedValue(moves({ movers: [mover(88, { card_code: null })] }));
+    await ready();
+    expect(within(moveSection()).getByRole("link", { name: /Mover 88/ })).toHaveAttribute("href", "/prints/88");
+  });
+  it("formats the server raw move without deriving it from prices or the cap", async () => {
+    await ready();
+    expect(within(moveSection()).getAllByText("+30.77%")).toHaveLength(2);
+    expect(within(moveSection()).queryByText("+100.00%")).not.toBeInTheDocument();
+    expect(within(moveSection()).queryByText("+25.00%")).not.toBeInTheDocument();
+    expect(within(moveSection()).getByText("Sep 10, 2026")).toBeInTheDocument();
+  });
+  it("uses exactly one catalogue and one movers request, with no per-card requests on rerender", async () => {
+    await ready();
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "OP01-001" } });
+    fireEvent.focus(within(moveSection()).getByRole("link", { name: /Mover 88/ }));
+    expect(fetchPrintCatalogue).toHaveBeenCalledExactlyOnceWith({ sort: "updated", limit: 100 });
+    expect(apiGet).toHaveBeenCalledExactlyOnceWith("/analytics/index/movers");
+    expect(fetchCardsCatalogue).not.toHaveBeenCalled();
+  });
+  it("shows an accessible loading state", () => {
+    apiGet.mockReturnValue(new Promise(() => {}));
+    render(<HomePage />);
+    expect(screen.getByRole("status", { name: "Loading cards on the move" })).toBeInTheDocument();
+  });
+  it.each([
+    ["zero", moves({ movers: [], movers_count: 0 }), "No cards moved on this published day."],
+    ["base", moves({ movers: [], prior_point_date: null }), "The latest index update has no previous point to compare."],
+  ])("handles %s movers honestly without replacement cards", async (_, payload, copy) => {
+    apiGet.mockResolvedValue(payload);
+    render(<HomePage />);
+    expect(await screen.findByText(copy as string)).toBeInTheDocument();
+    expect(within(moveSection()).queryByRole("list")).not.toBeInTheDocument();
+    expect(await screen.findByText("Test Card 9")).toBeInTheDocument();
+  });
+  it("keeps catalogue discovery available if movers are unavailable", async () => {
+    apiGet.mockRejectedValue(new Error("offline"));
+    render(<HomePage />);
+    expect(await screen.findByText("We can’t show the cards on the move right now.")).toBeInTheDocument();
+    expect(await screen.findByText("Test Card 9")).toBeInTheDocument();
+    expect(within(moveSection()).queryByRole("list")).not.toBeInTheDocument();
+  });
+  it("retains priced-first selection within recently updated records only", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([1, 2, 3, 4, 5].map((id) => makePrint({card_print_id: id, market_index: {index_value_jpy: id === 3 || id === 5 ? 100 : null}}))));
+    render(<HomePage />);
+    await screen.findByText("Test Card 3");
+    expect(within(recentSection()).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/prints/3", "/prints/5", "/prints/1", "/prints/2"]);
+  });
+  it("keeps recently updated sibling printings directly openable", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({card_print_id: 9, card_code: "OP01-001"}), makePrint({card_print_id: 10, card_code: "OP01-001"})]));
+    await ready();
+    expect(within(recentSection()).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/prints/9", "/prints/10"]);
+  });
+  it("does not add another catalogue CTA when the catalogue is empty", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
+    render(<HomePage />);
+    expect(await screen.findByText("No recently updated printings are available right now.")).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getAllByRole("link", { name: "Browse all cards" })).toHaveLength(1);
+  });
+  it("retries the catalogue independently without refetching movers", async () => {
+    fetchPrintCatalogue.mockRejectedValueOnce(new Error("offline"));
+    render(<HomePage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    await screen.findByText("Test Card 9");
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe("DiscoverPage accessibility and scope", () => {
-  it("exposes exactly one accessible name for the header logo link", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    // Throws if more than one match - the assertion itself proves no duplicate.
-    expect(screen.getByRole("link", { name: "CardPirate Atlas — Home" })).toHaveAttribute("href", "/");
-  });
-
-  it("renders no admin controls or admin navigation", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(screen.queryByText(/admin/i)).not.toBeInTheDocument();
-  });
-
-  it("contains no dense data table above the fold", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<DiscoverPage />);
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-  });
-
-  it("uses a single responsive DOM tree (Tailwind breakpoint classes), not a separate mobile branch", async () => {
-    const cards = [1, 2, 3].map((id) => makePrint({ card_print_id: id, image_url: `https://example.test/card-${id}.jpg` }));
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(cards));
-    const { container } = render(<DiscoverPage />);
-    await screen.findByTestId("hero-art");
-    expect(container.innerHTML).toMatch(/hidden sm:block/);
-    expect(container.innerHTML).toMatch(/hidden lg:block/);
-  });
-});
-
-describe("Recent Finds prefers priced prints within the recent population", () => {
-  /** `items` arrives already ordered by the API as updated_at DESC, id ASC -
-   * these fixtures stand in that order, newest first. */
-  const priced = (id: number, jpy: number) =>
-    makePrint({ card_print_id: id, market_index: { index_value_jpy: jpy, source_count: 1, coverage_status: "limited", confidence: "medium" } });
-  const unpriced = (id: number) => makePrint({ card_print_id: id });
-
-  function recentTitles() {
-    return screen
-      .getAllByRole("link")
-      .filter((l) => l.getAttribute("href")?.startsWith("/prints/"))
-      .map((l) => l.getAttribute("href"));
-  }
-
-  it("D. still asks the API for RECENT prints, never a priced ranking", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([unpriced(1)]));
-    render(<DiscoverPage />);
-    await screen.findByText(/recent finds/i);
-
-    // The population is unchanged: same sort, same limit, one request.
-    expect(fetchPrintCatalogue).toHaveBeenCalledWith({ sort: "updated", limit: 100 });
+describe("Home search", () => {
+  it.each(["Kaido", "OP01-001", "カイドウ", "  Kaido  ", "", "   "])("submits %s to public Cards without lookup requests", async (term) => {
+    await ready();
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search cards by name or code" }), { target: { value: term } });
+    fireEvent.submit(screen.getByRole("search"));
+    expect(push).toHaveBeenCalledWith(term.trim() ? `/cards?q=${encodeURIComponent(term.trim())}` : "/cards");
+    expect(apiGet).toHaveBeenCalledTimes(1);
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
   });
-
-  it("E. fills the slots with priced recent prints first", async () => {
-    // Newest-first: three unpriced, then two priced. Before this change the
-    // section showed 1,2,3,4 - three of them "Index unavailable".
-    fetchPrintCatalogue.mockResolvedValue(
-      catalogueResponse([unpriced(1), unpriced(2), unpriced(3), priced(4, 2000), priced(5, 800), unpriced(6)]),
-    );
-    render(<DiscoverPage />);
-    await screen.findByText(/recent finds/i);
-
-    const hrefs = recentTitles();
-    // Priced first, in their own recency order, then the newest unpriced.
-    expect(hrefs.slice(0, 2)).toEqual(["/prints/4", "/prints/5"]);
-    expect(hrefs.slice(2, 4)).toEqual(["/prints/1", "/prints/2"]);
+  it("has a visible submit control in the same responsive form", async () => {
+    await ready();
+    fireEvent.change(screen.getByRole("searchbox"), {target: {value: "OP01-001"}});
+    fireEvent.click(within(screen.getByRole("search")).getByRole("button", {name: "Search"}));
+    expect(push).toHaveBeenCalledWith("/cards?q=OP01-001");
+    expect(screen.getAllByRole("search")).toHaveLength(1);
   });
-
-  it("F. falls back to recent unpriced prints when too few are priced", async () => {
-    fetchPrintCatalogue.mockResolvedValue(
-      catalogueResponse([unpriced(1), unpriced(2), unpriced(3), unpriced(4)]),
-    );
-    render(<DiscoverPage />);
-    await screen.findByText(/recent finds/i);
-
-    // Still four cards - the section does not empty itself out.
-    expect(recentTitles()).toEqual(["/prints/1", "/prints/2", "/prints/3", "/prints/4"]);
-  });
-
-  it("never promotes a priced print that is not in the recent population", async () => {
-    // Only recent items are candidates. A ￥66,000 print absent from the
-    // response cannot appear here however expensive it is.
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([unpriced(1), unpriced(2)]));
-    render(<DiscoverPage />);
-    await screen.findByText(/recent finds/i);
-
-    expect(recentTitles()).toEqual(["/prints/1", "/prints/2"]);
+  it("bounds the query to the catalogue's existing limit", () => {
+    expect(buildCardsSearchHref("a".repeat(200))).toBe(`/cards?q=${"a".repeat(128)}`);
   });
 });

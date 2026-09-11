@@ -2,188 +2,90 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
-
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
-import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
-import { CardImageFrame } from "@/components/ui/CardImageFrame";
-import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
-import { SkeletonBlock } from "@/components/ui/SkeletonBlock";
+import { HomeMovers } from "@/components/ui/HomeMovers";
 import { brand } from "@/lib/brand";
 import { fetchPrintCatalogue, toPrintUiModel, type PrintUiModel } from "@/lib/prints";
 
-const PRIMARY_LINK_CLASS =
-  "rounded-control bg-accent-gold px-4 py-2 text-sm font-medium text-black/80 hover:bg-accent-gold-hover";
-const SECONDARY_LINK_CLASS =
-  "rounded-control border border-border-default px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary";
-
-// One request covers the whole page - hero art, Recent Finds, and the
-// collection-invitation stack all derive from this same array. The staging
-// catalogue is small enough that this is simpler and cheaper than a
-// separate fetch per section.
-//
-// `GET /prints`, not the legacy `GET /cards/catalogue`: this page is now
-// print-centric end to end, so every card shown is one exact printing with
-// its own `card_print_id`, its own print-scoped Market Index and its own
-// verified artwork - and every tile can link to /prints/{card_print_id}
-// without anything having to guess which printing it meant. The legacy
-// catalogue carried no print identity at all, and some of its rows disagree
-// with the print catalogue on name, code and price.
-//
-// Sorted "updated" so "Recent Finds" reflects a genuine server-side signal
-// (CardPrint.updated_at - see services/api/app/services/print_catalogue.py),
-// never an invented popularity/trending order.
-//
-// 100 is the API's documented maximum for this endpoint (limit > 100 is a
-// 422), so this asks for the largest page it will serve rather than a
-// number that would silently fail.
+// One catalogue request, shared by every recently updated tile. "updated"
+// means CardPrint.updated_at, not release, listing or price-observation date.
 const CATALOGUE_FETCH_LIMIT = 100;
-const HERO_CARD_LIMIT = 3;
 const RECENT_FINDS_LIMIT = 4;
-
+const LINK_CLASS = "text-sm font-medium text-accent-teal hover:text-accent-teal-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-teal";
 type CatalogueStatus =
   | { kind: "loading" }
   | { kind: "error" }
   | { kind: "ready"; items: PrintUiModel[] };
 
-/** Real-image prints first (just reordering what the API already returned,
- * never fabricated) so the hero's limited card-art slots favor prints that
- * actually have artwork (see docs/market_index.md "Image data audit").
- * Prints without an image still render - CardImageFrame already falls back to
- * a branded placeholder - so the composition fills up to HERO_CARD_LIMIT real
- * catalogue entries instead of looking sparse. */
-/** The Recent Finds slots, chosen from the recent population only.
- *
- * WHAT "RECENT" MEANS, UNCHANGED. `items` is `GET /prints?sort=updated`, which
- * the API orders by `CardPrint.updated_at DESC, id ASC`. This function does not
- * re-query, re-sort by price, or widen the population by one row: the candidate
- * set is exactly the same recently-updated prints in exactly the same order it
- * always was. Only WHICH of them fill the four slots changes.
- *
- * WHY. The most recently updated printings are the ones the collectors have
- * just been catalogued, and those are precisely the ones no source has priced
- * yet - on 2026-09-01 three of the four Recent Finds read "Index unavailable".
- * A section meant to show a collector something worth looking at was showing
- * them the least informative rows in the catalogue.
- *
- * So priced recent prints are preferred, and unpriced recent prints fill
- * whatever is left - which keeps the section full when few recent prints carry
- * a price, and keeps it honestly "recent" either way. This is NOT "most
- * expensive": a ￥66,000 print that has not been updated lately is not in
- * `items` at all and cannot appear here.
- *
- * Deterministic: both groups keep the API's own order, so the same response
- * always produces the same four cards. */
-function pickRecentFinds(items: PrintUiModel[], limit: number): PrintUiModel[] {
-  const priced = items.filter((print) => print.marketIndexJpy !== null);
-  const unpriced = items.filter((print) => print.marketIndexJpy === null);
-  return [...priced, ...unpriced].slice(0, limit);
+// Preserve the existing selection: priced entries first within the latest
+// 100 updated records, keeping server order within each group.
+function pickRecentFinds(items: PrintUiModel[]): PrintUiModel[] {
+  return [...items.filter((p) => p.marketIndexJpy !== null),
+    ...items.filter((p) => p.marketIndexJpy === null)].slice(0, RECENT_FINDS_LIMIT);
 }
 
-function pickHeroPrints(items: PrintUiModel[]): PrintUiModel[] {
-  const withImage = items.filter((p) => p.imageUrl);
-  const withoutImage = items.filter((p) => !p.imageUrl);
-  return [...withImage, ...withoutImage].slice(0, HERO_CARD_LIMIT);
-}
-
-/** The public Discover page (collector-first redesign, Tranche 2) - built
- * entirely from a single GET /prints call, never invented
- * popularity/trending/sales-volume data. Every section degrades explicitly
- * (skeleton / empty / error), never silently to a blank gap. */
-export default function DiscoverPage() {
-  const { data: session } = useSession();
+export default function HomePage() {
   const [status, setStatus] = useState<CatalogueStatus>({ kind: "loading" });
-
-  const load = useCallback(() => {
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
     let cancelled = false;
-    setStatus({ kind: "loading" });
     fetchPrintCatalogue({ sort: "updated", limit: CATALOGUE_FETCH_LIMIT })
       .then((data) => {
-        if (!cancelled) {
-          setStatus({ kind: "ready", items: data.items.map(toPrintUiModel) });
-        }
+        if (!cancelled) setStatus({ kind: "ready", items: data.items.map(toPrintUiModel) });
       })
-      .catch(() => {
-        if (!cancelled) setStatus({ kind: "error" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => load(), [load]);
-
-  const items = status.kind === "ready" ? status.items : [];
-  const isLoading = status.kind === "loading";
-  const isError = status.kind === "error";
-  const isEmpty = status.kind === "ready" && items.length === 0;
-
-  const heroCards = pickHeroPrints(items);
-  const recentFinds = pickRecentFinds(items, RECENT_FINDS_LIMIT);
+      .catch(() => { if (!cancelled) setStatus({ kind: "error" }); });
+    return () => { cancelled = true; };
+  }, [attempt]);
 
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-6xl px-4 py-10">
-        {/* Hero - hierarchy #1 (card artwork) and #2 (collector message). */}
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+        <div className="sm:flex sm:items-end sm:justify-between sm:gap-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent-teal">
-              {brand.productName}
-            </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-text-primary sm:text-4xl">
-              Your collection has a story.
-            </h1>
-            <p className="mt-3 max-w-prose text-sm text-text-secondary sm:text-base">
-              Map the cards you own, keep track of the ones you&rsquo;re chasing, and discover how
-              every card fits into the wider market.
-            </p>
-
-            <DiscoverCardSearch />
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/cards" className={PRIMARY_LINK_CLASS}>
-                Explore the Atlas
-              </Link>
-              <Link href="/analytics#latest-moves" prefetch={false} className={SECONDARY_LINK_CLASS}>
-                See what moved
-              </Link>
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-accent-teal">{brand.productName}</p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
+            <HomeCardSearch />
           </div>
-
-          <HeroArt loading={isLoading} cards={heroCards} />
+          <Link href="/cards" prefetch={false} className={`${LINK_CLASS} mt-3 inline-flex py-2`}>Browse all cards</Link>
         </div>
 
-        {/* Hierarchy #3 - card identity and discovery. */}
-        <RecentFindsSection
-          loading={isLoading}
-          error={isError}
-          empty={isEmpty}
-          cards={recentFinds}
-          onRetry={load}
-        />
+        <HomeMovers />
 
-        {/* Hierarchy #4 - collection invitation. */}
-        <CollectionInvitation authenticated={Boolean(session)} stackCards={heroCards.slice(0, 2)} />
+        <section aria-labelledby="updated-printings" className="mt-8 sm:mt-10">
+          <h2 id="updated-printings" className="font-display text-xl font-semibold text-text-primary">Recently updated printings</h2>
+          <p className="mt-1 mb-4 text-sm text-text-muted">A few recently updated catalogue entries, with priced cards shown first.</p>
+          {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
+          {status.kind === "error" && (
+            <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={() => {
+              setStatus({ kind: "loading" });
+              setAttempt((value) => value + 1);
+            }}>Try again</button>}>The catalogue couldn&rsquo;t be loaded right now.</ErrorState>
+          )}
+          {status.kind === "ready" && (status.items.length === 0
+            ? <p className="text-sm text-text-secondary">No recently updated printings are available right now.</p>
+            : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                {pickRecentFinds(status.items).map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
+              </div>)}
+        </section>
 
-        {/* Hierarchy #5 - Market Index context, kept brief. */}
-        <MarketIndexPreview />
+        <section aria-labelledby="home-market" className="mt-8 border-t border-border-muted pt-6 sm:mt-10">
+          <h2 id="home-market" className="font-display text-lg font-semibold text-text-primary">Card Pirate Index</h2>
+          <p className="mt-1 text-sm text-text-secondary">See how the broader One Piece card market is moving.</p>
+          <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} mt-3 inline-flex py-2`}>View Market →</Link>
+        </section>
       </main>
     </div>
   );
 }
 
-/** The longest a query is carried into /cards - the catalogue clamps `q` to
- * the same length when it reads it back out of the URL (see
- * parseCatalogueState in app/cards/page.tsx), so this simply avoids handing
- * it a term it would truncate anyway. */
 const MAX_SEARCH_LENGTH = 128;
 
-/** The URL a Discover search lands on. Always the public catalogue with a
+/** The URL a Home search lands on. Always the public catalogue with a
  * `q` filter - never a card/print id, and never a guess at which printing
  * was meant: /cards resolves the term server-side against card code, English
  * name and Japanese name, and every result it renders is one exact printing.
@@ -195,7 +97,7 @@ export function buildCardsSearchHref(term: string): string {
   return q ? `/cards?q=${encodeURIComponent(q)}` : "/cards";
 }
 
-/** Discover's card search - an entry point into /cards, not a search of its
+/** Home's card search - an entry point into /cards, not a search of its
  * own.
  *
  * It deliberately queries nothing: no request, no suggestions, no dropdown
@@ -208,7 +110,7 @@ export function buildCardsSearchHref(term: string): string {
  * Styled as the catalogue's own search field is (see CatalogueIntro) so the
  * two read as the same control in two places, and sized to the hero column
  * rather than spanning it - this is a way in, not the page's subject. */
-function DiscoverCardSearch() {
+function HomeCardSearch() {
   const router = useRouter();
   const [term, setTerm] = useState("");
 
@@ -219,7 +121,7 @@ function DiscoverCardSearch() {
         e.preventDefault();
         router.push(buildCardsSearchHref(term));
       }}
-      className="mt-6 flex max-w-md flex-col gap-2 sm:flex-row"
+      className="mt-4 flex w-full max-w-md gap-2"
     >
       <input
         type="search"
@@ -239,229 +141,5 @@ function DiscoverCardSearch() {
         Search
       </button>
     </form>
-  );
-}
-
-/** Fanned card-art composition - a small stack, not a grid, so it reads as
- * "opening a collection" rather than a catalogue browser. Reserves the same
- * footprint while loading (same aspect-ratio skeleton frames) so real
- * artwork never shifts the layout on arrival. Purely decorative - the
- * heading/copy beside it already carries the same message in text, so the
- * whole composition is aria-hidden rather than exposing unlabeled card
- * fragments to assistive tech. Desktop shows up to 3 cards fanned; tablet
- * shows 2; mobile shows a single centered card. */
-function HeroArt({ loading, cards }: { loading: boolean; cards: PrintUiModel[] }) {
-  if (loading) {
-    return (
-      <div aria-hidden="true" data-testid="hero-art-loading" className="flex justify-center gap-3 lg:justify-end">
-        <SkeletonBlock className="aspect-[63/88] w-24 rounded-panel sm:w-28" />
-        <SkeletonBlock className="hidden aspect-[63/88] w-24 rounded-panel sm:block sm:w-28" />
-        <SkeletonBlock className="hidden aspect-[63/88] w-24 rounded-panel lg:block lg:w-28" />
-      </div>
-    );
-  }
-
-  if (cards.length === 0) return null;
-
-  const fanTransform = ["-rotate-3", "-translate-y-2", "rotate-3"];
-  const visibility = ["", "hidden sm:block", "hidden lg:block"];
-
-  return (
-    <div aria-hidden="true" data-testid="hero-art" className="flex justify-center gap-3 lg:justify-end">
-      {cards.map((print, i) => (
-        <div
-          key={print.cardPrintId}
-          className={`w-24 shrink-0 sm:w-28 ${visibility[i]} ${fanTransform[i]}`}
-        >
-          <CardImageFrame
-            imageUrl={print.imageUrl}
-            alt={`${print.displayName} (${print.cardCode})`}
-            cardCode={print.cardCode}
-            rarity={print.rarity}
-            setCode={print.releaseCode}
-            size="full"
-            padded
-            geometry={print.imageGeometry}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function RecentFindsSection({
-  loading,
-  error,
-  empty,
-  cards,
-  onRetry,
-}: {
-  loading: boolean;
-  error: boolean;
-  empty: boolean;
-  cards: PrintUiModel[];
-  onRetry: () => void;
-}) {
-  return (
-    <section className="mt-12">
-      <div className="mb-3 flex items-baseline justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-text-primary">Recent Finds</h2>
-          <p className="text-xs text-text-muted">
-            Newly added or recently updated printings from across the Atlas.
-          </p>
-        </div>
-        {!loading && !error && !empty && (
-          <Link
-            href="/cards"
-            className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover"
-          >
-            View full catalogue →
-          </Link>
-        )}
-      </div>
-
-      {loading && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
-
-      {!loading && error && (
-        <ErrorState
-          tone="collector"
-          action={
-            <button type="button" onClick={onRetry} className={SECONDARY_LINK_CLASS}>
-              Try again
-            </button>
-          }
-        >
-          The catalogue couldn&rsquo;t be loaded right now.
-        </ErrorState>
-      )}
-
-      {!loading && !error && empty && (
-        <CollectorEmptyState
-          title="The Atlas is waiting to be mapped."
-          action={
-            <Link
-              href="/cards"
-              className="text-xs font-medium text-accent-teal hover:text-accent-teal-hover"
-            >
-              Browse Cards →
-            </Link>
-          }
-        >
-          Catalogue data hasn&rsquo;t been loaded for this view yet.
-        </CollectorEmptyState>
-      )}
-
-      {!loading && !error && !empty && (
-        <CardGrid>
-          {cards.map((print) => (
-            <PrintCardTile key={print.cardPrintId} print={print} />
-          ))}
-        </CardGrid>
-      )}
-    </section>
-  );
-}
-
-function CollectionInvitation({
-  authenticated,
-  stackCards,
-}: {
-  authenticated: boolean;
-  stackCards: PrintUiModel[];
-}) {
-  return (
-    <section className="panel-elevated mt-14 rounded-panel-lg p-6 sm:p-8">
-      <div className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div>
-          {authenticated ? (
-            <>
-              <h2 className="font-display text-xl font-semibold text-text-primary">
-                Your collection, in one place.
-              </h2>
-              <p className="mt-2 max-w-prose text-sm text-text-secondary">
-                Add to your collection, track your wishlist, and keep your grading progress
-                together.
-              </p>
-              <Link href="/collection" className={`${PRIMARY_LINK_CLASS} mt-4 inline-flex`}>
-                My Collection →
-              </Link>
-            </>
-          ) : (
-            /* The public collector product no longer needs an account: the
-               catalogue, every card family and every printing's Market Index
-               and price history are open. This block used to send an anonymous
-               visitor straight to /sign-in, which was the one dead end on an
-               otherwise public page - so the primary action now continues into
-               the catalogue, and signing in is offered as the smaller, honest
-               second step it actually is. Collections themselves stay
-               signed-in-only; nothing about that changed. */
-            <>
-              <h2 className="font-display text-xl font-semibold text-text-primary">
-                Start with the cards.
-              </h2>
-              <p className="mt-2 max-w-prose text-sm text-text-secondary">
-                Every printing is here to browse, each with its own Market Index and price
-                history &mdash; no account needed.
-              </p>
-              <Link href="/cards" className={`${PRIMARY_LINK_CLASS} mt-4 inline-flex`}>
-                Browse every printing &rarr;
-              </Link>
-              <p className="mt-3 text-xs text-text-muted">
-                <Link href="/sign-in" className="text-accent-teal hover:text-accent-teal-hover">
-                  Sign in
-                </Link>{" "}
-                to keep a collection and a wishlist.
-              </p>
-            </>
-          )}
-        </div>
-
-        {stackCards.length > 0 && (
-          <div aria-hidden="true" className="hidden -space-x-8 sm:flex sm:justify-end">
-            {stackCards.map((print, i) => (
-              <div
-                key={print.cardPrintId}
-                className={`w-20 shrink-0 ${i === 1 ? "translate-y-2 rotate-3" : "-rotate-3"}`}
-              >
-                <CardImageFrame
-                  imageUrl={print.imageUrl}
-                  alt=""
-                  cardCode={print.cardCode}
-                  rarity={print.rarity}
-                  setCode={print.releaseCode}
-                  size="full"
-                  padded
-                  geometry={print.imageGeometry}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function MarketIndexPreview() {
-  return (
-    <section className="mt-10 border-t border-border-muted pt-8">
-      <h2 className="font-display text-lg font-semibold text-text-primary">
-        A clearer view of the market.
-      </h2>
-      <p className="mt-2 max-w-prose text-sm text-text-secondary">
-        The Market Index combines eligible references from Yuyu-Tei and SNKRDUNK so you can
-        understand the context around a card without reducing collecting to a single price.
-      </p>
-      {/* Into the catalogue ordered by index, not to a second catalogue page
-          of its own: the Market Index is a value each printing carries, and
-          /cards already shows it on every tile and sorts by it. */}
-      <Link
-        href="/cards?sort=index_desc"
-        className="mt-3 inline-flex text-sm font-medium text-accent-teal hover:text-accent-teal-hover"
-      >
-        See cards by Market Index →
-      </Link>
-    </section>
   );
 }
