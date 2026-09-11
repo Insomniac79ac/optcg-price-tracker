@@ -497,6 +497,7 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
 }
 
 export interface PrintCatalogueParams {
+  set?: string;
   q?: string;
   treatment?: string;
   rarity?: string;

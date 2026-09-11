@@ -39,6 +39,14 @@ vi.mock("@/lib/prints", async () => {
   return { ...actual, fetchPrintCatalogue };
 });
 
+const { fetchMarketFilters } = vi.hoisted(() => ({ fetchMarketFilters: vi.fn() }));
+vi.mock("@/lib/marketAnalytics", () => ({ fetchMarketFilters }));
+fetchMarketFilters.mockResolvedValue({ sets: [
+  { value: "OP-01", label: "OP-01" },
+  { value: "PRB-01", label: "PRB-01" },
+  { value: "ST-31", label: "ST-31" },
+], rarities: [] });
+
 // Guard: if the catalogue ever reaches for a legacy card_id-keyed endpoint
 // again, these spies fail the test rather than silently working.
 const { fetchCardsCatalogue, fetchCardMarketIndex, fetchCards } = vi.hoisted(() => ({
@@ -1503,5 +1511,27 @@ describe("catalogue tiles - no current listing on SNKRDUNK", () => {
     // The source NAME may truncate - it is a known constant and cannot be
     // misread as a number - but the sentence beneath it never does.
     expect(within(snkrdunk).getByText("SNKRDUNK").className).toMatch(/truncate/);
+  });
+});
+
+
+describe("release browsing", () => {
+  it("loads the shared release vocabulary and commits a release with other filters, resetting pagination", async () => {
+    currentSearch = "q=Zoro&rarity=R&treatment=parallel&sort=name&offset=24";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("option", { name: "PRB-01" });
+    fireEvent.change(screen.getByRole("combobox", { name: "Release" }), { target: { value: "PRB-01" } });
+    expect(navigations().at(-1)).toBe("/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name");
+  });
+
+  it("restores a release from the URL, sends the intersection to the API and clears it", async () => {
+    currentSearch = "set=OP-01&q=OP01-016&rarity=R";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalledWith(expect.objectContaining({ set: "OP-01", q: "OP01-016", rarity: "R" })));
+    expect(screen.getByRole("combobox", { name: "Release" })).toHaveValue("OP-01");
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(navigations().at(-1)).toBe("/cards");
   });
 });

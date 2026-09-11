@@ -160,18 +160,19 @@ export function CatalogueIntro({
 
           <h1
             id="catalogue-intro-heading"
-            // `text-balance` so the first sentence does not leave "print."
-            // orphaned on a line of its own at 390px. The <br> still forces the
-            // payoff onto its own line; balancing only redistributes the words
-            // before it, and is a no-op at desktop where it already fits.
+            // Short mobile title keeps the catalogue within reach; desktop
+            // retains the established headline and helper copy.
             className="mt-1.5 text-balance font-display text-[26px] font-semibold leading-[1.1] tracking-tight text-text-primary sm:text-[33px]"
           >
-            Same code. Different print.
-            <br />
-            <span className="text-parchment">Different price.</span>
+            <span className="sm:hidden">Cards</span>
+            <span className="hidden sm:inline">
+              Same code. Different print.
+              <br />
+              <span className="text-parchment">Different price.</span>
+            </span>
           </h1>
 
-          <p className="mt-2 text-sm text-text-secondary sm:text-[15px]">
+          <p className="mt-2 hidden text-sm text-text-secondary sm:block sm:text-[15px]">
             Base, parallel and alt art don&apos;t get lumped together.
           </p>
 
@@ -266,18 +267,15 @@ function CatalogueSearchField({
   }
 
   return (
-    // Stacks below `sm`: at 390px an inline "Search" button leaves the input
-    // ~225px wide, which truncates the placeholder mid-word and makes the
-    // primary interaction feel cramped. Full-width input over a full-width
-    // button keeps the placeholder legible. From `sm` up there is room for
-    // one row.
+    // One row keeps search close to the release controls. The mobile
+    // placeholder names the same supported inputs without being truncated.
     <form
       onSubmit={(e) => {
         e.preventDefault();
         onSearch(value.trim());
       }}
       role="search"
-      className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row"
+      className="mt-3 flex max-w-xl gap-2 sm:mt-4"
     >
       <div className="relative min-w-0 flex-1">
         <input
@@ -291,11 +289,11 @@ function CatalogueSearchField({
           // field, so narrow viewports get the short one.
           placeholder={
             narrow
-              ? "Search cards by code or name…"
+              ? "Code or name…"
               : "Search by card code, English or Japanese name…"
           }
           aria-label="Search prints by card code, English name, or Japanese name"
-          className="w-full min-w-0 rounded-control border border-border-default bg-bg-page/75 py-2.5 pl-3.5 pr-10 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal [&::-webkit-search-cancel-button]:appearance-none"
+          className="min-h-11 w-full min-w-0 rounded-control sm:min-h-0 border border-border-default bg-bg-page/75 py-2.5 pl-3.5 pr-10 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal [&::-webkit-search-cancel-button]:appearance-none"
         />
         {value !== "" && (
           <button
@@ -321,7 +319,7 @@ function CatalogueSearchField({
       </div>
       <button
         type="submit"
-        className="shrink-0 rounded-control bg-accent-teal px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
+        className="min-h-11 shrink-0 rounded-control bg-accent-teal sm:min-h-0 px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
       >
         Search
       </button>

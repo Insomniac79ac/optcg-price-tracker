@@ -28,6 +28,8 @@ import {
   printsNeedingArtOrdinal,
 } from "@/lib/prints";
 
+import { fetchMarketFilters, type MarketFilterOption } from "@/lib/marketAnalytics";
+
 const PAGE_SIZE = 24;
 const MAX_QUERY_LENGTH = 128;
 
@@ -51,6 +53,7 @@ function parseCatalogueState(searchParams: URLSearchParams): {
     filters: {
       q: (searchParams.get("q") ?? "").slice(0, MAX_QUERY_LENGTH),
       treatment: searchParams.get("treatment") ?? "",
+      release: searchParams.get("set") ?? "",
       rarity: searchParams.get("rarity") ?? "",
       sort: isSortValue(rawSort) ? rawSort : EMPTY_PRINT_FILTERS.sort,
     },
@@ -60,6 +63,7 @@ function parseCatalogueState(searchParams: URLSearchParams): {
 
 function buildQueryString(filters: PrintCatalogueFilters, offset: number): string {
   const params = new URLSearchParams();
+  if (filters.release) params.set("set", filters.release);
   if (filters.q) params.set("q", filters.q);
   if (filters.treatment) params.set("treatment", filters.treatment);
   if (filters.rarity) params.set("rarity", filters.rarity);
@@ -138,12 +142,34 @@ function PrintsCataloguePageInner() {
    * the rest of the session. */
   const [heroPool, setHeroPool] = useState<PrintUiModel[] | null>(null);
 
+  const [releases, setReleases] = useState<MarketFilterOption[]>([]);
+  const [releaseStatus, setReleaseStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [releaseAttempt, setReleaseAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    fetchMarketFilters().then((result) => {
+      if (cancelled) return;
+      // Sort published values without normalising or merging their identities.
+      setReleases([...result.sets].sort((a, b) =>
+        a.value.localeCompare(b.value, "en", { numeric: true }) ||
+        (a.value < b.value ? -1 : a.value > b.value ? 1 : 0),
+      ));
+      setReleaseStatus("ready");
+    }).catch(() => {
+      if (!cancelled) setReleaseStatus("error");
+    });
+    return () => { cancelled = true; };
+  }, [releaseAttempt]);
+
   const paramsKey = searchParams.toString();
 
   useEffect(() => {
     let cancelled = false;
+    // URL changes include browser history; hide the old count while fetching.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
     fetchPrintCatalogue({
+      set: filters.release || undefined,
       q: filters.q || undefined,
       treatment: filters.treatment || undefined,
       rarity: filters.rarity || undefined,
@@ -231,17 +257,30 @@ function PrintsCataloguePageInner() {
             divider that used to sit here read as a standalone ornament and
             cost ~60px before the first card; the intro panel's own edge is
             transition enough. */}
-        <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-2 flex flex-col gap-1 sm:mt-4 sm:gap-3">
           <PrintCatalogueToolbar
+            releases={releases}
+            releaseStatus={releaseStatus}
+            onRetryReleases={() => {
+              setReleaseStatus("loading");
+              setReleaseAttempt((attempt) => attempt + 1);
+            }}
             filters={filters}
             facets={data?.facets ?? emptyFacets}
             onChange={(next) => navigate(next, 0)}
-            onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
           />
           {/* The terminology key. Sits under the filters rather than in them:
               it explains the badges on the tiles below, not the controls
               above. Tap/click/keyboard - never hover-only. */}
-          <CatalogueLegend />
+          <div className="flex flex-wrap items-center justify-between gap-x-3">
+            <CatalogueLegend />
+            {hasActivePrintFilters(filters) && (
+              <button type="button" onClick={() => navigate(EMPTY_PRINT_FILTERS, 0)}
+                className="min-h-11 text-xs font-medium text-text-muted underline-offset-2 hover:text-accent-teal-hover hover:underline">
+                Clear filters
+              </button>
+            )}
+          </div>
         </div>
 
         {status === "loading" && <CardGridSkeleton />}
