@@ -206,7 +206,7 @@ function IndexStat({
 }) {
   return (
     <div>
-      <dt className="mono text-[10px] font-medium uppercase tracking-[0.18em] text-text-faint">
+      <dt className="text-xs font-medium text-text-muted">
         {label}
       </dt>
       <dd className="mt-1 text-[15px] font-medium text-text-secondary" data-testid={testId}>

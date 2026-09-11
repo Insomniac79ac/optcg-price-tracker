@@ -49,7 +49,7 @@ function Figure({
           {value}
         </span>
       </div>
-      <span className="mono mt-1.5 block text-[10px] uppercase tracking-[0.14em] text-text-muted">
+      <span className="mt-1.5 block text-xs text-text-muted">
         {label}
       </span>
     </div>
@@ -73,10 +73,10 @@ export function MarketBreadthPanel({ point }: { point: IndexPoint | null }) {
         id="market-breadth-heading"
         className="font-display text-[16px] font-semibold leading-tight tracking-tight text-text-primary"
       >
-        Market Breadth
+        How many moved?
       </h3>
       <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
-        How today&rsquo;s Index constituents moved versus the prior point.
+        How many cards moved since the previous index update.
       </p>
 
       {!hasBreadth ? (
@@ -154,7 +154,7 @@ function BreadthBody({ point }: { point: IndexPoint }) {
           <dt className="mono shrink-0 tabular-nums text-text-primary">
             {point.eligible_print_count}
           </dt>
-          <dd className="text-text-secondary">priced today</dd>
+          <dd className="text-text-secondary">priced on the latest published day</dd>
         </div>
         <div className="flex items-baseline gap-2 text-[12px] leading-relaxed">
           <dt className="mono shrink-0 tabular-nums text-text-primary">{total}</dt>

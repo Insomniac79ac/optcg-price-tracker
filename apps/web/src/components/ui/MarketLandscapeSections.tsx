@@ -79,7 +79,7 @@ export function MarketLandscapeStats({ overview }: { overview: MarketOverview })
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string | null }) {
   return (
     <div className="panel px-3.5 py-3">
-      <div className="mono text-[10px] font-medium uppercase tracking-[0.14em] text-text-faint">
+      <div className="text-xs font-medium text-text-muted">
         {label}
       </div>
       <div
@@ -171,7 +171,7 @@ export function MarketPriceDistribution({ overview }: { overview: MarketOverview
   return (
     <SectionShell
       title="Price distribution"
-      caption="Where the priced prints in this view currently sit."
+      caption="How many prints fall in each price band."
     >
       <ul className="space-y-1.5">
         {distribution.map((bucket) => {
@@ -408,7 +408,7 @@ function SectionShell({
       <h2
         className={
           supporting
-            ? "mono text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint"
+            ? "font-display text-sm font-semibold text-text-secondary"
             : "font-display text-[15px] font-semibold text-text-primary"
         }
       >

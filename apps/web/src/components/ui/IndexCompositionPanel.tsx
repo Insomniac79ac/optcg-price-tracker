@@ -180,10 +180,10 @@ export function IndexCompositionPanel({
         id="index-composition-heading"
         className="font-display text-[16px] font-semibold leading-tight tracking-tight text-text-primary"
       >
-        Index Composition
+        What’s in the index
       </h3>
       <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
-        What the Card Pirate Index is made of today.
+        Cards in the index, by rarity.
       </p>
 
       {status === "error" || (status === "ready" && !Array.isArray(composition?.rarity)) ? (
@@ -229,13 +229,7 @@ export function IndexCompositionPanel({
               >
                 {composition.constituent_count}
               </span>
-              {/* Tracking is 0.08em, not the 0.14em used elsewhere for mono
-                  captions. At 390px the donut's hole is 85px across and the
-                  wider tracking left this word 80px wide - 2.5px of air per
-                  side, which read as the label touching the ring rather than
-                  sitting inside it. The type size is unchanged; only the
-                  letter-spacing gives the clearance back. */}
-              <span className="mono mt-1 text-[9px] uppercase tracking-[0.08em] text-text-muted">
+              <span className="mt-1 text-[11px] text-text-muted">
                 constituents
               </span>
             </div>

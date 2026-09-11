@@ -1,4 +1,4 @@
-/** The Index Composition and Market Breadth panels on /analytics.
+/** The What’s in the index and How many moved? panels on /analytics.
  *
  * WHAT THIS SUITE IS FOR. Both panels restate numbers the server already
  * published, so the failure mode worth guarding is not "the layout broke" but
@@ -269,9 +269,9 @@ describe("the composition is fetched once and never again", () => {
 describe("the composition panel restates the server's numbers", () => {
   it("shows the heading and supporting copy", async () => {
     await renderPage();
-    expect(screen.getByRole("heading", { name: "Index Composition" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What’s in the index" })).toBeTruthy();
     expect(
-      screen.getByText("What the Card Pirate Index is made of today."),
+      screen.getByText("Cards in the index, by rarity."),
     ).toBeTruthy();
   });
 
@@ -435,7 +435,7 @@ describe("composition edge cases are handled honestly", () => {
     expect(screen.getByTestId("breadth-flat").textContent).toBe("292");
     expect(screen.getByTestId("index-level")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Current market landscape" }),
+      screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" }),
     ).toBeTruthy();
   });
 });
@@ -445,9 +445,9 @@ describe("composition edge cases are handled honestly", () => {
 describe("market breadth comes from the index series already loaded", () => {
   it("shows the heading and supporting copy", async () => {
     await renderPage();
-    expect(screen.getByRole("heading", { name: "Market Breadth" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "How many moved?" })).toBeTruthy();
     expect(
-      screen.getByText("How today’s Index constituents moved versus the prior point."),
+      screen.getByText("How many cards moved since the previous index update."),
     ).toBeTruthy();
   });
 
@@ -498,7 +498,7 @@ describe("market breadth comes from the index series already loaded", () => {
     await renderPage();
     const panel = screen.getByTestId("market-breadth").textContent ?? "";
     expect(panel).toContain("305");
-    expect(panel).toContain("priced today");
+    expect(panel).toContain("priced on the latest published day");
     expect(panel).toContain("296");
     expect(panel).toContain("comparable with the prior index point");
     // The REASONS for 305 > 296 are not persisted on the point, so the panel
@@ -569,7 +569,7 @@ describe("the row reads as secondary analysis below the hero", () => {
     await renderPage();
     const row = screen.getByTestId("index-analytics-row");
     const landscape = screen.getByRole("heading", {
-      level: 2, name: "Current market landscape",
+      level: 2, name: "Prices across the catalogue",
     });
     expect(row.compareDocumentPosition(landscape) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
@@ -587,7 +587,7 @@ describe("the row reads as secondary analysis below the hero", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "Card Pirate Index",
     );
-    for (const name of ["Index Composition", "Market Breadth"]) {
+    for (const name of ["What’s in the index", "How many moved?"]) {
       expect(screen.getByRole("heading", { level: 3, name })).toBeTruthy();
     }
   });

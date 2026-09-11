@@ -85,8 +85,8 @@ function PageFrame({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-5">
-        <p className="mono text-[10px] font-medium uppercase tracking-[0.22em] text-accent-teal">
-          Atlas market analytics
+        <p className="text-xs font-medium text-accent-teal">
+          One Piece card market
         </p>
         {children}
       </main>
@@ -170,7 +170,7 @@ function MarketLandscapePageInner() {
    * it. There is no window in `fetchIndexComposition`'s signature to pass.
    *
    * Its failure is panel-local: `status: "error"` renders a quiet unavailable
-   * line inside the composition panel, while Market Breadth beside it keeps
+   * line inside the composition panel, while the breadth panel beside it keeps
    * rendering from the index series and the rest of the page is untouched. */
   const [composition, setComposition] = useState<{
     data: IndexComposition | null;
@@ -432,8 +432,8 @@ function MarketLandscapePageInner() {
   const newestIndexPoint = points.length > 0 ? points[points.length - 1] : null;
 
   const description = overview
-    ? `Read through ${overviewBasisLabel(overview)}. Pricing coverage and distribution across the current One Piece Card Game catalogue.`
-    : "Pricing coverage and distribution across the current One Piece Card Game catalogue.";
+    ? `Using ${overviewBasisLabel(overview)}. Which One Piece prints have prices, and how those prices are spread.`
+    : "Which One Piece prints have prices, and how those prices are spread.";
 
   return (
     <PageFrame>
@@ -447,8 +447,11 @@ function MarketLandscapePageInner() {
         />
       </div>
 
+      {/* The cards behind the latest move follow the chart. */}
+      <IndexMoversPanel movers={movers.data} status={movers.status} />
+
       {/* SECONDARY ANALYSIS, and sized to say so. Two panels of similar weight
-          below the hero, stacking on mobile. The breadth panel reads the
+          below the movers, stacking on mobile. The breadth panel reads the
           newest point off the series the hero is already holding - no request
           of its own - and the composition panel holds a response that does not
           vary with the window control above it. */}
@@ -463,19 +466,12 @@ function MarketLandscapePageInner() {
         <MarketBreadthPanel point={newestIndexPoint} />
       </div>
 
-      {/* THE THIRD LAYER, and sized to say so. Breadth counts how many moved;
-          this names them. It follows the row rather than joining it because a
-          list of cards is a different shape from two summary panels, and it
-          stays at the panels' own heading weight so it reads as their
-          continuation rather than as a second hero. */}
-      <IndexMoversPanel movers={movers.data} status={movers.status} />
-
       <section className="mt-8" aria-labelledby="market-landscape-heading">
         <h2
           id="market-landscape-heading"
           className="font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[23px]"
         >
-          Current market landscape
+          Prices across the catalogue
         </h2>
         <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-text-secondary">
           {description}
@@ -485,7 +481,7 @@ function MarketLandscapePageInner() {
       <div className="mt-4 space-y-3">
         {vocabularyFailed ? (
           <ErrorState tone="collector">
-            The market landscape could not be loaded. Please try again shortly.
+            Catalogue prices could not be loaded. Please try again shortly.
           </ErrorState>
         ) : !vocabulary ? (
           <MarketLandscapeSkeleton />
@@ -540,7 +536,7 @@ function MarketLandscapePageInner() {
 function MarketLandscapeSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading market landscape…</span>
+      <span className="sr-only">Loading catalogue prices…</span>
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="panel px-3.5 py-3">
@@ -584,7 +580,7 @@ function MarketLandscapeBody({ overview }: { overview: MarketOverview }) {
       <div className="panel px-4 py-6 text-center">
         <p className="text-sm text-text-secondary">No active prints match this scope.</p>
         <p className="mt-1.5 text-[13px] text-text-muted">
-          Coverage and price statistics need a catalogue to describe. Try clearing a filter.
+          Try clearing a filter to see more of the catalogue.
         </p>
       </div>
     );

@@ -286,7 +286,7 @@ afterEach(() => {
  * that continued there asserted against a page still showing its spinner. */
 async function renderPage() {
   render(<MarketLandscapePage />);
-  await waitFor(() => expect(screen.queryByText("Loading market landscape…")).toBeNull());
+  await waitFor(() => expect(screen.queryByText("Loading catalogue prices…")).toBeNull());
 }
 
 // --- A. controls come from the server ---------------------------------------
@@ -872,13 +872,13 @@ describe("refreshing does not collapse the page", () => {
       );
     await waitFor(() => expect(landscapeBusy()).toBeTruthy());
     expect(screen.getByText("Priced prints")).toBeTruthy();
-    // The STAT TILE's 296, not any 296 on the page - Market Breadth prints the
+    // The STAT TILE's 296, not any 296 on the page - the breadth panel prints the
     // same constituent count, so a bare text query is ambiguous. Same scoping
     // the SNKRDUNK assertion below already uses for exactly this reason.
     const pricedTile = () =>
       screen.getByText("Priced prints").closest("div")!.parentElement!;
     expect(within(pricedTile()).getByText("296")).toBeTruthy();
-    expect(screen.queryByText("Loading market landscape…")).toBeNull();
+    expect(screen.queryByText("Loading catalogue prices…")).toBeNull();
 
     release(snkrdunkOverview());
     // "25" appears twice once SNKRDUNK loads (the stat and the legend), so
@@ -893,12 +893,12 @@ describe("refreshing does not collapse the page", () => {
   it("shows a page-shaped placeholder on first paint, not a small box", async () => {
     fetchMarketOverview.mockReturnValue(new Promise<MarketOverview>(() => {}));
     render(<MarketLandscapePage />);
-    await waitFor(() => expect(screen.getByText("Loading market landscape…")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Loading catalogue prices…")).toBeTruthy());
     // The LANDSCAPE's placeholder specifically - the index hero and the
     // composition panel have busy skeletons of their own, so a document-wide
     // `[aria-busy]` query would now pick up whichever renders first.
     const busy = screen
-      .getByText("Loading market landscape…")
+      .getByText("Loading catalogue prices…")
       .closest("[aria-busy='true']")!;
     // Four stat placeholders and a chart-sized block, so the first frame is
     // roughly the height the real content will be.
@@ -975,7 +975,7 @@ describe("failure states", () => {
     fetchMarketBases.mockRejectedValue(new Error("boom"));
     render(<MarketLandscapePage />);
     await waitFor(() =>
-      expect(screen.getByText(/market landscape could not be loaded/i)).toBeTruthy(),
+      expect(screen.getByText(/catalogue prices could not be loaded/i)).toBeTruthy(),
     );
     expect(screen.queryByRole("group", { name: /price basis/i })).toBeNull();
     expect(document.body.textContent).not.toMatch(/[¥￥]\s*0\b/);
@@ -1069,6 +1069,6 @@ describe("the page reads as a landscape, not a terminal", () => {
     fetchMarketOverview.mockResolvedValue(snkrdunkOverview());
     startAt("basis=source:snkrdunk");
     await renderPage();
-    expect(screen.getByText(/Read through SNKRDUNK · Current listing/)).toBeTruthy();
+    expect(screen.getByText(/Using SNKRDUNK · Current listing/)).toBeTruthy();
   });
 });

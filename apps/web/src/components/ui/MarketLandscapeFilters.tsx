@@ -55,7 +55,7 @@ export function MarketLandscapeFilters({
           choice is visible at once and switching is one tap. At 390px the
           group wraps onto two rows instead of scrolling sideways. */}
       <fieldset className="min-w-0">
-        <legend className="mono mb-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint">
+        <legend className="mb-1.5 text-xs font-medium text-text-muted">
           Price basis
         </legend>
         <div className="flex flex-wrap gap-1.5">
@@ -87,7 +87,7 @@ export function MarketLandscapeFilters({
       {/* Scope filters share one bar, the same charcoal strip the print
           catalogue's toolbar uses, so the two surfaces read as one product. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-panel border border-border-muted bg-bg-elevated px-3 py-1.5">
-        <span className="mono hidden text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint sm:inline">
+        <span className="hidden text-xs font-medium text-text-muted sm:inline">
           Scope
         </span>
 

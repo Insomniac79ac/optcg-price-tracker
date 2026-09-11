@@ -53,14 +53,14 @@ function directionColor(direction: string): string {
   return direction === "up" ? UP_COLOR : DOWN_COLOR;
 }
 
-/** The small mono caption both metric columns wear.
+/** The small caption both metric columns wear.
  *
  * Above the figures rather than below them - the page's own stat tiles put the
  * label on top, and with two lines of value in the price column a trailing
  * label would leave the two columns' captions on different baselines. */
 function ColumnLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mono block text-[9px] uppercase leading-none tracking-[0.14em] text-text-muted">
+    <span className="block text-[11px] font-medium leading-none text-text-muted">
       {children}
     </span>
   );
@@ -258,13 +258,13 @@ export function IndexMoversPanel({
     <section
       aria-labelledby="index-movers-heading"
       data-testid="index-movers"
-      className="mt-3 rounded-panel border border-border-muted bg-bg-surface p-4 sm:p-5"
+      className="mt-5 rounded-panel border border-border-muted bg-bg-surface p-4 sm:p-5"
     >
       <h3
         id="index-movers-heading"
         className="font-display text-[16px] font-semibold leading-tight tracking-tight text-text-primary"
       >
-        What moved the Index?
+        What moved it?
       </h3>
       {/* The movers API's OWN as_of and constituent count. `movers_count` is
           the server's count over the FULL constituent set, so it stays correct
@@ -273,7 +273,7 @@ export function IndexMoversPanel({
       <p className="mt-1 text-[12px] leading-relaxed text-text-secondary" data-testid="movers-meta">
         {ready
           ? `${formatIndexDay(movers.as_of)} · ${movers.movers_count} of ${movers.constituent_count} constituents moved`
-          : "Which constituents moved the Card Pirate Index on its newest published day."}
+          : "The cards behind the latest index move."}
       </p>
 
       {status === "error" ? (
@@ -283,7 +283,7 @@ export function IndexMoversPanel({
           className="mt-5 text-[12px] leading-relaxed text-text-muted"
           data-testid="movers-unavailable"
         >
-          What moved the Index is unavailable right now.
+          We can&apos;t show the cards behind this move right now.
         </p>
       ) : status === "loading" || movers === null ? (
         <MoversSkeleton />
@@ -303,7 +303,7 @@ export function IndexMoversPanel({
           className="mt-5 text-[12px] leading-relaxed text-text-muted"
           data-testid="movers-none"
         >
-          No constituents moved on this Index day.
+          No cards moved on this published day.
         </p>
       ) : (
         <>

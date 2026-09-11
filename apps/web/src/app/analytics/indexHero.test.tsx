@@ -938,13 +938,13 @@ describe("the index establishes the page hierarchy", () => {
   it("is the page's H1, above the market landscape section", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Card Pirate Index");
-    expect(screen.getByRole("heading", { level: 2, name: "Current market landscape" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" })).toBeTruthy();
   });
 
   it("puts the chart before the coverage statistics in document order", async () => {
     await renderPage();
     const hero = screen.getByTestId("index-hero");
-    const landscape = screen.getByRole("heading", { level: 2, name: "Current market landscape" });
+    const landscape = screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" });
     expect(hero.compareDocumentPosition(landscape) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -1,4 +1,4 @@
-/** The "What moved the Index?" section on /analytics.
+/** The "What moved it?" section on /analytics.
  *
  * WHAT THIS SUITE IS FOR. The section restates a payload the server already
  * computed, and the failure mode worth guarding is not "the layout broke" but
@@ -505,7 +505,7 @@ describe("days with nothing to show", () => {
     stub({ mov: quietDay() });
     await renderPage();
     expect(screen.getByTestId("movers-none").textContent).toBe(
-      "No constituents moved on this Index day.",
+      "No cards moved on this published day.",
     );
     expect(screen.queryByTestId("index-mover")).toBeNull();
     expect(screen.queryByTestId("movers-unavailable")).toBeNull();
@@ -630,12 +630,13 @@ describe("request discipline", () => {
 });
 
 describe("placement and mobile structure", () => {
-  it("sits below the composition and breadth row", async () => {
+  it("sits after the hero and before composition and breadth", async () => {
     await renderPage();
     const row = screen.getByTestId("index-analytics-row");
     const panel = screen.getByTestId("index-movers");
     // Node.DOCUMENT_POSITION_FOLLOWING === 4
-    expect(row.compareDocumentPosition(panel) & 4).toBeTruthy();
+    expect(screen.getByTestId("index-hero").compareDocumentPosition(panel) & 4).toBeTruthy();
+    expect(panel.compareDocumentPosition(row) & 4).toBeTruthy();
   });
 
   it("keeps the two metric blocks separate children of every row", async () => {
