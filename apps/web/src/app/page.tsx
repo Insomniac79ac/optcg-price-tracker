@@ -48,21 +48,27 @@ export default function HomePage() {
       <AppHeader />
       <AtlasVisualSystem>
         <main className={`mx-auto max-w-6xl px-4 ${styles.home}`}>
-          <AtlasMapSurface>
-            <div className={styles.intro}>
-              <div>
-                <p className={styles.identity}>{brand.productName}</p>
-                <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
-                <HomeCardSearch />
+          <div className={styles.chart}>
+            <AtlasMapSurface>
+              <HomeChartRoute />
+              <div className={styles.opening}>
+                <div className={styles.intro}>
+                  <div>
+                    <p className={styles.identity}>{brand.productName}</p>
+                    <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
+                    <HomeCardSearch />
+                  </div>
+                </div>
+                <HomeMovers />
               </div>
-            </div>
-          </AtlasMapSurface>
-
-          <HomeMovers />
+            </AtlasMapSurface>
+          </div>
           <AtlasDivider />
 
           <section aria-labelledby="updated-printings">
-            <AtlasSectionIntro id="updated-printings" number="02" title="Recently updated printings" description="A few recently updated catalogue entries, with priced cards shown first." />
+            <div data-atlas-chapter>
+              <AtlasSectionIntro id="updated-printings" number="02" title="Recently updated printings" description="A few recently updated catalogue entries, with priced cards shown first." />
+            </div>
             {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
             {status.kind === "error" && (
               <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={() => {
@@ -80,12 +86,29 @@ export default function HomePage() {
           <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>
           <AtlasDivider />
           <section aria-labelledby="home-market" className={styles.market}>
-            <AtlasSectionIntro id="home-market" number="03" title="Card Pirate Index" description="See how the broader One Piece card market is moving." />
+            <span className={styles.destinationMark} aria-hidden="true"><span /></span>
+            <div data-atlas-chapter>
+              <AtlasSectionIntro id="home-market" number="03" title="Card Pirate Index" description="See how the broader One Piece card market is moving." />
+            </div>
             <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>View Market →</Link>
           </section>
         </main>
       </AtlasVisualSystem>
     </div>
+  );
+}
+
+/** Decorative chart geometry only: no coordinates, places or data series. */
+function HomeChartRoute() {
+  return (
+    <svg className={styles.chartRoute} viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <g className={styles.chartRings}>
+        <circle cx="740" cy="300" r="240" /><circle cx="740" cy="300" r="180" />
+        <path d="M740 30V570 M470 300H1000" />
+      </g>
+      <path className={styles.chartPath} d="M35 540H280Q320 540 320 500V390Q320 350 360 350H490Q530 350 530 310V130Q530 90 570 90H930" />
+      <g className={styles.chartNodes}><circle cx="35" cy="540" r="6" /><circle cx="490" cy="350" r="7" /><circle cx="930" cy="90" r="6" /></g>
+    </svg>
   );
 }
 

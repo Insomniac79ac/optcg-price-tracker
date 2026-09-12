@@ -26,13 +26,13 @@ export function HomeMovers() {
 
   return (
     <section aria-labelledby="home-movers" className={styles.section}>
-      <div className={styles.intro}>
+      <div className={styles.intro} data-atlas-chapter>
         <AtlasSectionIntro id="home-movers" number="01" title="Cards on the move" description={<>
           Cards behind the latest published index move.
           {status.kind === "ready" && <span className={styles.date}>{formatIndexDay(status.data.as_of)}</span>}
         </>} />
       </div>
-      <div className="mt-4">
+      <div className={styles.content}>
         {status.kind === "loading" && <div role="status" aria-label="Loading cards on the move" className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {Array.from({ length: HOME_MOVERS_LIMIT }, (_, i) => <SkeletonBlock key={i} className="aspect-[63/88] rounded-panel" />)}
         </div>}
