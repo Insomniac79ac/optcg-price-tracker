@@ -1,0 +1,19 @@
+/* Interaction belongs to the card frame, not the padded identity/price tile.
+ * Keep the normal border and all image geometry fixed in every state. */
+.tile:where(:hover, :focus-visible) > :global(.vault-frame) {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 0;
+}
+
+/* More specific than route-level link focus styles (including Home). The
+ * frame above remains the visible focus indicator for the entire link. */
+.tile:has(> :global(.vault-frame)):focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+@media (forced-colors: active) {
+  .tile:where(:hover, :focus-visible) > :global(.vault-frame) {
+    outline-color: Highlight;
+  }
+}

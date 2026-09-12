@@ -16,6 +16,7 @@ import {
 import { sourceEvidenceLabel } from "@/lib/sourceEvidence";
 import { CardImageFrame } from "./CardImageFrame";
 import { MarketIndexValue } from "./MarketIndexValue";
+import styles from "./PrintCardTile.module.css";
 
 /** One collectible print in the public catalogue grid.
  *
@@ -80,7 +81,7 @@ export function PrintCardTile({
     <Link
       href={`/prints/${print.cardPrintId}`}
       aria-label={accessibleName}
-      className="group flex flex-col rounded-panel border border-border-muted bg-bg-elevated p-2 transition duration-150 hover:-translate-y-0.5 hover:border-accent-teal/45 hover:bg-bg-elevated/80 focus:outline-none focus-visible:border-accent-teal focus-visible:ring-2 focus-visible:ring-accent-teal/60 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className={`group flex flex-col rounded-panel border border-border-muted bg-bg-elevated p-2 ${styles.tile}`}
     >
       {/* Untouched: bounded geometry, the natural-size guard, exact-print
           image selection and the no-crop contract all live in

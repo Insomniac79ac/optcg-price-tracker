@@ -150,7 +150,7 @@ describe("Home discovery", () => {
     expect(within(hero).getByRole("link", { name: /Preview Test Card 9/ })).toHaveAttribute("href", "/prints/9");
     expect(within(hero).queryByText("Mover 88")).not.toBeInTheDocument();
     expect(within(hero).queryByText(/Market Index|Price move/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "EB-01 Explore release" })).toHaveAttribute("href", "/cards?set=EB-01");
+    expect(screen.getByRole("link", { name: "EB-01 Memorial Collection" })).toHaveAttribute("href", "/cards?set=EB-01");
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
     expect(apiGet).toHaveBeenCalledTimes(1);
     const headings = within(screen.getByRole("main")).getAllByRole("heading", { level: 2 }).map((h) => h.textContent);

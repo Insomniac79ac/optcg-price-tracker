@@ -3,6 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import { CardImageFrame } from "./CardImageFrame";
 import styles from "./AtlasPrimitives.module.css";
+import { releaseDisplayName } from "@/lib/releaseNames";
 
 /** Explicit opt-in: importing this module changes no existing route or token. */
 export function AtlasVisualSystem({ children }: { children: ReactNode }) {
@@ -78,15 +79,19 @@ export function AtlasArtworkStage({ image, caption }: { image: ArtworkProps; cap
   );
 }
 
-/** The caller supplies the existing release URL and the actual release code.
- * No set-name lookup, code normalization, count or membership inference. */
-export function AtlasReleaseDestination({ releaseCode, href }: { releaseCode: string; href: string }) {
+/** The caller owns the release code and URL. Naming is display-only and
+ * prefers a supplied product name over the saved official catalogue label. */
+export function AtlasReleaseDestination({ releaseCode, releaseName, href }: {
+  releaseCode: string;
+  releaseName?: string | null;
+  href: string;
+}) {
   return (
     <Link href={href} prefetch={false} className={styles.destination}>
       <span className={styles.destinationDot} aria-hidden="true" />
       <span className={styles.destinationCopy}>
         <span className={styles.releaseCode}>{releaseCode}</span>{" "}
-        <span className={styles.destinationLabel}>Explore release</span>
+        <span className={styles.destinationLabel}>{releaseDisplayName(releaseCode, releaseName)}</span>
       </span>
       <span className={styles.destinationArrow} aria-hidden="true">→</span>
     </Link>

@@ -28,9 +28,27 @@ describe("Atlas presentation contracts", () => {
     }
   });
 
-  it("preserves release code and destination without constructing a name or membership", () => {
+  it("uses the official release name without changing the code or destination", () => {
     render(<AtlasReleaseDestination releaseCode="PRB-01" href="/cards?set=PRB-01" />);
-    expect(screen.getByRole("link", { name: "PRB-01 Explore release" })).toHaveAttribute("href", "/cards?set=PRB-01");
+    expect(screen.getByRole("link", { name: "PRB-01 ONE PIECE CARD THE BEST" })).toHaveAttribute("href", "/cards?set=PRB-01");
+  });
+
+  it.each([
+    ["OP-01", "Romance Dawn"],
+    ["OP-02", "Paramount War"],
+    ["OP-03", "Pillars of Strength"],
+    ["OP-04", "Kingdoms of Intrigue"],
+    ["PRB-02", "ONE PIECE CARD THE BEST vol.2"],
+  ])("shows the official title for %s", (code, name) => {
+    render(<AtlasReleaseDestination releaseCode={code} href={`/cards?set=${code}`} />);
+    expect(screen.getByRole("link", { name: `${code} ${name}` })).toHaveAttribute("href", `/cards?set=${code}`);
+  });
+
+  it("prefers a name supplied by the caller and does not guess unknown releases", () => {
+    const { rerender } = render(<AtlasReleaseDestination releaseCode="OP-01" releaseName="Current product title" href="/cards?set=OP-01" />);
+    expect(screen.getByText("Current product title")).toBeInTheDocument();
+    rerender(<AtlasReleaseDestination releaseCode="FUTURE-99" href="/cards?set=FUTURE-99" />);
+    expect(screen.getByRole("link", { name: "FUTURE-99 Release name unavailable" })).toHaveAttribute("href", "/cards?set=FUTURE-99");
   });
 
   it("keeps captions outside the image frame and resets a failed image for a different printing", () => {
