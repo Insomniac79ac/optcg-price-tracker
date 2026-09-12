@@ -135,6 +135,14 @@ describe("Home discovery", () => {
     expect(main.queryByRole("table")).not.toBeInTheDocument();
     expect(main.queryByText(/Trending|Hot|Opportunities|Newly added|Explore the Atlas|Browse every printing|View full catalogue/)).not.toBeInTheDocument();
   });
+  it.each([1, 2, 4])("renders exactly %i supplied movers without decorative slots", async (count) => {
+    apiGet.mockResolvedValue(moves({ movers: [88, 2, 91, 7].slice(0, count).map((id) => mover(id)) }));
+    await ready();
+    expect(within(moveSection()).getAllByRole("listitem")).toHaveLength(count);
+    expect(within(moveSection()).getAllByRole("img")).toHaveLength(count);
+    expect(within(moveSection()).getByRole("heading", { name: "Cards on the move" })).toHaveAttribute("id", "home-movers");
+    expect(within(moveSection()).getByText("01")).toHaveAttribute("aria-hidden", "true");
+  });
   it("renders four movers at most, preserving supplied order rather than sorting ranks or prices", async () => {
     apiGet.mockResolvedValue(moves({ movers: [mover(88), mover(2), mover(91), mover(7), mover(1)] }));
     await ready();

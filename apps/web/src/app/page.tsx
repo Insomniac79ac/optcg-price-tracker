@@ -8,6 +8,8 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import { HomeMovers } from "@/components/ui/HomeMovers";
+import { AtlasVisualSystem, AtlasMapSurface, AtlasSectionIntro, AtlasDivider } from "@/components/ui/AtlasPrimitives";
+import styles from "./Home.module.css";
 import { brand } from "@/lib/brand";
 import { fetchPrintCatalogue, toPrintUiModel, type PrintUiModel } from "@/lib/prints";
 
@@ -44,41 +46,45 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-        <div className="sm:flex sm:items-end sm:justify-between sm:gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-accent-teal">{brand.productName}</p>
-            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
-            <HomeCardSearch />
-          </div>
-          <Link href="/cards" prefetch={false} className={`${LINK_CLASS} mt-3 inline-flex py-2`}>Browse all cards</Link>
-        </div>
+      <AtlasVisualSystem>
+        <main className={`mx-auto max-w-6xl px-4 ${styles.home}`}>
+          <AtlasMapSurface>
+            <div className={styles.intro}>
+              <div>
+                <p className={styles.identity}>{brand.productName}</p>
+                <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
+                <HomeCardSearch />
+              </div>
+            </div>
+          </AtlasMapSurface>
 
-        <HomeMovers />
+          <HomeMovers />
+          <AtlasDivider />
 
-        <section aria-labelledby="updated-printings" className="mt-8 sm:mt-10">
-          <h2 id="updated-printings" className="font-display text-xl font-semibold text-text-primary">Recently updated printings</h2>
-          <p className="mt-1 mb-4 text-sm text-text-muted">A few recently updated catalogue entries, with priced cards shown first.</p>
-          {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
-          {status.kind === "error" && (
-            <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={() => {
-              setStatus({ kind: "loading" });
-              setAttempt((value) => value + 1);
-            }}>Try again</button>}>The catalogue couldn&rsquo;t be loaded right now.</ErrorState>
-          )}
-          {status.kind === "ready" && (status.items.length === 0
-            ? <p className="text-sm text-text-secondary">No recently updated printings are available right now.</p>
-            : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-                {pickRecentFinds(status.items).map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
-              </div>)}
-        </section>
+          <section aria-labelledby="updated-printings">
+            <AtlasSectionIntro id="updated-printings" number="02" title="Recently updated printings" description="A few recently updated catalogue entries, with priced cards shown first." />
+            {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
+            {status.kind === "error" && (
+              <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={() => {
+                setStatus({ kind: "loading" });
+                setAttempt((value) => value + 1);
+              }}>Try again</button>}>The catalogue couldn&rsquo;t be loaded right now.</ErrorState>
+            )}
+            {status.kind === "ready" && (status.items.length === 0
+              ? <p className="text-sm text-text-secondary">No recently updated printings are available right now.</p>
+              : <div className={styles.recentGrid}>
+                  {pickRecentFinds(status.items).map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
+                </div>)}
+          </section>
 
-        <section aria-labelledby="home-market" className="mt-8 border-t border-border-muted pt-6 sm:mt-10">
-          <h2 id="home-market" className="font-display text-lg font-semibold text-text-primary">Card Pirate Index</h2>
-          <p className="mt-1 text-sm text-text-secondary">See how the broader One Piece card market is moving.</p>
-          <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} mt-3 inline-flex py-2`}>View Market →</Link>
-        </section>
-      </main>
+          <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>
+          <AtlasDivider />
+          <section aria-labelledby="home-market" className={styles.market}>
+            <AtlasSectionIntro id="home-market" number="03" title="Card Pirate Index" description="See how the broader One Piece card market is moving." />
+            <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>View Market →</Link>
+          </section>
+        </main>
+      </AtlasVisualSystem>
     </div>
   );
 }
