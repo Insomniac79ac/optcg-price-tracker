@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,12 +11,11 @@ import {
   UnknownRarityBadge,
 } from "@/components/RarityBadge";
 import { ErrorState, LoadingState } from "@/components/StateBlocks";
-import { ATLAS_MAP_TEXTURE_SRC } from "@/components/brand/AtlasBrandAssets";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { MarketIndexValue } from "@/components/ui/MarketIndexValue";
-import { PrintAnalyticsSection } from "@/components/ui/PrintAnalyticsSection";
+import { PrintAnalyticsSection, PrintMarketIndexHeadline } from "@/components/ui/PrintAnalyticsSection";
 import { PrintWindowPerformance } from "@/components/ui/PrintWindowPerformance";
 import {
   PrintPriceSeriesRows,
@@ -28,6 +26,8 @@ import { SourceConstraintNote } from "@/components/ui/SourceConstraintNote";
 import { SourceContributionNote } from "@/components/ui/SourceContributionNote";
 import { ApiError } from "@/lib/api";
 import { formatDate, formatJpy } from "@/lib/format";
+import { resolveCardImageUrl } from "@/lib/cardImage";
+import styles from "@/components/ui/PrintDetail.module.css";
 import { buildPriceHistoryView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
   fetchPrintAnalytics,
@@ -255,29 +255,12 @@ export default function PrintDetailPage() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="relative isolate mx-auto max-w-6xl px-4 py-4">
-        {/* The same cartography as the catalogue intro, at a fraction of the
-            strength and only behind the top of the page: enough to place the
-            card on the Atlas's own surface, not enough to notice as a
-            texture. Screened so only the drawn lines survive, then washed out
-            to the page colour before the metadata section begins. */}
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px]">
-          <Image
-            src={ATLAS_MAP_TEXTURE_SRC}
-            data-brand-asset=""
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover object-right-top opacity-[0.18] mix-blend-screen"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(23,23,23,0.7)_0%,rgba(23,23,23,0.92)_62%,rgba(23,23,23,1)_100%)]" />
-        </div>
-
+      <main className={styles.page}>
         {/* The catalogue is the only place this page came from and the only
             place it links back to. */}
         <Link
           href="/cards"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted transition-colors hover:text-accent-teal"
+          className={styles.breadcrumb}
         >
           <span aria-hidden="true">←</span> Catalogue
         </Link>
@@ -313,71 +296,28 @@ export default function PrintDetailPage() {
         )}
 
         {status === "ready" && print && detail && (
-          <article className="mt-4">
-            {/* 40/60 on desktop: the card is the hero, but the money and the
-                identity beside it stay above the fold rather than being
-                pushed down by a pedestal. One column below `lg`, in the
-                stacking order a phone should read it in. */}
-            <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-10">
-              {/* The card follows the reader down the analytics band.
-                  The right column was always taller than the artwork; the
-                  380px chart made it ~330px taller still, which left a dead
-                  gutter under the card for most of a desktop scroll and broke
-                  the two-column rhythm. Sticking the card to the top of the
-                  viewport keeps the thing the page is ABOUT in view while its
-                  history is read - which is the collector-first ordering, not
-                  a workaround for it. Nothing about the artwork itself
-                  changes: same frame, same contain fit, same geometry.
-                  `lg:` only, because the phone layout is one column and has no
-                  gutter to close. */}
-              <div className="lg:sticky lg:top-6">
-                <CardStage print={print} />
-              </div>
-
-              {/* Everything a collector reads about this print lives in one
-                  column, metadata included. The card is much taller than the
-                  identity and the money alone, and leaving the attributes in a
-                  full-width band underneath left a dead block of column beside
-                  the lower half of the artwork. */}
-              <div className="min-w-0">
-                <Identity print={print} />
-                <PrintAnalyticsSection
-                  analytics={analyticsForPrint}
-                  // The export's title block. Identity comes from the print
-                  // payload, never from the analytics response - that endpoint
-                  // deliberately carries none, so no two endpoints can
-                  // disagree about what this card is called.
-                  identity={{
-                    cardCode: print.cardCode,
-                    displayName: print.displayName,
-                    printingLabel: print.printingType?.label ?? null,
-                    releaseCode: print.releaseCode,
-                  }}
-                  pressed={pressedAnalytics}
-                  loading={!analyticsReady}
-                  onWindowChange={setAnalyticsWindow}
-                />
-                {/* Between the chart and the live section, and subordinate to
-                    both: it describes the SELECTED HISTORICAL WINDOW, which is
-                    the chart's subject, while Current prices below describes what
-                    the sources say right now. */}
-                <PrintWindowPerformance
-                  analytics={analyticsForPrint}
-                  loading={!analyticsReady}
-                />
-                <LiveMarket
-                  print={print}
-                  history={history}
-                  historyStatus={historyStatus}
-                />
-                <AboutThisPrint print={print} detail={detail} />
-              </div>
+          <article className={styles.layout}>
+            <div className={styles.artwork}><CardStage print={print} /></div>
+            <Identity print={print} />
+            <PrintMarketIndexHeadline analytics={analyticsForPrint} />
+            <LiveMarket print={print} history={history} historyStatus={historyStatus} />
+            <OtherPrintings siblings={detail.siblings} print={print} />
+            <PrintAnalyticsSection
+              analytics={analyticsForPrint}
+              identity={{
+                cardCode: print.cardCode,
+                displayName: print.displayName,
+                printingLabel: print.printingType?.label ?? null,
+                releaseCode: print.releaseCode,
+              }}
+              pressed={pressedAnalytics}
+              loading={!analyticsReady}
+              onWindowChange={setAnalyticsWindow}
+            />
+            <div className={styles.performance}>
+              <PrintWindowPerformance analytics={analyticsForPrint} loading={!analyticsReady} />
             </div>
-
-            {/* Genuinely secondary, and about *other* prints rather than this
-                one - so it sits under both columns rather than inside the
-                column describing the print in hand. */}
-            <OtherPrintings siblings={detail.siblings} />
+            <AboutThisPrint print={print} detail={detail} />
           </article>
         )}
       </main>
@@ -385,39 +325,29 @@ export default function PrintDetailPage() {
   );
 }
 
-/** The card itself, as large as the column allows.
- *
- * Presentation is `CardImageFrame` exactly as the catalogue uses it - same
- * exact-print image, same verified geometry, same natural-size guard, same
- * no-crop contract - so this page cannot show a different card, a differently
- * framed card, or a card missing an edge. The surround is one charcoal panel,
- * a hairline border and a soft shadow: no slab, no grading case, no gold
- * frame, nothing that pretends to be part of the card.
- *
- * Widths are the whole point of the tranche. `max-w-[380px]` with the panel's
- * own 12px inset renders the card ~356px wide on desktop and ~276px on a
- * 390px phone, where it stays the largest thing on screen without swallowing
- * the viewport.
- */
+/** Real exact-print artwork, in an Atlas surround. CardImageFrame retains
+ * its resolver, verified geometry and uncropped presentation. */
 function CardStage({ print }: { print: PrintUiModel }) {
   const provenance = imageProvenance(print);
 
   return (
-    <div className="mx-auto w-full max-w-[300px] sm:mx-0 sm:max-w-[340px] lg:max-w-[380px]">
-      <div className="rounded-panel-lg border border-border-muted bg-bg-elevated p-3 shadow-[0_20px_44px_-26px_rgba(0,0,0,0.95)]">
-        <CardImageFrame
-          imageUrl={print.imageUrl}
-          alt={`${print.displayName} (${print.cardCode})`}
-          cardCode={print.cardCode}
-          rarity={print.rarity}
-          setCode={print.releaseCode}
-          size="full"
-          padded
-          geometry={print.imageGeometry}
-        />
+    <div>
+      <div className={styles.stage}>
+        <div className={styles.card}>
+          <CardImageFrame
+            imageUrl={print.imageUrl}
+            alt={`${print.displayName} (${print.cardCode})`}
+            cardCode={print.cardCode}
+            rarity={print.rarity}
+            setCode={print.releaseCode}
+            size="full"
+            padded
+            geometry={print.imageGeometry}
+          />
+        </div>
       </div>
       {provenance && (
-        <p className="mt-2.5 text-center text-xs leading-snug text-text-muted sm:text-left">
+        <p className={styles.provenance}>
           {provenance}
         </p>
       )}
@@ -437,49 +367,23 @@ function CardStage({ print }: { print: PrintUiModel }) {
  */
 function Identity({ print }: { print: PrintUiModel }) {
   return (
-    <header>
-      <h1 className="font-display text-[30px] font-semibold leading-[1.05] tracking-tight text-text-primary sm:text-[38px]">
-        {print.displayName}
-      </h1>
-
-      {print.nameJp && print.nameJp !== print.displayName && (
-        <p lang="ja" className="mt-1.5 text-base text-text-secondary sm:text-lg">
-          {print.nameJp}
-        </p>
-      )}
-
-      <div className="mono mt-3 flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
-        <span>{print.cardCode}</span>
-        {print.releaseCode && (
-          <>
-            <span aria-hidden="true">·</span>
-            {/* "Found in", never "Set": for a reprint this is a later product
-                than the set the card came from. The true set has its own row
-                in "About this print". */}
-            <span>
-              <span className="text-text-faint">Found in </span>
-              {print.releaseCode}
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Rarity, then special print, then printing - the same three
-          dimensions, in the same order, as the "About this print" rows below,
-          so the badges and the list never read as two different accounts of
-          the card. */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+    <header className={styles.identity}>
+      <div className={styles.codes}>
+        <span className="mono">{print.cardCode}</span>
         {print.rarityTerm && <RarityTermBadge term={print.rarityTerm} />}
         {print.specialPrint && <SpecialPrintBadge term={print.specialPrint} />}
         {print.unknownRarityToken && <UnknownRarityBadge token={print.unknownRarityToken} />}
         {print.printingType && (
-          <span
-            className="mono inline-flex rounded border border-accent-gold/30 bg-accent-gold/10 px-2 py-0.5 text-[11px] font-medium tracking-wide text-accent-gold"
-            title={`${print.printingType.label} — ${print.printingType.definition}`}
-          >
+          <span className={styles.treatment} title={`${print.printingType.label} — ${print.printingType.definition}`}>
             {print.printingType.label}
           </span>
         )}
+      </div>
+      <h1>{print.displayName}</h1>
+      <div className={styles.secondaryIdentity}>
+        {print.nameJp && print.nameJp !== print.displayName && <span lang="ja">{print.nameJp}</span>}
+        {print.releaseCode && <span>Found in <span className="mono">{print.releaseCode}</span></span>}
+        <span className="mono">Print #{print.cardPrintId}</span>
       </div>
     </header>
   );
@@ -518,7 +422,7 @@ function LiveMarket({
   historyStatus: PriceHistoryStatus;
 }) {
   return (
-    <section className="mt-7 border-t border-border-muted pt-5" data-testid="live-market">
+    <section className={styles.current} data-testid="live-market">
       <h2 className="text-base font-semibold leading-snug text-text-primary">
         Current prices
       </h2>
@@ -531,7 +435,7 @@ function LiveMarket({
           is what keeps that from reading as a contradiction, and it is why
           neither may appear as a bare "Market Index" figure. */}
       <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border-muted/60 pb-3">
-        <span className="text-[12px] text-text-secondary">Market Index</span>
+        <span className="text-[12px] text-text-secondary">Current Market Index</span>
         <div className="text-right">
           <MarketIndexValue
             index={print.marketIndex}
@@ -719,11 +623,11 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
     // directly, beneath the live index they are the sources for, and a second
     // heading between the two would split one statement into two sections.
     <div className="mt-3">
-      <div className={`grid gap-3 ${rows.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+      <div className={styles.sources}>
         {rows.map((row) => (
           <div
             key={`${row.source}-${row.reference_type}`}
-            className="rounded-panel border border-border-muted bg-bg-elevated/70 px-3.5 py-3"
+            className={styles.sourceRow} data-source-row=""
           >
             <div className="flex items-center gap-2 text-xs font-medium text-text-secondary">
               <span>{sourceDisplayName(row.source)}</span>
@@ -737,7 +641,7 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
               <UnavailablePriceLine value={row} />
             ) : (
               <>
-                <div className="tabular mt-2 text-xl font-semibold text-text-primary">
+                <div className={`${styles.sourcePrice} tabular`}>
                   {formatJpy(row.value_jpy)}
                 </div>
                 <EvidenceTypeLine value={row} />
@@ -757,55 +661,37 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
   );
 }
 
-/** The API's own `siblings` for this print - other printings of the same
- * card, each with its own detail page.
- *
- * Rendered only when the payload actually carries them. Nothing here is
- * derived from the catalogue or from artwork keys client-side: if the API
- * says a print has no siblings, this page says nothing about siblings.
- *
- * A sibling with no treatment is skipped entirely. The treatment is this
- * chip's only text, and this transitional treatment-keyed navigation has no
- * honest label for an unclassified printing - so it says nothing rather than
- * inventing one. Sibling identity is revisited after the final exact-print
- * identity migration.
- */
-function OtherPrintings({ siblings }: { siblings: PrintDetail["siblings"] }) {
-  const labelled = siblings.filter((sibling) => sibling.treatment);
-  if (labelled.length === 0) return null;
-
+/** Only the server's canonical-family siblings. This contract has artwork
+ * and exact IDs, but no sibling prices; no follow-up request is made. */
+function OtherPrintings({ siblings, print }: { siblings: PrintDetail["siblings"]; print: PrintUiModel }) {
+  if (siblings.length === 0) return null;
   return (
-    <section className="mt-10 border-t border-border-muted pt-6">
-      <h2 className="text-base font-semibold leading-snug text-text-primary">
-        Other printings
-      </h2>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {labelled.map((sibling) => (
-          <Link
-            key={sibling.card_print_id}
-            href={`/prints/${sibling.card_print_id}`}
-            className="rounded-control border border-border-default bg-bg-elevated px-2.5 py-1.5 text-xs lowercase text-text-secondary transition-colors hover:border-accent-teal/50 hover:text-text-primary"
-          >
-            {sibling.treatment}
-          </Link>
+    <section className={styles.siblings}>
+      <h2>Other printings</h2>
+      <ul className={styles.printingStrip}>
+        <li className={styles.currentPrinting}>
+          <CardImageFrame imageUrl={print.imageUrl} alt={`${print.displayName} — current printing`}
+            cardCode={print.cardCode} size="full" padded geometry={print.imageGeometry} />
+          <span className={styles.printingLabel}>Current printing</span>
+          <span className="mono">Print #{print.cardPrintId}</span>
+        </li>
+        {siblings.filter((sibling) => sibling.card_print_id !== print.cardPrintId).map((sibling) => (
+          <li key={sibling.card_print_id}>
+            <Link href={`/prints/${sibling.card_print_id}`} className={styles.printingLink}>
+              <CardImageFrame imageUrl={resolveCardImageUrl(sibling.image_url)}
+                alt={`${print.cardCode} — print #${sibling.card_print_id}`} cardCode={print.cardCode}
+                size="full" padded />
+              <span className={styles.printingLabel}>{sibling.treatment ?? `Print #${sibling.card_print_id}`}</span>
+              {sibling.treatment && <span className="mono">Print #{sibling.card_print_id}</span>}
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
 
-/** The print's own attributes, secondary to the card and the price.
- *
- * Sits at the foot of the identity column rather than in a full-width band
- * below, so on desktop it fills the column beside the lower half of the card
- * instead of leaving it empty. It is the same list either way: on a phone the
- * column is the page, and this still reads last, after the source prices.
- *
- * A plain two-column definition list rather than a grid of stat boxes, and
- * strictly the fields `GET /prints/{id}` returns - there is no cost, power,
- * attribute or effect text in that payload, so there are no rows for them.
- * Every row is omitted rather than dashed when its value is absent.
- */
+/** Compact Atlas metadata: only fields supplied for this print. */
 function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintDetail }) {
   // Six separate facts, deliberately not collapsed into one another, in the
   // order a collector reads them: which card this is, where the card came
@@ -850,10 +736,10 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
   ];
 
   return (
-    <section className="mt-7 border-t border-border-muted pt-5">
+    <section className={styles.metadata}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold leading-snug text-text-primary">
-          About this print
+          Atlas entry
         </h2>
         {/* The same key as the catalogue, on the page where a collector is
             most likely to be asking what "SP Card" is next to "Super Rare".
@@ -861,7 +747,7 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
             route that works on a phone and from the keyboard. */}
         <CatalogueLegend />
       </div>
-      <dl className="mt-4 grid gap-x-10 gap-y-2.5 sm:grid-cols-2">
+      <dl className={styles.metadataRows}>
         {rows.map((row) => (
           <div
             key={row.term}

@@ -577,7 +577,7 @@ describe("the archived headline", () => {
   it("renders every figure from the server's headline, not from the chart", async () => {
     await renderPage();
 
-    const band = screen.getByTestId("print-analytics");
+    const band = screen.getByTestId("print-analytics-headline");
     expect(screen.getByTestId("print-analytics-current")).toHaveTextContent("￥22,900");
     expect(within(band).getByText("As of Sep 8, 2026")).toBeInTheDocument();
 
@@ -695,7 +695,7 @@ describe("the archived headline", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const band = await screen.findByTestId("print-analytics");
+    const band = await screen.findByTestId("print-analytics-headline");
     expect(within(band).getByText("Index unavailable")).toBeInTheDocument();
     expect(band.textContent).not.toMatch(/￥0\b/);
   });
@@ -722,7 +722,7 @@ describe("the archived headline", () => {
   it("carries no volume, sample-size or average claim", async () => {
     await renderPage();
 
-    const band = screen.getByTestId("print-analytics");
+    const band = screen.getByTestId("print-analytics-headline");
     // `observed_days` counts days Atlas archived a number. Nothing recorded
     // anywhere in Atlas is a transaction, and there is no average price
     // because the only combination rule the system owns is a same-day median.
@@ -785,15 +785,11 @@ describe("the chart", () => {
     );
   });
 
-  it("is the tallest element in the band", async () => {
+  it("names the history independently from the archived headline", async () => {
     await renderPage();
-
-    // Asserted through the class rather than geometry: jsdom lays nothing out,
-    // and the point of the tranche is that the plot outweighs the number above
-    // it at every width.
-    const chart = screen.getByTestId("price-history-chart");
-    expect(chart.className).toMatch(/h-\[300px\]/);
-    expect(chart.className).toMatch(/lg:h-\[380px\]/);
+    expect(screen.getByRole("heading", { name: "Price history" })).toBeInTheDocument();
+    expect(screen.getByTestId("price-history-chart")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Analytics window" })).toBeInTheDocument();
   });
 });
 
@@ -807,7 +803,7 @@ describe("archived versus live", () => {
     // row that names itself, inside a section that names itself "Current prices".
     expect(screen.getAllByRole("heading", { name: "Market Index" })).toHaveLength(1);
     const live = screen.getByTestId("live-market");
-    expect(within(live).getByText("Market Index")).toBeInTheDocument();
+    expect(within(live).getByText("Current Market Index")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Current prices" })).toBeInTheDocument();
   });
 
@@ -817,7 +813,7 @@ describe("archived versus live", () => {
     // `As of <day>` is provenance for an archived point. The archive is
     // written once a day by design, so its age is the design rather than a
     // fault to flag - "updated N ago" would misread one as the other.
-    const band = screen.getByTestId("print-analytics");
+    const band = screen.getByTestId("print-analytics-headline");
     expect(within(band).getByText("As of Sep 8, 2026")).toBeInTheDocument();
     expect(band.textContent).not.toMatch(/updated|ago|stale/i);
   });
@@ -1348,7 +1344,7 @@ describe("window performance", () => {
     expect(rowFor("market_index")).toHaveTextContent("Sep 8, 2026");
   });
 
-  it("sits between the chart and the live market section", async () => {
+  it("keeps archived performance separate from the current market section", async () => {
     await renderPage();
 
     const order = [...document.querySelectorAll("h1, h2")];
@@ -1356,7 +1352,7 @@ describe("window performance", () => {
     const perf = order.indexOf(screen.getByRole("heading", { name: "Price changes" }));
     const live = order.indexOf(screen.getByRole("heading", { name: "Current prices" }));
     expect(index).toBeLessThan(perf);
-    expect(perf).toBeLessThan(live);
+    expect(live).toBeLessThan(perf);
     // Two separate sections - archived window vs current resolver state.
     expect(screen.getByTestId("window-performance")).not.toContainElement(
       screen.getByTestId("live-market"),

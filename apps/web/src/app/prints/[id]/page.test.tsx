@@ -176,10 +176,8 @@ describe("print detail page", () => {
     expect(screen.queryByText("parallel")).toBeNull();
   });
 
-  it("omits an unclassified sibling rather than labelling it", async () => {
-    // The treatment is this chip's only text, and there is no honest label
-    // for an unclassified printing - so the chip is not rendered at all.
-    // No "#12", no "Unclassified", no invented word.
+  it("identifies an unclassified sibling by its exact print ID", async () => {
+    // A missing treatment must not hide a real server-provided sibling.
     fetchPrint.mockResolvedValue(
       makeDetail({
         siblings: [
@@ -196,11 +194,10 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(screen.queryByRole("link", { name: "#12" })).toBeNull();
-    expect(container.querySelector('a[href="/prints/12"]')).toBeNull();
-    expect(container.textContent).not.toMatch(/unclassified|unknown|#12/i);
-    // With no labelled sibling left, the section says nothing at all.
-    expect(screen.queryByText("Other printings")).toBeNull();
+    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Print #12");
+    expect(container.textContent).not.toMatch(/unclassified|unknown/i);
+    expect(screen.getByText("Current printing")).toBeInTheDocument();
+    expect(screen.getByText("Other printings")).toBeInTheDocument();
   });
 
   it("still lists a classified sibling beside an unclassified one", async () => {
@@ -228,9 +225,9 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     expect(screen.getByText("Other printings")).toBeTruthy();
-    const link = screen.getByRole("link", { name: "normal" });
+    const link = screen.getByRole("link", { name: /normal/ });
     expect(link.getAttribute("href")).toBe("/prints/13");
-    expect(container.querySelector('a[href="/prints/12"]')).toBeNull();
+    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Print #12");
   });
 
   it("never reaches for a legacy card_id-keyed endpoint", async () => {
@@ -348,7 +345,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const about = screen
-      .getByRole("heading", { name: "About this print" })
+      .getByRole("heading", { name: "Atlas entry" })
       .closest("section")!;
     for (const term of ["Card code", "Set", "Found in", "Rarity", "Card type", "Colour", "Language"]) {
       expect(within(about).getByText(term)).toBeTruthy();
@@ -362,12 +359,12 @@ describe("print detail page", () => {
     expect(about.textContent).not.toMatch(/\b(Cost|Power|Attribute|Effect|Counter)\b/);
   });
 
-  /** The rows of "About this print", as term -> value, in document order.
+  /** The rows of "Atlas entry", as term -> value, in document order.
    * The whole point of this tranche is which rows exist and what each one
    * says, so the tests read them off the page rather than probing for text. */
   function aboutRows(): [string, string][] {
     const about = screen
-      .getByRole("heading", { name: "About this print" })
+      .getByRole("heading", { name: "Atlas entry" })
       .closest("section")!;
     return Array.from(about.querySelectorAll("dl > div")).map((row) => [
       row.querySelector("dt")!.textContent!,
@@ -501,7 +498,7 @@ describe("print detail page", () => {
     );
   });
 
-  it("keeps the metadata in the identity column, after the prices", async () => {
+  it("keeps metadata, archived analytics, current prices and siblings in distinct sections", async () => {
     fetchPrint.mockResolvedValue(
       makeDetail({
         siblings: [
@@ -520,24 +517,13 @@ describe("print detail page", () => {
 
     const index = screen.getByRole("heading", { name: "Market Index" });
     const live = screen.getByRole("heading", { name: "Current prices" });
-    const about = screen.getByRole("heading", { name: "About this print" });
+    const about = screen.getByRole("heading", { name: "Atlas entry" });
     const others = screen.getByRole("heading", { name: "Other printings" });
 
-    // One reading order at every width: identity, the archived index and its
-    // chart, THEN the live source values, then the print's own attributes.
-    // The source panels used to sit between the index and its own history,
-    // which split one subject across two sections.
-    const order = (el: Element) => [...document.querySelectorAll("h1, h2")].indexOf(el);
-    expect(order(index)).toBeLessThan(order(live));
-    expect(order(live)).toBeLessThan(order(about));
-
-    // The attributes share the column the prices are in, so the column runs
-    // the height of the card beside it rather than stopping short.
-    const column = live.closest("div.min-w-0")!;
-    expect(column.contains(about)).toBe(true);
-    // Other printings is about other prints, so it stays outside that column.
-    expect(column.contains(others)).toBe(false);
-    expect(order(about)).toBeLessThan(order(others));
+    expect(index.closest("section")).not.toContainElement(live);
+    expect(live.closest("section")).not.toContainElement(about);
+    expect(others.closest("section")).not.toContainElement(about);
+    expect(screen.getByText("Archived index · recorded daily")).toBeInTheDocument();
   });
 
   it("dates the index with its real freshest observation", async () => {
@@ -587,7 +573,7 @@ describe("print detail page", () => {
     );
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Other printings" });
-    expect(screen.getByRole("link", { name: "normal" }).getAttribute("href")).toBe("/prints/4");
+    expect(screen.getByRole("link", { name: /normal/ }).getAttribute("href")).toBe("/prints/4");
   });
 
   it("surfaces a failure rather than an empty page", async () => {
@@ -865,7 +851,7 @@ describe("print detail page", () => {
     expect(within(live).getByText(/Current listing/)).toBeTruthy();
     // ...and it is LABELLED live, so it cannot be read as the archived figure
     // in the analytics band above.
-    expect(within(live).getByText("Market Index")).toBeTruthy();
+    expect(within(live).getByText("Current Market Index")).toBeTruthy();
   });
 });
 
@@ -1512,7 +1498,7 @@ describe("print detail page - a source with no price", () => {
   /** The panel for one named source, whatever it contains. */
   function panelFor(name: string): HTMLElement {
     const sources = screen.getByTestId("live-market");
-    return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
+    return within(sources).getByText(name).closest("[data-source-row]") as HTMLElement;
   }
 
   it("names Yuyu-Tei as unavailable when only SNKRDUNK reported a price", async () => {
@@ -1672,7 +1658,7 @@ describe("print detail page - no current listing on SNKRDUNK", () => {
 
   function panelFor(name: string): HTMLElement {
     const sources = screen.getByTestId("live-market");
-    return within(sources).getByText(name).closest(".rounded-panel") as HTMLElement;
+    return within(sources).getByText(name).closest("[data-source-row]") as HTMLElement;
   }
 
   /** The shape this whole change is about: Yuyu-Tei priced it, SNKRDUNK looked

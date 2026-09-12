@@ -113,7 +113,7 @@ export function PrintWindowPerformance({
       </ul>
 
       <p className="mt-3 text-[11px] leading-snug text-text-muted">
-        Recorded history for the selected period. Current source prices are below.
+        Recorded history for the selected period. Current source prices are shown separately.
       </p>
     </section>
   );

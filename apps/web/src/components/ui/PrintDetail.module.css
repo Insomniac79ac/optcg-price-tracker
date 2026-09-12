@@ -1,0 +1,96 @@
+/* Exact-print content only. The shared public shell is unchanged. */
+.page {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 16px 40px 48px;
+  color: #e6eeee;
+  --bg-elevated: #111c21;
+  --bg-card: #101a20;
+  --border-muted: #25363c;
+  --parchment: #b5c6cd;
+}
+.page a, .page button { min-height: 44px; min-width: 44px; }
+.page :is(a, button):focus-visible { outline: 2px solid #78c4bf; outline-offset: 3px; }
+.page :is(h2) { color: #e6eeee; font-size: 19px; font-weight: 700; font-style: italic; line-height: 1.25; }
+.breadcrumb { display: inline-flex; align-items: center; gap: 8px; font: 12px var(--font-mono); color: #8aa7ad; }
+.breadcrumb:hover { color: #78c4bf; }
+.layout { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.9fr); gap: 24px 42px; align-items: start; margin-top: 10px; }
+.artwork { grid-column: 1; grid-row: 1 / 4; }
+.stage { display: flex; align-items: center; justify-content: center; padding: 30px 24px; border: 1px solid #26373d; border-radius: 16px; background-color: #0e181d; background-image: linear-gradient(#20333b55 1px, transparent 1px), linear-gradient(90deg, #20333b55 1px, transparent 1px), radial-gradient(ellipse at center, #21303966, transparent 70%); background-size: 64px 64px, 64px 64px, 100% 100%; }
+.card { width: 100%; max-width: 330px; filter: drop-shadow(0 14px 18px #0008); }
+.provenance { font-size: 11px; color: #8c9fa7; margin-top: 10px; line-height: 1.5; }
+.identity { grid-column: 2; grid-row: 1; min-width: 0; }
+.codes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: #bcd0d3; }
+.treatment { padding: 3px 9px; border-radius: 4px; background: #30274c; color: #c4b5ed; font: 11px var(--font-mono); }
+.identity h1 { margin-top: 10px; font-size: clamp(32px, 3.2vw, 46px); line-height: 1.06; font-weight: 750; font-style: italic; letter-spacing: -1.1px; }
+.secondaryIdentity { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; color: #8fa6ae; font-size: 13px; }
+.index { grid-column: 2; grid-row: 2; background: #111c21; border: 1px solid #2a3b41; border-radius: 12px; padding: 20px 24px; }
+.page .index h2 { color: #d6a84f; font: 12px var(--font-mono); letter-spacing: 2px; text-transform: uppercase; }
+.archiveLabel { color: #90a6ad; font-size: 11px; margin-top: 7px; }
+.indexValue { display: inline-block; color: #e9f0f0; font-size: 46px; font-weight: 650; line-height: 1.1; letter-spacing: -1.5px; }
+.index :global([data-testid="print-analytics-stats"]) { padding-top: 12px; border-top: 1px solid #28383f; }
+.history { grid-column: 2; grid-row: 3 / 6; min-width: 0; }
+.history :global(.recharts-cartesian-grid-vertical) { opacity: 0; }
+.history :global(.recharts-cartesian-grid-horizontal) { opacity: .6; }
+.history :global([role="group"]) { gap: 4px; }
+.metadata { grid-column: 1; grid-row: 4; border: 1px dashed #31434a; border-radius: 12px; padding: 16px; }
+.page .metadata h2 { font: 12px var(--font-mono); text-transform: uppercase; letter-spacing: 2px; color: #80b7b5; }
+.metadataRows { display: grid; gap: 10px; margin-top: 16px; }
+.metadataRows dd { font-family: var(--font-mono); text-align: right; overflow-wrap: anywhere; font-size: 12px; }
+.current { grid-column: 1; grid-row: 5 / 8; min-width: 0; }
+.sources { display: grid; gap: 10px; }
+.sourceRow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; padding: 12px 14px; border: 1px solid #293b42; border-radius: 10px; background: #111c21; }
+.sourceRow > :first-child { color: #97c6c6; align-self: center; }
+.sourceRow > p, .sourceRow > div:not(:first-child):not(.sourcePrice) { grid-column: 1 / -1; }
+.sourcePrice { font-size: 20px; font-weight: 650; text-align: right; }
+.sourceRow > p { margin-top: 4px; }
+.siblings { grid-column: 2; grid-row: 6; min-width: 0; }
+.printingStrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 16px; margin-top: 16px; list-style: none; }
+.printingStrip > li { min-width: 0; max-width: 180px; font-size: 10px; color: #819ba4; }
+.printingLink { display: flex; flex-direction: column; height: 100%; border-radius: 8px; }
+.printingLink:hover { color: #a5dad5; }
+.printingLink:hover :global(.vault-frame) { border-color: #76b9b5; }
+.currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: 2px; }
+.printingLabel { display: block; margin: 10px 0 4px; color: #bfd2d5; font-size: 12px; }
+.currentPrinting .printingLabel { color: #87c3be; }
+.performance { grid-column: 2; grid-row: 7; min-width: 0; }
+.performance > section { margin-top: 0; }
+@media (max-width: 1023px) {
+  .page { padding: 12px 20px 32px; }
+  .layout { grid-template-columns: minmax(0,1fr); gap: 24px; }
+  .layout > *, .index, .history { grid-column: auto; grid-row: auto; }
+  .artwork { order: 1; }
+  .identity { order: 2; }
+  .index { order: 3; }
+  .current { order: 4; }
+  .siblings { order: 5; }
+  .history { order: 6; }
+  .performance { order: 7; }
+  .metadata { order: 8; }
+  .stage { padding: 18px 24px; }
+  .card { width: 62%; max-width: 300px; min-width: 190px; }
+  .identity h1 { font-size: 32px; }
+  .secondaryIdentity { font-size: 12px; margin-top: 8px; }
+  .index { padding: 18px; }
+  .indexValue { font-size: 40px; }
+  .printingStrip { grid-template-columns: repeat(auto-fill, minmax(95px,1fr)); gap: 14px; }
+  .printingStrip > li { max-width: 180px; }
+}
+@media (max-width: 359px) {
+  .page { padding-inline: 16px; }
+  .stage { padding-inline: 14px; }
+  .identity h1 { font-size: 29px; }
+  .codes { font-size: 12px; }
+  .index { padding: 16px; }
+  .indexValue { font-size: 36px; }
+  .printingStrip { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+/* Seven real periods remain reachable at 320px without shrinking targets. */
+.history :global([data-testid="print-analytics-window"]) { flex-wrap: wrap; max-width: 100%; }
+.history :global([data-testid="print-analytics-window"] button[aria-pressed="true"]) { background: #77bbb6; color: #102125; }
+.metadataRows > div { padding-bottom: 5px; }
+.metadataRows { gap: 5px; }
+/* Source disclosures anchor to the row, not an icon near its right edge. */
+.sourceRow > p { position: relative; }
+.sourceRow > p > span:has(> button) { position: static; }
+.sourceRow :global([role="note"]) { max-width: 100%; }

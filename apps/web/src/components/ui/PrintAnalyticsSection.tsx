@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import styles from "./PrintDetail.module.css";
 
 import { PrintSeriesChartPanel } from "@/components/ui/PrintPriceHistory";
 import { WindowTokenControl } from "@/components/ui/WindowTokenControl";
@@ -69,34 +70,9 @@ export function PrintAnalyticsSection({
   loading: boolean;
   onWindowChange: (window: string) => void;
 }) {
-  const headline = analytics?.headline ?? null;
-
   return (
-    <section className="mt-7 border-t border-border-muted pt-5" data-testid="print-analytics">
-      <h2 className="text-base font-semibold leading-snug text-text-primary">
-        Market Index
-      </h2>
-
-      {headline ? (
-        <AnalyticsHeadline headline={headline} />
-      ) : (
-        // Reserves the headline's room from the first frame so the chart and
-        // everything below it do not jump when the response lands.
-        <div className="mt-2 h-[92px]" aria-hidden="true" />
-      )}
-
-      <PrintSeriesChartPanel
-        series={analytics}
-        loading={loading}
-        // THE DOMINANT ANALYTICAL ELEMENT. Roughly double the 168px this chart
-        // occupied as a footnote under the source panels, and taller than the
-        // headline above it - so the shape of the history, not the single
-        // number, is what a reader takes from this band. Mobile keeps a real
-        // plot rather than a strip: 300px is enough for the y-axis to carry
-        // three labelled gridlines at 10px type without collapsing.
-        chartHeightClass="h-[300px] sm:h-[340px] lg:h-[380px]"
-      />
-
+    <section className={styles.history} data-testid="print-analytics">
+      <h2>Price history</h2>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <WindowTokenControl
           window={pressed}
@@ -116,7 +92,30 @@ export function PrintAnalyticsSection({
         )}
       </div>
 
+      <PrintSeriesChartPanel
+        series={analytics}
+        loading={loading}
+        chartHeightClass="h-[240px] sm:h-[260px] lg:h-[260px]"
+      />
+
       <PrintChartExportAction analytics={analytics} identity={identity} />
+    </section>
+  );
+}
+
+/** Separate presentation lets the mobile DOM follow its visual order without
+ * duplicating the headline or adding any data requests. */
+export function PrintMarketIndexHeadline({ analytics }: { analytics: PrintAnalytics | null }) {
+  const headline = analytics?.headline ?? null;
+  return (
+    <section className={styles.index} data-testid="print-analytics-headline">
+      <h2>Market Index</h2>
+      <p className={styles.archiveLabel}>Archived index · recorded daily</p>
+      {headline ? (
+        <AnalyticsHeadline headline={headline} />
+      ) : (
+        <div className="mt-2 h-[92px]" aria-hidden="true" />
+      )}
     </section>
   );
 }
@@ -242,7 +241,7 @@ function AnalyticsHeadline({ headline }: { headline: PrintAnalyticsHeadline }) {
     <div className="mt-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span
-          className="tabular text-[30px] font-semibold leading-none text-accent-gold sm:text-4xl"
+          className={`${styles.indexValue} tabular`}
           data-testid="print-analytics-current"
         >
           {formatJpy(headline.current_value_jpy)}
