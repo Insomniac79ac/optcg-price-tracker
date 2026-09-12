@@ -8,9 +8,9 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import { HomeMovers } from "@/components/ui/HomeMovers";
-import { AtlasVisualSystem, AtlasMapSurface, AtlasSectionIntro, AtlasDivider } from "@/components/ui/AtlasPrimitives";
+import { AtlasVisualSystem, AtlasSectionIntro, AtlasReleaseDestination } from "@/components/ui/AtlasPrimitives";
 import styles from "./Home.module.css";
-import { brand } from "@/lib/brand";
+import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { fetchPrintCatalogue, toPrintUiModel, type PrintUiModel } from "@/lib/prints";
 
 // One catalogue request, shared by every recently updated tile. "updated"
@@ -43,31 +43,38 @@ export default function HomePage() {
     return () => { cancelled = true; };
   }, [attempt]);
 
+  const recent = status.kind === "ready" ? pickRecentFinds(status.items) : [];
+  const preview = recent.filter((print) => print.imageUrl).slice(0, 3);
+  // Codes come from the existing response, never a parallel release vocabulary.
+  const releases = status.kind === "ready"
+    ? [...new Set(status.items.map((print) => print.releaseCode).filter((code): code is string => Boolean(code)))].slice(0, 6)
+    : [];
+
   return (
-    <div className="min-h-screen">
+    <div className={styles.root}>
       <AppHeader />
       <AtlasVisualSystem>
         <main className={`mx-auto max-w-6xl px-4 ${styles.home}`}>
-          <div className={styles.chart}>
-            <AtlasMapSurface>
-              <HomeChartRoute />
-              <div className={styles.opening}>
-                <div className={styles.intro}>
-                  <div>
-                    <p className={styles.identity}>{brand.productName}</p>
-                    <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">Find your next card.</h1>
-                    <HomeCardSearch />
-                  </div>
-                </div>
-                <HomeMovers />
+          <section className={styles.hero} aria-labelledby="home-title">
+            <div className={styles.heroContent}>
+              <div className={styles.intro}>
+                <p className={styles.kicker}>Log · One Piece card printings</p>
+                <h1 id="home-title">Find your <span>next card.</span></h1>
+                <HomeCardSearch />
               </div>
-            </AtlasMapSurface>
-          </div>
-          <AtlasDivider />
+              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Artwork previews from recently updated printings">
+                {preview.map((print) => <Link key={print.cardPrintId} href={`/prints/${print.cardPrintId}`} prefetch={false} aria-label={`Preview ${print.displayName}, ${print.cardCode}, ${print.printingType?.label ?? "printing"}`}>
+                  <CardImageFrame imageUrl={print.imageUrl} alt="" cardCode={print.cardCode} rarity={print.rarity} geometry={print.imageGeometry} size="full" />
+                </Link>)}
+              </div>}
+            </div>
+            <HomeWave />
+          </section>
+          <HomeMovers />
 
           <section aria-labelledby="updated-printings">
             <div data-atlas-chapter>
-              <AtlasSectionIntro id="updated-printings" number="02" title="Recently updated printings" description="A few recently updated catalogue entries, with priced cards shown first." />
+              <AtlasSectionIntro id="updated-printings" number="02" title="Recent finds" description="A few recently updated catalogue entries, with priced cards shown first." />
             </div>
             {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
             {status.kind === "error" && (
@@ -79,16 +86,21 @@ export default function HomePage() {
             {status.kind === "ready" && (status.items.length === 0
               ? <p className="text-sm text-text-secondary">No recently updated printings are available right now.</p>
               : <div className={styles.recentGrid}>
-                  {pickRecentFinds(status.items).map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
+                  {recent.map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
                 </div>)}
           </section>
 
-          <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>
-          <AtlasDivider />
+          <section className={styles.explore} aria-labelledby="home-explore">
+            <div data-atlas-chapter><AtlasSectionIntro id="home-explore" number="03" title="Explore the Atlas" /></div>
+            {releases.length > 0 && <div className={styles.releaseGrid}>
+              {releases.map((code) => <AtlasReleaseDestination key={code} releaseCode={code} href={`/cards?set=${encodeURIComponent(code)}`} />)}
+            </div>}
+            <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>
+          </section>
           <section aria-labelledby="home-market" className={styles.market}>
-            <span className={styles.destinationMark} aria-hidden="true"><span /></span>
-            <div data-atlas-chapter>
-              <AtlasSectionIntro id="home-market" number="03" title="Card Pirate Index" description="See how the broader One Piece card market is moving." />
+            <div>
+              <h2 id="home-market">Card Pirate Index</h2>
+              <p>See how the broader One Piece card market is moving.</p>
             </div>
             <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>View Market →</Link>
           </section>
@@ -98,18 +110,11 @@ export default function HomePage() {
   );
 }
 
-/** Decorative chart geometry only: no coordinates, places or data series. */
-function HomeChartRoute() {
-  return (
-    <svg className={styles.chartRoute} viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <g className={styles.chartRings}>
-        <circle cx="740" cy="300" r="240" /><circle cx="740" cy="300" r="180" />
-        <path d="M740 30V570 M470 300H1000" />
-      </g>
-      <path className={styles.chartPath} d="M35 540H280Q320 540 320 500V390Q320 350 360 350H490Q530 350 530 310V130Q530 90 570 90H930" />
-      <g className={styles.chartNodes}><circle cx="35" cy="540" r="6" /><circle cx="490" cy="350" r="7" /><circle cx="930" cy="90" r="6" /></g>
-    </svg>
-  );
+/** Repeating current marks from the reference; decorative, never chart data. */
+function HomeWave() {
+  return <svg className={styles.wave} viewBox="0 0 1200 24" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path d="M0 12 Q30 2 60 12 T120 12 T180 12 T240 12 T300 12 T360 12 T420 12 T480 12 T540 12 T600 12 T660 12 T720 12 T780 12 T840 12 T900 12 T960 12 T1020 12 T1080 12 T1140 12 T1200 12" />
+  </svg>;
 }
 
 const MAX_SEARCH_LENGTH = 128;
@@ -136,9 +141,8 @@ export function buildCardsSearchHref(term: string): string {
  * keeps this reachable for a signed-out visitor, which the authenticated
  * /api/search is not.
  *
- * Styled as the catalogue's own search field is (see CatalogueIntro) so the
- * two read as the same control in two places, and sized to the hero column
- * rather than spanning it - this is a way in, not the page's subject. */
+ * The Home banner supplies its visual treatment; submission retains the
+ * catalogue's existing public search contract. */
 function HomeCardSearch() {
   const router = useRouter();
   const [term, setTerm] = useState("");
@@ -150,7 +154,7 @@ function HomeCardSearch() {
         e.preventDefault();
         router.push(buildCardsSearchHref(term));
       }}
-      className="mt-4 flex w-full max-w-md gap-2"
+      className={styles.search}
     >
       <input
         type="search"
@@ -165,7 +169,7 @@ function HomeCardSearch() {
       />
       <button
         type="submit"
-        className="shrink-0 rounded-control bg-accent-teal px-3.5 py-2.5 text-sm font-semibold text-bg-page transition-colors hover:bg-accent-teal-hover sm:px-5"
+        className={styles.searchSubmit}
       >
         Search
       </button>

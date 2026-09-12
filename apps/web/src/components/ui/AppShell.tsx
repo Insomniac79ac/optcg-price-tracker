@@ -7,6 +7,8 @@ import { CommandPalette } from "./CommandPalette";
 import { KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
+import { PublicBottomNav } from "./PublicBottomNav";
+import { isPublicShellRoute } from "./publicNavigation";
 
 // "g then <key>" goto-shortcut targets (design brief - "Workflow
 // shortcuts"). Kept in sync with KeyboardShortcutsModal's reference list and
@@ -134,6 +136,8 @@ export function AppShell() {
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
       />
+
+      {isPublicShellRoute(pathname ?? "") && <PublicBottomNav />}
 
       {/* Admin-only navigation rail - fixed, clears the topbar via
           --header-h (the one place that height is defined - globals.css),

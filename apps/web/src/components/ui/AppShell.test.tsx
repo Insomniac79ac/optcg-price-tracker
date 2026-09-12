@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let currentPathname = "/cards";
@@ -54,5 +54,47 @@ describe("AppShell navigation rail", () => {
     expect(hrefs).not.toContain("/market/movers");
     // The legacy collector-data analytics pages stay out of navigation.
     expect(hrefs).not.toContain("/analytics/collection");
+  });
+});
+
+
+describe("shared public shell", () => {
+  it.each([["/", "Home"], ["/cards", "Cards"], ["/cards/code/OP01-001", "Cards"], ["/analytics", "Market"], ["/prints/1", "Cards"]])("shares branding and both navigation states on %s", (pathname, active) => {
+    currentPathname = pathname;
+    const { container } = render(<AppShell />);
+    expect(container.querySelector("[data-public-shell]")).not.toBeNull();
+    const logo = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    expect(logo.querySelector("svg")).not.toBeNull();
+    expect(logo.querySelector("img")).toBeNull();
+    expect(logo).toHaveTextContent("CARDPIRATEATLAS");
+    for (const name of ["Public sections", "Mobile public sections"]) {
+      const nav = screen.getByRole("navigation", { name });
+      expect(within(nav).getAllByRole("link").map(a => a.getAttribute("href"))).toEqual(["/", "/cards", "/analytics"]);
+      expect(nav.querySelectorAll("[aria-current]")).toHaveLength(1);
+      expect(within(nav).getByRole("link", { name: active })).toHaveAttribute("aria-current", "page");
+    }
+    expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
+  });
+
+  it.each(["/admin/catalog-ops", "/collection", "/analytics/collection", "/search", "/sign-in"])("preserves private/account presentation on %s", (pathname) => {
+    currentPathname = pathname;
+    const { container } = render(<AppShell />);
+    expect(container.querySelector("[data-public-shell]")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Mobile public sections" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "CardPirate Atlas — Home" }).querySelector("img")).not.toBeNull();
+  });
+
+  it("updates the shared navigation and removes public scope when leaving browsing", () => {
+    currentPathname = "/";
+    const { container, rerender } = render(<AppShell />);
+    for (const path of ["/cards", "/analytics", "/prints/1"]) {
+      currentPathname = path;
+      rerender(<AppShell />);
+      expect(container.querySelectorAll("[data-public-shell]")).toHaveLength(1);
+      expect(screen.getByRole("navigation", { name: "Mobile public sections" }).querySelectorAll("[aria-current]")).toHaveLength(1);
+    }
+    currentPathname = "/collection";
+    rerender(<AppShell />);
+    expect(container.querySelector("[data-public-shell]")).toBeNull();
   });
 });

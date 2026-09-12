@@ -1,18 +1,30 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "unauthenticated" }),
   signOut: vi.fn(),
 }));
+let currentPathname = "/";
+beforeEach(() => { currentPathname = "/"; });
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: () => currentPathname,
 }));
 
 import { TopBar } from "./TopBar";
 
 describe("TopBar", () => {
-  it("renders the supplied brand artwork, not a text/SVG substitute or the old OPTCG/Vault wordmark", () => {
+  it("uses the canonical public compass wordmark while retaining navigation and search", () => {
+    render(<TopBar />);
+    const logo = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    expect(logo.querySelector("svg")).not.toBeNull();
+    expect(logo.querySelector("img")).toBeNull();
+    expect(logo).toHaveTextContent("CARDPIRATEATLAS");
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
+  });
+  it("preserves supplied brand artwork on private admin tools", () => {
+    currentPathname = "/admin/catalog-ops";
     render(<TopBar />);
     const link = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
     const srcs = Array.from(link.querySelectorAll("img")).map((i) => i.getAttribute("src") ?? "");
@@ -31,7 +43,7 @@ describe("TopBar", () => {
     // The brand images are decorative (alt=""), so nothing of theirs may leak
     // into the link's accessible name (this previously produced
     // "CardPirate Atlas — HomeCardPirate Atlas").
-    expect(link.textContent?.trim()).toBe("");
+    expect(link).toHaveAccessibleName("CardPirate Atlas — Home");
   });
 
   it("offers only public navigation destinations that already work", () => {

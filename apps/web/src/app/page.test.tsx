@@ -120,7 +120,7 @@ async function ready() {
   await screen.findByText("Test Card 9");
 }
 const moveSection = () => screen.getByRole("region", { name: "Cards on the move" });
-const recentSection = () => screen.getByRole("region", { name: "Recently updated printings" });
+const recentSection = () => screen.getByRole("region", { name: "Recent finds" });
 
 describe("Home discovery", () => {
   it("has one catalogue action, compact search and an editorial Market entry", async () => {
@@ -133,7 +133,7 @@ describe("Home discovery", () => {
     expect(main.getByRole("link", { name: "View Market →" })).toHaveAttribute("href", "/analytics");
     expect(main.getByRole("heading", { name: "Card Pirate Index" })).toBeInTheDocument();
     expect(main.queryByRole("table")).not.toBeInTheDocument();
-    expect(main.queryByText(/Trending|Hot|Opportunities|Newly added|Explore the Atlas|Browse every printing|View full catalogue/)).not.toBeInTheDocument();
+    expect(main.queryByText(/Trending|Hot|Opportunities|Newly added|Browse every printing|View full catalogue/)).not.toBeInTheDocument();
   });
   it.each([1, 2, 4])("renders exactly %i supplied movers without decorative slots", async (count) => {
     apiGet.mockResolvedValue(moves({ movers: [88, 2, 91, 7].slice(0, count).map((id) => mover(id)) }));
@@ -142,6 +142,19 @@ describe("Home discovery", () => {
     expect(within(moveSection()).getAllByRole("img")).toHaveLength(count);
     expect(within(moveSection()).getByRole("heading", { name: "Cards on the move" })).toHaveAttribute("id", "home-movers");
     expect(within(moveSection()).getByText("01")).toHaveAttribute("aria-hidden", "true");
+  });
+  it("reuses catalogue artwork and release codes without putting movers in the hero", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 9, image_url: "https://www.onepiece-cardgame.com/images/9.png", release_product_code: "EB-01" })]));
+    await ready();
+    const hero = screen.getByRole("region", { name: "Find your next card." });
+    expect(within(hero).getByRole("link", { name: /Preview Test Card 9/ })).toHaveAttribute("href", "/prints/9");
+    expect(within(hero).queryByText("Mover 88")).not.toBeInTheDocument();
+    expect(within(hero).queryByText(/Market Index|Price move/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "EB-01 Explore release" })).toHaveAttribute("href", "/cards?set=EB-01");
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+    expect(apiGet).toHaveBeenCalledTimes(1);
+    const headings = within(screen.getByRole("main")).getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(["Cards on the move", "Recent finds", "Explore the Atlas", "Card Pirate Index"]);
   });
   it("renders four movers at most, preserving supplied order rather than sorting ranks or prices", async () => {
     apiGet.mockResolvedValue(moves({ movers: [mover(88), mover(2), mover(91), mover(7), mover(1)] }));

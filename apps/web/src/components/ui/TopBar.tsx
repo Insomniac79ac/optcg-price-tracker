@@ -5,37 +5,22 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
 import { AtlasLogoImage, AtlasMarkImage } from "@/components/brand/AtlasBrandAssets";
+import styles from "./PublicShell.module.css";
+import { isPublicShellRoute, publicSectionActive } from "./publicNavigation";
 import { brand } from "@/lib/brand";
 import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
 
-/** The global public header - now the primary public navigation.
+/** Shared header mechanics for public browsing and private tools.
+ * PublicShell supplies the canonical compact compass, blue-black foundation,
+ * underline navigation and >=44px targets. Private routes retain their existing
+ * logo assets, token values and control sizing.
  *
- * Height comes from `--header-h` (globals.css): 60px on mobile, 76px from
- * `md` up, which is what gives the supplied logo lockup room to render at
- * ~192px wide instead of the 18px inline mark this bar used to carry.
- * AppShell's admin rail offsets itself by the same variable, so the two can
- * never drift apart.
- *
- * Navigation here is the *public* tier only, and only routes that already
- * work - it reuses SidebarNav's PUBLIC_NAV_ITEMS rather than declaring a
- * second list, so a route can never appear in one and not the other, and no
- * admin entry can leak in. It now shows at every width from `md` up: the
- * persistent rail that used to duplicate it at `lg`+ is gone from the public
- * surface, so the header is the only place these three live.
- *
- * Below `md` the nav collapses into the drawer behind the menu button. That
- * button also stays available at `md`+ for signed-in collectors, because
- * their tier (Collection, Wishlist, Grading, Activity) has no home in the
- * header and would otherwise have become unreachable when the rail went
- * away. Signed-out visitors never see it above `md` - everything they can
- * reach is already on the bar.
+ * Public sections share one destination list with the mobile bottom bar. Below
+ * md the desktop links are hidden; the drawer also keeps signed-in collector
+ * tools reachable. The admin rail remains owned by AppShell.
  */
-/** Every icon-only control in the bar, so they can never drift apart.
- *
- * 44x44 up to `md` and 36x36 above it: touch viewports get the full
- * recommended target (the 60px mobile bar has exactly the room, the same 8px
- * of clearance the 44px brand mark already gets), while pointer viewports
- * keep the compact chrome the desktop lockup was composed against. */
+// Private tools retain compact desktop icons; PublicShell increases their
+// effective target to 44px on public routes without enlarging the glyphs.
 const ICON_BUTTON_CLASS =
   "flex h-11 w-11 shrink-0 items-center justify-center border border-border-default text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-9 md:w-9";
 
@@ -65,6 +50,7 @@ export function TopBar({
   onOpenPalette?: () => void;
   onOpenShortcuts?: () => void;
 }) {
+  const publicShell = isPublicShellRoute(usePathname() ?? "");
   const { status } = useSession();
   const authenticated = status === "authenticated";
 
@@ -75,7 +61,8 @@ export function TopBar({
     // and the matching negative margin here off `data-app-header`.
     <header
       data-app-header=""
-      className="sticky top-0 z-30 h-[var(--header-h)] border-b border-border-default bg-bg-page/95 backdrop-blur"
+      data-public-shell={publicShell ? "" : undefined}
+      className={`sticky top-0 z-30 h-[var(--header-h)] border-b border-border-default bg-bg-page/95 backdrop-blur ${publicShell ? styles.header : ""}`}
     >
       <div className="flex h-full items-center gap-2.5 px-3 sm:gap-3 md:gap-5 md:px-6">
         <button
@@ -99,8 +86,10 @@ export function TopBar({
           className="flex shrink-0 items-center pr-1 md:pr-0"
           aria-label={`${brand.productName} — Home`}
         >
-          <AtlasMarkImage className="h-11 w-11 md:hidden" />
-          <AtlasLogoImage className="hidden h-16 w-auto md:block" />
+          {publicShell ? <PublicLogo /> : <>
+            <AtlasMarkImage className="h-11 w-11 md:hidden" />
+            <AtlasLogoImage className="hidden h-16 w-auto md:block" />
+          </>}
         </Link>
 
         <PublicNav />
@@ -165,7 +154,9 @@ function PublicNav() {
   return (
     <nav aria-label="Public sections" className="hidden items-center gap-1 md:flex">
       {PUBLIC_NAV_ITEMS.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isPublicShellRoute(pathname)
+          ? publicSectionActive(pathname, item.href)
+          : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
@@ -238,4 +229,19 @@ function AuthControl() {
       </button>
     </div>
   );
+}
+
+/** Canonical public compass and wordmark, decorative inside the labelled Home link.
+ * Private tools retain their existing brand assets and styling. */
+function PublicLogo() {
+  return <span className={styles.logo} aria-hidden="true">
+    <svg viewBox="0 0 36 36" fill="none" focusable="false">
+      <circle cx="18" cy="18" r="16" stroke="#33565b" />
+      <circle cx="18" cy="18" r="12.5" stroke="#6fb5b0" />
+      <path d="M18 5 20.5 15.5 31 18 20.5 20.5 18 31 15.5 20.5 5 18 15.5 15.5Z" stroke="#6fb5b0" fill="#12262a" />
+      <path d="M18 5 20.5 15.5 18 18 15.5 15.5Z" fill="#d6a84f" />
+      <circle cx="18" cy="18" r="1.5" fill="#eef2f2" />
+    </svg>
+    <span className={styles.wordmark}>CARD<span>PIRATE</span><small>ATLAS</small></span>
+  </span>;
 }

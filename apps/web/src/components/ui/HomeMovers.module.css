@@ -1,36 +1,127 @@
-.section { position: relative; min-width: 0; margin-top: 1.125rem; }
-.section .intro > div { margin-bottom: 0.625rem; }
-.intro > div > div > div { margin-top: 0.375rem; font-size: 0.8125rem; line-height: 1.4; }
-.date { display: block; margin-top: 0.25rem; color: var(--atlas-text-subdued); font: 0.75rem/1.5 var(--atlas-font-metadata); }
-.content { position: relative; padding: 0.5rem 0.5rem 0; }
-.content > p { padding: 1.25rem; border-left: 2px solid var(--atlas-waypoint); background: var(--atlas-surface-primary); }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 1rem; }
-.grid > li:nth-child(even) { padding-top: 1.5rem; }
-.print { display: block; height: 100%; border-radius: var(--radius-panel, 8px); }
-.print:hover { outline: 1px solid var(--atlas-route-line); outline-offset: 4px; }
-.print figure { transform: rotate(-2deg); }
-.grid > li:nth-child(even) figure { transform: rotate(2deg); }
-/* The chart belongs to the whole opening. Avoid a stack of nested map panels. */
-.print figure > div { background: transparent; border-color: transparent; }
-.print figure svg { display: none; }
-.print figure > div > div > div { padding: 0.25rem; }
-.caption { position: relative; padding: 0.875rem 0.25rem 0.25rem; }
-.caption > p:first-child { font-size: 1rem; }
-.metadata { margin-top: 0.375rem; color: var(--atlas-navigation); font: 0.75rem/1.6 var(--atlas-font-metadata); overflow-wrap: anywhere; }
-.move { display: inline-block; margin-top: 0.75rem; padding: 0.125rem 0.375rem; border: 1px solid var(--atlas-route-line); font-size: 0.875rem; color: var(--atlas-text-parchment); }
-.prices { margin-top: 0.375rem; color: var(--atlas-text-subdued); font-size: 0.75rem; overflow-wrap: anywhere; }
-.single { display: block; }
-.single .print { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); align-items: end; gap: 1rem; }
-.single .caption { margin-bottom: 1.25rem; padding: 0 0 0.75rem; border-bottom: 1px solid var(--atlas-route-line); }
-.section > a { color: var(--atlas-navigation); }
-@media (min-width: 800px) {
-  .section { margin-top: 0; }
-  .content { padding: 1rem 0.75rem 0; }
-  .single .print { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 1.5rem; }
-  .single .caption { margin-bottom: 2rem; }
-  .grid > li:nth-child(even) { padding-top: 2.5rem; }
+.section {
+  position:relative;
+  min-width:0;
 }
-@media (min-width: 800px) {
-  .grid:has(> li:nth-child(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
-  .grid:has(> li:nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.intro > div > div > div {
+  margin-top:.375rem;
+  font-size:.8125rem;
+  line-height:1.4;
+}
+
+.date {
+  display:block;
+  margin-top:.25rem;
+  color:var(--atlas-navigation);
+  font:.75rem/1.5 var(--atlas-font-metadata);
+}
+
+.content {
+  padding:.5rem;
+}
+
+.content > p {
+  padding:1rem;
+  border-left:1px solid var(--atlas-navigation);
+  background:var(--atlas-surface-map);
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:1.5rem;
+}
+
+.print {
+  display:block;
+  height:100%;
+  border-radius:8px;
+}
+
+.print:hover {
+  outline:1px solid var(--atlas-navigation);
+  outline-offset:4px;
+}
+
+.print figure {
+  transform:rotate(-1.5deg);
+}
+
+.grid >li:nth-child(even) figure {
+  transform:rotate(1.5deg);
+}
+
+.print figure >div {
+  background:transparent;
+  border-color:transparent;
+}
+
+.print figure svg {
+  display:none;
+}
+
+.print figure >div >div >div {
+  padding:0;
+}
+
+.caption {
+  padding:.875rem .25rem .25rem;
+}
+
+.caption >p:first-child {
+  font-size:1rem;
+}
+
+.metadata {
+  margin-top:.375rem;
+  color:var(--atlas-text-subdued);
+  font:.75rem/1.6 var(--atlas-font-metadata);
+  overflow-wrap:anywhere;
+}
+
+.move {
+  display:inline-block;
+  margin-top:.625rem;
+  font-size:.875rem;
+  color:var(--atlas-text-parchment);
+}
+
+.prices {
+  margin-top:.25rem;
+  font-size:.75rem;
+  color:var(--atlas-text-subdued);
+}
+
+.single {
+  display:block;
+  max-width:34rem;
+}
+
+.single .print {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:center;
+  gap:1.5rem;
+}
+
+.pair {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  max-width:36rem;
+}
+
+.section >a {
+  color:var(--atlas-navigation);
+}
+
+@media(max-width:767px) {
+  .grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:1rem;
+  }
+  .single {
+    display:block;
+  }
+  .single .print {
+    gap:1rem;
+  }
 }
