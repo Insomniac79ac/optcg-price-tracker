@@ -1,14 +1,18 @@
 "use client";
 
-import { classifyRarityToken } from "@/lib/terminology";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
+import { releaseDisplayName } from "@/lib/releaseNames";
+import { classifyRarityToken } from "@/lib/terminology";
 import type { PrintCatalogueFacets, PrintCatalogueSort } from "@/lib/prints";
+
+const MOBILE_QUERY = "(max-width: 63.999rem)";
 
 const SORT_OPTIONS: { value: PrintCatalogueSort; label: string }[] = [
   { value: "card_code", label: "Card code" },
   { value: "name", label: "Name" },
-  { value: "index_desc", label: "Market Index (high to low)" },
-  { value: "index_asc", label: "Market Index (low to high)" },
+  { value: "index_desc", label: "Market Index ↓" },
+  { value: "index_asc", label: "Market Index ↑" },
   { value: "updated", label: "Recently updated" },
 ];
 
@@ -20,22 +24,6 @@ export interface PrintCatalogueFilters {
   sort: PrintCatalogueSort;
 }
 
-/** The catalogue's resting state - what /cards shows with no query string.
- *
- * `sort` is "index_desc", not "card_code". Ordered by card code the first page
- * is EB01-001 onward, and on 2026-09-01 that was 24 of 24 tiles reading
- * "Index unavailable": a market product whose opening screen showed no market
- * at all. Roughly 1% of the 4,316 printings carry an eligible price today, so
- * code order buries every one of them.
- *
- * Ordering by Market Index puts the priced printings first WITHOUT hiding
- * anything - the backend sorts on `(value is null, -value, id)`, so unpriced
- * prints follow the priced ones instead of being filtered out, and card-code
- * order stays one selection away in the Sort control.
- *
- * This is also the value `buildParams` compares against to decide whether
- * `sort` belongs in the URL, so the default stays absent from the query string
- * and any OTHER sort the collector picks is written to it explicitly. */
 export const EMPTY_PRINT_FILTERS: PrintCatalogueFilters = {
   q: "",
   release: "",
@@ -48,8 +36,26 @@ export function hasActivePrintFilters(filters: PrintCatalogueFilters): boolean {
   return Boolean(filters.release || filters.q || filters.treatment || filters.rarity);
 }
 
-/** Release values come from the existing market filter vocabulary; the
- * catalogue applies each selection server-side to printing metadata. */
+function subscribeToMobile(onChange: () => void): () => void {
+  const media = window.matchMedia(MOBILE_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function useMobileCatalogue(): boolean {
+  return useSyncExternalStore(
+    subscribeToMobile,
+    () => window.matchMedia(MOBILE_QUERY).matches,
+    () => false,
+  );
+}
+
+/** One filter model with two responsive presentations.
+ *
+ * Desktop commits the URL when a rail field changes. Mobile uses the same
+ * field component against a draft inside a modal sheet and commits it once
+ * on Apply. The URL remains the only state that fetches data; reopening the
+ * sheet starts from that committed state. */
 export function PrintCatalogueToolbar({
   filters,
   releases,
@@ -57,6 +63,7 @@ export function PrintCatalogueToolbar({
   onRetryReleases,
   facets,
   onChange,
+  legend,
 }: {
   filters: PrintCatalogueFilters;
   releases: { value: string; label: string }[];
@@ -64,88 +71,249 @@ export function PrintCatalogueToolbar({
   onRetryReleases: () => void;
   facets: PrintCatalogueFacets;
   onChange: (next: PrintCatalogueFilters) => void;
+  legend?: ReactNode;
 }) {
-  function set<K extends keyof PrintCatalogueFilters>(
-    key: K,
-    value: PrintCatalogueFilters[K],
-  ) {
+  const mobile = useMobileCatalogue();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(filters);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const returnFocus = triggerRef.current;
+    document.body.style.overflow = "hidden";
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>(
+        "select, button:not([disabled]), input, [href], [tabindex]:not([tabindex='-1'])",
+      )?.focus();
+    });
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>(
+        "select:not([disabled]), button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex='-1'])",
+      )].filter((element) => element.getClientRects().length > 0 || element === document.activeElement);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      returnFocus?.focus();
+    };
+  }, [open]);
+
+  if (!mobile) {
+    return (
+      <aside className="sticky top-[calc(var(--header-h)+1rem)] rounded-panel border border-border-default bg-bg-surface p-4" aria-labelledby="catalogue-filters-title">
+        <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-gold">Refine the atlas</p>
+        <h2 id="catalogue-filters-title" className="mt-1 font-display text-lg font-semibold text-text-primary">Collector filters</h2>
+        <div className="mt-4 flex flex-col gap-4">
+          <CatalogueFilterFields
+            filters={filters}
+            releases={releases}
+            releaseStatus={releaseStatus}
+            facets={facets}
+            onChange={onChange}
+          />
+        </div>
+        {releaseStatus === "error" && <ReleaseRetry onRetry={onRetryReleases} />}
+        {hasActivePrintFilters(filters) && (
+          <button type="button" onClick={() => onChange(EMPTY_PRINT_FILTERS)} className="mt-5 min-h-11 w-full rounded-control border border-border-default px-3 text-xs font-medium text-text-secondary hover:border-text-faint hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60">
+            Clear filters
+          </button>
+        )}
+        {legend && <div className="mt-5 border-t border-border-muted pt-4">{legend}</div>}
+      </aside>
+    );
+  }
+
+  const selectedCount = [filters.release, filters.rarity, filters.treatment].filter(Boolean).length;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => {
+          setDraft(filters);
+          setOpen(true);
+        }}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-30 inline-flex min-h-11 items-center gap-2 rounded-full border border-accent-gold/70 bg-bg-elevated px-4 text-xs font-semibold text-parchment shadow-[0_8px_30px_rgba(0,0,0,0.45)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal"
+      >
+        <FilterIcon />
+        Filters{selectedCount > 0 ? ` · ${selectedCount}` : ""}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/65" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setOpen(false);
+        }}>
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-catalogue-filters-title"
+            className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] overflow-y-auto rounded-t-modal border border-border-default bg-bg-elevated px-5 pb-5 pt-4 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-accent-gold">Refine the atlas</p>
+                <h2 id="mobile-catalogue-filters-title" className="mt-1 font-display text-2xl font-semibold text-text-primary">Filters</h2>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close filters" className="grid min-h-11 min-w-11 place-items-center rounded-control border border-border-default text-xl text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal">
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-5">
+              <CatalogueFilterFields
+                filters={draft}
+                releases={releases}
+                releaseStatus={releaseStatus}
+                facets={facets}
+                onChange={setDraft}
+              />
+              {releaseStatus === "error" && <ReleaseRetry onRetry={onRetryReleases} />}
+              {legend && <div className="border-t border-border-default pt-4">{legend}</div>}
+            </div>
+
+            <div className="sticky bottom-0 -mx-5 mt-6 flex gap-2 border-t border-border-default bg-bg-elevated px-5 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange({ ...filters, release: "", rarity: "", treatment: "" });
+                  setOpen(false);
+                }}
+                className="min-h-11 flex-1 rounded-control border border-border-default px-4 text-sm font-medium text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(draft);
+                  setOpen(false);
+                }}
+                className="min-h-11 flex-[1.4] rounded-control border border-accent-gold bg-accent-gold/10 px-4 text-sm font-semibold text-parchment focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal"
+              >
+                Apply filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export function PrintCatalogueSortControl({
+  value,
+  onChange,
+}: {
+  value: PrintCatalogueSort;
+  onChange: (value: PrintCatalogueSort) => void;
+}) {
+  return (
+    <label className="flex min-w-0 items-center gap-2">
+      <span className="mono hidden text-[10px] uppercase tracking-[0.14em] text-text-faint sm:inline">Sort</span>
+      <select
+        aria-label="Sort"
+        value={value}
+        onChange={(event) => onChange(event.target.value as PrintCatalogueSort)}
+        className="min-h-11 max-w-[11.5rem] min-w-0 rounded-control border border-border-default bg-bg-surface px-2 text-xs text-text-primary focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
+      >
+        {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function CatalogueFilterFields({
+  filters,
+  releases,
+  releaseStatus,
+  facets,
+  onChange,
+}: {
+  filters: PrintCatalogueFilters;
+  releases: { value: string; label: string }[];
+  releaseStatus: "loading" | "ready" | "error";
+  facets: PrintCatalogueFacets;
+  onChange: (next: PrintCatalogueFilters) => void;
+}) {
+  function set<K extends keyof PrintCatalogueFilters>(key: K, value: PrintCatalogueFilters[K]) {
     onChange({ ...filters, [key]: value });
   }
 
-  return (
-    // Controls wrap on phones; each select keeps a 44px touch target.
-    <div className="sm:mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-panel border border-border-muted bg-bg-elevated px-3 py-1.5">
-      <span className="mono hidden text-[10px] font-medium uppercase tracking-[0.16em] text-text-faint sm:inline">
-        Filters
-      </span>
+  const releaseOptions = releases.map((release) => {
+    const suppliedName = release.label !== release.value ? release.label : undefined;
+    const name = releaseDisplayName(release.value, suppliedName);
+    return { value: release.value, label: name === "Release name unavailable" ? release.value : `${release.value} — ${name}` };
+  });
+  if (filters.release && !releaseOptions.some((release) => release.value === filters.release)) {
+    releaseOptions.unshift({ value: filters.release, label: filters.release });
+  }
 
+  const treatmentOptions = facets.treatments.map((value) => ({ value, label: titleCase(value) }));
+  if (filters.treatment && !treatmentOptions.some((option) => option.value === filters.treatment)) {
+    treatmentOptions.unshift({ value: filters.treatment, label: titleCase(filters.treatment) });
+  }
+
+  const rarityGroups = rarityOptionGroups(facets.rarities);
+  if (filters.rarity && !rarityGroups.some((group) => group.options.some((option) => option.value === filters.rarity))) {
+    rarityGroups.push({ label: "Selected", options: [{ value: filters.rarity, label: filters.rarity }] });
+  }
+
+  return (
+    <>
       <FilterSelect
         label="Release"
         value={filters.release}
         onSelect={(value) => set("release", value)}
         placeholder={releaseStatus === "loading" ? "Loading releases…" : "All releases"}
-        options={filters.release && !releases.some((r) => r.value === filters.release)
-          ? [{ value: filters.release, label: filters.release }, ...releases]
-          : releases}
+        options={releaseOptions}
       />
-      {releaseStatus === "error" && (
-        <button type="button" onClick={onRetryReleases} className="min-h-11 text-xs text-text-secondary underline">
-          Retry releases
-        </button>
-      )}
-
-      {facets.treatments.length > 0 && (
-        <FilterSelect
-          label="Treatment"
-          value={filters.treatment}
-          onSelect={(value) => set("treatment", value)}
-          placeholder="All treatments"
-          options={facets.treatments.map((value) => ({ value, label: value }))}
-        />
-      )}
-
-      {facets.rarities.length > 0 && (
-        <FilterSelect
-          label="Rarity"
-          // The control offers two different kinds of thing, and the optgroups
-          // below say which is which. The accessible name says so too, because
-          // an option list read aloud one item at a time is exactly where "SP
-          // Card" would otherwise be heard as a scarcity tier.
-          accessibleName="Rarity or special print"
-          value={filters.rarity}
-          onSelect={(value) => set("rarity", value)}
-          placeholder="All rarities"
-          // The option VALUE is whatever the API's facet published, because
-          // that is what `?rarity=` filters on - including the single
-          // `SP CARD` value the backend expands to both source tokens (see
-          // app/services/rarity_facets.py). Only the LABEL is translated, so
-          // the dropdown never offers a collector "SPカード".
-          groups={rarityOptionGroups(facets.rarities)}
-        />
-      )}
-
-      <div className="min-w-0 max-w-full sm:ml-auto">
-        <FilterSelect
-          label="Sort"
-          value={filters.sort}
-          onSelect={(value) => set("sort", value as PrintCatalogueSort)}
-          options={SORT_OPTIONS}
-        />
-      </div>
-    </div>
+      <FilterSelect
+        label="Rarity"
+        accessibleName="Rarity or special print"
+        value={filters.rarity}
+        onSelect={(value) => set("rarity", value)}
+        placeholder="All rarities"
+        groups={rarityGroups}
+      />
+      <FilterSelect
+        label="Treatment"
+        value={filters.treatment}
+        onSelect={(value) => set("treatment", value)}
+        placeholder="All treatments"
+        options={treatmentOptions}
+      />
+    </>
   );
 }
 
-const SELECT_CLASS =
-  "min-h-11 max-w-full min-w-0 rounded-control border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary transition-colors hover:border-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal";
-
-/** One labelled control in the toolbar.
- *
- * The visible label is hidden below `sm`, where two controls have to share a
- * 358px row and every "Treatment"/"Rarity" caption is width the select
- * itself needs - the placeholder option ("All treatments") already says what
- * the control is. `aria-label` carries the name at every width regardless, so
- * hiding the caption never costs the accessible name. */
 function FilterSelect({
   label,
   accessibleName,
@@ -156,44 +324,27 @@ function FilterSelect({
   placeholder,
 }: {
   label: string;
-  /** The `aria-label`, where the visible caption is too short to be the whole
-   * truth. The caption has to survive beside two other controls on a 640px
-   * row; the accessible name has no such budget, so it carries the fuller
-   * wording. Defaults to `label`. */
   accessibleName?: string;
   value: string;
   onSelect: (value: string) => void;
-  /** A flat option list. Mutually exclusive with `groups`. */
   options?: { value: string; label: string }[];
-  /** Options split into labelled `<optgroup>`s, for a control whose values
-   * are not all the same kind of thing. */
   groups?: FilterOptionGroup[];
-  /** Rendered as the empty/"no filter" option. Omit for a control like sort
-   * that is always set to something. */
-  placeholder?: string;
+  placeholder: string;
 }) {
   return (
-    <label className="flex min-w-0 items-center gap-1.5">
-      <span className="hidden text-[11px] text-text-muted sm:inline">{label}</span>
+    <label className="block min-w-0">
+      <span className="mono mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-text-faint">{label}</span>
       <select
         aria-label={accessibleName ?? label}
         value={value}
-        onChange={(e) => onSelect(e.target.value)}
-        className={SELECT_CLASS}
+        onChange={(event) => onSelect(event.target.value)}
+        className="min-h-11 w-full min-w-0 rounded-control border border-border-default bg-bg-page px-2.5 text-xs text-text-primary focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
       >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options?.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        <option value="">{placeholder}</option>
+        {options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         {groups?.map((group) => (
           <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {group.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </optgroup>
         ))}
       </select>
@@ -201,30 +352,27 @@ function FilterSelect({
   );
 }
 
+function ReleaseRetry({ onRetry }: { onRetry: () => void }) {
+  return <button type="button" onClick={onRetry} className="mt-3 min-h-11 text-xs text-text-secondary underline">Retry releases</button>;
+}
+
+function FilterIcon() {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M3 5h14M5.5 10h9M8 15h4" />
+    </svg>
+  );
+}
+
+function titleCase(value: string): string {
+  return value ? `${value[0].toUpperCase()}${value.slice(1)}` : value;
+}
+
 export interface FilterOptionGroup {
   label: string;
   options: { value: string; label: string }[];
 }
 
-/** The rarity control's options, split into the two kinds of thing the API's
- * one `?rarity=` parameter actually carries.
- *
- * The grouping is the point. "SP Card" and "Treasure Rare" are special
- * PRINT categories, not rungs on the scarcity ladder, and listing them
- * inline among Common/Rare/Super Rare is what made an SP print read as though
- * SP Card were its rarity. Under their own `<optgroup>` heading they are
- * plainly a different question - in the open list, in the accessible name,
- * and to a screen reader, which announces the group before the option.
- *
- * There is exactly ONE SP Card option, never one per source token. The
- * collapsing is the API's: `GET /prints` facets `SPカード` and `SP P` into a
- * single `SP CARD` value and expands that value back to both when filtering,
- * so the one option's population is the sum of both (see
- * app/services/rarity_facets.py). Nothing is merged, hidden or renamed here -
- * this function only labels and orders what the facet published, so a value
- * this build has never seen is still offered, under its own raw name, in the
- * group that does not claim to know what it is.
- */
 function rarityOptionGroups(rarities: string[]): FilterOptionGroup[] {
   const rarityOptions: { value: string; label: string }[] = [];
   const specialOptions: { value: string; label: string }[] = [];

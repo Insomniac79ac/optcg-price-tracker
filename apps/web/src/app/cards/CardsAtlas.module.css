@@ -1,0 +1,553 @@
+.main {
+  width: min(100%, 88rem);
+  margin-inline: auto;
+  padding: 1.75rem 1.5rem 7rem;
+}
+
+.identity {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1rem 0 1.25rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.identity::before {
+  position: absolute;
+  z-index: -1;
+  inset: -8rem -2rem auto 44%;
+  height: 17rem;
+  content: "";
+  opacity: 0.42;
+  background:
+    radial-gradient(circle at 52% 48%, transparent 0 3px, rgba(79, 141, 134, 0.22) 3.5px 4.5px, transparent 5px),
+    repeating-radial-gradient(circle at 52% 48%, transparent 0 2.1rem, rgba(232, 222, 199, 0.045) 2.15rem 2.2rem),
+    linear-gradient(115deg, transparent 0 47%, rgba(199, 154, 75, 0.12) 47.1% 47.35%, transparent 47.45%);
+}
+
+.kicker {
+  margin: 0;
+  color: var(--accent-gold);
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.heading {
+  max-width: 13ch;
+  margin: 0.45rem 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(3.15rem, 6vw, 5rem);
+  font-weight: 600;
+  line-height: 0.93;
+  letter-spacing: -0.055em;
+}
+
+.identityBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(21rem, 34rem);
+  align-items: end;
+  gap: 2rem;
+}
+
+.description {
+  max-width: 42rem;
+  margin: 0.65rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.description strong {
+  color: var(--parchment);
+  font-weight: 600;
+}
+
+.searchArea {
+  min-width: 0;
+}
+
+.queryContext {
+  margin: 0 0 0.65rem;
+  color: var(--text-secondary);
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1rem;
+}
+
+.queryContext strong {
+  color: var(--parchment);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.resultCount {
+  margin-left: 0.45rem;
+  color: var(--text-muted);
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+}
+
+.searchForm {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.searchField {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+}
+
+.searchInput {
+  min-height: 2.75rem;
+  width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: rgba(23, 23, 23, 0.84);
+  padding: 0.68rem 2.6rem 0.68rem 0.85rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.searchInput::placeholder {
+  color: var(--text-faint);
+}
+
+.searchInput:focus {
+  border-color: var(--accent-teal);
+  outline: 1px solid var(--accent-teal);
+  outline-offset: 0;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.clearSearch {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.clearSearch:hover,
+.clearSearch:focus-visible {
+  color: var(--text-primary);
+}
+
+.searchButton {
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 65%, transparent);
+  border-radius: var(--radius-control);
+  background: rgba(199, 154, 75, 0.1);
+  padding: 0.65rem 1rem;
+  color: var(--parchment);
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.searchButton:hover,
+.searchButton:focus-visible {
+  border-color: var(--accent-gold);
+  background: rgba(199, 154, 75, 0.16);
+  outline: none;
+}
+
+.releaseSection {
+  padding: 1rem 0 1.1rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.releaseHeadingRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.sectionLabel {
+  margin: 0;
+  color: var(--text-faint);
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sectionTitle {
+  margin: 0.25rem 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.releaseHint {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+
+.releaseScroller {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: var(--border-default) transparent;
+  scrollbar-width: thin;
+  scroll-snap-type: inline proximity;
+}
+
+.releaseList {
+  display: grid;
+  grid-auto-columns: minmax(10.75rem, 1fr);
+  grid-auto-flow: column;
+  gap: 0.65rem;
+  min-width: max-content;
+  padding: 1px 1px 0.55rem;
+}
+
+.releaseCard {
+  position: relative;
+  display: flex;
+  min-height: 4.5rem;
+  min-width: 10.75rem;
+  flex-direction: column;
+  justify-content: center;
+  scroll-snap-align: start;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+  padding: 0.75rem 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.releaseCard::after {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 0.32rem;
+  height: 0.32rem;
+  border: 1px solid var(--text-faint);
+  border-radius: 50%;
+  content: "";
+}
+
+.releaseCard:hover,
+.releaseCard:focus-visible {
+  border-color: var(--accent-teal);
+  background: var(--bg-elevated);
+  outline: 1px solid var(--accent-teal);
+  outline-offset: 0;
+}
+
+.releaseCardSelected {
+  border-color: var(--accent-gold);
+  background: color-mix(in srgb, var(--accent-gold) 8%, var(--bg-surface));
+  box-shadow: inset 0 -2px 0 var(--accent-gold);
+}
+
+.releaseCardSelected::after {
+  border-color: var(--accent-gold);
+  background: var(--accent-gold);
+}
+
+.releaseCode {
+  color: var(--parchment);
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.releaseName {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.releaseLoading {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.retryLink {
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.catalogueLayout {
+  display: grid;
+  grid-template-columns: 12.25rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+  padding-top: 1.1rem;
+}
+
+.catalogueContent {
+  min-width: 0;
+}
+
+.catalogueBar {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.catalogueMeta {
+  min-width: 0;
+}
+
+.catalogueTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.catalogueCount {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+}
+
+.sortRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activeRow {
+  display: flex;
+  min-height: 2.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+}
+
+.activeChip {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 55%, var(--border-default));
+  border-radius: 999px;
+  background: rgba(79, 141, 134, 0.08);
+  padding: 0.3rem 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.activeChip strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.activeChip:hover,
+.activeChip:focus-visible {
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.chipRemove {
+  color: var(--accent-teal-hover);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.clearAll {
+  min-height: 2rem;
+  border: 0;
+  background: transparent;
+  padding: 0.3rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+  cursor: pointer;
+}
+
+.clearAll:hover,
+.clearAll:focus-visible {
+  color: var(--text-primary);
+  outline: none;
+}
+
+.stateBlock {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 63.999rem) {
+  .main {
+    padding: 0.75rem 1rem 7.75rem;
+  }
+
+  .identity {
+    padding: 0.6rem 0 0.9rem;
+  }
+
+  .identity::before {
+    inset: -6rem -5rem auto 28%;
+  }
+
+  .identityBody {
+    display: block;
+  }
+
+  .heading {
+    margin-top: 0.35rem;
+    font-size: clamp(2.5rem, 13vw, 3.4rem);
+  }
+
+  .description {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .searchArea {
+    margin-top: 0.6rem;
+  }
+
+  .searchForm {
+    display: none;
+  }
+
+  .queryContext {
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .queryContext strong {
+    font-size: 1rem;
+  }
+
+  .searchButton {
+    padding-inline: 0.8rem;
+  }
+
+  .releaseSection {
+    padding-block: 0.75rem 0.85rem;
+  }
+
+  .releaseHeadingRow {
+    margin-bottom: 0.5rem;
+  }
+
+  .sectionTitle {
+    font-size: 1.08rem;
+  }
+
+  .releaseHint {
+    display: none;
+  }
+
+  .releaseList {
+    grid-auto-columns: 9.5rem;
+    gap: 0.5rem;
+    margin-right: -1rem;
+    padding-right: 1rem;
+  }
+
+  .releaseCard {
+    min-height: 4.2rem;
+    min-width: 9.5rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .catalogueLayout {
+    display: block;
+    padding-top: 0.75rem;
+  }
+
+  .catalogueBar {
+    align-items: end;
+    margin-bottom: 0.55rem;
+  }
+
+  .catalogueTitle {
+    font-size: 1.15rem;
+  }
+
+  .catalogueCount {
+    font-size: 0.6rem;
+  }
+
+  .sortRow {
+    gap: 0.35rem;
+  }
+
+  .activeRow {
+    min-height: 0;
+    margin-bottom: 0.65rem;
+  }
+
+}
+
+@media (max-width: 22rem) {
+  .main {
+    padding-inline: 0.75rem;
+  }
+
+  .heading {
+    font-size: 2.35rem;
+  }
+
+  .description {
+    font-size: 0.75rem;
+  }
+
+  .releaseList {
+    margin-right: -0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .catalogueBar {
+    align-items: flex-start;
+  }
+
+  .catalogueTitle {
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .releaseCard {
+    transition: none;
+  }
+}

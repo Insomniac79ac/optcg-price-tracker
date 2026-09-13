@@ -1,6 +1,4 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 let currentSearch = "";
@@ -9,6 +7,7 @@ let currentSearch = "";
  * router.push - see the `navigate` comment in ./page.tsx for why. These spies
  * are what a navigation looks like from a test's point of view. */
 const pushState = vi.spyOn(window.history, "pushState");
+const desktopMatchMedia = window.matchMedia;
 // jsdom has no layout, so window.scrollTo is unimplemented and would log on
 // every navigation.
 vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -181,30 +180,11 @@ const CATALOGUE: PrintCatalogueItem[] = Array.from({ length: 6 }, (_, i) =>
   }),
 );
 
-/** The <img> sources actually drawn in the hero fan, in DOM order. */
-function fanImageSources(container: HTMLElement): string[] {
-  const fan = container.querySelector("[data-hero-fan]");
-  if (!fan) return [];
-  return [...fan.querySelectorAll("img")].map((img) => img.getAttribute("src") ?? "");
-}
-
-/** The slots actually drawn in the hero fan, in DOM order. */
-function fanPositions(container: HTMLElement): string[] {
-  const fan = container.querySelector("[data-hero-fan]");
-  if (!fan) return [];
-  return [...fan.querySelectorAll("[data-hero-fan-position]")].map(
-    (el) => el.getAttribute("data-hero-fan-position") ?? "",
-  );
-}
-
-/** Prose mentions a card code or a URL all the time; code must not. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-}
-
 afterEach(() => {
   vi.clearAllMocks();
   currentSearch = "";
+  window.matchMedia = desktopMatchMedia;
+  document.body.style.overflow = "";
 });
 
 describe("print catalogue page", () => {
@@ -344,8 +324,7 @@ describe("print catalogue page", () => {
     const { container } = render(<PrintsCataloguePage />);
 
     await screen.findByRole("link", { name: /Sanji/ });
-    // The tile's own image specifically: the intro fan now draws real card
-    // artwork too, and it must not be what this assertion lands on.
+    // The exact-print tile's own image.
     const img = container.querySelector('a[href^="/prints/"] img');
     expect(img).not.toBeNull();
     expect(img!.className).toContain("object-contain");
@@ -525,151 +504,36 @@ describe("print catalogue page", () => {
     expect(navigations()).toEqual(["/cards?treatment=parallel"]);
   });
 
-  it("draws the intro card fan from prints the page already loaded, with no extra request", async () => {
+  it("uses the Card Atlas identity and keeps the exact-print explanation visible", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    const { container } = render(<PrintsCataloguePage />);
+    render(<PrintsCataloguePage />);
     await screen.findAllByRole("link", { name: /Sanji/ });
 
-    // Atmosphere only: the fan is aria-hidden and holds no links, so the
-    // real, labelled copies of these cards stay in the grid below.
-    const fan = container.querySelector("[data-hero-fan]");
-    expect(fan).not.toBeNull();
-    expect(fan!.getAttribute("aria-hidden")).toBe("true");
-    expect(fan!.querySelectorAll("a")).toHaveLength(0);
-    expect(fan!.querySelectorAll("img")).toHaveLength(3);
-    // No card names or prices in the composition.
-    expect(fan!.textContent).not.toMatch(/Sanji|Zoro|¥/);
+    expect(screen.getByRole("heading", { level: 1, name: "THE CARD ATLAS" })).toBeInTheDocument();
+    expect(screen.getByText(/Base, parallel and alt-art printings remain distinct entries/)).toBeInTheDocument();
+    expect(screen.queryByText(/Every printing is an island/)).not.toBeInTheDocument();
+    expect(document.querySelector("[data-hero-fan]")).toBeNull();
+  });
 
-    // Every card in it is one of the prints the response actually carried -
-    // nothing invented, nothing fetched separately.
-    const loaded = new Set(CATALOGUE.map((item) => item.image_url));
-    for (const src of fanImageSources(container)) {
-      expect([...loaded].some((url) => src.includes(encodeURIComponent(url!)))).toBe(true);
-    }
+  it("adds no decorative card fetch or invented catalogue image", async () => {
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
 
-    // Decoration must never cost a request - the page fetched exactly once.
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+    expect(fetchMarketFilters).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("img")).toHaveLength(CATALOGUE.length);
   });
 
-  it("fills the fan by position: one front card over two behind it", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    const { container } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
+  it("shows authoritative query context and only the server total", async () => {
+    currentSearch = "q=zoro";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([CATALOGUE[0]]));
+    render(<PrintsCataloguePage />);
+    await screen.findByRole("link", { name: /Sanji/ });
 
-    const fan = container.querySelector("[data-hero-fan]")!;
-    const positions = [...fan.querySelectorAll("[data-hero-fan-position]")].map((el) =>
-      el.getAttribute("data-hero-fan-position"),
-    );
-    // The slots are fixed geometry; only the artwork in them rotates.
-    expect(positions).toEqual(["back-left", "back-right", "front"]);
-    const front = fan.querySelector('[data-hero-fan-position="front"]')!;
-    expect(front.className).toContain("-translate-x-1/2");
-    expect(front.querySelectorAll("img")).toHaveLength(1);
-  });
-
-  it("keeps the same fan when the visitor changes treatment, rarity or sort", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    const { container, rerender } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-    const before = fanImageSources(container);
-    expect(before).toHaveLength(3);
-
-    // Now narrow the catalogue hard: a filtered response that shares no
-    // print with the fan at all. The fan represents the catalogue, not the
-    // current view, so it must not follow.
-    currentSearch = "rarity=SEC&treatment=parallel&sort=index_desc";
-    fetchPrintCatalogue.mockResolvedValue(
-      catalogueResponse([makePrint({ card_print_id: 99, card_code: "OP09-099" })]),
-    );
-    rerender(<PrintsCataloguePage />);
-    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(
-        expect.objectContaining({ rarity: "SEC", treatment: "parallel", sort: "index_desc" }),
-      ),
-    );
-
-    expect(fanImageSources(container)).toEqual(before);
-  });
-
-  it("hides the fan cleanly when no print has a usable image", async () => {
-    const imageless = CATALOGUE.map((item) =>
-      makePrint({ ...item, image_url: null, display_image: null }),
-    );
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(imageless));
-    const { container } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    // No fan, and no placeholder or empty shell standing in for one.
-    expect(container.querySelector("[data-hero-fan]")).toBeNull();
-    expect(container.querySelector("[data-hero-fan-position]")).toBeNull();
-    expect(fanImageSources(container)).toEqual([]);
-  });
-
-  it("draws a two-card fan when only two prints are eligible", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE.slice(0, 2)));
-    const { container } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    // Both real prints, drawn once each - no third slot, no repeat to fill it.
-    const sources = fanImageSources(container);
-    expect(sources).toHaveLength(2);
-    expect(new Set(sources).size).toBe(2);
-    expect(fanPositions(container)).toEqual(["back-left", "front"]);
-  });
-
-  it("draws a single card when only one print is eligible", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE.slice(0, 1)));
-    const { container } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    expect(fanImageSources(container)).toHaveLength(1);
-    // The one card fronts the composition and sits on the centre line.
-    expect(fanPositions(container)).toEqual(["front"]);
-    const front = container.querySelector('[data-hero-fan-position="front"]')!;
-    expect(front.className).toContain("left-1/2");
-    expect(front.className).toContain("-translate-x-1/2");
-  });
-
-  it("skips prints whose image is known not to be that exact print", async () => {
-    // Three prints, but one carries a display image the API has explicitly
-    // marked as not this print - so only the other two may be drawn.
-    const wrongImage = makePrint({
-      card_print_id: 30,
-      display_image: {
-        url: "https://cdn.example.test/wrong.webp",
-        source: "snkrdunk",
-        exact_print_verified: false,
-        geometry: null,
-      },
-    });
-    fetchPrintCatalogue.mockResolvedValue(
-      catalogueResponse([...CATALOGUE.slice(0, 2), wrongImage]),
-    );
-    const { container } = render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    const sources = fanImageSources(container);
-    expect(sources).toHaveLength(2);
-    expect(sources.join(" ")).not.toContain("wrong.webp");
-  });
-
-  it("hardcodes no card identity or image URL in the hero fan code", async () => {
-    // The composition has to stay a function of the API response. A literal
-    // print id, card code or image URL here would pin the fan to particular
-    // cards forever, which is the whole thing this rotation exists to undo.
-    const sources = [
-      readFileSync(resolve(process.cwd(), "src/lib/heroFan.ts"), "utf8"),
-      readFileSync(resolve(process.cwd(), "src/components/ui/CatalogueIntro.tsx"), "utf8"),
-    ].map(stripComments);
-
-    for (const source of sources) {
-      expect(source).not.toMatch(/https?:\/\//);
-      // Card codes look like OP01-013 / ST01-001 / EB01-001.
-      expect(source).not.toMatch(/\b[A-Z]{2,3}\d{2}-\d{3}\b/);
-      expect(source).not.toMatch(/card_?[Pp]rint_?[Ii]d\s*[=:]==?\s*\d/);
-      expect(source).not.toMatch(/\.(webp|png|jpe?g)\b/i);
-    }
+    expect(screen.getAllByText("“zoro”")).toHaveLength(2);
+    expect(screen.getByText(/1 printing/)).toBeInTheDocument();
+    expect(screen.queryByText(/families/i)).not.toBeInTheDocument();
   });
 
   it("uses no mock or demo dataset when the API returns nothing", async () => {
@@ -678,11 +542,25 @@ describe("print catalogue page", () => {
 
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
     await screen.findByText(/No cards yet/);
-    // Brand chrome (header lockup, intro texture) is tagged
-    // data-brand-asset; any other <img> would have to be card artwork, and
-    // there is no card to draw - the intro fan needs three prints and gets
-    // none here.
+    // Brand chrome is tagged data-brand-asset; any other image would be fake
+    // catalogue content because the server returned no printings.
     expect(container.querySelectorAll("img:not([data-brand-asset])")).toHaveLength(0);
+  });
+
+  it("restyles an API failure for the Atlas and retries the same URL state", async () => {
+    fetchPrintCatalogue
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(catalogueResponse([SANJI_PARALLEL]));
+    render(<PrintsCataloguePage />);
+
+    expect(await screen.findByText("The Card Atlas could not be loaded.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry catalogue" }));
+    expect(await screen.findByRole("link", { name: /Sanji/ })).toBeInTheDocument();
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2);
+    expect(fetchPrintCatalogue).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sort: "index_desc", limit: 24, offset: 0 }),
+    );
   });
 });
 
@@ -1516,13 +1394,58 @@ describe("catalogue tiles - no current listing on SNKRDUNK", () => {
 
 
 describe("release browsing", () => {
+  it("renders only published release codes and gives known codes their official display names", async () => {
+    fetchMarketFilters.mockResolvedValueOnce({
+      sets: [
+        { value: "OP-01", label: "OP-01" },
+        { value: "OP-02", label: "OP-02" },
+        { value: "OP-03", label: "OP-03" },
+        { value: "OP-04", label: "OP-04" },
+        { value: "PRB-02", label: "PRB-02" },
+        { value: "FUTURE-99", label: "FUTURE-99" },
+      ],
+      rarities: [],
+    });
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+
+    const releaseNav = await screen.findByRole("navigation", { name: "Browse releases" });
+    expect(within(releaseNav).getByRole("link", { name: /OP-01 Romance Dawn/ })).toHaveAttribute("href", "/cards?set=OP-01");
+    expect(within(releaseNav).getByRole("link", { name: /OP-02 Paramount War/ })).toHaveAttribute("href", "/cards?set=OP-02");
+    expect(within(releaseNav).getByRole("link", { name: /OP-03 Pillars of Strength/ })).toHaveAttribute("href", "/cards?set=OP-03");
+    expect(within(releaseNav).getByRole("link", { name: /OP-04 Kingdoms of Intrigue/ })).toHaveAttribute("href", "/cards?set=OP-04");
+    expect(within(releaseNav).getByRole("link", { name: /PRB-02 ONE PIECE CARD THE BEST vol\.2/ })).toHaveAttribute("href", "/cards?set=PRB-02");
+    expect(within(releaseNav).getByRole("link", { name: /FUTURE-99 Release name unavailable/ })).toHaveAttribute("href", "/cards?set=FUTURE-99");
+    // All releases plus exactly the six values the authoritative response supplied.
+    expect(within(releaseNav).getAllByRole("link")).toHaveLength(7);
+    expect(fetchMarketFilters).toHaveBeenCalledTimes(1);
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+  });
+
   it("loads the shared release vocabulary and commits a release with other filters, resetting pagination", async () => {
     currentSearch = "q=Zoro&rarity=R&treatment=parallel&sort=name&offset=24";
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
     render(<PrintsCataloguePage />);
-    await screen.findByRole("option", { name: "PRB-01" });
+    await screen.findByRole("option", { name: /PRB-01/ });
     fireEvent.change(screen.getByRole("combobox", { name: "Release" }), { target: { value: "PRB-01" } });
     expect(navigations().at(-1)).toBe("/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name");
+  });
+
+  it("uses real release links that preserve intersections and reset pagination", async () => {
+    currentSearch = "q=Zoro&rarity=R&treatment=parallel&sort=name&offset=24";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+
+    const releaseNav = await screen.findByRole("navigation", { name: "Browse releases" });
+    const destination = within(releaseNav).getByRole("link", { name: /PRB-01 ONE PIECE CARD THE BEST/ });
+    expect(destination).toHaveAttribute(
+      "href",
+      "/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name",
+    );
+    fireEvent.click(destination);
+    expect(navigations().at(-1)).toBe(
+      "/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name",
+    );
   });
 
   it("restores a release from the URL, sends the intersection to the API and clears it", async () => {
@@ -1533,5 +1456,73 @@ describe("release browsing", () => {
     expect(screen.getByRole("combobox", { name: "Release" })).toHaveValue("OP-01");
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(navigations().at(-1)).toBe("/cards");
+  });
+
+  it("marks the selected destination and removes individual active filters without clearing the rest", async () => {
+    currentSearch = "set=OP-01&q=Zoro&rarity=R&treatment=parallel&sort=name";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+
+    const selected = await screen.findByRole("link", { name: "OP-01 Romance Dawn" });
+    expect(selected).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getByRole("button", { name: "Remove rarity filter R" }));
+    expect(navigations().at(-1)).toBe(
+      "/cards?set=OP-01&q=Zoro&treatment=parallel&sort=name",
+    );
+  });
+});
+
+describe("mobile catalogue filters", () => {
+  function useMobileViewport() {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia;
+  }
+
+  it("uses the shared filter fields as a draft and commits them only on Apply", async () => {
+    useMobileViewport();
+    currentSearch = "q=Zoro&sort=name&offset=24";
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
+    const dialog = screen.getByRole("dialog", { name: "Filters" });
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "Release" }), {
+      target: { value: "PRB-01" },
+    });
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "Rarity or special print" }), {
+      target: { value: "SR" },
+    });
+    expect(navigations()).toEqual([]);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filters" }));
+    expect(navigations()).toEqual([
+      "/cards?set=PRB-01&q=Zoro&rarity=SR&sort=name",
+    ]);
+  });
+
+  it("locks body scrolling, closes on Escape and returns focus to the persistent trigger", async () => {
+    useMobileViewport();
+    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
+    render(<PrintsCataloguePage />);
+    await screen.findAllByRole("link", { name: /Sanji/ });
+
+    const trigger = screen.getByRole("button", { name: /^Filters/ });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Filters" })).not.toBeInTheDocument());
+    expect(document.body.style.overflow).toBe("");
+    expect(trigger).toHaveFocus();
   });
 });

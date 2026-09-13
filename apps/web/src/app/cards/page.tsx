@@ -1,34 +1,36 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { AppHeader } from "@/components/AppHeader";
 import { PaginationControls } from "@/components/PaginationControls";
 import { ErrorState } from "@/components/StateBlocks";
+import { CardAtlasHeader } from "@/components/ui/CardAtlasHeader";
 import { CardGrid } from "@/components/ui/CardGrid";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
-import { CatalogueIntro } from "@/components/ui/CatalogueIntro";
 import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
 import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import {
   EMPTY_PRINT_FILTERS,
   hasActivePrintFilters,
+  PrintCatalogueSortControl,
   PrintCatalogueToolbar,
   type PrintCatalogueFilters,
 } from "@/components/ui/PrintCatalogueToolbar";
+import { fetchMarketFilters, type MarketFilterOption } from "@/lib/marketAnalytics";
 import {
   fetchPrintCatalogue,
   PRINT_SORT_VALUES,
   type PrintCatalogueList,
   type PrintCatalogueSort,
-  type PrintUiModel,
   toPrintUiModel,
   printsNeedingArtOrdinal,
 } from "@/lib/prints";
+import { releaseDisplayName } from "@/lib/releaseNames";
 
-import { fetchMarketFilters, type MarketFilterOption } from "@/lib/marketAnalytics";
+import styles from "./CardsAtlas.module.css";
 
 const PAGE_SIZE = 24;
 const MAX_QUERY_LENGTH = 128;
@@ -37,11 +39,7 @@ function isSortValue(value: string): value is PrintCatalogueSort {
   return (PRINT_SORT_VALUES as string[]).includes(value);
 }
 
-/** Reads catalogue state (search/filters/sort/page) directly from the URL's
- * query string rather than component state, so a shared URL reproduces the
- * same view and browser back/forward restores it with no extra sync code.
- * Unrecognized/out-of-range values (a bad `sort`, a negative `offset`) are
- * discarded rather than passed through. */
+/** The URL is the committed catalogue state. */
 function parseCatalogueState(searchParams: URLSearchParams): {
   filters: PrintCatalogueFilters;
   offset: number;
@@ -69,8 +67,8 @@ function buildQueryString(filters: PrintCatalogueFilters, offset: number): strin
   if (filters.rarity) params.set("rarity", filters.rarity);
   if (filters.sort !== EMPTY_PRINT_FILTERS.sort) params.set("sort", filters.sort);
   if (offset > 0) params.set("offset", String(offset));
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }
 
 export default function PrintsCataloguePage() {
@@ -85,42 +83,30 @@ function PrintsCataloguePageFallback() {
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-4">
-        {/* Same intro as the real page so the Suspense fallback doesn't
-            reflow the whole top of the catalogue once the URL is readable -
-            with no count and no card fan, because there is no response to
-            draw either from yet.
-
-            `heroPending` is what makes that promise true on a phone. This
-            fallback IS the prerendered HTML for /cards (the page reads
-            useSearchParams, so the real component is client-only), so it is
-            what a visitor actually sees first. Without it the hero paints
-            fan-less at 312px and then jumps to 498px the moment the
-            catalogue lands - measured, +186px - taking the toolbar, the
-            legend and the whole grid with it. */}
-        <CatalogueIntro
-          query=""
-          onSearch={() => {}}
-          totalPrints={null}
-          filtered={false}
-          heroPending
+      <main className={styles.main}>
+        <CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} />
+        <ReleaseNavigation
+          releases={[]}
+          status="loading"
+          selected=""
+          hrefFor={() => "/cards"}
+          onSelect={() => {}}
+          onRetry={() => {}}
         />
-        <div className="mt-4">
-          <CardGridSkeleton />
+        <div className={styles.catalogueLayout}>
+          <div className="hidden lg:block" aria-hidden="true" />
+          <div className={styles.catalogueContent}>
+            <CatalogueHeading total={null} sort={EMPTY_PRINT_FILTERS.sort} onSort={() => {}} />
+            <CardGridSkeleton />
+          </div>
         </div>
       </main>
     </div>
   );
 }
 
-/** The public card catalogue, print-centric end to end.
- *
- * Backed by `GET /prints` (see src/lib/prints.ts), never the legacy
- * card_id-keyed `/cards/catalogue`: each tile is exactly one `card_print`, so
- * sibling prints that bridge through the same legacy `cards` row - Sanji
- * OP01-013 base and parallel, for instance - are shown and priced separately
- * rather than merged into one row.
- */
+/** Print-centric catalogue backed by GET /prints. Each tile is one
+ * card_print and carries only that printing's identity and prices. */
 function PrintsCataloguePageInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -128,36 +114,26 @@ function PrintsCataloguePageInner() {
 
   const [data, setData] = useState<PrintCatalogueList | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
-  /** The pool the intro's card fan draws from, latched to the first response
-   * that actually returned prints and never replaced.
-   *
-   * The fan is meant to represent the catalogue, not the visitor's current
-   * view, so it must not re-pick every time a treatment, rarity or sort
-   * changes the response - watching `data` would do exactly that. Latching
-   * costs no extra request: it keeps the first page of prints the page had
-   * already fetched for its own grid.
-   *
-   * An empty response is deliberately not latched. A visitor who lands on a
-   * search that matches nothing would otherwise pin the fan to "no cards" for
-   * the rest of the session. */
-  const [heroPool, setHeroPool] = useState<PrintUiModel[] | null>(null);
-
+  const [catalogueAttempt, setCatalogueAttempt] = useState(0);
   const [releases, setReleases] = useState<MarketFilterOption[]>([]);
   const [releaseStatus, setReleaseStatus] = useState<"loading" | "ready" | "error">("loading");
   const [releaseAttempt, setReleaseAttempt] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
-    fetchMarketFilters().then((result) => {
-      if (cancelled) return;
-      // Sort published values without normalising or merging their identities.
-      setReleases([...result.sets].sort((a, b) =>
-        a.value.localeCompare(b.value, "en", { numeric: true }) ||
-        (a.value < b.value ? -1 : a.value > b.value ? 1 : 0),
-      ));
-      setReleaseStatus("ready");
-    }).catch(() => {
-      if (!cancelled) setReleaseStatus("error");
-    });
+    fetchMarketFilters()
+      .then((result) => {
+        if (cancelled) return;
+        // Membership stays exactly the vocabulary the server published.
+        setReleases([...result.sets].sort((a, b) =>
+          a.value.localeCompare(b.value, "en", { numeric: true }) ||
+          (a.value < b.value ? -1 : a.value > b.value ? 1 : 0),
+        ));
+        setReleaseStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setReleaseStatus("error");
+      });
     return () => { cancelled = true; };
   }, [releaseAttempt]);
 
@@ -165,7 +141,6 @@ function PrintsCataloguePageInner() {
 
   useEffect(() => {
     let cancelled = false;
-    // URL changes include browser history; hide the old count while fetching.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
     fetchPrintCatalogue({
@@ -179,47 +154,21 @@ function PrintsCataloguePageInner() {
     })
       .then((result) => {
         if (cancelled) return;
-        const loaded = result.items.map(toPrintUiModel);
-        setHeroPool((latched) => (latched && latched.length > 0 ? latched : loaded));
         setData(result);
         setStatus("ready");
       })
       .catch(() => {
         if (!cancelled) setStatus("error");
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paramsKey]);
+  }, [paramsKey, catalogueAttempt]);
 
   const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
-  // Scoped to the prints on screen together - see printsNeedingArtOrdinal.
   const ordinalNeeded = useMemo(() => printsNeedingArtOrdinal(prints), [prints]);
 
-  /** Commits catalogue state to the URL - the only state this page keeps, since
-   * everything above reads back out of `useSearchParams()`.
-   *
-   * Deliberately the native History API rather than `router.push`, which the
-   * App Router silently drops on this route. /cards is statically prerendered,
-   * and any *visible* `<Link href="/cards">` prefetches that static entry into
-   * the client router cache - the header's own public nav does exactly that
-   * from `md` up. Once it is cached, a `router.push` issued from a URL that
-   * already carries search params (`?q=...`) is answered with a replaceState
-   * back to the URL you are already on: the address bar never changes, so
-   * `useSearchParams()` never changes, so the grid never refetches. Below `md`
-   * the identical push works, because those links are `display:none`, never
-   * intersect, and so never prefetch /cards.
-   *
-   * Reproduced against a production build at 767px (works) and 769px (does
-   * not). It was not specific to clearing: submitting a second search from a
-   * `?q=` URL and the toolbar's own "Clear all" were dead the same way.
-   *
-   * Next.js supports the native History API for precisely this case - a
-   * same-route search-param update - and keeps `useSearchParams()`, its own
-   * router state and the back/forward buttons in sync with it. The explicit
-   * scroll-to-top just preserves `router.push`'s default, which pagination
-   * relies on. */
+  /** Same-route native history keeps useSearchParams, shared URLs and browser
+   * history in sync on this statically prerendered route. */
   function navigate(nextFilters: PrintCatalogueFilters, nextOffset: number) {
     window.history.pushState(null, "", `${pathname}${buildQueryString(nextFilters, nextOffset)}`);
     window.scrollTo({ top: 0 });
@@ -231,33 +180,31 @@ function PrintsCataloguePageInner() {
     languages: [],
     verification_statuses: [],
   };
+  const total = status === "ready" && data ? data.total : null;
 
   return (
     <div className="min-h-screen">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-4">
-        <CatalogueIntro
+      <main className={styles.main}>
+        <CardAtlasHeader
           query={filters.q}
-          onSearch={(q) => navigate({ ...filters, q }, 0)}
-          // Only ever the live `total` for the query in the URL - null (and
-          // therefore nothing rendered) while loading or after a failure.
-          totalPrints={status === "ready" && data ? data.total : null}
-          filtered={hasActivePrintFilters(filters)}
-          // The latched catalogue pool, not the filtered grid below: the
-          // fan picks three of these for today and keeps them while the
-          // visitor searches, filters and sorts.
-          heroPrints={heroPool ?? []}
-          // Only the FIRST load: once a pool is latched the fan is already
-          // drawn and later filter navigations re-enter "loading" without ever
-          // removing it, so there is nothing to reserve.
-          heroPending={status === "loading" && heroPool === null}
+          onSearch={(query) => navigate({ ...filters, q: query }, 0)}
+          totalPrints={total}
         />
 
-        {/* Straight from the intro into the real controls. The compass
-            divider that used to sit here read as a standalone ornament and
-            cost ~60px before the first card; the intro panel's own edge is
-            transition enough. */}
-        <div className="mt-2 flex flex-col gap-1 sm:mt-4 sm:gap-3">
+        <ReleaseNavigation
+          releases={releases}
+          status={releaseStatus}
+          selected={filters.release}
+          hrefFor={(release) => `${pathname}${buildQueryString({ ...filters, release }, 0)}`}
+          onSelect={(release) => navigate({ ...filters, release }, 0)}
+          onRetry={() => {
+            setReleaseStatus("loading");
+            setReleaseAttempt((attempt) => attempt + 1);
+          }}
+        />
+
+        <div className={styles.catalogueLayout}>
           <PrintCatalogueToolbar
             releases={releases}
             releaseStatus={releaseStatus}
@@ -268,90 +215,251 @@ function PrintsCataloguePageInner() {
             filters={filters}
             facets={data?.facets ?? emptyFacets}
             onChange={(next) => navigate(next, 0)}
+            legend={<CatalogueLegend />}
           />
-          {/* The terminology key. Sits under the filters rather than in them:
-              it explains the badges on the tiles below, not the controls
-              above. Tap/click/keyboard - never hover-only. */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3">
-            <CatalogueLegend />
+
+          <div className={styles.catalogueContent}>
+            <CatalogueHeading
+              total={total}
+              sort={filters.sort}
+              onSort={(sort) => navigate({ ...filters, sort }, 0)}
+            />
+
             {hasActivePrintFilters(filters) && (
-              <button type="button" onClick={() => navigate(EMPTY_PRINT_FILTERS, 0)}
-                className="min-h-11 text-xs font-medium text-text-muted underline-offset-2 hover:text-accent-teal-hover hover:underline">
-                Clear filters
-              </button>
+              <ActiveFilterChips
+                filters={filters}
+                onChange={(next) => navigate(next, 0)}
+                onClear={() => navigate(EMPTY_PRINT_FILTERS, 0)}
+              />
+            )}
+
+            {status === "loading" && <CardGridSkeleton />}
+
+            {status === "error" && (
+              <div className={styles.stateBlock}>
+                <ErrorState
+                  tone="collector"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus("loading");
+                        setCatalogueAttempt((attempt) => attempt + 1);
+                      }}
+                      className="min-h-11 rounded-control border border-border-default px-4 text-xs font-medium text-text-secondary hover:text-text-primary"
+                    >
+                      Retry catalogue
+                    </button>
+                  }
+                >
+                  The Card Atlas could not be loaded.
+                </ErrorState>
+              </div>
+            )}
+
+            {status === "ready" && prints.length === 0 && (
+              <div className={styles.stateBlock}>
+                <CollectorEmptyState
+                  title={hasActivePrintFilters(filters) ? "No printings found in this charted view" : "No cards yet"}
+                  action={hasActivePrintFilters(filters) && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(EMPTY_PRINT_FILTERS, 0)}
+                      className="min-h-11 rounded-control border border-border-default px-4 text-xs font-medium text-text-secondary hover:text-text-primary"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                >
+                  {hasActivePrintFilters(filters)
+                    ? "Adjust the release, rarity, treatment or search to continue browsing."
+                    : "The catalogue is empty right now."}
+                </CollectorEmptyState>
+              </div>
+            )}
+
+            {status === "ready" && data && prints.length > 0 && (
+              <>
+                <CardGrid>
+                  {prints.map((print) => (
+                    <PrintCardTile
+                      key={print.cardPrintId}
+                      print={print}
+                      showArtOrdinal={ordinalNeeded.has(print.cardPrintId)}
+                    />
+                  ))}
+                </CardGrid>
+                <div className="mt-8">
+                  <PaginationControls
+                    offset={offset}
+                    limit={PAGE_SIZE}
+                    total={data.total}
+                    onOffsetChange={(nextOffset) => navigate(filters, nextOffset)}
+                    variant="catalogue"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
-
-        {status === "loading" && <CardGridSkeleton />}
-
-        {status === "error" && (
-          <ErrorState
-            tone="collector"
-            action={
-              <button
-                type="button"
-                onClick={() => navigate(filters, offset)}
-                className="rounded-control border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary"
-              >
-                Retry
-              </button>
-            }
-          >
-            Failed to load the card catalogue.
-          </ErrorState>
-        )}
-
-        {status === "ready" && prints.length === 0 && (
-          <CollectorEmptyState
-            title={
-              hasActivePrintFilters(filters) ? "No cards match these filters" : "No cards yet"
-            }
-            action={
-              hasActivePrintFilters(filters) && (
-                <button
-                  type="button"
-                  onClick={() => navigate(EMPTY_PRINT_FILTERS, 0)}
-                  className="rounded-control border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary"
-                >
-                  Clear filters
-                </button>
-              )
-            }
-          >
-            {hasActivePrintFilters(filters)
-              ? "Try a different search term or clear filters to see the full catalogue."
-              : "The catalogue is empty right now."}
-          </CollectorEmptyState>
-        )}
-
-        {status === "ready" && data && prints.length > 0 && (
-          <>
-            <CardGrid>
-              {prints.map((print) => (
-                <PrintCardTile
-                  key={print.cardPrintId}
-                  print={print}
-                  showArtOrdinal={ordinalNeeded.has(print.cardPrintId)}
-                />
-              ))}
-            </CardGrid>
-            {/* The catalogue variant, not the dense list-page one: 179 pages
-                of grid need the way onward to read as navigation rather than
-                as a caption under the last row of artwork. Same component and
-                the same offsets - only the presentation differs. */}
-            <div className="mt-8">
-              <PaginationControls
-                offset={offset}
-                limit={PAGE_SIZE}
-                total={data.total}
-                onOffsetChange={(nextOffset) => navigate(filters, nextOffset)}
-                variant="catalogue"
-              />
-            </div>
-          </>
-        )}
       </main>
+    </div>
+  );
+}
+
+function CatalogueHeading({
+  total,
+  sort,
+  onSort,
+}: {
+  total: number | null;
+  sort: PrintCatalogueSort;
+  onSort: (sort: PrintCatalogueSort) => void;
+}) {
+  return (
+    <div className={styles.catalogueBar}>
+      <div className={styles.catalogueMeta}>
+        <h2 className={styles.catalogueTitle}>Exact printings</h2>
+        {total !== null && (
+          <p className={styles.catalogueCount}>
+            {total.toLocaleString()} {total === 1 ? "entry" : "entries"} in this view
+          </p>
+        )}
+      </div>
+      <div className={styles.sortRow}>
+        <PrintCatalogueSortControl value={sort} onChange={onSort} />
+      </div>
+    </div>
+  );
+}
+
+function ReleaseNavigation({
+  releases,
+  status,
+  selected,
+  hrefFor,
+  onSelect,
+  onRetry,
+}: {
+  releases: MarketFilterOption[];
+  status: "loading" | "ready" | "error";
+  selected: string;
+  hrefFor: (release: string) => string;
+  onSelect: (release: string) => void;
+  onRetry: () => void;
+}) {
+  const selectedRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+    selectedRef.current?.scrollIntoView?.({ block: "nearest", inline: "center" });
+  }, [selected, status]);
+
+  function selectRelease(event: MouseEvent<HTMLAnchorElement>, release: string) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onSelect(release);
+  }
+
+  return (
+    <section className={styles.releaseSection} aria-labelledby="release-browse-title">
+      <div className={styles.releaseHeadingRow}>
+        <div>
+          <p className={styles.sectionLabel}>Chart a course</p>
+          <h2 id="release-browse-title" className={styles.sectionTitle}>Browse by release</h2>
+        </div>
+        <p className={styles.releaseHint}>Scroll to explore the official catalogue</p>
+      </div>
+
+      <nav className={styles.releaseScroller} aria-label="Browse releases">
+        <div className={styles.releaseList}>
+          <a
+            ref={selected === "" ? selectedRef : undefined}
+            href={hrefFor("")}
+            aria-label="All releases — complete exact-print catalogue"
+            aria-current={selected === "" ? "page" : undefined}
+            onClick={(event) => selectRelease(event, "")}
+            className={`${styles.releaseCard} ${selected === "" ? styles.releaseCardSelected : ""}`}
+          >
+            <span className={styles.releaseCode}>ALL RELEASES</span>
+            <span className={styles.releaseName}>Complete exact-print catalogue</span>
+          </a>
+
+          {releases.map((release) => {
+            const selectedRelease = selected === release.value;
+            const suppliedName = release.label !== release.value ? release.label : undefined;
+            const displayName = releaseDisplayName(release.value, suppliedName);
+            return (
+              <a
+                ref={selectedRelease ? selectedRef : undefined}
+                key={release.value}
+                href={hrefFor(release.value)}
+                aria-label={`${release.value} ${displayName}`}
+                aria-current={selectedRelease ? "page" : undefined}
+                onClick={(event) => selectRelease(event, release.value)}
+                className={`${styles.releaseCard} ${selectedRelease ? styles.releaseCardSelected : ""}`}
+              >
+                <span className={styles.releaseCode}>{release.value}</span>
+                <span className={styles.releaseName}>{displayName}</span>
+              </a>
+            );
+          })}
+        </div>
+      </nav>
+
+      {status === "loading" && releases.length === 0 && <div className={styles.releaseLoading}>Loading release destinations…</div>}
+      {status === "error" && releases.length === 0 && (
+        <button type="button" onClick={onRetry} className={styles.retryLink}>Retry release destinations</button>
+      )}
+    </section>
+  );
+}
+
+function ActiveFilterChips({
+  filters,
+  onChange,
+  onClear,
+}: {
+  filters: PrintCatalogueFilters;
+  onChange: (next: PrintCatalogueFilters) => void;
+  onClear: () => void;
+}) {
+  const chips = [
+    filters.release && {
+      key: "release",
+      label: "Release",
+      value: filters.release,
+      remove: () => onChange({ ...filters, release: "" }),
+    },
+    filters.rarity && {
+      key: "rarity",
+      label: "Rarity",
+      value: filters.rarity,
+      remove: () => onChange({ ...filters, rarity: "" }),
+    },
+    filters.treatment && {
+      key: "treatment",
+      label: "Treatment",
+      value: filters.treatment[0].toUpperCase() + filters.treatment.slice(1),
+      remove: () => onChange({ ...filters, treatment: "" }),
+    },
+    filters.q && {
+      key: "query",
+      label: "Search",
+      value: `“${filters.q}”`,
+      remove: () => onChange({ ...filters, q: "" }),
+    },
+  ].filter(Boolean) as { key: string; label: string; value: string; remove: () => void }[];
+
+  return (
+    <div className={styles.activeRow} aria-label="Active catalogue filters">
+      {chips.map((chip) => (
+        <button key={chip.key} type="button" onClick={chip.remove} aria-label={`Remove ${chip.label.toLowerCase()} filter ${chip.value}`} className={styles.activeChip}>
+          {chip.label}: <strong>{chip.value}</strong>
+          <span className={styles.chipRemove} aria-hidden="true">×</span>
+        </button>
+      ))}
+      <button type="button" onClick={onClear} className={styles.clearAll}>Clear all</button>
     </div>
   );
 }
