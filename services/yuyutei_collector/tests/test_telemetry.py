@@ -518,10 +518,11 @@ class SessionIndependence(TelemetryTestCase):
 class IntegrationPoints(unittest.TestCase):
     """Where the recorder is called from, pinned.
 
-    Replaces 1A's "not yet wired in" guard. The orchestration layer owns the
-    batch id and the loop, so all three calls live in batch.py; collect.py
-    stays free of telemetry entirely, which is what keeps a single mapping's
-    collection logic unaware of whether anything is recording it."""
+    The orchestration layer owns the batch id and the attempt lifecycle, so
+    selection/start/finish stay in batch.py. Collection owns the fail-closed
+    raw-before-parse boundary and may use that one telemetry primitive without
+    acquiring a second way to create or finish attempt rows.
+    """
 
     def _source(self, module):
         from pathlib import Path
@@ -573,8 +574,15 @@ class IntegrationPoints(unittest.TestCase):
         # selection, start, finish, and the skipped remainder
         self.assertEqual(passed_to_record, 4)
 
-    def test_collect_does_not_reference_telemetry(self):
-        self.assertNotIn("telemetry", self._source("collect.py"))
+    def test_collect_uses_only_the_raw_evidence_primitive(self):
+        source = self._source("collect.py")
+        self.assertIn("persist_response_snapshot", source)
+        for attempt_primitive in (
+            "record_selected_batch",
+            "mark_attempt_started",
+            "finish_attempt",
+        ):
+            self.assertNotIn(attempt_primitive, source)
 
 
 if __name__ == "__main__":

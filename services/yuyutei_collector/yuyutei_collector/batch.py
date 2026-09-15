@@ -241,6 +241,10 @@ def _attempt_telemetry(outcome) -> dict:
         # Only a written outcome carries one, and it is the id the writer
         # actually committed - never reconstructed by a lookup here.
         "price_observation_id": outcome.observation_id if outcome.written else None,
+        # Set as soon as a real response body is durably captured. Non-write
+        # outcomes therefore retain direct replay lineage too; no-body failures
+        # correctly leave it NULL.
+        "raw_snapshot_id": outcome.raw_snapshot_id,
     }
 
 

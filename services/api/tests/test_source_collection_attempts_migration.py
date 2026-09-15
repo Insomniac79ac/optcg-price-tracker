@@ -108,7 +108,12 @@ def test_upgrade_touches_no_existing_row():
 
 def test_the_columns_match_the_model_exactly():
     _, columns, _ = _created_table()
-    assert set(columns) == {c.name for c in SourceCollectionAttempt.__table__.columns}
+    # raw_snapshot_id is added by the later e3a7c5d9b102 migration; this test
+    # reconstructs the original b8e3f1a70d95 table at its own revision.
+    model_at_this_revision = {
+        c.name for c in SourceCollectionAttempt.__table__.columns
+    } - {"raw_snapshot_id"}
+    assert set(columns) == model_at_this_revision
 
 
 def test_selected_at_is_not_nullable_but_started_and_finished_are():

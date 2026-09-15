@@ -16,6 +16,7 @@ from app.models import (
     CanonicalCard,
     CardPrint,
     PriceObservation,
+    RawSnapshot,
     Source,
     SourceCardMapping,
     SourceCollectionAttempt,
@@ -295,6 +296,33 @@ def test_context_is_resolved_for_a_live_mapping(client, db_session, subject):
     assert row["source_name"] == "yuyutei"
     assert row["card_print_id"] == subject["print_id"]
     assert row["card_code"] == subject["card_code"]
+
+
+def test_attempt_response_exposes_its_direct_raw_snapshot_link(client, db_session, subject):
+    snapshot = RawSnapshot(
+        source_id=subject["source_id"],
+        source_url="https://yuyu-tei.jp/sell/opc/card/op13/10050",
+        http_status=200,
+        content_hash="0" * 64,
+        raw_content="<html>evidence</html>",
+        parser_version="test",
+    )
+    db_session.add(snapshot)
+    db_session.flush()
+    _attempt(
+        db_session,
+        subject,
+        1,
+        subject["mapping_ids"][0],
+        status="validation_failed",
+        started_at=BASE,
+        finished_at=BASE + timedelta(seconds=2),
+        failure_stage="validation",
+        raw_snapshot_id=snapshot.id,
+    )
+
+    row = client.get("/admin/collection-attempts").json()["attempts"][0]
+    assert row["raw_snapshot_id"] == snapshot.id
 
 
 def test_an_unresolvable_mapping_keeps_its_ids_and_invents_nothing(

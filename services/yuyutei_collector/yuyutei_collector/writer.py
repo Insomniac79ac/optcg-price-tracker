@@ -3,6 +3,10 @@ row (never updates/mutates an existing one) only when every fail-closed
 gate below passes; otherwise writes zero rows to the database and returns
 the reasons for audit logging by the caller.
 
+The raw response is not created here. Collection commits it before parsing and
+passes its id into this writer; keeping snapshot creation out of the observation
+transaction is what lets that evidence survive every failure below.
+
 Fail-closed gates (mirrors the tranche's Section 6 requirements):
 - page classification must be exactly "normal_product"
 - the source_card_mapping must be active, approved, and linked to an exact
@@ -30,7 +34,6 @@ it is not an offer, so it is not stored as one; the page that displayed it is
 retained whole in raw_snapshots.raw_content.
 """
 
-import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -84,10 +87,8 @@ def validate_and_write_observation(
     mapping: SourceCardMapping,
     classification: str,
     extraction: dict,
-    http_status: int | None,
-    raw_html: str,
-    source_url: str,
-    parser_version: str,
+    raw_snapshot_id: int | None,
+    write_observation: bool = True,
     price_type: str = "sell",
 ) -> WriteResult:
     reasons: list[str] = []
@@ -135,26 +136,40 @@ def validate_and_write_observation(
     if price_jpy is None:
         reasons.append("price_missing_or_ambiguous")
 
+    if write_observation:
+        if raw_snapshot_id is None:
+            reasons.append("raw_snapshot_missing")
+        else:
+            raw_snapshot = session.get(RawSnapshot, raw_snapshot_id)
+            if raw_snapshot is None:
+                reasons.append(f"raw_snapshot_not_found:{raw_snapshot_id}")
+            elif raw_snapshot.source_id != mapping.source_id:
+                reasons.append(
+                    "raw_snapshot_source_mismatch:"
+                    f"snapshot={raw_snapshot.source_id},mapping={mapping.source_id}"
+                )
+
     # De-duplicate while preserving order for stable, readable logs.
     reasons = list(dict.fromkeys(reasons))
 
     if reasons:
         return WriteResult(written=False, reasons=reasons)
 
-    content_hash = hashlib.sha256(raw_html.encode("utf-8")).hexdigest()
     observed_at = datetime.now(timezone.utc)
 
-    raw_snapshot = RawSnapshot(
-        source_id=mapping.source_id,
-        source_url=source_url,
-        fetched_at=observed_at,
-        http_status=http_status or 0,
-        content_hash=content_hash,
-        raw_content=raw_html,
-        parser_version=parser_version,
-    )
-    session.add(raw_snapshot)
-    session.flush()  # obtain raw_snapshot.id without committing yet
+    if not write_observation:
+        return WriteResult(
+            written=True,
+            raw_snapshot_id=None,
+            card_id=mapping.card_id,
+            card_print_id=mapping.card_print_id,
+            source_id=mapping.source_id,
+            source_card_mapping_id=mapping.id,
+            price_jpy=price_jpy,
+            stock_status=stock_status,
+            promotion_state=promotion_state,
+            observed_at=observed_at.isoformat(),
+        )
 
     observation = PriceObservation(
         card_id=mapping.card_id,
@@ -164,7 +179,7 @@ def validate_and_write_observation(
         price_jpy=price_jpy,
         stock_status=stock_status,
         promotion_state=promotion_state,
-        raw_snapshot_id=raw_snapshot.id,
+        raw_snapshot_id=raw_snapshot_id,
         source_card_mapping_id=mapping.id,
         card_print_id=mapping.card_print_id,
     )
@@ -174,7 +189,7 @@ def validate_and_write_observation(
     return WriteResult(
         written=True,
         observation_id=observation.id,
-        raw_snapshot_id=raw_snapshot.id,
+        raw_snapshot_id=raw_snapshot_id,
         card_id=observation.card_id,
         card_print_id=observation.card_print_id,
         source_id=observation.source_id,

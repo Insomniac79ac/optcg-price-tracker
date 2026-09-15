@@ -157,6 +157,7 @@ from yuyutei_collector.models import (  # noqa: E402
     Card,
     CardPrint,
     PriceObservation,
+    RawSnapshot,
     Source,
     SourceCardMapping,
 )
@@ -219,15 +220,22 @@ class WriterNullTreatmentTests(unittest.TestCase):
         return mapping
 
     def _write(self, mapping, extraction):
+        snapshot = RawSnapshot(
+            source_id=mapping.source_id,
+            source_url=PRODUCT_URL,
+            http_status=200,
+            content_hash="0" * 64,
+            raw_content="<html>evidence</html>",
+            parser_version="yuyutei-collector-v3",
+        )
+        self.session.add(snapshot)
+        self.session.commit()
         return validate_and_write_observation(
             session=self.session,
             mapping=mapping,
             classification="normal_product",
             extraction=extraction,
-            http_status=200,
-            raw_html="<html>evidence</html>",
-            source_url=PRODUCT_URL,
-            parser_version="yuyutei-collector-v3",
+            raw_snapshot_id=snapshot.id,
         )
 
     def test_a_null_treatment_print_loads_through_the_collector_mirror(self):

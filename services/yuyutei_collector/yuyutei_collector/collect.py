@@ -35,8 +35,10 @@ from playwright.sync_api import sync_playwright
 
 from yuyutei_collector.browser import (
     DeadlineExceeded,
+    HOMEPAGE_URL,
+    classify_capture,
     deadline,
-    goto_and_capture,
+    goto_and_capture_raw,
     homepage_session_ok,
     log_event,
     warm_up_homepage,
@@ -45,6 +47,10 @@ from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.extractor import EXPECTED_TREATMENT, extract_with_agreement
 from yuyutei_collector.models import CardPrint, Source, SourceCardMapping
+from yuyutei_collector.telemetry import (
+    RawSnapshotPersistenceError,
+    persist_response_snapshot,
+)
 from yuyutei_collector.writer import validate_and_write_observation
 
 PARSER_VERSION = "yuyutei-collector-v3"
@@ -233,6 +239,7 @@ def run_one_mapping_detailed(
         "classification": None,
         "http_status": None,
         "html": None,
+        "raw_snapshot_id": None,
         "observed_classification": None,
         "failure_stage": None,
     }
@@ -272,6 +279,23 @@ def run_one_mapping_detailed(
                     homepage_ok = homepage_session_ok(homepage_step)
 
                     if not homepage_ok:
+                        # A denied/error homepage is the terminal response for
+                        # this attempt. Preserve a real body when one was
+                        # obtained; navigation failures contain no ``html`` and
+                        # correctly leave the lineage NULL.
+                        if not validate_only and "html" in homepage_step:
+                            result_holder["failure_stage"] = "write"
+                            persisted = persist_response_snapshot(
+                                bind=session.get_bind(),
+                                source_id=mapping.source_id,
+                                source_url=homepage_step.get("final_url") or HOMEPAGE_URL,
+                                http_status=homepage_step.get("http_status"),
+                                raw_content=homepage_step["html"],
+                                parser_version=PARSER_VERSION,
+                                batch_run_id=batch_run_id,
+                                source_card_mapping_id=mapping.id,
+                            )
+                            result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
                         result_holder["observed_classification"] = homepage_step.get("classification")
                         result_holder["failure_stage"] = "homepage"
                         log_event(
@@ -282,7 +306,26 @@ def run_one_mapping_detailed(
                         )
                     else:
                         with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                            product_step = goto_and_capture(page, mapping.source_url, product_expected_markers)
+                            product_step = goto_and_capture_raw(page, mapping.source_url)
+
+                        # This is the raw-before-parse boundary. A captured body
+                        # is committed and linked to the attempt before even
+                        # page classification is allowed to inspect it.
+                        if "html" in product_step and not validate_only:
+                            result_holder["failure_stage"] = "write"
+                            persisted = persist_response_snapshot(
+                                bind=session.get_bind(),
+                                source_id=mapping.source_id,
+                                source_url=mapping.source_url,
+                                http_status=product_step.get("http_status"),
+                                raw_content=product_step["html"],
+                                parser_version=PARSER_VERSION,
+                                batch_run_id=batch_run_id,
+                                source_card_mapping_id=mapping.id,
+                            )
+                            result_holder["raw_snapshot_id"] = persisted.raw_snapshot_id
+
+                        product_step = classify_capture(product_step, product_expected_markers)
                         log_event(
                             "product_result",
                             mapping_id=mapping.id,
@@ -303,6 +346,7 @@ def run_one_mapping_detailed(
                         if product_step.get("classification") == "normal_product" and "error" not in product_step:
                             html = product_step["html"]
                             result_holder["html"] = html
+                            result_holder["failure_stage"] = "extraction"
                             extraction = extract_with_agreement(
                                 html, mapping.source_url, expected_card_code, expected_treatment
                             )
@@ -389,10 +433,26 @@ def run_one_mapping_detailed(
             # a homepage or product watchdog leaves the browser fine.
             browser_unusable=str(exc) == "browser_launch",
             reasons=[f"watchdog_triggered:{exc}"],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+        )
+    except RawSnapshotPersistenceError as exc:
+        session.rollback()
+        reason = f"raw_snapshot_persistence_failed:{exc}"
+        log_event(
+            "collection_raw_snapshot_failed",
+            mapping_id=mapping_id,
+            reason=reason,
+            batch_run_id=batch_run_id,
+        )
+        return MappingOutcome(
+            mapping_id=mapping_id,
+            stage="operational_error",
+            failure_stage="write",
+            reasons=[reason],
         )
     except PlaywrightError as exc:
         # Reached only by a Playwright call OUTSIDE the guarded navigation
-        # helpers: goto_and_capture already absorbs every navigation error
+        # helpers: goto_and_capture_raw already absorbs every navigation error
         # (including page.title/page.content) into an {"error": ...} result,
         # and teardown is consumed by _release_browser_objects. What is left -
         # launch, new_context, new_page, and the TargetClosedError A11 raised
@@ -410,6 +470,7 @@ def run_one_mapping_detailed(
             failure_stage=result_holder["failure_stage"],
             browser_unusable=True,
             reasons=[f"{type(exc).__name__}: {exc}"],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
         )
     except Exception as exc:  # operational error - never leave a half-written row
         session.rollback()
@@ -419,11 +480,17 @@ def run_one_mapping_detailed(
             error=f"{type(exc).__name__}: {exc}",
             batch_run_id=batch_run_id,
         )
+        reason = (
+            f"parser_failure:{type(exc).__name__}: {exc}"
+            if result_holder["failure_stage"] == "extraction"
+            else f"{type(exc).__name__}: {exc}"
+        )
         return MappingOutcome(
             mapping_id=mapping_id,
             stage="operational_error",
             failure_stage=result_holder["failure_stage"],
-            reasons=[f"{type(exc).__name__}: {exc}"],
+            reasons=[reason],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
         )
 
     observed_classification = result_holder["observed_classification"]
@@ -445,23 +512,39 @@ def run_one_mapping_detailed(
             classification=observed_classification,
             source_denied=source_denied,
             reasons=reasons,
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
         )
 
-    write_result = validate_and_write_observation(
-        session=session,
-        mapping=mapping,
-        classification=result_holder["classification"],
-        extraction=result_holder["extraction"],
-        http_status=result_holder["http_status"],
-        raw_html=result_holder["html"],
-        source_url=mapping.source_url,
-        parser_version=PARSER_VERSION,
-    )
+    result_holder["failure_stage"] = "validation"
+    try:
+        write_result = validate_and_write_observation(
+            session=session,
+            mapping=mapping,
+            classification=result_holder["classification"],
+            extraction=result_holder["extraction"],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+            write_observation=not validate_only,
+        )
+    except Exception as exc:
+        session.rollback()
+        reason = f"writer_failure:{type(exc).__name__}: {exc}"
+        log_event(
+            "collection_error",
+            mapping_id=mapping_id,
+            error=reason,
+            batch_run_id=batch_run_id,
+        )
+        return MappingOutcome(
+            mapping_id=mapping_id,
+            stage="operational_error",
+            failure_stage="write",
+            reasons=[reason],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+        )
 
-    # validate_and_write_observation already flushed (not committed) any
-    # would-be insert to compute IDs - roll back unconditionally in
-    # validate-only mode so a passing validation never leaves a row behind,
-    # regardless of whether it would have written.
+    # The writer's validate-only branch performs no inserts. Roll back anyway
+    # so this mode remains a categorical no-write boundary even if a future
+    # validation helper starts staging state in the caller session.
     if validate_only:
         session.rollback()
         log_event(
@@ -481,6 +564,7 @@ def run_one_mapping_detailed(
             reasons=write_result.reasons,
             price_jpy=write_result.price_jpy,
             stock_status=write_result.stock_status,
+            raw_snapshot_id=None,
         )
 
     if not write_result.written:
@@ -498,9 +582,27 @@ def run_one_mapping_detailed(
             failure_stage="validation",
             classification=observed_classification,
             reasons=write_result.reasons,
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
         )
 
-    session.commit()
+    try:
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        reason = f"writer_failure:{type(exc).__name__}: {exc}"
+        log_event(
+            "collection_error",
+            mapping_id=mapping_id,
+            error=reason,
+            batch_run_id=batch_run_id,
+        )
+        return MappingOutcome(
+            mapping_id=mapping_id,
+            stage="operational_error",
+            failure_stage="write",
+            reasons=[reason],
+            raw_snapshot_id=result_holder["raw_snapshot_id"],
+        )
     log_event(
         "collection_written",
         mapping_id=mapping.id,

@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
@@ -347,6 +348,7 @@ class SourceCollectionAttempt(Base):
             "selection_ordinal",
             name="uq_source_collection_attempts_batch_ordinal",
         ),
+        Index("ix_source_collection_attempts_raw_snapshot_id", "raw_snapshot_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -373,4 +375,7 @@ class SourceCollectionAttempt(Base):
     )
     price_observation_id: Mapped[int | None] = mapped_column(
         ForeignKey("price_observations.id", ondelete="SET NULL"), nullable=True
+    )
+    raw_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("raw_snapshots.id", ondelete="SET NULL"), nullable=True
     )

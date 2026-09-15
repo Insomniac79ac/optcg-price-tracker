@@ -15,7 +15,14 @@ from sqlalchemy.orm import sessionmaker
 from yuyutei_collector.batch import BatchResult, run_batch, select_eligible_mappings
 from yuyutei_collector.collect import MappingOutcome
 from yuyutei_collector.db import Base
-from yuyutei_collector.models import Card, CardPrint, PriceObservation, Source, SourceCardMapping
+from yuyutei_collector.models import (
+    Card,
+    CardPrint,
+    PriceObservation,
+    RawSnapshot,
+    Source,
+    SourceCardMapping,
+)
 
 
 def make_db():
@@ -494,6 +501,16 @@ class ObservationLineageTestCase(unittest.TestCase):
         )
         session.add_all([mapping_a, mapping_b])
         session.flush()
+        snapshot_a = RawSnapshot(
+            source_id=source.id, source_url=mapping_a.source_url, http_status=200,
+            content_hash="a" * 64, raw_content="<html>a</html>", parser_version="test",
+        )
+        snapshot_b = RawSnapshot(
+            source_id=source.id, source_url=mapping_b.source_url, http_status=200,
+            content_hash="b" * 64, raw_content="<html>b</html>", parser_version="test",
+        )
+        session.add_all([snapshot_a, snapshot_b])
+        session.flush()
 
         extraction_a = {
             "extraction_status": "extracted", "fail_reasons": [],
@@ -505,13 +522,11 @@ class ObservationLineageTestCase(unittest.TestCase):
         }
         validate_and_write_observation(
             session=session, mapping=mapping_a, classification="normal_product",
-            extraction=extraction_a, http_status=200, raw_html="<html>a</html>",
-            source_url=mapping_a.source_url, parser_version="test",
+            extraction=extraction_a, raw_snapshot_id=snapshot_a.id,
         )
         validate_and_write_observation(
             session=session, mapping=mapping_b, classification="normal_product",
-            extraction=extraction_b, http_status=200, raw_html="<html>b</html>",
-            source_url=mapping_b.source_url, parser_version="test",
+            extraction=extraction_b, raw_snapshot_id=snapshot_b.id,
         )
         session.commit()
 

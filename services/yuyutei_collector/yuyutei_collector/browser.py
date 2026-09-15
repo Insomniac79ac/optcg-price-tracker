@@ -72,36 +72,68 @@ def deadline(seconds: float, label: str):
         signal.signal(signal.SIGALRM, old_handler)
 
 
-def capture(page: Page, response, elapsed_s: float, expected_markers: list[str] | None = None) -> dict:
+def capture_response(page: Page, response, elapsed_s: float) -> dict:
+    """Read the response metadata and body without interpreting either.
+
+    Collection uses this lower-level boundary so durable raw evidence can be
+    committed before page classification or product parsing.  Callers that do
+    not persist raw evidence (for example discovery) continue to use
+    :func:`goto_and_capture`, which composes this with ``classify_capture`` and
+    therefore keeps its existing result shape and behaviour.
+    """
     title = page.title()
     html = page.content()
     status = response.status if response else None
     html_bytes = len(html.encode("utf-8"))
-    cls, evidence = classify_page(status, html, title, expected_markers)
 
     return {
         "final_url": page.url,
         "http_status": status,
         "navigation_ok": bool(response and response.ok),
         "page_title": title,
-        "classification": cls,
-        "classification_evidence": evidence,
         "html_bytes": html_bytes,
         "elapsed_s": round(elapsed_s, 3),
         "html": html,
     }
 
 
-def goto_and_capture(page: Page, url: str, expected_markers: list[str] | None = None) -> dict:
+def classify_capture(step: dict, expected_markers: list[str] | None = None) -> dict:
+    """Add the established page classification to an uninterpreted capture."""
+    if "error" in step:
+        return step
+    cls, evidence = classify_page(
+        step.get("http_status"),
+        step["html"],
+        step.get("page_title") or "",
+        expected_markers,
+    )
+    return {
+        **step,
+        "classification": cls,
+        "classification_evidence": evidence,
+    }
+
+
+def capture(page: Page, response, elapsed_s: float, expected_markers: list[str] | None = None) -> dict:
+    """Backward-compatible capture-and-classify helper."""
+    return classify_capture(capture_response(page, response, elapsed_s), expected_markers)
+
+
+def goto_and_capture_raw(page: Page, url: str) -> dict:
+    """Navigate once and return a body capture before page classification."""
     start = time.monotonic()
     try:
         resp = page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(1500)
         elapsed = time.monotonic() - start
-        return capture(page, resp, elapsed, expected_markers)
+        return capture_response(page, resp, elapsed)
     except Exception as exc:
         elapsed = time.monotonic() - start
         return {"error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(elapsed, 3)}
+
+
+def goto_and_capture(page: Page, url: str, expected_markers: list[str] | None = None) -> dict:
+    return classify_capture(goto_and_capture_raw(page, url), expected_markers)
 
 
 def homepage_session_ok(step: dict) -> bool:

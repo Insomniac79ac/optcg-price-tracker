@@ -10,7 +10,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from yuyutei_collector.db import Base
-from yuyutei_collector.models import Card, CardPrint, PriceObservation, Source, SourceCardMapping
+from yuyutei_collector.models import (
+    Card,
+    CardPrint,
+    PriceObservation,
+    RawSnapshot,
+    Source,
+    SourceCardMapping,
+)
 from yuyutei_collector.writer import validate_and_write_observation
 
 PRODUCT_URL = "https://yuyu-tei.jp/sell/opc/card/op01/10002"
@@ -71,15 +78,22 @@ class WriterTestCase(unittest.TestCase):
         self.session.close()
 
     def _write(self, mapping, extraction, html="<html>evidence</html>"):
+        snapshot = RawSnapshot(
+            source_id=mapping.source_id,
+            source_url=PRODUCT_URL,
+            http_status=200,
+            content_hash="0" * 64,
+            raw_content=html,
+            parser_version="yuyutei-collector-v3",
+        )
+        self.session.add(snapshot)
+        self.session.commit()
         return validate_and_write_observation(
             session=self.session,
             mapping=mapping,
             classification="normal_product",
             extraction=extraction,
-            http_status=200,
-            raw_html=html,
-            source_url=PRODUCT_URL,
-            parser_version="yuyutei-collector-v3",
+            raw_snapshot_id=snapshot.id,
         )
 
 
@@ -173,15 +187,16 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertEqual(self.session.query(PriceObservation).count(), 0)
 
     def test_non_normal_classification_fails_closed(self):
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION, "<html>challenge</html>")
+        # Classification is the gate under test; use the same already-persisted
+        # snapshot while changing only that input.
+        self.session.rollback()
         result = validate_and_write_observation(
             session=self.session,
             mapping=self.approved_mapping,
             classification="challenge_or_captcha",
             extraction=GOOD_EXTRACTION,
-            http_status=200,
-            raw_html="<html>challenge</html>",
-            source_url=PRODUCT_URL,
-            parser_version="yuyutei-collector-v3",
+            raw_snapshot_id=result.raw_snapshot_id,
         )
         self.assertFalse(result.written)
         self.assertTrue(any(r.startswith("page_classification_not_normal_product:") for r in result.reasons))

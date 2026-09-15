@@ -133,6 +133,7 @@ class SourceCollectionAttempt(Base):
         ),
         Index("ix_source_collection_attempts_batch_run_id", "batch_run_id"),
         Index("ix_source_collection_attempts_source_id", "source_id"),
+        Index("ix_source_collection_attempts_raw_snapshot_id", "raw_snapshot_id"),
         # Recent history for one mapping. Ordered by selected_at because it is
         # NOT NULL and therefore covers rows that never started.
         Index(
@@ -197,4 +198,12 @@ class SourceCollectionAttempt(Base):
     # explaining how it came to exist must outlive it.
     price_observation_id: Mapped[int | None] = mapped_column(
         ForeignKey("price_observations.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # The fetched body that determined this attempt's outcome. SET NULL mirrors
+    # price_observations.raw_snapshot_id: retention may prune old raw payloads,
+    # while the attempt row itself remains durable history. Existing attempts
+    # predate this lineage and therefore correctly remain NULL.
+    raw_snapshot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("raw_snapshots.id", ondelete="SET NULL"), nullable=True
     )

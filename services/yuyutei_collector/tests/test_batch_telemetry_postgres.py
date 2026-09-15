@@ -29,6 +29,7 @@ from yuyutei_collector.models import (
     CanonicalCard,
     PriceObservation,
     CardPrint,
+    RawSnapshot,
     Source,
     SourceCardMapping,
     SourceCollectionAttempt,
@@ -130,13 +131,28 @@ def pg():
             )
             for mapping in mappings
         ]
-        session.add_all(observations)
+        snapshots = [
+            RawSnapshot(
+                source_id=source.id,
+                source_url=mapping.source_url,
+                http_status=200,
+                content_hash=f"{mapping.id:064x}",
+                raw_content=f"<html>{mapping.source_card_id}</html>",
+                parser_version="test",
+            )
+            for mapping in mappings
+        ]
+        session.add_all([*observations, *snapshots])
         session.commit()
         subject = {
             "source_id": source.id,
             "mapping_ids": [m.id for m in mappings],
             "observation_ids": {
                 o.source_card_mapping_id: o.id for o in observations
+            },
+            "snapshot_ids": {
+                mapping.id: snapshot.id
+                for mapping, snapshot in zip(mappings, snapshots, strict=True)
             },
         }
 
@@ -156,6 +172,7 @@ def _written(subject, mapping_id):
     exists, so the production FK is exercised rather than tripped."""
     outcome = written_outcome(mapping_id)
     outcome.observation_id = subject["observation_ids"][mapping_id]
+    outcome.raw_snapshot_id = subject["snapshot_ids"][mapping_id]
     return outcome
 
 

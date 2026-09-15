@@ -4381,6 +4381,7 @@ class CollectionAttemptOut(BaseModel):
     failure_reason: str | None
     source_denied: bool
     price_observation_id: int | None
+    raw_snapshot_id: int | None
 
 
 class CollectionAttemptSummaryOut(BaseModel):

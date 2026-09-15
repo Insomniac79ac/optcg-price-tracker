@@ -1,10 +1,10 @@
-"""Best-effort durable telemetry for collector attempts.
+"""Durable telemetry and raw-evidence lineage for collector attempts.
 
-THE ONE RULE. Telemetry must never be capable of breaking pricing collection.
-Every function here returns a bool and raises nothing: a telemetry failure
-degrades the run to exactly today's behaviour (stdout only), never to a lost
-observation. This mirrors services/worker/worker/app_logging.py, whose
-record_app_log has held the same contract in production since July.
+Attempt population/start/finish telemetry remains best-effort: those functions
+return a bool and raise nothing. ``persist_response_snapshot`` is deliberately
+different. Raw source evidence is now a prerequisite for a price observation,
+so that function either commits the snapshot plus its attempt link or raises a
+typed error that makes collection fail closed.
 
 WHY AN INDEPENDENT SESSION, NOT THE CALLER'S. Two directions matter and only a
 separate short-lived session satisfies both:
@@ -33,22 +33,27 @@ matters most. price_observation_id is the exception and keeps its FK with
 ON DELETE SET NULL, because observations really are deleted (data_retention
 prunes them at 365 days) and a dangling pointer would mislead a later reader.
 
-NOT WIRED IN YET. Nothing in batch.py or collect.py calls these functions; this
-tranche adds the storage and the primitive only.
+The raw snapshot and attempt link share one short transaction. It commits before
+classification, parsing, validation, or observation writing begins, so none of
+those later paths can roll the evidence back.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import (
     MAX_FAILURE_REASON_LENGTH,
+    RawSnapshot,
     STATUS_SELECTED,
     SourceCollectionAttempt,
 )
@@ -56,8 +61,131 @@ from yuyutei_collector.models import (
 logger = logging.getLogger(__name__)
 
 
+class RawSnapshotPersistenceError(RuntimeError):
+    """A response body could not be committed with its attempt lineage."""
+
+
+@dataclass(frozen=True)
+class RawSnapshotPersistenceResult:
+    raw_snapshot_id: int
+    created: bool
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def persist_response_snapshot(
+    *,
+    bind,
+    source_id: int,
+    source_url: str,
+    http_status: int | None,
+    raw_content: str,
+    parser_version: str,
+    batch_run_id: str | None,
+    source_card_mapping_id: int,
+) -> RawSnapshotPersistenceResult:
+    """Commit one fetched body and link it to its attempt before parsing.
+
+    ``bind`` comes from the caller session, but this function deliberately
+    creates and commits its own Session. The caller's later rollback can then
+    remove a partial observation without removing the source evidence.
+
+    For a batch attempt, the existing attempt row is locked before inspecting
+    its nullable snapshot link. A repeated call for the same
+    ``(batch_run_id, mapping_id)`` returns the already-linked snapshot only when
+    it describes the identical response; it never inserts a duplicate. A
+    different response under the same attempt identity is a conflict and fails
+    closed rather than silently choosing either payload.
+
+    The standalone mapping CLI has no attempt ledger row by design, so a
+    ``batch_run_id`` of ``None`` persists the snapshot without an attempt link.
+    Each standalone invocation calls this boundary once.
+    """
+    content_hash = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
+    stored_status = http_status if http_status is not None else 0
+    evidence_session = Session(bind=bind, autoflush=False, future=True)
+    try:
+        created = False
+        snapshot_id: int | None = None
+        with evidence_session.begin():
+            attempt = None
+            if batch_run_id is not None:
+                attempt = evidence_session.execute(
+                    select(SourceCollectionAttempt)
+                    .where(
+                        SourceCollectionAttempt.batch_run_id == batch_run_id,
+                        SourceCollectionAttempt.source_card_mapping_id
+                        == source_card_mapping_id,
+                    )
+                    .with_for_update()
+                ).scalar_one_or_none()
+                if attempt is None:
+                    raise RawSnapshotPersistenceError("attempt_not_found")
+
+                if attempt.raw_snapshot_id is not None:
+                    snapshot = evidence_session.get(RawSnapshot, attempt.raw_snapshot_id)
+                    if snapshot is None:
+                        raise RawSnapshotPersistenceError("attempt_snapshot_missing")
+                    same_response = (
+                        snapshot.source_id == source_id
+                        and snapshot.source_url == source_url
+                        and snapshot.http_status == stored_status
+                        and snapshot.content_hash == content_hash
+                        and snapshot.raw_content == raw_content
+                        and snapshot.parser_version == parser_version
+                    )
+                    if not same_response:
+                        raise RawSnapshotPersistenceError("attempt_snapshot_conflict")
+                    snapshot_id = snapshot.id
+
+            if snapshot_id is None:
+                snapshot = RawSnapshot(
+                    source_id=source_id,
+                    source_url=source_url,
+                    fetched_at=_now(),
+                    http_status=stored_status,
+                    content_hash=content_hash,
+                    raw_content=raw_content,
+                    parser_version=parser_version,
+                )
+                evidence_session.add(snapshot)
+                evidence_session.flush()
+                snapshot_id = snapshot.id
+                created = True
+                if attempt is not None:
+                    attempt.raw_snapshot_id = snapshot_id
+
+        # The transaction context has committed both rows before this result is
+        # made visible to the parser.
+        assert snapshot_id is not None
+        return RawSnapshotPersistenceResult(raw_snapshot_id=snapshot_id, created=created)
+    except RawSnapshotPersistenceError as exc:
+        _stdout_fallback(
+            "persist_response_snapshot",
+            batch_run_id=batch_run_id,
+            source_card_mapping_id=source_card_mapping_id,
+            failure_code=str(exc),
+        )
+        raise
+    except Exception as exc:
+        code = f"database_error:{type(exc).__name__}"
+        logger.warning(
+            "persist_response_snapshot: failed for batch=%s mapping=%s.",
+            batch_run_id,
+            source_card_mapping_id,
+            exc_info=True,
+        )
+        _stdout_fallback(
+            "persist_response_snapshot",
+            batch_run_id=batch_run_id,
+            source_card_mapping_id=source_card_mapping_id,
+            failure_code=code,
+        )
+        raise RawSnapshotPersistenceError(code) from exc
+    finally:
+        evidence_session.close()
 
 
 def _stdout_fallback(operation: str, **fields) -> None:
@@ -184,6 +312,7 @@ def finish_attempt(
     failure_reason: str | None = None,
     source_denied: bool = False,
     price_observation_id: int | None = None,
+    raw_snapshot_id: int | None = None,
     started_at: datetime | None = None,
     finished_at: datetime | None = None,
 ) -> bool:
@@ -215,6 +344,8 @@ def finish_attempt(
     }
     if price_observation_id is not None:
         values["price_observation_id"] = price_observation_id
+    if raw_snapshot_id is not None:
+        values["raw_snapshot_id"] = raw_snapshot_id
     if started_at is not None:
         values["started_at"] = started_at
     return _update(

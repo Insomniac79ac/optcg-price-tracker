@@ -58,6 +58,7 @@ def attempt_to_out(row: AttemptRow) -> CollectionAttemptOut:
         failure_reason=attempt.failure_reason,
         source_denied=attempt.source_denied,
         price_observation_id=attempt.price_observation_id,
+        raw_snapshot_id=attempt.raw_snapshot_id,
     )
 
 
