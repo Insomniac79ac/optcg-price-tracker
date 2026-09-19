@@ -36,7 +36,7 @@ from app.models import (
     WishlistItem,
 )
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
-from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
+from app.services.backup import BACKUP_REGISTRY, backup_registry_errors
 from app.services.cache import redis_ping
 from app.services.file_job_storage import is_storage_writable
 from app.services.job_locks import get_active_locks
@@ -477,19 +477,19 @@ def _check_latest_workflow_run(db: Session) -> CheckResult:
 
 
 def _check_backup_tables_included(_db: Session) -> CheckResult:
-    missing = [t for t in REQUIRED_TABLES if t not in MODEL_BY_TABLE]
-    if missing:
+    registry_errors = backup_registry_errors()
+    if registry_errors:
         return CheckResult(
             "backup_tables_included",
             "fail",
             "critical",
-            f"Required table(s) missing from backup/restore: {', '.join(missing)}.",
+            "Backup registry is inconsistent: " + "; ".join(registry_errors) + ".",
         )
     return CheckResult(
         "backup_tables_included",
         "pass",
         "critical",
-        f"All {len(REQUIRED_TABLES)} required tables are covered by backup/restore.",
+        f"All {len(BACKUP_REGISTRY)} registered tables have valid models and FK-safe order.",
     )
 
 
@@ -497,18 +497,24 @@ def _check_search_responds(db: Session) -> CheckResult:
     # Imported lazily to avoid a module-level import cycle (search.py doesn't
     # import this module, but keeping the dependency direction explicit here
     # is cheap and avoids ever having to think about it).
-    from app.services.search import search as run_search
+    from app.services.search import search_health_probe
 
-    try:
-        run_search(db, "system-check", limit=1)
-    except Exception as exc:  # noqa: BLE001 - health check reports every failure
+    probe = search_health_probe(db)
+    if not probe.ok:
         return CheckResult(
             "search_responds",
             "fail",
             "critical",
-            f"Search service raised an error: {exc}",
+            f"Search health probe failed: {probe.error}",
         )
-    return CheckResult("search_responds", "pass", "critical", "Search service responded.")
+    return CheckResult(
+        "search_responds",
+        "pass",
+        "critical",
+        "Search catalogue probe responded "
+        f"({probe.result_count} bounded result(s); providers: "
+        f"{', '.join(probe.providers_checked)}).",
+    )
 
 
 def _check_orphan_fk(
