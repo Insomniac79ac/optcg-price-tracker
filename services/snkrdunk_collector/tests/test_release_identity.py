@@ -29,6 +29,7 @@ from snkrdunk_collector.models import (
     CardPrint,
     ReleaseProduct,
     ReleaseProductAlias,
+    Source,
 )
 from snkrdunk_collector.release_identity import (
     MATCH_BANDAI_OFFICIAL,
@@ -42,6 +43,7 @@ class ReleaseIdentityTests(unittest.TestCase):
         self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         self.session = sessionmaker(bind=self.engine, future=True)()
+        self.session.add(Source(id=1, name="snkrdunk", base_url="https://snkrdunk.com"))
         self.session.add(
             CanonicalCard(
                 id=1, card_code="ST01-012", name_en="Monkey.D.Luffy",
@@ -86,7 +88,12 @@ class ReleaseIdentityTests(unittest.TestCase):
 
     def _alias(self, product, name, kind):
         self.session.add(
-            ReleaseProductAlias(product_id=product.id, alias_name=name, alias_kind=kind)
+            ReleaseProductAlias(
+                product_id=product.id,
+                source_id=1 if kind == "source_rendering" else None,
+                alias_name=name,
+                alias_kind=kind,
+            )
         )
         self.session.flush()
 

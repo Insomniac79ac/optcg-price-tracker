@@ -49,6 +49,13 @@ SEARCH_TYPES: tuple[str, ...] = (
     "reports",
 )
 
+SEARCH_HEALTH_PROVIDER = "cards"
+SEARCH_HEALTH_QUERY = "system-check"
+SEARCH_HEALTH_LIMIT = 1
+SEARCH_HEALTH_EXCLUDED_PROVIDERS = tuple(
+    search_type for search_type in SEARCH_TYPES if search_type != SEARCH_HEALTH_PROVIDER
+)
+
 MIN_QUERY_LENGTH = 2
 RECENT_WINDOW = timedelta(days=7)
 
@@ -197,7 +204,9 @@ def _finalize(results: list[_ScoredResult]) -> list[SearchResultOut]:
 # --- cards -----------------------------------------------------------------
 
 
-def _search_cards(db: Session, q_lower: str, owned_by_card: dict[int, int], *, user_id: int) -> list[_ScoredResult]:
+def _search_cards(
+    db: Session, q_lower: str, owned_by_card: dict[int, int]
+) -> list[_ScoredResult]:
     cards = db.scalars(select(Card)).all()
     out: list[_ScoredResult] = []
     for card in cards:
@@ -648,7 +657,7 @@ def _search_reports(db: Session, q: str, q_lower: str, *, user_id: int) -> list[
 
 
 _SEARCH_FUNCS = {
-    "cards": lambda db, q, q_lower, owned, now, user_id: _search_cards(db, q_lower, owned, user_id=user_id),
+    "cards": lambda db, q, q_lower, owned, now, user_id: _search_cards(db, q_lower, owned),
     "collection": lambda db, q, q_lower, owned, now, user_id: _search_collection(db, q_lower, owned, user_id=user_id),
     "wishlist": lambda db, q, q_lower, owned, now, user_id: _search_wishlist(db, q_lower, owned, user_id=user_id),
     "grading": lambda db, q, q_lower, owned, now, user_id: _search_grading(db, q_lower, owned, user_id=user_id),
@@ -666,6 +675,46 @@ class SearchOutcome:
     total_results: int
     by_type: dict[str, int]
     results: list[SearchResultOut]
+
+
+@dataclass(frozen=True)
+class SearchHealthProbeResult:
+    """Bounded, non-user-specific result from the internal search probe."""
+
+    ok: bool
+    providers_checked: tuple[str, ...]
+    providers_skipped: tuple[str, ...]
+    result_count: int
+    error: str | None = None
+
+
+def search_health_probe(db: Session) -> SearchHealthProbeResult:
+    """Exercise catalogue search without reading or impersonating a user.
+
+    This is an internal, read-only health primitive, not an alternate search
+    API. It deliberately runs only the catalogue card provider with no
+    ownership data, then uses the normal result finalization path. Personal
+    providers and deployment-wide private reports are never invoked.
+    """
+    checked = (SEARCH_HEALTH_PROVIDER,)
+    try:
+        with db.no_autoflush:
+            scored = _search_cards(db, SEARCH_HEALTH_QUERY.lower(), {})
+            result_count = len(_finalize(scored)[:SEARCH_HEALTH_LIMIT])
+    except Exception as exc:  # noqa: BLE001 - the caller needs a health result
+        return SearchHealthProbeResult(
+            ok=False,
+            providers_checked=checked,
+            providers_skipped=SEARCH_HEALTH_EXCLUDED_PROVIDERS,
+            result_count=0,
+            error=f"{type(exc).__name__}: {exc}",
+        )
+    return SearchHealthProbeResult(
+        ok=True,
+        providers_checked=checked,
+        providers_skipped=SEARCH_HEALTH_EXCLUDED_PROVIDERS,
+        result_count=result_count,
+    )
 
 
 def is_exact_card_code(db: Session, q: str) -> bool:

@@ -39,9 +39,14 @@ def test_quality_detects_low_confidence_mapping(client, db_session):
 
     response = client.get("/admin/source-mappings/quality")
     body = response.json()
-    assert body["summary"]["low_confidence_count"] >= 1
+    assert body["summary"]["low_confidence_count"] == 0
+    assert body["summary"]["legacy_compatibility_mapping_count"] == 1
     item = body["items"][0]
-    assert "low_confidence" in item["issue_types"]
+    assert item["identity_classification"] == "legacy_compatibility"
+    assert item["confidence_scope"] == "compatibility_only"
+    assert item["match_confidence"] is None
+    assert item["compatibility_match_confidence_label"] == "very_low"
+    assert "legacy_compatibility_mapping" in item["issue_types"]
 
 
 def test_quality_detects_duplicate_source_url(client, db_session):
@@ -83,11 +88,21 @@ def test_quality_detects_stale_mapping(client, db_session):
 def test_quality_detects_inactive_with_recent_price(client, db_session):
     source = make_source(db_session, "snkrdunk")
     card = make_card(db_session, card_code="OP01-001", variant=None)
-    mapping = make_mapping(db_session, card, source, source_card_id="OP01-001", is_active=False)
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        card,
+        source,
+        source_card_id="OP01-001",
+        card_print_id=print_row.id,
+        is_active=False,
+    )
     db_session.add(
         PriceObservation(
             card_id=card.id,
             source_id=source.id,
+            source_card_mapping_id=mapping.id,
+            card_print_id=print_row.id,
             price_type="floor",
             price_jpy=1000,
             observed_at=datetime.now(timezone.utc) - timedelta(days=2),
@@ -104,7 +119,15 @@ def test_quality_detects_inactive_with_recent_price(client, db_session):
 def test_quality_detects_active_without_recent_price(client, db_session):
     source = make_source(db_session, "snkrdunk")
     card = make_card(db_session, card_code="OP01-001", variant=None)
-    mapping = make_mapping(db_session, card, source, source_card_id="OP01-001", is_active=True)
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        card,
+        source,
+        source_card_id="OP01-001",
+        card_print_id=print_row.id,
+        is_active=True,
+    )
 
     response = client.get("/admin/source-mappings/quality")
     body = response.json()
@@ -195,7 +218,15 @@ def test_bulk_update_reject(client, db_session):
 def test_bulk_update_deactivate_and_activate(client, db_session):
     source = make_source(db_session, "snkrdunk")
     card = make_card(db_session, card_code="OP01-001", variant=None)
-    mapping = make_mapping(db_session, card, source, source_card_id="OP01-001", is_active=True)
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        card,
+        source,
+        source_card_id="OP01-001",
+        is_active=True,
+        card_print_id=print_row.id,
+    )
 
     response = client.post(
         "/admin/source-mappings/bulk-update",
@@ -217,7 +248,14 @@ def test_bulk_update_deactivate_and_activate(client, db_session):
 def test_bulk_update_unknown_id_reports_error_without_failing_others(client, db_session):
     source = make_source(db_session, "snkrdunk")
     card = make_card(db_session, card_code="OP01-001", variant=None)
-    mapping = make_mapping(db_session, card, source, source_card_id="OP01-001")
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        card,
+        source,
+        source_card_id="OP01-001",
+        card_print_id=print_row.id,
+    )
 
     response = client.post(
         "/admin/source-mappings/bulk-update",
@@ -230,11 +268,19 @@ def test_bulk_update_unknown_id_reports_error_without_failing_others(client, db_
     assert results[999999]["error"] == "not found"
 
 
-def test_replace_card_updates_mapping_and_reruns_confidence(client, db_session):
+def test_replace_card_alias_updates_only_compatibility_metadata(client, db_session):
     source = make_source(db_session, "snkrdunk")
     wrong_card = make_card(db_session, card_code="OP01-013", name_en="Roronoa Zoro", variant=None)
     right_card = make_card(db_session, card_code="OP01-001", variant=None)
-    mapping = make_mapping(db_session, wrong_card, source, source_card_id="OP01-001")
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        wrong_card,
+        source,
+        source_card_id="OP01-001",
+        card_print_id=print_row.id,
+    )
+    previous_print_id = mapping.card_print_id
 
     response = client.post(
         f"/admin/source-mappings/{mapping.id}/replace-card",
@@ -243,13 +289,21 @@ def test_replace_card_updates_mapping_and_reruns_confidence(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["card_id"] == right_card.id
+    assert body["compatibility_card_id"] == right_card.id
+    assert body["authoritative_card_print_id"] == previous_print_id
+    assert body["previous_compatibility_card_id"] == wrong_card.id
+    assert body["new_compatibility_card_id"] == right_card.id
+    assert body["pricing_identity_changed"] is False
+    assert body["deprecated_route"] is True
+    assert body["deprecated_approve_requested"] is True
     assert body["review_status"] == "approved"
     assert body["match_confidence"] is not None
 
     db_session.refresh(mapping)
     assert mapping.card_id == right_card.id
-    assert mapping.manual_verified is True
-    assert mapping.match_confidence_label is not None
+    assert mapping.card_print_id == previous_print_id
+    assert mapping.manual_verified is False
+    assert mapping.match_confidence_label is None
 
 
 def test_suggested_cards_returns_ranked_matches(client, db_session):
@@ -261,15 +315,17 @@ def test_suggested_cards_returns_ranked_matches(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["mapping_id"] == mapping.id
+    assert body["identity_classification"] == "legacy_compatibility"
+    assert body["suggestion_scope"] == "legacy_compatibility_only"
+    assert body["authoritative_card_print_id"] is None
     assert len(body["matches"]) >= 1
     assert body["matches"][0]["card_code"] == "OP01-001"
 
 
 def test_quality_reports_a_mapping_with_no_legacy_card_instead_of_dropping_it(client, db_session):
     """The quality report joins `cards` too. A print-authoritative mapping
-    (card_id NULL since c9f31e2a7d04) must still be assessed - and reported as
-    missing its legacy reference - rather than vanish from the report or blow
-    up in db.get(Card, None)."""
+    (card_id NULL since c9f31e2a7d04) must still be assessed as exact rather
+    than vanish or be penalized for absent compatibility metadata."""
     source = make_source(db_session, "snkrdunk")
     mapping = make_print_authoritative_mapping(db_session, source)
 
@@ -282,4 +338,8 @@ def test_quality_reports_a_mapping_with_no_legacy_card_instead_of_dropping_it(cl
     assert item["mapping_id"] == mapping.id
     assert item["card_id"] is None
     assert item["card_code"] is None
-    assert "missing_card_reference" in item["issue_types"]
+    assert item["identity_classification"] == "exact"
+    assert item["confidence_scope"] == "exact_print"
+    assert item["compatibility_card_status"] == "absent"
+    assert item["canonical_card_code"] == "OP01-900"
+    assert "missing_card_reference" not in item["issue_types"]

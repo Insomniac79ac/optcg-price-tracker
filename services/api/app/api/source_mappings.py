@@ -14,15 +14,24 @@ from app.schemas import (
     SourceCardMappingOut,
     SourceCardMappingUpdateIn,
 )
-from app.api._mapping_approval import APPROVED, approval_http_error, guard_transition_to_approved
+from app.api._mapping_approval import (
+    APPROVED,
+    approval_http_error,
+    guard_mapping_can_activate,
+    guard_mapping_has_exact_priceable_identity,
+    guard_transition_to_approved,
+)
 from app.services.cache import delete_cache_prefix
 from app.services.exact_print_approval import ExactPrintApprovalError
+from app.services.source_mapping_identity import EXACT, load_source_mapping_identity
 
 router = APIRouter(
     prefix="/admin/source-mappings", tags=["admin"], dependencies=[Depends(require_admin_token)]
 )
 
 SUPPORTED_SOURCES = ("yuyutei", "snkrdunk")
+SOURCE_LISTING_IDENTITY_FIELDS = frozenset({"source_url", "source_card_id"})
+PENDING_REVIEW_STATUS = "needs_review"
 
 
 def _to_out(
@@ -170,6 +179,24 @@ def update_source_mapping(
             detail=f"Invalid review_status. Must be one of {list(REVIEW_STATUSES)}",
         )
 
+    listing_identity_changed = any(
+        field in updates and updates[field] != getattr(mapping, field)
+        for field in SOURCE_LISTING_IDENTITY_FIELDS
+    )
+    if listing_identity_changed:
+        identity = load_source_mapping_identity(db, mapping.id)
+        if (
+            identity is not None
+            and identity.classification == EXACT
+            and mapping.review_status == APPROVED
+        ):
+            # The listing evidence was what an operator approved. Changing it
+            # preserves print lineage and history, but the replacement listing
+            # must pass a distinct review before collection resumes.
+            if updates.get("review_status") in (None, APPROVED):
+                updates["review_status"] = PENDING_REVIEW_STATUS
+            updates["manual_verified"] = False
+
     # Checked BEFORE anything is written, so a refused PATCH leaves every
     # field - not just review_status - exactly as it was. This endpoint is a
     # transition into `approved` as surely as POST /approve is.
@@ -178,6 +205,22 @@ def update_source_mapping(
             guard_transition_to_approved(db, mapping)
         except ExactPrintApprovalError as exc:
             raise approval_http_error(exc) from exc
+
+    activates = mapping.is_active is False and updates.get("is_active") is True
+    verifies = mapping.manual_verified is False and updates.get("manual_verified") is True
+    try:
+        if activates:
+            guard_mapping_can_activate(
+                db,
+                mapping,
+                proposed_review_status=updates.get(
+                    "review_status", mapping.review_status
+                ),
+            )
+        if verifies:
+            guard_mapping_has_exact_priceable_identity(db, mapping)
+    except ExactPrintApprovalError as exc:
+        raise approval_http_error(exc) from exc
 
     for field, value in updates.items():
         setattr(mapping, field, value)
@@ -208,6 +251,9 @@ def approve_source_mapping(mapping_id: int, db: Session = Depends(get_db)):
     # nothing here fills one in for it.
     try:
         guard_transition_to_approved(db, mapping)
+        # A re-approve is also an activation. Historical approved legacy rows
+        # remain readable, but this new mutation may not reactivate one.
+        guard_mapping_has_exact_priceable_identity(db, mapping)
     except ExactPrintApprovalError as exc:
         raise approval_http_error(exc) from exc
     mapping.is_active = True

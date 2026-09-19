@@ -546,8 +546,8 @@ def test_a_legacy_card_id_only_mapping_still_reads_correctly(client, catalogue):
 
 def test_patch_cannot_reassign_the_exact_print(client, catalogue):
     """Reassignment has to go through an approval path that runs the gate, so
-    the PATCH schema deliberately has no card_print_id and silently ignores
-    one rather than writing it."""
+    the PATCH schema deliberately has no card_print_id and rejects one rather
+    than writing it or applying any sibling fields from the same request."""
     db = catalogue["db"]
     source = db.query(Source).filter_by(name="yuyutei").one()
     mapping = SourceCardMapping(
@@ -564,10 +564,10 @@ def test_patch_cannot_reassign_the_exact_print(client, catalogue):
         f"/admin/source-mappings/{mapping.id}",
         json={"card_print_id": catalogue["prints"]["p2"].id, "review_notes": "hand edit"},
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 422, response.text
     db.refresh(mapping)
     assert mapping.card_print_id is None
-    assert mapping.review_notes == "hand edit"
+    assert mapping.review_notes is None
 
 
 # --- the operator's decision aid ---------------------------------------------

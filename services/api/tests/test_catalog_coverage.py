@@ -6,6 +6,14 @@ from app.services.catalog_coverage import (
     compute_catalog_coverage,
     summarize_catalog_coverage,
 )
+from tests.exact_reporting_helpers import (
+    make_canonical,
+    make_compatibility_card,
+    make_exact_mapping,
+    make_legacy_mapping,
+    make_print,
+    make_source as make_exact_source,
+)
 from tests.test_source_mappings import make_card, make_mapping, make_source
 
 USER_ID = 1
@@ -310,16 +318,51 @@ def test_duplicate_risks_endpoint(client, db_session):
 
 
 def test_mapping_quality_risks_endpoint(client, db_session):
-    yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    # source_card_id that clearly mismatches card_code -> critical risk mapping
-    make_mapping(db_session, card, yuyutei, source_card_id="OP99-999")
+    yuyutei = make_exact_source(db_session, "yuyutei")
+    canonical = make_canonical(db_session, "OP01-001")
+    card = make_compatibility_card(db_session, canonical.card_code)
+    print_row = make_print(
+        db_session,
+        canonical,
+        active=True,
+        verification_status="verified",
+    )
+    exact_mapping = make_exact_mapping(
+        db_session,
+        print_row,
+        yuyutei,
+        compatibility_card=card,
+        source_card_id="OP99-999",
+        manual_verified=True,
+    )
+
+    legacy_card = make_compatibility_card(db_session, "OP01-002")
+    legacy_mapping = make_legacy_mapping(
+        db_session,
+        legacy_card,
+        yuyutei,
+        source_card_id="OP99-998",
+        manual_verified=True,
+    )
 
     resp = client.get("/admin/catalog-coverage/gaps?gap_type=mapping_quality")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["items"]) == 1
     assert data["items"][0]["card_id"] == card.id
+    assert data["items"][0]["severity"] == "critical"
+    assert "card_code_mismatch" in data["items"][0]["issue_types"]
+
+    quality = client.get("/admin/source-mappings/quality")
+    assert quality.status_code == 200, quality.text
+    quality_by_id = {item["mapping_id"]: item for item in quality.json()["items"]}
+    assert quality_by_id[exact_mapping.id]["confidence_scope"] == "exact_print"
+    legacy = quality_by_id[legacy_mapping.id]
+    assert legacy["confidence_scope"] == "compatibility_only"
+    assert legacy["risk_level"] == "review"
+    assert legacy["match_confidence"] is None
+    assert legacy["compatibility_match_confidence"] is not None
+    assert "legacy_compatibility_mapping" in legacy["issue_types"]
 
 
 def test_gaps_endpoint_invalid_gap_type(client, db_session):

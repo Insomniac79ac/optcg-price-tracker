@@ -186,6 +186,42 @@ class FailClosedWriteTests(WriterTestCase):
         self.assertTrue(any(r.startswith("card_print_not_verified:") for r in result.reasons))
         self.assertEqual(self.session.query(PriceObservation).count(), 0)
 
+    def test_inactive_print_is_rejected_before_observation_write(self):
+        self.verified_print.is_active = False
+        self.session.flush()
+
+        result = self._write(self.approved_mapping, GOOD_EXTRACTION)
+
+        self.assertFalse(result.written)
+        self.assertIn("card_print_not_active", result.reasons)
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
+
+    def test_wrong_source_mapping_is_rejected_before_observation_write(self):
+        wrong_source = Source(
+            id=2, name="snkrdunk", base_url="https://snkrdunk.com"
+        )
+        wrong_source_mapping = SourceCardMapping(
+            id=14,
+            card_id=11,
+            source_id=wrong_source.id,
+            card_print_id=self.verified_print.id,
+            source_card_id="OP01-001",
+            source_url=PRODUCT_URL + "-wrong-source",
+            is_active=True,
+            review_status="approved",
+        )
+        self.session.add_all([wrong_source, wrong_source_mapping])
+        self.session.flush()
+
+        result = self._write(wrong_source_mapping, GOOD_EXTRACTION)
+
+        self.assertFalse(result.written)
+        self.assertIn(
+            "mapping_source_mismatch:expected=yuyutei,actual=snkrdunk",
+            result.reasons,
+        )
+        self.assertEqual(self.session.query(PriceObservation).count(), 0)
+
     def test_non_normal_classification_fails_closed(self):
         result = self._write(self.approved_mapping, GOOD_EXTRACTION, "<html>challenge</html>")
         # Classification is the gate under test; use the same already-persisted

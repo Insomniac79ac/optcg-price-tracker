@@ -28,6 +28,7 @@ import pytest
 
 from app import import_frozen_bandai_to_canonical_staging as runner
 from app.services import canonical_staging_target as T
+from app.services.snapshot_planner_input import SnapshotInput
 from tests._repo_root import find_repo_root
 
 REPO_ROOT = find_repo_root()
@@ -118,6 +119,23 @@ def checker_with_fake_tunnel(monkeypatch, fake_railway: Path):
     monkeypatch.setattr(checker.subprocess, "Popen", _popen)
     checker._test_calls = calls
     return checker
+
+
+@pytest.fixture
+def minimal_runner_snapshot(monkeypatch, tmp_path: Path) -> SnapshotInput:
+    """Keep runner-exception tests independent of an untracked real corpus."""
+    snapshot = SnapshotInput(
+        root=tmp_path / "frozen-snapshot",
+        source_catalogue=runner.SOURCE_CATALOGUE,
+        identity="test-snapshot-identity",
+        entries=(),
+        series=(),
+        digests={},
+        entry_source={},
+        manifest={"snapshot_version": 1},
+    )
+    monkeypatch.setattr(runner, "load_snapshot", lambda *_a, **_kw: snapshot)
+    return snapshot
 
 
 def _passing_facts(checker, **overrides):
@@ -344,7 +362,9 @@ def test_d_a_chained_traceback_does_not_reintroduce_the_dsn(checker_with_fake_tu
 # --- 5. an exception raised inside the runner ------------------------------
 
 
-def test_e_a_runner_exception_is_reported_scrubbed(monkeypatch, capsys):
+def test_e_a_runner_exception_is_reported_scrubbed(
+    monkeypatch, capsys, minimal_runner_snapshot
+):
     """The whole DB phase is wrapped; the traceback is printed, redacted."""
     from app.services.canonical_import_apply import StagingTargetAttestation
 
@@ -371,7 +391,9 @@ def test_e_a_runner_exception_is_reported_scrubbed(monkeypatch, capsys):
     assert "RuntimeError" in captured.err  # still debuggable
 
 
-def test_e_the_runner_prints_a_traceback_that_is_scrubbed(monkeypatch, capsys):
+def test_e_the_runner_prints_a_traceback_that_is_scrubbed(
+    monkeypatch, capsys, minimal_runner_snapshot
+):
     from app.services.canonical_import_apply import StagingTargetAttestation
 
     attestation = StagingTargetAttestation(
@@ -396,7 +418,9 @@ def test_e_the_runner_prints_a_traceback_that_is_scrubbed(monkeypatch, capsys):
     assert "Traceback" in captured.err
 
 
-def test_e_the_tunnel_is_closed_even_when_the_runner_raises(monkeypatch, capsys):
+def test_e_the_tunnel_is_closed_even_when_the_runner_raises(
+    monkeypatch, capsys, minimal_runner_snapshot
+):
     from app.services.canonical_import_apply import StagingTargetAttestation
 
     closed: list[int] = []
@@ -419,6 +443,14 @@ def test_e_the_tunnel_is_closed_even_when_the_runner_raises(monkeypatch, capsys)
     runner.main([])
 
     assert closed == [1]
+
+
+def test_e_the_real_runner_refuses_a_missing_snapshot(tmp_path, capsys):
+    missing = tmp_path / "missing-snapshot"
+
+    assert runner.main(["--snapshot-root", str(missing)]) == runner.EXIT_USAGE
+    captured = capsys.readouterr()
+    assert "snapshot directory not found" in captured.err
 
 
 # --- 6. the subprocess wiring itself ---------------------------------------

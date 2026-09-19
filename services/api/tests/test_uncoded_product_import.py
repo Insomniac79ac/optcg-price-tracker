@@ -11,7 +11,7 @@ transaction or not at all.
 import pytest
 from sqlalchemy import select
 
-from app.models import CanonicalCard, CardPrint, ReleaseProduct
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, Source
 from app.services import canonical_import_apply as A
 from app.services import print_import_planner as P
 from app.services.official_cardlist import OfficialCardEntry, RawField
@@ -168,6 +168,14 @@ def _applier(db, plan, *, authorised=(), renderings=None):
     db.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num varchar)"))
     if not db.execute(text("SELECT version_num FROM alembic_version")).first():
         db.execute(text("INSERT INTO alembic_version VALUES ('test')"))
+    for source_name in {
+        source_name
+        for rows in (renderings or {}).values()
+        for _, source_name in rows
+    }:
+        if db.scalar(select(Source.id).where(Source.name == source_name)) is None:
+            db.add(Source(name=source_name, base_url=f"https://{source_name}.example.test"))
+    db.flush()
     ev = {
         n: UncodedProductEvidence(
             product_name=n, source_catalogue="bandai_jp", source_series_id="550901",

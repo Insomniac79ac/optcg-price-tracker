@@ -9,6 +9,7 @@ happens on `card_prints.release_product_id` - never on an invented code.
 """
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.models import (
     CanonicalCard,
@@ -81,9 +82,15 @@ def catalogue(db_session):
         "pcc_p2": _print(db, nami, pcc, "p2"),
     }
     db.add(ReleaseProductAlias(product_id=pcc.id, alias_name=LABEL,
-                               alias_kind="source_rendering", source_url=None))
+                               alias_kind="source_rendering",
+                               source_id=db.query(Source).filter_by(name="snkrdunk").one().id,
+                               source_url=None))
     db.commit()
     return {"db": db, "prints": prints, "pcc": pcc, "op01": op01, "nami": nami}
+
+
+def _snkrdunk_source_id(db):
+    return db.query(Source).filter_by(name="snkrdunk").one().id
 
 
 def _ev(**kw):
@@ -137,7 +144,8 @@ def test_a_label_whose_product_holds_no_print_of_this_code_fails_closed(catalogu
     db = catalogue["db"]
     empty = _product(db, None, "プレミアムカードコレクション-ウタ-")
     db.add(ReleaseProductAlias(product_id=empty.id, alias_name="Premium Card Collection -Uta-",
-                               alias_kind="source_rendering", source_url=None))
+                               alias_kind="source_rendering",
+                               source_id=_snkrdunk_source_id(db), source_url=None))
     db.commit()
     with pytest.raises(ExactPrintApprovalError) as exc:
         resolve_exact_print(
@@ -200,9 +208,11 @@ def test_a_label_behind_two_products_refuses_rather_than_picking_one(catalogue):
     db = catalogue["db"]
     other = _product(db, None, "別の限定商品")
     db.add(ReleaseProductAlias(product_id=other.id, alias_name=LABEL,
-                               alias_kind="source_rendering", source_url=None))
-    db.commit()
-    assert resolve_uncoded_product_id(db, "snkrdunk", LABEL) is None
+                               alias_kind="source_rendering",
+                               source_id=_snkrdunk_source_id(db), source_url=None))
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
 
 
 # --- 3. coded products are unchanged ----------------------------------------
@@ -227,7 +237,8 @@ def test_a_source_rendering_on_a_CODED_product_is_never_answered_here(catalogue)
     """
     db = catalogue["db"]
     db.add(ReleaseProductAlias(product_id=catalogue["op01"].id, alias_name="ロマンスドーン",
-                               alias_kind="source_rendering", source_url=None))
+                               alias_kind="source_rendering",
+                               source_id=_snkrdunk_source_id(db), source_url=None))
     db.commit()
     assert resolve_uncoded_product_id(db, "snkrdunk", "ロマンスドーン") is None
 
@@ -236,7 +247,8 @@ def test_a_coded_label_that_reaches_the_gate_is_still_refused_as_unresolved(cata
     """The consequence, at the gate: nothing about the coded path changed."""
     db = catalogue["db"]
     db.add(ReleaseProductAlias(product_id=catalogue["op01"].id, alias_name="ロマンスドーン",
-                               alias_kind="source_rendering", source_url=None))
+                               alias_kind="source_rendering",
+                               source_id=_snkrdunk_source_id(db), source_url=None))
     db.commit()
     with pytest.raises(ExactPrintApprovalError) as exc:
         resolve_exact_print(db, card_print_id=catalogue["prints"]["op01_base"].id,
@@ -244,13 +256,8 @@ def test_a_coded_label_that_reaches_the_gate_is_still_refused_as_unresolved(cata
     assert exc.value.code == REFUSAL_UNRESOLVED_SOURCE_PRODUCT
 
 
-def test_the_rendering_lookup_is_source_agnostic_today(catalogue):
-    """A documented limit, pinned so it cannot change unnoticed.
-
-    `release_product_aliases` has no source column, so the same rendering
-    answers whichever source asks. Harmless while SNKRDUNK is the only source
-    with renderings; this test is what will fail if that stops being true.
-    """
+def test_the_rendering_lookup_is_source_scoped(catalogue):
+    """A storefront spelling can answer only inside its source namespace."""
     db = catalogue["db"]
-    assert resolve_uncoded_product_id(db, "yuyutei", LABEL) == catalogue["pcc"].id
+    assert resolve_uncoded_product_id(db, "yuyutei", LABEL) is None
     assert resolve_uncoded_product_id(db, "snkrdunk", LABEL) == catalogue["pcc"].id

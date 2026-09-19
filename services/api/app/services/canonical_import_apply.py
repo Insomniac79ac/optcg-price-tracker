@@ -90,7 +90,7 @@ from typing import Any, Iterable, Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias, Source
 from app.services import print_import_planner as planner
 from app.services.official_snapshot import normalize_for_comparison
 from app.services.print_import_planner import (
@@ -1792,12 +1792,18 @@ class CanonicalImportApplier:
         identity, so a second run adds nothing.
         """
         for name, product in sorted(products.items()):
-            for alias_name, _source_name in self._source_renderings.get(name, ()):
+            for alias_name, source_name in self._source_renderings.get(name, ()):
+                source = self._session.scalar(select(Source).where(Source.name == source_name))
+                if source is None:
+                    raise ApplyAborted(
+                        f"source rendering {alias_name!r} names unconfigured source {source_name!r}"
+                    )
                 exists = self._session.execute(
                     select(ReleaseProductAlias).where(
                         ReleaseProductAlias.product_id == product.id,
                         ReleaseProductAlias.alias_kind == SOURCE_RENDERING_KIND,
                         ReleaseProductAlias.alias_name == alias_name,
+                        ReleaseProductAlias.source_id == source.id,
                     )
                 ).scalars().first()
                 if exists is not None:
@@ -1807,6 +1813,7 @@ class CanonicalImportApplier:
                         product_id=product.id,
                         alias_name=alias_name,
                         alias_kind=SOURCE_RENDERING_KIND,
+                        source_id=source.id,
                         source_url=None,
                     )
                 )

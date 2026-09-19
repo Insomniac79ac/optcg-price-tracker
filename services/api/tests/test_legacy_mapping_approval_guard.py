@@ -286,10 +286,9 @@ def test_an_already_approved_print_less_row_is_not_demoted_by_reading_it(client,
     assert _snapshot(row) == before, "reading must never rewrite a legacy row"
 
 
-def test_re_approving_an_already_approved_legacy_row_is_not_a_transition(client, fixtures):
-    """Re-running approve on a row that is already approved is a no-op in
-    review terms, so it is allowed rather than refused - the guard governs
-    entering `approved`, and this row is already there."""
+def test_re_approving_an_already_approved_legacy_row_cannot_reactivate_it(client, fixtures):
+    """Historical approval stays readable, but a new activation mutation
+    must satisfy exact-print authority."""
     row = _mapping(
         fixtures, review_status="approved", card_print_id=None,
         url="https://yuyu-tei.jp/legacy/re-approve",
@@ -297,10 +296,11 @@ def test_re_approving_an_already_approved_legacy_row_is_not_a_transition(client,
 
     response = client.post(f"/admin/source-mappings/{row.id}/approve")
 
-    assert response.status_code == 200
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT
     fixtures["db"].refresh(row)
     assert row.review_status == "approved"
-    assert row.card_print_id is None, "and no print was invented for it"
+    assert row.card_print_id is None
 
 
 # --- 6: no alternate approval endpoint bypasses the rule ---------------------
@@ -325,7 +325,7 @@ def test_bulk_approve_refuses_print_less_rows_and_still_applies_the_rest(client,
     assert response.status_code == 200, response.text
     results = {r["mapping_id"]: r for r in response.json()["results"]}
     assert results[legacy.id]["ok"] is False
-    assert results[legacy.id]["error"] == REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT
+    assert results[legacy.id]["error"] == "skipped_legacy_compatibility"
     assert results[exact.id]["ok"] is True
 
     fixtures["db"].refresh(legacy)
@@ -351,10 +351,8 @@ def test_bulk_reject_still_works_on_a_print_less_row(client, fixtures):
     assert legacy.review_status == "rejected"
 
 
-def test_replace_card_cannot_approve_a_print_less_row(client, fixtures):
-    """replace-card reassigns the legacy card pointer and can approve in the
-    same call. It resolves no exact print, so approving through it is refused
-    - and the card reassignment must not land either."""
+def test_replace_card_approve_flag_is_ignored_for_a_print_less_row(client, fixtures):
+    """The retained route is a compatibility alias, not an approval path."""
     legacy = _mapping(
         fixtures, review_status="needs_review", card_print_id=None,
         url="https://yuyu-tei.jp/replace/legacy",
@@ -366,8 +364,31 @@ def test_replace_card_cannot_approve_a_print_less_row(client, fixtures):
         json={"card_id": fixtures["card"].id, "approve": True},
     )
 
-    assert response.status_code == 409
-    assert response.json()["detail"]["code"] == REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT
+    assert response.status_code == 200, response.text
+    assert response.json()["deprecated_approve_requested"] is True
+    assert response.json()["pricing_identity_changed"] is False
+    fixtures["db"].refresh(legacy)
+    assert _snapshot(legacy) == before
+
+
+def test_replace_card_cannot_reverify_an_approved_grandfathered_row(client, fixtures):
+    legacy = _mapping(
+        fixtures,
+        review_status="approved",
+        card_print_id=None,
+        url="https://yuyu-tei.jp/replace/approved-legacy",
+        manual_verified=False,
+    )
+    before = _snapshot(legacy)
+
+    response = client.post(
+        f"/admin/source-mappings/{legacy.id}/replace-card",
+        json={"card_id": fixtures["card"].id, "approve": True},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["deprecated_approve_requested"] is True
+    assert response.json()["pricing_identity_changed"] is False
     fixtures["db"].refresh(legacy)
     assert _snapshot(legacy) == before
 

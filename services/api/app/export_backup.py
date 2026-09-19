@@ -16,7 +16,11 @@ def main() -> None:
         help=f"Output JSON file path (default: {DEFAULT_OUTPUT})",
     )
     parser.add_argument(
-        "--include-prices", action="store_true", help="Include price_observations"
+        "--include-prices",
+        action="store_true",
+        help=(
+            "Include price observations, collection-attempt provenance, and market index history"
+        ),
     )
     parser.add_argument(
         "--include-raw-snapshots", action="store_true", help="Include raw_snapshots"

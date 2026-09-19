@@ -14,7 +14,7 @@
 # directly to whatever DATABASE_URL points at via alembic).
 #
 # Usage:
-#   DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db bash scripts/staging_migrate.sh
+#   DATABASE_URL=postgresql+psycopg://user:placeholder@host:5432/db bash scripts/staging_migrate.sh
 #
 # Env vars:
 #   DATABASE_URL   required. Full SQLAlchemy URL. Railway's Postgres plugin
@@ -41,7 +41,7 @@ echo "APP_ENV=$APP_ENV"
 
 if [[ -z "${DATABASE_URL:-}" ]]; then
   echo "FAIL: DATABASE_URL is not set." >&2
-  echo "Usage: DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db bash scripts/staging_migrate.sh" >&2
+  echo "Usage: DATABASE_URL=postgresql+psycopg://user:placeholder@host:5432/db bash scripts/staging_migrate.sh" >&2
   exit 1
 fi
 

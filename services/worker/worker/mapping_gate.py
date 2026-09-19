@@ -1,37 +1,33 @@
-"""The one rule for whether a source mapping may contribute a price.
+"""The worker-local rule for whether a source mapping may write a price.
 
 A price row is a claim that a specific printing sold for a specific amount at
 a specific source. A mapping is what authorises that claim, and it authorises
 it only in one state:
 
   * `is_active` - the mapping has not been withdrawn; and
-  * `review_status == 'approved'` - a human confirmed, through the api's
-    exact-print gate (app.services.exact_print_approval), which printing this
-    listing actually sells.
+  * `review_status == 'approved'` - a human confirmed the mapping;
+  * `card_print_id IS NOT NULL` - the mapping identifies an exact print;
+  * the referenced print exists, is active, and is verified; and
+  * the mapping's source agrees with the writer's requested/adapted source.
 
 `needs_review` is the explicit "nobody has confirmed this yet" state and
 `rejected` is the explicit "this is wrong" state. Neither can back a price,
 and an active-but-unapproved row is precisely the case that reads as safe and
 is not: it is live, it is fetchable, and nothing about it has been verified.
 
-WHY THIS MODULE EXISTS. The rule was already enforced in three separate write
-paths - both production collectors' `validate_mapping_for_write` and the
-SNKRDUNK candidate-price ingest - and NOT in `refresh_prices`, which filtered
-on `is_active` alone and would happily price a `needs_review` mapping. The
-collectors and the api are separate deployables that share no code, so their
-copies necessarily stay copies; within the worker, though, there is no reason
-for two jobs to spell the same rule two ways and drift again.
+The API and worker are separate deployables that share no model code, so this
+module provides the smallest reusable worker-side contract for generic refresh
+and candidate-price ingestion. Dedicated collector guards remain unchanged.
 
-WHAT THIS DELIBERATELY DOES NOT DO. It says nothing about lineage. A mapping
-that names an exact `card_print_id` and a legacy one that names only a
-`card_id` are both priceable; which columns the resulting observation carries
-is the writer's business (copied from the mapping, both-or-neither), not this
-gate's. And it is a gate on WRITING new prices only - observations already
-written stay exactly as they are when a mapping is later unapproved, because
-they record what was true when they were taken.
+This is a gate on WRITING new prices only. Historical observations and legacy
+card-only mappings remain readable and unchanged.
 """
 
-from worker.models import SourceCardMapping
+from dataclasses import dataclass
+
+from sqlalchemy.orm import Session
+
+from worker.models import CardPrint, Source, SourceCardMapping
 
 APPROVED_REVIEW_STATUS = "approved"
 
@@ -40,9 +36,72 @@ APPROVED_REVIEW_STATUS = "approved"
 PRICEABLE_MAPPING_CONDITIONS = (
     SourceCardMapping.is_active.is_(True),
     SourceCardMapping.review_status == APPROVED_REVIEW_STATUS,
+    SourceCardMapping.card_print_id.is_not(None),
+)
+
+PRICEABLE_PRINT_CONDITIONS = (
+    CardPrint.is_active.is_(True),
+    CardPrint.verification_status == "verified",
 )
 
 
+@dataclass(frozen=True)
+class PriceableMappingLineage:
+    """Authoritative IDs copied onto a new observation after validation."""
+
+    mapping_id: int
+    card_id: int | None
+    card_print_id: int
+    source_id: int
+
+
 def is_priceable_mapping(mapping: SourceCardMapping) -> bool:
-    """In-Python form of the same rule, for callers holding a loaded row."""
-    return bool(mapping.is_active) and mapping.review_status == APPROVED_REVIEW_STATUS
+    """Cheap row-local portion of the contract.
+
+    Callers that can write must still use ``load_priceable_mapping_lineage``
+    so the referenced print and source are checked in the database.
+    """
+    return (
+        bool(mapping.is_active)
+        and mapping.review_status == APPROVED_REVIEW_STATUS
+        and mapping.card_print_id is not None
+    )
+
+
+def load_priceable_mapping_lineage(
+    db: Session,
+    mapping_id: int,
+    *,
+    expected_source_name: str,
+) -> PriceableMappingLineage | None:
+    """Return authoritative write lineage only when the full contract holds.
+
+    The scalar query deliberately reloads current database state rather than
+    trusting an ORM mapping selected earlier in a potentially slow fetch.
+    """
+    row = (
+        db.query(
+            SourceCardMapping.id,
+            SourceCardMapping.card_id,
+            SourceCardMapping.card_print_id,
+            SourceCardMapping.source_id,
+        )
+        .join(Source, Source.id == SourceCardMapping.source_id)
+        .join(CardPrint, CardPrint.id == SourceCardMapping.card_print_id)
+        .filter(
+            SourceCardMapping.id == mapping_id,
+            Source.name == expected_source_name,
+            *PRICEABLE_MAPPING_CONDITIONS,
+            *PRICEABLE_PRINT_CONDITIONS,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        return None
+
+    return PriceableMappingLineage(
+        mapping_id=row.id,
+        card_id=row.card_id,
+        card_print_id=row.card_print_id,
+        source_id=row.source_id,
+    )

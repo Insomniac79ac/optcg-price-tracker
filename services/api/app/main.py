@@ -12,6 +12,7 @@ from app.api.admin_cards import router as admin_cards_router
 from app.api.admin_catalog_coverage import router as admin_catalog_coverage_router
 from app.api.admin_snkrdunk_matching import router as admin_snkrdunk_matching_router
 from app.api.admin_source_mapping_quality import router as admin_source_mapping_quality_router
+from app.api.admin_source_mapping_proposals import router as admin_source_mapping_proposals_router
 from app.api.admin_data_retention import router as admin_data_retention_router
 from app.api.admin_db_backups import router as admin_db_backups_router
 from app.api.admin_db_index_audit import router as admin_db_index_audit_router
@@ -181,6 +182,7 @@ app.include_router(card_audit_router)
 # segment structurally matches an int path param before FastAPI's own type
 # validation ever runs).
 app.include_router(admin_source_mapping_quality_router)
+app.include_router(admin_source_mapping_proposals_router)
 app.include_router(source_mappings_router)
 app.include_router(collection_router)
 app.include_router(collector_router)

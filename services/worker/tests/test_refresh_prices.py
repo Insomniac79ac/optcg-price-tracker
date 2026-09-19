@@ -9,6 +9,7 @@ from worker.jobs import refresh_prices as refresh_prices_module
 from worker.jobs.refresh_prices import build_arg_parser, log_run_config, main, refresh_prices
 from worker.models import (
     Card,
+    CardPrint,
     CollectionItem,
     MarketIntelligenceReport,
     MarketSignalEvent,
@@ -33,8 +34,10 @@ class StubAdapter:
     def __init__(self, source_name: str, fail_for: set[str] | None = None):
         self.source_name = source_name
         self._fail_for = fail_for or set()
+        self.fetched_mapping_ids: list[int] = []
 
     def fetch_card(self, mapping) -> RawSnapshotData:
+        self.fetched_mapping_ids.append(mapping.id)
         if mapping.source_card_id in self._fail_for:
             raise FetchError(f"boom: {mapping.source_card_id}")
         return RawSnapshotData(
@@ -72,6 +75,31 @@ def seed_source_and_card(db_session, source_name: str, card_code: str) -> tuple[
 def make_source_card_mapping(
     db_session, source: Source, card: Card, source_card_id: str, **overrides
 ) -> SourceCardMapping:
+    print_is_active = overrides.pop("print_is_active", True)
+    print_verification_status = overrides.pop(
+        "print_verification_status", "verified"
+    )
+    if "card_print_id" not in overrides:
+        print_row = CardPrint(
+            verification_status=print_verification_status,
+            is_active=print_is_active,
+        )
+        db_session.add(print_row)
+        db_session.flush()
+        overrides["card_print_id"] = print_row.id
+    elif overrides["card_print_id"] is not None:
+        print_id = overrides["card_print_id"]
+        print_row = db_session.get(CardPrint, print_id)
+        if print_row is None:
+            db_session.add(
+                CardPrint(
+                    id=print_id,
+                    verification_status=print_verification_status,
+                    is_active=print_is_active,
+                )
+            )
+            db_session.flush()
+
     fields = dict(
         card_id=card.id,
         source_id=source.id,
@@ -325,20 +353,24 @@ def test_market_report_failure_does_not_crash_refresh_job(db_session, monkeypatc
 # --- print lineage ------------------------------------------------------
 
 
-def test_legacy_mapping_creates_observation_with_null_lineage(db_session):
+def test_legacy_mapping_is_skipped_without_fetch_or_observation(db_session):
     source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
-    mapping = make_source_card_mapping(db_session, source, card, "OP01-001")
+    mapping = make_source_card_mapping(
+        db_session, source, card, "OP01-001", card_print_id=None
+    )
     assert mapping.card_print_id is None
-    adapters = {"yuyutei": StubAdapter("yuyutei")}
+    adapter = StubAdapter("yuyutei")
 
-    summary = refresh_prices(limit=10, db=db_session, adapters=adapters)
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": adapter}
+    )
 
     assert summary.status == "completed"
-    observation = db_session.query(PriceObservation).one()
-    assert observation.source_card_mapping_id is None
-    assert observation.card_print_id is None
-    assert observation.card_id == card.id
-    assert observation.source_id == source.id
+    assert summary.mappings_checked == 0
+    assert summary.snapshots_created == 0
+    assert summary.observations_inserted == 0
+    assert adapter.fetched_mapping_ids == []
+    assert db_session.query(PriceObservation).count() == 0
 
 
 def test_print_linked_mapping_creates_observation_with_lineage(db_session):
@@ -356,6 +388,140 @@ def test_print_linked_mapping_creates_observation_with_lineage(db_session):
     # legacy mapping's own card/source, not derived from the print.
     assert observation.card_id == card.id
     assert observation.source_id == source.id
+
+
+def test_ineligible_mapping_before_limit_does_not_hide_exact_mapping(db_session):
+    source, legacy_card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    exact_card = Card(
+        card_code="OP01-002", name_en="Exact Card", name_jp=None,
+        set_code="OP01", rarity="L", variant=None, language="jp",
+    )
+    db_session.add(exact_card)
+    db_session.flush()
+    legacy = make_source_card_mapping(
+        db_session, source, legacy_card, "OP01-001", card_print_id=None
+    )
+    exact = make_source_card_mapping(db_session, source, exact_card, "OP01-002")
+    assert legacy.id < exact.id
+    adapter = StubAdapter("yuyutei")
+
+    summary = refresh_prices(
+        limit=1, db=db_session, adapters={"yuyutei": adapter}
+    )
+
+    assert summary.mappings_checked == 1
+    assert adapter.fetched_mapping_ids == [exact.id]
+    observation = db_session.query(PriceObservation).one()
+    assert observation.source_card_mapping_id == exact.id
+    assert observation.card_print_id == exact.card_print_id
+
+
+@pytest.mark.parametrize(
+    ("print_is_active", "print_verification_status"),
+    ((False, "verified"), (True, "unverified")),
+)
+def test_inactive_or_unverified_print_is_skipped_without_fetch(
+    db_session, print_is_active, print_verification_status
+):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(
+        db_session,
+        source,
+        card,
+        "OP01-001",
+        print_is_active=print_is_active,
+        print_verification_status=print_verification_status,
+    )
+    adapter = StubAdapter("yuyutei")
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": adapter}
+    )
+
+    assert summary.mappings_checked == 0
+    assert adapter.fetched_mapping_ids == []
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_mapping_with_missing_print_is_skipped_without_fetch(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001")
+    print_row = db_session.get(CardPrint, mapping.card_print_id)
+    db_session.delete(print_row)
+    db_session.flush()
+    adapter = StubAdapter("yuyutei")
+
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": adapter}
+    )
+
+    assert summary.mappings_checked == 0
+    assert adapter.fetched_mapping_ids == []
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_adapter_source_mismatch_is_rejected_without_fetch(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    make_source_card_mapping(db_session, source, card, "OP01-001")
+    wrong_source_adapter = StubAdapter("snkrdunk")
+
+    summary = refresh_prices(
+        limit=10,
+        db=db_session,
+        adapters={"yuyutei": wrong_source_adapter},
+    )
+
+    assert summary.mappings_checked == 0
+    assert summary.mappings_failed == 0
+    assert wrong_source_adapter.fetched_mapping_ids == []
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_exact_yuyutei_mapping_still_writes_sell_and_buy_with_mapping_lineage(
+    db_session,
+):
+    from worker.adapters.mock_yuyutei import MockYuyuTeiAdapter
+
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001")
+
+    summary = refresh_prices(
+        limit=10,
+        db=db_session,
+        adapters={"yuyutei": MockYuyuTeiAdapter()},
+        source="yuyutei",
+    )
+
+    assert summary.status == "completed"
+    observations = db_session.query(PriceObservation).all()
+    assert {observation.price_type for observation in observations} == {"sell", "buy"}
+    assert all(observation.source_card_mapping_id == mapping.id for observation in observations)
+    assert all(observation.card_print_id == mapping.card_print_id for observation in observations)
+    assert all(observation.source_id == source.id for observation in observations)
+    assert all(observation.card_id == card.id for observation in observations)
+
+
+def test_mapping_is_rechecked_after_fetch_before_observation_write(db_session):
+    source, card = seed_source_and_card(db_session, "yuyutei", "OP01-001")
+    mapping = make_source_card_mapping(db_session, source, card, "OP01-001")
+
+    class PrintInvalidatingAdapter(StubAdapter):
+        def parse_snapshot(self, snapshot):
+            print_row = db_session.get(CardPrint, mapping.card_print_id)
+            print_row.is_active = False
+            db_session.flush()
+            return super().parse_snapshot(snapshot)
+
+    adapter = PrintInvalidatingAdapter("yuyutei")
+    summary = refresh_prices(
+        limit=10, db=db_session, adapters={"yuyutei": adapter}
+    )
+
+    assert adapter.fetched_mapping_ids == [mapping.id]
+    assert summary.mappings_failed == 1
+    assert summary.snapshots_created == 1
+    assert summary.observations_inserted == 0
+    assert db_session.query(PriceObservation).count() == 0
 
 
 def test_mock_adapter_and_live_style_adapter_apply_the_same_lineage_logic(db_session):
