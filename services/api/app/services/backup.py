@@ -468,6 +468,18 @@ def validate_backup(backup: Any) -> ValidationResult:
                     f"release_product_aliases[{i}] references missing product_id "
                     f"{row.get('product_id')!r}"
                 )
+            alias_kind = row.get("alias_kind")
+            alias_source_id = row.get("source_id")
+            if alias_kind == "source_rendering" and alias_source_id not in source_ids:
+                errors.append(
+                    f"release_product_aliases[{i}] source_rendering references missing "
+                    f"source_id {alias_source_id!r}"
+                )
+            if alias_kind != "source_rendering" and alias_source_id is not None:
+                errors.append(
+                    f"release_product_aliases[{i}] authority alias must not carry "
+                    f"source_id {alias_source_id!r}"
+                )
 
         for i, row in enumerate(tables.get("card_prints", [])):
             if row.get("canonical_card_id") not in canonical_card_ids:

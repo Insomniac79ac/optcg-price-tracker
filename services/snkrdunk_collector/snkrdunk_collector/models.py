@@ -217,5 +217,6 @@ class ReleaseProductAlias(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(Integer, index=True)
+    source_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     alias_name: Mapped[str] = mapped_column(String(255))
     alias_kind: Mapped[str] = mapped_column(String(32))
