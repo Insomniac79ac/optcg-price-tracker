@@ -18,17 +18,14 @@ derives it, and never falls back to the card code.
 
 Concretely, per candidate: find the mapping for (snkrdunk, source_url) - the
 database's own uniqueness contract for a listing - require it to be active
-and `approved`, and stamp the observation with the mapping's own
-`card_print_id`, `source_card_mapping_id` and `card_id`. `card_id` may be
-NULL on a print-authoritative mapping and is passed through exactly as it is
-found; the composite FK
+and `approved`, require its print to exist, be active, and be verified, and
+stamp the observation with the mapping's own `card_print_id`,
+`source_card_mapping_id` and `card_id`. `card_id` may be NULL on a
+print-authoritative mapping and is passed through exactly as it is found; the composite FK
 (source_card_mapping_id, card_print_id, source_id) is what keeps the row
 honest, and it is enforced by the database, not here.
 
-LEGACY MAPPINGS STILL PRICE. A mapping that predates exact prints
-(card_print_id IS NULL, card_id set) is still ingested, and stamps neither
-lineage column - the same both-or-neither rule refresh_prices follows, and
-the same one ck_price_observations_lineage_paired enforces.
+Legacy card-only mappings remain stored but cannot authorize a NEW price.
 """
 
 import argparse
@@ -39,10 +36,15 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from worker.db import SessionLocal
-from worker.mapping_gate import PRICEABLE_MAPPING_CONDITIONS
+from worker.mapping_gate import (
+    PRICEABLE_MAPPING_CONDITIONS,
+    PRICEABLE_PRINT_CONDITIONS,
+    PriceableMappingLineage,
+    load_priceable_mapping_lineage,
+)
 from worker.matching.candidate_store import get_snkrdunk_source
 from worker.snkrdunk_urls import equivalent_listing_urls
-from worker.models import PriceObservation, SnkrdunkCandidate, SourceCardMapping
+from worker.models import CardPrint, PriceObservation, SnkrdunkCandidate, SourceCardMapping
 
 logger = logging.getLogger(__name__)
 
@@ -98,48 +100,43 @@ def _approved_mapping_for(
 
       * no source_url to key on;
       * no mapping, or one that is inactive or not `approved`;
-      * a mapping that names neither a print nor a legacy card, which
-        identifies nothing at all and must never become an observation.
+      * a card-only mapping; or
+      * a mapping whose print is missing, inactive, or unverified.
     """
     if not candidate.source_url:
         return None
 
     mapping = (
         db.query(SourceCardMapping)
+        .join(CardPrint, CardPrint.id == SourceCardMapping.card_print_id)
         .filter(
             SourceCardMapping.source_id == source_id,
             SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
             # The same active+approved rule refresh_prices and both
             # production collectors apply - see worker.mapping_gate.
             *PRICEABLE_MAPPING_CONDITIONS,
+            *PRICEABLE_PRINT_CONDITIONS,
         )
         .order_by(SourceCardMapping.id)
         .first()
     )
-    if mapping is None:
-        return None
-    if mapping.card_print_id is None and mapping.card_id is None:
-        return None
     return mapping
 
 
 def _is_duplicate(
     db: Session,
     candidate: SnkrdunkCandidate,
-    mapping: SourceCardMapping,
-    source_id: int,
+    lineage: PriceableMappingLineage,
     observed_at: datetime,
 ) -> bool:
     """Candidate-based dedup first (cheap and exact once candidate_id is
     populated), falling back to a same-day composite match for observations
     that predate the candidate_id column or were created via another path.
 
-    The fallback matches on whatever actually identifies the row. For a
-    print-authoritative observation that is the lineage pair, NOT card_id:
+    The fallback matches on the exact lineage pair, NOT card_id:
     `card_id` is NULL there, and `PriceObservation.card_id == None` renders as
     `card_id IS NULL`, which would match every other print-authoritative row
     in the same day at the same price and suppress a legitimate observation.
-    Legacy rows keep the card_id comparison they always had.
     """
     existing_by_candidate = (
         db.query(PriceObservation).filter_by(candidate_id=candidate.id).first()
@@ -151,20 +148,17 @@ def _is_duplicate(
     day_end = day_start + timedelta(days=1)
 
     query = db.query(PriceObservation).filter(
-        PriceObservation.source_id == source_id,
+        PriceObservation.source_id == lineage.source_id,
         PriceObservation.price_type == PRICE_TYPE,
         PriceObservation.price_jpy == candidate.price_jpy,
         PriceObservation.condition_label == candidate.condition_label,
         PriceObservation.observed_at >= day_start,
         PriceObservation.observed_at < day_end,
     )
-    if mapping.card_print_id is not None:
-        query = query.filter(
-            PriceObservation.source_card_mapping_id == mapping.id,
-            PriceObservation.card_print_id == mapping.card_print_id,
-        )
-    else:
-        query = query.filter(PriceObservation.card_id == mapping.card_id)
+    query = query.filter(
+        PriceObservation.source_card_mapping_id == lineage.mapping_id,
+        PriceObservation.card_print_id == lineage.card_print_id,
+    )
 
     return query.first() is not None
 
@@ -219,9 +213,24 @@ def ingest_snkrdunk_candidate_prices(
                 )
                 continue
 
+            lineage = load_priceable_mapping_lineage(
+                db,
+                mapping.id,
+                expected_source_name="snkrdunk",
+            )
+            if lineage is None:
+                summary.candidates_skipped_no_approved_mapping += 1
+                logger.info(
+                    "Candidate %s mapping %s no longer has valid SNKRDUNK "
+                    "exact-print lineage; skipping.",
+                    candidate.id,
+                    mapping.id,
+                )
+                continue
+
             observed_at = candidate.created_at or datetime.now(timezone.utc)
 
-            if _is_duplicate(db, candidate, mapping, source.id, observed_at):
+            if _is_duplicate(db, candidate, lineage, observed_at):
                 summary.observations_skipped_duplicate += 1
                 continue
 
@@ -229,24 +238,13 @@ def ingest_snkrdunk_candidate_prices(
             if dry_run:
                 continue
 
-            # Lineage is copied from the mapping, never derived - and stamped
-            # both-or-neither, which is what ck_price_observations_lineage_
-            # paired requires. This mirrors refresh_prices exactly, so the
-            # Yuyu-Tei and SNKRDUNK write paths cannot drift apart.
-            if mapping.card_print_id is not None:
-                source_card_mapping_id = mapping.id
-                observation_card_print_id = mapping.card_print_id
-            else:
-                source_card_mapping_id = None
-                observation_card_print_id = None
-
             db.add(
                 PriceObservation(
                     # Straight through from the mapping, NULL included. The
                     # observation must not claim a legacy card the mapping
                     # itself does not claim.
-                    card_id=mapping.card_id,
-                    source_id=source.id,
+                    card_id=lineage.card_id,
+                    source_id=lineage.source_id,
                     observed_at=observed_at,
                     price_type=PRICE_TYPE,
                     price_jpy=candidate.price_jpy,
@@ -255,8 +253,8 @@ def ingest_snkrdunk_candidate_prices(
                     listing_count=candidate.listing_count,
                     raw_snapshot_id=None,
                     candidate_id=candidate.id,
-                    source_card_mapping_id=source_card_mapping_id,
-                    card_print_id=observation_card_print_id,
+                    source_card_mapping_id=lineage.mapping_id,
+                    card_print_id=lineage.card_print_id,
                 )
             )
             # Flush so later candidates in this same run see this row for

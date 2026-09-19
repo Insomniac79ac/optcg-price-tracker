@@ -15,8 +15,19 @@ from worker.db import SessionLocal
 from worker.job_locks import LockHeldError, with_job_lock
 from worker.market_report import generate_market_report
 from worker.market_signal_events import snapshot_market_signals
-from worker.mapping_gate import PRICEABLE_MAPPING_CONDITIONS
-from worker.models import PriceObservation, PriceRefreshRun, RawSnapshot, Source, SourceCardMapping
+from worker.mapping_gate import (
+    PRICEABLE_MAPPING_CONDITIONS,
+    PRICEABLE_PRINT_CONDITIONS,
+    load_priceable_mapping_lineage,
+)
+from worker.models import (
+    CardPrint,
+    PriceObservation,
+    PriceRefreshRun,
+    RawSnapshot,
+    Source,
+    SourceCardMapping,
+)
 from worker.portfolio_valuation import create_portfolio_valuation_snapshot
 from worker.settings import settings
 
@@ -172,17 +183,24 @@ def _refresh_prices_locked(
                 adapters = _build_adapters(source)
 
             sources_by_id = {src.id: src for src in db.query(Source).all()}
+            adapted_source_names = tuple(
+                name
+                for name, adapter in adapters.items()
+                if adapter.source_name == name
+            )
 
-            # Active AND approved. Filtering on is_active alone - which this
-            # did until 4F-5B - let a `needs_review` mapping be scraped and
-            # priced: live and fetchable, but with nobody having confirmed
-            # which printing it sells. Both production collectors and the
-            # SNKRDUNK candidate-price ingest already refused that; see
-            # worker.mapping_gate for the single statement of the rule.
+            # Apply the full exact-print contract before LIMIT, so legacy or
+            # invalid mappings neither consume the run budget nor trigger a
+            # source fetch.
             query = (
                 db.query(SourceCardMapping)
                 .join(Source, SourceCardMapping.source_id == Source.id)
-                .filter(*PRICEABLE_MAPPING_CONDITIONS)
+                .join(CardPrint, CardPrint.id == SourceCardMapping.card_print_id)
+                .filter(
+                    Source.name.in_(adapted_source_names),
+                    *PRICEABLE_MAPPING_CONDITIONS,
+                    *PRICEABLE_PRINT_CONDITIONS,
+                )
             )
             if source and source != "all":
                 query = query.filter(Source.name == source)
@@ -202,6 +220,16 @@ def _refresh_prices_locked(
                         src.name,
                         mapping.id,
                     )
+                    continue
+                if adapter.source_name != src.name:
+                    logger.warning(
+                        "Adapter source '%s' does not match mapping source '%s'; "
+                        "skipping mapping %s.",
+                        adapter.source_name,
+                        src.name,
+                        mapping.id,
+                    )
+                    mappings_failed += 1
                     continue
 
                 try:
@@ -263,21 +291,29 @@ def _refresh_prices_locked(
 
                 observations_parsed += len(observations)
 
-                # Lineage is copied straight from the mapping, never derived:
-                # a print-linked mapping stamps both fields together, a
-                # legacy (card_print_id is None) mapping stamps neither.
-                if mapping.card_print_id is not None:
-                    source_card_mapping_id = mapping.id
-                    observation_card_print_id = mapping.card_print_id
-                else:
-                    source_card_mapping_id = None
-                    observation_card_print_id = None
+                # Re-read the complete invariant at the mutation boundary.
+                # A mapping or print may have been withdrawn while its source
+                # page was being fetched/parsed; that raw evidence remains,
+                # but it must not authorize a new price observation.
+                lineage = load_priceable_mapping_lineage(
+                    db,
+                    mapping.id,
+                    expected_source_name=adapter.source_name,
+                )
+                if lineage is None:
+                    logger.warning(
+                        "Mapping %s no longer has valid exact-print lineage; "
+                        "skipping parsed observations.",
+                        mapping.id,
+                    )
+                    mappings_failed += 1
+                    continue
 
                 for observation in observations:
                     db.add(
                         PriceObservation(
-                            card_id=mapping.card_id,
-                            source_id=src.id,
+                            card_id=lineage.card_id,
+                            source_id=lineage.source_id,
                             observed_at=observation.observed_at,
                             price_type=observation.price_type,
                             price_jpy=observation.price_jpy,
@@ -285,8 +321,8 @@ def _refresh_prices_locked(
                             stock_status=observation.stock_status,
                             listing_count=observation.listing_count,
                             raw_snapshot_id=raw_snapshot.id,
-                            source_card_mapping_id=source_card_mapping_id,
-                            card_print_id=observation_card_print_id,
+                            source_card_mapping_id=lineage.mapping_id,
+                            card_print_id=lineage.card_print_id,
                         )
                     )
                     observations_inserted += 1

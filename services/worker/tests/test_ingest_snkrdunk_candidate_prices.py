@@ -1,15 +1,23 @@
 """Ingestion is driven by the listing's APPROVED MAPPING, not by the
 candidate's legacy card pointer - see the job's module docstring.
 
-Every test that expects an observation therefore seeds a mapping for the
-candidate's source_url, because that is what production requires. The
-`legacy_mapping` helper keeps the pre-4F shape (card_id set, no print) so the
-old behaviour stays proven; `print_mapping` is the new print-authoritative
-shape (card_print_id set, card_id NULL).
+Every test that expects an observation therefore seeds an active, verified
+print and a mapping for the candidate's source_url. The `legacy_mapping`
+helper keeps the pre-4F shape (card_id set, no print) solely to prove that it
+is now rejected; `print_mapping` is the print-authoritative shape.
 """
 
+import pytest
+
 from worker.jobs.ingest_snkrdunk_candidate_prices import ingest_snkrdunk_candidate_prices
-from worker.models import Card, PriceObservation, Source, SnkrdunkCandidate, SourceCardMapping
+from worker.models import (
+    Card,
+    CardPrint,
+    PriceObservation,
+    SnkrdunkCandidate,
+    Source,
+    SourceCardMapping,
+)
 
 CANDIDATE_URL = "https://snkrdunk.com/trading-cards/op01-001-luffy-l"
 
@@ -44,14 +52,22 @@ def legacy_mapping(db_session, source, card, **overrides) -> SourceCardMapping:
 
 
 def print_mapping(db_session, source, card_print_id: int = 4242, **overrides) -> SourceCardMapping:
-    """A print-authoritative mapping: the exact print, and no legacy card.
-
-    card_print_id is a plain integer in worker's mirror (the api's migrations
-    own the card_prints FK), so this needs no card_prints row - the
-    cross-table lineage constraints are proven against the real schema in
-    tests/test_refresh_prices_print_lineage_postgres.py and the api's
-    end-to-end test, not here.
-    """
+    """A print-authoritative mapping: the exact print, and no legacy card."""
+    print_is_active = overrides.pop("print_is_active", True)
+    print_verification_status = overrides.pop(
+        "print_verification_status", "verified"
+    )
+    if card_print_id is not None:
+        print_row = db_session.get(CardPrint, card_print_id)
+        if print_row is None:
+            db_session.add(
+                CardPrint(
+                    id=card_print_id,
+                    verification_status=print_verification_status,
+                    is_active=print_is_active,
+                )
+            )
+            db_session.flush()
     fields = dict(
         card_id=None,
         source_id=source.id,
@@ -87,33 +103,20 @@ def make_candidate(db_session, card, **overrides) -> SnkrdunkCandidate:
     return candidate
 
 
-def test_legacy_mapping_candidate_creates_card_keyed_observation(db_session):
-    """The pre-4F shape, unchanged: a legacy mapping still prices, still
-    stamps card_id, and still stamps neither lineage column."""
+def test_legacy_mapping_candidate_is_rejected_without_observation(db_session):
     source, card = seed_source_and_card(db_session)
     legacy_mapping(db_session, source, card)
-    candidate = make_candidate(db_session, card)
+    make_candidate(db_session, card)
 
     summary = ingest_snkrdunk_candidate_prices(db=db_session)
 
     assert summary.candidates_checked == 1
-    assert summary.observations_created == 1
+    assert summary.observations_created == 0
     assert summary.observations_skipped_duplicate == 0
     assert summary.candidates_skipped_unmatched == 0
     assert summary.candidates_skipped_missing_price == 0
-
-    observation = db_session.query(PriceObservation).one()
-    assert observation.card_id == card.id
-    assert observation.price_type == "floor"
-    assert observation.price_jpy == 1500
-    assert observation.condition_label == "near_mint"
-    assert observation.listing_count == 3
-    assert observation.stock_status is None
-    assert observation.raw_snapshot_id is None
-    assert observation.candidate_id == candidate.id
-    assert observation.observed_at is not None
-    assert observation.source_card_mapping_id is None
-    assert observation.card_print_id is None
+    assert summary.candidates_skipped_no_approved_mapping == 1
+    assert db_session.query(PriceObservation).count() == 0
 
 
 def test_unmatched_candidate_is_skipped(db_session):
@@ -153,7 +156,7 @@ def test_missing_price_is_skipped(db_session):
 
 def test_duplicate_candidate_does_not_create_duplicate_observation(db_session):
     source, card = seed_source_and_card(db_session)
-    legacy_mapping(db_session, source, card)
+    print_mapping(db_session, source)
     make_candidate(db_session, card)
 
     first = ingest_snkrdunk_candidate_prices(db=db_session)
@@ -168,7 +171,7 @@ def test_duplicate_candidate_does_not_create_duplicate_observation(db_session):
 
 def test_dry_run_creates_no_observations(db_session):
     source, card = seed_source_and_card(db_session)
-    legacy_mapping(db_session, source, card)
+    print_mapping(db_session, source)
     make_candidate(db_session, card)
 
     summary = ingest_snkrdunk_candidate_prices(db=db_session, dry_run=True)
@@ -199,7 +202,12 @@ def test_print_mapping_creates_observation_with_null_card_id_and_print_lineage(d
     assert observation.card_print_id == mapping.card_print_id
     assert observation.source_card_mapping_id == mapping.id
     assert observation.source_id == source.id
+    assert observation.price_type == "floor"
     assert observation.price_jpy == 1500
+    assert observation.condition_label == "near_mint"
+    assert observation.listing_count == 3
+    assert observation.stock_status is None
+    assert observation.raw_snapshot_id is None
     assert observation.candidate_id == candidate.id
 
 
@@ -295,6 +303,29 @@ def test_inactive_mapping_does_not_price(db_session):
     assert db_session.query(PriceObservation).count() == 0
 
 
+@pytest.mark.parametrize(
+    ("print_is_active", "print_verification_status"),
+    ((False, "verified"), (True, "unverified")),
+)
+def test_inactive_or_unverified_print_does_not_authorize_candidate_price(
+    db_session, print_is_active, print_verification_status
+):
+    source, card = seed_source_and_card(db_session)
+    print_mapping(
+        db_session,
+        source,
+        print_is_active=print_is_active,
+        print_verification_status=print_verification_status,
+    )
+    make_candidate(db_session, card, matched_card_id=None)
+
+    summary = ingest_snkrdunk_candidate_prices(db=db_session)
+
+    assert summary.candidates_skipped_no_approved_mapping == 1
+    assert summary.observations_created == 0
+    assert db_session.query(PriceObservation).count() == 0
+
+
 def test_mapping_naming_neither_print_nor_card_does_not_price(db_session):
     """A mapping with no card_print_id and no card_id identifies nothing, so
     an observation from it would assert nothing. Fail closed."""
@@ -358,18 +389,17 @@ def test_a_candidate_and_mapping_on_the_same_path_still_match(db_session):
     assert db_session.query(PriceObservation).one().source_card_mapping_id == mapping.id
 
 
-def test_a_legacy_en_mapping_is_still_found_by_its_own_url(db_session):
-    """Existing /en mappings that predate canonicalisation must keep pricing."""
+def test_a_legacy_en_mapping_is_found_but_cannot_authorize_a_price(db_session):
     source, card = seed_source_and_card(db_session)
     mapping = legacy_mapping(db_session, source, card, source_url=EN_URL)
     make_candidate(db_session, card, source_url=EN_URL)
 
-    ingest_snkrdunk_candidate_prices(db=db_session)
+    summary = ingest_snkrdunk_candidate_prices(db=db_session)
 
-    observation = db_session.query(PriceObservation).one()
-    assert observation.source_card_mapping_id is None  # legacy: no print lineage
-    assert observation.card_id == card.id
     assert mapping.card_print_id is None
+    assert summary.candidates_skipped_no_approved_mapping == 1
+    assert summary.observations_created == 0
+    assert db_session.query(PriceObservation).count() == 0
 
 
 def test_a_different_listing_is_never_matched(db_session):
