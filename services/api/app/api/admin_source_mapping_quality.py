@@ -3,8 +3,9 @@ quality, built on top of app.services.source_mapping_confidence. Distinct
 from app.api.source_mappings (the pre-existing generic CRUD router at
 /admin/source-mappings) - this router adds the confidence-scored review
 workflow (GET .../quality, POST .../recheck-quality, POST .../bulk-update,
-POST .../{id}/replace-card, GET .../{id}/suggested-cards) without changing
-that router's existing behavior.
+PATCH .../{id}/compatibility-card, the deprecated POST .../{id}/replace-card
+alias, and GET .../{id}/suggested-cards) without changing the generic CRUD
+router's existing behavior.
 
 Never deletes mappings or price observations, never auto-approves an
 ambiguous match, and never scrapes anything - every signal here comes from
@@ -20,25 +21,42 @@ from sqlalchemy.orm import Session
 from app.auth import require_admin_token
 from app.core.pagination import pagination_response
 from app.db import get_db
-from app.models import Card, SourceCardMapping
+from app.models import SourceCardMapping
 from app.models.source_card_mapping import REVIEW_STATUSES
 from app.schemas import (
     BulkMappingUpdateIn,
     BulkMappingUpdateOut,
     BulkMappingUpdateResultOut,
+    BulkMappingUpdateSummaryOut,
+    CompatibilityCardUpdateIn,
+    CompatibilityCardUpdateOut,
+    LegacyReplaceCardAliasIn,
     MappingQualityItemOut,
     MappingQualityListOut,
     MappingQualitySummaryOut,
     RecheckQualityIn,
     RecheckQualityOut,
     RecheckQualitySummaryOut,
-    ReplaceMappingCardIn,
     SuggestedCardsOut,
 )
 from app.services.app_logging import record_app_log
-from app.api._mapping_approval import approval_http_error, guard_transition_to_approved
+from app.api._mapping_approval import (
+    REFUSAL_MAPPING_IDENTITY_BROKEN,
+    approval_http_error,
+    guard_mapping_can_activate,
+    guard_mapping_has_exact_priceable_identity,
+    guard_transition_to_approved,
+)
 from app.services.cache import delete_cache_prefix
-from app.services.exact_print_approval import ExactPrintApprovalError
+from app.services.compatibility_card_admin import (
+    ERROR_COMPATIBILITY_CARD_NOT_FOUND,
+    CompatibilityCardEditError,
+    update_mapping_compatibility_card,
+)
+from app.services.exact_print_approval import (
+    REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
+    ExactPrintApprovalError,
+)
 from app.services.source_mapping_confidence import (
     CONFIDENCE_LABELS,
     ISSUE_TYPES,
@@ -56,13 +74,14 @@ router = APIRouter(
 
 SUPPORTED_SOURCES = ("yuyutei", "snkrdunk")
 
-# The bulk-update/replace-card "pending" concept (spec's mark_pending
-# action, and a replace-card that isn't immediately approved) maps onto the
-# existing review_status vocabulary's "needs_review" - this codebase has
-# never had a literal "pending" review_status (see REVIEW_STATUSES), so
-# rather than adding a fourth value to an existing CHECK CONSTRAINT for a
-# synonym, mark_pending/replace-card-without-approve both set needs_review.
+# The bulk-update "pending" concept maps onto the existing review_status
+# vocabulary's "needs_review". This codebase has never had a literal
+# "pending" review_status (see REVIEW_STATUSES), so a fourth value is not
+# added to the existing CHECK CONSTRAINT for a synonym.
 PENDING_REVIEW_STATUS = "needs_review"
+SKIPPED_LEGACY_COMPATIBILITY = "skipped_legacy_compatibility"
+SKIPPED_BROKEN = "skipped_broken"
+SKIPPED_NON_PRICEABLE_EXACT = "skipped_non_priceable_exact"
 
 
 def _item_to_out(item) -> MappingQualityItemOut:
@@ -215,6 +234,26 @@ def _apply_bulk_action(mapping: SourceCardMapping, action: str, review_notes: st
         mapping.review_notes = review_notes
 
 
+def _bulk_operational_skip_code(exc: ExactPrintApprovalError) -> str:
+    if exc.code == REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT:
+        return SKIPPED_LEGACY_COMPATIBILITY
+    if exc.code == REFUSAL_MAPPING_IDENTITY_BROKEN:
+        return SKIPPED_BROKEN
+    return SKIPPED_NON_PRICEABLE_EXACT
+
+
+def _guard_bulk_operational_action(
+    db: Session, mapping: SourceCardMapping, action: str
+) -> None:
+    if action == "approve":
+        guard_transition_to_approved(db, mapping)
+        guard_mapping_has_exact_priceable_identity(db, mapping)
+    elif action == "activate":
+        guard_mapping_can_activate(db, mapping)
+    elif action == "mark_verified":
+        guard_mapping_has_exact_priceable_identity(db, mapping)
+
+
 @router.post("/bulk-update", response_model=BulkMappingUpdateOut)
 def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db)):
     results: list[BulkMappingUpdateResultOut] = []
@@ -228,16 +267,18 @@ def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db
             )
             continue
 
-        # A bulk approve is still an approval. One refused row is reported
-        # against that row and skipped; the rest of the batch proceeds, which
-        # is what makes the result list per-mapping in the first place.
-        if body.action == "approve":
+        # These actions can make or prime a mapping for collection. Every row
+        # is checked independently so legacy/broken/non-priceable identities
+        # are explicit skips rather than false successes.
+        if body.action in ("approve", "activate", "mark_verified"):
             try:
-                guard_transition_to_approved(db, mapping)
+                _guard_bulk_operational_action(db, mapping, body.action)
             except ExactPrintApprovalError as exc:
                 results.append(
                     BulkMappingUpdateResultOut(
-                        mapping_id=mapping_id, ok=False, error=exc.code
+                        mapping_id=mapping_id,
+                        ok=False,
+                        error=_bulk_operational_skip_code(exc),
                     )
                 )
                 continue
@@ -259,46 +300,52 @@ def bulk_update_mappings(body: BulkMappingUpdateIn, db: Session = Depends(get_db
             context={"action": body.action, "mapping_ids": body.mapping_ids},
         )
 
-    return BulkMappingUpdateOut(action=body.action, results=results)
+    return BulkMappingUpdateOut(
+        action=body.action,
+        results=results,
+        summary=BulkMappingUpdateSummaryOut(
+            applied=sum(result.ok for result in results),
+            skipped_legacy_compatibility=sum(
+                result.error == SKIPPED_LEGACY_COMPATIBILITY for result in results
+            ),
+            skipped_broken=sum(
+                result.error == SKIPPED_BROKEN for result in results
+            ),
+            skipped_non_priceable_exact=sum(
+                result.error == SKIPPED_NON_PRICEABLE_EXACT for result in results
+            ),
+            not_found=sum(result.error == "not found" for result in results),
+        ),
+    )
 
 
-@router.post("/{mapping_id}/replace-card", response_model=MappingQualityItemOut)
-def replace_mapping_card(
-    mapping_id: int, body: ReplaceMappingCardIn, db: Session = Depends(get_db)
-):
+def _edit_compatibility_card(
+    db: Session,
+    mapping_id: int,
+    *,
+    compatibility_card_id: int | None,
+    review_notes: str | None,
+    deprecated_route: bool,
+    deprecated_approve_requested: bool = False,
+) -> CompatibilityCardUpdateOut:
     mapping = _get_mapping_or_404(db, mapping_id)
-    card = db.get(Card, body.card_id)
-    if card is None:
-        raise HTTPException(status_code=404, detail="Card not found")
-
-    # replace-card reassigns the LEGACY card pointer; it has never resolved an
-    # exact print and does not start now. Approving through it therefore has
-    # to satisfy the same guard, and is checked before card_id is written so a
-    # refusal leaves the row untouched.
-    if body.approve:
-        try:
-            guard_transition_to_approved(db, mapping)
-        except ExactPrintApprovalError as exc:
-            raise approval_http_error(exc) from exc
-
-    mapping.card_id = card.id
-    if body.approve:
-        mapping.review_status = "approved"
-        mapping.manual_verified = True
-        mapping.last_verified_at = datetime.now(timezone.utc)
-    else:
-        mapping.review_status = PENDING_REVIEW_STATUS
-        mapping.manual_verified = False
-    if body.review_notes is not None:
-        mapping.review_notes = body.review_notes
-
-    db.flush()
-
-    item = evaluate_source_mapping(db, mapping, card=card)
-    mapping.match_confidence = item.match_confidence
-    mapping.match_confidence_label = item.match_confidence_label
-    mapping.match_explanation_json = item.explanation
-    mapping.last_match_checked_at = datetime.now(timezone.utc)
+    try:
+        result = update_mapping_compatibility_card(
+            db,
+            mapping,
+            compatibility_card_id=compatibility_card_id,
+            review_notes=review_notes,
+        )
+    except CompatibilityCardEditError as exc:
+        if deprecated_route and exc.code == ERROR_COMPATIBILITY_CARD_NOT_FOUND:
+            # Preserve the legacy route's existing error contract while the
+            # frontend still consumes it.
+            raise HTTPException(status_code=404, detail="Card not found") from exc
+        status_code = 404 if exc.code == ERROR_COMPATIBILITY_CARD_NOT_FOUND else 409
+        raise HTTPException(
+            status_code=status_code,
+            detail={"code": exc.code, "message": exc.detail},
+        ) from exc
 
     db.commit()
     delete_cache_prefix("source_mappings")
@@ -307,21 +354,85 @@ def replace_mapping_card(
     record_app_log(
         "info",
         "api",
-        "source_mapping_confidence",
-        f"Mapping {mapping.id} card replaced -> card_id={card.id} (approve={body.approve}).",
-        context={"mapping_id": mapping.id, "card_id": card.id, "approve": body.approve},
+        "source_mapping_compatibility_card",
+        f"Mapping {mapping.id} compatibility card updated; pricing identity unchanged.",
+        context={
+            "mapping_id": mapping.id,
+            "authoritative_card_print_id": result.authoritative_card_print_id,
+            "previous_compatibility_card_id": result.previous_compatibility_card_id,
+            "new_compatibility_card_id": result.new_compatibility_card_id,
+            "pricing_identity_changed": False,
+            "deprecated_route": deprecated_route,
+            "deprecated_approve_requested": deprecated_approve_requested,
+        },
     )
 
-    refreshed = evaluate_source_mapping(db, mapping, card=card)
-    return _item_to_out(refreshed)
+    refreshed = evaluate_source_mapping(db, mapping)
+    return CompatibilityCardUpdateOut(
+        **refreshed.to_dict(),
+        operation="compatibility_card_updated",
+        authoritative_card_print_id=result.authoritative_card_print_id,
+        previous_compatibility_card_id=result.previous_compatibility_card_id,
+        new_compatibility_card_id=result.new_compatibility_card_id,
+        pricing_identity_changed=False,
+        deprecated_route=deprecated_route,
+        deprecated_approve_requested=deprecated_approve_requested,
+    )
+
+
+@router.patch(
+    "/{mapping_id}/compatibility-card",
+    response_model=CompatibilityCardUpdateOut,
+    summary="Edit legacy compatibility-card metadata",
+)
+def edit_mapping_compatibility_card(
+    mapping_id: int,
+    body: CompatibilityCardUpdateIn,
+    db: Session = Depends(get_db),
+):
+    return _edit_compatibility_card(
+        db,
+        mapping_id,
+        compatibility_card_id=body.compatibility_card_id,
+        review_notes=body.review_notes,
+        deprecated_route=False,
+    )
+
+
+@router.post(
+    "/{mapping_id}/replace-card",
+    response_model=CompatibilityCardUpdateOut,
+    deprecated=True,
+    summary="Deprecated alias: edit legacy compatibility-card metadata",
+    description=(
+        "Compatibility alias retained for the current admin client. card_id is "
+        "legacy compatibility metadata; approve is ignored and this action never "
+        "changes authoritative CardPrint pricing identity or operational state."
+    ),
+)
+def replace_mapping_card_compatibility_alias(
+    mapping_id: int, body: LegacyReplaceCardAliasIn, db: Session = Depends(get_db)
+):
+    return _edit_compatibility_card(
+        db,
+        mapping_id,
+        compatibility_card_id=body.card_id,
+        review_notes=body.review_notes,
+        deprecated_route=True,
+        deprecated_approve_requested=body.approve,
+    )
 
 
 @router.get("/{mapping_id}/suggested-cards", response_model=SuggestedCardsOut)
 def get_suggested_cards(mapping_id: int, db: Session = Depends(get_db)):
     mapping = _get_mapping_or_404(db, mapping_id)
-    results = suggested_cards_for_mapping(db, mapping)
+    suggestions = suggested_cards_for_mapping(db, mapping)
     return SuggestedCardsOut(
         mapping_id=mapping.id,
+        identity_classification=suggestions.identity_classification,
+        authoritative_card_print_id=suggestions.authoritative_card_print_id,
+        suggestion_scope=suggestions.suggestion_scope,
+        message=suggestions.message,
         matches=[
             {
                 "card_id": r.card_id,
@@ -336,6 +447,6 @@ def get_suggested_cards(mapping_id: int, db: Session = Depends(get_db)):
                 "ambiguous": r.ambiguous,
                 "explanation": r.explanation.to_dict(),
             }
-            for r in results
+            for r in suggestions.matches
         ],
     )

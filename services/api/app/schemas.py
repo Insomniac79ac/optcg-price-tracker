@@ -1855,6 +1855,8 @@ class SourceCardMappingListOut(BaseModel):
 
 
 class SourceCardMappingUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     source_url: str | None = None
     source_card_id: str | None = None
     manual_verified: bool | None = None
@@ -1865,12 +1867,33 @@ class SourceCardMappingUpdateIn(BaseModel):
 
 class MappingQualityItemOut(BaseModel):
     mapping_id: int
+    identity_classification: Literal["exact", "legacy_compatibility", "broken"]
+    confidence_scope: Literal["exact_print", "compatibility_only", "structural_failure"]
     source_name: str | None
     source_url: str | None
     source_card_id: str
-    # NULL on a print-authoritative mapping, same as SourceCardMappingOut
-    # above: the quality report scores such a mapping and flags it with
-    # issue_type "missing_card_reference" rather than omitting it.
+    card_print_id: int | None
+    canonical_card_id: int | None
+    release_product_id: int | None
+    compatibility_card_id: int | None
+    compatibility_card_status: Literal[
+        "present_valid", "absent", "broken_reference", "conflicting"
+    ]
+    compatibility_issue_types: list[str]
+    compatibility_match_confidence: int | None
+    compatibility_match_confidence_label: str | None
+    exact_confidence_dimensions: dict[str, Any]
+    canonical_card_code: str | None
+    canonical_name_en: str | None
+    canonical_name_jp: str | None
+    print_language: str | None
+    release_product_code: str | None
+    release_product_name: str | None
+    official_asset_variant: str | None
+    treatment: str | None
+    official_rarity: str | None
+    # Deprecated compatibility-card presentation fields. Authoritative
+    # confidence uses the explicit print/canonical/product fields above.
     card_id: int | None = None
     card_code: str | None
     name_en: str | None
@@ -1892,6 +1915,9 @@ class MappingQualityItemOut(BaseModel):
 
 class MappingQualitySummaryOut(BaseModel):
     total_mappings: int
+    exact_mapping_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     ok_count: int
     review_count: int
     warning_count: int
@@ -1952,19 +1978,62 @@ class BulkMappingUpdateResultOut(BaseModel):
     error: str | None = None
 
 
+class BulkMappingUpdateSummaryOut(BaseModel):
+    applied: int
+    skipped_legacy_compatibility: int
+    skipped_broken: int
+    skipped_non_priceable_exact: int
+    not_found: int
+
+
 class BulkMappingUpdateOut(BaseModel):
     action: str
     results: list[BulkMappingUpdateResultOut]
+    summary: BulkMappingUpdateSummaryOut
 
 
-class ReplaceMappingCardIn(BaseModel):
+class CompatibilityCardUpdateIn(BaseModel):
+    """Edit optional legacy-card metadata, never authoritative print identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    compatibility_card_id: int | None
+    review_notes: str | None = None
+
+
+class LegacyReplaceCardAliasIn(BaseModel):
+    """Deprecated wire format for the compatibility-card edit alias."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"deprecated": True},
+    )
+
     card_id: int
     review_notes: str | None = None
     approve: bool = False
 
 
+class CompatibilityCardUpdateOut(MappingQualityItemOut):
+    operation: Literal["compatibility_card_updated"]
+    authoritative_card_print_id: int | None
+    previous_compatibility_card_id: int | None
+    new_compatibility_card_id: int | None
+    pricing_identity_changed: Literal[False] = False
+    deprecated_route: bool = False
+    deprecated_approve_requested: bool = False
+
+
 class SuggestedCardsOut(BaseModel):
     mapping_id: int
+    identity_classification: Literal["exact", "legacy_compatibility", "broken"]
+    authoritative_card_print_id: int | None
+    suggestion_scope: Literal[
+        "exact_print_review_required",
+        "legacy_compatibility_only",
+        "structural_repair_required",
+    ]
+    message: str
     matches: list[CandidateMatchOut]
 
 

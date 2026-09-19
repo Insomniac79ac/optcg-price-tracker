@@ -229,7 +229,14 @@ def test_get_source_mapping_not_found(client, db_session):
 def test_patch_source_mapping_updates_fields(client, db_session):
     card = make_card(db_session)
     source = make_source(db_session)
-    mapping = make_mapping(db_session, card, source)
+    print_row = make_print(db_session)
+    mapping = make_mapping(
+        db_session,
+        card,
+        source,
+        card_print_id=print_row.id,
+        manual_verified=True,
+    )
 
     response = client.patch(
         f"/admin/source-mappings/{mapping.id}",
@@ -243,13 +250,15 @@ def test_patch_source_mapping_updates_fields(client, db_session):
     assert response.status_code == 200
     body = response.json()
     assert body["source_url"] == "https://yuyutei.example/updated"
-    assert body["manual_verified"] is True
+    assert body["manual_verified"] is False
+    assert body["review_status"] == "needs_review"
     assert body["review_notes"] == "looks right"
 
     db_session.expire_all()
     updated = db_session.get(SourceCardMapping, mapping.id)
     assert updated.source_url == "https://yuyutei.example/updated"
-    assert updated.manual_verified is True
+    assert updated.manual_verified is False
+    assert updated.review_status == "needs_review"
     assert updated.review_notes == "looks right"
 
 
