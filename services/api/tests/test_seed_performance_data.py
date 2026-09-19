@@ -3,11 +3,15 @@ import pytest
 from app.cleanup_performance_data import CONFIRM_PHRASE, cleanup_performance_data
 from app.models import (
     AppLogEvent,
+    CanonicalCard,
     Card,
+    CardPrint,
     CollectionItem,
     CollectorActivityEvent,
     PriceObservation,
+    ReleaseProduct,
     Source,
+    SourceCardMapping,
     User,
     WishlistItem,
 )
@@ -59,6 +63,10 @@ def test_seed_dry_run_does_not_write_anything(db_session):
 
     assert db_session.query(Card).filter(Card.card_code.like(f"{CARD_CODE_PREFIX}%")).count() == 0
     assert db_session.query(PriceObservation).count() == 0
+    assert db_session.query(SourceCardMapping).count() == 0
+    assert db_session.query(CardPrint).count() == 0
+    assert db_session.query(CanonicalCard).count() == 0
+    assert db_session.query(ReleaseProduct).count() == 0
     assert db_session.query(CollectionItem).count() == 0
     assert db_session.query(WishlistItem).count() == 0
     assert db_session.query(CollectorActivityEvent).count() == 0
@@ -82,10 +90,26 @@ def test_seed_real_run_creates_expected_rows_and_is_idempotent(db_session):
     assert summary.cards_created == 3
     assert db_session.query(Card).filter(Card.card_code.like(f"{CARD_CODE_PREFIX}%")).count() == 3
     assert db_session.query(PriceObservation).count() == 3 * 2
+    assert db_session.query(SourceCardMapping).count() == 3
+    assert db_session.query(CardPrint).count() == 3
     assert db_session.query(CollectionItem).count() == 2
     assert db_session.query(WishlistItem).count() == 2
     assert db_session.query(CollectorActivityEvent).count() == 2
     assert db_session.query(AppLogEvent).count() == 2
+
+    for observation in db_session.query(PriceObservation).all():
+        assert observation.source_card_mapping_id is not None
+        assert observation.card_print_id is not None
+        mapping = db_session.get(SourceCardMapping, observation.source_card_mapping_id)
+        card_print = db_session.get(CardPrint, observation.card_print_id)
+        assert mapping is not None
+        assert card_print is not None
+        assert mapping.is_active is True
+        assert mapping.review_status == "approved"
+        assert observation.source_id == mapping.source_id
+        assert observation.card_print_id == mapping.card_print_id
+        assert card_print.is_active is True
+        assert card_print.verification_status == "verified"
 
     # Re-running with the same (or larger) counts only tops up the
     # difference - it never creates duplicate rows for what already exists.
@@ -106,6 +130,8 @@ def test_seed_real_run_creates_expected_rows_and_is_idempotent(db_session):
     assert summary2.activity_events_created == 0
     assert summary2.log_events_created == 0
     assert db_session.query(Card).filter(Card.card_code.like(f"{CARD_CODE_PREFIX}%")).count() == 3
+    assert db_session.query(SourceCardMapping).count() == 3
+    assert db_session.query(CardPrint).count() == 3
 
 
 def test_seed_refuses_production_without_allow_flag(db_session, monkeypatch):
@@ -164,6 +190,10 @@ def test_cleanup_deletes_only_test_perf_data(db_session):
 
     assert summary.deleted["cards"] == 3
     assert summary.deleted["price_observations"] == 6
+    assert summary.deleted["source_card_mappings"] == 3
+    assert summary.deleted["card_prints"] == 3
+    assert summary.deleted["canonical_cards"] == 3
+    assert summary.deleted["release_products"] == 1
     assert summary.deleted["collection_items"] == 2
     assert summary.deleted["wishlist_items"] == 2
     assert summary.deleted["activity_events"] == 2
@@ -173,6 +203,10 @@ def test_cleanup_deletes_only_test_perf_data(db_session):
 
     assert db_session.query(Card).filter(Card.card_code.like(f"{CARD_CODE_PREFIX}%")).count() == 0
     assert db_session.query(Source).filter(Source.name == "test-perf-source").count() == 0
+    assert db_session.query(SourceCardMapping).count() == 0
+    assert db_session.query(CardPrint).count() == 0
+    assert db_session.query(CanonicalCard).count() == 0
+    assert db_session.query(ReleaseProduct).count() == 0
     assert db_session.query(User).filter(User.google_sub == "test-perf-seed-user").count() == 0
 
     # Real, pre-existing data survives untouched.

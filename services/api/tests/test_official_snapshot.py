@@ -27,6 +27,7 @@ from app.services.official_snapshot import (
     suffix_inventory,
     variance_report,
 )
+from tests._repo_root import find_repo_root
 
 FIXTURE = Path(__file__).parent / "fixtures" / "official_cardlist" / "series_550101_excerpt.html"
 CARDLIST = "https://www.onepiece-cardgame.com/images/cardlist/card"
@@ -384,7 +385,12 @@ BASELINE = (
     / "official_cardlist"
     / "corpus_baseline_2026-08-22.json"
 )
-LIVE_SNAPSHOT = Path(__file__).parents[3] / "data/official_snapshots/bandai_jp/current"
+REPO_ROOT = find_repo_root()
+LIVE_SNAPSHOT = (
+    REPO_ROOT / "data" / "official_snapshots" / "bandai_jp" / "current"
+    if REPO_ROOT is not None
+    else Path(__file__).resolve().parent / "__repository_snapshot_unavailable__"
+)
 
 
 @pytest.fixture()

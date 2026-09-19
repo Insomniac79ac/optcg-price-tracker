@@ -6,7 +6,7 @@
 # (run from the repo root - NOT from services/yuyutei_collector).
 #
 # Base image pins the exact browser build that matches
-# services/yuyutei_collector/requirements.txt's `playwright==1.61.0` (same
+# services/yuyutei_collector/requirements.lock.txt's `playwright==1.61.0` (same
 # pin, same base image family already validated in
 # spikes/yuyutei-browser-feasibility/Dockerfile.railway), so no browser
 # download happens at container start - only `pip install` at build time.
@@ -29,8 +29,8 @@ FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
 
 WORKDIR /app
 
-COPY services/yuyutei_collector/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY services/yuyutei_collector/requirements.lock.txt .
+RUN python -m pip install --no-cache-dir --require-hashes -r requirements.lock.txt
 
 COPY services/yuyutei_collector/. .
 

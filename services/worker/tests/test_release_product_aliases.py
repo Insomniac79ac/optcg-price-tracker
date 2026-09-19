@@ -28,8 +28,14 @@ from worker.matching.release_product_aliases import (
     normalise_label,
     resolve_product_code,
 )
+from tests._repo_root import find_repo_root
 
-SNAPSHOTS = pathlib.Path(__file__).resolve().parents[3] / "data" / "official_snapshots"
+REPO_ROOT = find_repo_root()
+SNAPSHOTS = (
+    REPO_ROOT / "data" / "official_snapshots"
+    if REPO_ROOT is not None
+    else pathlib.Path(__file__).resolve().parent / "__repository_snapshots_unavailable__"
+)
 
 
 # --- the accepted aliases ----------------------------------------------------

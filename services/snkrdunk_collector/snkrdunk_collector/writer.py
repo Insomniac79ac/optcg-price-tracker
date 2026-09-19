@@ -53,6 +53,7 @@ from snkrdunk_collector.models import (
     CardPrint,
     PriceObservation,
     RawSnapshot,
+    Source,
     SourceCardMapping,
 )
 
@@ -143,14 +144,28 @@ def validate_mapping_for_write(session: Session, mapping: SourceCardMapping) -> 
         reasons.append("mapping_not_active")
     if mapping.review_status != "approved":
         reasons.append(f"mapping_not_approved:review_status={mapping.review_status}")
+
+    source = session.get(Source, mapping.source_id)
+    if source is None:
+        reasons.append(f"mapping_source_does_not_exist:source_id={mapping.source_id}")
+    elif source.name != SOURCE_NAME:
+        reasons.append(
+            f"mapping_source_mismatch:expected={SOURCE_NAME},actual={source.name}"
+        )
+
     if mapping.card_print_id is None:
         reasons.append("mapping_not_linked_to_exact_print")
     else:
         card_print = session.get(CardPrint, mapping.card_print_id)
         if card_print is None:
             reasons.append("mapping_card_print_id_does_not_exist")
-        elif card_print.verification_status != "verified":
-            reasons.append(f"card_print_not_verified:status={card_print.verification_status}")
+        else:
+            if not card_print.is_active:
+                reasons.append("card_print_not_active")
+            if card_print.verification_status != "verified":
+                reasons.append(
+                    f"card_print_not_verified:status={card_print.verification_status}"
+                )
     return reasons
 
 

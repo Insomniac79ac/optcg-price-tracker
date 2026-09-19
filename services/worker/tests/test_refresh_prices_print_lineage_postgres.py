@@ -6,13 +6,12 @@ SQLite (see conftest.py), which never enables foreign key enforcement, so it
 can't prove a print-linked observation is actually accepted at the database
 level, only that the ORM sets the right Python attributes.
 
-worker/models.py deliberately mirrors these columns as plain nullable
-integers (see its docstring comments) rather than redeclaring the
-migration's constraints, so this test layers the real constraint DDL - taken
-directly from b858237e3706, not reinvented - onto worker's own
-Base.metadata tables instead of importing the api service's app package
-(the two services are separate installs; only worker's own models are
-importable here).
+worker/models.py deliberately mirrors the lineage columns as plain nullable
+integers and mirrors only the print fields its write gate reads, rather than
+redeclaring the API model and migration constraints. This test layers the
+real constraint DDL - taken directly from b858237e3706, not reinvented - onto
+worker's own Base.metadata tables instead of importing the API package (the
+two services are separate installs).
 
 Points at TEST_POSTGRES_URL (falling back to a local disposable instance on
 port 5544, matching services/api/tests/test_print_lineage_postgres.py's
@@ -30,7 +29,7 @@ from sqlalchemy.orm import sessionmaker
 from worker.adapters.base import PriceObservationData, RawSnapshotData
 from worker.db import Base
 from worker.jobs.refresh_prices import refresh_prices
-from worker.models import Card, PriceObservation, Source, SourceCardMapping
+from worker.models import Card, CardPrint, PriceObservation, Source, SourceCardMapping
 
 TEST_POSTGRES_URL = os.environ.get(
     "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
@@ -77,10 +76,6 @@ def postgres_session():
 
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:
-        # Minimal stand-in for the api's card_prints table - only the FK
-        # target (id) matters for this test, not canonical_cards/card_prints'
-        # full column set.
-        conn.execute(text("CREATE TABLE card_prints (id SERIAL PRIMARY KEY)"))
         # The exact constraint DDL the api's migrations leave in place -
         # b858237e3706 as narrowed by c9f31e2a7d04, which dropped the legacy
         # card_id from both the unique key and the composite FK - layered
@@ -143,8 +138,6 @@ def postgres_session():
                 )
             )
         Base.metadata.drop_all(bind=engine)
-        with engine.begin() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS card_prints"))
         engine.dispose()
 
 
@@ -163,13 +156,14 @@ def make_source_and_card(session, source_name="yuyutei", card_code="OP01-001"):
 
 
 def make_print(session) -> int:
-    result = session.execute(text("INSERT INTO card_prints DEFAULT VALUES RETURNING id"))
-    print_id = result.scalar_one()
+    print_row = CardPrint(verification_status="verified", is_active=True)
+    session.add(print_row)
     session.commit()
-    return print_id
+    session.refresh(print_row)
+    return print_row.id
 
 
-def test_legacy_refresh_observation_accepted_with_null_lineage(postgres_session):
+def test_legacy_refresh_mapping_is_skipped_without_an_observation(postgres_session):
     source, card = make_source_and_card(postgres_session)
     mapping = SourceCardMapping(
         card_id=card.id, source_id=source.id, source_card_id="OP01-001",
@@ -183,9 +177,9 @@ def test_legacy_refresh_observation_accepted_with_null_lineage(postgres_session)
     )
 
     assert summary.status == "completed"
-    observation = postgres_session.query(PriceObservation).one()
-    assert observation.source_card_mapping_id is None
-    assert observation.card_print_id is None
+    assert summary.mappings_checked == 0
+    assert summary.observations_inserted == 0
+    assert postgres_session.query(PriceObservation).count() == 0
 
 
 def test_print_linked_refresh_observation_is_accepted_by_real_constraints(postgres_session):

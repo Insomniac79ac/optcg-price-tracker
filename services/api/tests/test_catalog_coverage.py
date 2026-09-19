@@ -1,51 +1,21 @@
 from datetime import datetime, timedelta, timezone
 
-from app.models import CollectionItem, PriceObservation, WishlistItem
 from app.services.catalog_coverage import (
     CatalogCoverageFilters,
     compute_catalog_coverage,
     summarize_catalog_coverage,
 )
-from tests.test_source_mappings import make_card, make_mapping, make_source
+from tests.exact_reporting_helpers import (
+    make_canonical,
+    make_compatibility_card,
+    make_exact_mapping,
+    make_exact_observation,
+    make_legacy_mapping,
+    make_print,
+    make_source,
+)
 
-USER_ID = 1
-
-
-def make_price(db_session, card, source, *, observed_at=None, price_jpy=1000, price_type="sell"):
-    obs = PriceObservation(
-        card_id=card.id,
-        source_id=source.id,
-        price_type=price_type,
-        price_jpy=price_jpy,
-        observed_at=observed_at or datetime.now(timezone.utc),
-    )
-    db_session.add(obs)
-    db_session.commit()
-    db_session.refresh(obs)
-    return obs
-
-
-def make_collection_item(db_session, card, **overrides):
-    fields = dict(user_id=USER_ID, card_id=card.id, quantity=1)
-    fields.update(overrides)
-    item = CollectionItem(**fields)
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-    return item
-
-
-def make_wishlist_item(db_session, card, **overrides):
-    fields = dict(user_id=USER_ID, card_id=card.id)
-    fields.update(overrides)
-    item = WishlistItem(**fields)
-    db_session.add(item)
-    db_session.commit()
-    db_session.refresh(item)
-    return item
-
-
-# --- auth ----------------------------------------------------------------
+NOW = datetime.now(timezone.utc)
 
 
 def test_catalog_coverage_requires_admin_token(db_session):
@@ -53,8 +23,7 @@ def test_catalog_coverage_requires_admin_token(db_session):
 
     from app.main import app
 
-    resp = TestClient(app).get("/admin/catalog-coverage")
-    assert resp.status_code == 401
+    assert TestClient(app).get("/admin/catalog-coverage").status_code == 401
 
 
 def test_catalog_coverage_gaps_requires_admin_token(db_session):
@@ -62,287 +31,185 @@ def test_catalog_coverage_gaps_requires_admin_token(db_session):
 
     from app.main import app
 
-    resp = TestClient(app).get("/admin/catalog-coverage/gaps?gap_type=metadata")
-    assert resp.status_code == 401
+    response = TestClient(app).get("/admin/catalog-coverage/gaps?gap_type=mapping")
+    assert response.status_code == 401
 
 
-# --- empty catalog ---------------------------------------------------------
+def test_empty_catalog_reports_physical_print_scope(client, db_session):
+    response = client.get("/admin/catalog-coverage")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["summary"]["coverage_unit"] == "eligible_physical_print"
+    assert body["summary"]["total_eligible_physical_prints"] == 0
+    assert body["summary"]["exact_mapping_coverage_pct"] == 0.0
+    assert body["summary"]["fresh_price_coverage_pct"] == 0.0
+    assert body["mapping_gaps"] == []
+    assert body["legacy_compatibility"]["summary"]["total_cards"] == 0
 
 
-def test_empty_catalog_works(client, db_session):
-    resp = client.get("/admin/catalog-coverage")
-    assert resp.status_code == 200
-    data = resp.json()
-    summary = data["summary"]
-    assert summary["total_cards"] == 0
-    assert summary["mapping_coverage_pct"] == 0.0
-    assert summary["recent_price_coverage_pct"] == 0.0
-    assert summary["metadata_completion_pct"] == 0.0
-    assert data["coverage_by_set"] == []
-    assert data["metadata_gaps"] == []
-
-
-def test_compute_catalog_coverage_empty_catalog(db_session):
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    assert report.summary["total_cards"] == 0
-    assert report.metadata_gaps == []
-    assert report.duplicate_risks == []
-
-
-# --- active/inactive -------------------------------------------------------
-
-
-def test_active_inactive_counts(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    inactive = make_card(db_session, card_code="OP01-002", rarity="R")
-    inactive.is_active = False
-    inactive.merged_into_card_id = None
-    db_session.commit()
-
-    resp = client.get("/admin/catalog-coverage")
-    data = resp.json()["summary"]
-    assert data["total_cards"] == 1
-    assert data["active_cards"] == 1
-    assert data["inactive_merged_cards"] == 0
-
-
-def test_include_inactive_includes_merged_cards(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    inactive = make_card(db_session, card_code="OP01-002", rarity="R")
-    inactive.is_active = False
-    db_session.commit()
-
-    resp = client.get("/admin/catalog-coverage?include_inactive=true")
-    data = resp.json()["summary"]
-    assert data["total_cards"] == 2
-    assert data["active_cards"] == 1
-    assert data["inactive_merged_cards"] == 1
-
-
-# --- mapping coverage -------------------------------------------------------
-
-
-def test_mapping_coverage_calculation(db_session):
-    yuyutei = make_source(db_session, "yuyutei")
-    snkrdunk = make_source(db_session, "snkrdunk")
-    mapped_both = make_card(db_session, card_code="OP01-001", rarity="L")
-    mapped_one = make_card(db_session, card_code="OP01-002", rarity="R")
-    unmapped = make_card(db_session, card_code="OP01-003", rarity="R", variant="alt")
-
-    make_mapping(db_session, mapped_both, yuyutei)
-    make_mapping(db_session, mapped_both, snkrdunk)
-    make_mapping(db_session, mapped_one, yuyutei)
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary = report.summary
-    assert summary["cards_with_yuyutei_mapping"] == 2
-    assert summary["cards_with_snkrdunk_mapping"] == 1
-    assert summary["cards_without_any_mapping"] == 1
-    assert summary["mapping_coverage_pct"] == round(2 / 3 * 100, 2)
-
-    gap_cards = {g.card_id for g in report.mapping_gaps}
-    assert unmapped.id in gap_cards
-    assert mapped_one.id in gap_cards
-    assert mapped_both.id not in gap_cards
-
-    unmapped_gap = next(g for g in report.mapping_gaps if g.card_id == unmapped.id)
-    assert unmapped_gap.severity == "critical"
-    partial_gap = next(g for g in report.mapping_gaps if g.card_id == mapped_one.id)
-    assert partial_gap.severity == "warning"
-    assert partial_gap.issue_types == ["missing_snkrdunk_mapping"]
-
-
-def test_inactive_mapping_does_not_count_as_coverage(db_session):
-    yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei, is_active=False)
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    assert report.summary["cards_without_any_mapping"] == 1
-
-
-# --- recent price coverage --------------------------------------------------
-
-
-def test_recent_yuyutei_price_coverage(db_session):
-    yuyutei = make_source(db_session, "yuyutei")
-    fresh = make_card(db_session, card_code="OP01-001", rarity="L")
-    stale = make_card(db_session, card_code="OP01-002", rarity="R")
-
-    now = datetime.now(timezone.utc)
-    make_price(db_session, fresh, yuyutei, observed_at=now - timedelta(hours=1))
-    make_price(db_session, stale, yuyutei, observed_at=now - timedelta(hours=25))
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary = report.summary
-    assert summary["cards_with_recent_yuyutei_price"] == 1
-    assert summary["cards_without_recent_price"] == 1  # stale has no recent price from either source
-
-    stale_gap = next(g for g in report.price_gaps if g.card_id == stale.id)
-    assert "missing_recent_yuyutei_price" in stale_gap.issue_types
-
-
-def test_recent_snkrdunk_price_coverage(db_session):
-    snkrdunk = make_source(db_session, "snkrdunk")
-    fresh = make_card(db_session, card_code="OP01-001", rarity="L")
-    stale = make_card(db_session, card_code="OP01-002", rarity="R")
-
-    now = datetime.now(timezone.utc)
-    make_price(db_session, fresh, snkrdunk, observed_at=now - timedelta(days=1))
-    make_price(db_session, stale, snkrdunk, observed_at=now - timedelta(days=8))
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary = report.summary
-    assert summary["cards_with_recent_snkrdunk_price"] == 1
-    assert summary["cards_without_recent_price"] == 1
-
-
-# --- metadata completion ----------------------------------------------------
-
-
-def test_metadata_completion_calculation(db_session):
-    complete = make_card(
+def test_denominator_is_active_verified_physical_prints(db_session):
+    canonical = make_canonical(db_session, "OP01-001")
+    make_print(db_session, canonical, asset_variant="base")
+    make_print(
         db_session,
-        card_code="OP01-001",
-        rarity="L",
-        name_en="Complete Card",
-        image_url="https://example.com/img.png",
-        artist="Artist",
-        character="Char",
-        color="Red",
-        card_type="Leader",
+        canonical,
+        asset_variant="p1",
+        verification_status="unverified",
     )
-    incomplete = make_card(db_session, card_code="OP01-002", rarity="R", name_en=None)
+    make_print(db_session, canonical, asset_variant="p2", active=False)
 
     report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary = report.summary
-    assert summary["cards_with_missing_metadata"] == 1
-    assert summary["metadata_completion_pct"] == 50.0
 
-    gap = next(g for g in report.metadata_gaps if g.card_id == incomplete.id)
-    assert gap.severity == "critical"
-    assert "missing_name_en" in gap.issue_types
-    assert complete.id not in {g.card_id for g in report.metadata_gaps}
+    assert report.summary["total_eligible_physical_prints"] == 1
+    assert report.summary["physical_prints_without_exact_mapping"] == 1
 
 
-# --- collection / wishlist coverage -----------------------------------------
-
-
-def test_collection_and_wishlist_coverage_counts(db_session):
-    in_collection = make_card(db_session, card_code="OP01-001", rarity="L")
-    on_wishlist = make_card(db_session, card_code="OP01-002", rarity="R")
-    neither = make_card(db_session, card_code="OP01-003", rarity="R", variant="alt")
-
-    make_collection_item(db_session, in_collection)
-    make_wishlist_item(db_session, on_wishlist)
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary = report.summary
-    assert summary["total_cards"] == 3
-    assert summary["cards_in_collection"] == 1
-    assert summary["cards_on_wishlist"] == 1
-    assert neither.card_code == "OP01-003"
-
-
-# --- breakdowns --------------------------------------------------------------
-
-
-def test_coverage_by_set(db_session):
-    make_card(db_session, card_code="OP01-001", set_code="OP01", rarity="L")
-    make_card(db_session, card_code="OP02-001", set_code="OP02", rarity="L")
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    keys = {i.key for i in report.coverage_by_set}
-    assert keys == {"OP01", "OP02"}
-    for item in report.coverage_by_set:
-        assert item.total_cards == 1
-
-
-def test_coverage_by_rarity(db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    make_card(db_session, card_code="OP01-002", rarity="R")
-    make_card(db_session, card_code="OP01-003", rarity="R", variant="alt")
-
-    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    by_rarity = {i.key: i.total_cards for i in report.coverage_by_rarity}
-    assert by_rarity == {"L": 1, "R": 2}
-
-
-# --- gaps endpoint -----------------------------------------------------------
-
-
-def test_metadata_gaps_endpoint(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L", name_en=None)
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=metadata")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["gap_type"] == "metadata"
-    assert len(data["items"]) == 1
-    assert data["pagination"]["total"] == 1
-
-
-def test_mapping_gaps_endpoint(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=mapping")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data["items"]) == 1
-    assert data["items"][0]["severity"] == "critical"
-
-
-def test_price_gaps_endpoint(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=price")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data["items"]) == 1
-
-
-def test_duplicate_risks_endpoint(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L", name_en="Luffy")
-    make_card(db_session, card_code="OP01-001", rarity="R", name_en="Luffy")
-
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=duplicate")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data["items"]) >= 1
-    assert data["items"][0]["suggested_action"] == "review_card_merge"
-
-
-def test_mapping_quality_risks_endpoint(client, db_session):
+def test_exact_null_card_id_counts_as_mapping_and_fresh_price(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    # source_card_id that clearly mismatches card_code -> critical risk mapping
-    make_mapping(db_session, card, yuyutei, source_card_id="OP99-999")
+    canonical = make_canonical(db_session, "OP01-001")
+    print_row = make_print(db_session, canonical, rarity="L")
+    mapping = make_exact_mapping(db_session, print_row, yuyutei)
+    make_exact_observation(db_session, mapping, observed_at=NOW - timedelta(hours=1))
 
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=mapping_quality")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data["items"]) == 1
-    assert data["items"][0]["card_id"] == card.id
+    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
+    source = next(item for item in report.sources if item.source_name == "yuyutei")
 
-
-def test_gaps_endpoint_invalid_gap_type(client, db_session):
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=bogus")
-    assert resp.status_code == 400
-
-
-def test_gaps_endpoint_pagination(client, db_session):
-    for i in range(3):
-        make_card(db_session, card_code=f"OP01-00{i}", rarity="L", variant=f"v{i}")
-
-    resp = client.get("/admin/catalog-coverage/gaps?gap_type=mapping&limit=2&offset=0")
-    data = resp.json()
-    assert len(data["items"]) == 2
-    assert data["pagination"]["total"] == 3
-    assert data["pagination"]["has_next"] is True
+    assert mapping.card_id is None
+    assert report.summary["prints_with_any_exact_mapping"] == 1
+    assert report.summary["prints_with_any_fresh_source_observation"] == 1
+    assert report.summary["exact_mapping_coverage_pct"] == 100.0
+    assert source.mapped_print_count == 1
+    assert source.fresh_price_print_count == 1
 
 
-# --- CLI -----------------------------------------------------------------
+def test_source_coverage_is_reported_per_source(db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    first = make_print(db_session, make_canonical(db_session, "OP01-001"))
+    second = make_print(
+        db_session,
+        make_canonical(db_session, "OP01-002"),
+        asset_variant="p1",
+    )
+    yuyu_first = make_exact_mapping(db_session, first, yuyutei, suffix="yuyu-first")
+    make_exact_mapping(db_session, second, yuyutei, suffix="yuyu-second")
+    snkr_first = make_exact_mapping(db_session, first, snkrdunk, suffix="snkr-first")
+    make_exact_observation(db_session, yuyu_first, observed_at=NOW - timedelta(hours=1))
+    make_exact_observation(
+        db_session,
+        snkr_first,
+        observed_at=NOW - timedelta(days=1),
+        price_type="floor",
+    )
+
+    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
+    by_source = {item.source_name: item for item in report.sources}
+
+    assert by_source["yuyutei"].mapped_print_count == 2
+    assert by_source["yuyutei"].fresh_price_print_count == 1
+    assert by_source["snkrdunk"].mapped_print_count == 1
+    assert by_source["snkrdunk"].fresh_price_print_count == 1
 
 
-def test_cli_prints_summary(db_session, monkeypatch, capsys):
-    make_card(db_session, card_code="OP01-001", rarity="L")
+def test_sibling_prints_are_independent_and_one_price_cannot_cover_another(db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    legacy = make_compatibility_card(db_session, "OP01-001")
+    canonical = make_canonical(db_session, "OP01-001")
+    base = make_print(db_session, canonical, asset_variant="base")
+    parallel = make_print(db_session, canonical, asset_variant="p1")
+    base_mapping = make_exact_mapping(
+        db_session, base, yuyutei, compatibility_card=legacy, suffix="base"
+    )
+    make_exact_mapping(
+        db_session, parallel, yuyutei, compatibility_card=legacy, suffix="parallel"
+    )
+    make_exact_observation(
+        db_session, base_mapping, observed_at=NOW - timedelta(hours=1)
+    )
+
+    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
+
+    assert report.summary["total_eligible_physical_prints"] == 2
+    assert report.summary["prints_with_any_exact_mapping"] == 2
+    assert report.summary["prints_with_any_fresh_source_observation"] == 1
+    assert (
+        report.summary["physical_prints_with_exact_mapping_but_no_fresh_observation"]
+        == 1
+    )
+    assert {gap.card_print_id for gap in report.price_gaps} == {parallel.id}
+
+
+def test_legacy_mapping_is_separate_and_does_not_cover_a_print(db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    legacy_card = make_compatibility_card(db_session, "OP01-001")
+    legacy_mapping = make_legacy_mapping(db_session, legacy_card, yuyutei)
+    make_print(db_session, make_canonical(db_session, "OP01-001"))
+
+    report = compute_catalog_coverage(db_session, CatalogCoverageFilters())
+
+    assert legacy_mapping.card_print_id is None
+    assert report.summary["legacy_compatibility_mapping_count"] == 1
+    assert report.summary["exact_source_mapping_count"] == 0
+    assert report.summary["physical_prints_without_exact_mapping"] == 1
+    assert report.legacy_compatibility.summary["cards_with_yuyutei_mapping"] == 1
+
+
+def test_exact_mapping_without_fresh_observation_is_a_price_gap(client, db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    print_row = make_print(db_session, make_canonical(db_session, "OP01-001"))
+    make_exact_mapping(db_session, print_row, yuyutei)
+
+    response = client.get("/admin/catalog-coverage/gaps?gap_type=price")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["pagination"]["total"] == 1
+    assert body["items"][0]["identity_scope"] == "physical_print"
+    assert body["items"][0]["card_print_id"] == print_row.id
+    assert body["items"][0]["issue_types"] == [
+        "exact_mapping_without_fresh_observation"
+    ]
+
+
+def test_mapping_gap_pagination_is_print_scoped(client, db_session):
+    for number in range(3):
+        canonical = make_canonical(db_session, f"OP01-00{number}")
+        make_print(
+            db_session,
+            canonical,
+            asset_variant="base" if number == 0 else f"p{number}",
+        )
+
+    response = client.get(
+        "/admin/catalog-coverage/gaps?gap_type=mapping&limit=2&offset=0"
+    )
+    body = response.json()
+
+    assert len(body["items"]) == 2
+    assert body["pagination"]["total"] == 3
+    assert body["pagination"]["has_next"] is True
+    assert all(item["identity_scope"] == "physical_print" for item in body["items"])
+
+
+def test_legacy_metadata_gap_remains_under_compatibility_scope(client, db_session):
+    make_compatibility_card(db_session, "OP01-001", name_en=None)
+
+    response = client.get("/admin/catalog-coverage/gaps?gap_type=metadata")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["pagination"]["total"] == 1
+    assert body["items"][0]["identity_scope"] == "legacy_compatibility"
+
+
+def test_gaps_endpoint_rejects_unknown_type(client, db_session):
+    response = client.get("/admin/catalog-coverage/gaps?gap_type=bogus")
+    assert response.status_code == 400
+
+
+def test_catalog_coverage_cli_prints_physical_summary(db_session, monkeypatch, capsys):
+    make_print(db_session, make_canonical(db_session, "OP01-001"))
 
     import sys
 
@@ -350,7 +217,6 @@ def test_cli_prints_summary(db_session, monkeypatch, capsys):
 
     monkeypatch.setattr(cli_module, "SessionLocal", lambda: db_session)
     monkeypatch.setattr(db_session, "close", lambda: None)
-
     old_argv = sys.argv
     sys.argv = ["catalog_coverage_report"]
     try:
@@ -361,41 +227,33 @@ def test_cli_prints_summary(db_session, monkeypatch, capsys):
     finally:
         sys.argv = old_argv
 
-    captured = capsys.readouterr()
-    assert "total_cards" in captured.out
+    assert "total_eligible_physical_prints" in capsys.readouterr().out
 
 
-# --- system check integration ----------------------------------------------
+def test_system_check_keeps_legacy_summary_contract_for_later_tranche(
+    client, db_session
+):
+    make_compatibility_card(db_session, "OP01-001")
 
+    response = client.get("/admin/system-check")
 
-def test_system_check_includes_catalog_coverage(client, db_session):
-    resp = client.get("/admin/system-check")
-    assert resp.status_code == 200
-    names = {c["name"] for c in resp.json()["checks"]}
+    assert response.status_code == 200
+    names = {check["name"] for check in response.json()["checks"]}
     assert "catalog_coverage_summary" in names
 
 
-def test_system_check_warns_on_low_mapping_coverage(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    resp = client.get("/admin/system-check")
-    checks = {c["name"]: c for c in resp.json()["checks"]}
-    assert checks["catalog_coverage_summary"]["status"] == "warning"
+def test_card_audit_keeps_legacy_compatibility_summary(client, db_session):
+    make_compatibility_card(db_session, "OP01-001")
+
+    response = client.get("/admin/card-audit")
+    assert response.status_code == 200
+    assert response.json()["catalog_coverage"]["total_cards"] == 1
 
 
-# --- card audit integration -------------------------------------------------
+def test_summary_only_function_remains_legacy_for_unmodified_system_checks(db_session):
+    make_compatibility_card(db_session, "OP01-001")
 
+    summary = summarize_catalog_coverage(db_session)
 
-def test_card_audit_includes_catalog_coverage_summary(client, db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    resp = client.get("/admin/card-audit")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["catalog_coverage"] is not None
-    assert data["catalog_coverage"]["total_cards"] == 1
-
-
-def test_summarize_catalog_coverage_matches_full_report(db_session):
-    make_card(db_session, card_code="OP01-001", rarity="L")
-    full = compute_catalog_coverage(db_session, CatalogCoverageFilters())
-    summary_only = summarize_catalog_coverage(db_session)
-    assert summary_only == full.summary
+    assert summary["total_cards"] == 1
+    assert "total_eligible_physical_prints" not in summary

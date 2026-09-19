@@ -63,10 +63,12 @@ function SourceHealthTable({ sources }: { sources: SourceHealthItem[] }) {
           <tr>
             <th>Source</th>
             <th>Health</th>
-            <th className="text-right">Active mappings</th>
-            <th className="text-right">Recent</th>
+            <th className="text-right">Active exact mappings</th>
+            <th className="text-right">Fresh observations</th>
             <th className="text-right">Stale</th>
             <th className="text-right">Missing</th>
+            <th className="text-right">Legacy compatibility</th>
+            <th className="text-right">Broken</th>
             <th>Latest price</th>
             <th>Latest refresh</th>
             <th>Started</th>
@@ -90,6 +92,8 @@ function SourceHealthTable({ sources }: { sources: SourceHealthItem[] }) {
               <td className="mono tabular text-right text-text-secondary">{formatNumber(s.recent_price_count)}</td>
               <td className="mono tabular text-right text-text-secondary">{formatNumber(s.stale_price_count)}</td>
               <td className="mono tabular text-right text-text-secondary">{formatNumber(s.missing_price_count)}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatNumber(s.legacy_compatibility_mapping_count)}</td>
+              <td className="mono tabular text-right text-text-secondary">{formatNumber(s.broken_mapping_count)}</td>
               <td className="mono text-[11px] text-text-muted">{na(s.latest_price_observed_at, formatDateTime)}</td>
               <td className="text-text-secondary">{na(s.latest_refresh_status, (v) => v)}</td>
               <td className="mono text-[11px] text-text-muted">{na(s.latest_refresh_started_at, formatDateTime)}</td>
@@ -155,21 +159,21 @@ function BreakdownTable({ title, items }: { title: string; items: HealthCoverage
           <thead>
             <tr>
               <th>Label</th>
-              <th className="text-right">Mapped</th>
-              <th className="text-right">Recent</th>
-              <th className="text-right">Stale</th>
-              <th className="text-right">Missing</th>
-              <th className="text-right">Coverage %</th>
+              <th className="text-right">Mapped prints</th>
+              <th className="text-right">Fresh-price prints</th>
+              <th className="text-right">Stale prints</th>
+              <th className="text-right">Missing prints</th>
+              <th className="text-right">Fresh coverage</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
               <tr key={item.key}>
                 <td className="font-medium text-text-primary">{item.label}</td>
-                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.mapped_cards)}</td>
-                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.recent_price_cards)}</td>
-                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.stale_price_cards)}</td>
-                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.missing_price_cards)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.mapped_prints)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.recent_price_prints)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.stale_price_prints)}</td>
+                <td className="mono tabular text-right text-text-secondary">{formatNumber(item.missing_price_prints)}</td>
                 <td className="mono tabular text-right text-text-secondary">{formatPercent(item.coverage_pct)}</td>
               </tr>
             ))}
@@ -177,6 +181,53 @@ function BreakdownTable({ title, items }: { title: string; items: HealthCoverage
         </table>
       </div>
     </div>
+  );
+}
+
+const IDENTITY_LABELS = {
+  exact: "Exact physical print",
+  legacy_compatibility: "Legacy compatibility only",
+  broken: "Broken — structural review required",
+} as const;
+
+function MappingIdentityTable({
+  title,
+  description,
+  items,
+  tone = "neutral",
+}: {
+  title: string;
+  description: string;
+  items: PriceGapItem[];
+  tone?: "neutral" | "warning";
+}) {
+  return (
+    <section className={`mb-6 rounded-panel border bg-bg-surface ${tone === "warning" ? "border-signal-red/40" : "border-border-default"}`}>
+      <div className="border-b border-border-default px-4 py-3">
+        <h2 className="font-medium text-text-primary">{title}</h2>
+        <p className="mt-1 text-xs text-text-muted">{description}</p>
+      </div>
+      {items.length === 0 ? (
+        <div className="px-4 py-6 text-sm text-text-muted">None.</div>
+      ) : (
+        <DataTableShell>
+          <table className="data-table min-w-[900px]">
+            <thead><tr><th>Classification</th><th>Source mapping</th><th>CardPrint</th><th>Canonical card</th><th>Release product</th><th>Compatibility Card</th><th>Health state</th></tr></thead>
+            <tbody>{items.map((item) => (
+              <tr key={`${item.mapping_id}-${item.issue_type}`}>
+                <td className={item.identity_classification === "broken" ? "font-medium text-signal-red" : "font-medium text-text-primary"}>{IDENTITY_LABELS[item.identity_classification]}</td>
+                <td className="mono text-text-secondary">#{item.mapping_id} · {item.source_name ?? `Source #${item.source_id}`}</td>
+                <td className="mono text-text-secondary">{item.card_print_id === null ? "None" : `#${item.card_print_id}`}</td>
+                <td className="text-text-secondary">{item.card_code ?? `#${item.canonical_card_id ?? "—"}`} {item.name_en ?? item.name_jp ?? ""}</td>
+                <td className="text-text-secondary">{item.release_product_name ?? item.release_product_code ?? (item.release_product_id === null ? "None" : `#${item.release_product_id}`)}</td>
+                <td className="mono text-text-secondary">{item.compatibility_card_id === null ? "None" : `#${item.compatibility_card_id}`}</td>
+                <td><RiskBadge level={severityToRisk(item.severity)} /> <span className="ml-1 text-xs text-text-muted">{item.issue_type}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </DataTableShell>
+      )}
+    </section>
   );
 }
 
@@ -201,6 +252,8 @@ export default function PriceSourceHealthPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Loading state follows a filter-driven external request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
     fetchPriceSourceHealth({
       source: source || undefined,
@@ -226,11 +279,15 @@ export default function PriceSourceHealthPage() {
   }, [source, setCode, rarity, variant, language, includeInactiveMappings]);
 
   useEffect(() => {
+    // Reset pagination when the query identity changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGapOffset(0);
   }, [activeTab, source, setCode, rarity]);
 
   useEffect(() => {
     let cancelled = false;
+    // Loading state follows a filter-driven external request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGapStatus("loading");
     fetchPriceSourceHealthGaps({
       gap_type: activeTab,
@@ -263,9 +320,10 @@ export default function PriceSourceHealthPage() {
     ? [
         { label: "Sources", value: formatNumber(summary.sources_count) },
         { label: "Active sources", value: formatNumber(summary.active_sources_count) },
-        { label: "Active mappings", value: formatNumber(summary.total_active_mappings) },
-        { label: "With recent price", value: formatNumber(summary.mappings_with_recent_price) },
-        { label: "Without recent price", value: formatNumber(summary.mappings_without_recent_price) },
+        { label: "Exact mappings", value: formatNumber(summary.exact_mapping_count) },
+        { label: "Active exact mappings", value: formatNumber(summary.total_active_mappings) },
+        { label: "With fresh observation", value: formatNumber(summary.mappings_with_recent_price) },
+        { label: "Without fresh observation", value: formatNumber(summary.mappings_without_recent_price) },
         { label: "Stale prices", value: formatNumber(summary.stale_price_count) },
         { label: "Missing prices", value: formatNumber(summary.missing_price_count) },
         { label: "Last successful refresh", value: na(summary.last_successful_refresh_at, formatDateTime) },
@@ -285,8 +343,7 @@ export default function PriceSourceHealthPage() {
           description={
             <>
               <span className="mb-2 block">
-                Track source freshness, refresh reliability, stale prices, and missing price
-                coverage.
+                Exact source-mapping health and observation freshness for individual physical prints.
               </span>
               <span className="mb-2 flex flex-wrap gap-3 text-xs">
                 <Link href="/admin/catalog-coverage" className="text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
@@ -426,9 +483,22 @@ export default function PriceSourceHealthPage() {
                 </div>
 
                 <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <BreakdownTable title="Coverage by set" items={report.coverage_by_set} />
+                  <BreakdownTable title="Health by release product" items={report.coverage_by_release_product} />
                   <BreakdownTable title="Coverage by rarity" items={report.coverage_by_rarity} />
+                  <BreakdownTable title="Coverage by language" items={report.coverage_by_language} />
                 </div>
+
+                <MappingIdentityTable
+                  title={`Legacy compatibility mappings (${summary?.legacy_compatibility_mapping_count ?? 0})`}
+                  description="Grandfathered Card-level compatibility only; these rows are not modern exact pricing lineage."
+                  items={report.legacy_compatibility_mappings}
+                />
+                <MappingIdentityTable
+                  title={`Broken mapping lineage (${summary?.broken_mapping_count ?? 0})`}
+                  description="Structural mapping problems that require review."
+                  items={report.broken_mappings}
+                  tone="warning"
+                />
 
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   {GAP_TABS.map((tab) => (
@@ -468,11 +538,12 @@ export default function PriceSourceHealthPage() {
                         <tr>
                           <th>Severity</th>
                           <th>Source</th>
-                          <th>Card code</th>
-                          <th>Name</th>
-                          <th>Set</th>
+                          <th>Mapping identity</th>
+                          <th>CardPrint</th>
+                          <th>Canonical card</th>
+                          <th>Release product</th>
                           <th>Rarity</th>
-                          <th>Variant</th>
+                          <th>Treatment</th>
                           <th>Latest price observed</th>
                           <th>Price type</th>
                           <th>Latest price</th>
@@ -488,13 +559,14 @@ export default function PriceSourceHealthPage() {
                               <RiskBadge level={severityToRisk(item.severity)} />
                             </td>
                             <td className="text-text-secondary">{item.source_name}</td>
+                            <td className="text-text-secondary">{IDENTITY_LABELS[item.identity_classification]}</td>
                             <td className="mono text-xs text-text-secondary">
-                              {na(item.card_code, (v) => v)}
+                              {item.card_print_id === null ? "None" : `#${item.card_print_id}`}
                             </td>
-                            <td className="text-text-secondary">{na(item.name_en, (v) => v)}</td>
-                            <td className="text-text-secondary">{na(item.set_code, (v) => v)}</td>
+                            <td className="text-text-secondary">{na(item.card_code, (v) => v)} · {na(item.name_en ?? item.name_jp, (v) => v)}</td>
+                            <td className="text-text-secondary">{na(item.release_product_name ?? item.release_product_code, (v) => v)}</td>
                             <td className="text-text-secondary">{na(item.rarity, (v) => v)}</td>
-                            <td className="text-text-secondary">{na(item.variant, (v) => v)}</td>
+                            <td className="text-text-secondary">{na(item.treatment ?? item.official_asset_variant, (v) => v)}</td>
                             <td className="mono text-[11px] text-text-muted">
                               {na(item.latest_price_observed_at, formatDateTime)}
                             </td>
@@ -510,9 +582,7 @@ export default function PriceSourceHealthPage() {
                             <td className="text-xs text-text-muted">{item.suggested_action}</td>
                             <td>
                               <div className="flex flex-wrap gap-2 text-xs">
-                                <Link href={`/cards/${item.card_id}`} className="text-sky-400 hover:underline">
-                                  Card
-                                </Link>
+                                {item.card_print_id !== null && <Link href={`/prints/${item.card_print_id}`} className="text-sky-400 hover:underline">Physical print</Link>}
                                 <Link href="/admin/source-mapping-quality" className="text-sky-400 hover:underline">
                                   Mapping quality
                                 </Link>

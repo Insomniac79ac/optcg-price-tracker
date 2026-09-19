@@ -764,12 +764,12 @@ def test_k_the_writer_reimplements_no_methodology():
         assert not re.search(forbidden, body), f"{forbidden!r} in the writer"
 
 
-def test_l_index_and_source_semantics_versions_are_untouched():
+def test_l_writer_does_not_restate_index_or_source_semantics_versions():
     from app.services.market_index import INDEX_VERSION
     from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
     assert INDEX_VERSION == 3
-    assert SOURCE_SEMANTICS_VERSION == 2
+    assert SOURCE_SEMANTICS_VERSION == 3
     assert "INDEX_VERSION" not in WRITER_SOURCE.split('"""', 2)[2]
     assert "SOURCE_SEMANTICS_VERSION" not in WRITER_SOURCE.split('"""', 2)[2]
 

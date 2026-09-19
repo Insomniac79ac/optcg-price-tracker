@@ -6,6 +6,7 @@ from worker.job_locks import LockHeldError, acquire_lock
 from worker.jobs.run_market_workflow import build_arg_parser, main, run_market_workflow
 from worker.models import (
     Card,
+    CardPrint,
     MarketWorkflowRun,
     PriceObservation,
     PriceRefreshRun,
@@ -25,9 +26,14 @@ def seed_yuyutei_mapping(db_session) -> tuple[Source, Card, SourceCardMapping]:
     db_session.add(card)
     db_session.flush()
 
+    print_row = CardPrint(verification_status="verified", is_active=True)
+    db_session.add(print_row)
+    db_session.flush()
+
     mapping = SourceCardMapping(
         card_id=card.id, source_id=source.id, source_card_id="OP01-001",
         source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
+        card_print_id=print_row.id,
     )
     db_session.add(mapping)
     db_session.commit()

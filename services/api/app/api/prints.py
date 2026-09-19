@@ -175,7 +175,12 @@ def _to_price_observation_out(
     source name and no price_type literal appears in this module - an
     unconfigured pair yields None for both rather than a guess.
     """
-    semantics = classify_observation(source_name, obs.price_type, obs.price_jpy)
+    semantics = classify_observation(
+        source_name,
+        obs.price_type,
+        obs.price_jpy,
+        promotion_state=obs.promotion_state,
+    )
     instrument = describe_instrument(source_name, obs.price_type)
     return PrintPriceObservationOut(
         id=obs.id,

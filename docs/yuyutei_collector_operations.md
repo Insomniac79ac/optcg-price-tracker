@@ -6,42 +6,70 @@ See `docs/market_index.md` for how the prices this collector writes feed the
 Market Index, and `docs/print_centric_pricing.md` for how they're read back
 per collectible print.
 
-## Schedule
+## Current staging shards and schedules
 
-The `yuyutei-collector` Railway service runs on a Railway Cron Schedule:
+The current Railway staging deployment has nine services, shards 0 through
+8. The shard index in each service's start command must match the shard number
+in that service's name, and every service must use `--shard-count 9`. Changing
+the shard count is a deployment topology change, not a routine service edit.
 
-```
-20 18 * * *
-```
+Each shard retains its own existing UTC Railway Cron Schedule. The
+authoritative expression is the individual service's **Settings → Cron
+Schedule** value; this document deliberately does not copy the nine
+expressions. Verify that value against the service's established schedule
+rather than reconstructing or standardising schedules from memory.
 
-That is **once per day**, interpreted as:
+Each scheduled tick starts a fresh container, runs one bounded shard batch to
+completion (or to an early stop - see below), and exits. The services have no
+public domain or HTTP server. A deployment and a collector execution are
+different events: redeploying a cron service may or may not cause the
+collector to execute immediately, so deployment success is not run success.
 
-| Timezone | Time |
-|---|---|
-| UTC | 18:20 |
-| JST (Japan) | 03:20 (next day) |
-| Malaysia (MYT) | 02:20 (next day) |
+**Do not increase any shard's cron frequency until the current schedules have
+been stable for a meaningful operational review period.** The established
+cadence is deliberate for a collector making live third-party requests;
+changing it is a separate, explicitly-scoped decision, not a default to drift
+into.
 
-Each scheduled tick starts a fresh container, runs one bounded batch to
-completion (or to an early stop - see below), and exits. The service has no
-public domain, no HTTP server, and `restartPolicyType=NEVER` - Railway does
-not restart it on its own; only the cron schedule (or a manual redeploy)
-starts a new run. Per Railway's own cron semantics, a scheduled invocation
-is skipped if the previous invocation is still running, so a hung collector
-can never overlap itself or stay alive indefinitely.
+## Required Railway networking
 
-**Do not increase the cron frequency until this schedule has been stable in
-production for a meaningful review period.** Once-daily is the deliberate
-starting cadence for a collector making live third-party requests; moving to
-multiple times a day is a separate, explicitly-scoped decision, not a
-default to drift into.
+Every Yuyu-Tei collector shard in the current Railway staging deployment must
+have all of the following:
+
+- deployment region **US West**
+- **Static Outbound IPs** enabled
+- the current **HA** Static IP configuration enabled
+- exactly **3 assigned outbound IPs** in the current Railway setup
+- a deployment created after Static Outbound IPs were enabled or changed
+
+Do not record the assigned IP addresses in this runbook. Verify their presence
+and count in Railway instead.
+
+Treat networking rollout as three separate states:
+
+1. **Assigned:** Railway shows Static Outbound IPs enabled and three addresses
+   assigned to the shard.
+2. **Redeployed/effective:** a successful deployment exists whose timestamp is
+   after the networking assignment or change. An assignment without this
+   deployment remains configuration-pending.
+3. **Operationally validated:** a normal collector execution after that
+   qualifying deployment reports homepage HTTP 200 / `normal_product`, no
+   source-wide abort, the expected shard workload completed, and exit code 0.
+
+A successful deployment alone does not validate access to Yuyu-Tei. Wait for
+and inspect a qualifying collector execution. At the time of this update
+(2026-09-18), Static Outbound IP configuration is complete for all staging
+shards (9/9), all shards have a qualifying deployment (9/9), and all shards
+have passed operational validation (9/9 PASS). The original Yuyu HTTP 403
+incident is operationally resolved.
 
 ## What one run does
 
-Effective start command:
+Effective start-command pattern for shard `N`:
 
-```
-python -m yuyutei_collector.collect --approved-mappings
+```text
+python -m yuyutei_collector.collect --approved-mappings \
+  --shard-index N --shard-count 9
 ```
 
 See `services/yuyutei_collector/yuyutei_collector/batch.py` for the full
@@ -124,6 +152,22 @@ Observations already written earlier in the same run are preserved as-is.
 The run's exit status is `source_wide_failure` in that case (see "Exit
 status" below).
 
+### Observed networking incident signatures
+
+The Static Outbound IP incident established these operational signatures:
+
+| Signal | Dynamic-egress failure | Successful static egress |
+|---|---|---|
+| Homepage | HTTP 403 / `static_403` | HTTP 200 / `normal_product` |
+| Batch behaviour | First mapping attempted; source-wide protection aborts; remaining mappings skipped | No source-wide abort; expected shard mappings are attempted and written |
+| Process result | `source_wide_failure`, non-zero exit | `success`, exit 0 |
+
+Multiple identical collector builds failed through dynamic outbound egress and
+succeeded after Static Outbound IPs became effective. This isolates the
+observed 403 incident to the outbound networking path. A homepage 403 does
+not, by itself, demonstrate a parser failure, Playwright initialisation
+failure, or PostgreSQL capacity failure.
+
 ## Exit status
 
 Each run reports one of three statuses (and a matching process exit code),
@@ -165,26 +209,66 @@ deploy logs). Look for, in order:
 
 To confirm what actually landed in the database for a given day, query
 `price_observations` by `observed_at` and cross-reference `card_print_id`
-against the five (or, as the trusted print set grows, more) verified prints;
-each real observation's `raw_snapshot_id` resolves to the actual page
-content that was fetched.
+against the shard's selected verified prints; each real observation's
+`raw_snapshot_id` resolves to the actual page content that was fetched.
 
-## Disabling the cron
+## Incident triage order
 
-To stop scheduled runs without touching any code: clear the service's cron
-schedule (Railway dashboard → the collector service → Settings → Cron
-Schedule, or the equivalent `deploy.cronSchedule` config value set to empty)
-and leave the start command as-is. The service will simply never start on
-its own again; a manual redeploy is still possible for an on-demand run
-(see "Running a manual batch" below) and remains subject to every fail-
-closed/denial rule above.
+Use this sequence for suspected Yuyu-Tei access failures:
 
-## Running a manual batch (outside the schedule)
+1. Verify the Railway project, environment, and exact shard service. Never
+   infer environment from a service name alone.
+2. Verify US West and the required Static Outbound IP/HA configuration,
+   including all three assigned addresses.
+3. Confirm that a successful deployment occurred after the networking
+   assignment or change.
+4. Inspect the first eligible collector run's logs for homepage HTTP status
+   and classification.
+5. Check whether source-wide failure protection fired and skipped the rest of
+   the batch.
+6. Investigate browser or parser logic only if a run using effective static
+   egress also fails in a way that supports that diagnosis.
+7. Do not manually run multiple shards simultaneously merely to test
+   connectivity. Let their existing schedules provide isolated evidence.
 
-The same effective start command works for a one-off manual run - trigger a
-redeploy of the collector service with `deploy.startCommand` set to
-`python -m yuyutei_collector.collect --approved-mappings`. This is the exact
-mechanism the daily cron itself uses; there is no separate "manual mode."
-Do this sparingly - each run makes real requests to Yuyu-Tei - and never to
-work around a `source_wide_failure` result from the previous run without
-first understanding why it was denied.
+Keep the project → environment → service → deployment scope explicit in notes
+and screenshots. Do not use a temporary start-command override on a live
+collector service for diagnostics: a prior attempt showed that the persistent
+Railway start command can still win and launch the normal collector.
+
+## Separate database-capacity incident
+
+A separate incident found a very small PostgreSQL volume at about 95% usage,
+with `raw_snapshots` dominating storage. That capacity condition did not cause
+the shard-2 or shard-3 homepage 403 failures. Raw snapshot retention and
+archive work is tracked separately; do not delete raw snapshots as an
+emergency networking response without first reviewing their provenance and
+retention obligations.
+
+## New-shard verification checklist
+
+- [ ] Staging/production environment verified
+- [ ] Correct region
+- [ ] Static Outbound IP enabled
+- [ ] HA/IP assignment present (3 assigned IPs in the current setup)
+- [ ] Correct shard index/count
+- [ ] Expected start command
+- [ ] Expected UTC cron
+- [ ] Intended commit
+- [ ] Redeployed after networking assignment
+- [ ] First post-deploy run HTTP 200 / `normal_product`
+- [ ] No source-wide abort
+- [ ] Expected mappings completed
+- [ ] Exit 0
+
+## Schedule and manual-run safety
+
+Changing or clearing a shard's cron is a separate, explicitly authorised
+configuration action; it is not part of connectivity triage. Preserve each
+shard's established schedule and start command during diagnosis.
+
+Do not assume redeploy equals collector run, and do not use a temporary
+start-command override on a live shard to manufacture a diagnostic run. A
+manual collector trigger is also an explicit operational action, not a
+default troubleshooting step. Prefer the next scheduled run, then correlate
+its `batch_run_id` and `batch_complete` line with the qualifying deployment.

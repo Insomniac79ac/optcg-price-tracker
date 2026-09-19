@@ -163,6 +163,13 @@ def empty_backup(**table_overrides) -> dict:
             "include_prices": False,
             "include_raw_snapshots": False,
             "include_refresh_runs": False,
+            "include_logs": False,
+            "include_validation_reports": False,
+            "raw_snapshot_provenance": {
+                "mode": "intentionally_omitted",
+                "price_observation_references_nullified": 0,
+                "source_collection_attempt_references_nullified": 0,
+            },
         },
         "tables": tables,
     }

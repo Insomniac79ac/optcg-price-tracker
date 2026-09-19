@@ -33,8 +33,16 @@ from app.services.exact_print_approval import (
     ExactPrintApprovalError,
     assert_print_is_priceable,
 )
+from app.services.source_mapping_identity import (
+    BROKEN,
+    EXACT,
+    LEGACY_COMPATIBILITY,
+    load_source_mapping_identity,
+)
 
 APPROVED = "approved"
+REFUSAL_MAPPING_IDENTITY_BROKEN = "mapping_identity_broken"
+REFUSAL_MAPPING_NOT_APPROVED = "mapping_not_approved"
 
 
 def approval_http_error(exc: ExactPrintApprovalError) -> HTTPException:
@@ -50,7 +58,10 @@ def approval_http_error(exc: ExactPrintApprovalError) -> HTTPException:
         status = 400
     elif exc.code == REFUSAL_PRINT_NOT_FOUND:
         status = 404
-    elif exc.needs_review:
+    elif exc.needs_review or exc.code in (
+        REFUSAL_MAPPING_IDENTITY_BROKEN,
+        REFUSAL_MAPPING_NOT_APPROVED,
+    ):
         status = 409
     else:
         status = 400
@@ -73,11 +84,11 @@ def guard_transition_to_approved(db: Session, mapping: SourceCardMapping) -> Non
     refused request leaves the row exactly as it was.
 
     ALREADY-APPROVED ROWS ARE NOT A TRANSITION, and are left alone on purpose.
-    Six approved Yuyu-Tei mappings on staging predate exact prints and carry a
-    NULL `card_print_id`; they stay readable and keep working. Demoting them
-    here would be a data migration wearing an endpoint's clothes, and this
-    guard's job is to stop the set growing, not to rewrite history. Their gap
-    is real and stays visible in `card_print_id`.
+    Approved rows that predate exact prints stay readable and are not demoted
+    by this transition guard. Mutation paths that would newly activate or
+    verify a row additionally call ``guard_mapping_has_exact_priceable_identity``;
+    that prevents historical compatibility state from being promoted without
+    rewriting it on read.
 
     Nothing is inferred. A NULL print is never filled in from the card code -
     that is the inference the whole contract forbids.
@@ -97,3 +108,50 @@ def guard_transition_to_approved(db: Session, mapping: SourceCardMapping) -> Non
     # A print that has since been deactivated or un-verified cannot be priced
     # against either, so the same three facts are checked here as at creation.
     assert_print_is_priceable(db, mapping.card_print_id)
+
+
+def guard_mapping_has_exact_priceable_identity(
+    db: Session, mapping: SourceCardMapping
+) -> None:
+    """Require current exact lineage and a currently priceable print.
+
+    Unlike ``guard_transition_to_approved``, this deliberately has no
+    grandfathering exception for an already-approved row. It protects a new
+    activation/verification mutation, not historical readability.
+    """
+    identity = load_source_mapping_identity(db, mapping.id)
+    if identity is None or identity.classification == BROKEN:
+        raise ExactPrintApprovalError(
+            REFUSAL_MAPPING_IDENTITY_BROKEN,
+            f"Source mapping {mapping.id} has broken identity lineage and cannot be "
+            "made operational.",
+        )
+    if identity.classification == LEGACY_COMPATIBILITY:
+        raise ExactPrintApprovalError(
+            REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
+            f"Source mapping {mapping.id} is a grandfathered card-only compatibility "
+            "record and cannot be activated or verified for modern collection.",
+        )
+    if identity.classification != EXACT or identity.card_print_id is None:
+        raise ExactPrintApprovalError(
+            REFUSAL_MAPPING_IDENTITY_BROKEN,
+            f"Source mapping {mapping.id} has no usable exact-print identity.",
+        )
+    assert_print_is_priceable(db, identity.card_print_id)
+
+
+def guard_mapping_can_activate(
+    db: Session,
+    mapping: SourceCardMapping,
+    *,
+    proposed_review_status: str | None = None,
+) -> None:
+    """Require the complete prospective activation contract."""
+    guard_mapping_has_exact_priceable_identity(db, mapping)
+    review_status = proposed_review_status or mapping.review_status
+    if review_status != APPROVED:
+        raise ExactPrintApprovalError(
+            REFUSAL_MAPPING_NOT_APPROVED,
+            f"Source mapping {mapping.id} is {review_status!r}; only an approved exact "
+            "mapping can be activated for collection.",
+        )

@@ -14,6 +14,7 @@ from worker.celery_app import (
 from worker.models import (
     AppLogEvent,
     Card,
+    CardPrint,
     MarketWorkflowRun,
     PriceObservation,
     PriceRefreshRun,
@@ -48,9 +49,14 @@ def seed_yuyutei_mapping(db_session) -> tuple[Source, Card, SourceCardMapping]:
     db_session.add(card)
     db_session.flush()
 
+    print_row = CardPrint(verification_status="verified", is_active=True)
+    db_session.add(print_row)
+    db_session.flush()
+
     mapping = SourceCardMapping(
         card_id=card.id, source_id=source.id, source_card_id="OP01-001",
         source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
+        card_print_id=print_row.id,
     )
     db_session.add(mapping)
     db_session.commit()
@@ -79,6 +85,9 @@ def test_task_calls_refresh_logic_and_records_price_refresh_run(db_session, monk
 
     observations = db_session.query(PriceObservation).filter_by(card_id=card_id).all()
     assert len(observations) == 2  # sell + buy, from the mock yuyutei fixture
+    assert {observation.price_type for observation in observations} == {"sell", "buy"}
+    assert all(observation.card_print_id is not None for observation in observations)
+    assert all(observation.source_card_mapping_id is not None for observation in observations)
 
 
 def test_task_does_not_force_live_mode(db_session, monkeypatch):

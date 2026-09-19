@@ -312,6 +312,14 @@ ALLOWED_REFERENCES = {
     # fingerprint, and inserts only through card_pirate_index_replay. Its own
     # suite proves it has no UPDATE, no DELETE and exactly one commit.
     "card_pirate_index_writer.py",
+    # The versioned application backup path exports and clean-restores the
+    # published series as data; it does not calculate points or participate
+    # in normal runtime writes. Backup v12 validates carry references and
+    # restores this table after market_index_snapshots.
+    "services/backup.py",
+    # The operational DB index audit inspects this table's index metadata. It
+    # never imports the model, reads point rows, or participates in writes.
+    "services/db_index_audit.py",
 }
 # NOTE: api/analytics.py is deliberately NOT listed. The read route reaches the
 # index through the read service and the response DTO, never through the ORM

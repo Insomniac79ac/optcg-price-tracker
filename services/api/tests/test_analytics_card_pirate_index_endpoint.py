@@ -84,6 +84,22 @@ def test_returns_the_four_published_points(client, seeded):
     ]
 
 
+def test_uncached_index_omits_absent_cache_key_without_changing_body(
+    client, seeded, monkeypatch
+):
+    import app.services.cache_headers as cache_headers
+
+    monkeypatch.setattr(cache_headers, "is_development_environment", lambda: True)
+
+    response = client.get("/analytics/index?window=all")
+
+    assert response.status_code == 200
+    assert response.headers["X-Cache"] == "MISS"
+    assert response.headers["X-Cache-TTL"] == "300"
+    assert "X-Cache-Key" not in response.headers
+    assert response.json()["current_value"] == "1000.9577"
+
+
 def test_scope_and_version_identity(client, seeded):
     body = client.get("/analytics/index?window=all").json()
     assert body["scope_kind"] == "overall"

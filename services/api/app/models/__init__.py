@@ -41,6 +41,10 @@ from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
 from app.models.source_collection_attempt import SourceCollectionAttempt
 from app.models.source import Source
 from app.models.source_card_mapping import SourceCardMapping
+from app.models.source_mapping_proposal import (
+    SourceMappingProposalAlternative,
+    SourceMappingProposalGroup,
+)
 from app.models.user import User
 from app.models.wishlist_item import WishlistItem
 
@@ -57,6 +61,8 @@ __all__ = [
     "CollectionItem",
     "Source",
     "SourceCardMapping",
+    "SourceMappingProposalGroup",
+    "SourceMappingProposalAlternative",
     "RawSnapshot",
     "PriceObservation",
     "PriceRefreshRun",

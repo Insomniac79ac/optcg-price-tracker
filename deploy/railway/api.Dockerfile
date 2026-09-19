@@ -3,7 +3,7 @@
 # build context (Root Directory: / in Railway's service settings), not from
 # services/api itself - see "Railway build failure" note in
 # docs/railway_staging.md for why: services/api/Dockerfile's bare
-# `COPY requirements.txt .` / `COPY . .` only resolves if the build context
+# `COPY requirements.lock.txt .` / `COPY . .` only resolves if the build context
 # is services/api itself (true for docker-compose.yml/docker-compose.prod.yml,
 # which both set `context: ./services/api` explicitly). Railway's "Root
 # Directory" setting controls both where it looks for this Dockerfile *and*
@@ -23,8 +23,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY services/api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY services/api/requirements.lock.txt .
+RUN python -m pip install --no-cache-dir --require-hashes -r requirements.lock.txt
 
 COPY services/api/. .
 

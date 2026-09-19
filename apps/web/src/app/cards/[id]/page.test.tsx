@@ -252,7 +252,7 @@ describe("CardDetailPage", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Monkey D. Luffy" })).toBeInTheDocument(),
     );
-    expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Compatibility-linked source mappings (admin)")).not.toBeInTheDocument();
   });
 
   it("renders the admin source-mappings panel for a role=admin session", async () => {
@@ -261,7 +261,48 @@ describe("CardDetailPage", () => {
       status: "authenticated",
     });
     render(<CardDetailPage />);
-    await waitFor(() => expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Compatibility-linked source mappings (admin)")).toBeInTheDocument());
+  });
+
+  it("separates authoritative print identity from the compatibility card in the admin panel", async () => {
+    useSessionMock.mockReturnValue({
+      data: { user: { email: "admin@example.com", role: "admin" } },
+      status: "authenticated",
+    });
+    fetchAdminSourceMappings.mockResolvedValue({
+      items: [{
+        id: 9,
+        card_id: 1,
+        compatibility_card_id: 1,
+        card_print_id: 101,
+        card_code: "OP01-001",
+        name_en: "Monkey D. Luffy",
+        name_jp: null,
+        source_name: "yuyutei",
+        source_url: "https://example.test/listing",
+        source_card_id: "OP01-001",
+        manual_verified: true,
+        match_confidence: 100,
+        match_confidence_label: "exact",
+        last_match_checked_at: null,
+        is_active: true,
+        review_status: "approved",
+        review_notes: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        last_verified_at: "2026-01-01T00:00:00Z",
+      }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+      pagination: {},
+    });
+
+    render(<CardDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("link", { name: "CardPrint #101" })).toBeInTheDocument());
+    expect(screen.getByText("Compatibility card: 1")).toBeInTheDocument();
+    expect(screen.getByText(/CardPrint, when present, is the authoritative pricing identity/)).toBeInTheDocument();
   });
 });
 
@@ -788,7 +829,7 @@ describe("CardDetailPage anonymous access", () => {
 
     render(<CardDetailPage />);
     await waitForPrintLinks(1);
-    expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Compatibility-linked source mappings (admin)")).not.toBeInTheDocument();
     expect(fetchAdminSourceMappings).not.toHaveBeenCalled();
   });
 
@@ -798,7 +839,7 @@ describe("CardDetailPage anonymous access", () => {
 
     render(<CardDetailPage />);
     await waitFor(() => expect(screen.getByText("Not on wishlist.")).toBeInTheDocument());
-    expect(screen.queryByText("Source mappings (admin)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Compatibility-linked source mappings (admin)")).not.toBeInTheDocument();
     expect(fetchAdminSourceMappings).not.toHaveBeenCalled();
   });
 
@@ -808,7 +849,7 @@ describe("CardDetailPage anonymous access", () => {
 
     render(<CardDetailPage />);
     await waitFor(() =>
-      expect(screen.getByText("Source mappings (admin)")).toBeInTheDocument(),
+      expect(screen.getByText("Compatibility-linked source mappings (admin)")).toBeInTheDocument(),
     );
     expect(fetchAdminSourceMappings).toHaveBeenCalled();
   });

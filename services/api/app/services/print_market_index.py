@@ -8,8 +8,9 @@ sibling print's observations even when both bridge through the same legacy
 card_id.
 
 This module never calls app.services.market_index.get_market_index_for_card
-or get_market_index_for_cards - it only imports the pure per-observation
-resolver functions and the shared _compute_index_fields combination helper.
+or get_market_index_for_cards. It reuses that module's Yuyu selector,
+per-observation resolver functions, and _compute_index_fields combination
+helper with card_print_id as the identity boundary.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from app.services.market_index import (
     SNKRDUNK_SOLD_WINDOW_DAYS,
     YUYUTEI,
     _compute_index_fields,
+    _get_preferred_yuyutei_price_map,
     _resolve_snkrdunk,
     _resolve_yuyutei_buy,
     _resolve_yuyutei_sell,
@@ -134,8 +136,10 @@ def get_market_index_for_prints(
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    yuyutei_latest = get_latest_price_map_for_prints(
-        db, print_ids, source_names=(YUYUTEI,), price_types=INDEX_INPUT_PRICE_TYPES[YUYUTEI]
+    yuyutei_latest = _get_preferred_yuyutei_price_map(
+        db,
+        print_ids,
+        identity_column=PriceObservation.card_print_id,
     )
     snkrdunk_floor_latest = get_latest_price_map_for_prints(
         db, print_ids, source_names=(SNKRDUNK,), price_types=(SNKRDUNK_FLOOR_PRICE_TYPE,)

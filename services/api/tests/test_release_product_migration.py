@@ -11,6 +11,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import sqlalchemy as sa
+import pytest
+
+from tests._repo_root import find_repo_root
 
 VERSIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 MIGRATION_PATH = VERSIONS_DIR / "b6e3a9c15d47_add_release_products.py"
@@ -317,9 +320,10 @@ def test_seed_names_match_the_collectors_release_reference():
     """
     import sys
 
-    collector_path = (
-        Path(__file__).resolve().parents[3] / "services" / "snkrdunk_collector"
-    )
+    repo_root = find_repo_root()
+    if repo_root is None:
+        pytest.skip("Repo root not visible; SNKRDUNK collector source is unavailable here.")
+    collector_path = repo_root / "services" / "snkrdunk_collector"
     sys.path.insert(0, str(collector_path))
     try:
         from snkrdunk_collector.release_reference import RELEASE_REFERENCES

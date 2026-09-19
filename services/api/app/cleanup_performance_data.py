@@ -2,15 +2,17 @@
 app.seed_performance_data - see 'Performance testing' in
 docs/performance_testing.md.
 
-Deletes are scoped as narrowly as possible: cards are looked up by exact
-card_code prefix first to get their primary key ids, and every dependent
-row is then deleted by id (card_id IN (...) / user_id IN (...)) rather than
-by re-matching on a data value - the same TEST-PERF card_code prefix can
-never collide with a real card code (real ones look like OP01-001), but
-child tables are still deleted by the parent's id, not by guessing at their
-own content, to keep this safe even if that ever changes. Activity/log
-events are identified by the exact event_type="test_perf_seed" marker set
-by the seed script, never by matching on message text.
+Deletes are scoped as narrowly as possible: legacy and canonical cards are
+looked up by exact card_code prefix first to get their primary key ids, and
+every dependent row is then deleted by id (card_id/canonical_card_id IN (...)
+/ user_id IN (...)) rather than by re-matching on a data value. The dedicated
+release product is selected by its exact synthetic catalogue/code pair. The
+same TEST-PERF card_code prefix can never collide with a real card code (real
+ones look like OP01-001), but child tables are still deleted by the parent's
+id, not by guessing at their own content, to keep this safe even if that ever
+changes. Activity/log events are identified by the exact
+event_type="test_perf_seed" marker set by the seed script, never by matching
+on message text.
 
 Requires --confirm DELETE_TEST_PERF_DATA - refuses to run otherwise.
 
@@ -29,10 +31,13 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import (
     AppLogEvent,
+    CanonicalCard,
     Card,
+    CardPrint,
     CollectionItem,
     CollectorActivityEvent,
     PriceObservation,
+    ReleaseProduct,
     Source,
     SourceCardMapping,
     User,
@@ -41,6 +46,8 @@ from app.models import (
 from app.seed_performance_data import (
     CARD_CODE_PREFIX,
     SEED_MARKER,
+    TEST_RELEASE_PRODUCT_CODE,
+    TEST_SOURCE_CATALOGUE,
     TEST_SOURCE_NAME,
     TEST_USER_GOOGLE_SUB,
 )
@@ -67,6 +74,12 @@ def cleanup_performance_data(db: Session, confirm: str | None) -> CleanupSummary
     card_ids = [
         row[0]
         for row in db.query(Card.id).filter(Card.card_code.like(f"{CARD_CODE_PREFIX}%")).all()
+    ]
+    canonical_card_ids = [
+        row[0]
+        for row in db.query(CanonicalCard.id)
+        .filter(CanonicalCard.card_code.like(f"{CARD_CODE_PREFIX}%"))
+        .all()
     ]
     user_ids = [
         row[0] for row in db.query(User.id).filter(User.google_sub == TEST_USER_GOOGLE_SUB).all()
@@ -100,6 +113,30 @@ def cleanup_performance_data(db: Session, confirm: str | None) -> CleanupSummary
         summary.deleted["source_card_mappings"] = 0
         summary.deleted["collection_items"] = 0
         summary.deleted["wishlist_items"] = 0
+
+    if canonical_card_ids:
+        summary.deleted["card_prints"] = (
+            db.query(CardPrint)
+            .filter(CardPrint.canonical_card_id.in_(canonical_card_ids))
+            .delete(synchronize_session=False)
+        )
+        summary.deleted["canonical_cards"] = (
+            db.query(CanonicalCard)
+            .filter(CanonicalCard.id.in_(canonical_card_ids))
+            .delete(synchronize_session=False)
+        )
+    else:
+        summary.deleted["card_prints"] = 0
+        summary.deleted["canonical_cards"] = 0
+
+    summary.deleted["release_products"] = (
+        db.query(ReleaseProduct)
+        .filter(
+            ReleaseProduct.source_catalogue == TEST_SOURCE_CATALOGUE,
+            ReleaseProduct.official_code == TEST_RELEASE_PRODUCT_CODE,
+        )
+        .delete(synchronize_session=False)
+    )
 
     # Defensive: a collection/wishlist item could in principle be owned by
     # the test-perf user but point at a non-TEST-PERF card (shouldn't

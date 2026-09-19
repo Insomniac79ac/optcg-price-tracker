@@ -570,14 +570,10 @@ class MarketAnalyticsCoverageOut(BaseModel):
     `usable_priced_prints`, and a client may safely present it as impaired
     coverage.
 
-    It is deliberately narrower than "carries a constraint". Of the four
-    verdicts app.services.source_semantics ships, `platform_floor` and
-    `below_platform_minimum` disqualify while `sale_price` does not: a sale
-    price is a real price a collector can pay today. Counting the wider notion
-    would have reported Yuyu-Tei's 36 sale-priced prints as excluded when
-    every one of them is usable. The distinction is derived from the
-    classifier's own `eligible` flag, never from a constraint name, so a
-    future constraint lands on the correct side of it with no edit."""
+    It is deliberately narrower than "carries a constraint": the distinction
+    is derived from the classifier's own `eligible` flag, never from a
+    constraint name, so a future constraint lands on the correct side of it
+    with no edit."""
 
     observed_prints: int | None
     usable_priced_prints: int
@@ -947,9 +943,9 @@ class PrintPriceObservationOut(BaseModel):
 
     Derived at read time by app.services.source_semantics.classify_observation
     - the same classifier app.services.market_index calls - from
-    (source, price_type, price_jpy). No threshold, source name, or platform
-    minimum is restated here or in the endpoint; a rules change therefore
-    reaches this payload with no migration and no backfill.
+    (source, price_type, price_jpy, promotion_state). No threshold, source
+    name, or platform minimum is restated here or in the endpoint; a rules
+    change therefore reaches this payload with no migration and no backfill.
 
     WHAT ``eligible`` DOES NOT MEAN. It answers only "is this observation
     disqualified by *source semantics*?", exactly as
@@ -1855,6 +1851,8 @@ class SourceCardMappingListOut(BaseModel):
 
 
 class SourceCardMappingUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     source_url: str | None = None
     source_card_id: str | None = None
     manual_verified: bool | None = None
@@ -1865,12 +1863,33 @@ class SourceCardMappingUpdateIn(BaseModel):
 
 class MappingQualityItemOut(BaseModel):
     mapping_id: int
+    identity_classification: Literal["exact", "legacy_compatibility", "broken"]
+    confidence_scope: Literal["exact_print", "compatibility_only", "structural_failure"]
     source_name: str | None
     source_url: str | None
     source_card_id: str
-    # NULL on a print-authoritative mapping, same as SourceCardMappingOut
-    # above: the quality report scores such a mapping and flags it with
-    # issue_type "missing_card_reference" rather than omitting it.
+    card_print_id: int | None
+    canonical_card_id: int | None
+    release_product_id: int | None
+    compatibility_card_id: int | None
+    compatibility_card_status: Literal[
+        "present_valid", "absent", "broken_reference", "conflicting"
+    ]
+    compatibility_issue_types: list[str]
+    compatibility_match_confidence: int | None
+    compatibility_match_confidence_label: str | None
+    exact_confidence_dimensions: dict[str, Any]
+    canonical_card_code: str | None
+    canonical_name_en: str | None
+    canonical_name_jp: str | None
+    print_language: str | None
+    release_product_code: str | None
+    release_product_name: str | None
+    official_asset_variant: str | None
+    treatment: str | None
+    official_rarity: str | None
+    # Deprecated compatibility-card presentation fields. Authoritative
+    # confidence uses the explicit print/canonical/product fields above.
     card_id: int | None = None
     card_code: str | None
     name_en: str | None
@@ -1892,6 +1911,9 @@ class MappingQualityItemOut(BaseModel):
 
 class MappingQualitySummaryOut(BaseModel):
     total_mappings: int
+    exact_mapping_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     ok_count: int
     review_count: int
     warning_count: int
@@ -1952,19 +1974,67 @@ class BulkMappingUpdateResultOut(BaseModel):
     error: str | None = None
 
 
+class BulkMappingUpdateSummaryOut(BaseModel):
+    applied: int
+    skipped_legacy_compatibility: int
+    skipped_broken: int
+    skipped_non_priceable_exact: int
+    not_found: int
+
+
 class BulkMappingUpdateOut(BaseModel):
     action: str
     results: list[BulkMappingUpdateResultOut]
+    summary: BulkMappingUpdateSummaryOut
 
 
-class ReplaceMappingCardIn(BaseModel):
+class CompatibilityCardUpdateIn(BaseModel):
+    """Edit optional legacy-card metadata, never authoritative print identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    compatibility_card_id: int | None
+    review_notes: str | None = None
+
+
+class LegacyReplaceCardAliasIn(BaseModel):
+    """Deprecated wire format for the compatibility-card edit alias.
+
+    ``card_id`` means legacy compatibility metadata. ``approve`` is accepted
+    only so the existing admin client does not break; the compatibility-only
+    operation never changes approval or operational state.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"deprecated": True},
+    )
+
     card_id: int
     review_notes: str | None = None
     approve: bool = False
 
 
+class CompatibilityCardUpdateOut(MappingQualityItemOut):
+    operation: Literal["compatibility_card_updated"]
+    authoritative_card_print_id: int | None
+    previous_compatibility_card_id: int | None
+    new_compatibility_card_id: int | None
+    pricing_identity_changed: Literal[False] = False
+    deprecated_route: bool = False
+    deprecated_approve_requested: bool = False
+
+
 class SuggestedCardsOut(BaseModel):
     mapping_id: int
+    identity_classification: Literal["exact", "legacy_compatibility", "broken"]
+    authoritative_card_print_id: int | None
+    suggestion_scope: Literal[
+        "exact_print_review_required",
+        "legacy_compatibility_only",
+        "structural_repair_required",
+    ]
+    message: str
     matches: list[CandidateMatchOut]
 
 
@@ -2484,7 +2554,7 @@ class CardAuditSummaryOut(BaseModel):
 # must already exist rather than relying on a forward-reference string.
 
 
-class CatalogCoverageSummaryOut(BaseModel):
+class LegacyCatalogCoverageSummaryOut(BaseModel):
     total_cards: int
     active_cards: int
     inactive_merged_cards: int
@@ -2508,7 +2578,9 @@ class CatalogCoverageSummaryOut(BaseModel):
 class CardAuditReportOut(BaseModel):
     summary: CardAuditSummaryOut
     issues: list[CardAuditIssueOut]
-    catalog_coverage: CatalogCoverageSummaryOut | None = None
+    catalog_coverage: LegacyCatalogCoverageSummaryOut | None = None
+    modern_exact_print_audit: dict[str, int] | None = None
+    compatibility_audit: dict[str, int] | None = None
 
 
 class CatalogCoverageBreakdownItemOut(BaseModel):
@@ -2530,21 +2602,34 @@ class CatalogCoverageBreakdownItemOut(BaseModel):
 
 
 class CatalogCoverageGapItemOut(BaseModel):
-    card_id: int
-    card_code: str | None
-    name_en: str | None
-    name_jp: str | None
-    set_code: str | None
-    rarity: str | None
-    variant: str | None
-    language: str | None
+    identity_scope: str
+    card_id: int | None = None
+    compatibility_card_id: int | None = None
+    card_print_id: int | None = None
+    canonical_card_id: int | None = None
+    release_product_id: int | None = None
+    card_code: str | None = None
+    name_en: str | None = None
+    name_jp: str | None = None
+    set_code: str | None = None
+    rarity: str | None = None
+    variant: str | None = None
+    language: str | None = None
+    release_product_code: str | None = None
+    release_product_name: str | None = None
+    official_asset_variant: str | None = None
+    treatment: str | None = None
+    exact_mapping_ids: list[int] = Field(default_factory=list)
+    compatibility_card_ids: list[int] = Field(default_factory=list)
+    mapped_sources: list[str] = Field(default_factory=list)
+    fresh_sources: list[str] = Field(default_factory=list)
     issue_types: list[str]
     severity: str
     suggested_action: str
 
 
-class CatalogCoverageReportOut(BaseModel):
-    summary: CatalogCoverageSummaryOut
+class LegacyCatalogCoverageReportOut(BaseModel):
+    summary: LegacyCatalogCoverageSummaryOut
     coverage_by_set: list[CatalogCoverageBreakdownItemOut]
     coverage_by_rarity: list[CatalogCoverageBreakdownItemOut]
     coverage_by_variant: list[CatalogCoverageBreakdownItemOut]
@@ -2554,10 +2639,53 @@ class CatalogCoverageReportOut(BaseModel):
     price_gaps: list[CatalogCoverageGapItemOut]
     duplicate_risks: list[CatalogCoverageGapItemOut]
     mapping_quality_risks: list[CatalogCoverageGapItemOut]
-    # Loosely-typed (not PriceSourceHealthSummaryOut, defined later in this
-    # file) rather than reordering every catalog-coverage schema above this
-    # one - see app.services.catalog_coverage's price_source_health field,
-    # populated from app.services.price_source_health.summarize_price_source_health.
+    price_source_health: dict[str, Any] | None = None
+
+
+class CatalogCoverageSummaryOut(BaseModel):
+    coverage_unit: Literal["eligible_physical_print"]
+    total_eligible_physical_prints: int
+    prints_with_any_exact_mapping: int
+    physical_prints_without_exact_mapping: int
+    prints_with_any_fresh_source_observation: int
+    physical_prints_with_exact_mapping_but_no_fresh_observation: int
+    exact_mapping_coverage_pct: float
+    fresh_price_coverage_pct: float
+    exact_source_mapping_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
+    exact_mappings_outside_eligible_prints: int
+
+
+class PhysicalPrintCoverageSourceOut(BaseModel):
+    source_id: int
+    source_name: str
+    eligible_print_count: int
+    mapped_print_count: int
+    fresh_price_print_count: int
+    mapping_coverage_pct: float
+    fresh_price_coverage_pct: float
+
+
+class PhysicalPrintCoverageBreakdownOut(BaseModel):
+    key: str
+    label: str
+    eligible_print_count: int
+    mapped_print_count: int
+    fresh_price_print_count: int
+    mapping_coverage_pct: float
+    fresh_price_coverage_pct: float
+
+
+class CatalogCoverageReportOut(BaseModel):
+    summary: CatalogCoverageSummaryOut
+    sources: list[PhysicalPrintCoverageSourceOut]
+    coverage_by_release_product: list[PhysicalPrintCoverageBreakdownOut]
+    coverage_by_rarity: list[PhysicalPrintCoverageBreakdownOut]
+    coverage_by_language: list[PhysicalPrintCoverageBreakdownOut]
+    mapping_gaps: list[CatalogCoverageGapItemOut]
+    price_gaps: list[CatalogCoverageGapItemOut]
+    legacy_compatibility: LegacyCatalogCoverageReportOut
     price_source_health: dict[str, Any] | None = None
 
 
@@ -2573,6 +2701,9 @@ class CatalogCoverageGapsOut(BaseModel):
 class PriceSourceHealthSummaryOut(BaseModel):
     sources_count: int
     active_sources_count: int
+    exact_mapping_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     total_active_mappings: int
     mappings_with_recent_price: int
     mappings_without_recent_price: int
@@ -2592,6 +2723,8 @@ class SourceHealthItemOut(BaseModel):
     recent_price_count: int
     stale_price_count: int
     missing_price_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     latest_price_observed_at: datetime | None
     latest_refresh_status: str | None
     latest_refresh_started_at: datetime | None
@@ -2607,23 +2740,31 @@ class SourceHealthItemOut(BaseModel):
 class HealthCoverageBreakdownItemOut(BaseModel):
     key: str
     label: str
-    mapped_cards: int
-    recent_price_cards: int
-    stale_price_cards: int
-    missing_price_cards: int
+    mapped_prints: int
+    recent_price_prints: int
+    stale_price_prints: int
+    missing_price_prints: int
     coverage_pct: float
 
 
 class PriceGapItemOut(BaseModel):
     mapping_id: int
-    card_id: int
+    source_id: int
+    card_print_id: int | None
+    canonical_card_id: int | None
+    release_product_id: int | None
+    compatibility_card_id: int | None
+    identity_classification: str
     card_code: str | None
     name_en: str | None
-    set_code: str | None
+    name_jp: str | None
+    release_product_code: str | None
+    release_product_name: str | None
     rarity: str | None
-    variant: str | None
+    official_asset_variant: str | None
+    treatment: str | None
     language: str | None
-    source_name: str
+    source_name: str | None
     source_url: str | None
     latest_price_observed_at: datetime | None
     latest_price_type: str | None
@@ -2648,10 +2789,13 @@ class RefreshRunSummaryItemOut(BaseModel):
 class PriceSourceHealthReportOut(BaseModel):
     summary: PriceSourceHealthSummaryOut
     sources: list[SourceHealthItemOut]
-    coverage_by_set: list[HealthCoverageBreakdownItemOut]
+    coverage_by_release_product: list[HealthCoverageBreakdownItemOut]
     coverage_by_rarity: list[HealthCoverageBreakdownItemOut]
+    coverage_by_language: list[HealthCoverageBreakdownItemOut]
     stale_prices: list[PriceGapItemOut]
     missing_prices: list[PriceGapItemOut]
+    legacy_compatibility_mappings: list[PriceGapItemOut]
+    broken_mappings: list[PriceGapItemOut]
     refresh_runs: list[RefreshRunSummaryItemOut]
     warnings: list[str]
 
@@ -4273,6 +4417,8 @@ class CatalogOperationsSummaryOut(BaseModel):
     recent_price_coverage_pct: float
     price_source_health_status: str
     latest_import_validation_status: str
+    modern_exact_print: dict[str, Any]
+    legacy_compatibility: dict[str, int]
     warnings: list[str]
 
 
@@ -4490,6 +4636,7 @@ class DbIndexCheckOut(BaseModel):
     index: str
     status: str
     severity: str
+    scope: str
     message: str
 
 

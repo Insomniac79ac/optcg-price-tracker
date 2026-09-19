@@ -22,9 +22,12 @@ import { formatPercent } from "@/lib/format";
 const NOT_AVAILABLE = "not available";
 
 interface CatalogOpsSummary {
-  metadataCompletionPct: number | null;
-  mappingCoveragePct: number | null;
-  recentPriceCoveragePct: number | null;
+  eligiblePhysicalPrints: number | null;
+  mappedPhysicalPrints: number | null;
+  freshPricePhysicalPrints: number | null;
+  exactMappingCoveragePct: number | null;
+  freshPriceCoveragePct: number | null;
+  legacyMetadataCompletionPct: number | null;
   duplicateRiskCount: number | null;
   mappingQualityCriticalCount: number | null;
   priceSourceHealthWarningCount: number | null;
@@ -69,14 +72,14 @@ const OPS_CARDS: OpsCard[] = [
     description: "Review low-confidence/stale/duplicate mappings.",
   },
   {
-    title: "Catalog Coverage",
+    title: "Physical Print Coverage",
     href: "/admin/catalog-coverage",
-    description: "Mapping, price, metadata, wishlist and collection coverage.",
+    description: "Exact source mapping and fresh-price coverage by physical print.",
   },
   {
     title: "Price Source Health",
     href: "/admin/price-source-health",
-    description: "Source freshness, failed refreshes and missing prices.",
+    description: "Per-print source freshness, failed refreshes and mapping lineage.",
   },
   {
     title: "System Check",
@@ -102,6 +105,8 @@ export default function CatalogOpsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // This effect owns the initial external summary request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
 
     Promise.allSettled([
@@ -133,9 +138,12 @@ export default function CatalogOpsPage() {
       const latestReport = reports?.reports?.[0] ?? null;
 
       setSummary({
-        metadataCompletionPct: coverage?.summary.metadata_completion_pct ?? null,
-        mappingCoveragePct: coverage?.summary.mapping_coverage_pct ?? null,
-        recentPriceCoveragePct: coverage?.summary.recent_price_coverage_pct ?? null,
+        eligiblePhysicalPrints: coverage?.summary.total_eligible_physical_prints ?? null,
+        mappedPhysicalPrints: coverage?.summary.prints_with_any_exact_mapping ?? null,
+        freshPricePhysicalPrints: coverage?.summary.prints_with_any_fresh_source_observation ?? null,
+        exactMappingCoveragePct: coverage?.summary.exact_mapping_coverage_pct ?? null,
+        freshPriceCoveragePct: coverage?.summary.fresh_price_coverage_pct ?? null,
+        legacyMetadataCompletionPct: coverage?.legacy_compatibility.summary.metadata_completion_pct ?? null,
         duplicateRiskCount: duplicates?.summary.total_pairs ?? null,
         mappingQualityCriticalCount: quality?.summary.critical_count ?? null,
         priceSourceHealthWarningCount: health
@@ -159,7 +167,7 @@ export default function CatalogOpsPage() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
           title="Catalog Operations"
-          description="One landing page for canonical catalog import/export, matching, duplicate review, mapping quality, coverage, and price source health."
+          description="Operational reporting for exact physical-print mappings, source freshness, and separate legacy catalogue compatibility."
         />
 
         {unauthorized && <AdminSessionExpired />}
@@ -188,16 +196,28 @@ export default function CatalogOpsPage() {
               <div className="mb-6">
                 <StatGrid>
                   <StatCard
-                    label="Metadata completion"
-                    value={formatPercent(summary.metadataCompletionPct)}
+                    label="Eligible physical prints"
+                    value={formatCount(summary.eligiblePhysicalPrints)}
                   />
                   <StatCard
-                    label="Mapping coverage"
-                    value={formatPercent(summary.mappingCoveragePct)}
+                    label="Mapped physical prints"
+                    value={formatCount(summary.mappedPhysicalPrints)}
                   />
                   <StatCard
-                    label="Recent price coverage"
-                    value={formatPercent(summary.recentPriceCoveragePct)}
+                    label="Fresh-price physical prints"
+                    value={formatCount(summary.freshPricePhysicalPrints)}
+                  />
+                  <StatCard
+                    label="Source mapping coverage"
+                    value={formatPercent(summary.exactMappingCoveragePct)}
+                  />
+                  <StatCard
+                    label="Fresh price coverage"
+                    value={formatPercent(summary.freshPriceCoveragePct)}
+                  />
+                  <StatCard
+                    label="Legacy metadata completion"
+                    value={formatPercent(summary.legacyMetadataCompletionPct)}
                   />
                   <StatCard label="Duplicate risks" value={formatCount(summary.duplicateRiskCount)} />
                   <StatCard

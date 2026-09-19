@@ -119,6 +119,8 @@ export default function CardDetailPage() {
     if (!card?.card_code) return;
     const cardCode = card.card_code;
     let cancelled = false;
+    // A new legacy card code invalidates the previous canonical-print result.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrintsStatus("loading");
     setCanonicalIdentity(null);
 
@@ -265,7 +267,7 @@ export default function CardDetailPage() {
     fetchAdminSourceMappings({ card_code: card.card_code })
       .then((data) => setAdminMappings(data.items))
       .catch(() => setAdminMappings([]));
-  }, [isAdmin, card?.card_code]);
+  }, [isAdmin, card]);
 
   const gradingSubmissions = collectionItems.flatMap((item) => item.grading_submissions);
 
@@ -889,16 +891,22 @@ function CardEffectText({ card }: { card: Card }) {
   );
 }
 
-/** Admin-only source-mappings mini panel - compact, clearly admin-styled,
+/** Admin-only compatibility-linked source-mappings mini panel - compact, clearly admin-styled,
  * only ever rendered for a role="admin" session (see isAdmin in the page
  * component). Uses the existing GET /admin/source-mappings?card_code= list
- * (server-side-authorized via the Next.js proxy - see
- * src/lib/adminProxy.ts), not the /quality review endpoint. */
+ * (server-side-authorized via the Next.js proxy - see src/lib/adminProxy.ts).
+ * That legacy filter is a compatibility-card lookup, so this panel names it
+ * as such and separately shows CardPrint when the mapping has one. */
 function AdminSourceMappingsMiniPanel({ mappings }: { mappings: SourceCardMapping[] }) {
   return (
     <div className="admin-preview rounded-panel p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-text-primary">Source mappings (admin)</h2>
+        <div>
+          <h2 className="text-sm font-semibold text-text-primary">Compatibility-linked source mappings (admin)</h2>
+          <p className="mt-1 text-xs text-text-muted">
+            This legacy card page filters by compatibility metadata. CardPrint, when present, is the authoritative pricing identity.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-3 text-xs">
           <Link href="/admin/source-mapping-quality" className="text-sky-400 hover:text-sky-300">
             Source Mapping Quality →
@@ -922,6 +930,19 @@ function AdminSourceMappingsMiniPanel({ mappings }: { mappings: SourceCardMappin
               <span className="text-text-secondary">{m.is_active ? "active" : "inactive"}</span>
               <span className="text-text-secondary">
                 {m.manual_verified ? "verified" : "unverified"}
+              </span>
+              <span className="text-text-secondary">
+                Authoritative print:{" "}
+                {m.card_print_id === null ? (
+                  "None"
+                ) : (
+                  <Link href={`/prints/${m.card_print_id}`} className="mono text-sky-400 hover:underline">
+                    CardPrint #{m.card_print_id}
+                  </Link>
+                )}
+              </span>
+              <span className="text-text-muted">
+                Compatibility card: {m.compatibility_card_id ?? m.card_id ?? "None"}
               </span>
               {m.match_confidence_label && (
                 <span className="text-text-muted">{m.match_confidence_label}</span>

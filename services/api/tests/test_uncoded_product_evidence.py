@@ -16,8 +16,14 @@ from app.services.uncoded_product_evidence import (
     prove_asia_en_carries_no_uncoded_names,
     prove_uncoded_product,
 )
+from tests._repo_root import find_repo_root
 
-SNAPSHOTS = pathlib.Path(__file__).resolve().parents[3] / "data" / "official_snapshots"
+REPO_ROOT = find_repo_root()
+SNAPSHOTS = (
+    REPO_ROOT / "data" / "official_snapshots"
+    if REPO_ROOT is not None
+    else pathlib.Path(__file__).resolve().parent / "__repository_snapshots_unavailable__"
+)
 JP = SNAPSHOTS / "bandai_jp" / "current"
 EN = SNAPSHOTS / "bandai_asia_en" / "current"
 

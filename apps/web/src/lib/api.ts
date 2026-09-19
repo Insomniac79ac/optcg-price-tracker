@@ -416,6 +416,29 @@ export interface CardAuditSummary {
 export interface CardAuditReport {
   summary: CardAuditSummary;
   issues: CardAuditIssue[];
+  catalog_coverage: LegacyCatalogCoverageSummary | null;
+  modern_exact_print_audit: ModernExactPrintAudit | null;
+  compatibility_audit: CompatibilityAudit | null;
+}
+
+export interface ModernExactPrintAudit {
+  eligible_physical_prints: number;
+  exact_mappings: number;
+  active_exact_mappings: number;
+  mappings_with_fresh_observations: number;
+  mappings_without_fresh_observations: number;
+  active_exact_mappings_non_priceable: number;
+  broken_mappings: number;
+}
+
+export interface CompatibilityAudit {
+  grandfathered_legacy_mappings: number;
+  legacy_card_references: number;
+  broken_compatibility_card_pointers: number;
+  collection_items_card_keyed: number;
+  collection_items_broken_card_references: number;
+  wishlist_items_card_keyed: number;
+  wishlist_items_broken_card_references: number;
 }
 
 /** A response is a valid CardAuditReport as long as it has a `summary`
@@ -604,8 +627,8 @@ export class AdminAuthRequiredError extends Error {
 }
 
 export class AdminNotFoundError extends Error {
-  constructor() {
-    super("Not found");
+  constructor(message = "Not found") {
+    super(message);
     this.name = "AdminNotFoundError";
   }
 }
@@ -703,24 +726,25 @@ export async function fetchAdminJson<T>(
   }
 
   if (res.status === 401) throw new AdminAuthRequiredError();
-  if (res.status === 404) throw new AdminNotFoundError();
   if (!res.ok) {
     // The proxy route reports backend-fetch/parsing failures as a JSON body
     // with an `error` field rather than an HTTP-level failure, so surface
     // that message and its details instead of a generic status-code error.
     // A `detail` field instead means the proxy successfully forwarded a real
     // FastAPI error response (e.g. a 400/422/502 from the backend itself).
-    const details = await res
-      .json()
-      .catch(
-        () =>
-          null as {
-            error?: string;
-            detail?: string;
-            backend_status?: number;
-            body_preview?: string;
-          } | null,
-      );
+    const details = (await res.json().catch(() => null)) as {
+      error?: string;
+      detail?: string | { code?: string; message?: string } | Array<{ msg?: string }>;
+      backend_status?: number;
+      body_preview?: string;
+    } | null;
+    const detailMessage =
+      typeof details?.detail === "string"
+        ? details.detail
+        : Array.isArray(details?.detail)
+          ? details.detail.map((item) => item.msg).filter(Boolean).join("; ")
+          : details?.detail?.message ?? details?.detail?.code;
+    if (res.status === 404) throw new AdminNotFoundError(detailMessage || "Not found");
     if (details?.error) {
       throw new AdminProxyError(
         details.error,
@@ -728,8 +752,8 @@ export async function fetchAdminJson<T>(
         details.body_preview,
       );
     }
-    if (details?.detail) {
-      throw new Error(details.detail);
+    if (detailMessage) {
+      throw new Error(detailMessage);
     }
     throw new Error(`Request to ${path} failed with status ${res.status}`);
   }
@@ -1170,12 +1194,43 @@ export function rejectCandidateMatch(
   );
 }
 
+export type MappingIdentityClassification = "exact" | "legacy_compatibility" | "broken";
+export type MappingConfidenceScope = "exact_print" | "compatibility_only" | "structural_failure";
+export type CompatibilityCardStatus = "present_valid" | "absent" | "broken_reference" | "conflicting";
+
+export interface ExactConfidenceDimension {
+  status: string;
+  expected?: string | null;
+  observed?: string | null;
+}
+
 export interface MappingQualityItem {
   mapping_id: number;
+  identity_classification: MappingIdentityClassification;
+  confidence_scope: MappingConfidenceScope;
   source_name: string | null;
   source_url: string | null;
   source_card_id: string;
-  card_id: number;
+  card_print_id: number | null;
+  canonical_card_id: number | null;
+  release_product_id: number | null;
+  compatibility_card_id: number | null;
+  compatibility_card_status: CompatibilityCardStatus;
+  compatibility_issue_types: string[];
+  compatibility_match_confidence: number | null;
+  compatibility_match_confidence_label: string | null;
+  exact_confidence_dimensions: Record<string, ExactConfidenceDimension>;
+  canonical_card_code: string | null;
+  canonical_name_en: string | null;
+  canonical_name_jp: string | null;
+  print_language: string | null;
+  release_product_code: string | null;
+  release_product_name: string | null;
+  official_asset_variant: string | null;
+  treatment: string | null;
+  official_rarity: string | null;
+  /** Deprecated compatibility metadata alias. Never authoritative identity. */
+  card_id: number | null;
   card_code: string | null;
   name_en: string | null;
   name_jp: string | null;
@@ -1196,6 +1251,9 @@ export interface MappingQualityItem {
 
 export interface MappingQualitySummary {
   total_mappings: number;
+  exact_mapping_count: number;
+  legacy_compatibility_mapping_count: number;
+  broken_mapping_count: number;
   ok_count: number;
   review_count: number;
   warning_count: number;
@@ -1247,16 +1305,33 @@ export interface BulkMappingUpdateResult {
 export interface BulkMappingUpdateResponse {
   action: string;
   results: BulkMappingUpdateResult[];
+  summary?: {
+    applied: number;
+    skipped_legacy_compatibility: number;
+    skipped_broken: number;
+    skipped_non_priceable_exact: number;
+    not_found: number;
+  };
 }
 
 export interface SuggestedCardsForMapping {
   mapping_id: number;
+  identity_classification: MappingIdentityClassification;
+  authoritative_card_print_id: number | null;
+  suggestion_scope:
+    | "exact_print_review_required"
+    | "legacy_compatibility_only"
+    | "structural_repair_required";
+  message: string;
   matches: CandidateMatch[];
 }
 
 export interface SourceCardMapping {
   id: number;
-  card_id: number;
+  /** Legacy compatibility metadata alias, not the priced-print identity. */
+  card_id: number | null;
+  compatibility_card_id?: number | null;
+  card_print_id: number | null;
   card_code: string | null;
   name_en: string | null;
   name_jp: string | null;
@@ -1308,7 +1383,7 @@ export function fetchAdminSourceMappings(params?: {
 
 /* Source mapping quality review goes through the Next.js server proxy (see
  * src/app/api/admin/source-mappings/quality|recheck-quality|bulk-update/
- * route.ts and .../[id]/replace-card|suggested-cards/route.ts), same
+ * route.ts and .../[id]/compatibility-card|suggested-cards/route.ts), same
  * reasoning as the SNKRDUNK matching fetchers above. */
 export function fetchMappingQuality(params?: {
   source?: string;
@@ -1368,17 +1443,29 @@ export function bulkUpdateMappings(
   );
 }
 
-export function replaceMappingCard(
+export interface CompatibilityCardUpdateResult extends MappingQualityItem {
+  operation: "compatibility_card_updated";
+  authoritative_card_print_id: number | null;
+  previous_compatibility_card_id: number | null;
+  new_compatibility_card_id: number | null;
+  pricing_identity_changed: false;
+  deprecated_route: boolean;
+  deprecated_approve_requested: boolean;
+}
+
+export function updateMappingCompatibilityCard(
   mappingId: number,
-  cardId: number,
+  compatibilityCardId: number | null,
   reviewNotes?: string,
-  approve?: boolean,
-): Promise<MappingQualityItem> {
-  return fetchAdminJson<MappingQualityItem>(
-    `/api/admin/source-mappings/${mappingId}/replace-card`,
+): Promise<CompatibilityCardUpdateResult> {
+  return fetchAdminJson<CompatibilityCardUpdateResult>(
+    `/api/admin/source-mappings/${mappingId}/compatibility-card`,
     {
-      method: "POST",
-      body: { card_id: cardId, review_notes: reviewNotes ?? null, approve: approve ?? false },
+      method: "PATCH",
+      body: {
+        compatibility_card_id: compatibilityCardId,
+        review_notes: reviewNotes ?? null,
+      },
     },
   );
 }
@@ -1537,7 +1624,7 @@ export function mergeCards(params: {
 
 // --- Catalog coverage (see GET /admin/catalog-coverage*) --------------------
 
-export interface CatalogCoverageSummary {
+export interface LegacyCatalogCoverageSummary {
   total_cards: number;
   active_cards: number;
   inactive_merged_cards: number;
@@ -1577,7 +1664,12 @@ export interface CatalogCoverageBreakdownItem {
 }
 
 export interface CatalogCoverageGapItem {
-  card_id: number;
+  identity_scope: string;
+  card_id: number | null;
+  compatibility_card_id: number | null;
+  card_print_id: number | null;
+  canonical_card_id: number | null;
+  release_product_id: number | null;
   card_code: string | null;
   name_en: string | null;
   name_jp: string | null;
@@ -1585,13 +1677,21 @@ export interface CatalogCoverageGapItem {
   rarity: string | null;
   variant: string | null;
   language: string | null;
+  release_product_code: string | null;
+  release_product_name: string | null;
+  official_asset_variant: string | null;
+  treatment: string | null;
+  exact_mapping_ids: number[];
+  compatibility_card_ids: number[];
+  mapped_sources: string[];
+  fresh_sources: string[];
   issue_types: string[];
   severity: string;
   suggested_action: string;
 }
 
-export interface CatalogCoverageReport {
-  summary: CatalogCoverageSummary;
+export interface LegacyCatalogCoverageReport {
+  summary: LegacyCatalogCoverageSummary;
   coverage_by_set: CatalogCoverageBreakdownItem[];
   coverage_by_rarity: CatalogCoverageBreakdownItem[];
   coverage_by_variant: CatalogCoverageBreakdownItem[];
@@ -1601,9 +1701,53 @@ export interface CatalogCoverageReport {
   price_gaps: CatalogCoverageGapItem[];
   duplicate_risks: CatalogCoverageGapItem[];
   mapping_quality_risks: CatalogCoverageGapItem[];
-  // Loosely-typed - see PriceSourceHealthSummary for the real shape (kept
-  // as Record here rather than importing that type ordering-wise, since
-  // both are declared in this same file - see the type below).
+  price_source_health: Record<string, unknown> | null;
+}
+
+export interface CatalogCoverageSummary {
+  coverage_unit: "eligible_physical_print";
+  total_eligible_physical_prints: number;
+  prints_with_any_exact_mapping: number;
+  physical_prints_without_exact_mapping: number;
+  prints_with_any_fresh_source_observation: number;
+  physical_prints_with_exact_mapping_but_no_fresh_observation: number;
+  exact_mapping_coverage_pct: number;
+  fresh_price_coverage_pct: number;
+  exact_source_mapping_count: number;
+  legacy_compatibility_mapping_count: number;
+  broken_mapping_count: number;
+  exact_mappings_outside_eligible_prints: number;
+}
+
+export interface PhysicalPrintCoverageSource {
+  source_id: number;
+  source_name: string;
+  eligible_print_count: number;
+  mapped_print_count: number;
+  fresh_price_print_count: number;
+  mapping_coverage_pct: number;
+  fresh_price_coverage_pct: number;
+}
+
+export interface PhysicalPrintCoverageBreakdown {
+  key: string;
+  label: string;
+  eligible_print_count: number;
+  mapped_print_count: number;
+  fresh_price_print_count: number;
+  mapping_coverage_pct: number;
+  fresh_price_coverage_pct: number;
+}
+
+export interface CatalogCoverageReport {
+  summary: CatalogCoverageSummary;
+  sources: PhysicalPrintCoverageSource[];
+  coverage_by_release_product: PhysicalPrintCoverageBreakdown[];
+  coverage_by_rarity: PhysicalPrintCoverageBreakdown[];
+  coverage_by_language: PhysicalPrintCoverageBreakdown[];
+  mapping_gaps: CatalogCoverageGapItem[];
+  price_gaps: CatalogCoverageGapItem[];
+  legacy_compatibility: LegacyCatalogCoverageReport;
   price_source_health: PriceSourceHealthSummary | null;
 }
 
@@ -1668,6 +1812,9 @@ export function fetchCatalogCoverageGaps(params: {
 export interface PriceSourceHealthSummary {
   sources_count: number;
   active_sources_count: number;
+  exact_mapping_count: number;
+  legacy_compatibility_mapping_count: number;
+  broken_mapping_count: number;
   total_active_mappings: number;
   mappings_with_recent_price: number;
   mappings_without_recent_price: number;
@@ -1687,6 +1834,8 @@ export interface SourceHealthItem {
   recent_price_count: number;
   stale_price_count: number;
   missing_price_count: number;
+  legacy_compatibility_mapping_count: number;
+  broken_mapping_count: number;
   latest_price_observed_at: string | null;
   latest_refresh_status: string | null;
   latest_refresh_started_at: string | null;
@@ -1702,23 +1851,31 @@ export interface SourceHealthItem {
 export interface HealthCoverageBreakdownItem {
   key: string;
   label: string;
-  mapped_cards: number;
-  recent_price_cards: number;
-  stale_price_cards: number;
-  missing_price_cards: number;
+  mapped_prints: number;
+  recent_price_prints: number;
+  stale_price_prints: number;
+  missing_price_prints: number;
   coverage_pct: number;
 }
 
 export interface PriceGapItem {
   mapping_id: number;
-  card_id: number;
+  source_id: number;
+  card_print_id: number | null;
+  canonical_card_id: number | null;
+  release_product_id: number | null;
+  compatibility_card_id: number | null;
+  identity_classification: MappingIdentityClassification;
   card_code: string | null;
   name_en: string | null;
-  set_code: string | null;
+  name_jp: string | null;
+  release_product_code: string | null;
+  release_product_name: string | null;
   rarity: string | null;
-  variant: string | null;
+  official_asset_variant: string | null;
+  treatment: string | null;
   language: string | null;
-  source_name: string;
+  source_name: string | null;
   source_url: string | null;
   latest_price_observed_at: string | null;
   latest_price_type: string | null;
@@ -1743,10 +1900,13 @@ export interface RefreshRunSummaryItem {
 export interface PriceSourceHealthReport {
   summary: PriceSourceHealthSummary;
   sources: SourceHealthItem[];
-  coverage_by_set: HealthCoverageBreakdownItem[];
+  coverage_by_release_product: HealthCoverageBreakdownItem[];
   coverage_by_rarity: HealthCoverageBreakdownItem[];
+  coverage_by_language: HealthCoverageBreakdownItem[];
   stale_prices: PriceGapItem[];
   missing_prices: PriceGapItem[];
+  legacy_compatibility_mappings: PriceGapItem[];
+  broken_mappings: PriceGapItem[];
   refresh_runs: RefreshRunSummaryItem[];
   warnings: string[];
 }
@@ -2998,6 +3158,48 @@ export interface CatalogOperationsSummary {
   recent_price_coverage_pct: number;
   price_source_health_status: string;
   latest_import_validation_status: string;
+  modern_exact_print: {
+    mapping_identity: {
+      exact: number;
+      legacy_compatibility: number;
+      broken: number;
+      broken_operational: number;
+    };
+    mapping_operations: {
+      active_exact_mappings: number;
+      active_exact_to_priceable_print: number;
+      active_exact_to_non_priceable_print: number;
+      approved_exact_with_valid_source: number;
+      operationally_eligible_exact_mappings: number;
+      exact_mappings_missing_expected_operational_eligibility: number;
+    };
+    observations: {
+      exact: number;
+      legacy_lineage_less: number;
+      broken_inconsistent: number;
+    };
+    parents: {
+      card_prints: number;
+      card_prints_with_canonical_card: number;
+      card_prints_broken_canonical_card: number;
+      card_prints_with_release_product: number;
+      card_prints_without_release_product: number;
+      card_prints_broken_release_product: number;
+      active_verified_prints_missing_release_product: number;
+      market_index_snapshots: number;
+      market_index_snapshots_with_card_print: number;
+      market_index_snapshots_broken_card_print: number;
+    };
+  };
+  legacy_compatibility: {
+    grandfathered_mappings: number;
+    mapping_card_references: number;
+    broken_mapping_card_pointers: number;
+    collection_items: number;
+    broken_collection_item_card_pointers: number;
+    wishlist_items: number;
+    broken_wishlist_item_card_pointers: number;
+  };
   warnings: string[];
 }
 

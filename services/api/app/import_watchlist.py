@@ -91,6 +91,8 @@ def _upsert_mapping(
             source_card_id=card_code,
             source_url=url,
             manual_verified=manual_verified,
+            is_active=True,
+            review_status="needs_review",
         )
         db.add(mapping)
         summary.mappings_created += 1

@@ -23,8 +23,8 @@ FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
 
 WORKDIR /app
 
-COPY services/snkrdunk_collector/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY services/snkrdunk_collector/requirements.lock.txt .
+RUN python -m pip install --no-cache-dir --require-hashes -r requirements.lock.txt
 
 COPY services/snkrdunk_collector/. .
 

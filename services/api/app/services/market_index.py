@@ -53,11 +53,10 @@ has to move whenever the combination rule does.
 Batch-safe by construction
 ----------------------------
 `get_market_index_for_cards` takes many card_ids and issues a small, fixed
-number of queries total (latest yuyutei sell/buy + latest snkrdunk floor via
-app.services.latest_prices's window-function helper, plus one bounded query
-for recent snkrdunk sold observations) - never one query per card. Both the
-single-card endpoint and the batch catalogue endpoint call this same
-function so their numbers can never drift apart.
+number of queries total (preferred yuyutei sell/buy + latest snkrdunk floor,
+plus one bounded query for recent snkrdunk sold observations) - never one
+query per card. Both the single-card endpoint and the batch catalogue endpoint
+call this same function so their numbers can never drift apart.
 """
 
 from __future__ import annotations
@@ -67,13 +66,17 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.models import PriceObservation
 from app.schemas import MarketIndexOut, MarketIndexSourceValueOut, SourcePriceRangeOut
 from app.services.latest_prices import get_latest_price_map
-from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
+from app.services.source_semantics import (
+    PROMOTION_SALE,
+    SOURCE_SEMANTICS_VERSION,
+    classify_observation,
+)
 
 # Version 3 (was 2, was 1): the COMBINATION step changed again, and in the
 # opposite direction to v2.
@@ -231,6 +234,70 @@ def _naive_utc(dt: datetime) -> datetime:
     return dt
 
 
+def _get_preferred_yuyutei_price_map(
+    db: Session,
+    identity_ids: list[int],
+    *,
+    identity_column,
+) -> dict[int, dict[tuple[str, str], PriceObservation]]:
+    """Return the preferred Yuyu observation per identity and price type.
+
+    A normal sell takes precedence over a promotional sell even when the
+    promotion is newer. Buy observations retain normal latest-row selection.
+    If only promotional sells exist, the newest one is returned so the
+    semantic resolver can expose its value and ineligible status.
+    """
+    if not identity_ids:
+        return {}
+
+    from app.models import Source  # local import avoids a cycle at module load
+
+    source_id = db.scalar(select(Source.id).where(Source.name == YUYUTEI))
+    if source_id is None:
+        return {}
+
+    sale_priority = case(
+        (
+            (PriceObservation.price_type == "sell")
+            & (PriceObservation.promotion_state == PROMOTION_SALE),
+            1,
+        ),
+        else_=0,
+    )
+    row_number = (
+        func.row_number()
+        .over(
+            partition_by=(identity_column, PriceObservation.price_type),
+            order_by=(
+                sale_priority.asc(),
+                PriceObservation.observed_at.desc(),
+                PriceObservation.id.desc(),
+            ),
+        )
+        .label("rn")
+    )
+    ranked = (
+        select(PriceObservation.id, row_number)
+        .where(
+            identity_column.in_(identity_ids),
+            PriceObservation.source_id == source_id,
+            PriceObservation.price_type.in_(("sell", "buy")),
+        )
+        .subquery()
+    )
+    latest_ids = select(ranked.c.id).where(ranked.c.rn == 1)
+    observations = db.scalars(
+        select(PriceObservation).where(PriceObservation.id.in_(latest_ids))
+    ).all()
+
+    result: dict[int, dict[tuple[str, str], PriceObservation]] = defaultdict(dict)
+    for observation in observations:
+        identity_id = getattr(observation, identity_column.key)
+        if identity_id is not None:
+            result[identity_id][(YUYUTEI, observation.price_type)] = observation
+    return dict(result)
+
+
 def _resolve_yuyutei_sell(
     observation: PriceObservation | None, now: datetime
 ) -> _SourceValue:
@@ -241,22 +308,10 @@ def _resolve_yuyutei_sell(
     stock, so an out-of-stock observation is exactly as eligible as an
     in-stock one of the same age.
 
-    A PROMOTIONAL PRICE IS STILL A RETAIL SELL PRICE, and this function's
-    arithmetic says so: when the stored promotion_state is "sale" the only
-    thing that changes is `constraint`. The value, the staleness rule, the
-    eligibility verdict and therefore the index number, source_count,
-    coverage, confidence and source_price_range are all identical to what they
-    would have been without the label. The reason is simple - a discounted
-    asking price is the price the card can actually be bought at, so treating
-    it as anything less than ordinary evidence would make Atlas publish
-    nothing for a card whose current price it knows exactly.
-
-    `eligible` is combined with the semantic verdict the same way
-    _resolve_snkrdunk does it, rather than ignoring it: today Yuyu-Tei's only
-    two possible verdicts are both eligible, so the `and` cannot change any
-    current outcome, but writing it this way means a future Yuyu-Tei rule that
-    genuinely disqualifies an observation is honoured automatically instead of
-    being silently dropped here."""
+    Promotional observations remain visible with their raw value and
+    ``sale_price`` constraint, but source semantics makes them ineligible for
+    Market Index. Freshness and semantic eligibility are independent gates and
+    both must pass."""
     if observation is None:
         return _SourceValue(
             source=YUYUTEI,
@@ -297,10 +352,9 @@ def _resolve_yuyutei_sell(
         stale=stale,
         eligible=not stale and semantics.eligible,
         fallback_used=False,
-        # Staleness keeps the reason string when both apply, matching
-        # _resolve_snkrdunk. `sale_price` never supplies one at all - it is
-        # not a reason for exclusion - so a fresh sale observation reports
-        # ineligible_reason=None exactly as an ordinary one does.
+        # Staleness keeps precedence when both gates fail, matching
+        # _resolve_snkrdunk. A fresh promotional observation reports the
+        # source-semantics reason ``sale_price``.
         ineligible_reason="stale" if stale else semantics.ineligible_reason,
         constraint=semantics.constraint,
     )
@@ -638,16 +692,18 @@ def get_market_index_for_cards(db: Session, card_ids: list[int]) -> dict[int, Ma
     """The one entry point both GET /cards/{id}/market-index and the
     catalogue batch endpoint call - same code path, so a single card's
     index can never disagree with what the catalogue shows for it. Issues a
-    fixed number of queries regardless of len(card_ids): two calls to
-    get_latest_price_map (already N+1-safe) plus one bounded sold-
-    observations query."""
+    fixed number of queries regardless of len(card_ids): one preferred-Yuyu
+    lookup, one call to get_latest_price_map (already N+1-safe), plus one
+    bounded sold-observations query."""
     if not card_ids:
         return {}
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    yuyutei_latest = get_latest_price_map(
-        db, card_ids, source_names=(YUYUTEI,), price_types=("sell", "buy")
+    yuyutei_latest = _get_preferred_yuyutei_price_map(
+        db,
+        card_ids,
+        identity_column=PriceObservation.card_id,
     )
     snkrdunk_floor_latest = get_latest_price_map(
         db, card_ids, source_names=(SNKRDUNK,), price_types=("floor",)

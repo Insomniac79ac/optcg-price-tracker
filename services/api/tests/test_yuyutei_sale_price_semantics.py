@@ -1,11 +1,9 @@
 """Yuyu-Tei sale-price semantics end to end on the API side.
 
 The policy under test, in one sentence: a Yuyu-Tei price that the source
-itself displays as a sale is an ORDINARY Market Index contributor that
-happens to carry a label. So the load-bearing assertions here are all
-negative - the index value, source_count, coverage, confidence and
-source_price_range must be provably identical to the same catalogue with the
-label removed. `constraint` is the only field allowed to move.
+itself displays as a sale remains visible evidence but is not a Market Index
+contributor. ``constraint``, ``eligible`` and ``ineligible_reason`` explain
+that exclusion without mutating the stored observation.
 
 The other half is what NULL means. Every one of the 549 Yuyu-Tei observations
 already stored on staging predates promotion_state, including four prints
@@ -119,12 +117,10 @@ def test_sale_promotion_state_is_classified_as_sale_price():
     assert semantics.constraint == "sale_price"
 
 
-def test_a_sale_price_is_eligible_and_has_no_ineligible_reason():
-    """The whole distinction between `constraint` and `eligible`. A sale price
-    is described, never excluded."""
+def test_a_sale_price_is_ineligible_with_an_explicit_reason():
     semantics = classify_observation(YUYUTEI, STORED_SELL, 120, promotion_state=PROMOTION_SALE)
-    assert semantics.eligible is True
-    assert semantics.ineligible_reason is None
+    assert semantics.eligible is False
+    assert semantics.ineligible_reason == SALE_PRICE
 
 
 def test_none_promotion_state_is_unconstrained():
@@ -196,7 +192,7 @@ def test_snkrdunk_is_not_promotion_aware():
 # --- the resolver ---------------------------------------------------------
 
 
-def test_sale_observation_surfaces_the_constraint_and_still_contributes(db_session):
+def test_sale_observation_surfaces_the_constraint_and_does_not_contribute(db_session):
     card = make_card(db_session)
     yuyutei = make_source(db_session, YUYUTEI)
     yuyutei_sell(db_session, card, yuyutei, price_jpy=120, promotion_state=PROMOTION_SALE)
@@ -205,9 +201,9 @@ def test_sale_observation_surfaces_the_constraint_and_still_contributes(db_sessi
     value = yuyutei_value(index)
 
     assert value.constraint == SALE_PRICE
-    assert value.eligible is True
-    assert value.contributes_to_index is True
-    assert value.ineligible_reason is None
+    assert value.eligible is False
+    assert value.contributes_to_index is False
+    assert value.ineligible_reason == SALE_PRICE
     assert value.reference_type == "retail_sell"
     assert value.value_jpy == 120
 
@@ -368,9 +364,8 @@ def _index_numbers(index):
         1500,  # SNKRDUNK eligible: two admissible values, a real range
     ],
 )
-def test_sale_metadata_moves_no_index_field(db_session, snkrdunk_price):
-    """Run the identical catalogue twice - once labelled sale, once not - and
-    require every number to match. This is the central claim of the policy."""
+def test_sale_metadata_removes_yuyutei_from_index_fields(db_session, snkrdunk_price):
+    """The sale label changes eligibility, not the stored source value."""
     numbers = {}
     for state in (PROMOTION_SALE, PROMOTION_NONE):
         card = make_card(db_session, card_code=f"OP01-{state}")
@@ -381,12 +376,17 @@ def test_sale_metadata_moves_no_index_field(db_session, snkrdunk_price):
             snkrdunk_floor(db_session, card, snkrdunk, price_jpy=snkrdunk_price)
         numbers[state] = _index_numbers(get_market_index_for_card(db_session, card.id))
 
-    assert numbers[PROMOTION_SALE] == numbers[PROMOTION_NONE]
+    sale = numbers[PROMOTION_SALE]
+    normal = numbers[PROMOTION_NONE]
+    assert sale["values"] == normal["values"]
+    assert sale["eligible"][0] is False
+    assert sale["contributes"][0] is False
+    assert normal["eligible"][0] is True
+    assert normal["contributes"][0] is True
+    assert sale["source_count"] == normal["source_count"] - 1
 
 
-def test_sale_price_participates_in_source_price_range_normally(db_session):
-    """Not merely "unchanged" - present. The range is built from admissible
-    values, and a sale price is admissible."""
+def test_sale_price_is_excluded_from_source_price_range(db_session):
     card = make_card(db_session)
     yuyutei = make_source(db_session, YUYUTEI)
     snkrdunk = make_source(db_session, SNKRDUNK)
@@ -395,13 +395,12 @@ def test_sale_price_participates_in_source_price_range_normally(db_session):
 
     index = get_market_index_for_card(db_session, card.id)
 
-    assert index.source_price_range is not None
-    assert (index.source_price_range.low_jpy, index.source_price_range.high_jpy) == (120, 1500)
+    assert index.source_price_range is None
+    assert index.index_value_jpy == 1500
+    assert index.source_count == 1
 
 
-def test_a_sale_price_still_aggregates_with_another_contributor(db_session):
-    """Two contributors, median of both - the sale value is not held back
-    from the aggregate in any way."""
+def test_a_sale_price_does_not_aggregate_with_another_contributor(db_session):
     card = make_card(db_session)
     yuyutei = make_source(db_session, YUYUTEI)
     snkrdunk = make_source(db_session, SNKRDUNK)
@@ -416,11 +415,11 @@ def test_a_sale_price_still_aggregates_with_another_contributor(db_session):
 
     index = get_market_index_for_card(db_session, card.id)
 
-    assert index.source_count == 2
-    assert index.index_value_jpy == 1300
-    assert index.coverage_status == "full"
-    assert index.confidence == "high"
-    assert yuyutei_value(index).contributes_to_index is True
+    assert index.source_count == 1
+    assert index.index_value_jpy == 1400
+    assert index.coverage_status == "limited"
+    assert index.confidence == "medium"
+    assert yuyutei_value(index).contributes_to_index is False
 
 
 def test_snkrdunk_source_value_is_byte_identical_beside_a_sale_price(db_session):
@@ -443,17 +442,9 @@ def test_snkrdunk_source_value_is_byte_identical_beside_a_sale_price(db_session)
 # --- versions -------------------------------------------------------------
 
 
-def test_source_semantics_version_is_2_and_index_version_is_3(db_session):
-    """The sale-price work moved the classification ruleset to 2 and left the
-    combination rule alone; index v3 later moved the combination rule and left
-    the classification ruleset alone. Neither change touched the other's
-    version, which is the entire reason there are two of them.
-
-    This test is the sale-price side of that pair, and its subject has not
-    changed: a promotional Yuyu-Tei price is still classified `sale_price`,
-    still eligible, still a full participant in the index. Only the number
-    beside INDEX_VERSION has moved."""
-    assert SOURCE_SEMANTICS_VERSION == 2
+def test_source_semantics_version_is_3_and_index_version_is_3(db_session):
+    """Eligibility changed, so only the source-semantics version moves."""
+    assert SOURCE_SEMANTICS_VERSION == 3
     assert INDEX_VERSION == 3
 
     card = make_card(db_session)
@@ -461,7 +452,7 @@ def test_source_semantics_version_is_2_and_index_version_is_3(db_session):
     yuyutei_sell(db_session, card, yuyutei, price_jpy=120, promotion_state=PROMOTION_SALE)
 
     index = get_market_index_for_card(db_session, card.id)
-    assert index.source_semantics_version == 2
+    assert index.source_semantics_version == 3
     assert index.index_version == 3
 
 
@@ -491,10 +482,8 @@ def test_the_existing_constraint_field_carries_sale_price_with_no_schema_change(
 # --- snapshot provenance ----------------------------------------------------
 
 
-def test_snapshot_provenance_carries_sale_price(db_session):
-    """A v2 snapshot must record that the value behind it was promotional -
-    that is how a future reader tells it apart from the 310 v1 rows written
-    when the distinction was not knowable."""
+def test_snapshot_provenance_carries_excluded_sale_price(db_session):
+    """A v3 snapshot preserves the excluded promotional source evidence."""
     canonical = CanonicalCard(
         card_code="OP01-013", name_en="Sanji", card_type="CHARACTER", rarity="R"
     )
@@ -546,12 +535,14 @@ def test_snapshot_provenance_carries_sale_price(db_session):
     index = get_market_index_for_print(db_session, print_row.id)
     row = build_snapshot_row(index)
 
-    assert row["source_semantics_version"] == 2
+    assert row["source_semantics_version"] == 3
     assert row["index_version"] == 3
-    assert row["index_value_jpy"] == 120
+    assert row["index_value_jpy"] is None
     yuyu_provenance = next(
         sv for sv in row["provenance"]["source_values"] if sv["source"] == YUYUTEI
     )
     assert yuyu_provenance["constraint"] == "sale_price"
-    assert yuyu_provenance["contributes_to_index"] is True
+    assert yuyu_provenance["eligible"] is False
+    assert yuyu_provenance["ineligible_reason"] == "sale_price"
+    assert yuyu_provenance["contributes_to_index"] is False
     assert yuyu_provenance["value_jpy"] == 120

@@ -17,6 +17,20 @@ jobs:
       - name: Fail if git is tracking a real env file
         run: bash scripts/check_secrets.sh
 
+  python-locks-current:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate Python locks in their pinned compiler images
+        run: ./scripts/compile_python_locks.sh
+      - name: Fail if a committed Python lock is stale
+        run: |
+          git diff --exit-code -- \
+            services/api/requirements.lock.txt \
+            services/worker/requirements.lock.txt \
+            services/yuyutei_collector/requirements.lock.txt \
+            services/snkrdunk_collector/requirements.lock.txt
+
   prod-compose:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +60,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r services/api/requirements.txt
+      - run: python -m pip install --no-cache-dir --require-hashes -r services/api/requirements.lock.txt
+      - run: python -m pip check
       - run: cd services/api && python -m pytest -q
 
   worker-tests:
@@ -56,8 +71,38 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r services/worker/requirements.txt
+      - run: python -m pip install --no-cache-dir --require-hashes -r services/worker/requirements.lock.txt
+      - run: python -m pip check
       - run: cd services/worker && python -m pytest -q
+
+  collector-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: yuyutei
+            dockerfile: deploy/railway/yuyutei-collector.Dockerfile
+            image: opcg-yuyutei-collector-ci
+          - service: snkrdunk
+            dockerfile: deploy/railway/snkrdunk-collector.Dockerfile
+            image: opcg-snkrdunk-collector-ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.service }} collector from its hashed lock
+        run: docker build -f "${{ matrix.dockerfile }}" -t "${{ matrix.image }}" .
+      - name: Assert Python and Playwright image/client coupling
+        run: |
+          docker run --rm --network none "${{ matrix.image }}" \
+            python -c "import sys; from importlib.metadata import version; assert sys.version_info[:2] == (3, 10), sys.version; assert version('playwright') == '1.61.0'"
+      - name: Check ${{ matrix.service }} locked dependencies
+        run: docker run --rm --network none "${{ matrix.image }}" python -m pip check
+      - name: Run ${{ matrix.service }} offline collector suite
+        run: |
+          docker run --rm --network none \
+            --env HOME=/tmp \
+            --env PYTHONDONTWRITEBYTECODE=1 \
+            "${{ matrix.image }}" python -m pytest -q -p no:cacheprovider
 
   frontend-build:
     runs-on: ubuntu-latest

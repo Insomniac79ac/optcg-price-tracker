@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -38,16 +38,25 @@ class ReleaseProductAlias(Base):
     print references cannot be deleted at all, and the design rule for a
     withdrawn product is to mark it, never to delete it.
 
-    Nothing reads or writes this table yet.
+    Source-rendering consumers must constrain by ``source_id``. Authority
+    aliases carry no source namespace and remain separately typed.
     """
 
     __tablename__ = "release_product_aliases"
     __table_args__ = (
-        UniqueConstraint(
-            "product_id",
-            "alias_kind",
-            "alias_name",
-            name="uq_release_product_aliases_identity",
+        Index(
+            "uq_release_product_aliases_authority_identity",
+            "product_id", "alias_kind", "alias_name",
+            unique=True,
+            postgresql_where=text("alias_kind <> 'source_rendering'"),
+            sqlite_where=text("alias_kind <> 'source_rendering'"),
+        ),
+        Index(
+            "uq_release_product_aliases_source_identity",
+            "source_id", "alias_name",
+            unique=True,
+            postgresql_where=text("alias_kind = 'source_rendering'"),
+            sqlite_where=text("alias_kind = 'source_rendering'"),
         ),
         CheckConstraint(
             "alias_kind IN ('bandai_official', 'bandai_additional', 'source_rendering')",
@@ -71,6 +80,11 @@ class ReleaseProductAlias(Base):
             ")",
             name="ck_release_product_aliases_bandai_alias_requires_source",
         ),
+        CheckConstraint(
+            "(alias_kind = 'source_rendering' AND source_id IS NOT NULL) OR "
+            "(alias_kind <> 'source_rendering' AND source_id IS NULL)",
+            name="ck_release_product_aliases_source_scope",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -79,6 +93,11 @@ class ReleaseProductAlias(Base):
     )
     alias_name: Mapped[str] = mapped_column(String(255), nullable=False)
     alias_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Storefront renderings are meaningful only inside one source namespace.
+    # Bandai aliases remain authority evidence and therefore carry no source.
+    source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sources.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

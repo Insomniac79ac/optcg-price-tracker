@@ -60,6 +60,25 @@ class Source(Base):
     )
 
 
+class CardPrint(Base):
+    """Minimal worker mirror used to validate price-write lineage.
+
+    The API owns the complete ``card_prints`` model and its schema. Worker
+    pricing jobs only need the row's identity, active flag, and verification
+    status in order to fail closed before writing an observation.
+    """
+
+    __tablename__ = "card_prints"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    verification_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unverified", server_default="unverified"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+
+
 class SourceCardMapping(Base):
     __tablename__ = "source_card_mappings"
     __table_args__ = (

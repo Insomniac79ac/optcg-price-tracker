@@ -21,7 +21,9 @@ import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
   type BulkMappingAction,
+  type BulkMappingUpdateResponse,
   type Card,
+  type CompatibilityCardUpdateResult,
   type MappingQualityItem,
   type MappingQualitySummary,
   type RecheckQualityResult,
@@ -31,7 +33,7 @@ import {
   fetchMappingQuality,
   fetchSuggestedCardsForMapping,
   recheckMappingQuality,
-  replaceMappingCard,
+  updateMappingCompatibilityCard,
 } from "@/lib/api";
 import { cardDisplayName, formatDateTime } from "@/lib/format";
 
@@ -51,6 +53,7 @@ const ISSUE_TYPE_OPTIONS = [
   "card_code_mismatch",
   "set_code_mismatch",
   "variant_mismatch",
+  "treatment_mismatch",
   "duplicate_source_url",
   "inactive_with_recent_price",
   "active_without_recent_price",
@@ -58,6 +61,8 @@ const ISSUE_TYPE_OPTIONS = [
   "unverified_mapping",
   "missing_source_url",
   "missing_card_reference",
+  "legacy_compatibility_mapping",
+  "broken_mapping_identity",
 ];
 
 const RISK_STYLES: Record<string, string> = {
@@ -94,6 +99,137 @@ function RiskBadge({ level }: { level: string }) {
   return <Badge label={level} className={`ring-1 ring-inset ${style}`} />;
 }
 
+const IDENTITY_STYLES = {
+  exact: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  legacy_compatibility: "bg-amber-500/15 text-signal-warning ring-amber-500/30",
+  broken: "bg-rose-500/15 text-signal-red ring-rose-500/30",
+} as const;
+
+function IdentityClassification({ item }: { item: MappingQualityItem }) {
+  const content = {
+    exact: {
+      label: "Exact print",
+      description: "Authoritative physical-print mapping",
+    },
+    legacy_compatibility: {
+      label: "Legacy compatibility",
+      description: "Compatibility-only; not modern exact pricing lineage",
+    },
+    broken: {
+      label: "Broken",
+      description: "Structural review required",
+    },
+  }[item.identity_classification];
+
+  return (
+    <div className="min-w-[10rem] space-y-1">
+      <Badge
+        label={content.label}
+        className={`ring-1 ring-inset ${IDENTITY_STYLES[item.identity_classification]}`}
+      />
+      <div className="text-[11px] leading-4 text-text-muted">{content.description}</div>
+    </div>
+  );
+}
+
+function AuthoritativePrintIdentity({ item }: { item: MappingQualityItem }) {
+  if (item.identity_classification !== "exact" || item.card_print_id === null) {
+    return (
+      <div className="min-w-[12rem] text-xs text-text-muted">
+        {item.identity_classification === "legacy_compatibility"
+          ? "No authoritative CardPrint — legacy compatibility only"
+          : "Authoritative print unavailable — structural review required"}
+      </div>
+    );
+  }
+
+  const product = [item.release_product_code, item.release_product_name].filter(Boolean).join(" — ");
+  const variant = [item.official_asset_variant, item.treatment, item.official_rarity]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div className="min-w-[13rem] space-y-0.5 text-xs">
+      <Link href={`/prints/${item.card_print_id}`} className="mono font-semibold text-sky-400 hover:underline">
+        CardPrint #{item.card_print_id}
+      </Link>
+      <div className="text-text-primary">
+        {item.canonical_card_code ?? "Unknown code"}
+        {item.canonical_name_en ? ` — ${item.canonical_name_en}` : ""}
+      </div>
+      {product && <div className="text-text-secondary">{product}</div>}
+      <div className="text-text-muted">
+        {[item.print_language, variant].filter(Boolean).join(" · ") || "No additional print metadata"}
+      </div>
+    </div>
+  );
+}
+
+function CompatibilityCardIdentity({ item }: { item: MappingQualityItem }) {
+  const compatibilityCardId = item.compatibility_card_id;
+  return (
+    <div className="min-w-[12rem] space-y-0.5 text-xs">
+      <div className="text-text-primary">
+        Compatibility card:{" "}
+        {compatibilityCardId === null ? (
+          <span className="font-medium">None</span>
+        ) : (
+          <Link href={`/cards/${compatibilityCardId}`} className="mono text-sky-400 hover:underline">
+            {item.card_code ?? `#${compatibilityCardId}`}
+          </Link>
+        )}
+      </div>
+      <div className="text-text-muted">Status: {item.compatibility_card_status.replaceAll("_", " ")}</div>
+      {item.compatibility_issue_types.length > 0 && (
+        <div className="text-signal-warning">{item.compatibility_issue_types.join(", ")}</div>
+      )}
+      {compatibilityCardId === null && item.identity_classification === "exact" && (
+        <div className="text-emerald-400">Optional metadata; exact pricing identity is valid.</div>
+      )}
+    </div>
+  );
+}
+
+function MappingConfidence({ item }: { item: MappingQualityItem }) {
+  if (item.confidence_scope === "structural_failure") {
+    return <div className="min-w-[11rem] text-xs text-signal-red">Structural failure — no confidence score</div>;
+  }
+
+  const compatibilityOnly = item.confidence_scope === "compatibility_only";
+  const score = compatibilityOnly ? item.compatibility_match_confidence : item.match_confidence;
+  const label = compatibilityOnly
+    ? item.compatibility_match_confidence_label
+    : item.match_confidence_label;
+
+  return (
+    <div className="min-w-[12rem] space-y-1 text-xs">
+      <div className={compatibilityOnly ? "text-signal-warning" : "text-text-primary"}>
+        {compatibilityOnly ? "Compatibility-only confidence" : "Exact-print confidence"}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="mono tabular text-text-secondary">{score ?? "—"}</span>
+        <ConfidenceBadge level={label ?? "unknown"} />
+      </div>
+      {!compatibilityOnly && Object.keys(item.exact_confidence_dimensions).length > 0 && (
+        <div className="flex max-w-[16rem] flex-wrap gap-1 text-[10px] text-text-muted">
+          {Object.entries(item.exact_confidence_dimensions).map(([dimension, value]) => (
+            <span key={dimension} className="rounded-control bg-bg-elevated px-1.5 py-0.5">
+              {dimension.replaceAll("_", " ")}: {value.status.replaceAll("_", " ")}
+            </span>
+          ))}
+        </div>
+      )}
+      {compatibilityOnly && item.compatibility_issue_types.length > 0 && (
+        <div className="text-text-muted">{item.compatibility_issue_types.join(", ")}</div>
+      )}
+    </div>
+  );
+}
+
+function idLabel(id: number | null): string {
+  return id === null ? "None" : `#${id}`;
+}
+
 export default function SourceMappingQualityPage() {
   const [unauthorized, setUnauthorized] = useState(false);
   const [status, setStatus] = useState<"loading" | "error" | "ready">("loading");
@@ -125,9 +261,7 @@ export default function SourceMappingQualityPage() {
   const [recheckLimit, setRecheckLimit] = useState(100);
   const [recheckResult, setRecheckResult] = useState<RecheckQualityResult | null>(null);
   const [bulkToolsOpen, setBulkToolsOpen] = useState(false);
-  const [bulkResults, setBulkResults] = useState<
-    { action: string; results: { mapping_id: number; ok: boolean; error: string | null }[] } | null
-  >(null);
+  const [bulkResults, setBulkResults] = useState<BulkMappingUpdateResponse | null>(null);
 
   const [cards, setCards] = useState<Card[]>([]);
   const [detailMapping, setDetailMapping] = useState<MappingQualityItem | null>(null);
@@ -137,8 +271,15 @@ export default function SourceMappingQualityPage() {
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
   const [cardQuery, setCardQuery] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
+  const [pendingCompatibilityEdit, setPendingCompatibilityEdit] = useState<{
+    compatibilityCardId: number | null;
+  } | null>(null);
+  const [compatibilityUpdateResult, setCompatibilityUpdateResult] =
+    useState<CompatibilityCardUpdateResult | null>(null);
 
   useEffect(() => {
+    // Each filter change starts a new result set at its first page.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOffset(0);
   }, [source, reviewStatus, isActive, manualVerified, confidenceLabel, riskLevel, issueType, q, limit]);
 
@@ -271,7 +412,7 @@ export default function SourceMappingQualityPage() {
     setDetailData(null);
     setDetailError(null);
     setDetailLoading(true);
-    setSelectedCardId(item.card_id);
+    setSelectedCardId(item.compatibility_card_id);
     setCardQuery("");
     setReviewNotes("");
     fetchSuggestedCardsForMapping(item.mapping_id)
@@ -287,27 +428,50 @@ export default function SourceMappingQualityPage() {
     setDetailMapping(null);
     setDetailData(null);
     setDetailError(null);
+    setPendingCompatibilityEdit(null);
   }
 
-  async function handleReplace(cardId: number, approve: boolean) {
+  async function executeCompatibilityEdit(compatibilityCardId: number | null) {
     if (!detailMapping) return;
-    setPendingAction(`replace-${detailMapping.mapping_id}`);
-    setActionError(null);
+    setPendingAction(`compatibility-${detailMapping.mapping_id}`);
+    setDetailError(null);
     try {
-      const updated = await replaceMappingCard(
+      const updated = await updateMappingCompatibilityCard(
         detailMapping.mapping_id,
-        cardId,
+        compatibilityCardId,
         reviewNotes.trim() || undefined,
-        approve,
       );
       updateItem(updated);
+      setCompatibilityUpdateResult(updated);
       closeDetail();
     } catch (err) {
       if (err instanceof AdminAuthRequiredError) setUnauthorized(true);
-      else setActionError("Failed to replace mapped card.");
+      else {
+        setDetailError(
+          err instanceof Error
+            ? `Compatibility card was not changed: ${err.message}`
+            : "Compatibility card was not changed.",
+        );
+      }
     } finally {
       setPendingAction(null);
     }
+  }
+
+  function requestCompatibilityEdit(compatibilityCardId: number | null) {
+    if (!detailMapping) return;
+    if (detailMapping.identity_classification === "exact") {
+      setPendingCompatibilityEdit({ compatibilityCardId });
+      return;
+    }
+    executeCompatibilityEdit(compatibilityCardId);
+  }
+
+  function confirmCompatibilityEdit() {
+    if (!pendingCompatibilityEdit) return;
+    const { compatibilityCardId } = pendingCompatibilityEdit;
+    setPendingCompatibilityEdit(null);
+    executeCompatibilityEdit(compatibilityCardId);
   }
 
   async function executeQuickAction(mappingId: number, action: BulkMappingAction) {
@@ -345,6 +509,9 @@ export default function SourceMappingQualityPage() {
   const summaryCards: { label: string; value: number | undefined }[] = summary
     ? [
         { label: "Total mappings", value: summary.total_mappings },
+        { label: "Exact print", value: summary.exact_mapping_count },
+        { label: "Legacy compatibility", value: summary.legacy_compatibility_mapping_count },
+        { label: "Broken identity", value: summary.broken_mapping_count },
         { label: "OK", value: summary.ok_count },
         { label: "Review", value: summary.review_count },
         { label: "Warning", value: summary.warning_count },
@@ -364,7 +531,7 @@ export default function SourceMappingQualityPage() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
           title="Source Mapping Quality"
-          description="Review mapping confidence, mismatches, stale mappings, and duplicate source URLs."
+          description="Review authoritative physical-print identity separately from optional legacy compatibility-card metadata."
         />
         <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
           <Link href="/admin/import-validation" className="text-sky-400 hover:underline">
@@ -555,7 +722,11 @@ export default function SourceMappingQualityPage() {
                     {bulkResults.results.some((r) => !r.ok) && (
                       <span className="text-signal-red">
                         {" "}
-                        (failed: {bulkResults.results.filter((r) => !r.ok).map((r) => r.mapping_id).join(", ")})
+                        (skipped/failed:{" "}
+                        {bulkResults.results
+                          .filter((r) => !r.ok)
+                          .map((r) => `${r.mapping_id}: ${r.error ?? "unknown error"}`)
+                          .join(", ")})
                       </span>
                     )}
                   </div>
@@ -565,6 +736,18 @@ export default function SourceMappingQualityPage() {
 
             {actionError && (
               <div className="mb-4 rounded-panel border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">{actionError}</div>
+            )}
+
+            {compatibilityUpdateResult && (
+              <div className="mb-4 rounded-panel border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                <div className="font-medium">Compatibility card updated; pricing identity was unchanged.</div>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <span>Authoritative CardPrint: {idLabel(compatibilityUpdateResult.authoritative_card_print_id)}</span>
+                  <span>Previous compatibility card: {idLabel(compatibilityUpdateResult.previous_compatibility_card_id)}</span>
+                  <span>New compatibility card: {idLabel(compatibilityUpdateResult.new_compatibility_card_id)}</span>
+                  <span className="mono">pricing_identity_changed=false</span>
+                </div>
+              </div>
             )}
 
             {status === "loading" && <LoadingState>Loading mappings…</LoadingState>}
@@ -583,13 +766,14 @@ export default function SourceMappingQualityPage() {
                       <th>Risk</th>
                       <th>Issues</th>
                       <th>Source</th>
-                      <th>Mapped card</th>
+                      <th>Identity classification</th>
+                      <th>Authoritative physical print</th>
+                      <th>Compatibility metadata</th>
                       <th>URL</th>
                       <th>Active</th>
                       <th>Verified</th>
                       <th>Review</th>
-                      <th className="text-right">Score</th>
-                      <th>Confidence</th>
+                      <th>Confidence scope</th>
                       <th>Latest price</th>
                       <th>Last checked</th>
                       <th>Actions</th>
@@ -614,15 +798,9 @@ export default function SourceMappingQualityPage() {
                           </div>
                         </td>
                         <td className="text-text-secondary">{item.source_name ?? "—"}</td>
-                        <td className="text-text-secondary">
-                          {item.card_id ? (
-                            <Link href={`/cards/${item.card_id}`} className="mono text-sky-400 hover:underline">
-                              {item.card_code ?? item.card_id}
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
+                        <td><IdentityClassification item={item} /></td>
+                        <td><AuthoritativePrintIdentity item={item} /></td>
+                        <td><CompatibilityCardIdentity item={item} /></td>
                         <td className="max-w-[10rem] truncate">
                           {item.source_url ? (
                             <a href={item.source_url} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">
@@ -635,15 +813,12 @@ export default function SourceMappingQualityPage() {
                         <td className="text-text-secondary">{item.is_active ? "yes" : "no"}</td>
                         <td className="text-text-secondary">{item.manual_verified ? "yes" : "no"}</td>
                         <td className="text-text-secondary">{item.review_status}</td>
-                        <td className="mono tabular text-right text-text-secondary">{item.match_confidence ?? "—"}</td>
-                        <td>
-                          <ConfidenceBadge level={item.match_confidence_label} />
-                        </td>
+                        <td><MappingConfidence item={item} /></td>
                         <td className="mono text-xs text-text-muted">{formatDateTime(item.latest_price_observed_at)}</td>
                         <td className="mono text-xs text-text-muted">{formatDateTime(item.last_match_checked_at)}</td>
                         <td>
                           <div className="flex flex-wrap gap-1.5">
-                            <ActionButton onClick={() => openSuggested(item)}>Suggested cards</ActionButton>
+                            <ActionButton onClick={() => openSuggested(item)}>Edit compatibility card</ActionButton>
                             <ActionButton
                               onClick={() => quickAction(item.mapping_id, "approve")}
                               disabled={pendingAction === `row-${item.mapping_id}`}
@@ -679,7 +854,7 @@ export default function SourceMappingQualityPage() {
             <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-modal border border-border-default bg-bg-elevated p-5">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-text-primary">Suggested cards</h2>
+                  <h2 className="text-base font-semibold text-text-primary">Edit compatibility card</h2>
                   <div className="text-xs text-text-muted">
                     Mapping {detailMapping.mapping_id} — {detailMapping.source_card_id}
                   </div>
@@ -694,6 +869,37 @@ export default function SourceMappingQualityPage() {
                 </button>
               </div>
 
+              <div className="mb-4 grid gap-3 md:grid-cols-2">
+                <div className="panel p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    Authoritative pricing identity
+                  </div>
+                  <IdentityClassification item={detailMapping} />
+                  <div className="mt-2"><AuthoritativePrintIdentity item={detailMapping} /></div>
+                  {detailMapping.identity_classification === "exact" && (
+                    <p className="mt-2 text-xs text-emerald-300">
+                      This physical print remains unchanged by compatibility-card edits.
+                    </p>
+                  )}
+                </div>
+                <div className="panel p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    Legacy compatibility metadata
+                  </div>
+                  <CompatibilityCardIdentity item={detailMapping} />
+                  <p className="mt-2 text-xs text-text-muted">
+                    Editing this metadata does not change pricing history, Market Index identity, or Card Pirate Index identity.
+                  </p>
+                </div>
+              </div>
+
+              <div className="panel mb-4 p-3">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                  Confidence
+                </div>
+                <MappingConfidence item={detailMapping} />
+              </div>
+
               {detailLoading && <p className="p-6 text-center text-sm text-text-muted">Loading suggested cards…</p>}
               {detailError && (
                 <div className="rounded-control border border-signal-red/40 bg-signal-red/10 p-3 text-sm text-signal-red">
@@ -703,8 +909,11 @@ export default function SourceMappingQualityPage() {
 
               {!detailLoading && detailData && (
                 <>
+                  <div className="mb-3 rounded-control border border-border-default bg-bg-page p-3 text-xs text-text-secondary">
+                    {detailData.message}
+                  </div>
                   {detailData.matches.length === 0 && (
-                    <EmptyState>No candidate cards above the scoring threshold.</EmptyState>
+                    <EmptyState>No compatibility-card suggestions available.</EmptyState>
                   )}
                   <div className="mb-4 space-y-2">
                     {detailData.matches.map((match) => (
@@ -718,17 +927,10 @@ export default function SourceMappingQualityPage() {
                               score {match.score} ({match.confidence_label})
                             </span>
                             <ActionButton
-                              onClick={() => handleReplace(match.card_id, false)}
-                              disabled={pendingAction === `replace-${detailMapping.mapping_id}`}
+                              onClick={() => requestCompatibilityEdit(match.card_id)}
+                              disabled={pendingAction === `compatibility-${detailMapping.mapping_id}`}
                             >
-                              Replace
-                            </ActionButton>
-                            <ActionButton
-                              variant="primary"
-                              onClick={() => handleReplace(match.card_id, true)}
-                              disabled={pendingAction === `replace-${detailMapping.mapping_id}`}
-                            >
-                              Replace &amp; approve
+                              Use as compatibility card
                             </ActionButton>
                           </div>
                         </div>
@@ -754,7 +956,10 @@ export default function SourceMappingQualityPage() {
                   </div>
 
                   <div className="panel mb-3 p-3">
-                    <div className="mb-2 text-xs font-medium text-text-secondary">Replace with a different card</div>
+                    <div className="mb-1 text-xs font-medium text-text-secondary">Edit compatibility card</div>
+                    <p className="mb-3 text-xs text-text-muted">
+                      This changes legacy compatibility metadata only. The authoritative CardPrint shown above is read-only and remains unchanged.
+                    </p>
                     <FilterBar>
                       <input
                         value={cardQuery}
@@ -767,7 +972,11 @@ export default function SourceMappingQualityPage() {
                         onChange={(e) => setSelectedCardId(e.target.value ? Number(e.target.value) : null)}
                         className={`w-64 ${FILTER_INPUT_CLASS}`}
                       >
-                        <option value="">Select a card…</option>
+                        <option value="">
+                          {detailMapping.identity_classification === "exact"
+                            ? "None (clear compatibility card)"
+                            : "Select a compatibility card…"}
+                        </option>
                         {filteredCards.map((card) => (
                           <option key={card.id} value={card.id}>
                             {card.card_code} — {cardDisplayName(card)}
@@ -781,17 +990,14 @@ export default function SourceMappingQualityPage() {
                         className={`w-56 ${FILTER_INPUT_CLASS}`}
                       />
                       <ActionButton
-                        onClick={() => selectedCardId !== null && handleReplace(selectedCardId, false)}
-                        disabled={selectedCardId === null || pendingAction === `replace-${detailMapping.mapping_id}`}
-                      >
-                        Replace
-                      </ActionButton>
-                      <ActionButton
                         variant="primary"
-                        onClick={() => selectedCardId !== null && handleReplace(selectedCardId, true)}
-                        disabled={selectedCardId === null || pendingAction === `replace-${detailMapping.mapping_id}`}
+                        onClick={() => requestCompatibilityEdit(selectedCardId)}
+                        disabled={
+                          (selectedCardId === null && detailMapping.identity_classification !== "exact") ||
+                          pendingAction === `compatibility-${detailMapping.mapping_id}`
+                        }
                       >
-                        Replace &amp; approve
+                        Save compatibility card
                       </ActionButton>
                     </FilterBar>
                   </div>
@@ -800,6 +1006,25 @@ export default function SourceMappingQualityPage() {
             </div>
           </div>
         )}
+
+        <ConfirmActionModal
+          open={pendingCompatibilityEdit !== null}
+          title="Confirm compatibility-card edit"
+          description="Compatibility metadata will change. The authoritative physical-print identity will remain unchanged."
+          affectedRecords={
+            detailMapping && pendingCompatibilityEdit
+              ? [
+                  { label: "Authoritative CardPrint", value: idLabel(detailMapping.card_print_id) },
+                  { label: "Current compatibility card", value: idLabel(detailMapping.compatibility_card_id) },
+                  { label: "New compatibility card", value: idLabel(pendingCompatibilityEdit.compatibilityCardId) },
+                ]
+              : undefined
+          }
+          confirmLabel="Save compatibility card"
+          pending={detailMapping ? pendingAction === `compatibility-${detailMapping.mapping_id}` : false}
+          onConfirm={confirmCompatibilityEdit}
+          onCancel={() => setPendingCompatibilityEdit(null)}
+        />
 
         <ConfirmActionModal
           open={pendingDestructive !== null}

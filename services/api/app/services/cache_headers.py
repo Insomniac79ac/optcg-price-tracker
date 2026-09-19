@@ -10,8 +10,10 @@ from fastapi import Response
 from app.env import is_development_environment
 
 
-def set_cache_headers(response: Response, *, hit: bool, ttl_seconds: int, cache_key: str) -> None:
+def set_cache_headers(
+    response: Response, *, hit: bool, ttl_seconds: int, cache_key: str | None
+) -> None:
     response.headers["X-Cache"] = "HIT" if hit else "MISS"
     response.headers["X-Cache-TTL"] = str(ttl_seconds)
-    if is_development_environment():
+    if cache_key is not None and is_development_environment():
         response.headers["X-Cache-Key"] = cache_key

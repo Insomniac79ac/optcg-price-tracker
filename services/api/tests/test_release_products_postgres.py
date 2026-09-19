@@ -12,7 +12,13 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
-from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
+from app.models import (
+    CanonicalCard,
+    CardPrint,
+    ReleaseProduct,
+    ReleaseProductAlias,
+    Source,
+)
 
 TEST_POSTGRES_URL = os.environ.get(
     "TEST_POSTGRES_URL", "postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test"
@@ -20,6 +26,7 @@ TEST_POSTGRES_URL = os.environ.get(
 
 TABLES = [
     ReleaseProduct.__table__,
+    Source.__table__,
     ReleaseProductAlias.__table__,
     CanonicalCard.__table__,
     CardPrint.__table__,

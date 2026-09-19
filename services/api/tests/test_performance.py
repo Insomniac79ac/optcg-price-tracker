@@ -27,6 +27,13 @@ def test_db_index_audit_returns_checks(client, db_session):
     for check in data["checks"]:
         assert check["status"] in ("pass", "warning", "critical")
         assert check["severity"] in ("warning", "critical")
+        assert check["scope"] in (
+            "exact_print",
+            "market_index",
+            "card_pirate",
+            "shared",
+            "legacy_compatibility",
+        )
         assert check["table"]
         assert check["index"]
         assert check["message"]
@@ -133,6 +140,243 @@ def test_print_scoped_price_index_requires_leading_column_order():
         ["card_id", "source_id", "price_type", "observed_at"], PRINT_PRICE_COLUMNS
     )
     assert not _covers(["card_print_id"], PRINT_PRICE_COLUMNS)
+
+
+MODERN_REGISTRY_ENTRIES = (
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_card_print_id",
+        ("card_print_id",),
+        "critical",
+        "exact_print",
+    ),
+    (
+        "price_observations",
+        "ix_price_observations_source_card_mapping_id",
+        ("source_card_mapping_id",),
+        "critical",
+        "exact_print",
+    ),
+    (
+        "price_observations",
+        "ix_price_observations_card_print_id",
+        ("card_print_id",),
+        "critical",
+        "exact_print",
+    ),
+    (
+        "market_index_snapshots",
+        "uq_market_index_snapshots_print_date",
+        ("card_print_id", "snapshot_date"),
+        "critical",
+        "market_index",
+    ),
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_print_calculated",
+        ("card_print_id", "calculated_at"),
+        "critical",
+        "market_index",
+    ),
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_snapshot_date",
+        ("snapshot_date",),
+        "critical",
+        "market_index",
+    ),
+    (
+        "card_pirate_index_points",
+        "uq_cpi_points_point",
+        ("scope_kind", "scope_key", "methodology_version", "point_date"),
+        "critical",
+        "card_pirate",
+    ),
+    (
+        "card_prints",
+        "ix_card_prints_canonical_card_id",
+        ("canonical_card_id",),
+        "warning",
+        "exact_print",
+    ),
+    (
+        "card_prints",
+        "ix_card_prints_release_product_id",
+        ("release_product_id",),
+        "warning",
+        "exact_print",
+    ),
+    (
+        "card_prints",
+        "ix_card_prints_is_active",
+        ("is_active",),
+        "warning",
+        "exact_print",
+    ),
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_collection_order",
+        ("last_collection_attempted_at", "id"),
+        "warning",
+        "exact_print",
+    ),
+)
+
+
+def test_modern_exact_print_indexes_are_registered_with_severity_and_scope():
+    from app.services.db_index_audit import INDEX_SCOPE_BY_KEY, REQUIRED_INDEXES
+
+    for table, name, columns, severity, scope in MODERN_REGISTRY_ENTRIES:
+        assert (table, name, columns, severity) in REQUIRED_INDEXES
+        assert INDEX_SCOPE_BY_KEY[(table, name)] == scope
+
+
+def test_modern_exact_print_indexes_pass_against_disposable_schema():
+    """Exercise actual SQLAlchemy index definitions, adding only the one
+    migration-owned index that is intentionally not duplicated in the model."""
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+    from sqlalchemy.pool import StaticPool
+
+    import app.models  # noqa: F401  (registers models on Base.metadata)
+    from app.db import Base
+    from app.services.db_index_audit import run_db_index_audit
+
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "CREATE INDEX ix_source_card_mappings_collection_order "
+                    "ON source_card_mappings (last_collection_attempted_at, id)"
+                )
+            )
+        with Session(bind=engine) as session:
+            by_name = {check.index: check for check in run_db_index_audit(session)}
+
+        for _, name, _, severity, scope in MODERN_REGISTRY_ENTRIES:
+            assert by_name[name].status == "pass"
+            assert by_name[name].severity == severity
+            assert by_name[name].scope == scope
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_missing_critical_exact_print_access_path_is_critical():
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+    from sqlalchemy.pool import StaticPool
+
+    import app.models  # noqa: F401
+    from app.db import Base
+    from app.services.db_index_audit import run_db_index_audit
+
+    index_name = "ix_price_observations_source_card_mapping_id"
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    try:
+        with Session(bind=engine) as session:
+            session.execute(text(f"DROP INDEX {index_name}"))
+            session.commit()
+            check = next(c for c in run_db_index_audit(session) if c.index == index_name)
+
+        assert check.status == "critical"
+        assert check.severity == "critical"
+        assert check.scope == "exact_print"
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_missing_warning_exact_print_access_path_is_warning():
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+    from sqlalchemy.pool import StaticPool
+
+    import app.models  # noqa: F401
+    from app.db import Base
+    from app.services.db_index_audit import run_db_index_audit
+
+    index_name = "ix_card_prints_release_product_id"
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    try:
+        with Session(bind=engine) as session:
+            session.execute(text(f"DROP INDEX {index_name}"))
+            session.commit()
+            check = next(c for c in run_db_index_audit(session) if c.index == index_name)
+
+        assert check.status == "warning"
+        assert check.severity == "warning"
+        assert check.scope == "exact_print"
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_legacy_compatibility_indexes_remain_distinctly_registered():
+    from app.services.db_index_audit import INDEX_SCOPE_BY_KEY, REQUIRED_INDEXES
+
+    legacy_entries = (
+        (
+            "source_card_mappings",
+            "ix_source_card_mappings_card_id",
+            ("card_id",),
+            "warning",
+        ),
+        (
+            "source_card_mappings",
+            "ix_source_card_mappings_card_id_source_id",
+            ("card_id", "source_id"),
+            "warning",
+        ),
+        ("price_observations", "ix_price_observations_card_id", ("card_id",), "critical"),
+        (
+            "price_observations",
+            "ix_price_observations_card_source_type_observed",
+            ("card_id", "source_id", "price_type", "observed_at"),
+            "critical",
+        ),
+    )
+    for table, name, columns, severity in legacy_entries:
+        assert (table, name, columns, severity) in REQUIRED_INDEXES
+        assert INDEX_SCOPE_BY_KEY[(table, name)] == "legacy_compatibility"
+
+
+def test_leading_column_check_does_not_claim_constraint_semantics():
+    from app.services.db_index_audit import (
+        CONSTRAINT_AWARE_FOLLOW_UP,
+        REQUIRED_INDEXES,
+        _covers,
+    )
+
+    assert _covers(
+        ["scope_kind", "scope_key", "methodology_version", "point_date"],
+        ("scope_kind", "scope_key"),
+    )
+    assert not _covers(
+        ["point_date", "scope_kind", "scope_key", "methodology_version"],
+        ("scope_kind", "scope_key"),
+    )
+    assert "uniqueness" in (_covers.__doc__ or "")
+    assert "partial predicates" in (_covers.__doc__ or "")
+
+    registered_names = {name for _, name, _, _ in REQUIRED_INDEXES}
+    follow_up_names = {name for _, name, _ in CONSTRAINT_AWARE_FOLLOW_UP}
+    assert "uq_card_prints_active_verified_identity" in follow_up_names
+    assert "uq_source_card_mappings_print_lineage_identity" in follow_up_names
+    assert "fk_price_observations_mapping_print_source" in follow_up_names
+    assert "uq_cpi_points_carry_target" in follow_up_names
+    assert "fk_cpi_points_carried_from" in follow_up_names
+    assert follow_up_names.isdisjoint(registered_names)
 
 
 def test_performance_summary_requires_admin_token(db_session):

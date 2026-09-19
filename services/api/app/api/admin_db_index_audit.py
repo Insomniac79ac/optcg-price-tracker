@@ -20,7 +20,12 @@ def db_index_audit_endpoint(db: Session = Depends(get_db)):
         summary=DbIndexAuditSummaryOut(**summary),
         checks=[
             DbIndexCheckOut(
-                table=c.table, index=c.index, status=c.status, severity=c.severity, message=c.message
+                table=c.table,
+                index=c.index,
+                status=c.status,
+                severity=c.severity,
+                scope=c.scope,
+                message=c.message,
             )
             for c in checks
         ],

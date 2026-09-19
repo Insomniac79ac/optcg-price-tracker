@@ -141,6 +141,91 @@ def test_import_creates_active_needs_review_mappings_when_manual_verified(tmp_pa
     assert mapping.card_print_id is None
 
 
+def test_import_without_manual_verification_still_creates_a_reviewable_mapping(
+    tmp_path, db_session, client
+):
+    """The ORM's legacy approved default must not price-authorize a new
+    card-code-only watchlist mapping when the CSV does not vouch for it."""
+    csv_path = write_csv(
+        tmp_path,
+        [
+            base_row(
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                manual_verified="false",
+            )
+        ],
+    )
+
+    import_watchlist(csv_path, db=db_session)
+
+    card = db_session.query(Card).filter_by(card_code="OP01-001").one()
+    mapping = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
+    assert mapping.is_active is True
+    assert mapping.review_status == "needs_review"
+    assert mapping.card_print_id is None
+
+    response = client.get(
+        "/admin/source-mappings", params={"review_status": "needs_review"}
+    )
+    assert response.status_code == 200
+    assert mapping.id in {item["id"] for item in response.json()["items"]}
+
+
+def test_import_does_not_rewrite_a_grandfathered_approved_printless_mapping(
+    tmp_path, db_session
+):
+    """The new-row guard must not become an implicit legacy-data migration."""
+    card = Card(
+        card_code="OP01-001",
+        name_en="Monkey D. Luffy",
+        name_jp="モンキー・D・ルフィ",
+        set_code="OP01",
+        rarity="L",
+        variant="base",
+        language="jp",
+    )
+    source = Source(name="yuyutei", base_url="https://yuyu-tei.jp")
+    db_session.add_all([card, source])
+    db_session.flush()
+    mapping = SourceCardMapping(
+        card_id=card.id,
+        source_id=source.id,
+        source_card_id="OP01-001",
+        source_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+        manual_verified=True,
+        is_active=True,
+        review_status="approved",
+        card_print_id=None,
+        review_notes="grandfathered",
+    )
+    db_session.add(mapping)
+    db_session.commit()
+    before = {
+        column.name: getattr(mapping, column.name)
+        for column in SourceCardMapping.__table__.columns
+    }
+
+    csv_path = write_csv(
+        tmp_path,
+        [
+            base_row(
+                yuyutei_url=mapping.source_url,
+                manual_verified="true",
+            )
+        ],
+    )
+    summary = import_watchlist(csv_path, db=db_session)
+
+    assert summary.mappings_created == 0
+    assert summary.mappings_updated == 1
+    db_session.refresh(mapping)
+    after = {
+        column.name: getattr(mapping, column.name)
+        for column in SourceCardMapping.__table__.columns
+    }
+    assert after == before
+
+
 def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path, db_session):
     """Re-activation still works; the row comes back for review, not approved."""
     csv_path = write_csv(

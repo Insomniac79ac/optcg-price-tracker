@@ -115,7 +115,10 @@ export default function CardAuditPage() {
     <div className="min-h-screen">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <PageHeader title="Card catalog audit" />
+        <PageHeader
+          title="Pricing identity audit"
+          description="Modern exact-print operational checks and legacy Card compatibility checks are reported separately."
+        />
         <div className="mb-4 flex flex-wrap gap-3 text-xs text-text-muted">
           <Link href="/admin/cards" className="text-sky-400 hover:underline">
             Card catalog (import/export)
@@ -190,7 +193,7 @@ export default function CardAuditPage() {
         {status === "ready" && report && (
           <>
             <StatGrid>
-              <StatCard label="Total cards" value={report.summary.total_cards} />
+              <StatCard label="Legacy catalogue Cards" value={report.summary.total_cards} />
               <StatCard label="Total issues" value={report.summary.total_issues} />
               <StatCard
                 label="Critical"
@@ -203,6 +206,35 @@ export default function CardAuditPage() {
                 tone={report.summary.warning_issues > 0 ? "bad" : "neutral"}
               />
             </StatGrid>
+
+            {report.modern_exact_print_audit && (
+              <section className="mt-6 rounded-panel border border-border-default bg-bg-surface p-4">
+                <h2 className="text-base font-medium text-text-primary">Modern exact-print audit</h2>
+                <p className="mb-4 mt-1 text-xs text-text-muted">Operational pricing lineage for authoritative physical prints.</p>
+                <StatGrid>
+                  <StatCard label="Eligible physical prints" value={report.modern_exact_print_audit.eligible_physical_prints} />
+                  <StatCard label="Exact mappings" value={report.modern_exact_print_audit.exact_mappings} />
+                  <StatCard label="Mappings with fresh observations" value={report.modern_exact_print_audit.mappings_with_fresh_observations} />
+                  <StatCard label="Mappings without fresh observations" value={report.modern_exact_print_audit.mappings_without_fresh_observations} />
+                  <StatCard label="Active mappings to non-priceable prints" value={report.modern_exact_print_audit.active_exact_mappings_non_priceable} tone={report.modern_exact_print_audit.active_exact_mappings_non_priceable > 0 ? "bad" : "neutral"} />
+                  <StatCard label="Broken exact mapping lineage" value={report.modern_exact_print_audit.broken_mappings} tone={report.modern_exact_print_audit.broken_mappings > 0 ? "bad" : "neutral"} />
+                </StatGrid>
+              </section>
+            )}
+
+            {report.compatibility_audit && (
+              <section className="mt-4 rounded-panel border border-border-default bg-bg-surface p-4">
+                <h2 className="text-base font-medium text-text-primary">Legacy compatibility audit</h2>
+                <p className="mb-4 mt-1 text-xs text-text-muted">Card-keyed catalogue, collection, and wishlist compatibility. Grandfathered mappings are informational, not exact-pricing failures.</p>
+                <StatGrid>
+                  <StatCard label="Grandfathered legacy mappings" value={report.compatibility_audit.grandfathered_legacy_mappings} />
+                  <StatCard label="Compatibility Card references" value={report.compatibility_audit.legacy_card_references} />
+                  <StatCard label="Broken compatibility Card pointers" value={report.compatibility_audit.broken_compatibility_card_pointers} tone={report.compatibility_audit.broken_compatibility_card_pointers > 0 ? "bad" : "neutral"} />
+                  <StatCard label="Collection compatibility issues" value={report.compatibility_audit.collection_items_broken_card_references} tone={report.compatibility_audit.collection_items_broken_card_references > 0 ? "bad" : "neutral"} />
+                  <StatCard label="Wishlist compatibility issues" value={report.compatibility_audit.wishlist_items_broken_card_references} tone={report.compatibility_audit.wishlist_items_broken_card_references > 0 ? "bad" : "neutral"} />
+                </StatGrid>
+              </section>
+            )}
 
             {report.issues.some((i) => i.issue_type === "duplicate_card_identity") && (
               <div className="mb-4 mt-4 rounded-control border border-signal-warning/40 bg-signal-warning/10 px-4 py-3 text-sm text-signal-warning">
@@ -255,7 +287,7 @@ export default function CardAuditPage() {
                     <th>Severity</th>
                     <th>Issue type</th>
                     <th>Card code</th>
-                    <th>Card IDs</th>
+                    <th>Affected identity</th>
                     <th>Message</th>
                     <th>Suggested action</th>
                   </tr>
@@ -269,7 +301,7 @@ export default function CardAuditPage() {
                       <td className="mono text-text-secondary">{issue.issue_type}</td>
                       <td className="mono text-text-secondary">{issue.card_code ?? "—"}</td>
                       <td className="max-w-xs">
-                        <CardIdsCell cardIds={issue.card_ids} />
+                        <AuditIdentityCell issue={issue} />
                       </td>
                       <td className="max-w-md">
                         <span className="block text-text-secondary" title={issue.message}>
@@ -309,6 +341,30 @@ function CardIdsCell({ cardIds }: { cardIds: number[] }) {
         </Link>
       ))}
       {remaining > 0 && <span className="px-1.5 py-0.5 text-text-muted">+{remaining} more</span>}
+    </div>
+  );
+}
+
+function AuditIdentityCell({ issue }: { issue: CardAuditReport["issues"][number] }) {
+  const printIds = Array.isArray(issue.details?.card_print_ids)
+    ? issue.details.card_print_ids.filter((value): value is number => typeof value === "number")
+    : [];
+  if (printIds.length > 0) {
+    return (
+      <div>
+        <div className="mb-1 text-[10px] uppercase tracking-wide text-text-muted">Physical prints</div>
+        <div className="flex flex-wrap gap-1 text-xs">
+          {printIds.slice(0, 6).map((id) => (
+            <Link key={id} href={`/prints/${id}`} className="mono rounded-control bg-bg-elevated px-1.5 py-0.5 text-text-secondary hover:text-sky-400">CardPrint #{id}</Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className="mb-1 text-[10px] uppercase tracking-wide text-text-muted">Compatibility Cards</div>
+      <CardIdsCell cardIds={issue.card_ids} />
     </div>
   );
 }

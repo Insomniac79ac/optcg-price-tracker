@@ -1585,6 +1585,144 @@ def test_yuyutei_sell_remains_unconstrained(client, five_prints):
         assert obs["ineligible_reason"] is None
 
 
+def test_yuyutei_sale_history_is_ineligible_and_normal_sell_is_index_representative(
+    client, db_session, five_prints
+):
+    """History keeps both rows, while exact-print current pricing prefers the
+    newest normal sell over a newer promotional sell."""
+    canonical = make_canonical(
+        db_session, card_code="OP01-889", name_en="Robin", rarity="R"
+    )
+    legacy = make_legacy_card(db_session, card_code="OP01-889", rarity="R")
+    print_row = make_print(db_session, canonical, artwork_key="robin-base")
+    source = five_prints["source"]
+    mapping = make_mapping(db_session, legacy, source, print_row)
+
+    normal = make_observation(
+        db_session,
+        legacy,
+        source,
+        mapping,
+        print_row,
+        price_type="sell",
+        price_jpy=600,
+        promotion_state="none",
+        observed_at=NOW - timedelta(hours=2),
+    )
+    promotional = make_observation(
+        db_session,
+        legacy,
+        source,
+        mapping,
+        print_row,
+        price_type="sell",
+        price_jpy=400,
+        promotion_state="sale",
+        observed_at=NOW - timedelta(hours=1),
+    )
+    buy_observation = make_observation(
+        db_session,
+        legacy,
+        source,
+        mapping,
+        print_row,
+        price_type="buy",
+        price_jpy=250,
+        promotion_state="sale",  # ignored for the non-promotion-aware buy type
+        observed_at=NOW,
+    )
+
+    response = client.get(f"/prints/{print_row.id}/prices")
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"card_print_id", "observations", "series"}
+    assert body["card_print_id"] == print_row.id
+
+    by_id = {observation["id"]: observation for observation in body["observations"]}
+    normal_out = by_id[normal.id]
+    sale_out = by_id[promotional.id]
+    expected_observation_fields = {
+        "id",
+        "card_print_id",
+        "source_id",
+        "source",
+        "observed_at",
+        "price_type",
+        "price_jpy",
+        "condition_label",
+        "listing_count",
+        "raw_snapshot_id",
+        "constraint",
+        "eligible",
+        "ineligible_reason",
+        "reference_type",
+        "evidence_type",
+    }
+    assert set(normal_out) == set(sale_out) == expected_observation_fields
+    assert normal_out["constraint"] is None
+    assert normal_out["eligible"] is True
+    assert normal_out["ineligible_reason"] is None
+    assert sale_out["constraint"] == "sale_price"
+    assert sale_out["eligible"] is False
+    assert sale_out["ineligible_reason"] == "sale_price"
+    assert [observation["id"] for observation in body["observations"]] == [
+        normal.id,
+        promotional.id,
+        buy_observation.id,
+    ]
+    sell_trend = next(series for series in body["series"] if series["price_type"] == "sell")
+    assert sell_trend["latest_price_jpy"] == 400
+
+    index = client.get(f"/prints/{print_row.id}/market-index").json()
+    yuyutei = next(value for value in index["source_values"] if value["source"] == "yuyutei")
+    assert yuyutei["value_jpy"] == 600
+    assert yuyutei["constraint"] is None
+    assert yuyutei["eligible"] is True
+    assert yuyutei["contributes_to_index"] is True
+    assert index["index_value_jpy"] == 600
+
+    buy = next(value for value in index["auxiliary_values"] if value["source"] == "yuyutei")
+    assert buy["reference_type"] == "dealer_buy"
+    assert buy["value_jpy"] == 250
+    assert buy["eligible"] is False
+    assert buy["ineligible_reason"] == "auxiliary_only"
+    assert buy["contributes_to_index"] is False
+
+
+def test_promotional_yuyutei_sell_cannot_contribute_to_print_market_index(
+    client, db_session, five_prints
+):
+    canonical = make_canonical(
+        db_session, card_code="OP01-890", name_en="Franky", rarity="R"
+    )
+    legacy = make_legacy_card(db_session, card_code="OP01-890", rarity="R")
+    print_row = make_print(db_session, canonical, artwork_key="franky-base")
+    source = five_prints["source"]
+    mapping = make_mapping(db_session, legacy, source, print_row)
+    make_observation(
+        db_session,
+        legacy,
+        source,
+        mapping,
+        print_row,
+        price_type="sell",
+        price_jpy=400,
+        promotion_state="sale",
+        observed_at=NOW,
+    )
+
+    index = client.get(f"/prints/{print_row.id}/market-index").json()
+    yuyutei = next(value for value in index["source_values"] if value["source"] == "yuyutei")
+
+    assert yuyutei["value_jpy"] == 400
+    assert yuyutei["constraint"] == "sale_price"
+    assert yuyutei["eligible"] is False
+    assert yuyutei["ineligible_reason"] == "sale_price"
+    assert yuyutei["contributes_to_index"] is False
+    assert index["index_value_jpy"] is None
+    assert index["source_count"] == 0
+
+
 def test_yuyutei_sell_at_1000_is_not_treated_as_a_platform_floor(client, db_session, five_prints):
     canonical = make_canonical(db_session, card_code="OP01-888", name_en="Shanks", rarity="L")
     legacy = make_legacy_card(db_session, card_code="OP01-888", rarity="L")

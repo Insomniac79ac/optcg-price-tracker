@@ -64,7 +64,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias, Source
 from app.services.artwork_evidence import ArtworkVerdict
 
 # Machine-readable refusal codes. They are part of the endpoint contract - the
@@ -338,16 +338,8 @@ def resolve_uncoded_product_id(db: Session, source_name: str, product_label: str
     None - which leaves the label unresolved and the gate refuses the approval
     exactly as it does today. A drift can only ever cost coverage.
 
-    `source_name` IS NOT CONSULTED, and saying so is the point of this
-    paragraph. `release_product_aliases` records no source column, so a
-    `source_rendering` row is source-agnostic in storage: a label recorded for
-    SNKRDUNK would answer for Yuyu-Tei too. That is harmless today because
-    SNKRDUNK is the only source with renderings and because a wrong answer
-    still has to survive the card-code and variant filters, but it is a real
-    limit rather than an oversight. The argument is kept so that call sites
-    state which source is asking, and so that adding a source column later is
-    a change to this function and its table rather than to every caller. Until
-    then, do not add a rendering for a second source without addressing it.
+    `source_name` is part of identity.  A rendering observed on SNKRDUNK must
+    never answer the same text as seen on Yuyu-Tei.
     """
     if not product_label:
         return None
@@ -366,10 +358,12 @@ def resolve_uncoded_product_id(db: Session, source_name: str, product_label: str
     # or not - exactly where it did before this tranche.
     rows = db.execute(
         select(ReleaseProductAlias.product_id)
+        .join(Source, Source.id == ReleaseProductAlias.source_id)
         .join(ReleaseProduct, ReleaseProduct.id == ReleaseProductAlias.product_id)
         .where(
             ReleaseProductAlias.alias_kind == "source_rendering",
             ReleaseProductAlias.alias_name == product_label,
+            Source.name == source_name,
             ReleaseProduct.official_code.is_(None),
         )
     ).scalars().all()

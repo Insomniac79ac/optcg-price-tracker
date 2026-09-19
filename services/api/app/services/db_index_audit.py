@@ -10,11 +10,11 @@ as price_observations/raw_snapshots/market_signal_events/
 collector_activity_events/app_log_events grow.
 
 A check passes if *some* index or unique constraint on the table has the
-required columns as its leading (leftmost) columns, in order - matching how
-a B-tree index actually gets used, rather than demanding an exact index name
-match. The `index` field on each result is still a specific, meaningful name
-(matching this codebase's `ix_<table>_<col(s)>` convention) so a failing
-check tells you exactly what to create.
+required columns as its leading (leftmost) columns, in order. This is only an
+ordinary query-access check: it does not prove uniqueness, partial-index
+predicates, foreign-key semantics, or identity constraints. The `index` field
+on each result is still a specific, meaningful name so a failing check tells
+you which access path is missing.
 """
 
 from __future__ import annotations
@@ -40,11 +40,46 @@ REQUIRED_INDEXES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     ("cards", "ix_cards_language", ("language",), "warning"),
     ("sources", "ix_sources_name", ("name",), "warning"),
     ("source_card_mappings", "ix_source_card_mappings_card_id", ("card_id",), "warning"),
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_card_id_source_id",
+        ("card_id", "source_id"),
+        "warning",
+    ),
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_card_print_id",
+        ("card_print_id",),
+        "critical",
+    ),
     ("source_card_mappings", "ix_source_card_mappings_source_id", ("source_id",), "warning"),
     ("source_card_mappings", "ix_source_card_mappings_source_url", ("source_url",), "warning"),
     ("source_card_mappings", "ix_source_card_mappings_is_active", ("is_active",), "warning"),
-    ("source_card_mappings", "ix_source_card_mappings_review_status", ("review_status",), "warning"),
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_review_status",
+        ("review_status",),
+        "warning",
+    ),
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_collection_order",
+        ("last_collection_attempted_at", "id"),
+        "warning",
+    ),
     ("price_observations", "ix_price_observations_card_id", ("card_id",), "critical"),
+    (
+        "price_observations",
+        "ix_price_observations_source_card_mapping_id",
+        ("source_card_mapping_id",),
+        "critical",
+    ),
+    (
+        "price_observations",
+        "ix_price_observations_card_print_id",
+        ("card_print_id",),
+        "critical",
+    ),
     ("price_observations", "ix_price_observations_source_id", ("source_id",), "critical"),
     ("price_observations", "ix_price_observations_price_type", ("price_type",), "warning"),
     ("price_observations", "ix_price_observations_observed_at", ("observed_at",), "critical"),
@@ -65,6 +100,9 @@ REQUIRED_INDEXES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
         ("card_print_id", "source_id", "price_type", "observed_at"),
         "critical",
     ),
+    # 1B-8F1 found no production mapping/time index was warranted. The plain
+    # and price-type variants remain deferred; a covering variant is a future
+    # scale candidate only and is intentionally absent from this registry.
     (
         "price_observations",
         "ix_price_observations_source_observed",
@@ -174,6 +212,113 @@ REQUIRED_INDEXES: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     ("search_history", "ix_search_history_created_at", ("created_at",), "warning"),
     ("market_workflow_runs", "ix_market_workflow_runs_status", ("status",), "warning"),
     ("market_workflow_runs", "ix_market_workflow_runs_started_at", ("started_at",), "warning"),
+    ("card_prints", "ix_card_prints_canonical_card_id", ("canonical_card_id",), "warning"),
+    ("card_prints", "ix_card_prints_release_product_id", ("release_product_id",), "warning"),
+    ("card_prints", "ix_card_prints_is_active", ("is_active",), "warning"),
+    (
+        "market_index_snapshots",
+        "uq_market_index_snapshots_print_date",
+        ("card_print_id", "snapshot_date"),
+        "critical",
+    ),
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_print_calculated",
+        ("card_print_id", "calculated_at"),
+        "critical",
+    ),
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_snapshot_date",
+        ("snapshot_date",),
+        "critical",
+    ),
+    (
+        "card_pirate_index_points",
+        "uq_cpi_points_point",
+        ("scope_kind", "scope_key", "methodology_version", "point_date"),
+        "critical",
+    ),
+)
+
+
+INDEX_SCOPE_BY_KEY: dict[tuple[str, str], str] = {
+    # Compatibility readers intentionally retain card-level pricing access.
+    ("source_card_mappings", "ix_source_card_mappings_card_id"): "legacy_compatibility",
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_card_id_source_id",
+    ): "legacy_compatibility",
+    ("price_observations", "ix_price_observations_card_id"): "legacy_compatibility",
+    (
+        "price_observations",
+        "ix_price_observations_card_source_type_observed",
+    ): "legacy_compatibility",
+    # Exact-print pricing, health, coverage, reporting, and collection access.
+    ("source_card_mappings", "ix_source_card_mappings_card_print_id"): "exact_print",
+    (
+        "source_card_mappings",
+        "ix_source_card_mappings_collection_order",
+    ): "exact_print",
+    (
+        "price_observations",
+        "ix_price_observations_source_card_mapping_id",
+    ): "exact_print",
+    ("price_observations", "ix_price_observations_card_print_id"): "exact_print",
+    (
+        "price_observations",
+        "ix_price_observations_print_source_type_observed",
+    ): "exact_print",
+    ("card_prints", "ix_card_prints_canonical_card_id"): "exact_print",
+    ("card_prints", "ix_card_prints_release_product_id"): "exact_print",
+    ("card_prints", "ix_card_prints_is_active"): "exact_print",
+    # Per-print Market Index storage and lookup access.
+    (
+        "market_index_snapshots",
+        "uq_market_index_snapshots_print_date",
+    ): "market_index",
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_print_calculated",
+    ): "market_index",
+    (
+        "market_index_snapshots",
+        "ix_market_index_snapshots_snapshot_date",
+    ): "market_index",
+    # Card Pirate natural-point access path.
+    ("card_pirate_index_points", "uq_cpi_points_point"): "card_pirate",
+}
+
+
+# These identity/integrity contracts cannot be proven by the leading-column
+# access-path audit. They are intentionally documented for a separate, narrow,
+# constraint-aware tranche instead of being registered as ordinary indexes.
+CONSTRAINT_AWARE_FOLLOW_UP: tuple[tuple[str, str, str], ...] = (
+    (
+        "card_prints",
+        "uq_card_prints_active_verified_identity",
+        "partial unique active/verified CardPrint identity",
+    ),
+    (
+        "source_card_mappings",
+        "uq_source_card_mappings_print_lineage_identity",
+        "exact-print lineage composite uniqueness",
+    ),
+    (
+        "price_observations",
+        "fk_price_observations_mapping_print_source",
+        "exact-lineage composite foreign-key target",
+    ),
+    (
+        "card_pirate_index_points",
+        "uq_cpi_points_carry_target",
+        "Card Pirate carry-chain target uniqueness",
+    ),
+    (
+        "card_pirate_index_points",
+        "fk_cpi_points_carried_from",
+        "Card Pirate carry-chain referential integrity",
+    ),
 )
 
 
@@ -183,13 +328,17 @@ class IndexCheckResult:
     index: str
     status: str
     severity: str
+    scope: str
     message: str
 
 
 def _covers(index_columns: list[str], required_columns: tuple[str, ...]) -> bool:
-    """True if index_columns (in their actual, defined order) start with
-    required_columns, in order - a B-tree index on (a, b, c) can serve a
-    lookup on just `a`, or on `(a, b)`, but not on `b` alone."""
+    """Return whether columns provide an ordinary leading-column access path.
+
+    A B-tree index on ``(a, b, c)`` can serve a lookup on ``a`` or ``(a, b)``,
+    but not on ``b`` alone. This deliberately says nothing about uniqueness,
+    partial predicates, foreign keys, or identity constraints.
+    """
     if len(index_columns) < len(required_columns):
         return False
     actual_prefix = tuple(c.lower() for c in index_columns[: len(required_columns)])
@@ -215,6 +364,7 @@ def run_db_index_audit(db: Session) -> list[IndexCheckResult]:
 
     results: list[IndexCheckResult] = []
     for table, index_name, required_columns, severity in REQUIRED_INDEXES:
+        scope = INDEX_SCOPE_BY_KEY.get((table, index_name), "shared")
         if table not in column_sets_by_table:
             column_sets_by_table[table] = _table_column_sets(inspector, table)
         column_sets = column_sets_by_table[table]
@@ -226,6 +376,7 @@ def run_db_index_audit(db: Session) -> list[IndexCheckResult]:
                     index=index_name,
                     status=severity,
                     severity=severity,
+                    scope=scope,
                     message=f"Could not read index metadata for table '{table}'.",
                 )
             )
@@ -238,6 +389,7 @@ def run_db_index_audit(db: Session) -> list[IndexCheckResult]:
                     index=index_name,
                     status="pass",
                     severity=severity,
+                    scope=scope,
                     message="Index exists.",
                 )
             )
@@ -248,6 +400,7 @@ def run_db_index_audit(db: Session) -> list[IndexCheckResult]:
                     index=index_name,
                     status=severity,
                     severity=severity,
+                    scope=scope,
                     message=(
                         f"Missing index on {table}({', '.join(required_columns)}) - "
                         f"expected an index named '{index_name}' (or any index/unique "

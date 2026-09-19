@@ -99,8 +99,11 @@ class SourceCardMapping(Base):
     # legacy field (0.0-1.0 on the pre-existing manual-approval paths, but
     # already also holding raw 0-100 values written by
     # app.api.admin_snkrdunk_matching's approve-match - see that module's
-    # docstring); match_confidence_label is always derived from this same
-    # 0-100 scale, never from the legacy field, so it's never ambiguous.
+    # docstring). For an exact mapping, match_confidence_label is derived from
+    # the current exact-print score. A compatibility-only or structurally
+    # broken mapping persists no authoritative numeric score and uses
+    # ``unknown``; its legacy-card diagnostic lives inside
+    # match_explanation_json.compatibility_card instead.
     match_confidence_label: Mapped[str | None] = mapped_column(String(16), nullable=True)
     match_explanation_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_match_checked_at: Mapped[datetime | None] = mapped_column(

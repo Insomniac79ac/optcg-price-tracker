@@ -6,6 +6,9 @@ Every row this script creates is namespaced so it can never be mistaken for
 exactly what this script created and nothing else:
   - Cards use card_code TEST-PERF-0001.. (real card codes look like
     OP01-001 and never start with "TEST-PERF-") and set_code "TEST-PERF".
+  - Canonical cards, exact prints and source mappings use the same card-code
+    namespace; all priced prints are active and verified.
+  - One dedicated TEST-PERF release product owns those exact prints.
   - The price source is a dedicated Source named "test-perf-source" - the
     real yuyutei/snkrdunk sources (app.seed) are never touched.
   - The collection/wishlist owner is a dedicated User
@@ -37,11 +40,15 @@ from app.db import SessionLocal
 from app.env import is_production_environment
 from app.models import (
     AppLogEvent,
+    CanonicalCard,
     Card,
+    CardPrint,
     CollectionItem,
     CollectorActivityEvent,
     PriceObservation,
+    ReleaseProduct,
     Source,
+    SourceCardMapping,
     User,
     WishlistItem,
 )
@@ -56,6 +63,9 @@ TEST_LANGUAGE = "jp"
 
 TEST_SOURCE_NAME = "test-perf-source"
 TEST_SOURCE_BASE_URL = "https://example.invalid/test-perf"
+TEST_SOURCE_CATALOGUE = "bandai_jp"
+TEST_RELEASE_PRODUCT_CODE = TEST_SET_CODE
+TEST_RELEASE_PRODUCT_URL = "https://example.invalid/test-perf/product"
 
 TEST_USER_GOOGLE_SUB = "test-perf-seed-user"
 TEST_USER_EMAIL = "test-perf-seed@example.invalid"
@@ -150,23 +160,176 @@ def _get_or_create_user(db: Session, dry_run: bool) -> tuple[User | None, bool]:
     return user, True
 
 
+def _get_or_create_price_product(db: Session) -> ReleaseProduct:
+    product = (
+        db.query(ReleaseProduct)
+        .filter_by(
+            source_catalogue=TEST_SOURCE_CATALOGUE,
+            official_code=TEST_RELEASE_PRODUCT_CODE,
+        )
+        .one_or_none()
+    )
+    if product is None:
+        product = ReleaseProduct(
+            source_catalogue=TEST_SOURCE_CATALOGUE,
+            official_code=TEST_RELEASE_PRODUCT_CODE,
+            display_name="Synthetic performance test product",
+            first_seen_name="Synthetic performance test product",
+            source_series_id=TEST_SET_CODE,
+            source_url=TEST_RELEASE_PRODUCT_URL,
+            verification_status="verified",
+        )
+        db.add(product)
+        db.flush()
+    return product
+
+
+def _existing_price_lineage(
+    db: Session, card: Card, source: Source
+) -> tuple[SourceCardMapping, CardPrint] | None:
+    mapping = (
+        db.query(SourceCardMapping)
+        .filter_by(
+            source_id=source.id,
+            source_url=f"{TEST_SOURCE_BASE_URL}/cards/{card.card_code}",
+        )
+        .one_or_none()
+    )
+    if mapping is None:
+        return None
+    card_print = db.get(CardPrint, mapping.card_print_id) if mapping.card_print_id else None
+    if (
+        mapping.card_id != card.id
+        or mapping.source_id != source.id
+        or mapping.review_status != "approved"
+        or not mapping.is_active
+        or card_print is None
+        or not card_print.is_active
+        or card_print.verification_status != "verified"
+    ):
+        raise RuntimeError(
+            f"Existing performance mapping {mapping.id} does not satisfy exact-print pricing "
+            "lineage; refusing to rewrite or price through it."
+        )
+    return mapping, card_print
+
+
+def _seed_price_lineage(
+    db: Session,
+    cards_by_code: dict[str, Card | None],
+    source: Source | None,
+    dry_run: bool,
+) -> dict[str, tuple[SourceCardMapping, CardPrint] | None]:
+    lineages: dict[str, tuple[SourceCardMapping, CardPrint] | None] = {}
+    has_persisted_cards = source is not None and any(
+        card is not None for card in cards_by_code.values()
+    )
+    product = (
+        _get_or_create_price_product(db)
+        if not dry_run and has_persisted_cards
+        else None
+    )
+
+    for code, card in cards_by_code.items():
+        if card is None or source is None:
+            lineages[code] = None
+            continue
+
+        existing = _existing_price_lineage(db, card, source)
+        if existing is not None:
+            lineages[code] = existing
+            continue
+        if dry_run:
+            lineages[code] = None
+            continue
+        assert product is not None
+
+        canonical = db.query(CanonicalCard).filter_by(card_code=code).one_or_none()
+        if canonical is None:
+            canonical = CanonicalCard(
+                card_code=code,
+                name_en=card.name_en,
+                name_jp=card.name_jp,
+                original_set_code=TEST_SET_CODE,
+                rarity=TEST_RARITY,
+                card_type="Character",
+            )
+            db.add(canonical)
+            db.flush()
+
+        card_print = (
+            db.query(CardPrint)
+            .filter_by(
+                canonical_card_id=canonical.id,
+                language=TEST_LANGUAGE,
+                release_product_id=product.id,
+                official_asset_variant="base",
+                verification_status="verified",
+                is_active=True,
+            )
+            .one_or_none()
+        )
+        if card_print is None:
+            card_print = CardPrint(
+                canonical_card_id=canonical.id,
+                language=TEST_LANGUAGE,
+                treatment="normal",
+                release_product_code=TEST_RELEASE_PRODUCT_CODE,
+                release_product_id=product.id,
+                artwork_key=f"test-perf-fixture:{code}:base",
+                official_asset_variant="base",
+                official_rarity=TEST_RARITY,
+                official_name=card.name_en,
+                verification_status="verified",
+                is_active=True,
+            )
+            db.add(card_print)
+            db.flush()
+
+        mapping = SourceCardMapping(
+            card_id=card.id,
+            source_id=source.id,
+            card_print_id=card_print.id,
+            source_card_id=code,
+            source_url=f"{TEST_SOURCE_BASE_URL}/cards/{code}",
+            manual_verified=True,
+            is_active=True,
+            review_status="approved",
+        )
+        db.add(mapping)
+        db.flush()
+        lineages[code] = (mapping, card_print)
+
+    return lineages
+
+
 def _seed_price_observations(
     db: Session,
     cards_by_code: dict[str, Card | None],
     per_card: int,
     source: Source | None,
+    lineages_by_code: dict[str, tuple[SourceCardMapping, CardPrint] | None],
     dry_run: bool,
 ) -> int:
     if per_card <= 0:
         return 0
     created = 0
-    for card in cards_by_code.values():
+    for code, card in cards_by_code.items():
         if card is None or source is None:
             created += per_card
             continue
+        lineage = lineages_by_code[code]
+        if lineage is None:
+            created += per_card
+            continue
+        mapping, card_print = lineage
         existing_count = (
             db.query(PriceObservation)
-            .filter_by(card_id=card.id, source_id=source.id)
+            .filter_by(
+                source_card_mapping_id=mapping.id,
+                card_print_id=card_print.id,
+                source_id=mapping.source_id,
+            )
             .count()
         )
         missing = max(0, per_card - existing_count)
@@ -181,7 +344,9 @@ def _seed_price_observations(
             db.add(
                 PriceObservation(
                     card_id=card.id,
-                    source_id=source.id,
+                    source_id=mapping.source_id,
+                    source_card_mapping_id=mapping.id,
+                    card_print_id=card_print.id,
                     observed_at=observed_at,
                     price_type="sell",
                     price_jpy=base_price + j * 13,
@@ -350,8 +515,18 @@ def seed_performance_data(
     source, source_created = _get_or_create_source(db, dry_run)
     user, user_created = _get_or_create_user(db, dry_run)
 
+    lineages_by_code = (
+        _seed_price_lineage(db, cards_by_code, source, dry_run)
+        if price_observations_per_card > 0
+        else {code: None for code in cards_by_code}
+    )
     price_observations_created = _seed_price_observations(
-        db, cards_by_code, price_observations_per_card, source, dry_run
+        db,
+        cards_by_code,
+        price_observations_per_card,
+        source,
+        lineages_by_code,
+        dry_run,
     )
     collection_items_created = _seed_collection_items(db, cards_by_code, collection_items, user, dry_run)
     wishlist_items_created = _seed_wishlist_items(db, cards_by_code, wishlist_items, user, dry_run)

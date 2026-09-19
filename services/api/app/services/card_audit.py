@@ -10,16 +10,31 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Card, PriceObservation, Source, SourceCardMapping
+from app.models import (
+    Card,
+    CardPrint,
+    CollectionItem,
+    PriceObservation,
+    Source,
+    SourceCardMapping,
+    WishlistItem,
+)
 from app.models.card_alias import CardAlias
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_catalog_import import LANGUAGE_SYNONYMS, VARIANT_SYNONYMS
 from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
 from app.services.catalog_coverage import summarize_catalog_coverage
 from app.services.price_source_health import PriceSourceHealthFilters, compute_price_source_health
+from app.services.source_mapping_identity import (
+    BROKEN,
+    EXACT,
+    LEGACY_COMPATIBILITY,
+    SourceMappingIdentity,
+    load_source_mapping_identities,
+)
 from app.services.source_mapping_confidence import (
     MappingQualityFilters,
     evaluate_source_mappings,
@@ -124,6 +139,8 @@ class CardAuditReport:
     # metadata/mapping/price/duplicate/mapping-quality gap the coverage page
     # already lists individually.
     catalog_coverage: dict[str, Any] | None = None
+    modern_exact_print_audit: dict[str, int] | None = None
+    compatibility_audit: dict[str, int] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         critical_issues = sum(1 for issue in self.issues if issue.severity == CRITICAL)
@@ -140,6 +157,8 @@ class CardAuditReport:
             "summary": summary,
             "issues": [issue.to_dict() for issue in self.issues],
             "catalog_coverage": self.catalog_coverage,
+            "modern_exact_print_audit": self.modern_exact_print_audit,
+            "compatibility_audit": self.compatibility_audit,
         }
 
 
@@ -281,7 +300,10 @@ def _check_duplicate_source_url(
 
         source = sources_by_id.get(source_id)
         source_name = source.name if source is not None else str(source_id)
-        card_ids = sorted({m.card_id for m in all_mappings})
+        card_ids = sorted({m.card_id for m in all_mappings if m.card_id is not None})
+        card_print_ids = sorted(
+            {m.card_print_id for m in all_mappings if m.card_print_id is not None}
+        )
         issues.append(
             AuditIssue(
                 issue_type="duplicate_source_url",
@@ -296,6 +318,7 @@ def _check_duplicate_source_url(
                 details={
                     "source_id": source_id,
                     "mapping_ids": sorted(m.id for m in all_mappings),
+                    "card_print_ids": card_print_ids,
                 },
             )
         )
@@ -589,7 +612,7 @@ def _check_low_confidence_mappings(
             AuditIssue(
                 issue_type="low_match_confidence_mapping",
                 severity=WARNING,
-                card_ids=[mapping.card_id],
+                card_ids=[mapping.card_id] if mapping.card_id is not None else [],
                 card_code=card.card_code if card is not None else None,
                 message=(
                     f"Mapping {mapping.id} (source_id={mapping.source_id}) has a low match "
@@ -763,14 +786,21 @@ def _check_critical_mapping_quality(db: Session) -> list[AuditIssue]:
             AuditIssue(
                 issue_type="critical_mapping_quality",
                 severity=CRITICAL,
-                card_ids=[item.card_id],
+                # card_id is optional compatibility metadata.  The exact
+                # mapping-quality semantics are a later tranche, but the
+                # audit response must not become malformed merely because a
+                # valid print-authoritative mapping has no legacy Card row.
+                card_ids=[item.card_id] if item.card_id is not None else [],
                 card_code=item.card_code,
                 message=(
                     f"Mapping {item.mapping_id} (source={item.source_name}) is critical risk: "
                     f"{', '.join(item.issue_types)}"
                 ),
                 suggested_action="review_source_mapping_quality",
-                details={"mapping_id": item.mapping_id, "issue_types": item.issue_types},
+                details={
+                    "mapping_id": item.mapping_id,
+                    "issue_types": item.issue_types,
+                },
             )
         )
     return issues
@@ -782,7 +812,7 @@ def _check_critical_mapping_quality(db: Session) -> list[AuditIssue]:
 SOURCE_MISSING_PRICE_AUDIT_THRESHOLD_PCT = 20.0
 
 
-def _check_source_price_health(db: Session) -> list[AuditIssue]:
+def _check_source_price_health(db: Session, report=None) -> list[AuditIssue]:
     """One AuditIssue per source with a notable stale-price rate, a notable
     missing-price rate, or a failed latest refresh - reuses
     app.services.price_source_health's per-source health_status/stale/
@@ -790,7 +820,7 @@ def _check_source_price_health(db: Session) -> list[AuditIssue]:
     GET /admin/price-source-health for that per-mapping detail, and the
     'only include severe/high-level summary' rule this satisfies by
     aggregating every affected card into one issue per source)."""
-    report = compute_price_source_health(db, PriceSourceHealthFilters())
+    report = report or compute_price_source_health(db, PriceSourceHealthFilters())
     issues: list[AuditIssue] = []
 
     for source in report.sources:
@@ -810,8 +840,18 @@ def _check_source_price_health(db: Session) -> list[AuditIssue]:
         if source.active_mapping_count == 0:
             continue
 
-        stale_card_ids = sorted({g.card_id for g in report.stale_prices if g.source_name == source.source_name})
-        if source.health_status in ("stale", "degraded") and stale_card_ids:
+        stale_gaps = [g for g in report.stale_prices if g.source_name == source.source_name]
+        stale_card_ids = sorted(
+            {
+                gap.compatibility_card_id
+                for gap in stale_gaps
+                if gap.compatibility_card_id is not None
+            }
+        )
+        stale_print_ids = sorted(
+            {gap.card_print_id for gap in stale_gaps if gap.card_print_id is not None}
+        )
+        if source.health_status in ("stale", "degraded") and stale_print_ids:
             stale_pct = round((source.stale_price_count / source.active_mapping_count) * 100, 2)
             issues.append(
                 AuditIssue(
@@ -824,13 +864,23 @@ def _check_source_price_health(db: Session) -> list[AuditIssue]:
                         f"({stale_pct}%) have a stale price"
                     ),
                     suggested_action="review_price_source_health",
-                    details={"source_name": source.source_name, "stale_price_count": source.stale_price_count},
+                    details={
+                        "source_name": source.source_name,
+                        "stale_price_count": source.stale_price_count,
+                        "card_print_ids": stale_print_ids,
+                    },
                 )
             )
 
-        missing_card_ids = sorted({g.card_id for g in report.missing_prices if g.source_name == source.source_name})
+        missing_gaps = [g for g in report.missing_prices if g.source_name == source.source_name]
+        missing_card_ids = sorted(
+            {g.compatibility_card_id for g in missing_gaps if g.compatibility_card_id is not None}
+        )
+        missing_print_ids = sorted(
+            {gap.card_print_id for gap in missing_gaps if gap.card_print_id is not None}
+        )
         missing_pct = round((source.missing_price_count / source.active_mapping_count) * 100, 2)
-        if missing_card_ids and missing_pct > SOURCE_MISSING_PRICE_AUDIT_THRESHOLD_PCT:
+        if missing_print_ids and missing_pct > SOURCE_MISSING_PRICE_AUDIT_THRESHOLD_PCT:
             issues.append(
                 AuditIssue(
                     issue_type="source_price_missing",
@@ -842,10 +892,173 @@ def _check_source_price_health(db: Session) -> list[AuditIssue]:
                         f"({missing_pct}%) have no price observation"
                     ),
                     suggested_action="review_price_source_health",
-                    details={"source_name": source.source_name, "missing_price_count": source.missing_price_count},
+                    details={
+                        "source_name": source.source_name,
+                        "missing_price_count": source.missing_price_count,
+                        "card_print_ids": missing_print_ids,
+                    },
                 )
             )
 
+    return issues
+
+
+def _build_modern_exact_print_audit(
+    db: Session,
+    identities: list[SourceMappingIdentity],
+    price_health_report,
+) -> dict[str, int]:
+    """Build modern coverage without borrowing identity from legacy Card."""
+    exact = [identity for identity in identities if identity.classification == EXACT]
+    active_exact = [identity for identity in exact if identity.mapping.is_active]
+    with_fresh = price_health_report.summary["mappings_with_recent_price"]
+    eligible_prints = (
+        db.scalar(
+            select(func.count())
+            .select_from(CardPrint)
+            .where(
+                CardPrint.is_active.is_(True),
+                CardPrint.verification_status == "verified",
+            )
+        )
+        or 0
+    )
+    return {
+        "eligible_physical_prints": eligible_prints,
+        "exact_mappings": len(exact),
+        "active_exact_mappings": len(active_exact),
+        # Freshness is operational, so these counts intentionally cover only
+        # active exact mappings. Grandfathered rows never enter the denominator.
+        "mappings_with_fresh_observations": with_fresh,
+        "mappings_without_fresh_observations": len(active_exact) - with_fresh,
+        "active_exact_mappings_non_priceable": sum(
+            not identity.is_priceable_print for identity in active_exact
+        ),
+        "broken_mappings": sum(
+            identity.classification == BROKEN for identity in identities
+        ),
+    }
+
+
+def _build_compatibility_audit(
+    db: Session,
+    identities: list[SourceMappingIdentity],
+) -> dict[str, int]:
+    collection_items = list(db.scalars(select(CollectionItem)).all())
+    wishlist_items = list(db.scalars(select(WishlistItem)).all())
+    card_ids = set(db.scalars(select(Card.id)).all())
+    return {
+        "grandfathered_legacy_mappings": sum(
+            identity.classification == LEGACY_COMPATIBILITY
+            for identity in identities
+        ),
+        "legacy_card_references": sum(
+            identity.mapping.card_id is not None for identity in identities
+        ),
+        "broken_compatibility_card_pointers": sum(
+            identity.mapping.card_id is not None
+            and identity.compatibility_card is None
+            for identity in identities
+        ),
+        "collection_items_card_keyed": len(collection_items),
+        "collection_items_broken_card_references": sum(
+            item.card_id not in card_ids for item in collection_items
+        ),
+        "wishlist_items_card_keyed": len(wishlist_items),
+        "wishlist_items_broken_card_references": sum(
+            item.card_id not in card_ids for item in wishlist_items
+        ),
+    }
+
+
+def _check_exact_print_operational_issues(
+    identities: list[SourceMappingIdentity],
+) -> list[AuditIssue]:
+    issues: list[AuditIssue] = []
+    non_priceable = [
+        identity
+        for identity in identities
+        if identity.classification == EXACT
+        and identity.mapping.is_active
+        and not identity.is_priceable_print
+    ]
+    if non_priceable:
+        issues.append(
+            AuditIssue(
+                issue_type="active_exact_mapping_non_priceable",
+                severity=CRITICAL,
+                card_ids=sorted(
+                    {
+                        identity.compatibility_card_id
+                        for identity in non_priceable
+                        if identity.compatibility_card_id is not None
+                    }
+                ),
+                message=(
+                    f"{len(non_priceable)} active exact mapping(s) point to an "
+                    "inactive or unverified physical print"
+                ),
+                suggested_action="review_exact_mapping_print_eligibility",
+                details={
+                    "mapping_ids": [identity.mapping.id for identity in non_priceable],
+                    "card_print_ids": [identity.card_print_id for identity in non_priceable],
+                },
+            )
+        )
+
+    broken_operational = [
+        identity
+        for identity in identities
+        if identity.classification == BROKEN
+        and (
+            identity.mapping.card_print_id is not None
+            or identity.mapping.card_id is None
+            or identity.source is None
+        )
+    ]
+    if broken_operational:
+        issues.append(
+            AuditIssue(
+                issue_type="broken_exact_mapping_identity",
+                severity=CRITICAL,
+                card_ids=[],
+                message=(
+                    f"{len(broken_operational)} mapping(s) have broken operational "
+                    "identity lineage"
+                ),
+                suggested_action="review_exact_mapping_lineage",
+                details={
+                    "mapping_ids": [
+                        identity.mapping.id for identity in broken_operational
+                    ]
+                },
+            )
+        )
+
+    broken_compatibility = [
+        identity
+        for identity in identities
+        if identity.mapping.card_id is not None
+        and identity.compatibility_card is None
+    ]
+    if broken_compatibility:
+        issues.append(
+            AuditIssue(
+                issue_type="broken_compatibility_card_pointer",
+                severity=WARNING,
+                card_ids=[],
+                message=(
+                    f"{len(broken_compatibility)} mapping(s) have a broken legacy Card "
+                    "pointer; exact print identity is reported separately"
+                ),
+                suggested_action="review_legacy_card_reference",
+                details={
+                    "mapping_ids": [
+                        identity.mapping.id for identity in broken_compatibility
+                    ]
+                },
+            )
+        )
     return issues
 
 
@@ -856,9 +1069,17 @@ def run_card_audit(db: Session) -> CardAuditReport:
     sources_by_id = {s.id: s for s in db.scalars(select(Source)).all()}
     cards_by_id = {c.id: c for c in cards}
 
-    mapped_card_ids = {m.card_id for m in mappings}
-    active_mapped_card_ids = {m.card_id for m in mappings if m.is_active}
-    priced_card_ids = set(db.scalars(select(PriceObservation.card_id).distinct()).all())
+    mapped_card_ids = {m.card_id for m in mappings if m.card_id is not None}
+    active_mapped_card_ids = {
+        m.card_id for m in mappings if m.is_active and m.card_id is not None
+    }
+    priced_card_ids = {
+        card_id
+        for card_id in db.scalars(select(PriceObservation.card_id).distinct()).all()
+        if card_id is not None
+    }
+    identities = load_source_mapping_identities(db)
+    price_health_report = compute_price_source_health(db, PriceSourceHealthFilters())
 
     issues: list[AuditIssue] = [
         *_check_duplicate_card_code_conflicting_names(cards),
@@ -884,7 +1105,8 @@ def run_card_audit(db: Session) -> CardAuditReport:
         *_check_active_card_merged_into_another_card(cards),
         *_check_merged_card_still_has_active_source_mapping(mappings, cards_by_id),
         *_check_card_alias_without_card(db, set(cards_by_id.keys())),
-        *_check_source_price_health(db),
+        *_check_source_price_health(db, price_health_report),
+        *_check_exact_print_operational_issues(identities),
     ]
 
     return CardAuditReport(
@@ -892,4 +1114,8 @@ def run_card_audit(db: Session) -> CardAuditReport:
         issues=issues,
         mapping_quality=summarize_mapping_quality(db),
         catalog_coverage=summarize_catalog_coverage(db),
+        modern_exact_print_audit=_build_modern_exact_print_audit(
+            db, identities, price_health_report
+        ),
+        compatibility_audit=_build_compatibility_audit(db, identities),
     )

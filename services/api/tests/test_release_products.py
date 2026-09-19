@@ -9,7 +9,7 @@ test_canonical_cards_postgres.py."""
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias
+from app.models import CanonicalCard, CardPrint, ReleaseProduct, ReleaseProductAlias, Source
 from app.models.release_product import SOURCE_CATALOGUES
 from app.models.release_product_alias import ALIAS_KINDS
 
@@ -42,6 +42,13 @@ def make_alias(db_session, product, **overrides) -> ReleaseProductAlias:
         source_url=BANDAI_OP01_URL,
     )
     fields.update(overrides)
+    if fields["alias_kind"] == "source_rendering" and "source_id" not in fields:
+        source = db_session.query(Source).filter_by(name="snkrdunk").one_or_none()
+        if source is None:
+            source = Source(name="snkrdunk", base_url="https://snkrdunk.com")
+            db_session.add(source)
+            db_session.flush()
+        fields["source_id"] = source.id
     alias = ReleaseProductAlias(**fields)
     db_session.add(alias)
     db_session.commit()

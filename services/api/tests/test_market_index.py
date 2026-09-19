@@ -54,11 +54,21 @@ def add_obs(db_session, card, source, **kwargs) -> PriceObservation:
     return obs
 
 
-def yuyutei_sell(db_session, card, yuyutei, *, price_jpy, days_ago=0, stock_status="in_stock"):
+def yuyutei_sell(
+    db_session,
+    card,
+    yuyutei,
+    *,
+    price_jpy,
+    days_ago=0,
+    stock_status="in_stock",
+    promotion_state=None,
+):
     return add_obs(
         db_session, card, yuyutei,
         price_type="sell", price_jpy=price_jpy,
         observed_at=NOW - timedelta(days=days_ago), stock_status=stock_status,
+        promotion_state=promotion_state,
     )
 
 
@@ -571,6 +581,116 @@ def test_catalogue_endpoint_returns_market_index_per_item(client, db_session):
     assert by_code["OP01-001"]["market_index"]["index_value_jpy"] == 1200
     assert by_code["OP01-002"]["market_index"]["index_value_jpy"] is None
     assert "pagination" in body
+
+
+def test_legacy_routes_prefer_normal_yuyu_sell_and_preserve_raw_history(
+    client, db_session
+):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    snkrdunk = make_source(db_session, "snkrdunk")
+    normal = yuyutei_sell(
+        db_session,
+        card,
+        yuyutei,
+        price_jpy=1200,
+        days_ago=2,
+        promotion_state="none",
+    )
+    promotion = yuyutei_sell(
+        db_session,
+        card,
+        yuyutei,
+        price_jpy=800,
+        days_ago=1,
+        promotion_state="sale",
+    )
+    floor = snkrdunk_floor(
+        db_session,
+        card,
+        snkrdunk,
+        price_jpy=1800,
+        days_ago=1,
+    )
+
+    service_index = get_market_index_for_card(db_session, card.id)
+    yuyu_value = find(service_index.source_values, "yuyutei", "retail_sell")
+    snkrdunk_value = find(
+        service_index.source_values, "snkrdunk", "listing_floor"
+    )
+    assert yuyu_value.value_jpy == normal.price_jpy
+    assert yuyu_value.observed_at == normal.observed_at
+    assert yuyu_value.eligible is True
+    assert yuyu_value.contributes_to_index is True
+    assert snkrdunk_value.value_jpy == floor.price_jpy
+    assert snkrdunk_value.eligible is True
+    assert snkrdunk_value.contributes_to_index is True
+    assert service_index.index_value_jpy == 1500
+    assert service_index.source_count == 2
+
+    index_response = client.get(f"/cards/{card.id}/market-index")
+    assert index_response.status_code == 200
+    index_body = index_response.json()
+    index_sources = {value["source"]: value for value in index_body["source_values"]}
+    assert index_body["index_value_jpy"] == 1500
+    assert index_body["source_count"] == 2
+    assert index_sources["yuyutei"]["value_jpy"] == normal.price_jpy
+    assert index_sources["yuyutei"]["constraint"] is None
+    assert index_sources["snkrdunk"]["value_jpy"] == floor.price_jpy
+
+    catalogue_response = client.get("/cards/catalogue")
+    assert catalogue_response.status_code == 200
+    catalogue_index = catalogue_response.json()["items"][0]["market_index"]
+    catalogue_sources = {
+        value["source"]: value for value in catalogue_index["source_values"]
+    }
+    assert catalogue_index["index_value_jpy"] == 1500
+    assert catalogue_index["source_count"] == 2
+    assert catalogue_sources["yuyutei"]["value_jpy"] == normal.price_jpy
+    assert catalogue_sources["snkrdunk"]["value_jpy"] == floor.price_jpy
+
+    history_response = client.get(f"/cards/{card.id}/prices")
+    assert history_response.status_code == 200
+    history = history_response.json()
+    assert {row["id"] for row in history} == {normal.id, promotion.id, floor.id}
+    assert {
+        (row["source"], row["price_type"], row["price_jpy"])
+        for row in history
+    } == {
+        ("yuyutei", "sell", 1200),
+        ("yuyutei", "sell", 800),
+        ("snkrdunk", "floor", 1800),
+    }
+
+
+def test_legacy_routes_exclude_sale_only_yuyu_data(client, db_session):
+    card = make_card(db_session)
+    yuyutei = make_source(db_session, "yuyutei")
+    promotion = yuyutei_sell(
+        db_session,
+        card,
+        yuyutei,
+        price_jpy=800,
+        days_ago=1,
+        promotion_state="sale",
+    )
+
+    index_response = client.get(f"/cards/{card.id}/market-index")
+    assert index_response.status_code == 200
+    index_body = index_response.json()
+    yuyu_value = index_body["source_values"][0]
+    assert index_body["index_value_jpy"] is None
+    assert index_body["source_count"] == 0
+    assert yuyu_value["value_jpy"] == promotion.price_jpy
+    assert yuyu_value["constraint"] == "sale_price"
+    assert yuyu_value["eligible"] is False
+    assert yuyu_value["contributes_to_index"] is False
+
+    catalogue_response = client.get("/cards/catalogue")
+    assert catalogue_response.status_code == 200
+    catalogue_index = catalogue_response.json()["items"][0]["market_index"]
+    assert catalogue_index["index_value_jpy"] is None
+    assert catalogue_index["source_count"] == 0
 
 
 def test_catalogue_endpoint_pagination(client, db_session):
@@ -1304,7 +1424,7 @@ def test_adding_the_range_did_not_move_any_index_field(client, db_session):
     assert body["confidence"] == "high"
     assert body["calculation_method"] == "median_of_sources"
     assert body["index_version"] == 3
-    assert body["source_semantics_version"] == 2
+    assert body["source_semantics_version"] == SOURCE_SEMANTICS_VERSION
 
 
 # --- Market Index v3: multi-source market consensus --------------------------
@@ -1872,23 +1992,13 @@ def test_confidence_is_contributor_count_metadata_and_range_is_independent(db_se
     assert evidence == {"transaction", "listing"}
 
 
-def test_index_version_is_three_and_source_semantics_version_is_two(db_session):
-    """The two version fields move independently, and v3 is the clearest
-    demonstration yet: the combination step changed completely while per-source
-    interpretation did not change at all.
+def test_index_and_source_semantics_versions_are_three(db_session):
+    """The counters version independent layers and now happen to coincide.
 
-    Nothing about how a Yuyu-Tei sell price or a SNKRDUNK floor is READ moved
-    in v3 - the same thresholds, the same platform-minimum rule, the same
-    staleness windows, the same promotion handling. What moved is what happens
-    to those readings afterwards. So INDEX_VERSION goes to 3 and
-    SOURCE_SEMANTICS_VERSION stays at 2, and the numbers no longer coincide.
-
-    The INDEX_VERSION bump is also what keeps app.services.market_index_change
-    honest: it refuses to compare a v2 snapshot against a v3 live value, so the
-    7d movement figure goes null for a week rather than reporting a
-    methodology change as a price change."""
+    Index v3 records the existing combination rule. Source-semantics v3 records
+    the later change that made promotional Yuyu sells ineligible."""
     assert INDEX_VERSION == 3
-    assert SOURCE_SEMANTICS_VERSION == 2
+    assert SOURCE_SEMANTICS_VERSION == 3
 
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
@@ -1897,4 +2007,4 @@ def test_index_version_is_three_and_source_semantics_version_is_two(db_session):
     index = get_market_index_for_card(db_session, card.id)
 
     assert index.index_version == 3
-    assert index.source_semantics_version == 2
+    assert index.source_semantics_version == 3

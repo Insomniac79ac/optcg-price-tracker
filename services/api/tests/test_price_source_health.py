@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from app.models import PriceObservation
+from app.models import SourceCardMapping
 from app.models.price_refresh_run import PriceRefreshRun
 from app.models.snkrdunk_discovery_run import SnkrdunkDiscoveryRun
 from app.services.price_source_health import (
@@ -8,23 +8,39 @@ from app.services.price_source_health import (
     compute_price_source_health,
     summarize_price_source_health,
 )
-from tests.test_source_mappings import make_card, make_mapping, make_source
+from app.services.source_mapping_identity import BROKEN, SourceMappingIdentity
+from tests.exact_reporting_helpers import (
+    make_canonical,
+    make_compatibility_card,
+    make_exact_mapping,
+    make_exact_observation,
+    make_legacy_mapping,
+    make_print,
+    make_source,
+)
 
 NOW = datetime.now(timezone.utc)
 
 
-def make_price(db_session, card, source, *, observed_at=None, price_jpy=1000, price_type="sell"):
-    obs = PriceObservation(
-        card_id=card.id,
-        source_id=source.id,
-        price_type=price_type,
-        price_jpy=price_jpy,
-        observed_at=observed_at or NOW,
+def make_exact_case(
+    db_session,
+    source,
+    card_code,
+    *,
+    product_code="OP-01",
+    asset_variant="base",
+    rarity="R",
+):
+    canonical = make_canonical(db_session, card_code, rarity=rarity)
+    print_row = make_print(
+        db_session,
+        canonical,
+        product_code=product_code,
+        asset_variant=asset_variant,
+        rarity=rarity,
     )
-    db_session.add(obs)
-    db_session.commit()
-    db_session.refresh(obs)
-    return obs
+    mapping = make_exact_mapping(db_session, print_row, source)
+    return print_row, mapping
 
 
 def make_refresh_run(
@@ -111,9 +127,8 @@ def test_compute_price_source_health_empty(db_session):
 
 def test_healthy_source_detected(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
-    make_price(db_session, card, yuyutei, observed_at=NOW - timedelta(hours=1))
+    _print, mapping = make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
+    make_exact_observation(db_session, mapping, observed_at=NOW - timedelta(hours=1))
     make_refresh_run(db_session, status="completed", source_filter="yuyutei")
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
@@ -124,9 +139,8 @@ def test_healthy_source_detected(db_session):
 
 def test_stale_source_detected(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
-    make_price(db_session, card, yuyutei, observed_at=NOW - timedelta(hours=48))
+    _print, mapping = make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
+    make_exact_observation(db_session, mapping, observed_at=NOW - timedelta(hours=48))
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
     source_item = next(s for s in report.sources if s.source_name == "yuyutei")
@@ -136,9 +150,8 @@ def test_stale_source_detected(db_session):
 
 def test_failed_refresh_marks_error(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
-    make_price(db_session, card, yuyutei, observed_at=NOW - timedelta(hours=1))
+    _print, mapping = make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
+    make_exact_observation(db_session, mapping, observed_at=NOW - timedelta(hours=1))
     make_refresh_run(db_session, status="failed", source_filter="yuyutei")
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
@@ -169,9 +182,24 @@ def test_source_without_any_data_is_unknown(db_session):
 
 def test_success_rate_calculation(db_session):
     make_source(db_session, "yuyutei")
-    make_refresh_run(db_session, status="completed", source_filter="yuyutei", started_at=NOW - timedelta(hours=1))
-    make_refresh_run(db_session, status="completed", source_filter="yuyutei", started_at=NOW - timedelta(hours=2))
-    make_refresh_run(db_session, status="failed", source_filter="yuyutei", started_at=NOW - timedelta(hours=3))
+    make_refresh_run(
+        db_session,
+        status="completed",
+        source_filter="yuyutei",
+        started_at=NOW - timedelta(hours=1),
+    )
+    make_refresh_run(
+        db_session,
+        status="completed",
+        source_filter="yuyutei",
+        started_at=NOW - timedelta(hours=2),
+    )
+    make_refresh_run(
+        db_session,
+        status="failed",
+        source_filter="yuyutei",
+        started_at=NOW - timedelta(hours=3),
+    )
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
     source_item = next(s for s in report.sources if s.source_name == "yuyutei")
@@ -185,12 +213,18 @@ def test_success_rate_calculation(db_session):
 
 def test_yuyutei_24h_freshness_threshold(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    fresh_card = make_card(db_session, card_code="OP01-001", rarity="L")
-    stale_card = make_card(db_session, card_code="OP01-002", rarity="R")
-    make_mapping(db_session, fresh_card, yuyutei)
-    make_mapping(db_session, stale_card, yuyutei)
-    make_price(db_session, fresh_card, yuyutei, observed_at=NOW - timedelta(hours=23))
-    make_price(db_session, stale_card, yuyutei, observed_at=NOW - timedelta(hours=25))
+    _fresh_print, fresh_mapping = make_exact_case(
+        db_session, yuyutei, "OP01-001", rarity="L"
+    )
+    _stale_print, stale_mapping = make_exact_case(
+        db_session, yuyutei, "OP01-002", asset_variant="p1", rarity="R"
+    )
+    make_exact_observation(
+        db_session, fresh_mapping, observed_at=NOW - timedelta(hours=23)
+    )
+    make_exact_observation(
+        db_session, stale_mapping, observed_at=NOW - timedelta(hours=25)
+    )
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
     source_item = next(s for s in report.sources if s.source_name == "yuyutei")
@@ -200,12 +234,18 @@ def test_yuyutei_24h_freshness_threshold(db_session):
 
 def test_snkrdunk_7d_freshness_threshold(db_session):
     snkrdunk = make_source(db_session, "snkrdunk")
-    fresh_card = make_card(db_session, card_code="OP01-001", rarity="L")
-    stale_card = make_card(db_session, card_code="OP01-002", rarity="R")
-    make_mapping(db_session, fresh_card, snkrdunk)
-    make_mapping(db_session, stale_card, snkrdunk)
-    make_price(db_session, fresh_card, snkrdunk, observed_at=NOW - timedelta(days=6))
-    make_price(db_session, stale_card, snkrdunk, observed_at=NOW - timedelta(days=8))
+    _fresh_print, fresh_mapping = make_exact_case(
+        db_session, snkrdunk, "OP01-001", rarity="L"
+    )
+    _stale_print, stale_mapping = make_exact_case(
+        db_session, snkrdunk, "OP01-002", asset_variant="p1", rarity="R"
+    )
+    make_exact_observation(
+        db_session, fresh_mapping, observed_at=NOW - timedelta(days=6)
+    )
+    make_exact_observation(
+        db_session, stale_mapping, observed_at=NOW - timedelta(days=8)
+    )
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
     source_item = next(s for s in report.sources if s.source_name == "snkrdunk")
@@ -213,35 +253,114 @@ def test_snkrdunk_7d_freshness_threshold(db_session):
     assert source_item.stale_price_count == 1
 
 
+def test_sibling_prints_have_independent_mapping_health(db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    canonical = make_canonical(db_session, "OP01-001")
+    base = make_print(db_session, canonical, asset_variant="base")
+    parallel = make_print(db_session, canonical, asset_variant="p1")
+    base_mapping = make_exact_mapping(db_session, base, yuyutei, suffix="base")
+    make_exact_mapping(db_session, parallel, yuyutei, suffix="parallel")
+    make_exact_observation(
+        db_session, base_mapping, observed_at=NOW - timedelta(hours=1)
+    )
+
+    report = compute_price_source_health(db_session, PriceSourceHealthFilters())
+    source_item = next(item for item in report.sources if item.source_name == "yuyutei")
+
+    assert source_item.active_mapping_count == 2
+    assert source_item.recent_price_count == 1
+    assert source_item.missing_price_count == 1
+    assert {gap.card_print_id for gap in report.missing_prices} == {parallel.id}
+
+
+def test_legacy_mapping_is_visible_but_not_healthy_exact_coverage(db_session):
+    yuyutei = make_source(db_session, "yuyutei")
+    card = make_compatibility_card(db_session, "OP01-001")
+    mapping = make_legacy_mapping(db_session, card, yuyutei)
+
+    report = compute_price_source_health(db_session, PriceSourceHealthFilters())
+    source_item = next(item for item in report.sources if item.source_name == "yuyutei")
+
+    assert source_item.active_mapping_count == 0
+    assert source_item.recent_price_count == 0
+    assert source_item.legacy_compatibility_mapping_count == 1
+    assert report.summary["legacy_compatibility_mapping_count"] == 1
+    assert [item.mapping_id for item in report.legacy_compatibility_mappings] == [
+        mapping.id
+    ]
+    assert (
+        report.legacy_compatibility_mappings[0].identity_classification
+        == "legacy_compatibility"
+    )
+
+
+def test_broken_mapping_remains_a_distinct_health_category(db_session, monkeypatch):
+    source = make_source(db_session, "yuyutei")
+    mapping = SourceCardMapping(
+        id=999,
+        source_id=source.id,
+        card_print_id=123456,
+        card_id=None,
+        source_card_id="broken-listing",
+        source_url="https://yuyutei.example/broken",
+        is_active=True,
+    )
+    broken = SourceMappingIdentity(
+        mapping=mapping,
+        source=source,
+        card_print=None,
+        canonical_card=None,
+        release_product=None,
+        compatibility_card=None,
+        classification=BROKEN,
+    )
+    monkeypatch.setattr(
+        "app.services.price_source_health.load_source_mapping_identities",
+        lambda _db, conditions=(): [broken],
+    )
+
+    report = compute_price_source_health(db_session, PriceSourceHealthFilters())
+
+    assert report.summary["broken_mapping_count"] == 1
+    assert report.summary["exact_mapping_count"] == 0
+    assert report.broken_mappings[0].mapping_id == mapping.id
+    assert report.broken_mappings[0].identity_classification == "broken"
+
+
 # --- breakdowns ----------------------------------------------------------------
 
 
-def test_coverage_by_set(db_session):
+def test_coverage_by_release_product(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card_a = make_card(db_session, card_code="OP01-001", set_code="OP01", rarity="L")
-    card_b = make_card(db_session, card_code="OP02-001", set_code="OP02", rarity="L")
-    make_mapping(db_session, card_a, yuyutei)
-    make_mapping(db_session, card_b, yuyutei)
-    make_price(db_session, card_a, yuyutei, observed_at=NOW - timedelta(hours=1))
+    _print_a, mapping_a = make_exact_case(
+        db_session, yuyutei, "OP01-001", product_code="OP-01", rarity="L"
+    )
+    make_exact_case(
+        db_session,
+        yuyutei,
+        "OP02-001",
+        product_code="OP-02",
+        asset_variant="p1",
+        rarity="L",
+    )
+    make_exact_observation(db_session, mapping_a, observed_at=NOW - timedelta(hours=1))
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
-    by_set = {i.key: i for i in report.coverage_by_set}
-    assert by_set["OP01"].mapped_cards == 1
-    assert by_set["OP01"].recent_price_cards == 1
-    assert by_set["OP02"].missing_price_cards == 1
+    by_product = {i.key: i for i in report.coverage_by_release_product}
+    assert by_product["OP-01"].mapped_prints == 1
+    assert by_product["OP-01"].recent_price_prints == 1
+    assert by_product["OP-02"].missing_price_prints == 1
 
 
 def test_coverage_by_rarity(db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card_a = make_card(db_session, card_code="OP01-001", rarity="L")
-    card_b = make_card(db_session, card_code="OP01-002", rarity="R")
-    make_mapping(db_session, card_a, yuyutei)
-    make_mapping(db_session, card_b, yuyutei)
+    make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
+    make_exact_case(db_session, yuyutei, "OP01-002", asset_variant="p1", rarity="R")
 
     report = compute_price_source_health(db_session, PriceSourceHealthFilters())
     by_rarity = {i.key: i for i in report.coverage_by_rarity}
-    assert by_rarity["L"].mapped_cards == 1
-    assert by_rarity["R"].mapped_cards == 1
+    assert by_rarity["L"].mapped_prints == 1
+    assert by_rarity["R"].mapped_prints == 1
 
 
 # --- gaps endpoint -------------------------------------------------------------
@@ -249,9 +368,8 @@ def test_coverage_by_rarity(db_session):
 
 def test_stale_gap_endpoint_works(client, db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
-    make_price(db_session, card, yuyutei, observed_at=NOW - timedelta(hours=48))
+    print_row, mapping = make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
+    make_exact_observation(db_session, mapping, observed_at=NOW - timedelta(hours=48))
 
     resp = client.get("/admin/price-source-health/gaps?gap_type=stale")
     assert resp.status_code == 200
@@ -259,12 +377,13 @@ def test_stale_gap_endpoint_works(client, db_session):
     assert data["gap_type"] == "stale"
     assert len(data["items"]) == 1
     assert data["items"][0]["issue_type"] == "stale_price"
+    assert data["items"][0]["card_print_id"] == print_row.id
+    assert data["items"][0]["identity_classification"] == "exact"
 
 
 def test_missing_gap_endpoint_works(client, db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
+    make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
 
     resp = client.get("/admin/price-source-health/gaps?gap_type=missing")
     assert resp.status_code == 200
@@ -275,8 +394,7 @@ def test_missing_gap_endpoint_works(client, db_session):
 
 def test_failed_refresh_gap_endpoint_works(client, db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
+    make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
     make_refresh_run(db_session, status="failed", source_filter="yuyutei")
 
     resp = client.get("/admin/price-source-health/gaps?gap_type=failed_refresh")
@@ -289,8 +407,7 @@ def test_failed_refresh_gap_endpoint_works(client, db_session):
 
 def test_blocked_gap_endpoint_works(client, db_session):
     snkrdunk = make_source(db_session, "snkrdunk")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, snkrdunk)
+    make_exact_case(db_session, snkrdunk, "OP01-001", rarity="L")
     make_discovery_run(db_session, status="blocked")
 
     resp = client.get("/admin/price-source-health/gaps?gap_type=blocked")
@@ -345,8 +462,7 @@ def test_system_check_includes_price_source_health(client, db_session):
 
 def test_system_check_warns_on_no_successful_refresh(client, db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
+    make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
 
     resp = client.get("/admin/system-check")
     checks = {c["name"]: c for c in resp.json()["checks"]}
@@ -367,8 +483,7 @@ def test_catalog_coverage_includes_price_source_health_summary(client, db_sessio
 
 def test_card_audit_detects_source_price_missing(client, db_session):
     yuyutei = make_source(db_session, "yuyutei")
-    card = make_card(db_session, card_code="OP01-001", rarity="L")
-    make_mapping(db_session, card, yuyutei)
+    make_exact_case(db_session, yuyutei, "OP01-001", rarity="L")
 
     resp = client.get("/admin/card-audit")
     assert resp.status_code == 200

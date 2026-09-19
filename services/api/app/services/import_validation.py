@@ -694,14 +694,19 @@ def _validate_source_mappings_row(
         item = evaluate_source_mapping(
             db, transient, card=card, source=source, latest_price_observed_at=None, is_duplicate=False
         )
-        if item.match_confidence_label in ("low", "very_low"):
+        # A transient source-mapping import is still legacy-card keyed. Its
+        # deterministic card match remains a useful compatibility warning,
+        # but is no longer presented as authoritative exact-print confidence.
+        if item.compatibility_match_confidence_label in ("low", "very_low"):
             warnings.append(
                 RowIssue(
                     row_number,
                     None,
                     None,
                     "low_confidence_match",
-                    f"Estimated match confidence is {item.match_confidence_label} ({item.match_confidence})",
+                    "Estimated compatibility-card match confidence is "
+                    f"{item.compatibility_match_confidence_label} "
+                    f"({item.compatibility_match_confidence})",
                 )
             )
 

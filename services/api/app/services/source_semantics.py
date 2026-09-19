@@ -53,17 +53,13 @@ staleness (YUYUTEI_SELL_MAX_AGE_DAYS, SNKRDUNK_FLOOR_MAX_AGE_DAYS) and the
 sold-sample minimum still live in market_index's resolvers. A caller wiring
 this in must combine the two, never substitute one for the other.
 
-Not every constraint disqualifies
-----------------------------------
+Promotional prices are excluded
+--------------------------------
 ``constraint`` and ``eligible`` are separate fields because they answer
-separate questions, and ``sale_price`` is the case that proves it. A
-promotional price is a fully valid market observation - it is the price the
-card can actually be bought at today, and on the evidence it is not even
-transient (the four sale-priced prints on staging held one unchanged price,
-beside one unchanged struck price, on every captured page across 25
-consecutive days). So it is *described*, never *excluded*: ``eligible`` stays
-True, ``ineligible_reason`` stays None, and the Market Index number it feeds
-is byte-identical to what it would have been without the label.
+separate questions. ``sale_price`` describes a real current offer that stays
+visible in provenance and history, but it is ineligible for Market Index:
+Yuyu-Tei's promotion is source-specific and may not represent the broader
+market. The raw number is never rewritten or deleted.
 
 The struck former price is not represented here at all, under any name. It is
 not an offer, so it is not stored as one and cannot be classified as one.
@@ -94,15 +90,11 @@ from dataclasses import dataclass
 # under, so a stored index value can later be traced back to the rules that
 # produced it.
 #
-# Version 2 (was 1): a new classification exists. A Yuyu-Tei retail sell
-# observation whose stored promotion_state is "sale" is now described as
-# ``sale_price`` instead of unconstrained. No observation's ELIGIBILITY moved
-# and no index value changes because of it - but the ruleset that interprets
-# an observation did, which is exactly the event this counter exists to
-# record. 310 snapshots are already stored under version 1, written when the
-# distinction was not knowable; the bump is what keeps "Atlas could not tell"
-# and "Atlas could tell, and it was ordinary" from collapsing into the same
-# unlabelled row forever.
+# Version 3 (was 2): a Yuyu-Tei retail sell observation whose stored
+# promotion_state is "sale" is now ineligible for Market Index. It remains
+# classified as ``sale_price`` and remains visible as raw evidence. This
+# eligibility change requires a new source-semantics version so archived
+# snapshots produced under the former eligible rule remain distinguishable.
 #
 # INDEX_VERSION is deliberately NOT bumped alongside it. The combination
 # algorithm in market_index did not move, and a spurious bump there would make
@@ -133,7 +125,7 @@ from dataclasses import dataclass
 # Deliberately separate from market_index.INDEX_VERSION: the combination
 # algorithm and the per-source rules change on different cadences, and a
 # snapshot records both independently. Not exposed through any API schema yet.
-SOURCE_SEMANTICS_VERSION = 2
+SOURCE_SEMANTICS_VERSION = 3
 
 # Stored source names, as they appear in sources.name.
 SNKRDUNK = "snkrdunk"
@@ -166,10 +158,9 @@ BELOW_PLATFORM_MINIMUM = "below_platform_minimum"
 
 # The observed number is what the source is asking for the card RIGHT NOW,
 # while the source itself displays that price as a discount off its own
-# regular price. It is a real, current, executable offer - the only price the
-# card can actually be bought at - so unlike the two constraints above this
-# one is purely descriptive and never disqualifies. See "Not every constraint
-# disqualifies" in the module docstring.
+# regular price. It remains valid provenance/history, but it is excluded from
+# Market Index because a source-specific promotion may not represent the
+# broader market.
 #
 # It describes the CURRENT price. The struck former price is a different
 # quantity, is never stored, and has no vocabulary here.
@@ -246,10 +237,9 @@ SOURCE_SEMANTICS: dict[str, dict[str, _PriceTypeRule]] = {
 # exactly the constraint, and giving them separate vocabularies would invite
 # them to disagree.
 #
-# _SALE_PRICE is the one constrained-but-usable verdict, and its
-# ineligible_reason is None precisely because there is no reason - it is not
-# ineligible. Anything reading `constraint` as a synonym for "excluded" is
-# reading it wrong; `eligible` is the field that answers that.
+# _SALE_PRICE preserves the descriptive constraint while making the value
+# ineligible for Market Index. The shared reason string lets API consumers
+# explain why the stored observation did not contribute.
 _UNCONSTRAINED = SourceSemantics()
 _AT_PLATFORM_FLOOR = SourceSemantics(
     constraint=PLATFORM_FLOOR, eligible=False, ineligible_reason=PLATFORM_FLOOR
@@ -260,7 +250,7 @@ _BELOW_PLATFORM_MINIMUM = SourceSemantics(
     ineligible_reason=BELOW_PLATFORM_MINIMUM,
 )
 _SALE_PRICE = SourceSemantics(
-    constraint=SALE_PRICE, eligible=True, ineligible_reason=None
+    constraint=SALE_PRICE, eligible=False, ineligible_reason=SALE_PRICE
 )
 
 

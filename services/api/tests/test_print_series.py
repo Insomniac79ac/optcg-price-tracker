@@ -207,7 +207,7 @@ class TestSourceSemanticsArePreservedNotReimplemented:
     def test_below_minimum_and_sale_verdicts_come_from_the_classifier(self, db_session, world):
         # Two more classifier verdicts this module never restates: a
         # below-minimum floor fails closed, and a Yuyu-Tei sale price is
-        # DESCRIBED without being excluded.
+        # retained for provenance while being excluded from index use.
         observe(db_session, world, "snkrdunk", "base", "snkrdunk_base",
                 price_type="floor", price_jpy=800, observed_at=day(3))
         observe(db_session, world, "yuyutei", "base", "yuyutei_base",
@@ -218,8 +218,8 @@ class TestSourceSemanticsArePreservedNotReimplemented:
         assert snk["eligible"] is False
         yuyu = all_points(payload["source:yuyutei"])[0]
         assert yuyu["constraint"] == "sale_price"
-        # A sale price is a real, buyable price - described, never excluded.
-        assert yuyu["eligible"] is True
+        assert yuyu["eligible"] is False
+        assert yuyu["ineligible_reason"] == "sale_price"
 
     def test_sample_size_is_null_because_no_stored_row_is_an_aggregate(
         self, db_session, world

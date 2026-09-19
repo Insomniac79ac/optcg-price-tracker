@@ -78,7 +78,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from snkrdunk_collector.identity import release_names_match
-from snkrdunk_collector.models import CardPrint, ReleaseProduct, ReleaseProductAlias
+from snkrdunk_collector.models import CardPrint, ReleaseProduct, ReleaseProductAlias, Source
 from snkrdunk_collector.release_reference import (
     MATCH_BANDAI_OFFICIAL,
     MATCH_SOURCE_RENDERING,
@@ -196,8 +196,18 @@ def resolve_release_identity(session: Session, card_print: CardPrint | None) -> 
             )
         )
 
+    snkrdunk_source_id = session.scalar(select(Source.id).where(Source.name == "snkrdunk"))
     aliases = session.scalars(
-        select(ReleaseProductAlias).where(ReleaseProductAlias.product_id == product.id)
+        select(ReleaseProductAlias).where(
+            ReleaseProductAlias.product_id == product.id,
+            (
+                ReleaseProductAlias.alias_kind.in_(BANDAI_ALIAS_KINDS)
+                | (
+                    (ReleaseProductAlias.alias_kind == SOURCE_ALIAS_KIND)
+                    & (ReleaseProductAlias.source_id == snkrdunk_source_id)
+                )
+            ),
+        )
     ).all()
 
     bandai = [a.alias_name for a in aliases if a.alias_kind in BANDAI_ALIAS_KINDS]

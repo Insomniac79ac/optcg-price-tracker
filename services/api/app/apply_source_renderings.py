@@ -14,7 +14,7 @@ additive fact. So this command does exactly one thing.
 
 WHAT IT MAY WRITE, and nothing else:
 
-    INSERT INTO release_product_aliases (product_id, alias_name,
+    INSERT INTO release_product_aliases (product_id, source_id, alias_name,
                                          alias_kind='source_rendering',
                                          source_url=NULL)
 
@@ -56,7 +56,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import ReleaseProduct, ReleaseProductAlias
+from app.models import ReleaseProduct, ReleaseProductAlias, Source
 from app.services.uncoded_source_renderings import (
     SOURCE_RENDERING,
     UNCODED_SOURCE_RENDERINGS,
@@ -162,6 +162,9 @@ def plan_renderings(
             )
         declared = [r for r in declared if r.source_label in wanted]
 
+    source = db.scalar(select(Source).where(Source.name == source_name))
+    if source is None:
+        raise SourceRenderingError(f"Refusing: source {source_name!r} is not configured")
     report = RenderingReport()
     for row in declared:
         plan = RenderingPlan(
@@ -183,6 +186,7 @@ def plan_renderings(
                 ReleaseProductAlias.product_id == product.id,
                 ReleaseProductAlias.alias_kind == SOURCE_RENDERING,
                 ReleaseProductAlias.alias_name == row.source_label,
+                ReleaseProductAlias.source_id == source.id,
             )
         ).first()
         plan.action = "present" if exists is not None else "create"
@@ -210,12 +214,16 @@ def apply_renderings(
             + ". Nothing was written."
         )
     try:
+        source = db.scalar(select(Source).where(Source.name == source_name))
+        if source is None:
+            raise SourceRenderingError(f"Refusing: source {source_name!r} is not configured")
         for plan in report.to_create:
             db.add(
                 ReleaseProductAlias(
                     product_id=plan.product_id,
                     alias_name=plan.source_label,
                     alias_kind=SOURCE_RENDERING,
+                    source_id=source.id,
                     source_url=None,
                 )
             )

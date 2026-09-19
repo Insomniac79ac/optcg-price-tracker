@@ -1,7 +1,10 @@
 import pytest
+from fastapi import Response
 
 from app.models import Card, CollectionItem, GradingSubmission
 from app.services import cache as cache_module
+from app.services import cache_headers as cache_headers_module
+from app.services.cache_headers import set_cache_headers
 from app.settings import settings
 
 
@@ -91,6 +94,41 @@ def test_get_or_set_cache_reports_hit_and_miss():
     assert hit1 is False
     assert hit2 is True
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(("hit", "expected"), [(False, "MISS"), (True, "HIT")])
+def test_cache_headers_include_real_key_in_development(monkeypatch, hit, expected):
+    monkeypatch.setattr(
+        cache_headers_module, "is_development_environment", lambda: True
+    )
+    response = Response()
+
+    set_cache_headers(
+        response,
+        hit=hit,
+        ttl_seconds=300,
+        cache_key="analytics:index:composition:2026-09-07",
+    )
+
+    assert response.headers["X-Cache"] == expected
+    assert response.headers["X-Cache-TTL"] == "300"
+    assert (
+        response.headers["X-Cache-Key"]
+        == "analytics:index:composition:2026-09-07"
+    )
+
+
+def test_cache_headers_omit_absent_key_in_development(monkeypatch):
+    monkeypatch.setattr(
+        cache_headers_module, "is_development_environment", lambda: True
+    )
+    response = Response()
+
+    set_cache_headers(response, hit=False, ttl_seconds=300, cache_key=None)
+
+    assert response.headers["X-Cache"] == "MISS"
+    assert response.headers["X-Cache-TTL"] == "300"
+    assert "X-Cache-Key" not in response.headers
 
 
 def test_cache_disabled_never_stores(monkeypatch):

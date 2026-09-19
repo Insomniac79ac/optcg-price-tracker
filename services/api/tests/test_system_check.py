@@ -72,6 +72,27 @@ def test_system_check_works_on_empty_db(client, db_session):
     assert checks["backup_tables_included"]["status"] == "pass"
 
 
+def test_system_check_reports_search_health_probe_failure(
+    client, db_session, monkeypatch
+):
+    from app.services import search as search_service
+
+    def fail_catalogue_provider(*_args, **_kwargs):
+        raise RuntimeError("catalogue unavailable")
+
+    monkeypatch.setattr(search_service, "_search_cards", fail_catalogue_provider)
+
+    response = client.get("/admin/system-check")
+
+    check = checks_by_name(response.json())["search_responds"]
+    assert check == {
+        "name": "search_responds",
+        "status": "fail",
+        "severity": "critical",
+        "message": "Search health probe failed: RuntimeError: catalogue unavailable",
+    }
+
+
 def test_system_check_passes_required_sources_when_present(client, db_session):
     make_sources(db_session)
     response = client.get("/admin/system-check")

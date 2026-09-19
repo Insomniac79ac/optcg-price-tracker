@@ -195,9 +195,14 @@ def test_the_buckets_are_the_archived_population_not_the_catalogue(client, archi
     assert keys == {"C": 4, "R": 2, "SP CARD": 2, "UNKNOWN": 1, "L": 1, "UC": 1}
 
 
-def test_an_entrant_is_eligible_but_not_a_constituent(client, archive):
+def test_an_entrant_is_eligible_but_not_a_constituent(
+    client, archive, monkeypatch
+):
     """Print 12 is valued on D7 and absent on D6, so it produced no return.
     `eligible_print_count` counts it; this endpoint must not."""
+    import app.services.cache_headers as cache_headers
+
+    monkeypatch.setattr(cache_headers, "is_development_environment", lambda: True)
     body = client.get("/analytics/index/composition").json()
     assert body["constituent_count"] == 11
     index = client.get("/analytics/index").json()
@@ -503,7 +508,12 @@ def test_a_catalogue_print_that_was_never_valued_is_absent(client, archive):
 # --- I. the index endpoint is untouched --------------------------------------
 
 
-def test_the_index_endpoint_still_answers_exactly_as_before(client, archive):
+def test_the_index_endpoint_still_answers_exactly_as_before(
+    client, archive, monkeypatch
+):
+    import app.services.cache_headers as cache_headers
+
+    monkeypatch.setattr(cache_headers, "is_development_environment", lambda: True)
     body = client.get("/analytics/index").json()
     assert body["requested_window"] == "all"
     assert body["default_window"] == "all"

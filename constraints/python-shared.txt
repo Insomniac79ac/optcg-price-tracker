@@ -1,0 +1,30 @@
+# Compatibility-sensitive packages shared by deployable Python services.
+#
+# This is an input to pip-compile, not an install manifest. A constraint only
+# applies when a service's own requirements.txt selects that package. Keep
+# this list deliberately small; generated requirements.lock.txt files contain
+# the complete transitive graphs.
+
+# Database/settings stack shared by API, worker/beat, and both collectors.
+sqlalchemy==2.0.51
+psycopg==3.3.4
+psycopg-binary==3.3.4
+pydantic==2.13.4
+pydantic-settings==2.14.2
+
+# API producer and worker/beat consumer compatibility.
+celery==5.6.3
+redis==6.4.0
+
+# Parser behavior shared by the worker and collectors.
+beautifulsoup4==4.14.3
+
+# Image-analysis behavior shared by the API and SNKRDUNK collector.
+pillow==12.3.0
+imagehash==4.3.2
+# The current Playwright Jammy image uses Python 3.10, where NumPy 2.5.x is
+# unavailable. Preserve the proven 3.12 version elsewhere and the newest
+# compatible 2.2 line in that current collector image; both are validated by
+# their service suites before these locks may be enforced.
+numpy==2.5.1 ; python_version >= "3.12"
+numpy==2.2.6 ; python_version < "3.12"

@@ -25,7 +25,7 @@ from app.apply_source_renderings import (
     apply_renderings,
     plan_renderings,
 )
-from app.models import ReleaseProduct, ReleaseProductAlias
+from app.models import ReleaseProduct, ReleaseProductAlias, Source
 from app.services.exact_print_approval import resolve_uncoded_product_id
 from app.services.uncoded_source_renderings import (
     SOURCE_RENDERING,
@@ -56,6 +56,7 @@ def catalogue(db_session):
     """The uncoded products the renderings name, plus their neighbours, plus a
     CODED product - all as staging holds them."""
     db = db_session
+    db.add(Source(name="snkrdunk", base_url="https://snkrdunk.com"))
     names = list(JP_RENDERINGS.values()) + list(NEIGHBOURS)
     for index, name in enumerate(names, start=1):
         db.add(
@@ -220,6 +221,7 @@ def test_a_source_rendering_never_answers_for_a_coded_product(catalogue):
             product_id=300,
             alias_name="ロマンスドーン",
             alias_kind=SOURCE_RENDERING,
+            source_id=catalogue.scalar(select(Source.id).where(Source.name == "snkrdunk")),
             source_url=None,
         )
     )

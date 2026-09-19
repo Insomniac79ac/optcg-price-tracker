@@ -43,34 +43,28 @@ import CatalogOpsPage from "./page";
 
 const EMPTY_COVERAGE: CatalogCoverageReport = {
   summary: {
-    total_cards: 0,
-    active_cards: 0,
-    inactive_merged_cards: 0,
-    sets_count: 0,
-    cards_with_yuyutei_mapping: 0,
-    cards_with_snkrdunk_mapping: 0,
-    cards_without_any_mapping: 0,
-    cards_with_recent_yuyutei_price: 0,
-    cards_with_recent_snkrdunk_price: 0,
-    cards_without_recent_price: 0,
-    cards_in_collection: 0,
-    cards_on_wishlist: 0,
-    cards_with_missing_metadata: 0,
-    cards_with_duplicate_risk: 0,
-    cards_with_mapping_quality_risk: 0,
-    metadata_completion_pct: 0,
-    mapping_coverage_pct: 0,
-    recent_price_coverage_pct: 0,
+    coverage_unit: "eligible_physical_print", total_eligible_physical_prints: 10,
+    prints_with_any_exact_mapping: 8, physical_prints_without_exact_mapping: 2,
+    prints_with_any_fresh_source_observation: 7, physical_prints_with_exact_mapping_but_no_fresh_observation: 1,
+    exact_mapping_coverage_pct: 80, fresh_price_coverage_pct: 70,
+    exact_source_mapping_count: 9, legacy_compatibility_mapping_count: 1,
+    broken_mapping_count: 0, exact_mappings_outside_eligible_prints: 0,
   },
-  coverage_by_set: [],
-  coverage_by_rarity: [],
-  coverage_by_variant: [],
-  coverage_by_language: [],
-  metadata_gaps: [],
+  sources: [], coverage_by_release_product: [], coverage_by_rarity: [], coverage_by_language: [],
   mapping_gaps: [],
   price_gaps: [],
-  duplicate_risks: [],
-  mapping_quality_risks: [],
+  legacy_compatibility: {
+    summary: {
+      total_cards: 0, active_cards: 0, inactive_merged_cards: 0, sets_count: 0,
+      cards_with_yuyutei_mapping: 0, cards_with_snkrdunk_mapping: 0, cards_without_any_mapping: 0,
+      cards_with_recent_yuyutei_price: 0, cards_with_recent_snkrdunk_price: 0, cards_without_recent_price: 0,
+      cards_in_collection: 0, cards_on_wishlist: 0, cards_with_missing_metadata: 0,
+      cards_with_duplicate_risk: 0, cards_with_mapping_quality_risk: 0,
+      metadata_completion_pct: 95, mapping_coverage_pct: 0, recent_price_coverage_pct: 0,
+    },
+    coverage_by_set: [], coverage_by_rarity: [], coverage_by_variant: [], coverage_by_language: [],
+    metadata_gaps: [], mapping_gaps: [], price_gaps: [], duplicate_risks: [], mapping_quality_risks: [], price_source_health: null,
+  },
   price_source_health: null,
 };
 
@@ -78,6 +72,9 @@ const EMPTY_HEALTH: PriceSourceHealthReport = {
   summary: {
     sources_count: 0,
     active_sources_count: 0,
+    exact_mapping_count: 0,
+    legacy_compatibility_mapping_count: 0,
+    broken_mapping_count: 0,
     total_active_mappings: 0,
     mappings_with_recent_price: 0,
     mappings_without_recent_price: 0,
@@ -90,10 +87,13 @@ const EMPTY_HEALTH: PriceSourceHealthReport = {
     error_source_count: 0,
   },
   sources: [],
-  coverage_by_set: [],
+  coverage_by_release_product: [],
   coverage_by_rarity: [],
+  coverage_by_language: [],
   stale_prices: [],
   missing_prices: [],
+  legacy_compatibility_mappings: [],
+  broken_mappings: [],
   refresh_runs: [],
   warnings: [],
 };
@@ -101,6 +101,9 @@ const EMPTY_HEALTH: PriceSourceHealthReport = {
 const EMPTY_QUALITY: MappingQualityList = {
   summary: {
     total_mappings: 0,
+    exact_mapping_count: 0,
+    legacy_compatibility_mapping_count: 0,
+    broken_mapping_count: 0,
     ok_count: 0,
     review_count: 0,
     warning_count: 0,
@@ -213,7 +216,7 @@ describe("CatalogOpsPage", () => {
       ["Duplicate Review", "/admin/card-duplicates"],
       ["Source Candidate Matching", "/admin/snkrdunk-candidates"],
       ["Source Mapping Quality", "/admin/source-mapping-quality"],
-      ["Catalog Coverage", "/admin/catalog-coverage"],
+      ["Physical Print Coverage", "/admin/catalog-coverage"],
       ["Price Source Health", "/admin/price-source-health"],
       ["System Check", "/admin/system-check"],
     ];
@@ -228,6 +231,21 @@ describe("CatalogOpsPage", () => {
       const link = grid.getByText(title).closest("a");
       expect(link).toHaveAttribute("href", href);
     }
+  });
+
+  it("summarizes print-based coverage and labels legacy metadata explicitly", async () => {
+    fetchCatalogCoverage.mockResolvedValue(EMPTY_COVERAGE);
+    fetchPriceSourceHealth.mockResolvedValue(EMPTY_HEALTH);
+    fetchMappingQuality.mockResolvedValue(EMPTY_QUALITY);
+    fetchCardDuplicates.mockResolvedValue(EMPTY_DUPLICATES);
+    fetchImportValidationReports.mockResolvedValue(EMPTY_REPORTS);
+    render(<CatalogOpsPage />);
+
+    await waitFor(() => expect(screen.getByText("Eligible physical prints")).toBeInTheDocument());
+    expect(screen.getByText("Mapped physical prints")).toBeInTheDocument();
+    expect(screen.getByText("Fresh-price physical prints")).toBeInTheDocument();
+    expect(screen.getByText("Legacy metadata completion")).toBeInTheDocument();
+    expect(screen.queryByText("Recent price coverage")).not.toBeInTheDocument();
   });
 
   it("shows an error state when every summary fetch fails without throwing", async () => {

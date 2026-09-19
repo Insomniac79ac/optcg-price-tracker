@@ -26,10 +26,36 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping, WishlistItem
-from app.services.card_identity_merge import MIN_MERGE_SCORE, duplicate_pairs_at_or_above
-from app.services.price_source_health import summarize_price_source_health
-from app.services.source_mapping_confidence import MappingQualityFilters, evaluate_source_mappings
+from app.models import (
+    CanonicalCard,
+    Card,
+    CardPrint,
+    CollectionItem,
+    PriceObservation,
+    ReleaseProduct,
+    Source,
+    SourceCardMapping,
+    WishlistItem,
+)
+from app.services.card_identity_merge import (
+    MIN_MERGE_SCORE,
+    duplicate_pairs_at_or_above,
+)
+from app.services.price_source_health import (
+    DEFAULT_RECENT_PRICE_WINDOW,
+    summarize_price_source_health,
+)
+from app.services.source_mapping_confidence import (
+    MappingQualityFilters,
+    evaluate_source_mappings,
+)
+from app.services.source_mapping_identity import (
+    BROKEN,
+    EXACT,
+    LEGACY_COMPATIBILITY,
+    SourceMappingIdentity,
+    load_source_mapping_identities,
+)
 
 SUPPORTED_MAPPING_SOURCES = ("yuyutei", "snkrdunk")
 
@@ -144,6 +170,7 @@ class CoverageGapItem:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "identity_scope": "legacy_compatibility",
             "card_id": self.card_id,
             "card_code": self.card_code,
             "name_en": self.name_en,
@@ -188,13 +215,17 @@ class CoverageBreakdownItem:
             "duplicate_risk_cards": self.duplicate_risk_cards,
             "mapping_quality_risk_cards": self.mapping_quality_risk_cards,
             "mapping_coverage_pct": _pct(self.mapped_cards, self.total_cards),
-            "recent_price_coverage_pct": _pct(self.recent_price_cards, self.total_cards),
-            "metadata_completion_pct": _pct(self.total_cards - self.missing_metadata_cards, self.total_cards),
+            "recent_price_coverage_pct": _pct(
+                self.recent_price_cards, self.total_cards
+            ),
+            "metadata_completion_pct": _pct(
+                self.total_cards - self.missing_metadata_cards, self.total_cards
+            ),
         }
 
 
 @dataclass
-class CatalogCoverageReport:
+class LegacyCatalogCoverageReport:
     summary: dict[str, Any]
     coverage_by_set: list[CoverageBreakdownItem] = field(default_factory=list)
     coverage_by_rarity: list[CoverageBreakdownItem] = field(default_factory=list)
@@ -276,7 +307,9 @@ def _mapped_sources_by_card(db: Session, card_ids: set[int]) -> dict[int, set[st
     return result
 
 
-def _latest_price_by_card_source(db: Session, card_ids: set[int]) -> dict[int, dict[str, datetime]]:
+def _latest_price_by_card_source(
+    db: Session, card_ids: set[int]
+) -> dict[int, dict[str, datetime]]:
     if not card_ids:
         return {}
     rows = db.execute(
@@ -286,7 +319,10 @@ def _latest_price_by_card_source(db: Session, card_ids: set[int]) -> dict[int, d
             func.max(PriceObservation.observed_at),
         )
         .join(Source, PriceObservation.source_id == Source.id)
-        .where(PriceObservation.card_id.in_(card_ids), Source.name.in_(SUPPORTED_MAPPING_SOURCES))
+        .where(
+            PriceObservation.card_id.in_(card_ids),
+            Source.name.in_(SUPPORTED_MAPPING_SOURCES),
+        )
         .group_by(PriceObservation.card_id, Source.name)
     ).all()
     result: dict[int, dict[str, datetime]] = defaultdict(dict)
@@ -295,7 +331,9 @@ def _latest_price_by_card_source(db: Session, card_ids: set[int]) -> dict[int, d
     return result
 
 
-def _recent_price_sources(latest_by_source: dict[str, datetime], now: datetime) -> set[str]:
+def _recent_price_sources(
+    latest_by_source: dict[str, datetime], now: datetime
+) -> set[str]:
     recent: set[str] = set()
     for source_name, window in RECENT_PRICE_WINDOWS.items():
         observed_at = latest_by_source.get(source_name)
@@ -339,13 +377,20 @@ def _build_card_facts(db: Session, cards: list[Card]) -> dict[int, _CardFacts]:
     duplicate_confidence: dict[int, str] = {}
     # DUPLICATE_LABEL_THRESHOLDS-ordered rank so the "worst" (highest) label
     # wins when a card appears in more than one flagged pair.
-    _label_rank = {"exact_duplicate": 3, "likely_duplicate": 2, "possible_duplicate": 1, "weak_match": 0}
+    _label_rank = {
+        "exact_duplicate": 3,
+        "likely_duplicate": 2,
+        "possible_duplicate": 1,
+        "weak_match": 0,
+    }
     for pair in duplicate_pairs_at_or_above(db, MIN_MERGE_SCORE):
         for c in (pair.source_card, pair.target_card):
             if c.id not in card_ids:
                 continue
             current = duplicate_confidence.get(c.id)
-            if current is None or _label_rank.get(pair.confidence_label, 0) > _label_rank.get(current, 0):
+            if current is None or _label_rank.get(
+                pair.confidence_label, 0
+            ) > _label_rank.get(current, 0):
                 duplicate_confidence[c.id] = pair.confidence_label
 
     mapping_quality_risk: dict[int, tuple[str, set[str]]] = {}
@@ -354,14 +399,25 @@ def _build_card_facts(db: Session, cards: list[Card]) -> dict[int, _CardFacts]:
         db, MappingQualityFilters(), limit=_UNBOUNDED, offset=0
     )
     for item in items:
-        if item.risk_level not in ("critical", "warning") or item.card_id not in card_ids:
+        if (
+            item.risk_level not in ("critical", "warning")
+            or item.card_id not in card_ids
+        ):
             continue
         current = mapping_quality_risk.get(item.card_id)
-        if current is None or _risk_rank.get(item.risk_level, 0) > _risk_rank.get(current[0], 0):
+        if current is None or _risk_rank.get(item.risk_level, 0) > _risk_rank.get(
+            current[0], 0
+        ):
             issue_types = current[1] if current else set()
-            mapping_quality_risk[item.card_id] = (item.risk_level, issue_types | set(item.issue_types))
+            mapping_quality_risk[item.card_id] = (
+                item.risk_level,
+                issue_types | set(item.issue_types),
+            )
         else:
-            mapping_quality_risk[item.card_id] = (current[0], current[1] | set(item.issue_types))
+            mapping_quality_risk[item.card_id] = (
+                current[0],
+                current[1] | set(item.issue_types),
+            )
 
     facts: dict[int, _CardFacts] = {}
     for card in cards:
@@ -388,7 +444,9 @@ def _breakdown_key(card: Card, dimension: str) -> str:
     return value
 
 
-def _build_breakdown(facts_by_id: dict[int, _CardFacts], dimension: str) -> list[CoverageBreakdownItem]:
+def _build_breakdown(
+    facts_by_id: dict[int, _CardFacts], dimension: str
+) -> list[CoverageBreakdownItem]:
     groups: dict[str, CoverageBreakdownItem] = {}
     for facts in facts_by_id.values():
         key = _breakdown_key(facts.card, dimension)
@@ -423,7 +481,9 @@ _DUPLICATE_SEVERITY = {
 }
 
 
-def _gap_item(facts: _CardFacts, issue_types: list[str], severity: str, suggested_action: str) -> CoverageGapItem:
+def _gap_item(
+    facts: _CardFacts, issue_types: list[str], severity: str, suggested_action: str
+) -> CoverageGapItem:
     card = facts.card
     return CoverageGapItem(
         card_id=card.id,
@@ -459,9 +519,15 @@ def _build_gaps(facts_by_id: dict[int, _CardFacts]) -> dict[str, list[CoverageGa
                 )
             )
 
-        missing_sources = [s for s in SUPPORTED_MAPPING_SOURCES if s not in facts.mapped_sources]
+        missing_sources = [
+            s for s in SUPPORTED_MAPPING_SOURCES if s not in facts.mapped_sources
+        ]
         if missing_sources:
-            severity = CRITICAL if len(missing_sources) == len(SUPPORTED_MAPPING_SOURCES) else WARNING
+            severity = (
+                CRITICAL
+                if len(missing_sources) == len(SUPPORTED_MAPPING_SOURCES)
+                else WARNING
+            )
             mapping_gaps.append(
                 _gap_item(
                     facts,
@@ -471,9 +537,15 @@ def _build_gaps(facts_by_id: dict[int, _CardFacts]) -> dict[str, list[CoverageGa
                 )
             )
 
-        stale_sources = [s for s in SUPPORTED_MAPPING_SOURCES if s not in facts.recent_price_sources]
+        stale_sources = [
+            s for s in SUPPORTED_MAPPING_SOURCES if s not in facts.recent_price_sources
+        ]
         if stale_sources:
-            severity = CRITICAL if len(stale_sources) == len(SUPPORTED_MAPPING_SOURCES) else WARNING
+            severity = (
+                CRITICAL
+                if len(stale_sources) == len(SUPPORTED_MAPPING_SOURCES)
+                else WARNING
+            )
             price_gaps.append(
                 _gap_item(
                     facts,
@@ -516,15 +588,23 @@ def _build_gaps(facts_by_id: dict[int, _CardFacts]) -> dict[str, list[CoverageGa
     }
 
 
-def _build_summary(cards: list[Card], facts_by_id: dict[int, _CardFacts]) -> dict[str, Any]:
+def _build_summary(
+    cards: list[Card], facts_by_id: dict[int, _CardFacts]
+) -> dict[str, Any]:
     total_cards = len(cards)
     active_cards = sum(1 for c in cards if c.is_active)
     inactive_merged_cards = total_cards - active_cards
     sets_count = len({c.set_code for c in cards if c.set_code})
 
-    cards_with_yuyutei_mapping = sum(1 for f in facts_by_id.values() if "yuyutei" in f.mapped_sources)
-    cards_with_snkrdunk_mapping = sum(1 for f in facts_by_id.values() if "snkrdunk" in f.mapped_sources)
-    cards_without_any_mapping = sum(1 for f in facts_by_id.values() if not f.mapped_sources)
+    cards_with_yuyutei_mapping = sum(
+        1 for f in facts_by_id.values() if "yuyutei" in f.mapped_sources
+    )
+    cards_with_snkrdunk_mapping = sum(
+        1 for f in facts_by_id.values() if "snkrdunk" in f.mapped_sources
+    )
+    cards_without_any_mapping = sum(
+        1 for f in facts_by_id.values() if not f.mapped_sources
+    )
 
     cards_with_recent_yuyutei_price = sum(
         1 for f in facts_by_id.values() if "yuyutei" in f.recent_price_sources
@@ -532,12 +612,16 @@ def _build_summary(cards: list[Card], facts_by_id: dict[int, _CardFacts]) -> dic
     cards_with_recent_snkrdunk_price = sum(
         1 for f in facts_by_id.values() if "snkrdunk" in f.recent_price_sources
     )
-    cards_without_recent_price = sum(1 for f in facts_by_id.values() if not f.recent_price_sources)
+    cards_without_recent_price = sum(
+        1 for f in facts_by_id.values() if not f.recent_price_sources
+    )
 
     cards_in_collection = sum(1 for f in facts_by_id.values() if f.in_collection)
     cards_on_wishlist = sum(1 for f in facts_by_id.values() if f.on_wishlist)
     cards_with_missing_metadata = sum(1 for c in cards if _has_incomplete_metadata(c))
-    cards_with_duplicate_risk = sum(1 for f in facts_by_id.values() if f.duplicate_confidence is not None)
+    cards_with_duplicate_risk = sum(
+        1 for f in facts_by_id.values() if f.duplicate_confidence is not None
+    )
     cards_with_mapping_quality_risk = sum(
         1 for f in facts_by_id.values() if f.mapping_quality_risk_level is not None
     )
@@ -558,19 +642,25 @@ def _build_summary(cards: list[Card], facts_by_id: dict[int, _CardFacts]) -> dic
         "cards_with_missing_metadata": cards_with_missing_metadata,
         "cards_with_duplicate_risk": cards_with_duplicate_risk,
         "cards_with_mapping_quality_risk": cards_with_mapping_quality_risk,
-        "metadata_completion_pct": _pct(total_cards - cards_with_missing_metadata, total_cards),
-        "mapping_coverage_pct": _pct(total_cards - cards_without_any_mapping, total_cards),
-        "recent_price_coverage_pct": _pct(total_cards - cards_without_recent_price, total_cards),
+        "metadata_completion_pct": _pct(
+            total_cards - cards_with_missing_metadata, total_cards
+        ),
+        "mapping_coverage_pct": _pct(
+            total_cards - cards_without_any_mapping, total_cards
+        ),
+        "recent_price_coverage_pct": _pct(
+            total_cards - cards_without_recent_price, total_cards
+        ),
     }
 
 
-def compute_catalog_coverage(
+def _compute_legacy_catalog_coverage(
     db: Session,
     filters: CatalogCoverageFilters | None = None,
     *,
     include_gaps: bool = True,
     include_price_source_health: bool = True,
-) -> CatalogCoverageReport:
+) -> LegacyCatalogCoverageReport:
     """Computes the full catalog coverage report for the given filters. Pass
     include_gaps=False (see summarize_catalog_coverage) to skip building the
     five gap-item lists when only the summary counts are needed - the
@@ -600,9 +690,11 @@ def compute_catalog_coverage(
         }
     )
 
-    price_source_health = summarize_price_source_health(db) if include_price_source_health else None
+    price_source_health = (
+        summarize_price_source_health(db) if include_price_source_health else None
+    )
 
-    return CatalogCoverageReport(
+    return LegacyCatalogCoverageReport(
         summary=summary,
         coverage_by_set=coverage_by_set,
         coverage_by_rarity=coverage_by_rarity,
@@ -619,9 +711,431 @@ def summarize_catalog_coverage(db: Session) -> dict[str, Any]:
     so neither has to pull in the full gap breakdown just to report a
     handful of top-line numbers. See GET /admin/catalog-coverage for the
     full report."""
-    return compute_catalog_coverage(
-        db, CatalogCoverageFilters(), include_gaps=False, include_price_source_health=False
+    return _compute_legacy_catalog_coverage(
+        db,
+        CatalogCoverageFilters(),
+        include_gaps=False,
+        include_price_source_health=False,
     ).summary
+
+
+@dataclass
+class PhysicalPrintCoverageSource:
+    source_id: int
+    source_name: str
+    eligible_print_count: int
+    mapped_print_count: int
+    fresh_price_print_count: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_id": self.source_id,
+            "source_name": self.source_name,
+            "eligible_print_count": self.eligible_print_count,
+            "mapped_print_count": self.mapped_print_count,
+            "fresh_price_print_count": self.fresh_price_print_count,
+            "mapping_coverage_pct": _pct(
+                self.mapped_print_count, self.eligible_print_count
+            ),
+            "fresh_price_coverage_pct": _pct(
+                self.fresh_price_print_count, self.eligible_print_count
+            ),
+        }
+
+
+@dataclass
+class PhysicalPrintCoverageBreakdown:
+    key: str
+    label: str
+    eligible_print_count: int = 0
+    mapped_print_count: int = 0
+    fresh_price_print_count: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "key": self.key,
+            "label": self.label,
+            "eligible_print_count": self.eligible_print_count,
+            "mapped_print_count": self.mapped_print_count,
+            "fresh_price_print_count": self.fresh_price_print_count,
+            "mapping_coverage_pct": _pct(
+                self.mapped_print_count, self.eligible_print_count
+            ),
+            "fresh_price_coverage_pct": _pct(
+                self.fresh_price_print_count, self.eligible_print_count
+            ),
+        }
+
+
+@dataclass
+class PhysicalPrintCoverageGap:
+    card_print_id: int
+    canonical_card_id: int
+    release_product_id: int | None
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    release_product_code: str | None
+    release_product_name: str | None
+    language: str
+    rarity: str | None
+    official_asset_variant: str | None
+    treatment: str | None
+    exact_mapping_ids: list[int]
+    compatibility_card_ids: list[int]
+    mapped_sources: list[str]
+    fresh_sources: list[str]
+    issue_types: list[str]
+    severity: str
+    suggested_action: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "identity_scope": "physical_print",
+            "card_print_id": self.card_print_id,
+            "canonical_card_id": self.canonical_card_id,
+            "release_product_id": self.release_product_id,
+            "compatibility_card_id": None,
+            "card_id": None,
+            "card_code": self.card_code,
+            "name_en": self.name_en,
+            "name_jp": self.name_jp,
+            "release_product_code": self.release_product_code,
+            "release_product_name": self.release_product_name,
+            "language": self.language,
+            "rarity": self.rarity,
+            "official_asset_variant": self.official_asset_variant,
+            "treatment": self.treatment,
+            "exact_mapping_ids": self.exact_mapping_ids,
+            "compatibility_card_ids": self.compatibility_card_ids,
+            "mapped_sources": self.mapped_sources,
+            "fresh_sources": self.fresh_sources,
+            "issue_types": self.issue_types,
+            "severity": self.severity,
+            "suggested_action": self.suggested_action,
+        }
+
+
+@dataclass
+class _PhysicalPrintFact:
+    card_print: CardPrint
+    canonical_card: CanonicalCard
+    release_product: ReleaseProduct | None
+    mappings: list[SourceMappingIdentity] = field(default_factory=list)
+    fresh_sources: set[str] = field(default_factory=set)
+
+    @property
+    def mapped_sources(self) -> set[str]:
+        return {
+            identity.source.name
+            for identity in self.mappings
+            if identity.source is not None
+        }
+
+
+@dataclass
+class CatalogCoverageReport:
+    summary: dict[str, Any]
+    sources: list[PhysicalPrintCoverageSource]
+    coverage_by_release_product: list[PhysicalPrintCoverageBreakdown]
+    coverage_by_rarity: list[PhysicalPrintCoverageBreakdown]
+    coverage_by_language: list[PhysicalPrintCoverageBreakdown]
+    mapping_gaps: list[PhysicalPrintCoverageGap]
+    price_gaps: list[PhysicalPrintCoverageGap]
+    legacy_compatibility: LegacyCatalogCoverageReport
+    price_source_health: dict[str, Any] | None = None
+
+    def gaps_for(
+        self, gap_type: str
+    ) -> list[PhysicalPrintCoverageGap] | list[CoverageGapItem]:
+        if gap_type == "mapping":
+            return self.mapping_gaps
+        if gap_type == "price":
+            return self.price_gaps
+        return self.legacy_compatibility.gaps_for(gap_type)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "summary": self.summary,
+            "sources": [source.to_dict() for source in self.sources],
+            "coverage_by_release_product": [
+                item.to_dict() for item in self.coverage_by_release_product
+            ],
+            "coverage_by_rarity": [item.to_dict() for item in self.coverage_by_rarity],
+            "coverage_by_language": [
+                item.to_dict() for item in self.coverage_by_language
+            ],
+            "mapping_gaps": [item.to_dict() for item in self.mapping_gaps],
+            "price_gaps": [item.to_dict() for item in self.price_gaps],
+            "legacy_compatibility": self.legacy_compatibility.to_dict(),
+            "price_source_health": self.price_source_health,
+        }
+
+
+def _eligible_physical_prints(
+    db: Session, filters: CatalogCoverageFilters
+) -> list[tuple[CardPrint, CanonicalCard, ReleaseProduct | None]]:
+    stmt = (
+        select(CardPrint, CanonicalCard, ReleaseProduct)
+        .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
+        .outerjoin(ReleaseProduct, ReleaseProduct.id == CardPrint.release_product_id)
+        .where(
+            CardPrint.is_active.is_(True),
+            CardPrint.verification_status == "verified",
+        )
+    )
+    if filters.set_code:
+        stmt = stmt.where(ReleaseProduct.official_code == filters.set_code)
+    if filters.language:
+        stmt = stmt.where(CardPrint.language == filters.language)
+    if filters.variant:
+        stmt = stmt.where(CardPrint.treatment == filters.variant)
+    if filters.rarity:
+        stmt = stmt.where(CardPrint.official_rarity == filters.rarity)
+    return list(db.execute(stmt.order_by(CardPrint.id)).all())
+
+
+def _latest_exact_observation_by_mapping(
+    db: Session, mapping_ids: set[int]
+) -> dict[int, datetime]:
+    if not mapping_ids:
+        return {}
+    rows = db.execute(
+        select(
+            PriceObservation.source_card_mapping_id,
+            func.max(PriceObservation.observed_at),
+        )
+        .join(
+            SourceCardMapping,
+            (SourceCardMapping.id == PriceObservation.source_card_mapping_id)
+            & (SourceCardMapping.card_print_id == PriceObservation.card_print_id)
+            & (SourceCardMapping.source_id == PriceObservation.source_id),
+        )
+        .where(PriceObservation.source_card_mapping_id.in_(mapping_ids))
+        .group_by(PriceObservation.source_card_mapping_id)
+    ).all()
+    return {mapping_id: observed_at for mapping_id, observed_at in rows}
+
+
+def _physical_print_facts(
+    db: Session, filters: CatalogCoverageFilters
+) -> tuple[dict[int, _PhysicalPrintFact], list[SourceMappingIdentity]]:
+    facts = {
+        print_row.id: _PhysicalPrintFact(print_row, canonical, product)
+        for print_row, canonical, product in _eligible_physical_prints(db, filters)
+    }
+    identities = load_source_mapping_identities(
+        db, conditions=(SourceCardMapping.is_active.is_(True),)
+    )
+    exact = [
+        identity
+        for identity in identities
+        if identity.classification == EXACT and identity.card_print_id in facts
+    ]
+    for identity in exact:
+        assert identity.card_print_id is not None
+        facts[identity.card_print_id].mappings.append(identity)
+
+    latest_by_mapping = _latest_exact_observation_by_mapping(
+        db, {identity.mapping.id for identity in exact}
+    )
+    now = datetime.now(timezone.utc)
+    for identity in exact:
+        observed_at = latest_by_mapping.get(identity.mapping.id)
+        if observed_at is None or identity.source is None:
+            continue
+        window = RECENT_PRICE_WINDOWS.get(
+            identity.source.name, DEFAULT_RECENT_PRICE_WINDOW
+        )
+        if _naive(observed_at) >= _naive(now) - window:
+            assert identity.card_print_id is not None
+            facts[identity.card_print_id].fresh_sources.add(identity.source.name)
+    return facts, identities
+
+
+def _physical_breakdown_key(fact: _PhysicalPrintFact, dimension: str) -> str:
+    if dimension == "release_product":
+        product = fact.release_product
+        if product is None:
+            return "none"
+        return (
+            product.official_code
+            or product.display_name
+            or f"release_product:{product.id}"
+        )
+    if dimension == "rarity":
+        value = fact.card_print.official_rarity
+    else:
+        value = getattr(fact.card_print, dimension)
+    return str(value) if value is not None and str(value).strip() else "none"
+
+
+def _physical_breakdown(
+    facts: dict[int, _PhysicalPrintFact], dimension: str
+) -> list[PhysicalPrintCoverageBreakdown]:
+    groups: dict[str, PhysicalPrintCoverageBreakdown] = {}
+    for fact in facts.values():
+        key = _physical_breakdown_key(fact, dimension)
+        item = groups.setdefault(
+            key, PhysicalPrintCoverageBreakdown(key=key, label=key)
+        )
+        item.eligible_print_count += 1
+        if fact.mappings:
+            item.mapped_print_count += 1
+        if fact.fresh_sources:
+            item.fresh_price_print_count += 1
+    return sorted(groups.values(), key=lambda item: item.key)
+
+
+def _physical_gap(
+    fact: _PhysicalPrintFact,
+    issue_types: list[str],
+    severity: str,
+    suggested_action: str,
+) -> PhysicalPrintCoverageGap:
+    product = fact.release_product
+    compatibility_ids = sorted(
+        {
+            identity.compatibility_card_id
+            for identity in fact.mappings
+            if identity.compatibility_card_id is not None
+        }
+    )
+    return PhysicalPrintCoverageGap(
+        card_print_id=fact.card_print.id,
+        canonical_card_id=fact.canonical_card.id,
+        release_product_id=fact.card_print.release_product_id,
+        card_code=fact.canonical_card.card_code,
+        name_en=fact.canonical_card.name_en,
+        name_jp=fact.canonical_card.name_jp,
+        release_product_code=product.official_code if product is not None else None,
+        release_product_name=product.display_name if product is not None else None,
+        language=fact.card_print.language,
+        rarity=fact.card_print.official_rarity,
+        official_asset_variant=fact.card_print.official_asset_variant,
+        treatment=fact.card_print.treatment,
+        exact_mapping_ids=sorted(identity.mapping.id for identity in fact.mappings),
+        compatibility_card_ids=compatibility_ids,
+        mapped_sources=sorted(fact.mapped_sources),
+        fresh_sources=sorted(fact.fresh_sources),
+        issue_types=issue_types,
+        severity=severity,
+        suggested_action=suggested_action,
+    )
+
+
+def compute_catalog_coverage(
+    db: Session,
+    filters: CatalogCoverageFilters | None = None,
+    *,
+    include_gaps: bool = True,
+    include_price_source_health: bool = True,
+) -> CatalogCoverageReport:
+    """Physical-print source coverage with legacy catalogue data separated."""
+    filters = filters or CatalogCoverageFilters()
+    facts, identities = _physical_print_facts(db, filters)
+    total = len(facts)
+    mapped = sum(bool(fact.mappings) for fact in facts.values())
+    fresh = sum(bool(fact.fresh_sources) for fact in facts.values())
+    mapped_without_fresh = sum(
+        bool(fact.mappings) and not fact.fresh_sources for fact in facts.values()
+    )
+
+    sources = list(db.scalars(select(Source).order_by(Source.name)).all())
+    source_items = []
+    for source in sources:
+        mapped_prints = sum(
+            source.name in fact.mapped_sources for fact in facts.values()
+        )
+        fresh_prints = sum(source.name in fact.fresh_sources for fact in facts.values())
+        source_items.append(
+            PhysicalPrintCoverageSource(
+                source_id=source.id,
+                source_name=source.name,
+                eligible_print_count=total,
+                mapped_print_count=mapped_prints,
+                fresh_price_print_count=fresh_prints,
+            )
+        )
+
+    mapping_gaps: list[PhysicalPrintCoverageGap] = []
+    price_gaps: list[PhysicalPrintCoverageGap] = []
+    if include_gaps:
+        for fact in facts.values():
+            missing_sources = [
+                source
+                for source in SUPPORTED_MAPPING_SOURCES
+                if source not in fact.mapped_sources
+            ]
+            if missing_sources:
+                mapping_gaps.append(
+                    _physical_gap(
+                        fact,
+                        [
+                            f"missing_{source}_exact_mapping"
+                            for source in missing_sources
+                        ],
+                        CRITICAL if not fact.mappings else WARNING,
+                        "add_exact_source_mapping",
+                    )
+                )
+            if fact.mappings and not fact.fresh_sources:
+                price_gaps.append(
+                    _physical_gap(
+                        fact,
+                        ["exact_mapping_without_fresh_observation"],
+                        WARNING,
+                        "review_exact_mapping_refresh",
+                    )
+                )
+
+    sort_key = lambda item: (item.card_code, item.card_print_id)
+    active_identities = identities
+    summary = {
+        "coverage_unit": "eligible_physical_print",
+        "total_eligible_physical_prints": total,
+        "prints_with_any_exact_mapping": mapped,
+        "physical_prints_without_exact_mapping": total - mapped,
+        "prints_with_any_fresh_source_observation": fresh,
+        "physical_prints_with_exact_mapping_but_no_fresh_observation": mapped_without_fresh,
+        "exact_mapping_coverage_pct": _pct(mapped, total),
+        "fresh_price_coverage_pct": _pct(fresh, total),
+        "exact_source_mapping_count": sum(
+            identity.classification == EXACT and identity.card_print_id in facts
+            for identity in active_identities
+        ),
+        "legacy_compatibility_mapping_count": sum(
+            identity.classification == LEGACY_COMPATIBILITY
+            for identity in active_identities
+        ),
+        "broken_mapping_count": sum(
+            identity.classification == BROKEN for identity in active_identities
+        ),
+        "exact_mappings_outside_eligible_prints": sum(
+            identity.classification == EXACT and identity.card_print_id not in facts
+            for identity in active_identities
+        ),
+    }
+
+    legacy = _compute_legacy_catalog_coverage(
+        db,
+        filters,
+        include_gaps=include_gaps,
+        include_price_source_health=False,
+    )
+    return CatalogCoverageReport(
+        summary=summary,
+        sources=source_items,
+        coverage_by_release_product=_physical_breakdown(facts, "release_product"),
+        coverage_by_rarity=_physical_breakdown(facts, "rarity"),
+        coverage_by_language=_physical_breakdown(facts, "language"),
+        mapping_gaps=sorted(mapping_gaps, key=sort_key),
+        price_gaps=sorted(price_gaps, key=sort_key),
+        legacy_compatibility=legacy,
+        price_source_health=(
+            summarize_price_source_health(db) if include_price_source_health else None
+        ),
+    )
 
 
 def paginated_gaps(
@@ -632,7 +1146,7 @@ def paginated_gaps(
     severity: str | None = None,
     limit: int = 100,
     offset: int = 0,
-) -> tuple[list[CoverageGapItem], int]:
+) -> tuple[list[PhysicalPrintCoverageGap] | list[CoverageGapItem], int]:
     """Returns (page_of_items, total_matching) for one gap_type - used by GET
     /admin/catalog-coverage/gaps. Recomputes the report scoped to `filters`
     (the same set_code/rarity/variant/language/include_inactive filters the

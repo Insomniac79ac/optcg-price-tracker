@@ -34,19 +34,13 @@ are named separately and counted separately:
   excluded_constrained
                     the current value is INELIGIBLE, and specifically because
                     a source-semantics constraint disqualified it. Narrower
-                    than "carries a constraint" on purpose: `platform_floor`
-                    and `below_platform_minimum` disqualify, `sale_price` does
-                    not - a sale price is a real price a collector can pay. So
-                    this set is disjoint from `usable_priced`, and reporting
-                    the wider notion would have shown 36 perfectly good
-                    Yuyu-Tei prices as impaired coverage.
+                    than "carries a constraint" on purpose: only constraints
+                    whose semantic verdict is ineligible belong here. This set
+                    is therefore disjoint from `usable_priced`.
   unavailable       active prints in scope with no usable value for this basis.
 
-On staging today those four are 43 / 25 / 18 / 4,291 for SNKRDUNK: 43 prints
-carry a SNKRDUNK number, 18 of them are the ¥1,000 platform minimum, and only
-25 are prices. A single "SNKRDUNK covers 43 prints" would have been wrong by
-18, in the direction that flatters the product. Yuyu-Tei is 264 / 264 / 0 /
-4,052 - it has 36 sale-priced prints, and none of them is excluded.
+For example, both SNKRDUNK platform-minimum rows and Yuyu-Tei promotional rows
+remain observed while being excluded from usable pricing by source semantics.
 
 `observed_prints` and `excluded_constrained_prints` are both None for the
 Market Index basis rather than 0. The index is DERIVED from sources; nobody
@@ -360,17 +354,8 @@ def _basis_values(
             if source_value.source != basis.source_name:
                 continue
             # EXCLUDED-because-constrained, which is narrower than
-            # "carries a constraint". source_semantics ships four verdicts and
-            # only two of them disqualify: platform_floor and
-            # below_platform_minimum are ineligible, sale_price is a fully
-            # valid market price that merely has a name. Reading `constraint`
-            # alone would have reported Yuyu-Tei's 36 sale-priced prints as
-            # impaired coverage when every one of them is a real price a
-            # collector can pay today - see source_semantics, "Anything
-            # reading `constraint` as a synonym for 'excluded' is reading it
-            # wrong; `eligible` is the field that answers that."
-            #
-            # Both conditions, and no constraint NAME: a future ineligible
+            # "carries a constraint". Both conditions, and no constraint NAME:
+            # a future ineligible
             # constraint is counted here the day the classifier ships it, and
             # a future eligible one is correctly ignored, with no edit.
             if source_value.constraint is not None and not source_value.eligible:

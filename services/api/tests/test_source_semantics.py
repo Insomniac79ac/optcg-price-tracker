@@ -13,6 +13,8 @@ from dataclasses import fields
 from app.services.source_semantics import (
     BELOW_PLATFORM_MINIMUM,
     PLATFORM_FLOOR,
+    PROMOTION_NONE,
+    PROMOTION_SALE,
     SALE_PRICE,
     SNKRDUNK,
     SOURCE_SEMANTICS,
@@ -47,7 +49,19 @@ def assert_below_platform_minimum(semantics: SourceSemantics) -> None:
 
 
 def test_yuyutei_sell_is_unconstrained():
-    assert_unconstrained(classify_observation("yuyutei", "sell", 580))
+    assert_unconstrained(
+        classify_observation("yuyutei", "sell", 580, promotion_state=PROMOTION_NONE)
+    )
+
+
+def test_yuyutei_sale_sell_is_preserved_but_ineligible():
+    semantics = classify_observation(
+        "yuyutei", "sell", 580, promotion_state=PROMOTION_SALE
+    )
+
+    assert semantics.constraint == SALE_PRICE
+    assert semantics.eligible is False
+    assert semantics.ineligible_reason == SALE_PRICE
 
 
 def test_yuyutei_sell_at_the_snkrdunk_minimum_is_still_unconstrained():
@@ -253,16 +267,9 @@ def test_snkrdunk_configures_only_the_stored_floor_price_type():
 # --- Version --------------------------------------------------------------
 
 
-def test_source_semantics_version_is_2():
-    """Bumped 1 -> 2 by the sale_price classification.
+def test_source_semantics_version_is_3():
+    """Bumped 2 -> 3 when sale_price became index-ineligible.
 
-    This is the first bump, and it is the case the counter was built for. The
-    Task 1C-2D three-way correction deliberately did NOT bump, because version
-    1 had never been deployed and no stored index anywhere had been derived
-    under the old `<=` rule - there was no released ruleset to distinguish
-    from. That is no longer true: market_index_snapshots holds rows written
-    under version 1, at a time when a promotional Yuyu-Tei price was
-    indistinguishable from an ordinary one. Without this bump those rows and
-    every future row would claim the same ruleset while meaning different
-    things."""
-    assert SOURCE_SEMANTICS_VERSION == 2
+    Stored version-2 snapshots treated the same observation as eligible, so
+    reusing that version would make two different policies indistinguishable."""
+    assert SOURCE_SEMANTICS_VERSION == 3

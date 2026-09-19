@@ -35,6 +35,9 @@ import PriceSourceHealthPage from "./page";
 const EMPTY_SUMMARY = {
   sources_count: 0,
   active_sources_count: 0,
+  exact_mapping_count: 0,
+  legacy_compatibility_mapping_count: 0,
+  broken_mapping_count: 0,
   total_active_mappings: 0,
   mappings_with_recent_price: 0,
   mappings_without_recent_price: 0,
@@ -50,10 +53,13 @@ const EMPTY_SUMMARY = {
 const EMPTY_REPORT: PriceSourceHealthReport = {
   summary: EMPTY_SUMMARY,
   sources: [],
-  coverage_by_set: [],
+  coverage_by_release_product: [],
   coverage_by_rarity: [],
+  coverage_by_language: [],
   stale_prices: [],
   missing_prices: [],
+  legacy_compatibility_mappings: [],
+  broken_mappings: [],
   refresh_runs: [],
   warnings: [],
 };
@@ -61,12 +67,20 @@ const EMPTY_REPORT: PriceSourceHealthReport = {
 function makeGapItem(overrides: Partial<PriceGapItem> = {}): PriceGapItem {
   return {
     mapping_id: 1,
-    card_id: 1,
+    source_id: 1,
+    card_print_id: 101,
+    canonical_card_id: 1,
+    release_product_id: 11,
+    compatibility_card_id: null,
+    identity_classification: "exact",
     card_code: "OP01-001",
     name_en: "Monkey D. Luffy",
-    set_code: "OP01",
+    name_jp: null,
+    release_product_code: "OP-01",
+    release_product_name: "Romance Dawn",
     rarity: "L",
-    variant: null,
+    official_asset_variant: null,
+    treatment: null,
     language: null,
     source_name: "yuyutei",
     source_url: "https://yuyu-tei.jp/x",
@@ -115,7 +129,7 @@ describe("PriceSourceHealthPage", () => {
 
   it("renders null card fields as 'not available', never as literal null/undefined", async () => {
     fetchPriceSourceHealth.mockResolvedValue(EMPTY_REPORT);
-    fetchPriceSourceHealthGaps.mockResolvedValue(gapsResponse([makeGapItem({ variant: null })]));
+    fetchPriceSourceHealthGaps.mockResolvedValue(gapsResponse([makeGapItem({ treatment: null })]));
 
     render(<PriceSourceHealthPage />);
 
@@ -174,5 +188,41 @@ describe("PriceSourceHealthPage", () => {
         screen.getByText(/SNKRDUNK automated discovery can be blocked/i),
       ).toBeInTheDocument(),
     );
+  });
+
+  it("renders card_id-null exact sibling prints as distinct healthy identities", async () => {
+    fetchPriceSourceHealth.mockResolvedValue({
+      ...EMPTY_REPORT,
+      legacy_compatibility_mappings: [],
+      broken_mappings: [],
+    });
+    fetchPriceSourceHealthGaps.mockResolvedValue(gapsResponse([
+      makeGapItem({ mapping_id: 10, card_print_id: 101, compatibility_card_id: null, issue_type: "stale_price" }),
+      makeGapItem({ mapping_id: 11, card_print_id: 102, compatibility_card_id: null, issue_type: "missing_price" }),
+    ]));
+    render(<PriceSourceHealthPage />);
+
+    await waitFor(() => expect(screen.getByText("#101")).toBeInTheDocument());
+    expect(screen.getByText("#102")).toBeInTheDocument();
+    expect(screen.getAllByText("Exact physical print")).toHaveLength(2);
+    expect(screen.getByText("#101").closest("tr")).toHaveTextContent("stale_price");
+    expect(screen.getByText("#102").closest("tr")).toHaveTextContent("missing_price");
+    expect(screen.queryByText("Missing card")).not.toBeInTheDocument();
+  });
+
+  it("labels legacy compatibility and broken mappings separately", async () => {
+    fetchPriceSourceHealth.mockResolvedValue({
+      ...EMPTY_REPORT,
+      summary: { ...EMPTY_SUMMARY, legacy_compatibility_mapping_count: 1, broken_mapping_count: 1 },
+      legacy_compatibility_mappings: [makeGapItem({ mapping_id: 20, card_print_id: null, compatibility_card_id: 5, identity_classification: "legacy_compatibility", issue_type: "legacy_compatibility" })],
+      broken_mappings: [makeGapItem({ mapping_id: 21, card_print_id: null, identity_classification: "broken", issue_type: "broken_mapping", severity: "critical" })],
+    });
+    fetchPriceSourceHealthGaps.mockResolvedValue(gapsResponse([]));
+    render(<PriceSourceHealthPage />);
+
+    await waitFor(() => expect(screen.getByText("Legacy compatibility only")).toBeInTheDocument());
+    expect(screen.getByText("Broken — structural review required")).toBeInTheDocument();
+    expect(screen.getByText(/not modern exact pricing lineage/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Market Index eligibility/i)).not.toBeInTheDocument();
   });
 });

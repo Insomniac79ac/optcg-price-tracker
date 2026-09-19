@@ -14,10 +14,10 @@ import { SavedViewBar } from "@/components/ui/SavedViewBar";
 import { StatCard as SharedStatCard, StatGrid } from "@/components/ui/StatCard";
 import {
   AdminAuthRequiredError,
-  type CatalogCoverageBreakdownItem,
   type CatalogCoverageGapItem,
   type CatalogCoverageGapType,
   type CatalogCoverageReport,
+  type PhysicalPrintCoverageBreakdown,
   fetchCatalogCoverage,
   fetchCatalogCoverageGaps,
 } from "@/lib/api";
@@ -26,11 +26,11 @@ import { formatNullable, formatNumber, formatPercent } from "@/lib/format";
 const NOT_AVAILABLE = "not available";
 
 const GAP_TABS: { value: CatalogCoverageGapType; label: string; emptyLabel: string }[] = [
-  { value: "metadata", label: "Metadata gaps", emptyLabel: "No metadata gaps found" },
-  { value: "mapping", label: "Mapping gaps", emptyLabel: "No mapping gaps found" },
-  { value: "price", label: "Price gaps", emptyLabel: "No price gaps found" },
-  { value: "duplicate", label: "Duplicate risks", emptyLabel: "No duplicate risks found" },
-  { value: "mapping_quality", label: "Mapping quality risks", emptyLabel: "No mapping quality risks found" },
+  { value: "mapping", label: "Exact mapping gaps", emptyLabel: "No physical prints without exact source mappings" },
+  { value: "price", label: "Fresh price gaps", emptyLabel: "No mapped physical prints without fresh observations" },
+  { value: "metadata", label: "Compatibility metadata gaps", emptyLabel: "No legacy compatibility metadata gaps found" },
+  { value: "duplicate", label: "Compatibility duplicate risks", emptyLabel: "No legacy compatibility duplicate risks found" },
+  { value: "mapping_quality", label: "Compatibility mapping risks", emptyLabel: "No legacy compatibility mapping risks found" },
 ];
 
 const SEVERITY_OPTIONS = ["", "critical", "warning", "review"];
@@ -52,7 +52,7 @@ function SeverityPill({ severity }: { severity: string }) {
 
 const BREAKDOWN_LIMIT_OPTIONS = [10, 25, 50] as const;
 
-function BreakdownTable({ title, items }: { title: string; items: CatalogCoverageBreakdownItem[] }) {
+function BreakdownTable({ title, items }: { title: string; items: PhysicalPrintCoverageBreakdown[] }) {
   const [visible, setVisible] = useState(25);
 
   if (items.length === 0) {
@@ -84,40 +84,26 @@ function BreakdownTable({ title, items }: { title: string; items: CatalogCoverag
         )}
       </div>
       <TableScrollContainer>
-        <table className="w-full min-w-[900px] border-collapse text-sm">
+        <table className="w-full min-w-[700px] border-collapse text-sm">
           <thead className="sticky-thead">
             <tr className="border-b border-border-default text-left text-xs uppercase tracking-wide text-text-muted">
               <th className="px-3 py-2 font-medium">Label</th>
-              <th className="px-3 py-2 text-right font-medium">Total</th>
-              <th className="px-3 py-2 text-right font-medium">Mapped</th>
-              <th className="px-3 py-2 text-right font-medium">Unmapped</th>
-              <th className="px-3 py-2 text-right font-medium">Recent price</th>
-              <th className="px-3 py-2 text-right font-medium">Collection</th>
-              <th className="px-3 py-2 text-right font-medium">Wishlist</th>
-              <th className="px-3 py-2 text-right font-medium">Missing metadata</th>
-              <th className="px-3 py-2 text-right font-medium">Dup. risk</th>
-              <th className="px-3 py-2 text-right font-medium">Mapping risk</th>
-              <th className="px-3 py-2 text-right font-medium">Mapping %</th>
-              <th className="px-3 py-2 text-right font-medium">Price %</th>
-              <th className="px-3 py-2 text-right font-medium">Metadata %</th>
+              <th className="px-3 py-2 text-right font-medium">Eligible prints</th>
+              <th className="px-3 py-2 text-right font-medium">Mapped prints</th>
+              <th className="px-3 py-2 text-right font-medium">Fresh-price prints</th>
+              <th className="px-3 py-2 text-right font-medium">Source mapping coverage</th>
+              <th className="px-3 py-2 text-right font-medium">Fresh price coverage</th>
             </tr>
           </thead>
           <tbody>
             {items.slice(0, visible).map((item) => (
               <tr key={item.key} className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60">
                 <td className="px-3 py-2 font-medium text-text-primary">{item.label}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.total_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.mapped_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.unmapped_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.recent_price_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.collection_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.wishlist_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.missing_metadata_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.duplicate_risk_cards)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.mapping_quality_risk_cards)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.eligible_print_count)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.mapped_print_count)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatNumber(item.fresh_price_print_count)}</td>
                 <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.mapping_coverage_pct)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.recent_price_coverage_pct)}</td>
-                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.metadata_completion_pct)}</td>
+                <td className="px-3 py-2 text-right text-text-secondary">{formatPercent(item.fresh_price_coverage_pct)}</td>
               </tr>
             ))}
           </tbody>
@@ -138,7 +124,7 @@ export default function CatalogCoveragePage() {
   const [language, setLanguage] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<CatalogCoverageGapType>("metadata");
+  const [activeTab, setActiveTab] = useState<CatalogCoverageGapType>("mapping");
   const [severity, setSeverity] = useState("");
   const [gapItems, setGapItems] = useState<CatalogCoverageGapItem[]>([]);
   const [gapTotal, setGapTotal] = useState(0);
@@ -148,6 +134,8 @@ export default function CatalogCoveragePage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Loading state follows a filter-driven external request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
     fetchCatalogCoverage({
       set_code: setCode || undefined,
@@ -172,11 +160,15 @@ export default function CatalogCoveragePage() {
   }, [setCode, rarity, variant, language, includeInactive]);
 
   useEffect(() => {
+    // Reset pagination when the query identity changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGapOffset(0);
   }, [activeTab, severity, setCode, rarity, variant, language]);
 
   useEffect(() => {
     let cancelled = false;
+    // Loading state follows a filter-driven external request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGapStatus("loading");
     fetchCatalogCoverageGaps({
       gap_type: activeTab,
@@ -209,23 +201,14 @@ export default function CatalogCoveragePage() {
 
   const summaryCards: { label: string; value: string }[] = summary
     ? [
-        { label: "Total cards", value: formatNumber(summary.total_cards) },
-        { label: "Active cards", value: formatNumber(summary.active_cards) },
-        { label: "Sets", value: formatNumber(summary.sets_count) },
-        { label: "Yuyu-Tei mapped", value: formatNumber(summary.cards_with_yuyutei_mapping) },
-        { label: "SNKRDUNK mapped", value: formatNumber(summary.cards_with_snkrdunk_mapping) },
-        { label: "Without mapping", value: formatNumber(summary.cards_without_any_mapping) },
-        { label: "Recent Yuyu-Tei prices", value: formatNumber(summary.cards_with_recent_yuyutei_price) },
-        { label: "Recent SNKRDUNK prices", value: formatNumber(summary.cards_with_recent_snkrdunk_price) },
-        { label: "Without recent price", value: formatNumber(summary.cards_without_recent_price) },
-        { label: "In collection", value: formatNumber(summary.cards_in_collection) },
-        { label: "On wishlist", value: formatNumber(summary.cards_on_wishlist) },
-        { label: "Missing metadata", value: formatNumber(summary.cards_with_missing_metadata) },
-        { label: "Duplicate risk", value: formatNumber(summary.cards_with_duplicate_risk) },
-        { label: "Mapping quality risk", value: formatNumber(summary.cards_with_mapping_quality_risk) },
-        { label: "Metadata completion", value: formatPercent(summary.metadata_completion_pct) },
-        { label: "Mapping coverage", value: formatPercent(summary.mapping_coverage_pct) },
-        { label: "Recent price coverage", value: formatPercent(summary.recent_price_coverage_pct) },
+        { label: "Eligible physical prints", value: formatNumber(summary.total_eligible_physical_prints) },
+        { label: "Mapped physical prints", value: formatNumber(summary.prints_with_any_exact_mapping) },
+        { label: "Fresh-price physical prints", value: formatNumber(summary.prints_with_any_fresh_source_observation) },
+        { label: "No exact source mapping", value: formatNumber(summary.physical_prints_without_exact_mapping) },
+        { label: "Mapped without fresh observation", value: formatNumber(summary.physical_prints_with_exact_mapping_but_no_fresh_observation) },
+        { label: "Source mapping coverage", value: formatPercent(summary.exact_mapping_coverage_pct) },
+        { label: "Fresh price coverage", value: formatPercent(summary.fresh_price_coverage_pct) },
+        { label: "Exact source mappings", value: formatNumber(summary.exact_source_mapping_count) },
       ]
     : [];
 
@@ -234,8 +217,8 @@ export default function CatalogCoveragePage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
-          title="Catalog Coverage"
-          description="Track canonical card coverage, metadata gaps, mappings, prices, and quality risks."
+          title="Physical Print Coverage"
+          description="Exact source mapping and fresh observation coverage for eligible physical prints."
         />
         <div className="mb-4 flex flex-wrap gap-3">
           <Link href="/admin/cards" className="text-xs text-sky-400 underline decoration-sky-800 underline-offset-2 hover:text-sky-300">
@@ -329,9 +312,9 @@ export default function CatalogCoveragePage() {
               }}
             />
 
-            {status === "loading" && <LoadingState>Loading catalog coverage…</LoadingState>}
+            {status === "loading" && <LoadingState>Loading physical print coverage…</LoadingState>}
             {status === "error" && (
-              <ErrorState>Failed to load catalog coverage from the API. Is the backend running?</ErrorState>
+              <ErrorState>Failed to load physical print coverage from the API. Is the backend running?</ErrorState>
             )}
 
             {status === "ready" && report && (
@@ -344,12 +327,38 @@ export default function CatalogCoveragePage() {
                   </StatGrid>
                 </div>
 
+                <div className="mb-6 rounded-panel border border-border-default bg-bg-surface">
+                  <div className="border-b border-border-default px-4 py-3">
+                    <h2 className="font-medium text-text-primary">Per-source physical print coverage</h2>
+                  </div>
+                  <TableScrollContainer>
+                    <table className="w-full min-w-[720px] border-collapse text-sm">
+                      <thead className="sticky-thead"><tr className="text-left text-xs uppercase tracking-wide text-text-muted">
+                        <th className="px-3 py-2 font-medium">Source</th><th className="px-3 py-2 text-right font-medium">Eligible prints</th><th className="px-3 py-2 text-right font-medium">Mapped prints</th><th className="px-3 py-2 text-right font-medium">Fresh-price prints</th><th className="px-3 py-2 text-right font-medium">Source mapping coverage</th><th className="px-3 py-2 text-right font-medium">Fresh price coverage</th>
+                      </tr></thead>
+                      <tbody>{report.sources.map((source) => <tr key={source.source_id} className="border-t border-border-muted">
+                        <td className="px-3 py-2 font-medium text-text-primary">{source.source_name}</td><td className="px-3 py-2 text-right text-text-secondary">{formatNumber(source.eligible_print_count)}</td><td className="px-3 py-2 text-right text-text-secondary">{formatNumber(source.mapped_print_count)}</td><td className="px-3 py-2 text-right text-text-secondary">{formatNumber(source.fresh_price_print_count)}</td><td className="px-3 py-2 text-right text-text-secondary">{formatPercent(source.mapping_coverage_pct)}</td><td className="px-3 py-2 text-right text-text-secondary">{formatPercent(source.fresh_price_coverage_pct)}</td>
+                      </tr>)}</tbody>
+                    </table>
+                  </TableScrollContainer>
+                </div>
+
                 <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <BreakdownTable title="Coverage by set" items={report.coverage_by_set} />
+                  <BreakdownTable title="Coverage by release product" items={report.coverage_by_release_product} />
                   <BreakdownTable title="Coverage by rarity" items={report.coverage_by_rarity} />
-                  <BreakdownTable title="Coverage by variant" items={report.coverage_by_variant} />
                   <BreakdownTable title="Coverage by language" items={report.coverage_by_language} />
                 </div>
+
+                <details className="mb-6 rounded-panel border border-border-default bg-bg-surface p-4">
+                  <summary className="cursor-pointer font-medium text-text-secondary">Legacy compatibility catalogue metrics</summary>
+                  <p className="mt-2 text-sm text-text-muted">Card-keyed catalogue, collection, and wishlist compatibility only. These totals are not physical-print pricing coverage.</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <SharedStatCard label="Legacy Cards" value={formatNumber(report.legacy_compatibility.summary.total_cards)} />
+                    <SharedStatCard label="Legacy mapping coverage" value={formatPercent(report.legacy_compatibility.summary.mapping_coverage_pct)} />
+                    <SharedStatCard label="Legacy recent-price coverage" value={formatPercent(report.legacy_compatibility.summary.recent_price_coverage_pct)} />
+                    <SharedStatCard label="Legacy metadata completion" value={formatPercent(report.legacy_compatibility.summary.metadata_completion_pct)} />
+                  </div>
+                </details>
 
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   {GAP_TABS.map((tab) => (
@@ -395,11 +404,11 @@ export default function CatalogCoveragePage() {
                         <tr className="border-b border-border-default bg-bg-surface text-left text-xs uppercase tracking-wide text-text-muted">
                           <th className="px-3 py-2 font-medium">Severity</th>
                           <th className="px-3 py-2 font-medium">Issue types</th>
-                          <th className="px-3 py-2 font-medium">Card code</th>
-                          <th className="px-3 py-2 font-medium">Name</th>
-                          <th className="px-3 py-2 font-medium">Set</th>
+                          <th className="px-3 py-2 font-medium">Identity</th>
+                          <th className="px-3 py-2 font-medium">Canonical card</th>
+                          <th className="px-3 py-2 font-medium">Release product</th>
                           <th className="px-3 py-2 font-medium">Rarity</th>
-                          <th className="px-3 py-2 font-medium">Variant</th>
+                          <th className="px-3 py-2 font-medium">Print treatment</th>
                           <th className="px-3 py-2 font-medium">Language</th>
                           <th className="px-3 py-2 font-medium">Suggested action</th>
                           <th className="px-3 py-2 font-medium">Links</th>
@@ -408,7 +417,7 @@ export default function CatalogCoveragePage() {
                       <tbody>
                         {gapItems.map((item) => (
                           <tr
-                            key={`${item.card_id}-${item.issue_types.join(",")}`}
+                            key={`${item.identity_scope}-${item.card_print_id ?? item.card_id}-${item.issue_types.join(",")}`}
                             className="border-b border-border-muted last:border-0 hover:bg-bg-elevated/60"
                           >
                             <td className="px-3 py-2">
@@ -423,20 +432,22 @@ export default function CatalogCoveragePage() {
                                 ))}
                               </div>
                             </td>
-                            <td className="px-3 py-2 font-mono text-xs text-text-secondary">
-                              {formatNullable(item.card_code, (v) => v, NOT_AVAILABLE)}
+                            <td className="px-3 py-2 text-text-secondary">
+                              <div className="font-medium text-text-primary">{item.identity_scope === "physical_print" ? `CardPrint #${item.card_print_id}` : "Legacy compatibility Card"}</div>
+                              {item.identity_scope === "physical_print" && <div className="text-xs text-text-muted">Exact physical print</div>}
                             </td>
                             <td className="px-3 py-2 text-text-secondary">
-                              {formatNullable(item.name_en ?? item.name_jp, (v) => v, NOT_AVAILABLE)}
+                              <div>{formatNullable(item.card_code, (v) => v, NOT_AVAILABLE)} · {formatNullable(item.name_en ?? item.name_jp, (v) => v, NOT_AVAILABLE)}</div>
+                              <div className="text-xs text-text-muted">Canonical Card #{item.canonical_card_id ?? item.card_id ?? "—"}</div>
                             </td>
                             <td className="px-3 py-2 text-text-secondary">
-                              {formatNullable(item.set_code, (v) => v, NOT_AVAILABLE)}
+                              {formatNullable(item.release_product_name ?? item.release_product_code ?? item.set_code, (v) => v, NOT_AVAILABLE)}
                             </td>
                             <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.rarity, (v) => v, NOT_AVAILABLE)}
                             </td>
                             <td className="px-3 py-2 text-text-secondary">
-                              {formatNullable(item.variant, (v) => v, NOT_AVAILABLE)}
+                              {formatNullable(item.treatment ?? item.official_asset_variant ?? item.variant, (v) => v, NOT_AVAILABLE)}
                             </td>
                             <td className="px-3 py-2 text-text-secondary">
                               {formatNullable(item.language, (v) => v, NOT_AVAILABLE)}
@@ -444,9 +455,8 @@ export default function CatalogCoveragePage() {
                             <td className="px-3 py-2 text-xs text-text-muted">{item.suggested_action}</td>
                             <td className="px-3 py-2">
                               <div className="flex flex-wrap gap-2 text-xs">
-                                <Link href={`/cards/${item.card_id}`} className="text-sky-400 hover:underline">
-                                  Card
-                                </Link>
+                                {item.card_print_id !== null && <Link href={`/prints/${item.card_print_id}`} className="text-sky-400 hover:underline">Physical print</Link>}
+                                {(item.compatibility_card_id ?? item.card_id) !== null && <Link href={`/cards/${item.compatibility_card_id ?? item.card_id}`} className="text-sky-400 hover:underline">Compatibility Card</Link>}
                                 <Link href="/admin/cards" className="text-sky-400 hover:underline">
                                   Catalog
                                 </Link>

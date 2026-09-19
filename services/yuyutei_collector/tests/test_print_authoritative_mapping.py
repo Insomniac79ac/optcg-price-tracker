@@ -296,9 +296,10 @@ def test_the_mirror_declares_no_migration(session):
     mistaken for a schema change."""
     import pathlib
 
-    # parents[1] is services/yuyutei_collector - the service root, not the
-    # whole services/ tree, which of course contains the API's migrations.
-    service_root = pathlib.Path(collector_models.__file__).resolve().parents[1]
-    assert service_root.name == "yuyutei_collector"
+    # The importable package sits directly below the service root both in a
+    # checkout and in the standalone /app image. The directory's spelling is
+    # deployment-specific and is not part of the no-migrations contract.
+    package_root = pathlib.Path(collector_models.__file__).resolve().parent
+    service_root = package_root.parent
     assert not (service_root / "alembic").exists()
-    assert not list(service_root.rglob("versions/*.py"))
+    assert not list(package_root.rglob("versions/*.py"))

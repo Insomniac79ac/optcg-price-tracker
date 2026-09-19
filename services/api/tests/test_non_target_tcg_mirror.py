@@ -14,19 +14,17 @@ the worker).
 """
 
 import importlib.util
-from pathlib import Path
 
 import pytest
 
 from app.services.non_target_tcg import identify_non_target_tcg, known_foreign_game_tokens
+from tests._repo_root import find_repo_root
 
+_REPO_ROOT = find_repo_root()
 _WORKER_MODULE = (
-    Path(__file__).resolve().parents[3]
-    / "services"
-    / "worker"
-    / "worker"
-    / "matching"
-    / "non_target_tcg.py"
+    _REPO_ROOT / "services" / "worker" / "worker" / "matching" / "non_target_tcg.py"
+    if _REPO_ROOT is not None
+    else None
 )
 
 # Every shape the two modules' docstrings name, plus the ways a naive
@@ -53,7 +51,7 @@ _CASES = [
 
 
 def _worker_half():
-    if not _WORKER_MODULE.exists():
+    if _WORKER_MODULE is None or not _WORKER_MODULE.exists():
         pytest.skip("worker source is not present in this image")
     spec = importlib.util.spec_from_file_location("_worker_non_target_tcg", _WORKER_MODULE)
     module = importlib.util.module_from_spec(spec)
