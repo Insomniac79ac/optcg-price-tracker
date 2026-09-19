@@ -18,15 +18,19 @@ from app.env import is_development_environment
 from app.models import (
     AnalyticsDigestReport,
     Card,
+    CanonicalCard,
+    CardPrint,
     CollectionItem,
     FileJob,
     GradingSubmission,
     ImportValidationReport,
     MarketIntelligenceReport,
+    MarketIndexSnapshot,
     MarketSignalEvent,
     MarketWorkflowRun,
     PortfolioValuationSnapshot,
     PriceObservation,
+    ReleaseProduct,
     Source,
     SourceCardMapping,
     WishlistItem,
@@ -36,6 +40,13 @@ from app.services.backup import MODEL_BY_TABLE, REQUIRED_TABLES
 from app.services.cache import redis_ping
 from app.services.file_job_storage import is_storage_writable
 from app.services.job_locks import get_active_locks
+from app.services.source_mapping_identity import (
+    BROKEN,
+    EXACT,
+    LEGACY_COMPATIBILITY,
+    SourceMappingIdentity,
+    load_source_mapping_identities,
+)
 from app.settings import settings
 
 # A file_job stuck in 'running' this long is likely wedged (crashed
@@ -70,6 +81,320 @@ class CheckResult:
     status: str
     severity: str
     message: str
+
+
+def _count_rows(db: Session, model) -> int:
+    return db.scalar(select(func.count()).select_from(model)) or 0
+
+
+def _broken_mapping_categories(
+    identities: list[SourceMappingIdentity],
+) -> tuple[list[SourceMappingIdentity], list[SourceMappingIdentity]]:
+    """Split operational identity failures from compatibility-pointer debt."""
+    operational: list[SourceMappingIdentity] = []
+    compatibility: list[SourceMappingIdentity] = []
+    for identity in identities:
+        if identity.classification != BROKEN:
+            continue
+        if (
+            identity.mapping.card_print_id is None
+            and identity.mapping.card_id is not None
+            and identity.compatibility_card is None
+            and identity.source is not None
+        ):
+            compatibility.append(identity)
+        else:
+            operational.append(identity)
+    return operational, compatibility
+
+
+def build_operational_identity_summary(db: Session) -> dict[str, dict[str, int]]:
+    """Read-only exact-print and compatibility populations for operations.
+
+    Mapping classification comes exclusively from
+    ``source_mapping_identity``. Observation identity is exact only when its
+    mapping/print/source composite agrees with one of those exact mappings;
+    Card and card code are never used as fallback identity.
+    """
+    identities = load_source_mapping_identities(db)
+    exact = [identity for identity in identities if identity.classification == EXACT]
+    legacy = [
+        identity
+        for identity in identities
+        if identity.classification == LEGACY_COMPATIBILITY
+    ]
+    broken_operational, broken_compatibility = _broken_mapping_categories(identities)
+    broken_mapping_card_pointers = sum(
+        identity.mapping.card_id is not None
+        and identity.compatibility_card is None
+        for identity in identities
+    )
+    active_exact = [identity for identity in exact if identity.mapping.is_active]
+    active_non_priceable = [
+        identity for identity in active_exact if not identity.is_priceable_print
+    ]
+    active_missing_eligibility = [
+        identity for identity in active_exact if not identity.is_operationally_eligible
+    ]
+
+    exact_mapping_ids = [identity.mapping.id for identity in exact]
+    if exact_mapping_ids:
+        exact_observations = (
+            db.scalar(
+                select(func.count())
+                .select_from(PriceObservation)
+                .join(
+                    SourceCardMapping,
+                    (SourceCardMapping.id == PriceObservation.source_card_mapping_id)
+                    & (SourceCardMapping.card_print_id == PriceObservation.card_print_id)
+                    & (SourceCardMapping.source_id == PriceObservation.source_id),
+                )
+                .where(SourceCardMapping.id.in_(exact_mapping_ids))
+            )
+            or 0
+        )
+    else:
+        exact_observations = 0
+    total_observations = _count_rows(db, PriceObservation)
+    legacy_observations = (
+        db.scalar(
+            select(func.count())
+            .select_from(PriceObservation)
+            .where(
+                PriceObservation.source_card_mapping_id.is_(None),
+                PriceObservation.card_print_id.is_(None),
+            )
+        )
+        or 0
+    )
+
+    total_prints = _count_rows(db, CardPrint)
+    broken_print_canonical = _orphan_count(db, CardPrint.canonical_card_id, CanonicalCard.id)
+    release_references = (
+        db.scalar(
+            select(func.count())
+            .select_from(CardPrint)
+            .where(CardPrint.release_product_id.is_not(None))
+        )
+        or 0
+    )
+    broken_print_release = _orphan_count(
+        db, CardPrint.release_product_id, ReleaseProduct.id
+    )
+    active_verified_missing_release = (
+        db.scalar(
+            select(func.count())
+            .select_from(CardPrint)
+            .where(
+                CardPrint.is_active.is_(True),
+                CardPrint.verification_status == "verified",
+                (
+                    CardPrint.release_product_id.is_(None)
+                    | ~CardPrint.release_product_id.in_(select(ReleaseProduct.id))
+                ),
+            )
+        )
+        or 0
+    )
+    total_snapshots = _count_rows(db, MarketIndexSnapshot)
+    broken_snapshot_print = _orphan_count(
+        db, MarketIndexSnapshot.card_print_id, CardPrint.id
+    )
+
+    return {
+        "mapping_identity": {
+            "exact": len(exact),
+            "legacy_compatibility": len(legacy),
+            "broken": len(broken_operational) + len(broken_compatibility),
+            "broken_operational": len(broken_operational),
+        },
+        "exact_mapping_operations": {
+            "active_exact_mappings": len(active_exact),
+            "active_exact_to_priceable_print": len(active_exact)
+            - len(active_non_priceable),
+            "active_exact_to_non_priceable_print": len(active_non_priceable),
+            "approved_exact_with_valid_source": sum(
+                identity.mapping.review_status == "approved" for identity in exact
+            ),
+            "operationally_eligible_exact_mappings": sum(
+                identity.is_operationally_eligible for identity in exact
+            ),
+            "exact_mappings_missing_expected_operational_eligibility": len(
+                active_missing_eligibility
+            ),
+        },
+        "observations": {
+            "exact": exact_observations,
+            "legacy_lineage_less": legacy_observations,
+            "broken_inconsistent": total_observations
+            - exact_observations
+            - legacy_observations,
+        },
+        "modern_parents": {
+            "card_prints": total_prints,
+            "card_prints_with_canonical_card": total_prints - broken_print_canonical,
+            "card_prints_broken_canonical_card": broken_print_canonical,
+            "card_prints_with_release_product": release_references
+            - broken_print_release,
+            "card_prints_without_release_product": total_prints - release_references,
+            "card_prints_broken_release_product": broken_print_release,
+            "active_verified_prints_missing_release_product": active_verified_missing_release,
+            "market_index_snapshots": total_snapshots,
+            "market_index_snapshots_with_card_print": total_snapshots
+            - broken_snapshot_print,
+            "market_index_snapshots_broken_card_print": broken_snapshot_print,
+        },
+        "legacy_compatibility": {
+            "grandfathered_mappings": len(legacy),
+            "mapping_card_references": sum(
+                identity.mapping.card_id is not None for identity in identities
+            ),
+            # Compatibility Card is optional and never affects exact
+            # classification, but a non-null pointer must still resolve.
+            "broken_mapping_card_pointers": broken_mapping_card_pointers,
+            "collection_items": _count_rows(db, CollectionItem),
+            "broken_collection_item_card_pointers": _orphan_count(
+                db, CollectionItem.card_id, Card.id
+            ),
+            "wishlist_items": _count_rows(db, WishlistItem),
+            "broken_wishlist_item_card_pointers": _orphan_count(
+                db, WishlistItem.card_id, Card.id
+            ),
+        },
+    }
+
+
+def build_exact_print_semantic_checks(db: Session) -> list[CheckResult]:
+    """Focused semantic checks, exposed separately for side-effect-free tests."""
+    summary = build_operational_identity_summary(db)
+    mappings = summary["mapping_identity"]
+    exact_ops = summary["exact_mapping_operations"]
+    observations = summary["observations"]
+    parents = summary["modern_parents"]
+    compatibility = summary["legacy_compatibility"]
+
+    checks = [
+        CheckResult(
+            "mapping_identity_population",
+            "pass",
+            "info",
+            "Mapping identity population: "
+            f"exact={mappings['exact']}, "
+            f"legacy_compatibility={mappings['legacy_compatibility']}, "
+            f"broken={mappings['broken']}.",
+        ),
+        CheckResult(
+            "mapping_identity_integrity",
+            "fail" if mappings["broken_operational"] else "pass",
+            "critical" if mappings["broken_operational"] else "info",
+            f"Broken operational mapping identities: {mappings['broken_operational']}.",
+        ),
+        CheckResult(
+            "exact_mapping_operational_state",
+            (
+                "fail"
+                if exact_ops["active_exact_to_non_priceable_print"]
+                else (
+                    "warning"
+                    if exact_ops[
+                        "exact_mappings_missing_expected_operational_eligibility"
+                    ]
+                    else "pass"
+                )
+            ),
+            (
+                "critical"
+                if exact_ops["active_exact_to_non_priceable_print"]
+                else (
+                    "warning"
+                    if exact_ops[
+                        "exact_mappings_missing_expected_operational_eligibility"
+                    ]
+                    else "info"
+                )
+            ),
+            "Exact mapping operations: "
+            f"active_priceable={exact_ops['active_exact_to_priceable_print']}, "
+            f"active_non_priceable={exact_ops['active_exact_to_non_priceable_print']}, "
+            f"approved_with_valid_source={exact_ops['approved_exact_with_valid_source']}, "
+            "missing_expected_eligibility="
+            f"{exact_ops['exact_mappings_missing_expected_operational_eligibility']}.",
+        ),
+        CheckResult(
+            "observation_identity_population",
+            "fail" if observations["broken_inconsistent"] else "pass",
+            "critical" if observations["broken_inconsistent"] else "info",
+            "Observation identity population: "
+            f"exact={observations['exact']}, "
+            f"legacy_lineage_less={observations['legacy_lineage_less']}, "
+            f"broken_inconsistent={observations['broken_inconsistent']}.",
+        ),
+    ]
+
+    parent_failures = (
+        parents["card_prints_broken_canonical_card"]
+        + parents["card_prints_broken_release_product"]
+        + parents["active_verified_prints_missing_release_product"]
+        + parents["market_index_snapshots_broken_card_print"]
+    )
+    checks.append(
+        CheckResult(
+            "modern_parent_population",
+            "fail" if parent_failures else "pass",
+            "critical" if parent_failures else "info",
+            "Modern parents: "
+            f"CardPrint→CanonicalCard={parents['card_prints_with_canonical_card']}/"
+            f"{parents['card_prints']}, CardPrint→ReleaseProduct="
+            f"{parents['card_prints_with_release_product']}/{parents['card_prints']}, "
+            f"MarketIndexSnapshot→CardPrint="
+            f"{parents['market_index_snapshots_with_card_print']}/"
+            f"{parents['market_index_snapshots']}.",
+        )
+    )
+    checks.append(
+        CheckResult(
+            "legacy_compatibility_population",
+            "pass",
+            "info",
+            "Legacy compatibility: "
+            f"grandfathered_mappings={compatibility['grandfathered_mappings']}, "
+            f"broken_mapping_card_pointers={compatibility['broken_mapping_card_pointers']}, "
+            "broken_collection_card_pointers="
+            f"{compatibility['broken_collection_item_card_pointers']}, "
+            "broken_wishlist_card_pointers="
+            f"{compatibility['broken_wishlist_item_card_pointers']}.",
+        )
+    )
+    for name, key, label in (
+        (
+            "source_mappings_valid_card_id",
+            "broken_mapping_card_pointers",
+            "source mapping Card",
+        ),
+        (
+            "collection_items_valid_card_id",
+            "broken_collection_item_card_pointers",
+            "collection item Card",
+        ),
+        (
+            "wishlist_items_valid_card_id",
+            "broken_wishlist_item_card_pointers",
+            "wishlist item Card",
+        ),
+    ):
+        broken_count = compatibility[key]
+        checks.append(
+            CheckResult(
+                name,
+                "fail" if broken_count else "pass",
+                "critical" if broken_count else "info",
+                (
+                    f"Legacy compatibility: {broken_count} broken {label} "
+                    "reference(s)."
+                ),
+            )
+        )
+    return checks
 
 
 def _orphan_count(db: Session, fk_column, ref_column) -> int:
@@ -176,9 +501,12 @@ def _check_search_responds(db: Session) -> CheckResult:
 
     try:
         run_search(db, "system-check", limit=1)
-    except Exception as exc:  # noqa: BLE001 - this is a health check, any failure is reportable
+    except Exception as exc:  # noqa: BLE001 - health check reports every failure
         return CheckResult(
-            "search_responds", "fail", "critical", f"Search service raised an error: {exc}"
+            "search_responds",
+            "fail",
+            "critical",
+            f"Search service raised an error: {exc}",
         )
     return CheckResult("search_responds", "pass", "critical", "Search service responded.")
 
@@ -491,22 +819,23 @@ CATALOG_COVERAGE_METADATA_WARNING_PCT = 70.0
 
 
 def _check_catalog_coverage_summary(db: Session) -> CheckResult:
-    """Rolls up app.services.catalog_coverage.summarize_catalog_coverage into
-    one system-check warning - low mapping/recent-price/metadata coverage,
-    or any duplicate/mapping-quality risk, is worth a human glancing at GET
-    /admin/catalog-coverage."""
+    """Retain the legacy Card-keyed catalogue check as compatibility health.
+
+    Exact physical-print coverage is reported by the semantic checks above;
+    this existing release signal remains unchanged for 1B-8C.
+    """
     from app.services.catalog_coverage import summarize_catalog_coverage
 
     summary = summarize_catalog_coverage(db)
     reasons = []
     if summary["mapping_coverage_pct"] < CATALOG_COVERAGE_MAPPING_WARNING_PCT:
         reasons.append(
-            f"mapping coverage {summary['mapping_coverage_pct']}% "
+            f"legacy Card mapping coverage {summary['mapping_coverage_pct']}% "
             f"({summary['cards_without_any_mapping']} unmapped card(s))"
         )
     if summary["recent_price_coverage_pct"] < CATALOG_COVERAGE_RECENT_PRICE_WARNING_PCT:
         reasons.append(
-            f"recent price coverage {summary['recent_price_coverage_pct']}% "
+            f"legacy Card recent price coverage {summary['recent_price_coverage_pct']}% "
             f"({summary['cards_without_recent_price']} card(s) without a recent price)"
         )
     if summary["metadata_completion_pct"] < CATALOG_COVERAGE_METADATA_WARNING_PCT:
@@ -521,13 +850,14 @@ def _check_catalog_coverage_summary(db: Session) -> CheckResult:
             "catalog_coverage_summary",
             "warning",
             "warning",
-            f"Catalog coverage needs review: {'; '.join(reasons)}. See GET /admin/catalog-coverage.",
+            "Legacy catalogue compatibility coverage needs review: "
+            f"{'; '.join(reasons)}. See GET /admin/catalog-coverage.",
         )
     return CheckResult(
         "catalog_coverage_summary",
         "pass",
         "info",
-        f"Catalog coverage looks healthy: mapping {summary['mapping_coverage_pct']}%, "
+        f"Legacy catalogue coverage looks healthy: mapping {summary['mapping_coverage_pct']}%, "
         f"recent price {summary['recent_price_coverage_pct']}%, "
         f"metadata {summary['metadata_completion_pct']}%.",
     )
@@ -656,6 +986,7 @@ def build_catalog_operations_summary(db: Session) -> dict:
     mapping_quality_summary = summarize_mapping_quality(db)
     coverage_summary = summarize_catalog_coverage(db)
     price_health_summary = summarize_price_source_health(db)
+    identity_summary = build_operational_identity_summary(db)
 
     latest_report = db.scalar(
         select(ImportValidationReport).order_by(ImportValidationReport.created_at.desc()).limit(1)
@@ -683,12 +1014,47 @@ def build_catalog_operations_summary(db: Session) -> dict:
     warnings: list[str] = []
     if mapping_quality_critical_count > 0:
         warnings.append(f"{mapping_quality_critical_count} critical-risk source mapping(s)")
+    modern_critical_count = (
+        identity_summary["mapping_identity"]["broken_operational"]
+        + identity_summary["exact_mapping_operations"][
+            "active_exact_to_non_priceable_print"
+        ]
+        + identity_summary["observations"]["broken_inconsistent"]
+        + identity_summary["modern_parents"]["card_prints_broken_canonical_card"]
+        + identity_summary["modern_parents"]["card_prints_broken_release_product"]
+        + identity_summary["modern_parents"][
+            "active_verified_prints_missing_release_product"
+        ]
+        + identity_summary["modern_parents"][
+            "market_index_snapshots_broken_card_print"
+        ]
+    )
+    compatibility_warning_count = (
+        identity_summary["legacy_compatibility"]["broken_mapping_card_pointers"]
+        + identity_summary["legacy_compatibility"][
+            "broken_collection_item_card_pointers"
+        ]
+        + identity_summary["legacy_compatibility"][
+            "broken_wishlist_item_card_pointers"
+        ]
+    )
+    if modern_critical_count:
+        warnings.append(f"{modern_critical_count} critical exact-print integrity issue(s)")
+    if compatibility_warning_count:
+        warnings.append(
+            f"{compatibility_warning_count} broken legacy compatibility pointer(s)"
+        )
     if duplicate_risk_count > 0:
         warnings.append(f"{duplicate_risk_count} duplicate card pair(s)")
     if coverage_summary["mapping_coverage_pct"] < CATALOG_COVERAGE_MAPPING_WARNING_PCT:
-        warnings.append(f"mapping coverage {coverage_summary['mapping_coverage_pct']}%")
+        warnings.append(
+            f"legacy Card mapping coverage {coverage_summary['mapping_coverage_pct']}%"
+        )
     if coverage_summary["recent_price_coverage_pct"] < CATALOG_COVERAGE_RECENT_PRICE_WARNING_PCT:
-        warnings.append(f"recent price coverage {coverage_summary['recent_price_coverage_pct']}%")
+        warnings.append(
+            "legacy Card recent price coverage "
+            f"{coverage_summary['recent_price_coverage_pct']}%"
+        )
     if coverage_summary["metadata_completion_pct"] < CATALOG_COVERAGE_METADATA_WARNING_PCT:
         warnings.append(f"metadata completion {coverage_summary['metadata_completion_pct']}%")
     if price_source_health_status == "degraded":
@@ -696,7 +1062,11 @@ def build_catalog_operations_summary(db: Session) -> dict:
     if latest_import_validation_status == "invalid":
         warnings.append(f"latest import validation report (#{latest_report.id}) is invalid")
 
-    if mapping_quality_critical_count > 0 or duplicate_summary["exact_duplicate_count"] > 0:
+    if (
+        modern_critical_count > 0
+        or mapping_quality_critical_count > 0
+        or duplicate_summary["exact_duplicate_count"] > 0
+    ):
         card_audit_status = "critical"
     elif warnings:
         card_audit_status = "warning"
@@ -712,6 +1082,13 @@ def build_catalog_operations_summary(db: Session) -> dict:
         "recent_price_coverage_pct": coverage_summary["recent_price_coverage_pct"],
         "price_source_health_status": price_source_health_status,
         "latest_import_validation_status": latest_import_validation_status,
+        "modern_exact_print": {
+            "mapping_identity": identity_summary["mapping_identity"],
+            "mapping_operations": identity_summary["exact_mapping_operations"],
+            "observations": identity_summary["observations"],
+            "parents": identity_summary["modern_parents"],
+        },
+        "legacy_compatibility": identity_summary["legacy_compatibility"],
         "warnings": warnings,
     }
 
@@ -720,6 +1097,7 @@ def run_system_check(db: Session) -> list[CheckResult]:
     checks: list[CheckResult] = [
         _check_database_reachable(db),
         _check_required_sources(db),
+        *build_exact_print_semantic_checks(db),
         _check_table_count(db, Card, "cards_count", "Cards"),
         _check_table_count(db, CollectionItem, "collection_items_count", "Collection items"),
         _check_table_count(db, WishlistItem, "wishlist_items_count", "Wishlist items"),
@@ -757,19 +1135,6 @@ def run_system_check(db: Session) -> list[CheckResult]:
         _check_latest_workflow_run(db),
         _check_backup_tables_included(db),
         _check_search_responds(db),
-        _check_orphan_fk(
-            db,
-            SourceCardMapping.card_id,
-            Card.id,
-            "source_mappings_valid_card_id",
-            "source_card_mappings",
-        ),
-        _check_orphan_fk(
-            db, CollectionItem.card_id, Card.id, "collection_items_valid_card_id", "collection_items"
-        ),
-        _check_orphan_fk(
-            db, WishlistItem.card_id, Card.id, "wishlist_items_valid_card_id", "wishlist_items"
-        ),
         _check_orphan_fk(
             db,
             GradingSubmission.collection_item_id,

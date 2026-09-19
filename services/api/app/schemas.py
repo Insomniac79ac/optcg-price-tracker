@@ -2509,6 +2509,8 @@ class CardAuditReportOut(BaseModel):
     summary: CardAuditSummaryOut
     issues: list[CardAuditIssueOut]
     catalog_coverage: CatalogCoverageSummaryOut | None = None
+    modern_exact_print_audit: dict[str, int] | None = None
+    compatibility_audit: dict[str, int] | None = None
 
 
 class CatalogCoverageBreakdownItemOut(BaseModel):
@@ -2573,6 +2575,9 @@ class CatalogCoverageGapsOut(BaseModel):
 class PriceSourceHealthSummaryOut(BaseModel):
     sources_count: int
     active_sources_count: int
+    exact_mapping_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     total_active_mappings: int
     mappings_with_recent_price: int
     mappings_without_recent_price: int
@@ -2592,6 +2597,8 @@ class SourceHealthItemOut(BaseModel):
     recent_price_count: int
     stale_price_count: int
     missing_price_count: int
+    legacy_compatibility_mapping_count: int
+    broken_mapping_count: int
     latest_price_observed_at: datetime | None
     latest_refresh_status: str | None
     latest_refresh_started_at: datetime | None
@@ -2607,23 +2614,31 @@ class SourceHealthItemOut(BaseModel):
 class HealthCoverageBreakdownItemOut(BaseModel):
     key: str
     label: str
-    mapped_cards: int
-    recent_price_cards: int
-    stale_price_cards: int
-    missing_price_cards: int
+    mapped_prints: int
+    recent_price_prints: int
+    stale_price_prints: int
+    missing_price_prints: int
     coverage_pct: float
 
 
 class PriceGapItemOut(BaseModel):
     mapping_id: int
-    card_id: int
+    source_id: int
+    card_print_id: int | None
+    canonical_card_id: int | None
+    release_product_id: int | None
+    compatibility_card_id: int | None
+    identity_classification: str
     card_code: str | None
     name_en: str | None
-    set_code: str | None
+    name_jp: str | None
+    release_product_code: str | None
+    release_product_name: str | None
     rarity: str | None
-    variant: str | None
+    official_asset_variant: str | None
+    treatment: str | None
     language: str | None
-    source_name: str
+    source_name: str | None
     source_url: str | None
     latest_price_observed_at: datetime | None
     latest_price_type: str | None
@@ -2648,10 +2663,13 @@ class RefreshRunSummaryItemOut(BaseModel):
 class PriceSourceHealthReportOut(BaseModel):
     summary: PriceSourceHealthSummaryOut
     sources: list[SourceHealthItemOut]
-    coverage_by_set: list[HealthCoverageBreakdownItemOut]
+    coverage_by_release_product: list[HealthCoverageBreakdownItemOut]
     coverage_by_rarity: list[HealthCoverageBreakdownItemOut]
+    coverage_by_language: list[HealthCoverageBreakdownItemOut]
     stale_prices: list[PriceGapItemOut]
     missing_prices: list[PriceGapItemOut]
+    legacy_compatibility_mappings: list[PriceGapItemOut]
+    broken_mappings: list[PriceGapItemOut]
     refresh_runs: list[RefreshRunSummaryItemOut]
     warnings: list[str]
 
@@ -4273,6 +4291,8 @@ class CatalogOperationsSummaryOut(BaseModel):
     recent_price_coverage_pct: float
     price_source_health_status: str
     latest_import_validation_status: str
+    modern_exact_print: dict[str, Any]
+    legacy_compatibility: dict[str, int]
     warnings: list[str]
 
 
