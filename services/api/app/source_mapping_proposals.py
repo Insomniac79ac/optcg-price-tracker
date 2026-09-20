@@ -22,9 +22,11 @@ CONFIRM_PERSIST = "persist source mapping proposals"
 def _args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", choices=("all", "yuyutei", "snkrdunk"), default="all")
-    parser.add_argument("--all-releases", action="store_true")
-    parser.add_argument("--release-product-id", type=int)
-    parser.add_argument("--release-code")
+    release_scope = parser.add_mutually_exclusive_group()
+    release_scope.add_argument("--all-releases", action="store_true")
+    release_scope.add_argument("--release-product-id", type=int)
+    release_scope.add_argument("--release-code")
+    release_scope.add_argument("--release-unresolved", action="store_true")
     parser.add_argument(
         "--resolution-status",
         choices=("exact", "ambiguous", "unresolved_identity", "release_unresolved", "conflict", "stale", "superseded"),
@@ -43,8 +45,16 @@ def _args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("choose exactly one of --dry-run or --persist")
     if args.persist and args.confirm != CONFIRM_PERSIST:
         parser.error(f'--persist requires --confirm "{CONFIRM_PERSIST}"')
-    if args.all_releases and (args.release_product_id or args.release_code):
-        parser.error("--all-releases cannot be combined with a release filter")
+    if args.persist and not any((
+        args.all_releases,
+        args.release_product_id is not None,
+        args.release_code is not None,
+        args.release_unresolved,
+    )):
+        parser.error(
+            "--persist requires exactly one release scope: --all-releases, "
+            "--release-product-id, --release-code, or --release-unresolved"
+        )
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be >= 1")
     if args.offset < 0:
@@ -74,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
                 source=args.source,
                 release_product_id=args.release_product_id,
                 release_code=args.release_code,
+                release_unresolved=args.release_unresolved,
                 resolution_status=args.resolution_status,
                 candidate_id=args.candidate_id,
                 limit=args.limit,

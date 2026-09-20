@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
-from sqlalchemy import inspect, select
+from sqlalchemy import inspect, select, tuple_
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import (
@@ -66,6 +66,7 @@ class ProposalFilters:
     source: str = "all"
     release_product_id: int | None = None
     release_code: str | None = None
+    release_unresolved: bool = False
     resolution_status: str | None = None
     candidate_id: int | None = None
     limit: int | None = None
@@ -264,6 +265,12 @@ def analyse_source_mapping_proposals(
     filters = filters or ProposalFilters()
     if filters.source not in ("all", *SUPPORTED_SOURCES):
         raise ValueError(f"unsupported source {filters.source!r}")
+    if filters.release_unresolved and (
+        filters.release_product_id is not None or filters.release_code is not None
+    ):
+        raise ValueError(
+            "release_unresolved cannot be combined with a resolved release filter"
+        )
 
     sources = {row.name: row for row in db.scalars(select(Source)).all()}
     missing = [name for name in SUPPORTED_SOURCES if name not in sources]
@@ -278,7 +285,12 @@ def analyse_source_mapping_proposals(
             release_by_code[_norm(row.official_code)].append(row)
 
     selected_release_ids = {row.id for row in releases}
-    if filters.release_product_id is not None:
+    has_resolved_release_filter = (
+        filters.release_product_id is not None or filters.release_code is not None
+    )
+    if filters.release_unresolved:
+        selected_release_ids.clear()
+    elif filters.release_product_id is not None:
         selected_release_ids &= {filters.release_product_id}
     if filters.release_code is not None:
         selected_release_ids &= {
@@ -526,8 +538,15 @@ def analyse_source_mapping_proposals(
                 proposal=plan,
             ))
 
+    def in_release_scope(release_product_id: int | None) -> bool:
+        if filters.release_unresolved:
+            return release_product_id is None
+        if has_resolved_release_filter:
+            return release_product_id in selected_release_ids
+        return release_product_id in selected_release_ids or release_product_id is None
+
     plans = [outcome.proposal for outcome in outcomes if outcome.proposal is not None]
-    plans = [plan for plan in plans if plan.release_product_id in selected_release_ids or plan.release_product_id is None]
+    plans = [plan for plan in plans if in_release_scope(plan.release_product_id)]
     if filters.resolution_status:
         plans = [plan for plan in plans if plan.resolution_status == filters.resolution_status]
     plans.sort(key=lambda plan: (plan.source_name, plan.source_candidate_id))
@@ -538,7 +557,7 @@ def analyse_source_mapping_proposals(
 
     selected_outcomes = [
         outcome for outcome in outcomes
-        if outcome.release_product_id in selected_release_ids or outcome.release_product_id is None
+        if in_release_scope(outcome.release_product_id)
     ]
     report = _build_report(
         db=db,
@@ -735,20 +754,54 @@ class PersistenceResult:
 
 
 def persist_proposals(db: Session, plans: Iterable[ProposalPlan]) -> PersistenceResult:
-    """Persist plans idempotently.  Flushes but never commits."""
+    """Persist plans idempotently.  Flushes but never commits.
+
+    Existing versions are loaded in one group query plus the select-in query
+    for their alternatives, so existence checks are O(1) queries per batch
+    rather than two SELECT round trips per proposal plan.
+    """
+    plans = list(plans)
     created = reused = superseded = alternatives = 0
     now = datetime.now(timezone.utc)
-    for plan in plans:
-        current = db.scalar(
+    listing_keys = {
+        (plan.source_id, plan.canonical_source_listing_identity) for plan in plans
+    }
+    existing = (
+        db.scalars(
             select(SourceMappingProposalGroup)
             .options(selectinload(SourceMappingProposalGroup.alternatives))
             .where(
-                SourceMappingProposalGroup.source_id == plan.source_id,
-                SourceMappingProposalGroup.canonical_source_listing_identity
-                == plan.canonical_source_listing_identity,
-                SourceMappingProposalGroup.superseded_at.is_(None),
+                tuple_(
+                    SourceMappingProposalGroup.source_id,
+                    SourceMappingProposalGroup.canonical_source_listing_identity,
+                ).in_(listing_keys)
             )
+        ).all()
+        if listing_keys
+        else []
+    )
+    current_by_listing = {
+        (group.source_id, group.canonical_source_listing_identity): group
+        for group in existing
+        if group.superseded_at is None
+    }
+    historical_by_evidence = {
+        (
+            group.source_id,
+            group.canonical_source_listing_identity,
+            group.resolver_version,
+            group.evidence_digest,
+        ): group
+        for group in existing
+    }
+    for plan in plans:
+        listing_key = (plan.source_id, plan.canonical_source_listing_identity)
+        evidence_key = (
+            *listing_key,
+            plan.resolver_version,
+            plan.evidence_digest,
         )
+        current = current_by_listing.get(listing_key)
         if current is not None and (
             current.resolver_version == plan.resolver_version
             and current.evidence_digest == plan.evidence_digest
@@ -761,17 +814,7 @@ def persist_proposals(db: Session, plans: Iterable[ProposalPlan]) -> Persistence
                 )
             reused += 1
             continue
-        historical = db.scalar(
-            select(SourceMappingProposalGroup)
-            .options(selectinload(SourceMappingProposalGroup.alternatives))
-            .where(
-                SourceMappingProposalGroup.source_id == plan.source_id,
-                SourceMappingProposalGroup.canonical_source_listing_identity
-                == plan.canonical_source_listing_identity,
-                SourceMappingProposalGroup.resolver_version == plan.resolver_version,
-                SourceMappingProposalGroup.evidence_digest == plan.evidence_digest,
-            )
-        )
+        historical = historical_by_evidence.get(evidence_key)
         if historical is not None:
             expected = {(a.card_print_id, a.recommended) for a in plan.alternatives}
             actual = {(a.card_print_id, a.recommended) for a in historical.alternatives}
@@ -784,6 +827,7 @@ def persist_proposals(db: Session, plans: Iterable[ProposalPlan]) -> Persistence
                 db.flush()
                 superseded += 1
             historical.superseded_at = None
+            current_by_listing[listing_key] = historical
             reused += 1
             continue
         if current is not None:
@@ -803,20 +847,22 @@ def persist_proposals(db: Session, plans: Iterable[ProposalPlan]) -> Persistence
             evidence_digest=plan.evidence_digest,
             evidence_summary_json=plan.evidence_summary,
             resolution_reasons_json=list(plan.resolution_reasons),
+            alternatives=[
+                SourceMappingProposalAlternative(
+                    card_print_id=item.card_print_id,
+                    recommended=item.recommended,
+                    supporting_evidence_json=list(item.supporting_evidence),
+                    missing_evidence_json=list(item.missing_evidence),
+                    conflict_reasons_json=list(item.conflict_reasons),
+                    review_disposition="pending",
+                )
+                for item in plan.alternatives
+            ],
         )
         db.add(group)
-        db.flush()
         created += 1
-        for item in plan.alternatives:
-            db.add(SourceMappingProposalAlternative(
-                proposal_group_id=group.id,
-                card_print_id=item.card_print_id,
-                recommended=item.recommended,
-                supporting_evidence_json=list(item.supporting_evidence),
-                missing_evidence_json=list(item.missing_evidence),
-                conflict_reasons_json=list(item.conflict_reasons),
-                review_disposition="pending",
-            ))
-            alternatives += 1
+        alternatives += len(plan.alternatives)
+        current_by_listing[listing_key] = group
+        historical_by_evidence[evidence_key] = group
     db.flush()
     return PersistenceResult(created, reused, superseded, alternatives)
