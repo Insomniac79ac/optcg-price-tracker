@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+from unittest.mock import patch
+
+import pytest
 from sqlalchemy import event, select
 from sqlalchemy.exc import IntegrityError
 
@@ -22,6 +26,7 @@ from app.models import (
 )
 from app.services.source_mapping_proposals import (
     ProposalFilters,
+    ProposalPlan,
     analyse_source_mapping_proposals,
     persist_proposals,
 )
@@ -40,8 +45,9 @@ def _source(db, name):
     return row
 
 
-def _release(db, code, *, name=None):
+def _release(db, code, *, name=None, product_id=None):
     row = ReleaseProduct(
+        id=product_id,
         source_catalogue="bandai_jp",
         official_code=code,
         display_name=name or code,
@@ -107,6 +113,26 @@ def _yuyu(db, run, slug, product_id, code, **kw):
 
 def _base(db):
     return _source(db, "yuyutei"), _source(db, "snkrdunk")
+
+
+def _release_scope_fixture(db):
+    selected = _release(db, "SET-230", product_id=230)
+    other = _release(db, "SET-231", product_id=231)
+    selected_family = _family(db, "CARD-230")
+    other_family = _family(db, "CARD-231")
+    _print(db, selected_family, selected)
+    _print(db, other_family, other)
+    run = _run(db, "set230", "set231")
+    _yuyu(db, run, "set230", 230, selected_family.card_code)
+    _yuyu(db, run, "set231", 231, other_family.card_code)
+    db.add(SnkrdunkCandidate(
+        source_url="https://snkrdunk.com/en/trading-cards/999230",
+        title="unresolved release",
+        detected_card_code=selected_family.card_code,
+        match_status="suggested",
+    ))
+    db.commit()
+    return selected, other
 
 
 def test_catalogue_report_keeps_zero_mapping_releases_and_release_scope_makes_family_exact(db_session):
@@ -231,6 +257,114 @@ def test_unresolved_snkrdunk_alias_stays_release_unresolved(db_session):
     assert not plan.alternatives
 
 
+def test_release_product_filter_excludes_null_and_other_release_plans(db_session):
+    _base(db_session)
+    _release_scope_fixture(db_session)
+
+    analysis = analyse_source_mapping_proposals(
+        db_session, ProposalFilters(release_product_id=230)
+    )
+
+    assert [plan.release_product_id for plan in analysis.plans] == [230]
+
+
+def test_release_code_filter_is_strict_and_release_unresolved_is_explicit(db_session):
+    _base(db_session)
+    _release_scope_fixture(db_session)
+
+    by_code = analyse_source_mapping_proposals(
+        db_session, ProposalFilters(release_code="SET-230")
+    )
+    unresolved = analyse_source_mapping_proposals(
+        db_session, ProposalFilters(release_unresolved=True)
+    )
+
+    assert [plan.release_product_id for plan in by_code.plans] == [230]
+    assert len(unresolved.plans) == 1
+    assert unresolved.plans[0].release_product_id is None
+    assert unresolved.plans[0].resolution_status == "release_unresolved"
+
+
+def test_no_release_filter_preserves_all_release_catalogue_scope(db_session):
+    _base(db_session)
+    _release_scope_fixture(db_session)
+
+    analysis = analyse_source_mapping_proposals(db_session, ProposalFilters())
+
+    assert {plan.release_product_id for plan in analysis.plans} == {None, 230, 231}
+
+
+def test_release_scope_arguments_are_exclusive_and_persistence_requires_one():
+    from app import source_mapping_proposals as cli
+
+    with pytest.raises(SystemExit):
+        cli._args([
+            "--release-product-id", "230", "--release-unresolved", "--dry-run",
+        ])
+    with pytest.raises(SystemExit):
+        cli._args([
+            "--all-releases", "--release-product-id", "230", "--dry-run",
+        ])
+    with pytest.raises(SystemExit):
+        cli._args([
+            "--persist", "--confirm", cli.CONFIRM_PERSIST,
+        ])
+
+    assert cli._args(["--dry-run"]).all_releases is False
+    assert cli._args([
+        "--release-unresolved", "--persist", "--confirm", cli.CONFIRM_PERSIST,
+    ]).release_unresolved is True
+
+
+def test_cli_dry_run_and_persist_use_the_same_strict_release_scope(
+    db_session, monkeypatch, capsys,
+):
+    from app import source_mapping_proposals as cli
+
+    _base(db_session)
+    _release_scope_fixture(db_session)
+    monkeypatch.setattr(cli, "SessionLocal", lambda: db_session)
+    scope = ["--source", "all", "--release-product-id", "230", "--include-groups"]
+
+    assert cli.main([*scope, "--dry-run"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)
+    assert cli.main([
+        "--source", "snkrdunk", "--release-unresolved", "--include-groups", "--dry-run",
+    ]) == 0
+    unresolved = json.loads(capsys.readouterr().out)
+    assert cli.main([
+        "--source", "all", "--all-releases", "--include-groups", "--dry-run",
+    ]) == 0
+    all_releases = json.loads(capsys.readouterr().out)
+    assert cli.main([
+        *scope, "--persist", "--confirm", cli.CONFIRM_PERSIST,
+    ]) == 0
+    persisted = json.loads(capsys.readouterr().out)
+
+    dry_identities = {
+        row["canonical_source_listing_identity"] for row in dry_run["proposal_groups"]
+    }
+    persisted_identities = {
+        row["canonical_source_listing_identity"] for row in persisted["proposal_groups"]
+    }
+    assert dry_identities == persisted_identities
+    assert len(dry_identities) == 1
+    assert len(unresolved["proposal_groups"]) == 1
+    assert unresolved["proposal_groups"][0]["release_product_id"] is None
+    assert {
+        row["release_product_id"] for row in all_releases["proposal_groups"]
+    } == {None, 230, 231}
+    assert persisted["persistence"] == {
+        "created_groups": 1,
+        "reused_groups": 0,
+        "superseded_groups": 0,
+        "created_alternatives": 1,
+    }
+    assert db_session.query(SourceMappingProposalGroup).count() == 1
+    assert db_session.query(SourceCardMapping).count() == 0
+    assert db_session.query(PriceObservation).count() == 0
+
+
 def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overwriting_review(db_session):
     _base(db_session)
     release = _release(db_session, "OP-17")
@@ -244,8 +378,15 @@ def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overw
     db_session.commit()
     second = persist_proposals(db_session, analyse_source_mapping_proposals(db_session).plans)
     db_session.commit()
-    assert (first.created_groups, second.reused_groups) == (1, 1)
+    assert first.created_groups == 1
+    assert first.created_alternatives == 1
+    assert second.created_groups == 0
+    assert second.created_alternatives == 0
+    assert second.superseded_groups == 0
+    assert second.reused_groups == 1
     old = db_session.scalar(select(SourceMappingProposalGroup))
+    assert old.review_status == "pending"
+    assert old.alternatives[0].review_disposition == "pending"
     old.review_status = "approved"
     candidate.name_jp = "changed source evidence"
     db_session.commit()
@@ -259,6 +400,108 @@ def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overw
     assert db_session.query(SourceMappingProposalAlternative).count() == 2
     assert db_session.query(SourceCardMapping).count() == 0
     assert db_session.query(PriceObservation).count() == 0
+
+    candidate.name_jp = family.card_code
+    db_session.commit()
+    restored = persist_proposals(db_session, analyse_source_mapping_proposals(db_session).plans)
+    db_session.commit()
+    rows = db_session.scalars(
+        select(SourceMappingProposalGroup).order_by(SourceMappingProposalGroup.id)
+    ).all()
+    assert restored.created_groups == 0
+    assert restored.created_alternatives == 0
+    assert restored.reused_groups == 1
+    assert restored.superseded_groups == 1
+    assert len(rows) == 2
+    assert rows[0].superseded_at is None
+    assert rows[0].review_status == "approved"
+    assert rows[1].superseded_at is not None
+
+
+def test_multiple_listings_can_reference_one_print_and_one_listing_can_have_many_alternatives(
+    db_session,
+):
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    shared_family = _family(db_session, "OP17-010")
+    shared_print = _print(db_session, shared_family, release)
+    ambiguous_family = _family(db_session, "OP17-011")
+    _print(db_session, ambiguous_family, release, "base")
+    _print(db_session, ambiguous_family, release, "p1")
+    run = _run(db_session, "op17")
+    _yuyu(db_session, run, "op17", 1001, shared_family.card_code)
+    _yuyu(db_session, run, "op17", 1002, shared_family.card_code)
+    ambiguous_candidate = _yuyu(
+        db_session, run, "op17", 1003, ambiguous_family.card_code
+    )
+    db_session.commit()
+
+    analysis = analyse_source_mapping_proposals(
+        db_session, ProposalFilters(release_product_id=release.id)
+    )
+    result = persist_proposals(db_session, analysis.plans)
+    db_session.commit()
+
+    assert result.created_groups == 3
+    assert result.created_alternatives == 4
+    assert db_session.query(SourceMappingProposalAlternative).filter_by(
+        card_print_id=shared_print.id
+    ).count() == 2
+    ambiguous = db_session.scalar(
+        select(SourceMappingProposalGroup).where(
+            SourceMappingProposalGroup.source_candidate_id == ambiguous_candidate.id
+        )
+    )
+    assert len(ambiguous.alternatives) == 2
+
+
+def _synthetic_plans(source_id: int, count: int) -> list[ProposalPlan]:
+    return [
+        ProposalPlan(
+            source_id=source_id,
+            source_name="snkrdunk",
+            canonical_source_listing_identity=f"synthetic-{index}",
+            source_url=f"https://snkrdunk.example.test/{index}",
+            source_candidate_type="snkrdunk_candidate",
+            source_candidate_id=index,
+            canonical_card_id=None,
+            card_code=None,
+            release_product_id=None,
+            resolution_status="release_unresolved",
+            resolver_version="source-mapping-proposals/1.0",
+            evidence_digest=f"{index:064x}",
+            evidence_summary={"candidate_id": index},
+            resolution_reasons=("synthetic_performance_fixture",),
+            alternatives=(),
+        )
+        for index in range(1, count + 1)
+    ]
+
+
+@pytest.mark.parametrize("plan_count", [1, 25, 100])
+def test_persistence_existence_lookups_are_bounded(db_session, plan_count):
+    source = _source(db_session, "snkrdunk")
+    db_session.commit()
+    statements = []
+
+    def capture(_conn, _cursor, statement, _parameters, _context, _executemany):
+        statements.append(statement)
+
+    event.listen(db_session.get_bind(), "before_cursor_execute", capture)
+    try:
+        with patch.object(db_session, "flush", wraps=db_session.flush) as flush:
+            result = persist_proposals(db_session, _synthetic_plans(source.id, plan_count))
+    finally:
+        event.remove(db_session.get_bind(), "before_cursor_execute", capture)
+
+    lookup_selects = [
+        statement for statement in statements
+        if statement.lstrip().upper().startswith("SELECT")
+        and "source_mapping_proposal_groups" in statement
+    ]
+    assert result.created_groups == plan_count
+    assert len(lookup_selects) <= 2
+    assert flush.call_count == 1
 
 
 def test_existing_mapping_is_revalidated_against_candidate_release(db_session):
