@@ -137,6 +137,16 @@ def _run_worker_ingest(url: str, *extra: str) -> str:
 # --- the staging-shaped catalogue -------------------------------------------
 
 
+def _source(session, *, name: str, base_url: str) -> Source:
+    source = session.query(Source).filter_by(name=name).one_or_none()
+    if source is None:
+        source = Source(name=name, base_url=base_url)
+        session.add(source)
+    else:
+        assert source.base_url == base_url
+    return source
+
+
 def _seed(session) -> dict:
     op02 = ReleaseProduct(
         source_catalogue="jp",
@@ -148,8 +158,10 @@ def _seed(session) -> dict:
         verification_status="verified",
     )
     session.add(op02)
-    session.add(Source(name="snkrdunk", base_url="https://snkrdunk.com"))
-    session.add(Source(name="yuyutei", base_url="https://yuyu-tei.jp"))
+    snkrdunk = _source(
+        session, name="snkrdunk", base_url="https://snkrdunk.com"
+    )
+    _source(session, name="yuyutei", base_url="https://yuyu-tei.jp")
     session.flush()
 
     canonical = CanonicalCard(
@@ -208,7 +220,7 @@ def _seed(session) -> dict:
         "candidate": candidate,
         "prints": prints,
         "legacy_card": legacy_card,
-        "snkrdunk": session.query(Source).filter_by(name="snkrdunk").one(),
+        "snkrdunk": snkrdunk,
     }
 
 
