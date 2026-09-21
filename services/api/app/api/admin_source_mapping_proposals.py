@@ -14,12 +14,23 @@ from app.models import (
     SourceMappingProposalGroup,
 )
 from app.services.source_mapping_proposals import ProposalFilters, analyse_source_mapping_proposals
+from app.services.source_mapping_proposal_review import (
+    ReviewFilters,
+    get_persisted_release_summary,
+    get_persisted_review_summary,
+    list_review_groups,
+    review_group_detail,
+)
 from app.source_mapping_proposal_schemas import (
     ProposalGroupDetailOut,
     ProposalGroupListOut,
     ProposalGroupOut,
     ProposalReleaseListOut,
     ProposalSummaryOut,
+    ProposalReviewGroupDetailOut,
+    ProposalReviewGroupListOut,
+    ProposalReviewReleaseListOut,
+    ProposalReviewSummaryOut,
 )
 
 
@@ -142,3 +153,75 @@ def proposal_group_detail(proposal_group_id: int, db: Session = Depends(get_db))
     if row is None:
         raise HTTPException(status_code=404, detail="Proposal group not found")
     return ProposalGroupDetailOut.model_validate(row)
+
+
+# Persisted queue review routes.  Unlike /summary and /releases above these
+# never invoke the resolver; they read only the durable proposal queue.
+
+
+@router.get("/review/summary", response_model=ProposalReviewSummaryOut)
+def proposal_review_summary(db: Session = Depends(get_db)):
+    return get_persisted_review_summary(db)
+
+
+@router.get("/review/releases", response_model=ProposalReviewReleaseListOut)
+def proposal_review_releases(db: Session = Depends(get_db)):
+    return get_persisted_release_summary(db)
+
+
+@router.get("/review/groups", response_model=ProposalReviewGroupListOut)
+def proposal_review_groups(
+    source: str | None = Query(default=None),
+    release_product_id: int | None = Query(default=None),
+    release_code: str | None = Query(default=None),
+    unresolved_release: bool = Query(default=False),
+    resolution_status: str | None = Query(default=None),
+    review_status: str | None = Query(default=None),
+    card_code: str | None = Query(default=None),
+    candidate_id: int | None = Query(default=None),
+    proposal_group_id: int | None = Query(default=None),
+    has_candidate_image: bool | None = Query(default=None),
+    has_recommended_alternative: bool | None = Query(default=None),
+    include_superseded: bool = Query(default=False),
+    q: str | None = Query(default=None, max_length=255),
+    sort: str = Query(default="default"),
+    limit: int = Query(default=50),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    filters = ReviewFilters(
+        source=source,
+        release_product_id=release_product_id,
+        release_code=release_code,
+        unresolved_release=unresolved_release,
+        resolution_status=resolution_status,
+        review_status=review_status,
+        card_code=card_code,
+        candidate_id=candidate_id,
+        proposal_group_id=proposal_group_id,
+        has_candidate_image=has_candidate_image,
+        has_recommended_alternative=has_recommended_alternative,
+        include_superseded=include_superseded,
+        query=q,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
+    try:
+        return list_review_groups(db, filters)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get(
+    "/review/groups/{proposal_group_id}",
+    response_model=ProposalReviewGroupDetailOut,
+)
+def proposal_review_group_detail(
+    proposal_group_id: int,
+    db: Session = Depends(get_db),
+):
+    payload = review_group_detail(db, proposal_group_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Proposal group not found")
+    return payload
