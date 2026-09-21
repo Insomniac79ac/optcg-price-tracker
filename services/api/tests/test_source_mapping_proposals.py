@@ -387,7 +387,11 @@ def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overw
     old = db_session.scalar(select(SourceMappingProposalGroup))
     assert old.review_status == "pending"
     assert old.alternatives[0].review_disposition == "pending"
-    old.review_status = "approved"
+    old.review_status = "rejected"
+    old.reviewed_at = old.updated_at
+    old.reviewed_by = "reviewer@example.test"
+    old.review_notes = "Fixture decision retained across supersession"
+    old.decision_basis_updated_at = old.updated_at
     candidate.name_jp = "changed source evidence"
     db_session.commit()
 
@@ -395,7 +399,7 @@ def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overw
     db_session.commit()
     rows = db_session.scalars(select(SourceMappingProposalGroup).order_by(SourceMappingProposalGroup.id)).all()
     assert (changed.created_groups, changed.superseded_groups) == (1, 1)
-    assert rows[0].review_status == "approved" and rows[0].superseded_at is not None
+    assert rows[0].review_status == "rejected" and rows[0].superseded_at is not None
     assert rows[1].review_status == "pending" and rows[1].superseded_at is None
     assert db_session.query(SourceMappingProposalAlternative).count() == 2
     assert db_session.query(SourceCardMapping).count() == 0
@@ -414,7 +418,7 @@ def test_persistence_is_idempotent_and_changed_evidence_supersedes_without_overw
     assert restored.superseded_groups == 1
     assert len(rows) == 2
     assert rows[0].superseded_at is None
-    assert rows[0].review_status == "approved"
+    assert rows[0].review_status == "rejected"
     assert rows[1].superseded_at is not None
 
 

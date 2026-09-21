@@ -42,6 +42,7 @@ ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 DATABASE_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
 PREVIOUS = "e3a7c5d9b102"
 REVISION = "f4c8a2d91b60"
+CURRENT_HEAD = "a7f936027b8f"
 
 
 def _alembic(*args):
@@ -99,7 +100,9 @@ def test_upgrade_and_downgrade_source_scoped_alias_and_proposal_schema(migration
     inspector = inspect(migration_engine)
     assert "source_id" not in {c["name"] for c in inspector.get_columns("release_product_aliases")}
     assert "source_mapping_proposal_groups" not in inspector.get_table_names()
-    _alembic("upgrade", REVISION)
+    # The remainder of this module exercises the current ORM. Preserve the
+    # f4 round trip above, then advance through the additive decision schema.
+    _alembic("upgrade", CURRENT_HEAD)
 
 
 def _plan(source_id, identity, candidate_id, digest, alternatives):
