@@ -13,6 +13,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     String,
     Text,
@@ -58,12 +59,43 @@ class SourceMappingProposalGroup(Base):
             "length(evidence_digest) = 64",
             name="ck_mapping_proposal_groups_digest_length",
         ),
+        CheckConstraint(
+            "(review_status = 'pending' AND "
+            "reviewed_at IS NULL AND reviewed_by IS NULL AND review_notes IS NULL AND "
+            "selected_alternative_id IS NULL AND decision_basis_updated_at IS NULL AND "
+            "resulting_source_card_mapping_id IS NULL) OR "
+            "(review_status = 'approved' AND "
+            "reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND "
+            "length(trim(reviewed_by, ' \t\n\r')) > 0 AND "
+            "selected_alternative_id IS NOT NULL AND "
+            "decision_basis_updated_at IS NOT NULL AND "
+            "resulting_source_card_mapping_id IS NOT NULL) OR "
+            "(review_status = 'rejected' AND "
+            "reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND "
+            "length(trim(reviewed_by, ' \t\n\r')) > 0 AND review_notes IS NOT NULL AND "
+            "length(trim(review_notes, ' \t\n\r')) > 0 AND "
+            "selected_alternative_id IS NULL AND "
+            "decision_basis_updated_at IS NOT NULL AND "
+            "resulting_source_card_mapping_id IS NULL)",
+            name="ck_mapping_proposal_groups_decision_lifecycle",
+        ),
         UniqueConstraint(
             "source_id",
             "canonical_source_listing_identity",
             "resolver_version",
             "evidence_digest",
             name="uq_mapping_proposal_groups_evidence_version",
+        ),
+        ForeignKeyConstraint(
+            ["selected_alternative_id", "id"],
+            [
+                "source_mapping_proposal_alternatives.id",
+                "source_mapping_proposal_alternatives.proposal_group_id",
+            ],
+            name="fk_mapping_proposal_groups_selected_alternative_same_group",
+            deferrable=True,
+            initially="DEFERRED",
+            use_alter=True,
         ),
         Index(
             "uq_mapping_proposal_groups_current_listing",
@@ -89,7 +121,11 @@ class SourceMappingProposalGroup(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    # The selected-alternative composite FK also contains this primary key.
+    # Keep SQLite's integer-PK generation (and PostgreSQL's normal sequence
+    # behavior) explicit instead of letting SQLAlchemy treat the PK as a
+    # non-autoincrementing foreign-key column.
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement="ignore_fk")
     source_id: Mapped[int] = mapped_column(
         ForeignKey("sources.id", ondelete="RESTRICT"), nullable=False, index=True
     )
@@ -116,6 +152,15 @@ class SourceMappingProposalGroup(Base):
     resulting_source_card_mapping_id: Mapped[int | None] = mapped_column(
         ForeignKey("source_card_mappings.id", ondelete="SET NULL"), nullable=True
     )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected_alternative_id: Mapped[int | None] = mapped_column(nullable=True)
+    decision_basis_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -125,7 +170,10 @@ class SourceMappingProposalGroup(Base):
     superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     alternatives: Mapped[list["SourceMappingProposalAlternative"]] = relationship(
-        back_populates="group", cascade="all, delete-orphan", order_by="SourceMappingProposalAlternative.id"
+        back_populates="group",
+        cascade="all, delete-orphan",
+        foreign_keys="SourceMappingProposalAlternative.proposal_group_id",
+        order_by="SourceMappingProposalAlternative.id",
     )
 
 
@@ -137,6 +185,11 @@ class SourceMappingProposalAlternative(Base):
             "card_print_id",
             name="uq_mapping_proposal_alternatives_group_print",
         ),
+        UniqueConstraint(
+            "id",
+            "proposal_group_id",
+            name="uq_mapping_proposal_alternatives_id_group",
+        ),
         CheckConstraint(
             "review_disposition IN ('pending', 'approved', 'rejected')",
             name="ck_mapping_proposal_alternatives_review_disposition",
@@ -147,6 +200,13 @@ class SourceMappingProposalAlternative(Base):
             "recommended",
         ),
         Index("ix_mapping_proposal_alternatives_group", "proposal_group_id"),
+        Index(
+            "uq_mapping_proposal_alternatives_one_approved_per_group",
+            "proposal_group_id",
+            unique=True,
+            postgresql_where=text("review_disposition = 'approved'"),
+            sqlite_where=text("review_disposition = 'approved'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -175,4 +235,6 @@ class SourceMappingProposalAlternative(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    group: Mapped[SourceMappingProposalGroup] = relationship(back_populates="alternatives")
+    group: Mapped[SourceMappingProposalGroup] = relationship(
+        back_populates="alternatives", foreign_keys=[proposal_group_id]
+    )

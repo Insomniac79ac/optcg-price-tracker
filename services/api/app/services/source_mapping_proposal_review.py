@@ -1212,6 +1212,11 @@ def review_group_detail(db: Session, proposal_group_id: int) -> dict[str, Any] |
         return {
             **item,
             "evidence_digest": group.evidence_digest,
+            "reviewed_at": group.reviewed_at,
+            "reviewed_by": group.reviewed_by,
+            "review_notes": group.review_notes,
+            "selected_alternative_id": group.selected_alternative_id,
+            "decision_basis_updated_at": group.decision_basis_updated_at,
             "evidence_summary": group.evidence_summary_json,
             "resolution_reasons": group.resolution_reasons_json,
             "resulting_mapping": resulting_mapping_payload,
