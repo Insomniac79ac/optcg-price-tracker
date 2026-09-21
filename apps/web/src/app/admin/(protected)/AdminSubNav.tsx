@@ -15,6 +15,7 @@ const ADMIN_ROUTES: { href: string; label: string }[] = [
   { href: "/admin/card-audit", label: "Card Audit" },
   { href: "/admin/card-duplicates", label: "Duplicates" },
   { href: "/admin/snkrdunk-candidates", label: "SNKRDUNK Candidates" },
+  { href: "/admin/source-mapping-proposals", label: "Proposal Review" },
   { href: "/admin/source-mapping-quality", label: "Source Mapping Quality" },
   { href: "/admin/catalog-coverage", label: "Catalog Coverage" },
   { href: "/admin/price-source-health", label: "Price Source Health" },

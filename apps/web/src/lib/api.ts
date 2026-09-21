@@ -674,10 +674,17 @@ const ADMIN_FETCH_TIMEOUT_MS = 15_000;
  * (POST/PATCH) through the same proxy-aware error handling. */
 export async function fetchAdminJson<T>(
   path: string,
-  options?: { method?: string; body?: unknown },
+  options?: { method?: string; body?: unknown; signal?: AbortSignal },
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ADMIN_FETCH_TIMEOUT_MS);
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, ADMIN_FETCH_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+  if (options?.signal?.aborted) controller.abort();
+  else options?.signal?.addEventListener("abort", abortFromCaller, { once: true });
 
   let res: Response;
   try {
@@ -693,6 +700,7 @@ export async function fetchAdminJson<T>(
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
+      if (!timedOut && options?.signal?.aborted) throw err;
       throw new AdminTimeoutError();
     }
     throw new AdminNetworkError(
@@ -700,6 +708,7 @@ export async function fetchAdminJson<T>(
     );
   } finally {
     clearTimeout(timeout);
+    options?.signal?.removeEventListener("abort", abortFromCaller);
   }
 
   if (res.status === 401) throw new AdminAuthRequiredError();
