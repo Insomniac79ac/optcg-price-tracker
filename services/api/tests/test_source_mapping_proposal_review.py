@@ -525,6 +525,13 @@ def test_detail_is_human_readable_and_separates_legacy_compatibility(
     payload = response.json()
     assert payload["resolution_status"] == "ambiguous"
     assert payload["evidence_digest"]
+    assert {
+        payload["reviewed_at"],
+        payload["reviewed_by"],
+        payload["review_notes"],
+        payload["selected_alternative_id"],
+        payload["decision_basis_updated_at"],
+    } == {None}
     assert payload["evidence_summary"]["candidate_id"] == candidate.id
     assert payload["resolution_reasons"] == ["fixture:ambiguous"]
     assert payload["candidate"]["raw_listing_text"].startswith("raw snkr")

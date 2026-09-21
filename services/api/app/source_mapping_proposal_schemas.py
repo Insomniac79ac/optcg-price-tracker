@@ -42,6 +42,11 @@ class ProposalGroupOut(BaseModel):
     evidence_summary_json: dict[str, Any]
     resolution_reasons_json: list
     resulting_source_card_mapping_id: int | None
+    reviewed_at: datetime | None
+    reviewed_by: str | None
+    review_notes: str | None
+    selected_alternative_id: int | None
+    decision_basis_updated_at: datetime | None
     created_at: datetime
     updated_at: datetime
     superseded_at: datetime | None
@@ -316,6 +321,11 @@ class ProposalReviewCompatibilityOut(BaseModel):
 
 class ProposalReviewGroupDetailOut(ProposalReviewGroupOut):
     evidence_digest: str
+    reviewed_at: datetime | None
+    reviewed_by: str | None
+    review_notes: str | None
+    selected_alternative_id: int | None
+    decision_basis_updated_at: datetime | None
     evidence_summary: dict[str, Any]
     resolution_reasons: list[Any]
     resulting_mapping: dict[str, Any] | None
