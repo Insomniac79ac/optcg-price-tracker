@@ -60,7 +60,7 @@ describe("ProposalReviewPage", () => {
     expect(screen.getAllByText("1,918").length).toBeGreaterThan(0);
     expect(screen.getAllByText("1,866").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Read-only queue").length).toBeGreaterThan(0);
-    expect(screen.getByText("Review decisions are not enabled in this phase.")).toBeInTheDocument();
+    expect(screen.getByText("Approval is available only from an eligible proposal detail page. Queue rows remain read-only.")).toBeInTheDocument();
   });
 
   it("updates URL-backed source and resolution filters and resets the page", async () => {
