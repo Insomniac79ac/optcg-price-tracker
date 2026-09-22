@@ -103,7 +103,8 @@ describe("ExactProposalApprovalPanel eligibility", () => {
     }));
     expect(screen.getByRole("heading", { name: "Approved" })).toBeInTheDocument();
     expect(screen.getByText("Mapping #836")).toBeInTheDocument();
-    expect(screen.getByText("reviewer@example.com")).toBeInTheDocument();
+    expect(screen.getByText("r***@example.com")).toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain("reviewer@example.com");
     expect(screen.getByText("Checked physical print")).toBeInTheDocument();
     expect(screen.getByText(/Eligible for future scheduled collection/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /approve/i })).not.toBeInTheDocument();
@@ -261,7 +262,8 @@ describe("ExactProposalApprovalPanel results and refusals", () => {
     const dialog = completeConfirmation();
     fireEvent.click(within(dialog).getByRole("button", { name: "Approve exact proposal" }));
     expect(await screen.findByRole("heading", { name: "Approved" })).toBeInTheDocument();
-    expect(screen.getByText("reviewer@example.com")).toBeInTheDocument();
+    expect(screen.getByText("r***@example.com")).toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain("reviewer@example.com");
     expect(screen.getByText("family_matched")).toBeInTheDocument();
     expect(screen.getByText(mappingLabel)).toBeInTheDocument();
     expect(screen.getByText("Eligible for a future run")).toBeInTheDocument();
