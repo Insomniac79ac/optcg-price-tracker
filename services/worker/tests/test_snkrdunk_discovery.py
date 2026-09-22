@@ -23,6 +23,14 @@ FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 SEARCH_PAGE_HTML = (FIXTURES / "snkrdunk_search_sample.html").read_text(encoding="utf-8")
 CANDIDATE_PAGE_HTML = (FIXTURES / "snkrdunk_candidate_sample.html").read_text(encoding="utf-8")
 
+# Writer tests use supported numeric product URLs; adapter fixtures elsewhere
+# deliberately retain legacy URL shapes for parsing compatibility coverage.
+for old, new in (("/trading-cards/op01-001-luffy-l", "/apparels/100001"),
+                 ("/trading-cards/op02-025-robin-r", "/apparels/100002"),
+                 ("/trading-cards/op01-001-luffy-graded", "/apparels/100003")):
+    SEARCH_PAGE_HTML = SEARCH_PAGE_HTML.replace(old, new)
+    CANDIDATE_PAGE_HTML = CANDIDATE_PAGE_HTML.replace(old, new)
+
 SEARCH_URL = "https://snkrdunk.com/trading-cards/search?category=one-piece-card-game"
 NEXT_PAGE_URL = "https://snkrdunk.com/trading-cards/search?category=one-piece-card-game&page=2"
 
@@ -70,7 +78,7 @@ def test_parse_search_page_extracts_candidates_and_skips_off_domain_links():
     assert all(url.startswith("https://snkrdunk.com/") for url in urls)
     assert "https://external-shop.example.com/should-be-ignored" not in urls
 
-    luffy = next(c for c in result.candidates if "luffy-l" in c.source_url)
+    luffy = next(c for c in result.candidates if "100001" in c.source_url)
     assert luffy.title == "ONE PIECEカードゲーム OP01-001 モンキー・D・ルフィ L"
     assert luffy.price_jpy == 1200
     assert luffy.listing_count == 12
@@ -191,7 +199,7 @@ def test_discover_snkrdunk_stores_snapshots_candidates_and_matches(db_session, t
 
     luffy = (
         db_session.query(SnkrdunkCandidate)
-        .filter(SnkrdunkCandidate.source_url.like("%luffy-l"))
+        .filter(SnkrdunkCandidate.source_url.like("%100001"))
         .one()
     )
     assert luffy.match_status == "matched"
@@ -199,14 +207,14 @@ def test_discover_snkrdunk_stores_snapshots_candidates_and_matches(db_session, t
 
     robin = (
         db_session.query(SnkrdunkCandidate)
-        .filter(SnkrdunkCandidate.source_url.like("%robin-r"))
+        .filter(SnkrdunkCandidate.source_url.like("%100002"))
         .one()
     )
     assert robin.match_status == "matched"
 
     graded = (
         db_session.query(SnkrdunkCandidate)
-        .filter(SnkrdunkCandidate.source_url.like("%luffy-graded"))
+        .filter(SnkrdunkCandidate.source_url.like("%100003"))
         .one()
     )
     assert graded.match_status == "suggested"

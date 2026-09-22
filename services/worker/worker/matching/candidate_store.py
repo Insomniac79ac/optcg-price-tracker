@@ -101,6 +101,13 @@ def apply_match(
         existing_mapping = (
             current[0] if current else None
         )
+        if existing_mapping is None and db.query(SourceCardMapping.id).filter_by(
+            card_id=result.matched_card_id, source_id=source.id,
+            manual_verified=True, superseded_at=None,
+        ).first() is not None:
+            # Keep the existing manual-over-fuzzy policy even when a different
+            # listing for the same legacy card is discovered automatically.
+            return result.match_status
         if existing_mapping is not None and (
             existing_mapping.manual_verified or existing_mapping.review_status == "rejected"
             or existing_mapping.card_print_id is not None
