@@ -98,7 +98,7 @@ REJECTED = "rejected"
 
 
 def find_mapping_for_listing(
-    db: Session, *, source: Source, url: str | None
+    db: Session, *, source: Source, url: str | None, for_update: bool = False
 ) -> SourceCardMapping | None:
     """The one mapping that already holds this listing, or None.
 
@@ -134,23 +134,8 @@ def find_mapping_for_listing(
     parsed = listing_id(url)
     if parsed is None:
         return None
-    rows = db.scalars(
-        select(SourceCardMapping).where(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.like(f"%{parsed}%"),
-        )
-    ).all()
-    matches = [m for m in rows if listing_id(m.source_url) == parsed]
-    if len(matches) > 1:
-        raise ExactPrintApprovalError(
-            REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
-            f"SNKRDUNK listing {parsed} is already held by {len(matches)} mappings "
-            f"({sorted(m.id for m in matches)}). Approving would have to choose one and "
-            "leave the others pointing at printings nobody re-examined. Resolve the "
-            "duplicates first.",
-            alternatives=sorted(m.id for m in matches),
-        )
-    return matches[0] if matches else None
+    from app.services.current_source_mapping import lookup_current_mapping
+    return lookup_current_mapping(db, source=source, url=url, for_update=for_update).current
 
 
 def assert_mapping_may_be_approved(
@@ -239,7 +224,7 @@ def approve_candidate_onto_print(
     # equality was not enough and what it cost. Re-approving a listing first
     # approved under the other path (or stored with discovery's query string)
     # updates that row instead of creating a second mapping for one listing.
-    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, decision.card_print.id)
     mapping_created = mapping is None
 

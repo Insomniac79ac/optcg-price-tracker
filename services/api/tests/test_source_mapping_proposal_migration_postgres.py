@@ -42,7 +42,7 @@ ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 DATABASE_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
 PREVIOUS = "e3a7c5d9b102"
 REVISION = "f4c8a2d91b60"
-CURRENT_HEAD = "a7f936027b8f"
+CURRENT_HEAD = "b8e04219d6c3"
 
 
 def _alembic(*args):

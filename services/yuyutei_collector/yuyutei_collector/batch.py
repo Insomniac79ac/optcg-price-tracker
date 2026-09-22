@@ -155,6 +155,7 @@ def select_eligible_mappings(
         .where(
             Source.name == YUYUTEI_SOURCE_NAME,
             SourceCardMapping.is_active.is_(True),
+            SourceCardMapping.superseded_at.is_(None),
             SourceCardMapping.review_status == "approved",
             SourceCardMapping.card_print_id.is_not(None),
             CardPrint.is_active.is_(True),

@@ -94,8 +94,8 @@ def test_import_creates_source_mappings(tmp_path, db_session):
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
-                snkrdunk_url="https://snkrdunk.com/cards/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
+                snkrdunk_url="https://snkrdunk.com/apparels/100001",
                 manual_verified="true",
             )
         ],
@@ -126,7 +126,7 @@ def test_import_creates_active_needs_review_mappings_when_manual_verified(tmp_pa
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
                 manual_verified="true",
             )
         ],
@@ -141,13 +141,13 @@ def test_import_creates_active_needs_review_mappings_when_manual_verified(tmp_pa
     assert mapping.card_print_id is None
 
 
-def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path, db_session):
-    """Re-activation still works; the row comes back for review, not approved."""
+def test_reimport_cannot_override_a_rejected_mapping(tmp_path, db_session):
+    """Rejected current listing is a human decision, not an empty slot."""
     csv_path = write_csv(
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
                 manual_verified="false",
             )
         ],
@@ -164,17 +164,19 @@ def test_reimporting_as_manual_verified_reactivates_a_rejected_mapping(tmp_path,
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
                 manual_verified="true",
             )
         ],
     )
-    import_watchlist(reimport_csv, db=db_session)
+    with pytest.raises(ValueError, match="listing_has_protected_mapping"):
+        import_watchlist(reimport_csv, db=db_session)
+    db_session.rollback()
 
     db_session.expire_all()
     updated = db_session.query(SourceCardMapping).filter_by(card_id=card.id).one()
-    assert updated.is_active is True
-    assert updated.review_status == "needs_review"
+    assert updated.is_active is False
+    assert updated.review_status == "rejected"
 
 
 def test_import_skips_empty_source_urls(tmp_path, db_session):
@@ -182,7 +184,7 @@ def test_import_skips_empty_source_urls(tmp_path, db_session):
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
                 snkrdunk_url="",
             )
         ],
@@ -205,8 +207,8 @@ def test_import_allows_multiple_yuyutei_urls_for_same_card(tmp_path, db_session)
     csv_path = write_csv(
         tmp_path,
         [
-            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001-raw"),
-            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001-graded"),
+            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001"),
+            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10002"),
         ],
     )
 
@@ -220,8 +222,8 @@ def test_import_allows_multiple_yuyutei_urls_for_same_card(tmp_path, db_session)
     mappings = db_session.query(SourceCardMapping).filter_by(card_id=card.id).all()
     assert len(mappings) == 2
     assert {m.source_url for m in mappings} == {
-        "https://yuyu-tei.jp/sell/opc/card/OP01-001-raw",
-        "https://yuyu-tei.jp/sell/opc/card/OP01-001-graded",
+        "https://yuyu-tei.jp/sell/opc/card/op01/10001",
+        "https://yuyu-tei.jp/sell/opc/card/op01/10002",
     }
 
 
@@ -229,8 +231,8 @@ def test_import_allows_multiple_snkrdunk_urls_for_same_card(tmp_path, db_session
     csv_path = write_csv(
         tmp_path,
         [
-            base_row(snkrdunk_url="https://snkrdunk.com/cards/op01-001-listing-a"),
-            base_row(snkrdunk_url="https://snkrdunk.com/cards/op01-001-listing-b"),
+            base_row(snkrdunk_url="https://snkrdunk.com/apparels/100001"),
+            base_row(snkrdunk_url="https://snkrdunk.com/apparels/100002"),
         ],
     )
 
@@ -243,8 +245,8 @@ def test_import_allows_multiple_snkrdunk_urls_for_same_card(tmp_path, db_session
     mappings = db_session.query(SourceCardMapping).filter_by(card_id=card.id).all()
     assert len(mappings) == 2
     assert {m.source_url for m in mappings} == {
-        "https://snkrdunk.com/cards/op01-001-listing-a",
-        "https://snkrdunk.com/cards/op01-001-listing-b",
+        "https://snkrdunk.com/apparels/100001",
+        "https://snkrdunk.com/apparels/100002",
     }
 
 
@@ -253,8 +255,8 @@ def test_reimport_same_csv_does_not_create_duplicate_mappings(tmp_path, db_sessi
         tmp_path,
         [
             base_row(
-                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
-                snkrdunk_url="https://snkrdunk.com/cards/OP01-001",
+                yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
+                snkrdunk_url="https://snkrdunk.com/apparels/100001",
                 manual_verified="true",
             )
         ],
@@ -277,8 +279,8 @@ def test_duplicate_source_url_rows_in_csv_do_not_crash(tmp_path, db_session):
     csv_path = write_csv(
         tmp_path,
         [
-            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001"),
-            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/OP01-001"),
+            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001"),
+            base_row(yuyutei_url="https://yuyu-tei.jp/sell/opc/card/op01/10001"),
         ],
     )
 
@@ -305,13 +307,13 @@ def test_source_card_mappings_no_longer_unique_on_card_id_and_source_id(db_sessi
     db_session.add(
         SourceCardMapping(
             card_id=card.id, source_id=source.id, source_card_id="OP01-001",
-            source_url="https://yuyu-tei.jp/sell/opc/card/OP01-001-raw",
+            source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
         )
     )
     db_session.add(
         SourceCardMapping(
             card_id=card.id, source_id=source.id, source_card_id="OP01-001",
-            source_url="https://yuyu-tei.jp/sell/opc/card/OP01-001-graded",
+            source_url="https://yuyu-tei.jp/sell/opc/card/op01/10002",
         )
     )
 
@@ -338,7 +340,7 @@ def test_source_card_mappings_unique_on_source_id_and_source_url(db_session):
     db_session.add(
         SourceCardMapping(
             card_id=card_a.id, source_id=source.id, source_card_id="OP01-001",
-            source_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+            source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
         )
     )
     db_session.commit()
@@ -346,7 +348,7 @@ def test_source_card_mappings_unique_on_source_id_and_source_url(db_session):
     db_session.add(
         SourceCardMapping(
             card_id=card_b.id, source_id=source.id, source_card_id="OP01-002",
-            source_url="https://yuyu-tei.jp/sell/opc/card/OP01-001",
+            source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001",
         )
     )
     with pytest.raises(IntegrityError):

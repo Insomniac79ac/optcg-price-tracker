@@ -22,6 +22,18 @@ from worker.models import (
 CANDIDATE_URL = "https://snkrdunk.com/trading-cards/op01-001-luffy-l"
 
 
+def test_superseded_active_mapping_cannot_price(db_session):
+    from datetime import datetime, timezone
+    from worker.mapping_gate import is_priceable_mapping, load_priceable_mapping_lineage
+    source, card = seed_source_and_card(db_session)
+    row = print_mapping(db_session, source, superseded_at=datetime.now(timezone.utc))
+    make_candidate(db_session, card)
+    assert not is_priceable_mapping(row)
+    assert load_priceable_mapping_lineage(db_session, row.id, expected_source_name="snkrdunk") is None
+    result = ingest_snkrdunk_candidate_prices(db=db_session)
+    assert result.observations_created == 0
+
+
 def seed_source_and_card(db_session) -> tuple[Source, Card]:
     source = Source(name="snkrdunk", base_url="https://snkrdunk.com")
     card = Card(

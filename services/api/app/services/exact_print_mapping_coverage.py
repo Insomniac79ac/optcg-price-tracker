@@ -298,7 +298,7 @@ def _classify_exact_rows(mappings: list[SourceCardMapping]) -> str:
     live_candidates = [
         mapping
         for mapping in mappings
-        if mapping.is_active and mapping.review_status != "rejected"
+        if mapping.superseded_at is None and mapping.is_active and mapping.review_status != "rejected"
     ]
     if len(live_candidates) > 1:
         return AMBIGUOUS_MULTIPLE_EXACT_MAPPINGS
@@ -308,7 +308,7 @@ def _classify_exact_rows(mappings: list[SourceCardMapping]) -> str:
             if live_candidates[0].review_status == "approved"
             else EXACT_NEEDS_REVIEW
         )
-    if any(mapping.is_active for mapping in mappings):
+    if any(mapping.is_active and mapping.superseded_at is None for mapping in mappings):
         return EXACT_REJECTED
     return EXACT_INACTIVE
 
@@ -483,7 +483,7 @@ def _compute_exact_print_mapping_coverage(
                 mapping = next(
                     mapping
                     for mapping in mappings
-                    if mapping.is_active and mapping.review_status == "approved"
+                    if mapping.superseded_at is None and mapping.is_active and mapping.review_status == "approved"
                 )
                 approved_mapping_by_pair[(print_row.id, source)] = mapping
                 approved_mapping_ids.add(mapping.id)

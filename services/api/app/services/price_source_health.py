@@ -326,6 +326,7 @@ def _filtered_identities(
     conditions = []
     if not filters.include_inactive_mappings:
         conditions.append(SourceCardMapping.is_active.is_(True))
+        conditions.append(SourceCardMapping.superseded_at.is_(None))
     identities = load_source_mapping_identities(db, conditions=conditions)
 
     def matches(identity: SourceMappingIdentity) -> bool:

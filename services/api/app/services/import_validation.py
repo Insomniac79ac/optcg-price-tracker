@@ -668,11 +668,21 @@ def _validate_source_mappings_row(
 
     existing_mapping = None
     if source is not None:
-        existing_mapping = db.scalars(
-            select(SourceCardMapping).where(
-                SourceCardMapping.source_id == source.id, SourceCardMapping.source_url == source_url
-            )
-        ).first()
+        from opcg_source_identity import canonical_source_listing_identity
+        identity = canonical_source_listing_identity(source.name, source_url)
+        if source.name in ("yuyutei", "snkrdunk"):
+            from app.services.current_source_mapping import lookup_current_mapping
+            from app.services.exact_print_approval import ExactPrintApprovalError
+            try:
+                existing_mapping = lookup_current_mapping(db, source=source, url=source_url).current
+            except ExactPrintApprovalError as exc:
+                errors.append(RowIssue(row_number, "source_url", source_url, exc.code, exc.detail))
+            dedupe_key = (source_name.strip().lower(), identity or source_url)
+        else:
+            existing_mapping = db.scalars(select(SourceCardMapping).where(
+                SourceCardMapping.source_id == source.id, SourceCardMapping.source_url == source_url,
+                SourceCardMapping.superseded_at.is_(None),
+            )).first()
         if existing_mapping is not None:
             warnings.append(
                 RowIssue(

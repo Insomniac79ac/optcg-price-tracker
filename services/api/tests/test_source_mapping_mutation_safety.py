@@ -288,7 +288,7 @@ def test_approved_exact_listing_identity_edit_forces_rereview_and_preserves_hist
     response = client.patch(
         f"/admin/source-mappings/{mapping.id}",
         json={
-            "source_url": "https://yuyutei.example/identity-after",
+            "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10098",
             "source_card_id": "OP01-110-new-listing",
         },
     )

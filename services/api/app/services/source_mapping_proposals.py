@@ -156,11 +156,8 @@ class ProposalAnalysis:
 
 
 def _mapping_listing_identity(source_name: str, url: str | None) -> str | None:
-    if source_name == "yuyutei":
-        parsed = yuyutei_listing_identity(url)
-        return f"{parsed[0]}:{parsed[1]}" if parsed else None
-    parsed = snkrdunk_listing_id(url)
-    return parsed
+    from opcg_source_identity import canonical_source_listing_identity
+    return canonical_source_listing_identity(source_name, url)
 
 
 def _candidate_payload(candidate: Any, source_name: str) -> dict[str, Any]:
@@ -336,10 +333,12 @@ def analyse_source_mapping_proposals(
     approved_mapping_prints: dict[str, set[int]] = defaultdict(set)
     exact_mapping_print_ids: dict[str, list[int]] = defaultdict(list)
     for mapping in mappings:
+        if mapping.superseded_at is not None:
+            continue
         source_name = source_name_by_id.get(mapping.source_id)
         if source_name not in SUPPORTED_SOURCES or mapping.card_print_id is None:
             continue
-        identity = _mapping_listing_identity(source_name, mapping.source_url)
+        identity = mapping.canonical_source_listing_identity
         if identity:
             exact_mapping_by_listing[(source_name, identity)].append(mapping)
         if mapping.is_active and mapping.review_status == "approved":

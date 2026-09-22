@@ -72,6 +72,8 @@ class WriteResult:
 def validate_mapping_for_write(session: Session, mapping: SourceCardMapping) -> list[str]:
     """Mapping-level fail-closed checks, independent of page content."""
     reasons: list[str] = []
+    if mapping.superseded_at is not None:
+        reasons.append("mapping_superseded")
     if not mapping.is_active:
         reasons.append("mapping_not_active")
     if mapping.review_status != "approved":

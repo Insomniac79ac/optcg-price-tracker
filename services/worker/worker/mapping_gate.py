@@ -34,6 +34,7 @@ APPROVED_REVIEW_STATUS = "approved"
 # SQL-level form, for callers that select mappings in bulk. Spread into a
 # query with `.filter(*PRICEABLE_MAPPING_CONDITIONS)`.
 PRICEABLE_MAPPING_CONDITIONS = (
+    SourceCardMapping.superseded_at.is_(None),
     SourceCardMapping.is_active.is_(True),
     SourceCardMapping.review_status == APPROVED_REVIEW_STATUS,
     SourceCardMapping.card_print_id.is_not(None),
@@ -63,6 +64,7 @@ def is_priceable_mapping(mapping: SourceCardMapping) -> bool:
     """
     return (
         bool(mapping.is_active)
+        and mapping.superseded_at is None
         and mapping.review_status == APPROVED_REVIEW_STATUS
         and mapping.card_print_id is not None
     )

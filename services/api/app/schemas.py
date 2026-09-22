@@ -1818,6 +1818,11 @@ class AlertRuleUpdateIn(BaseModel):
 
 
 class SourceCardMappingOut(BaseModel):
+    canonical_source_listing_identity: str | None = None
+    mapping_lifecycle: Literal["current", "superseded"] = "current"
+    superseded_at: datetime | None = None
+    superseded_by_mapping_id: int | None = None
+    supersession_reason: str | None = None
     id: int
     # NULL on a print-authoritative mapping: card_print_id below is the
     # identity, and the legacy `cards` table cannot name most of the
@@ -1866,6 +1871,11 @@ class SourceCardMappingUpdateIn(BaseModel):
 
 
 class MappingQualityItemOut(BaseModel):
+    canonical_source_listing_identity: str | None = None
+    mapping_lifecycle: Literal["current", "superseded"] = "current"
+    superseded_at: datetime | None = None
+    superseded_by_mapping_id: int | None = None
+    supersession_reason: str | None = None
     mapping_id: int
     identity_classification: Literal["exact", "legacy_compatibility", "broken"]
     confidence_scope: Literal["exact_print", "compatibility_only", "structural_failure"]
@@ -1931,6 +1941,7 @@ class MappingQualitySummaryOut(BaseModel):
 
 
 class MappingQualityListOut(BaseModel):
+    global_listing_integrity: dict[str, Any] = Field(default_factory=dict)
     summary: MappingQualitySummaryOut
     items: list[MappingQualityItemOut]
     pagination: PaginationMeta

@@ -116,6 +116,7 @@ def select_eligible_mappings(
         .where(
             Source.name == SNKRDUNK_SOURCE_NAME,
             SourceCardMapping.is_active.is_(True),
+            SourceCardMapping.superseded_at.is_(None),
             SourceCardMapping.card_print_id.is_not(None),
             CardPrint.is_active.is_(True),
         )

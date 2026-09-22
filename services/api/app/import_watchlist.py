@@ -73,17 +73,23 @@ def _upsert_mapping(
     """Upsert a source_card_mappings row keyed by (source_id, source_url), so
     a card can have multiple mappings per source (raw/graded pages, reprints,
     multiple listings, etc)."""
-    key = (source.id, url)
+    from opcg_source_identity import canonical_source_listing_identity
+    key = (source.id, canonical_source_listing_identity(source.name, url) or url)
     if key in seen_urls:
         summary.duplicate_urls_skipped += 1
         return
     seen_urls.add(key)
 
-    mapping = (
-        db.query(SourceCardMapping)
-        .filter_by(source_id=source.id, source_url=url)
-        .one_or_none()
-    )
+    if source.name in ("yuyutei", "snkrdunk"):
+        from app.services.current_source_mapping import lookup_current_mapping
+        mapping = lookup_current_mapping(db, source=source, url=url, for_update=True).current
+    else:
+        mapping = db.query(SourceCardMapping).filter_by(source_id=source.id, source_url=url, superseded_at=None).one_or_none()
+    if mapping is not None and (
+        mapping.review_status == "rejected" or mapping.card_print_id is not None
+        or mapping.card_id != card.id
+    ):
+        raise ValueError("listing_has_protected_mapping")
     if mapping is None:
         mapping = SourceCardMapping(
             card_id=card.id,
@@ -101,11 +107,8 @@ def _upsert_mapping(
         mapping.match_confidence = None
         summary.mappings_updated += 1
 
-    # A row the watchlist itself vouches for (manual_verified=true) is
-    # authoritative about the LISTING - re-importing it should un-reject/
-    # re-activate it even if an earlier review had flagged it, since a curated
-    # watchlist entry is a stronger signal than a prior auto-match review
-    # decision.
+    # A watchlist is listing evidence only. The protection above preserves
+    # rejected and exact human decisions; CSV does not override them.
     #
     # It is NOT authoritative about the printing, and no longer claims to be.
     # This importer resolves its target from `card_code` alone, which is the
@@ -119,6 +122,7 @@ def _upsert_mapping(
         mapping.is_active = True
         if mapping.review_status != "approved":
             mapping.review_status = "needs_review"
+    db.flush()  # Make the next row's canonical lookup see this mapping.
 
 
 def _import_row(

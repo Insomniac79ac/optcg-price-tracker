@@ -120,6 +120,7 @@ class SourceCardMapping(Base):
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean)
     review_status: Mapped[str] = mapped_column(String(32))
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False)

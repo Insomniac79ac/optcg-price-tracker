@@ -40,6 +40,7 @@ from app.schemas import (
     SuggestedCardsOut,
 )
 from app.services.app_logging import record_app_log
+from app.services.mapping_listing_report import mapping_listing_report
 from app.api._mapping_approval import (
     REFUSAL_MAPPING_IDENTITY_BROKEN,
     approval_http_error,
@@ -148,6 +149,7 @@ def get_mapping_quality(
     out_items = [_item_to_out(i) for i in items]
 
     return MappingQualityListOut(
+        global_listing_integrity=mapping_listing_report(db),
         summary=MappingQualitySummaryOut(**summary),
         items=out_items,
         pagination=pagination_response(out_items, total, limit, offset),

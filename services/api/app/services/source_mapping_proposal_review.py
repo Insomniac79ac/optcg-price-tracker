@@ -383,6 +383,7 @@ def persisted_release_summary(db: Session) -> dict[str, Any]:
     ).where(
         SourceCardMapping.card_print_id.is_not(None),
         SourceCardMapping.is_active.is_(True),
+        SourceCardMapping.superseded_at.is_(None),
         SourceCardMapping.review_status == "approved",
     )
     proposed_prints = (
@@ -1168,6 +1169,10 @@ def review_group_detail(db: Session, proposal_group_id: int) -> dict[str, Any] |
                     "source_id": mapping.source_id,
                     "source_card_id": mapping.source_card_id,
                     "source_url": mapping.source_url,
+                    "canonical_source_listing_identity": mapping.canonical_source_listing_identity,
+                    "superseded_at": mapping.superseded_at,
+                    "superseded_by_mapping_id": mapping.superseded_by_mapping_id,
+                    "supersession_reason": mapping.supersession_reason,
                     "card_print_id": mapping.card_print_id,
                     "review_status": mapping.review_status,
                     "is_active": mapping.is_active,

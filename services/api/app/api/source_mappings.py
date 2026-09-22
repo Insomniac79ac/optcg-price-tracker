@@ -38,6 +38,11 @@ def _to_out(
     mapping: SourceCardMapping, card: Card | None, source: Source | None
 ) -> SourceCardMappingOut:
     return SourceCardMappingOut(
+        canonical_source_listing_identity=mapping.canonical_source_listing_identity,
+        mapping_lifecycle="current" if mapping.superseded_at is None else "superseded",
+        superseded_at=mapping.superseded_at,
+        superseded_by_mapping_id=mapping.superseded_by_mapping_id,
+        supersession_reason=mapping.supersession_reason,
         id=mapping.id,
         card_id=mapping.card_id,
         card_print_id=mapping.card_print_id,
@@ -173,6 +178,18 @@ def update_source_mapping(
     mapping = _get_mapping_or_404(db, mapping_id)
 
     updates = body.model_dump(exclude_unset=True)
+    if mapping.superseded_at is not None:
+        raise HTTPException(status_code=409, detail={"code": "mapping_superseded"})
+    if "source_url" in updates and updates["source_url"] != mapping.source_url:
+        source = db.get(Source, mapping.source_id)
+        if source and source.name in ("yuyutei", "snkrdunk"):
+            from app.services.current_source_mapping import lookup_current_mapping
+            try:
+                found = lookup_current_mapping(db, source=source, url=updates["source_url"], for_update=True)
+                if found.current is not None and found.current.id != mapping.id:
+                    raise HTTPException(status_code=409, detail={"code": "listing_already_mapped"})
+            except ExactPrintApprovalError as exc:
+                raise approval_http_error(exc) from exc
     if "review_status" in updates and updates["review_status"] not in REVIEW_STATUSES:
         raise HTTPException(
             status_code=400,

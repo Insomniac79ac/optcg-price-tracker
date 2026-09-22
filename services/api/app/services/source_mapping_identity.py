@@ -94,6 +94,7 @@ class SourceMappingIdentity:
         """
         return (
             self.mapping.is_active
+            and self.mapping.superseded_at is None
             and self.mapping.review_status == "approved"
             and self.is_priceable_print
         )

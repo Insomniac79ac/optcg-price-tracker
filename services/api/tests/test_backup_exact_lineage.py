@@ -200,7 +200,7 @@ def test_current_archive_unknown_table_is_rejected():
 
 def test_old_version_is_rejected_instead_of_reinterpreted_as_current():
     archive = exact_archive()
-    archive["metadata"]["backup_version"] = BACKUP_VERSION - 1
+    archive["metadata"]["backup_version"] = 11  # v12 has an explicit additive compatibility path.
 
     result = validate_backup(archive)
 
