@@ -3,6 +3,7 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminIdentityForRouteHandler } from "@/lib/adminSession";
+import { signAdminActorAssertion } from "@/lib/adminActorAssertion";
 
 /** Shared server-side boundary + upstream-fetch helper for every
  * /api/admin/** Route Handler (and any other Next.js route that performs
@@ -140,6 +141,94 @@ export async function proxyAdminJson(
     return NextResponse.json(parsed, { status: backendResponse.status });
   } catch {
     console.error(`[${label} proxy] backend response was not valid JSON (status=${backendResponse.status})`);
+    return NextResponse.json(
+      {
+        error: "Invalid JSON from backend API",
+        backend_status: backendResponse.status,
+        body_preview: bodyText.slice(0, 500),
+      },
+      { status: fallbackStatus },
+    );
+  }
+}
+
+/** Actor-bound variant used only by proposal decisions. It reads the exact
+ * browser body bytes, signs those same bytes after server-side Auth.js
+ * authorization, and forwards only server-generated credentials. */
+export async function proxyAdminActorJson(
+  request: NextRequest,
+  backendPath: string,
+  options?: Pick<ProxyAdminJsonOptions, "timeoutMs" | "logLabel">,
+): Promise<NextResponse> {
+  const auth = await requireAdminOrResponse();
+  if ("response" in auth) return auth.response;
+
+  const adminToken = process.env.ADMIN_TOKEN;
+  if (!adminToken) {
+    return NextResponse.json(
+      { error: "Admin actor signing is not configured." },
+      { status: 500 },
+    );
+  }
+
+  const method = request.method.toUpperCase();
+  const body = new Uint8Array(await request.arrayBuffer());
+  const assertion = await signAdminActorAssertion({
+    adminToken,
+    identity: auth.identity,
+    method,
+    path: backendPath,
+    body,
+  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Admin-Token": adminToken,
+    "X-Admin-Actor-Assertion": assertion,
+  };
+  const backendUrl = `${API_INTERNAL_URL}${backendPath}`;
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_BACKEND_TIMEOUT_MS;
+  const label = options?.logLabel ?? backendPath;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let backendResponse: Response;
+  try {
+    backendResponse = await fetch(backendUrl, {
+      method,
+      headers,
+      body,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    const timedOut = err instanceof DOMException && err.name === "AbortError";
+    console.error(
+      `[${label} proxy] failed to reach backend at ${backendUrl}: ${
+        timedOut ? `timed out after ${timeoutMs}ms` : String(err)
+      }`,
+    );
+    return NextResponse.json(
+      { error: timedOut ? "Timed out waiting for backend API" : "Failed to reach backend API" },
+      { status: 502 },
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const bodyText = await backendResponse.text();
+  const fallbackStatus = backendResponse.ok ? 502 : backendResponse.status;
+  if (!bodyText) {
+    return NextResponse.json(
+      { error: "Empty response from backend API", backend_status: backendResponse.status },
+      { status: fallbackStatus },
+    );
+  }
+  try {
+    return NextResponse.json(JSON.parse(bodyText), { status: backendResponse.status });
+  } catch {
+    console.error(
+      `[${label} proxy] backend response was not valid JSON (status=${backendResponse.status})`,
+    );
     return NextResponse.json(
       {
         error: "Invalid JSON from backend API",

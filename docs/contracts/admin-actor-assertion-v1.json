@@ -1,0 +1,19 @@
+{
+  "admin_token": "contract-admin-token",
+  "body_utf8": "{\"selected_alternative_id\":7}",
+  "derived_key_hex": "613a3acf4b99cb2c7e1e13b18a3c39cf6b0b4a5506ddfc26e775e8e57c0fcb03",
+  "body_sha256": "dac082ce89a9b9db3369b15ea538152150354b46a5d5673c74608ac8c3960d5f",
+  "claims": {
+    "issuer": "opcg-web-admin-proxy",
+    "audience": "opcg-proposal-decision",
+    "purpose": "approve_exact_proposal",
+    "subject": "authjs-user-123",
+    "email": "reviewer@example.com",
+    "issued_at": 1790000000,
+    "expiry": 1790000060,
+    "jti": "00000000-0000-4000-8000-000000000001",
+    "method": "POST",
+    "path": "/admin/source-mapping-proposals/review/groups/42/approve-exact"
+  },
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdXJwb3NlIjoiYXBwcm92ZV9leGFjdF9wcm9wb3NhbCIsImVtYWlsIjoicmV2aWV3ZXJAZXhhbXBsZS5jb20iLCJtZXRob2QiOiJQT1NUIiwicGF0aCI6Ii9hZG1pbi9zb3VyY2UtbWFwcGluZy1wcm9wb3NhbHMvcmV2aWV3L2dyb3Vwcy80Mi9hcHByb3ZlLWV4YWN0IiwiYm9keV9zaGEyNTYiOiJkYWMwODJjZTg5YTliOWRiMzM2OWIxNWVhNTM4MTUyMTUwMzU0YjQ2YTVkNTY3M2M3NDYwOGFjOGMzOTYwZDVmIiwiaXNzIjoib3BjZy13ZWItYWRtaW4tcHJveHkiLCJhdWQiOiJvcGNnLXByb3Bvc2FsLWRlY2lzaW9uIiwic3ViIjoiYXV0aGpzLXVzZXItMTIzIiwiaWF0IjoxNzkwMDAwMDAwLCJleHAiOjE3OTAwMDAwNjAsImp0aSI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9.Sl6yEN4V1GKKhFZy-uHO2_wrPuocIoYY2kusRJhYE9M"
+}
