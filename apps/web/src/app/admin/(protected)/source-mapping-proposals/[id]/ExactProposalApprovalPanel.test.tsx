@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -103,10 +104,25 @@ describe("ExactProposalApprovalPanel eligibility", () => {
     }));
     expect(screen.getByRole("heading", { name: "Approved" })).toBeInTheDocument();
     expect(screen.getByText("Mapping #836")).toBeInTheDocument();
-    expect(screen.getByText("reviewer@example.com")).toBeInTheDocument();
+    expect(screen.getByText("r***@example.com")).toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain("reviewer@example.com");
     expect(screen.getByText("Checked physical print")).toBeInTheDocument();
     expect(screen.getByText(/Eligible for future scheduled collection/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /approve/i })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["reviewer@example.com", "r***@example.com"],
+    ["i@gmail.com", "i***@gmail.com"],
+    ["malformed-reviewer", "Reviewer recorded"],
+    [null, "Not returned"],
+  ])("masks reviewer %s throughout server-rendered terminal markup", (reviewer, masked) => {
+    const proposal = makeReviewDetail({ review_status: "approved", reviewed_by: reviewer });
+    const html = renderToStaticMarkup(<ExactProposalApprovalPanel proposal={proposal} onReload={vi.fn()} />);
+    expect(html).toContain(masked);
+    // Whole markup includes text, aria labels, titles, tooltips and data attributes.
+    if (reviewer) expect(html).not.toContain(reviewer);
+    expect(approveExactProposal).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -261,7 +277,8 @@ describe("ExactProposalApprovalPanel results and refusals", () => {
     const dialog = completeConfirmation();
     fireEvent.click(within(dialog).getByRole("button", { name: "Approve exact proposal" }));
     expect(await screen.findByRole("heading", { name: "Approved" })).toBeInTheDocument();
-    expect(screen.getByText("reviewer@example.com")).toBeInTheDocument();
+    expect(screen.getByText("r***@example.com")).toBeInTheDocument();
+    expect(document.body.innerHTML).not.toContain("reviewer@example.com");
     expect(screen.getByText("family_matched")).toBeInTheDocument();
     expect(screen.getByText(mappingLabel)).toBeInTheDocument();
     expect(screen.getByText("Eligible for a future run")).toBeInTheDocument();

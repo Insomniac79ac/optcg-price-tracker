@@ -247,7 +247,7 @@ def assert_source_identity_is_intact(candidate: YuyuteiCandidate) -> tuple[str, 
 
 
 def find_mapping_for_listing(
-    db: Session, *, source: Source, url: str | None
+    db: Session, *, source: Source, url: str | None, for_update: bool = False
 ) -> SourceCardMapping | None:
     """The one mapping that already holds this listing, or None.
 
@@ -277,24 +277,8 @@ def find_mapping_for_listing(
     identity = listing_identity(url)
     if identity is None:
         return None
-    set_slug, product_id = identity
-    rows = db.scalars(
-        select(SourceCardMapping).where(
-            SourceCardMapping.source_id == source.id,
-            SourceCardMapping.source_url.like(f"%/{set_slug}/{product_id}%"),
-        )
-    ).all()
-    matches = [m for m in rows if listing_identity(m.source_url) == identity]
-    if len(matches) > 1:
-        raise ExactPrintApprovalError(
-            REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
-            f"Yuyu-Tei listing {set_slug}/{product_id} is already held by "
-            f"{len(matches)} mappings ({sorted(m.id for m in matches)}). Approving "
-            "would have to choose one and leave the others pointing at printings "
-            "nobody re-examined. Resolve the duplicates first.",
-            alternatives=sorted(m.id for m in matches),
-        )
-    return matches[0] if matches else None
+    from app.services.current_source_mapping import lookup_current_mapping
+    return lookup_current_mapping(db, source=source, url=url, for_update=for_update).current
 
 
 def assert_mapping_may_be_approved(
@@ -390,7 +374,7 @@ def approve_candidate(
     # a shape it cannot parse rather than storing an unfetchable mapping.
     mapping_url = canonical_listing_url(candidate.source_url)
 
-    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, decision.card_print.id)
     mapping_created = mapping is None
 
@@ -525,7 +509,7 @@ def approve_candidate_from_exact_proposal(
         )
 
     mapping_url = canonical_listing_url(candidate.source_url)
-    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, proof.card_print_id)
     mapping_created = mapping is None
     if mapping is None:

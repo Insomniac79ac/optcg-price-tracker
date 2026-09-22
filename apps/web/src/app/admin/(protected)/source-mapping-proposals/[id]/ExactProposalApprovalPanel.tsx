@@ -12,6 +12,7 @@ import {
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { formatDateTime } from "@/lib/format";
+import { maskReviewer } from "@/lib/maskReviewer";
 import {
   ProposalApprovalError,
   approveExactProposal,
@@ -530,7 +531,7 @@ function ApprovalResult({ result }: { result: ApproveExactProposalResponse }) {
       <h3 className="font-semibold">Approved</h3>
       {result.idempotent_replay && <p className="mt-2">This exact approval was already recorded. No duplicate mapping or decision was created.</p>}
       <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-        <DecisionValue label="Reviewer" value={result.reviewed_by} />
+        <DecisionValue label="Reviewer" value={maskReviewer(result.reviewed_by)} />
         <DecisionValue label="Reviewed" value={formatDateTime(result.reviewed_at)} />
         <DecisionValue label="Resulting mapping" value={`Mapping #${result.resulting_source_card_mapping_id}`} />
         <DecisionValue label="Mapping result" value={result.mapping_created ? "Created" : result.mapping_reused ? "Reused" : "Existing mapping retained"} />
@@ -553,7 +554,7 @@ function ApprovedDecision({ proposal }: { proposal: ProposalReviewGroupDetail })
         <KeyValueGrid>
           <KeyValue label="Selected printing">{selected ? `${selected.canonical_card.card_code} · CardPrint #${selected.card_print_id}` : `Alternative #${proposal.selected_alternative_id ?? "not returned"}`}</KeyValue>
           <KeyValue label="Resulting mapping">{proposal.resulting_source_card_mapping_id ? `Mapping #${proposal.resulting_source_card_mapping_id}` : "Not returned"}</KeyValue>
-          <KeyValue label="Reviewer">{proposal.reviewed_by ?? "Not returned"}</KeyValue>
+          <KeyValue label="Reviewer">{maskReviewer(proposal.reviewed_by)}</KeyValue>
           <KeyValue label="Reviewed time">{formatDateTime(proposal.reviewed_at)}</KeyValue>
           <KeyValue label="Review note">{proposal.review_notes ?? "None"}</KeyValue>
           <KeyValue label="Decision basis">{formatDateTime(proposal.decision_basis_updated_at)}</KeyValue>

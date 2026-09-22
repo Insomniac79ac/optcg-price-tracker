@@ -121,6 +121,16 @@ class BaseBatchTestCase(unittest.TestCase):
 
 
 class SelectionTests(BaseBatchTestCase):
+    def test_superseded_mapping_excluded_even_when_active(self):
+        from datetime import datetime, timezone
+        from snkrdunk_collector.writer import validate_mapping_for_write
+        with self.Session() as session:
+            mapping = session.get(SourceCardMapping, 101)
+            mapping.superseded_at = datetime.now(timezone.utc)
+            session.flush()
+            self.assertNotIn(101, [m.id for m in select_eligible_mappings(session)])
+            self.assertIn("mapping_superseded", validate_mapping_for_write(session, mapping))
+
     def test_only_approved_active_verified_print_mappings_selected(self):
         session = self.Session()
         selected = select_eligible_mappings(session)

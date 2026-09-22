@@ -51,6 +51,7 @@ def plan(db: Session) -> list[dict]:
         .where(
             SourceCardMapping.source_id == source.id,
             SourceCardMapping.card_print_id.is_not(None),
+            SourceCardMapping.superseded_at.is_(None),
         )
         .order_by(SourceCardMapping.id)
     ).all()
@@ -119,6 +120,9 @@ def main() -> int:
                 continue
             changed += 1
             if args.apply:
+                from app.services.current_source_mapping import lookup_current_mapping
+                source = db.scalars(select(Source).where(Source.name == "snkrdunk")).one()
+                lookup_current_mapping(db, source=source, url=entry["new_url"], for_update=True)
                 mapping = db.get(SourceCardMapping, entry["mapping_id"])
                 mapping.source_url = entry["new_url"]
         if args.apply and changed:

@@ -267,6 +267,7 @@ def _mapped_sources_by_card(db: Session, card_ids: set[int]) -> dict[int, set[st
         .where(
             SourceCardMapping.card_id.in_(card_ids),
             SourceCardMapping.is_active.is_(True),
+            SourceCardMapping.superseded_at.is_(None),
             Source.name.in_(SUPPORTED_MAPPING_SOURCES),
         )
     ).all()

@@ -2,10 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY services/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY packages/opcg_source_identity /opt/opcg_source_identity
+RUN python -m pip install --no-cache-dir --no-deps /opt/opcg_source_identity
+COPY services/api/. .
+RUN python -c "from app.services.canonical_listing_identity import canonical_source_listing_identity as derive; from opcg_source_identity.vectors import verify_contract; verify_contract(derive)"
 
 # Release/build metadata - see app/core/version.py (GET /version, GET
 # /health, GET /admin/release-status) and the Makefile's prod-build target,

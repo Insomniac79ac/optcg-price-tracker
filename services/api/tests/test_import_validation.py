@@ -205,14 +205,14 @@ def test_source_mappings_validation_warns_duplicate_source_url(client, db_sessio
     card = make_card(db_session)
     source = make_source(db_session, "yuyutei")
     db_session.add(
-        SourceCardMapping(card_id=card.id, source_id=source.id, source_card_id=card.card_code, source_url="https://yuyutei.example.com/OP01-001")
+        SourceCardMapping(card_id=card.id, source_id=source.id, source_card_id=card.card_code, source_url="https://yuyu-tei.jp/sell/opc/card/op01/10001")
     )
     db_session.commit()
 
     response = validate(
         client,
         "source_mappings",
-        [{"source_name": "yuyutei", "source_url": "https://yuyutei.example.com/OP01-001", "card_code": card.card_code}],
+        [{"source_name": "yuyutei", "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10001", "card_code": card.card_code}],
     )
     body = response.json()
     assert body["valid"] is True

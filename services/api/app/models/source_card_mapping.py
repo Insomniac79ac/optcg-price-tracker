@@ -12,6 +12,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    event,
+    inspect,
+    select,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,6 +28,14 @@ class SourceCardMapping(Base):
     __table_args__ = (
         UniqueConstraint("source_id", "source_url", name="uq_source_card_mappings_source_url"),
         Index("ix_source_card_mappings_card_id_source_id", "card_id", "source_id"),
+        Index("ix_mapping_current_listing", "source_id", "canonical_source_listing_identity", "superseded_at"),
+        CheckConstraint(
+            "(superseded_at IS NULL AND superseded_by_mapping_id IS NULL AND supersession_reason IS NULL) OR "
+            "(superseded_at IS NOT NULL AND superseded_by_mapping_id IS NOT NULL AND "
+            "supersession_reason IS NOT NULL AND length(trim(supersession_reason, ' \t\n\r')) > 0 AND is_active = false)",
+            name="ck_mapping_supersession_lifecycle",
+        ),
+        CheckConstraint("superseded_by_mapping_id IS NULL OR superseded_by_mapping_id <> id", name="ck_mapping_no_self_supersession"),
         CheckConstraint(
             "review_status IN ('approved', 'needs_review', 'rejected')",
             name="ck_source_card_mappings_review_status",
@@ -73,6 +84,15 @@ class SourceCardMapping(Base):
     )
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True, index=True)
+    canonical_source_listing_identity: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_by_mapping_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_card_mappings.id", name="fk_mapping_superseded_by", ondelete="RESTRICT"), nullable=True
+    )
+    supersession_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    superseded_by: Mapped["SourceCardMapping | None"] = relationship(
+        "SourceCardMapping", remote_side="SourceCardMapping.id", foreign_keys=[superseded_by_mapping_id]
+    )
     match_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)
@@ -122,3 +142,27 @@ class SourceCardMapping(Base):
     card_print: Mapped["CardPrint | None"] = relationship(
         "CardPrint", back_populates="source_card_mappings", foreign_keys=[card_print_id]
     )
+
+
+@event.listens_for(SourceCardMapping, "before_insert")
+@event.listens_for(SourceCardMapping, "before_update")
+def _derive_listing_identity(mapper, connection, mapping):
+    """Server-side projection for every ORM writer, including operational scripts.
+
+    Core bulk imports/restore must derive explicitly. Historical unparseable
+    rows remain readable; changing a valid listing to an unparseable one fails.
+    """
+    from opcg_source_identity import canonical_source_listing_identity
+    from app.models.source import Source
+
+    state = inspect(mapping)
+    if state.persistent and not any(
+        state.attrs[field].history.has_changes()
+        for field in ("source_url", "source_id", "canonical_source_listing_identity")
+    ):
+        return
+    source_name = connection.scalar(select(Source.name).where(Source.id == mapping.source_id))
+    derived = canonical_source_listing_identity(source_name or "", mapping.source_url)
+    if state.persistent and mapping.canonical_source_listing_identity and derived is None:
+        raise ValueError("source_url_not_canonical")
+    mapping.canonical_source_listing_identity = derived

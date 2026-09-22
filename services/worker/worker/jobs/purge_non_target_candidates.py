@@ -62,7 +62,7 @@ from sqlalchemy.orm import Session
 
 from worker.db import SessionLocal
 from worker.matching.non_target_tcg import identify_non_target_tcg
-from worker.models import PriceObservation, SnkrdunkCandidate, SourceCardMapping
+from worker.models import PriceObservation, SnkrdunkCandidate, SourceCardMapping, Source
 
 REMOVABLE_MATCH_STATUS = "unmatched"
 
@@ -197,13 +197,19 @@ def _relationship_refusal(
             f"price_observation {observations} references this candidate; deleting "
             "would SET NULL its provenance."
         )
+    from opcg_source_identity import canonical_source_listing_identity
+    identity = canonical_source_listing_identity("snkrdunk", candidate.source_url)
+    listing_condition = SourceCardMapping.source_url == candidate.source_url
+    if identity is not None:
+        listing_condition = listing_condition | (SourceCardMapping.canonical_source_listing_identity == identity)
     mapping = db.scalar(
         select(SourceCardMapping.id)
-        .where(SourceCardMapping.source_url == candidate.source_url)
+        .join(Source, Source.id == SourceCardMapping.source_id)
+        .where(Source.name == "snkrdunk", listing_condition)
         .limit(1)
     )
     if mapping is not None:
-        return f"source_card_mapping {mapping} shares this source_url."
+        return f"source_card_mapping {mapping} shares this source_url or canonical listing identity (including history)."
     return None
 
 

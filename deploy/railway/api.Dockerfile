@@ -2,10 +2,7 @@
 # services/api/Dockerfile, but written to be built from the REPO ROOT as
 # build context (Root Directory: / in Railway's service settings), not from
 # services/api itself - see "Railway build failure" note in
-# docs/railway_staging.md for why: services/api/Dockerfile's bare
-# `COPY requirements.txt .` / `COPY . .` only resolves if the build context
-# is services/api itself (true for docker-compose.yml/docker-compose.prod.yml,
-# which both set `context: ./services/api` explicitly). Railway's "Root
+# docs/railway_staging.md for the historical context mismatch. Railway's "Root
 # Directory" setting controls both where it looks for this Dockerfile *and*
 # the build context passed to `docker build` - pointing it at a
 # subdirectory while wanting a repo-root context (or vice versa) silently
@@ -16,8 +13,9 @@
 # Local verification: docker build -f deploy/railway/api.Dockerfile -t opcg-api-railway-test .
 # (run from the repo root - NOT from services/api).
 #
-# Does not change docker-compose.yml/docker-compose.prod.yml or
-# services/api/Dockerfile - local Docker Compose still uses those unchanged.
+# Canonical identity foundation: local Compose now also uses root context
+# with services/api/Dockerfile, to install the same shared package. Railway
+# root-directory settings are unchanged.
 
 FROM python:3.12-slim
 
@@ -26,7 +24,10 @@ WORKDIR /app
 COPY services/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY packages/opcg_source_identity /opt/opcg_source_identity
+RUN python -m pip install --no-cache-dir --no-deps /opt/opcg_source_identity
 COPY services/api/. .
+RUN python -c "from app.services.canonical_listing_identity import canonical_source_listing_identity as derive; from opcg_source_identity.vectors import verify_contract; verify_contract(derive)"
 
 # Release/build metadata - see app/core/version.py (GET /version, GET
 # /health, GET /admin/release-status). Same convention as

@@ -93,6 +93,8 @@ def guard_transition_to_approved(db: Session, mapping: SourceCardMapping) -> Non
     Nothing is inferred. A NULL print is never filled in from the card code -
     that is the inference the whole contract forbids.
     """
+    if mapping.superseded_at is not None:
+        raise ExactPrintApprovalError("mapping_superseded", "Historical mappings cannot be reactivated or approved.")
     if mapping.review_status == APPROVED:
         return
 
@@ -119,6 +121,8 @@ def guard_mapping_has_exact_priceable_identity(
     grandfathering exception for an already-approved row. It protects a new
     activation/verification mutation, not historical readability.
     """
+    if mapping.superseded_at is not None:
+        raise ExactPrintApprovalError("mapping_superseded", "Historical mappings cannot be made operational.")
     identity = load_source_mapping_identity(db, mapping.id)
     if identity is None or identity.classification == BROKEN:
         raise ExactPrintApprovalError(

@@ -57,7 +57,8 @@ services:
 
   api:
     build:
-      context: ./services/api
+      context: .
+      dockerfile: services/api/Dockerfile
       # See the Makefile's prod-build target, which computes these from
       # `git rev-parse --short HEAD`/a UTC timestamp/the repo-root VERSION
       # file - GET /version, GET /health, and GET /admin/release-status all
@@ -99,7 +100,8 @@ services:
 
   worker:
     build:
-      context: ./services/worker
+      context: .
+      dockerfile: services/worker/Dockerfile
       args:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         BUILD_TIME: ${BUILD_TIME:-unknown}
@@ -132,7 +134,8 @@ services:
 
   beat:
     build:
-      context: ./services/worker
+      context: .
+      dockerfile: services/worker/Dockerfile
       args:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         BUILD_TIME: ${BUILD_TIME:-unknown}

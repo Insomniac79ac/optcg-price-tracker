@@ -131,9 +131,18 @@ class MappingQualityItem:
     explanation: dict[str, list[str]]
     latest_price_observed_at: datetime | None
     last_match_checked_at: datetime | None
+    canonical_source_listing_identity: str | None = None
+    superseded_at: datetime | None = None
+    superseded_by_mapping_id: int | None = None
+    supersession_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "canonical_source_listing_identity": self.canonical_source_listing_identity,
+            "mapping_lifecycle": "current" if self.superseded_at is None else "superseded",
+            "superseded_at": self.superseded_at,
+            "superseded_by_mapping_id": self.superseded_by_mapping_id,
+            "supersession_reason": self.supersession_reason,
             "mapping_id": self.mapping_id,
             "identity_classification": self.identity_classification,
             "confidence_scope": self.confidence_scope,
@@ -287,9 +296,11 @@ def _latest_exact_price_observed_at(
 def _duplicate_mapping_ids(mappings: list[SourceCardMapping]) -> set[int]:
     groups: dict[tuple[int, str], list[int]] = {}
     for mapping in mappings:
+        if mapping.superseded_at is not None:
+            continue
         if not mapping.source_url:
             continue
-        normalized = mapping.source_url.strip().lower()
+        normalized = mapping.canonical_source_listing_identity or mapping.source_url.strip().lower()
         if normalized:
             groups.setdefault((mapping.source_id, normalized), []).append(mapping.id)
     return {mapping_id for ids in groups.values() if len(ids) > 1 for mapping_id in ids}
@@ -627,6 +638,10 @@ def evaluate_source_mapping(
     release_product = identity.release_product
 
     return MappingQualityItem(
+        canonical_source_listing_identity=mapping.canonical_source_listing_identity,
+        superseded_at=mapping.superseded_at,
+        superseded_by_mapping_id=mapping.superseded_by_mapping_id,
+        supersession_reason=mapping.supersession_reason,
         mapping_id=mapping.id,
         identity_classification=identity.classification,
         confidence_scope=confidence_scope,

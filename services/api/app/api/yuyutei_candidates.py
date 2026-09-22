@@ -93,11 +93,12 @@ def _mapping_ids_by_identity(
     if not wanted:
         return {}
     rows = db.scalars(
-        select(SourceCardMapping).where(SourceCardMapping.source_id == source.id)
+        select(SourceCardMapping).where(SourceCardMapping.source_id == source.id, SourceCardMapping.superseded_at.is_(None))
     ).all()
     found: dict[tuple[str, str], int] = {}
     for mapping in rows:
-        identity = listing_identity(mapping.source_url)
+        value = mapping.canonical_source_listing_identity
+        identity = tuple(value.split(":", 1)) if value and ":" in value else None
         if identity is not None and identity in wanted:
             # Lowest id wins only for display. A listing held by two mappings
             # is a real conflict, and the approval path refuses it loudly

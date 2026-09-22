@@ -154,6 +154,13 @@ class SelectionTestCase(unittest.TestCase):
         selected = select_eligible_mappings(self.session)
         self.assertEqual([m.id for m in selected], [mapping.id])
 
+    def test_superseded_mapping_excluded_even_when_active(self):
+        from datetime import datetime, timezone
+        from yuyutei_collector.writer import validate_mapping_for_write
+        mapping = self._mapping(id=10, superseded_at=datetime.now(timezone.utc))
+        self.assertEqual(select_eligible_mappings(self.session), [])
+        self.assertIn("mapping_superseded", validate_mapping_for_write(self.session, mapping))
+
     def test_unverified_print_excluded(self):
         self._mapping(id=11, card_print_id=self.unverified_print.id)
         selected = select_eligible_mappings(self.session)

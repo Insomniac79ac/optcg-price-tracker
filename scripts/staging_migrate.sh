@@ -80,6 +80,8 @@ if ! command -v alembic >/dev/null 2>&1; then
   exit 1
 fi
 
+# Host migrations need the same contract that deployed images install.
+python3 -m pip install --no-deps "$repo_root/packages/opcg_source_identity"
 cd "$API_DIR"
 export DATABASE_URL
 export APP_ENV

@@ -86,12 +86,33 @@ def apply_match(
     candidate.match_status = result.match_status
 
     if result.match_status == "matched":
+        from worker.matching.listing_identity import canonical_source_listing_identity
+        identity = canonical_source_listing_identity(source.name, candidate.source_url)
+        if identity is None:
+            raise ValueError("source_url_not_canonical")
+        # Same source-row serialization protocol as API writers, until uniqueness.
+        db.query(Source).filter(Source.id == source.id).with_for_update().one()
+        current = db.query(SourceCardMapping).filter_by(
+            source_id=source.id, canonical_source_listing_identity=identity,
+            superseded_at=None,
+        ).all()
+        if len(current) > 1:
+            raise ValueError("multiple_mappings_for_listing")
         existing_mapping = (
-            db.query(SourceCardMapping)
-            .filter_by(card_id=result.matched_card_id, source_id=source.id)
-            .one_or_none()
+            current[0] if current else None
         )
-        if existing_mapping is not None and existing_mapping.manual_verified:
+        if existing_mapping is None and db.query(SourceCardMapping.id).filter_by(
+            card_id=result.matched_card_id, source_id=source.id,
+            manual_verified=True, superseded_at=None,
+        ).first() is not None:
+            # Keep the existing manual-over-fuzzy policy even when a different
+            # listing for the same legacy card is discovered automatically.
+            return result.match_status
+        if existing_mapping is not None and (
+            existing_mapping.manual_verified or existing_mapping.review_status == "rejected"
+            or existing_mapping.card_print_id is not None
+            or existing_mapping.card_id != result.matched_card_id
+        ):
             logger.info(
                 "Not overriding manually verified mapping for card_id=%s source=snkrdunk (candidate %s).",
                 result.matched_card_id,
@@ -100,6 +121,7 @@ def apply_match(
         elif existing_mapping is not None:
             existing_mapping.source_card_id = candidate.detected_card_code or candidate.source_url
             existing_mapping.source_url = candidate.source_url
+            existing_mapping.canonical_source_listing_identity = identity
             existing_mapping.match_confidence = result.match_confidence
             existing_mapping.manual_verified = False
             # Auto-matched (not manually verified) mappings are flagged for
@@ -112,6 +134,7 @@ def apply_match(
                     source_id=source.id,
                     source_card_id=candidate.detected_card_code or candidate.source_url,
                     source_url=candidate.source_url,
+                    canonical_source_listing_identity=identity,
                     match_confidence=result.match_confidence,
                     manual_verified=False,
                     review_status="needs_review",

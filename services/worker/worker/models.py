@@ -14,6 +14,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    event,
+    inspect,
+    select,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -114,6 +117,10 @@ class SourceCardMapping(Base):
     card_print_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     source_card_id: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    canonical_source_listing_identity: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    superseded_by_mapping_id: Mapped[int | None] = mapped_column(ForeignKey("source_card_mappings.id", ondelete="RESTRICT"), nullable=True)
+    supersession_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     match_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     manual_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
@@ -131,6 +138,21 @@ class SourceCardMapping(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+@event.listens_for(SourceCardMapping, "before_insert")
+@event.listens_for(SourceCardMapping, "before_update")
+def _derive_mapping_listing_identity(mapper, connection, mapping):
+    from opcg_source_identity import canonical_source_listing_identity
+    state = inspect(mapping)
+    if state.persistent and not any(state.attrs[field].history.has_changes() for field in
+                                   ("source_url", "source_id", "canonical_source_listing_identity")):
+        return
+    source_name = connection.scalar(select(Source.name).where(Source.id == mapping.source_id))
+    derived = canonical_source_listing_identity(source_name or "", mapping.source_url)
+    if state.persistent and mapping.canonical_source_listing_identity and derived is None:
+        raise ValueError("source_url_not_canonical")
+    mapping.canonical_source_listing_identity = derived
 
 
 class RawSnapshot(Base):

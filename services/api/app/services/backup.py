@@ -70,7 +70,11 @@ from app.services.job_locks import with_job_lock
 # the one exception, kept optional alongside app_log_events). The v12 market
 # tables follow the explicit include flags in BACKUP_REGISTRY. An archive from
 # an earlier version is never silently reinterpreted under this contract.
-BACKUP_VERSION = 12
+# v13 carries operational supersession. Old runtimes must refuse it, rather
+# than ignore lifecycle fields and resurrect historical mappings. v12 remains
+# explicitly readable with derived identity and NULL lifecycle metadata.
+BACKUP_VERSION = 13
+READABLE_BACKUP_VERSIONS = (12, 13)
 APP_NAME = "opcg-price-tracker"
 
 
@@ -339,11 +343,11 @@ def validate_backup(backup: Any) -> ValidationResult:
         backup_version = metadata.get("backup_version")
         if backup_version is None:
             errors.append("metadata.backup_version is missing")
-        elif backup_version != BACKUP_VERSION:
+        elif backup_version not in READABLE_BACKUP_VERSIONS:
             errors.append(
                 f"Unsupported backup_version {backup_version!r}; expected {BACKUP_VERSION}"
             )
-        if backup_version == BACKUP_VERSION:
+        if backup_version in READABLE_BACKUP_VERSIONS:
             for flag in BACKUP_METADATA_FLAGS:
                 value = metadata.get(flag)
                 if not isinstance(value, bool):
@@ -572,6 +576,31 @@ def validate_backup(backup: Any) -> ValidationResult:
 
         summary["source_card_mappings_exact"] = exact_mapping_count
         summary["source_card_mappings_legacy_compatibility"] = legacy_mapping_count
+        from opcg_source_identity import canonical_source_listing_identity
+        sources_by_id = {row["id"]: row for row in tables.get("sources", [])}
+        current_identities = Counter()
+        for row in mappings_by_id.values():
+            derived = canonical_source_listing_identity(
+                sources_by_id.get(row.get("source_id"), {}).get("name", ""), row.get("source_url")
+            )
+            if row.get("canonical_source_listing_identity") not in (None, derived):
+                errors.append(f"mapping {row['id']}: canonical identity disagrees with raw URL")
+            at, successor, reason = (row.get(k) for k in ("superseded_at", "superseded_by_mapping_id", "supersession_reason"))
+            if all(value is None for value in (at, successor, reason)):
+                if derived is not None:
+                    current_identities[(row.get("source_id"), derived)] += 1
+            elif not (at and successor is not None and isinstance(reason, str) and reason.strip() and row.get("is_active") is False):
+                errors.append(f"mapping {row['id']}: incomplete supersession lifecycle")
+            if successor is not None and (successor == row["id"] or successor not in mappings_by_id):
+                errors.append(f"mapping {row['id']}: invalid supersession target")
+        duplicates = sum(count > 1 for count in current_identities.values())
+        summary["duplicate_current_canonical_identities"] = duplicates
+        if duplicates:
+            warnings.append(f"{duplicates} duplicate current canonical listing identities; retained without automatic repair")
+        try:
+            _mapping_restore_order(list(mappings_by_id.values()))
+        except ValueError as exc:
+            errors.append(str(exc))
         if legacy_mapping_count:
             warnings.append(
                 f"source_card_mappings contains {legacy_mapping_count} legacy compatibility "
@@ -749,7 +778,46 @@ def _apply_deferred_self_refs(db: Session, table: str, deferred: list[tuple[int,
     db.flush()
 
 
+def _mapping_restore_order(rows):
+    """Targets before historical rows; never temporarily violate lifecycle checks."""
+    remaining = {row["id"]: row for row in rows}
+    result = []
+    while remaining:
+        ready = [row for row in remaining.values() if row.get("superseded_by_mapping_id") not in remaining]
+        if not ready:
+            raise ValueError("source_card_mappings contains a supersession cycle")
+        for row in ready:
+            result.append(row)
+            del remaining[row["id"]]
+    return result
+
+
+def _restore_mapping_rows(db, rows, *, merge):
+    from opcg_source_identity import canonical_source_listing_identity
+    created = updated = 0
+    for row in _mapping_restore_order(rows):
+        kwargs = _deserialize_row(SourceCardMapping, row)
+        source = db.get(Source, kwargs["source_id"])
+        kwargs["canonical_source_listing_identity"] = canonical_source_listing_identity(source.name, kwargs.get("source_url"))
+        for field in ("superseded_at", "superseded_by_mapping_id", "supersession_reason"):
+            kwargs.setdefault(field, None)
+        existing = db.get(SourceCardMapping, kwargs["id"]) if merge else None
+        if existing is not None:
+            if existing.superseded_at is not None and kwargs["superseded_at"] is None:
+                raise ValueError("Restore cannot silently reactivate a superseded mapping")
+            for key, value in kwargs.items():
+                setattr(existing, key, value)
+            updated += 1
+        else:
+            db.add(SourceCardMapping(**kwargs))
+            created += 1
+        db.flush()
+    return created, updated
+
+
 def _upsert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> tuple[int, int]:
+    if table == "source_card_mappings":
+        return _restore_mapping_rows(db, rows, merge=True)
     model = MODEL_BY_TABLE[table]
     created = updated = 0
     deferred: list[tuple[int, Any]] = []
@@ -773,6 +841,8 @@ def _upsert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> tuple[i
 
 
 def _insert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> int:
+    if table == "source_card_mappings":
+        return _restore_mapping_rows(db, rows, merge=False)[0]
     model = MODEL_BY_TABLE[table]
     deferred: list[tuple[int, Any]] = []
     for row in rows:

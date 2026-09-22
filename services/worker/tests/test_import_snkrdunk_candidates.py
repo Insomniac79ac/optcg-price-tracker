@@ -35,7 +35,7 @@ def write_csv(tmp_path: Path, rows: list[dict]) -> Path:
 
 def base_row(**overrides) -> dict:
     row = {
-        "source_url": "https://snkrdunk.com/trading-cards/op01-001-luffy-l",
+        "source_url": "https://snkrdunk.com/apparels/100001",
         "title": "ONE PIECEカードゲーム OP01-001 モンキー・D・ルフィ L",
         "price_jpy": "1200",
         "image_url": "https://img.snkrdunk.com/op01-001.jpg",
@@ -69,7 +69,7 @@ def test_import_creates_new_candidates(db_session, tmp_path):
     assert summary.skipped_rows == 0
 
     candidate = db_session.query(SnkrdunkCandidate).one()
-    assert candidate.source_url == "https://snkrdunk.com/trading-cards/op01-001-luffy-l"
+    assert candidate.source_url == "https://snkrdunk.com/apparels/100001"
     assert candidate.price_jpy == 1200
     assert candidate.listing_count == 12
     assert candidate.condition_label == "中古"

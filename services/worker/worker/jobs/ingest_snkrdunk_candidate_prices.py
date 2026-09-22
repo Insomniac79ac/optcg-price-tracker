@@ -106,12 +106,25 @@ def _approved_mapping_for(
     if not candidate.source_url:
         return None
 
+    from opcg_source_identity import canonical_source_listing_identity
+    identity = canonical_source_listing_identity("snkrdunk", candidate.source_url)
+    listing_condition = (
+        SourceCardMapping.canonical_source_listing_identity == identity if identity is not None
+        else SourceCardMapping.source_url == candidate.source_url
+    )
+    current = db.query(SourceCardMapping.id).filter(
+        SourceCardMapping.source_id == source_id,
+        SourceCardMapping.superseded_at.is_(None), listing_condition,
+    ).all()
+    if len(current) != 1:
+        return None  # Never silently choose among duplicate current claims.
+
     mapping = (
         db.query(SourceCardMapping)
         .join(CardPrint, CardPrint.id == SourceCardMapping.card_print_id)
         .filter(
             SourceCardMapping.source_id == source_id,
-            SourceCardMapping.source_url.in_(equivalent_listing_urls(candidate.source_url)),
+            listing_condition,
             # The same active+approved rule refresh_prices and both
             # production collectors apply - see worker.mapping_gate.
             *PRICEABLE_MAPPING_CONDITIONS,

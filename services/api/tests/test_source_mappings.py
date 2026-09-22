@@ -241,7 +241,7 @@ def test_patch_source_mapping_updates_fields(client, db_session):
     response = client.patch(
         f"/admin/source-mappings/{mapping.id}",
         json={
-            "source_url": "https://yuyutei.example/updated",
+            "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10099",
             "manual_verified": True,
             "review_notes": "looks right",
         },
@@ -249,14 +249,14 @@ def test_patch_source_mapping_updates_fields(client, db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["source_url"] == "https://yuyutei.example/updated"
+    assert body["source_url"] == "https://yuyu-tei.jp/sell/opc/card/op01/10099"
     assert body["manual_verified"] is False
     assert body["review_status"] == "needs_review"
     assert body["review_notes"] == "looks right"
 
     db_session.expire_all()
     updated = db_session.get(SourceCardMapping, mapping.id)
-    assert updated.source_url == "https://yuyutei.example/updated"
+    assert updated.source_url == "https://yuyu-tei.jp/sell/opc/card/op01/10099"
     assert updated.manual_verified is False
     assert updated.review_status == "needs_review"
     assert updated.review_notes == "looks right"
