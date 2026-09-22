@@ -46,6 +46,37 @@ describe("ProposalReviewDetailPage", () => {
     expect(screen.getByText("Eligible for exact-approval review")).toBeInTheDocument();
   });
 
+  it.each([1128, 1129, 3815])("loads approved proposal %s without mutations, source fetches or reviewer leakage", async (id) => {
+    routeId = String(id);
+    const reviewer = "reviewer@example.com";
+    fetchProposalReviewGroup.mockResolvedValue(makeReviewDetail({ id, review_status: "approved", reviewed_by: reviewer }));
+    const network = vi.fn(() => Promise.reject(new Error("Unexpected network request")));
+    vi.stubGlobal("fetch", network);
+    const logs = ["log", "info", "warn", "error", "debug"] as const;
+    const spies = logs.map((method) => vi.spyOn(console, method));
+    try {
+      const { container } = render(<ProposalReviewDetailPage />);
+      await screen.findByRole("heading", { name: "Approved" });
+      expect(screen.getByText("r***@example.com")).toBeInTheDocument();
+      expect(container.innerHTML).not.toContain(reviewer);
+      expect(container.textContent).not.toContain(reviewer);
+      for (const node of container.querySelectorAll("*")) {
+        for (const attribute of node.attributes) expect(attribute.value).not.toContain(reviewer);
+      }
+      expect(fetchProposalReviewGroup).toHaveBeenCalledTimes(1);
+      expect(fetchProposalReviewGroup).toHaveBeenCalledWith(id, expect.any(AbortSignal));
+      expect(network).not.toHaveBeenCalled();
+      expect(screen.queryByRole("button", { name: /approve|reject|reopen|repoint/i })).not.toBeInTheDocument();
+      for (const spy of spies) expect(JSON.stringify(spy.mock.calls)).not.toContain(reviewer);
+      for (const node of container.querySelectorAll("[src], [srcset]")) {
+        expect(node.outerHTML).not.toMatch(/yuyu-tei\.jp|snkrdunk\.com/);
+      }
+    } finally {
+      spies.forEach((spy) => spy.mockRestore());
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("renders every ambiguous alternative with uncropped artwork and evidence", async () => {
     const second = makeAlternative({ alternative_id: 9002, card_print_id: 502, recommended: false, official_asset_variant: "p3", printing_label: "Second parallel", display_image: null, canonical_image_url: null, image_missing: true, missing_evidence: ["Listing photo does not distinguish the treatment"] });
     fetchProposalReviewGroup.mockResolvedValue(makeReviewDetail({ resolution_status: "ambiguous", alternatives: [makeAlternative({ recommended: false }), second], recommended_print: null, recommended_alternative_count: 0, alternative_count: 2 }));
