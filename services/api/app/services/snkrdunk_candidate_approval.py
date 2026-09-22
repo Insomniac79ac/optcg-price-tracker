@@ -44,6 +44,7 @@ from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
 from app.services.card_matching import CandidateMatchResult, calculate_candidate_match
 from app.services.exact_print_approval import (
+    REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
     REFUSAL_MAPPING_WAS_REJECTED,
     REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
     ApprovalDecision,
@@ -152,13 +153,14 @@ def find_mapping_for_listing(
     return matches[0] if matches else None
 
 
-def assert_mapping_may_be_approved(mapping: SourceCardMapping | None) -> None:
-    """Refuse to reuse a mapping a person has already refused.
+def assert_mapping_may_be_approved(
+    mapping: SourceCardMapping | None, card_print_id: int
+) -> None:
+    """Refuse a rejected mapping or one that already names another print.
 
-    Deliberately narrow: it blocks ONE transition, `rejected` -> approved, and
-    says nothing about any other state. A `needs_review` row is still a row
-    the approval path is meant to advance, and an already-`approved` one is
-    the ordinary re-approval case.
+    A `needs_review` row naming this print remains approvable, as does an
+    already-approved row naming this print.  The writer never silently
+    overturns a rejection or repoints a listing to a different printing.
     """
     if mapping is not None and mapping.review_status == REJECTED:
         raise ExactPrintApprovalError(
@@ -167,6 +169,18 @@ def assert_mapping_may_be_approved(mapping: SourceCardMapping | None) -> None:
             f"({(mapping.review_notes or '')[:160]!r}). Approving it here would overturn "
             "that decision without anyone reading why it was made. Clear the rejection "
             "explicitly first.",
+        )
+    if (
+        mapping is not None
+        and mapping.card_print_id is not None
+        and mapping.card_print_id != card_print_id
+    ):
+        raise ExactPrintApprovalError(
+            REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
+            f"Source mapping {mapping.id} already prices this listing against "
+            f"card_print {mapping.card_print_id}, not {card_print_id}. One listing "
+            "sells one printing, so the reusable approval writer will not repoint it.",
+            alternatives=[mapping.card_print_id],
         )
 
 
@@ -226,7 +240,7 @@ def approve_candidate_onto_print(
     # approved under the other path (or stored with discovery's query string)
     # updates that row instead of creating a second mapping for one listing.
     mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
-    assert_mapping_may_be_approved(mapping)
+    assert_mapping_may_be_approved(mapping, decision.card_print.id)
     mapping_created = mapping is None
 
     if review_notes is None:

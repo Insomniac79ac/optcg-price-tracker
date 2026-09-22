@@ -445,7 +445,7 @@ def plan_candidate(db: Session, source: Source, candidate: SnkrdunkCandidate) ->
         # so the plan REPORTS the refusal instead of only discovering it at
         # apply time. One definition, two moments.
         try:
-            assert_mapping_may_be_approved(mapping)
+            assert_mapping_may_be_approved(mapping, print_row.id)
         except ExactPrintApprovalError as exc:
             return refuse(exc.code, exc.detail)
         if mapping.card_print_id is None:
@@ -453,13 +453,6 @@ def plan_candidate(db: Session, source: Source, candidate: SnkrdunkCandidate) ->
                 REFUSAL_MAPPING_NO_PRINT,
                 f"Mapping {mapping.id} predates exact prints and names no printing. "
                 "Approve it individually so the change of claim is visible.",
-            )
-        if mapping.card_print_id != print_row.id:
-            return refuse(
-                REFUSAL_MAPPING_CONFLICT,
-                f"Mapping {mapping.id} already prices card_print {mapping.card_print_id}, "
-                f"and the resolver says {print_row.id}. A batch must not re-point an "
-                "existing mapping.",
             )
         if mapping.source_url not in equivalent_listing_urls(candidate.source_url):
             return refuse(

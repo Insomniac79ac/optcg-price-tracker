@@ -1,10 +1,12 @@
-"""GET-only admin API for exact-print proposal analysis and persisted evidence."""
+"""Admin API for exact-print proposal analysis, review reads, and approval."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_admin_token
+from app.admin_actor import AdminActor, require_admin_actor
+from app.api._mapping_approval import approval_http_error
 from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import (
@@ -21,6 +23,11 @@ from app.services.source_mapping_proposal_review import (
     list_review_groups,
     review_group_detail,
 )
+from app.services.exact_print_approval import ExactPrintApprovalError
+from app.services.source_mapping_proposal_decision import (
+    ProposalDecisionError,
+    approve_exact_proposal,
+)
 from app.source_mapping_proposal_schemas import (
     ProposalGroupDetailOut,
     ProposalGroupListOut,
@@ -31,6 +38,8 @@ from app.source_mapping_proposal_schemas import (
     ProposalReviewGroupListOut,
     ProposalReviewReleaseListOut,
     ProposalReviewSummaryOut,
+    ApproveExactProposalIn,
+    ApproveExactProposalOut,
 )
 
 
@@ -225,3 +234,45 @@ def proposal_review_group_detail(
     if payload is None:
         raise HTTPException(status_code=404, detail="Proposal group not found")
     return payload
+
+
+@router.post(
+    "/review/groups/{proposal_group_id}/approve-exact",
+    response_model=ApproveExactProposalOut,
+)
+def approve_exact_proposal_group(
+    proposal_group_id: int,
+    payload: ApproveExactProposalIn,
+    request: Request,
+    actor: AdminActor = Depends(require_admin_actor),
+    db: Session = Depends(get_db),
+):
+    """Approve one revalidated exact proposal in one route-owned transaction."""
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        raise HTTPException(
+            status_code=415,
+            detail={"code": "json_body_required", "message": "Content-Type must be application/json."},
+        )
+    try:
+        result = approve_exact_proposal(db, proposal_group_id, payload, actor)
+        db.commit()
+        return result
+    except ProposalDecisionError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+    except ExactPrintApprovalError as exc:
+        db.rollback()
+        raise approval_http_error(exc) from exc
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "proposal_decision_failed",
+                "message": "Exact proposal approval failed and was rolled back.",
+            },
+        ) from exc

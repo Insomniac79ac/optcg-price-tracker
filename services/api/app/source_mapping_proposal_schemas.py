@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
 
 from app.core.pagination import PaginationMeta
 from app.schemas import DisplayImageOut
@@ -333,3 +333,51 @@ class ProposalReviewGroupDetailOut(ProposalReviewGroupOut):
     alternatives: list[ProposalReviewAlternativeOut]
     compatibility: ProposalReviewCompatibilityOut
     historical_state: dict[str, Any]
+
+
+class ApproveExactProposalIn(BaseModel):
+    """Optimistic-concurrency basis for one exact proposal decision."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    selected_alternative_id: PositiveInt
+    expected_evidence_digest: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    expected_resolver_version: str = Field(min_length=1, max_length=64)
+    expected_updated_at: datetime
+    review_note: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("expected_updated_at")
+    @classmethod
+    def expected_updated_at_must_be_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("expected_updated_at must include a timezone")
+        return value
+
+    @field_validator("review_note")
+    @classmethod
+    def normalize_review_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
+class ApproveExactProposalOut(BaseModel):
+    proposal_group_id: int
+    review_status: str
+    selected_alternative_id: int
+    resulting_source_card_mapping_id: int
+    card_print_id: int
+    source: str
+    source_candidate_id: int
+    reviewed_at: datetime
+    reviewed_by: str
+    review_notes: str | None
+    decision_basis_updated_at: datetime
+    mapping_created: bool
+    mapping_reused: bool
+    candidate_status: str
+    idempotent_replay: bool
+    collection_triggered: bool = False
+    price_observation_written: bool = False
+    eligible_for_future_scheduled_collection: bool = True
