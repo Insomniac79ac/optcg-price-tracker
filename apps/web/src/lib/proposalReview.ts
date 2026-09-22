@@ -288,6 +288,11 @@ export interface ProposalReviewGroupList {
 
 export interface ProposalReviewGroupDetail extends ProposalReviewGroup {
   evidence_digest: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  review_notes: string | null;
+  selected_alternative_id: number | null;
+  decision_basis_updated_at: string | null;
   evidence_summary: Record<string, ProposalReviewJsonValue>;
   resolution_reasons: ProposalReviewJsonValue[];
   resulting_mapping: Record<string, ProposalReviewJsonValue> | null;
@@ -295,6 +300,77 @@ export interface ProposalReviewGroupDetail extends ProposalReviewGroup {
   alternatives: ProposalReviewAlternative[];
   compatibility: ProposalReviewCompatibility;
   historical_state: Record<string, ProposalReviewJsonValue>;
+}
+
+export interface ApproveExactProposalRequest {
+  selected_alternative_id: number;
+  expected_evidence_digest: string;
+  expected_resolver_version: string;
+  expected_updated_at: string;
+  review_note?: string;
+}
+
+export interface ApproveExactProposalResponse {
+  proposal_group_id: number;
+  review_status: "approved";
+  selected_alternative_id: number;
+  resulting_source_card_mapping_id: number;
+  card_print_id: number;
+  source: ProposalReviewSourceName;
+  source_candidate_id: number;
+  reviewed_at: string;
+  reviewed_by: string;
+  review_notes: string | null;
+  decision_basis_updated_at: string;
+  mapping_created: boolean;
+  mapping_reused: boolean;
+  candidate_status: string;
+  idempotent_replay: boolean;
+  collection_triggered: boolean;
+  price_observation_written: boolean;
+  eligible_for_future_scheduled_collection: boolean;
+}
+
+export interface ProposalApprovalErrorPayload {
+  detail?:
+    | string
+    | { code?: string; message?: string }
+    | Array<Record<string, ProposalReviewJsonValue>>;
+  error?: string;
+  backend_status?: number;
+}
+
+export class ProposalApprovalError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly payload: ProposalApprovalErrorPayload | null;
+  readonly uncertain: boolean;
+
+  constructor({
+    message,
+    status,
+    code = null,
+    payload = null,
+    uncertain = false,
+  }: {
+    message: string;
+    status: number;
+    code?: string | null;
+    payload?: ProposalApprovalErrorPayload | null;
+    uncertain?: boolean;
+  }) {
+    super(message);
+    this.name = "ProposalApprovalError";
+    this.status = status;
+    this.code = code;
+    this.payload = payload;
+    this.uncertain = uncertain;
+  }
+}
+
+export interface ApproveExactProposalOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 export interface ProposalReviewGroupParams {
@@ -368,4 +444,98 @@ export function fetchProposalReviewGroup(
     `/api/admin/source-mapping-proposals/review/groups/${id}`,
     { signal },
   );
+}
+
+const APPROVAL_TIMEOUT_MS = 15_000;
+
+/** Sends one deliberate exact-proposal decision through the same-origin
+ * Next.js proxy. The browser knows neither server credential and this helper
+ * never retries a mutation after any response or transport failure. */
+export async function approveExactProposal(
+  proposalGroupId: number,
+  request: ApproveExactProposalRequest,
+  options: ApproveExactProposalOptions = {},
+): Promise<ApproveExactProposalResponse> {
+  const path = `/api/admin/source-mapping-proposals/review/groups/${proposalGroupId}/approve-exact`;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, options.timeoutMs ?? APPROVAL_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+  if (options.signal?.aborted) controller.abort();
+  else options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      if (!timedOut && options.signal?.aborted) throw error;
+      throw new ProposalApprovalError({
+        message: "The approval request timed out before its result was known.",
+        status: 0,
+        code: "request_timeout",
+        uncertain: true,
+      });
+    }
+    throw new ProposalApprovalError({
+      message: error instanceof Error ? error.message : "Network error",
+      status: 0,
+      code: "network_error",
+      uncertain: true,
+    });
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", abortFromCaller);
+  }
+
+  const text = await response.text();
+  let payload: ProposalApprovalErrorPayload | ApproveExactProposalResponse | null = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text) as ProposalApprovalErrorPayload | ApproveExactProposalResponse;
+    } catch {
+      throw new ProposalApprovalError({
+        message: "The approval service returned an unreadable response.",
+        status: response.status,
+        code: "invalid_response",
+        uncertain: response.ok || response.status >= 500,
+      });
+    }
+  }
+
+  if (!response.ok) {
+    const errorPayload = payload as ProposalApprovalErrorPayload | null;
+    const detail = errorPayload?.detail;
+    const code = typeof detail === "object" && !Array.isArray(detail) ? detail?.code ?? null : null;
+    const message =
+      (typeof detail === "object" && !Array.isArray(detail) ? detail?.message : null) ??
+      (typeof detail === "string" ? detail : null) ??
+      errorPayload?.error ??
+      `Approval failed with status ${response.status}.`;
+    throw new ProposalApprovalError({
+      message,
+      status: response.status,
+      code,
+      payload: errorPayload,
+      uncertain: response.status >= 500,
+    });
+  }
+  if (!payload) {
+    throw new ProposalApprovalError({
+      message: "The approval service returned an empty response.",
+      status: response.status,
+      code: "invalid_response",
+      uncertain: true,
+    });
+  }
+  return payload as ApproveExactProposalResponse;
 }

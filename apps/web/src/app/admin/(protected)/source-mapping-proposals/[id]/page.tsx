@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AdminSessionExpired } from "@/components/AdminSessionExpired";
 import { AppHeader } from "@/components/AppHeader";
@@ -27,12 +27,12 @@ import {
   ProposalResolutionBadge,
   ProposalReviewStatusBadge,
   ProposalSourceBadge,
-  ReadOnlyNotice,
   TechnicalJson,
   candidateDisplayName,
   jsonValueText,
   releaseDisplayName,
 } from "../ProposalReviewComponents";
+import { ExactProposalApprovalPanel } from "./ExactProposalApprovalPanel";
 
 export default function ProposalReviewDetailPage() {
   return (
@@ -61,13 +61,18 @@ function ProposalReviewDetailPageInner() {
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "not-found">("loading");
   const [error, setError] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [reloadRevision, setReloadRevision] = useState(0);
+  const silentReloadRef = useRef(false);
 
   useEffect(() => {
     if (invalidId) return;
     const controller = new AbortController();
-    queueMicrotask(() => {
-      if (!controller.signal.aborted) setStatus("loading");
-    });
+    if (silentReloadRef.current) silentReloadRef.current = false;
+    else {
+      queueMicrotask(() => {
+        if (!controller.signal.aborted) setStatus("loading");
+      });
+    }
     fetchProposalReviewGroup(id, controller.signal)
       .then((result) => {
         setProposal(result);
@@ -83,7 +88,7 @@ function ProposalReviewDetailPageInner() {
         }
       });
     return () => controller.abort();
-  }, [id, invalidId]);
+  }, [id, invalidId, reloadRevision]);
 
   if (unauthorized) return <DetailShell><AdminSessionExpired /></DetailShell>;
   if (status === "loading") return <DetailShell><LoadingState>Loading proposal evidence…</LoadingState></DetailShell>;
@@ -109,10 +114,9 @@ function ProposalReviewDetailPageInner() {
       </nav>
       <PageHeader
         title={`Proposal #${proposal.id}`}
-        description="Complete persisted resolver and exact-print evidence. This workspace is read-only."
-        actions={<span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">Read-only</span>}
+        description="Complete persisted resolver and exact-print evidence. Approval is available only after deliberate review of an eligible exact proposal."
+        actions={<span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">Detail review</span>}
       />
-      <ReadOnlyNotice />
 
       <div className="mt-5 space-y-5">
         <DetailSection title="Proposal">
@@ -247,6 +251,14 @@ function ProposalReviewDetailPageInner() {
             {proposal.candidate.ambiguous_matches && <TechnicalJson label="Stored ambiguous matches" value={proposal.candidate.ambiguous_matches} />}
           </div>
         </DetailSection>
+
+        <ExactProposalApprovalPanel
+          proposal={proposal}
+          onReload={(options) => {
+            silentReloadRef.current = options?.silent === true;
+            setReloadRevision((revision) => revision + 1);
+          }}
+        />
 
         <details className="rounded-panel border border-border-default bg-bg-surface p-4">
           <summary className="cursor-pointer text-base font-semibold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60">Legacy compatibility metadata</summary>

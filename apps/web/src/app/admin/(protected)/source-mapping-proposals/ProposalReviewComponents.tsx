@@ -125,7 +125,7 @@ export function ReadOnlyNotice({ compact = false }: { compact?: boolean }) {
         compact ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm"
       }`}
     >
-      Review decisions are not enabled in this phase.
+      Approval is available only from an eligible proposal detail page. Queue rows remain read-only.
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 export type ActionButtonVariant = "default" | "primary" | "dry-run" | "preview" | "real" | "danger";
 
@@ -16,21 +16,26 @@ const VARIANT_CLASS: Record<ActionButtonVariant, string> = {
   danger: "admin-danger",
 };
 
-export function ActionButton({
-  variant = "default",
-  className = "",
-  children,
-  ...props
-}: {
-  variant?: ActionButtonVariant;
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+export const ActionButton = forwardRef<
+  HTMLButtonElement,
+  { variant?: ActionButtonVariant } & ButtonHTMLAttributes<HTMLButtonElement>
+>(function ActionButton(
+  {
+    variant = "default",
+    className = "",
+    children,
+    ...props
+  },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       {...props}
-      className={`rounded-control px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT_CLASS[variant]} ${className}`}
+      className={`rounded-control px-2.5 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 disabled:cursor-not-allowed disabled:opacity-40 ${VARIANT_CLASS[variant]} ${className}`}
     >
       {children}
     </button>
   );
-}
+});
