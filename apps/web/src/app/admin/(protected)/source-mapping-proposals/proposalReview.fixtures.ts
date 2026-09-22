@@ -220,7 +220,12 @@ export function makeReviewDetail(overrides: Partial<ProposalReviewGroupDetail> =
   const group = makeReviewGroup();
   return {
     ...group,
-    evidence_digest: "sha256:fixture",
+    evidence_digest: "a".repeat(64),
+    reviewed_at: null,
+    reviewed_by: null,
+    review_notes: null,
+    selected_alternative_id: null,
+    decision_basis_updated_at: null,
     evidence_summary: { candidate_id: 9911, matched_card_code: "OP01-001", release_product_id: 17 },
     resolution_reasons: ["Stored card code and release evidence support one exact printing."],
     resulting_mapping: null,

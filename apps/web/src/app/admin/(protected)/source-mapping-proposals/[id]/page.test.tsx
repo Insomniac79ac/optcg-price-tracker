@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: routeId }),
   useSearchParams: () => detailSearch,
   usePathname: () => `/admin/source-mapping-proposals/${routeId}`,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
 const fetchProposalReviewGroup = vi.fn();
@@ -41,8 +41,9 @@ describe("ProposalReviewDetailPage", () => {
       expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
     }
     expect(screen.getByText("Release membership is authoritative from CardPrint.release_product_id.")).toBeInTheDocument();
-    expect(screen.getByText("sha256:fixture")).toBeInTheDocument();
-    expect(screen.getByText("Review decisions are not enabled in this phase.")).toBeInTheDocument();
+    expect(screen.getByText("a".repeat(64))).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Approve exact proposal" })).toBeInTheDocument();
+    expect(screen.getByText("Eligible for exact-approval review")).toBeInTheDocument();
   });
 
   it("renders every ambiguous alternative with uncropped artwork and evidence", async () => {
@@ -55,7 +56,7 @@ describe("ProposalReviewDetailPage", () => {
     expect(screen.getByText("Listing photo does not distinguish the treatment")).toBeInTheDocument();
     const images = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
     expect(images.every((image) => image.className.includes("object-contain"))).toBe(true);
-    expect(screen.getByText("Artwork unavailable")).toBeInTheDocument();
+    expect(screen.getAllByText("Artwork unavailable").length).toBeGreaterThan(0);
   });
 
   it("keeps compatibility metadata collapsed and explicitly subordinate", async () => {
@@ -70,6 +71,7 @@ describe("ProposalReviewDetailPage", () => {
     await screen.findByRole("heading", { name: "Source evidence" });
     const images = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
     expect(images.some((image) => image.src.includes("yuyu-tei"))).toBe(false);
+    expect(images.every((image) => !image.src.startsWith("https://www.onepiece-cardgame.com"))).toBe(true);
     const sourceLinks = screen.getAllByRole("link", { name: /opens in a new tab/ });
     expect(sourceLinks.length).toBeGreaterThan(0);
     for (const link of sourceLinks) {
@@ -77,6 +79,25 @@ describe("ProposalReviewDetailPage", () => {
       expect(link.getAttribute("rel")).toContain("noreferrer");
       expect(link.getAttribute("rel")).toContain("noopener");
     }
+  });
+
+  it("does not hotlink a non-owned marketplace display image", async () => {
+    const alternative = makeAlternative({
+      display_image: {
+        url: "https://card.yuyu-tei.jp/card_image/opc/front/9911.jpg",
+        source: "yuyutei",
+        exact_print_verified: true,
+        owned_asset_selected: false,
+        geometry: null,
+      },
+    });
+    fetchProposalReviewGroup.mockResolvedValue(makeReviewDetail({ alternatives: [alternative] }));
+    render(<ProposalReviewDetailPage />);
+    await screen.findByRole("heading", { name: "Approve exact proposal" });
+    const artwork = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
+    expect(artwork.length).toBeGreaterThan(0);
+    expect(artwork.every((image) => !image.src.includes("yuyu-tei"))).toBe(true);
+    expect(artwork.every((image) => image.getAttribute("src")?.startsWith("/api/card-image?u="))).toBe(true);
   });
 
   it("preserves the exact filtered queue return URL", async () => {
@@ -93,7 +114,7 @@ describe("ProposalReviewDetailPage", () => {
     fetchProposalReviewGroup.mockResolvedValue(detail);
     render(<ProposalReviewDetailPage />);
     expect(await screen.findByText("Candidate artwork is missing.")).toBeInTheDocument();
-    expect(screen.getByText("Artwork unavailable")).toBeInTheDocument();
+    expect(screen.getAllByText("Artwork unavailable").length).toBeGreaterThan(0);
   });
 
   it("renders a proposal detail 404", async () => {
@@ -102,10 +123,12 @@ describe("ProposalReviewDetailPage", () => {
     expect(await screen.findByText("Proposal #1127 was not found.")).toBeInTheDocument();
   });
 
-  it("contains no mutation controls", async () => {
+  it("places the approval entry point only after the complete resolver evidence", async () => {
     render(<ProposalReviewDetailPage />);
-    await screen.findByRole("heading", { name: "Proposal #1127" });
-    for (const label of ["Approve", "Reject", "Mark reviewed", "Create mapping", "Replace printing"]) {
+    const reasoning = await screen.findByRole("heading", { name: "Resolver reasoning" });
+    const approval = screen.getByRole("heading", { name: "Approve exact proposal" });
+    expect(reasoning.compareDocumentPosition(approval) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const label of ["Reject", "Mark reviewed", "Create mapping", "Replace printing"]) {
       expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
     }
   });
