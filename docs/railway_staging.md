@@ -39,11 +39,13 @@ be a real production credential.
 
 ## Why a separate Dockerfile per Railway service
 
-`services/api/Dockerfile` and `services/worker/Dockerfile` both use a bare `COPY requirements.txt
-.` / `COPY . .`, which only resolves correctly if the Docker **build context** is that service's
-own subdirectory (`services/api` or `services/worker`) - true locally because
-`docker-compose.yml`/`docker-compose.prod.yml` both set `context: ./services/api` (or
-`./services/worker`) explicitly.
+The API and worker historically used service-directory build contexts. Since the
+canonical mapping identity foundation, both local Compose files and Railway use
+repository-root contexts with explicit COPY paths, installing
+`packages/opcg_source_identity` as a regular local Python project. Railway-specific
+Dockerfiles retain their existing runtime commands. No dashboard root-directory
+or watch-path change is required for this tranche. See
+[the foundation contract](source_mapping_identity_foundation.md).
 
 On Railway, a service's "Root Directory" setting controls *both* where Railway looks for a
 Dockerfile *and* the build context passed to `docker build` - if those two don't end up meaning

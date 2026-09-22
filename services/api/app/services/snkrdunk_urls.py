@@ -37,7 +37,7 @@ join a candidate to its mapping must do so on the listing id (see
 
 from __future__ import annotations
 
-import re
+from opcg_source_identity import snkrdunk_listing_id as listing_id
 
 from app.services.exact_print_approval import (
     REFUSAL_SOURCE_URL_NOT_CANONICAL,
@@ -49,10 +49,6 @@ SNKRDUNK_HOST = "snkrdunk.com"
 # The two published paths for one listing. Anchored, and the id is digits
 # only: a trailing query string or fragment is ignored (discovery URLs carry
 # `?slide=right&query_id=...`), but nothing else is accepted.
-_LISTING_PATH_RES = (
-    re.compile(r"^https://snkrdunk\.com/apparels/(\d+)(?:[/?#].*)?$"),
-    re.compile(r"^https://snkrdunk\.com/en/trading-cards/(\d+)(?:[/?#].*)?$"),
-)
 
 # card_print.language -> the path that serves that language. Mirrors
 # snkrdunk_collector/writer.py's CARD_PRINT_LANGUAGE_TO_HTML_LANG, which is
@@ -62,19 +58,6 @@ _LANGUAGE_PATHS = {
     "jp": "https://snkrdunk.com/apparels/{listing_id}",
     "en": "https://snkrdunk.com/en/trading-cards/{listing_id}",
 }
-
-
-def listing_id(url: str | None) -> str | None:
-    """The numeric listing id shared by both paths, or None if this is not a
-    recognised SNKRDUNK listing URL. Never raises - callers that need a
-    refusal use `canonical_listing_url`."""
-    if not url:
-        return None
-    for pattern in _LISTING_PATH_RES:
-        match = pattern.match(url.strip())
-        if match:
-            return match.group(1)
-    return None
 
 
 def canonical_listing_url(url: str | None, *, card_print_language: str | None) -> str:

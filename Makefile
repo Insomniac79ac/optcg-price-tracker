@@ -61,9 +61,11 @@ dev-down:
 	docker compose down
 
 test-api:
+	python3 -m pip install --no-deps ./packages/opcg_source_identity
 	cd services/api && python3 -m pytest
 
 test-worker:
+	python3 -m pip install --no-deps ./packages/opcg_source_identity
 	cd services/worker && python3 -m pytest
 
 migrate:

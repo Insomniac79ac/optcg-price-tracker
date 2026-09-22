@@ -6,9 +6,8 @@
 # Local verification: docker build -f deploy/railway/worker.Dockerfile -t opcg-worker-railway-test .
 # (run from the repo root - NOT from services/worker).
 #
-# Does not change docker-compose.yml/docker-compose.prod.yml or
-# services/worker/Dockerfile - local Docker Compose still uses those
-# unchanged. No public port - worker only consumes Celery tasks over Redis,
+# Local Compose now also uses root context for the shared identity package.
+# No public port - worker only consumes Celery tasks over Redis,
 # it never serves HTTP (do not enable public networking for this service in
 # Railway).
 #
@@ -28,7 +27,10 @@ WORKDIR /app
 COPY services/worker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY packages/opcg_source_identity /opt/opcg_source_identity
+RUN python -m pip install --no-cache-dir --no-deps /opt/opcg_source_identity
 COPY services/worker/. .
+RUN python -c "from worker.matching.listing_identity import canonical_source_listing_identity as derive; from opcg_source_identity.vectors import verify_contract; verify_contract(derive)"
 
 ARG GIT_COMMIT=unknown
 ARG BUILD_TIME=unknown

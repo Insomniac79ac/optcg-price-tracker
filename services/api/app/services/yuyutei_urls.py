@@ -35,7 +35,7 @@ Those rows stay readable and keep working; they are simply not listings.
 
 from __future__ import annotations
 
-import re
+from opcg_source_identity import yuyutei_listing_identity as listing_identity
 
 from app.services.exact_print_approval import (
     REFUSAL_SOURCE_URL_NOT_CANONICAL,
@@ -48,26 +48,8 @@ YUYUTEI_HOST = "yuyu-tei.jp"
 # (`op01`, `eb01`, `prb01`, `promo-op10`); the product id is digits only, which
 # is what excludes the legacy card-code form above. A trailing query string or
 # fragment is tolerated and dropped - identity is the pair, not the spelling.
-_LISTING_PATH_RE = re.compile(
-    r"^https://yuyu-tei\.jp/sell/opc/card/([a-z0-9][a-z0-9-]*)/(\d+)(?:[/?#].*)?$"
-)
 
 _CANONICAL = "https://yuyu-tei.jp/sell/opc/card/{set_slug}/{product_id}"
-
-
-def listing_identity(url: str | None) -> tuple[str, str] | None:
-    """`(set_slug, product_id)` for a Yuyu-Tei product page, else None.
-
-    Never raises - callers that need a refusal use `canonical_listing_url`.
-    None means "this is not a product listing", which is a real answer for the
-    legacy card-code rows and must not be confused with "no mapping exists".
-    """
-    if not url:
-        return None
-    match = _LISTING_PATH_RE.match(url.strip())
-    if match is None:
-        return None
-    return match.group(1), match.group(2)
 
 
 def canonical_listing_url(url: str | None) -> str:

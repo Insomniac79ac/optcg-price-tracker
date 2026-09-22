@@ -18,7 +18,9 @@ services:
       - "6379:6379"
 
   api:
-    build: ./services/api
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
     container_name: opcg-api
     ports:
       - "8000:8000"
@@ -37,7 +39,9 @@ services:
       - redis
 
   worker:
-    build: ./services/worker
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
     container_name: opcg-worker
     command: celery -A worker.celery_app worker --loglevel=info
     environment:
@@ -59,7 +63,9 @@ services:
       - redis
 
   beat:
-    build: ./services/worker
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
     container_name: opcg-beat
     command: celery -A worker.celery_app beat --loglevel=info
     environment:

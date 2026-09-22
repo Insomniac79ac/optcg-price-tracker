@@ -102,6 +102,7 @@ echo
 RUN_TESTS="${RUN_TESTS:-false}"
 echo "== 4. Test suites (RUN_TESTS=$RUN_TESTS) =="
 if [[ "$RUN_TESTS" == "true" ]]; then
+  python3 -m pip install --no-deps ./packages/opcg_source_identity || exit 1
   if (cd services/api && python3 -m pytest -q); then
     pass "services/api test suite"
   else

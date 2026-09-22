@@ -2,10 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY services/worker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY packages/opcg_source_identity /opt/opcg_source_identity
+RUN python -m pip install --no-cache-dir --no-deps /opt/opcg_source_identity
+COPY services/worker/. .
+RUN python -c "from worker.matching.listing_identity import canonical_source_listing_identity as derive; from opcg_source_identity.vectors import verify_contract; verify_contract(derive)"
 
 # Release/build metadata, for correlating worker/beat logs with a specific
 # release - see services/api/Dockerfile's identical block and the Makefile's
