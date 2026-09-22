@@ -25,6 +25,7 @@ from app.services.exact_print_approval import (
     REFUSAL_AMBIGUOUS,
     REFUSAL_CARD_CODE_MISMATCH,
     REFUSAL_EVIDENCE_CONTRADICTS,
+    REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
     REFUSAL_NO_SOURCE_CARD_CODE,
     REFUSAL_PRINT_INACTIVE,
     REFUSAL_PRINT_NOT_FOUND,
@@ -437,10 +438,7 @@ def test_manual_match_endpoint_also_requires_the_exact_print(client, catalogue, 
 
 
 def test_one_listing_cannot_be_approved_to_two_prints(client, catalogue, candidate):
-    """The existing contract is UNIQUE (source_id, source_url). Approving the
-    same listing again moves that ONE row; it never creates a second mapping
-    pointing at a different print. This asserts the repository's existing
-    uniqueness semantics rather than adding a new rule."""
+    """The reusable writer refuses to repoint one listing to another print."""
     db = catalogue["db"]
     candidate.detected_set_code = "OP-02"
     candidate.detected_variant = "p1"
@@ -458,11 +456,12 @@ def test_one_listing_cannot_be_approved_to_two_prints(client, catalogue, candida
         f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
         json={"card_id": _card_id(catalogue), "card_print_id": catalogue["prints"]["p2"].id},
     )
-    assert second.status_code == 200, second.text
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == REFUSAL_MAPPING_NAMES_ANOTHER_PRINT
 
     mappings = db.query(SourceCardMapping).all()
     assert len(mappings) == 1, "a second row would be a second claim about one listing"
-    assert mappings[0].card_print_id == catalogue["prints"]["p2"].id
+    assert mappings[0].card_print_id == catalogue["prints"]["p1"].id
 
 
 def test_two_distinct_listings_may_map_to_two_prints_of_one_card(client, catalogue):
@@ -940,11 +939,10 @@ def test_approve_match_with_a_dangling_card_id_is_still_404(client, catalogue, c
     assert catalogue["db"].query(SourceCardMapping).count() == 0
 
 
-def test_re_approving_without_card_id_does_not_erase_an_existing_legacy_pointer(
+def test_refused_repoint_without_card_id_does_not_erase_existing_identity(
     client, catalogue, candidate
 ):
-    """A legacy mapping re-approved onto a corrected print keeps its card_id -
-    dropping it would be silent data loss, not a print-authoritative write."""
+    """A refused different-print reapproval leaves both identity pointers intact."""
     candidate.detected_set_code = "OP-02"
     candidate.detected_variant = "p1"
     catalogue["db"].commit()
@@ -960,11 +958,12 @@ def test_re_approving_without_card_id_does_not_erase_an_existing_legacy_pointer(
         f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
         json={"card_print_id": catalogue["prints"]["p2"].id},
     )
-    assert second.status_code == 200, second.text
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == REFUSAL_MAPPING_NAMES_ANOTHER_PRINT
 
     mapping = catalogue["db"].query(SourceCardMapping).one()
     assert mapping.card_id == _card_id(catalogue)
-    assert mapping.card_print_id == catalogue["prints"]["p2"].id
+    assert mapping.card_print_id == catalogue["prints"]["p1"].id
 
 
 def test_manual_match_endpoint_also_accepts_a_print_without_a_card(
@@ -1072,11 +1071,8 @@ def test_an_unrecognised_listing_url_refuses_and_writes_nothing(
     assert catalogue["db"].query(SourceCardMapping).count() == 0
 
 
-def test_re_approving_the_other_path_updates_the_same_row(client, catalogue, candidate):
-    """Duplicate protection across canonicalisation: a listing first approved
-    from one path must not produce a second row when re-approved from the
-    other - uq_source_card_mappings_source_url cannot catch that, because the
-    two URLs are different strings."""
+def test_re_approving_other_path_cannot_repoint_the_same_row(client, catalogue, candidate):
+    """Alias-path lookup finds the same row and refuses a different print."""
     candidate.source_url = EN_LISTING
     _evidence_for(catalogue, candidate, variant="p1")
     first = client.post(
@@ -1092,13 +1088,14 @@ def test_re_approving_the_other_path_updates_the_same_row(client, catalogue, can
         f"/admin/snkrdunk-candidates/{candidate.id}/approve-match",
         json={"card_print_id": catalogue["prints"]["p2"].id},
     )
-    assert second.status_code == 200, second.text
+    assert second.status_code == 409, second.text
+    assert second.json()["detail"]["code"] == REFUSAL_MAPPING_NAMES_ANOTHER_PRINT
 
     mappings = catalogue["db"].query(SourceCardMapping).all()
     assert len(mappings) == 1
     assert mappings[0].id == mapping_id
     assert mappings[0].source_url == JP_LISTING
-    assert mappings[0].card_print_id == catalogue["prints"]["p2"].id
+    assert mappings[0].card_print_id == catalogue["prints"]["p1"].id
 
 
 def test_canonicalisation_preserves_the_print_authoritative_shape(
