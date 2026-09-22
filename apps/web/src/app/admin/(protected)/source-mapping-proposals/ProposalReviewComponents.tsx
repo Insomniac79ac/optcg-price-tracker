@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/Badge";
+import { resolveCardImageUrl } from "@/lib/cardImage";
 import type {
   ProposalReviewCandidateSummary,
   ProposalReviewJsonValue,
@@ -88,7 +89,17 @@ export function ProposalArtwork({
   size?: "queue" | "detail";
 }) {
   const [failed, setFailed] = useState(false);
-  const source = print?.display_image?.url ?? print?.canonical_image_url ?? null;
+  const displayImage = print?.display_image;
+  // Proposal review never hotlinks a marketplace image merely because the
+  // display-image selector found one. Only an owned mirror or first-party
+  // Bandai evidence may be shown automatically; otherwise the canonical
+  // official asset is the safe fallback. Bandai itself requires the existing
+  // same-origin image proxy because its CORP header blocks direct embedding.
+  const safeDisplayUrl =
+    displayImage?.owned_asset_selected || displayImage?.source === "bandai"
+      ? displayImage.url
+      : null;
+  const source = resolveCardImageUrl(safeDisplayUrl ?? print?.canonical_image_url ?? null);
   const showImage = Boolean(source && !failed && !print?.image_missing);
   const frameClass =
     size === "detail" ? "h-80 w-56 sm:h-[28rem] sm:w-80" : "h-28 w-20";
@@ -98,8 +109,8 @@ export function ProposalArtwork({
       className={`${frameClass} flex shrink-0 items-center justify-center overflow-hidden rounded-panel border border-border-default bg-bg-page`}
     >
       {showImage ? (
-        // The review contract supplies exact-print display images. Candidate
-        // marketplace image URLs are deliberately never passed here.
+        // Candidate and non-owned marketplace image URLs are deliberately
+        // never passed here.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={source!}
@@ -152,7 +163,7 @@ export function KeyValue({ label, children }: { label: string; children: ReactNo
   return (
     <div className="min-w-0">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-text-muted">{label}</dt>
-      <dd className="mt-0.5 break-words text-text-primary">{children ?? "—"}</dd>
+      <dd className="mt-0.5 min-w-0 [overflow-wrap:anywhere] text-text-primary">{children ?? "—"}</dd>
     </div>
   );
 }

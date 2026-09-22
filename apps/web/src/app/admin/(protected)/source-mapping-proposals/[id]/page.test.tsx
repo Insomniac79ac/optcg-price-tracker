@@ -71,6 +71,7 @@ describe("ProposalReviewDetailPage", () => {
     await screen.findByRole("heading", { name: "Source evidence" });
     const images = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
     expect(images.some((image) => image.src.includes("yuyu-tei"))).toBe(false);
+    expect(images.every((image) => !image.src.startsWith("https://www.onepiece-cardgame.com"))).toBe(true);
     const sourceLinks = screen.getAllByRole("link", { name: /opens in a new tab/ });
     expect(sourceLinks.length).toBeGreaterThan(0);
     for (const link of sourceLinks) {
@@ -78,6 +79,25 @@ describe("ProposalReviewDetailPage", () => {
       expect(link.getAttribute("rel")).toContain("noreferrer");
       expect(link.getAttribute("rel")).toContain("noopener");
     }
+  });
+
+  it("does not hotlink a non-owned marketplace display image", async () => {
+    const alternative = makeAlternative({
+      display_image: {
+        url: "https://card.yuyu-tei.jp/card_image/opc/front/9911.jpg",
+        source: "yuyutei",
+        exact_print_verified: true,
+        owned_asset_selected: false,
+        geometry: null,
+      },
+    });
+    fetchProposalReviewGroup.mockResolvedValue(makeReviewDetail({ alternatives: [alternative] }));
+    render(<ProposalReviewDetailPage />);
+    await screen.findByRole("heading", { name: "Approve exact proposal" });
+    const artwork = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
+    expect(artwork.length).toBeGreaterThan(0);
+    expect(artwork.every((image) => !image.src.includes("yuyu-tei"))).toBe(true);
+    expect(artwork.every((image) => image.getAttribute("src")?.startsWith("/api/card-image?u="))).toBe(true);
   });
 
   it("preserves the exact filtered queue return URL", async () => {

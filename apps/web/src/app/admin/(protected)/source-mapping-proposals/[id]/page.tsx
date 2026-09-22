@@ -227,14 +227,14 @@ function ProposalReviewDetailPageInner() {
         </DetailSection>
 
         <DetailSection title="Resolver reasoning">
-          <div className="grid gap-5 lg:grid-cols-2">
-            <div><h3 className="mb-2 text-sm font-medium text-text-primary">Resolution reasons</h3><EvidenceList values={proposal.resolution_reasons} /></div>
-            <div>
+          <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+            <div className="min-w-0"><h3 className="mb-2 text-sm font-medium text-text-primary">Resolution reasons</h3><EvidenceList values={proposal.resolution_reasons} /></div>
+            <div className="min-w-0">
               <h3 className="mb-2 text-sm font-medium text-text-primary">Evidence summary</h3>
               <dl className="space-y-2">
                 {Object.entries(proposal.evidence_summary).map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-[minmax(8rem,0.4fr)_1fr] gap-3 border-b border-border-muted pb-2 text-sm">
-                    <dt className="text-text-muted">{key.replaceAll("_", " ")}</dt><dd className="break-words text-text-primary">{jsonValueText(value)}</dd>
+                  <div key={key} className="grid min-w-0 grid-cols-[minmax(8rem,0.4fr)_minmax(0,1fr)] gap-3 border-b border-border-muted pb-2 text-sm">
+                    <dt className="text-text-muted">{key.replaceAll("_", " ")}</dt><dd className="min-w-0 [overflow-wrap:anywhere] text-text-primary">{jsonValueText(value)}</dd>
                   </div>
                 ))}
               </dl>
@@ -296,7 +296,7 @@ function DetailSection({ title, children }: { title: string; children: ReactNode
 function AlternativeCard({ alternative }: { alternative: ProposalReviewAlternative }) {
   const cardName = alternative.canonical_card.name_en ?? alternative.canonical_card.name_jp ?? alternative.canonical_card.card_code;
   return (
-    <article className={`rounded-panel border p-4 ${alternative.recommended ? "border-sky-500/45 bg-sky-500/5" : "border-border-default bg-bg-page"}`}>
+    <article className={`min-w-0 rounded-panel border p-4 ${alternative.recommended ? "border-sky-500/45 bg-sky-500/5" : "border-border-default bg-bg-page"}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div><h3 className="font-semibold text-text-primary">{cardName}</h3><p className="mono text-xs text-text-muted">{alternative.canonical_card.card_code} · CardPrint #{alternative.card_print_id}</p></div>
         {alternative.recommended && <span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">Recommended proposal</span>}

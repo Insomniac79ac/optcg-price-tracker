@@ -473,13 +473,15 @@ function ApprovalConfirmationModal({
 
         <div className="mt-4 flex flex-col gap-4 sm:flex-row">
           <ProposalArtwork print={alternative} alt={`${cardName} ${alternative.printing_label ?? "printing"} approval artwork`} size="detail" />
-          <KeyValueGrid>
-            <KeyValue label="Proposal ID">{proposal.id}</KeyValue>
-            <KeyValue label="Card">{alternative.canonical_card.card_code} · {cardName}</KeyValue>
-            <KeyValue label="Source">{proposal.source_name}</KeyValue>
-            <KeyValue label="Authoritative release">{releaseDisplayName(proposal.release)}</KeyValue>
-            <KeyValue label="CardPrint ID">{alternative.card_print_id}</KeyValue>
-          </KeyValueGrid>
+          <div className="min-w-0 flex-1">
+            <KeyValueGrid>
+              <KeyValue label="Proposal ID">{proposal.id}</KeyValue>
+              <KeyValue label="Card">{alternative.canonical_card.card_code} · {cardName}</KeyValue>
+              <KeyValue label="Source">{proposal.source_name}</KeyValue>
+              <KeyValue label="Authoritative release">{releaseDisplayName(proposal.release)}</KeyValue>
+              <KeyValue label="CardPrint ID">{alternative.card_print_id}</KeyValue>
+            </KeyValueGrid>
+          </div>
         </div>
 
         <p className="mt-4 rounded-control border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
