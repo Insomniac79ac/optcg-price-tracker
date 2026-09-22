@@ -31,7 +31,7 @@ def lookup_current_mapping(db: Session, *, source: Source, url: str | None, for_
     if len(current) > 1:
         raise ExactPrintApprovalError(
             REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
-            f"Listing {identity} has multiple current mappings; explicit repair required.",
+            f"Listing {identity} has {len(current)} mappings currently claiming it; explicit repair required.",
             alternatives=[m.id for m in current],
         )
     return CurrentMappingLookup(current[0] if current else None, tuple(m for m in rows if m.superseded_at is not None))

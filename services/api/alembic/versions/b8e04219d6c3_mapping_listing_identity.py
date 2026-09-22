@@ -6,8 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 from opcg_source_identity import canonical_source_listing_identity
 
-revision = "b8e04219d6c3"
-down_revision = "a7f936027b8f"
+revision: str = "b8e04219d6c3"
+down_revision: str = "a7f936027b8f"
 branch_labels = None
 depends_on = None
 TABLE = "source_card_mappings"

@@ -54,10 +54,12 @@ def test_upgrade_downgrade_upgrade_preserves_duplicate_rows(pg_connection):
     spec = importlib.util.spec_from_file_location("identity_migration", file)
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    with Operations.context(MigrationContext.configure(c)):
-        migration.upgrade()
-        migration.downgrade()
-        migration.upgrade()
+    # Instance-local operations avoid global alembic.op recording stubs left
+    # by structural migration tests elsewhere in the full suite.
+    migration.op = Operations(MigrationContext.configure(c))
+    migration.upgrade()
+    migration.downgrade()
+    migration.upgrade()
     after = c.execute(text("SELECT id,source_id,source_url,is_active,review_status,updated_at FROM source_card_mappings ORDER BY id")).all()
     assert after == before
     identities = dict(c.execute(text("SELECT id,canonical_source_listing_identity FROM source_card_mappings")).all())
