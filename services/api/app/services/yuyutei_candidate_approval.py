@@ -48,13 +48,16 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Source, SourceCardMapping
+from app.models import CanonicalCard, CardPrint, Source, SourceCardMapping
 from app.models.yuyutei_candidate import YuyuteiCandidate
 from app.models.yuyutei_discovery_run import YuyuteiDiscoveryRun
 from app.services.exact_print_approval import (
     REFUSAL_CANDIDATE_NOT_PRINT_MATCHED,
     REFUSAL_CANDIDATE_SUPERSEDED,
+    REFUSAL_CARD_CODE_MISMATCH,
     REFUSAL_DISCOVERY_RUN_INCOMPLETE,
+    REFUSAL_EVIDENCE_CONTRADICTS,
+    REFUSAL_AMBIGUOUS,
     REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
     REFUSAL_MAPPING_WAS_REJECTED,
     REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
@@ -63,6 +66,7 @@ from app.services.exact_print_approval import (
     ApprovalDecision,
     ExactPrintApprovalError,
     SourceEvidence,
+    assert_print_is_priceable,
     resolve_exact_print,
 )
 from app.services.yuyutei_urls import canonical_listing_url, listing_identity
@@ -70,6 +74,7 @@ from app.services.yuyutei_urls import canonical_listing_url, listing_identity
 APPROVED = "approved"
 REJECTED = "rejected"
 PRINT_MATCHED = "print_matched"
+FAMILY_MATCHED = "family_matched"
 RUN_COMPLETED = "completed"
 
 YUYUTEI_SOURCE_NAME = "yuyutei"
@@ -99,6 +104,24 @@ class YuyuteiApprovalResult:
     decision: ApprovalDecision
     mapping_created: bool
     canonical_url: str
+
+
+@dataclass(frozen=True)
+class ExactProposalApprovalProof:
+    """Resolver-derived facts accepted by the family-matched writer.
+
+    This is constructed inside the proposal decision service after rerunning
+    the persisted-evidence resolver.  No HTTP schema exposes it.
+    """
+
+    proposal_group_id: int
+    candidate_id: int
+    canonical_source_listing_identity: str
+    canonical_card_id: int
+    release_product_id: int
+    card_print_id: int
+    evidence_digest: str
+    resolver_version: str
 
 
 def get_yuyutei_source(db: Session) -> Source:
@@ -420,14 +443,145 @@ def approve_candidate(
     )
 
 
+def _normalized_code(value: str | None) -> str | None:
+    if value is None:
+        return None
+    result = value.strip().upper().replace("-", "").replace("_", "").replace(" ", "")
+    return result or None
+
+
+def approve_candidate_from_exact_proposal(
+    db: Session,
+    *,
+    candidate: YuyuteiCandidate,
+    proof: ExactProposalApprovalProof,
+    review_notes: str | None = None,
+    source: Source | None = None,
+) -> YuyuteiApprovalResult:
+    """Approve a release-scoped exact proposal without rewriting candidate truth.
+
+    A family-matched Yuyu candidate deliberately does not name a CardPrint.
+    The freshly revalidated proposal proof supplies the authoritative release
+    scope, while this writer independently rechecks every Yuyu provenance and
+    mapping invariant before flushing.  It never commits or performs I/O.
+    """
+    source = source or get_yuyutei_source(db)
+    if candidate.id != proof.candidate_id or candidate.match_status != FAMILY_MATCHED:
+        raise ExactPrintApprovalError(
+            "candidate_state_changed",
+            f"Yuyu-Tei candidate {candidate.id} is no longer the family-matched "
+            "candidate proven by this proposal.",
+        )
+    if candidate.matched_card_print_id is not None:
+        raise ExactPrintApprovalError(
+            "candidate_state_changed",
+            f"Family-matched candidate {candidate.id} unexpectedly names card_print "
+            f"{candidate.matched_card_print_id}.",
+        )
+
+    assert_enumeration_is_trustworthy(db, candidate)
+    identity = assert_source_identity_is_intact(candidate)
+    canonical_identity = f"{identity[0]}:{identity[1]}"
+    if canonical_identity != proof.canonical_source_listing_identity:
+        raise ExactPrintApprovalError(
+            REFUSAL_SOURCE_URL_NOT_CANONICAL,
+            "The proposal listing identity no longer matches the candidate.",
+        )
+
+    print_row = assert_print_is_priceable(db, proof.card_print_id)
+    canonical = db.get(CanonicalCard, proof.canonical_card_id)
+    if canonical is None or print_row.canonical_card_id != proof.canonical_card_id:
+        raise ExactPrintApprovalError(
+            REFUSAL_EVIDENCE_CONTRADICTS,
+            "The proposed print no longer belongs to the resolved canonical card.",
+        )
+    if _normalized_code(candidate.detected_card_code) != _normalized_code(canonical.card_code):
+        raise ExactPrintApprovalError(
+            REFUSAL_CARD_CODE_MISMATCH,
+            f"Candidate code {candidate.detected_card_code!r} no longer corroborates "
+            f"canonical card {canonical.card_code!r}.",
+        )
+    if print_row.release_product_id != proof.release_product_id:
+        raise ExactPrintApprovalError(
+            REFUSAL_EVIDENCE_CONTRADICTS,
+            "The proposed print no longer belongs to the authoritative release.",
+        )
+
+    eligible = db.scalars(
+        select(CardPrint).where(
+            CardPrint.canonical_card_id == proof.canonical_card_id,
+            CardPrint.release_product_id == proof.release_product_id,
+            CardPrint.language == "jp",
+            CardPrint.is_active.is_(True),
+            CardPrint.verification_status == "verified",
+        )
+    ).all()
+    if [row.id for row in eligible] != [proof.card_print_id]:
+        raise ExactPrintApprovalError(
+            REFUSAL_AMBIGUOUS,
+            "The canonical family and authoritative release no longer contain exactly "
+            "the proposed active verified Japanese print.",
+            alternatives=sorted(row.id for row in eligible),
+        )
+
+    mapping_url = canonical_listing_url(candidate.source_url)
+    mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
+    assert_mapping_may_be_approved(mapping, proof.card_print_id)
+    mapping_created = mapping is None
+    if mapping is None:
+        mapping = SourceCardMapping(
+            source_id=source.id,
+            source_card_id=candidate.detected_card_code,
+        )
+        db.add(mapping)
+
+    decision = ApprovalDecision(
+        card_print=print_row,
+        canonical=canonical,
+        evidence_used=[
+            f"card code {canonical.card_code}",
+            f"authoritative release #{proof.release_product_id}",
+            f"exact proposal #{proof.proposal_group_id}",
+        ],
+        considered_print_ids=[proof.card_print_id],
+    )
+    if review_notes is None:
+        review_notes = (
+            f"{decision.as_review_note()} Revalidated proposal evidence "
+            f"{proof.evidence_digest} at {proof.resolver_version}."
+        )
+
+    mapping.source_card_id = candidate.detected_card_code
+    mapping.card_print_id = print_row.id
+    mapping.source_url = mapping_url
+    mapping.manual_verified = True
+    mapping.review_status = APPROVED
+    mapping.is_active = True
+    mapping.review_notes = review_notes
+
+    # Deliberately do not touch match_status or matched_card_print_id.  The
+    # candidate remains truthful about needing release-scoped reasoning.
+    db.flush()
+    return YuyuteiApprovalResult(
+        candidate=candidate,
+        mapping=mapping,
+        decision=decision,
+        mapping_created=mapping_created,
+        canonical_url=mapping_url,
+    )
+
+
 __all__ = [
     "APPROVED",
+    "ExactProposalApprovalProof",
+    "FAMILY_MATCHED",
     "PRINT_MATCHED",
     "REJECTED",
     "YUYUTEI_SOURCE_NAME",
     "YuyuteiApprovalResult",
     "YuyuteiSourceMissing",
     "approve_candidate",
+    "approve_candidate_from_exact_proposal",
     "assert_candidate_is_print_matched",
     "assert_enumeration_is_trustworthy",
     "assert_mapping_may_be_approved",

@@ -171,7 +171,7 @@ def match_candidate(
             candidate.source_url, card_print_language=decision.card_print.language
         )
         mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url)
-        assert_mapping_may_be_approved(mapping)
+        assert_mapping_may_be_approved(mapping, decision.card_print.id)
     except ExactPrintApprovalError as exc:
         raise approval_http_error(exc) from exc
 

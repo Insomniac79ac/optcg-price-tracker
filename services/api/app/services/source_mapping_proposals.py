@@ -260,7 +260,11 @@ def _source_alias_resolution(
 
 
 def analyse_source_mapping_proposals(
-    db: Session, filters: ProposalFilters | None = None
+    db: Session,
+    filters: ProposalFilters | None = None,
+    *,
+    ignore_existing_mappings: bool = False,
+    build_report: bool = True,
 ) -> ProposalAnalysis:
     filters = filters or ProposalFilters()
     if filters.source not in ("all", *SUPPORTED_SOURCES):
@@ -273,7 +277,10 @@ def analyse_source_mapping_proposals(
         )
 
     sources = {row.name: row for row in db.scalars(select(Source)).all()}
-    missing = [name for name in SUPPORTED_SOURCES if name not in sources]
+    required_sources = (
+        SUPPORTED_SOURCES if filters.source == "all" else (filters.source,)
+    )
+    missing = [name for name in required_sources if name not in sources]
     if missing:
         raise RuntimeError(f"missing source rows: {missing}")
 
@@ -346,10 +353,18 @@ def analyse_source_mapping_proposals(
         for slug in run.requested_set_slugs or []:
             later_completed[slug].add(run.id)
 
-    candidates_by_source: dict[str, list[Any]] = {
-        "yuyutei": db.scalars(select(YuyuteiCandidate).order_by(YuyuteiCandidate.id)).all(),
-        "snkrdunk": db.scalars(select(SnkrdunkCandidate).order_by(SnkrdunkCandidate.id)).all(),
-    }
+    candidates_by_source: dict[str, list[Any]] = {}
+    for source_name, model in (
+        ("yuyutei", YuyuteiCandidate),
+        ("snkrdunk", SnkrdunkCandidate),
+    ):
+        if filters.source not in ("all", source_name):
+            candidates_by_source[source_name] = []
+            continue
+        candidate_stmt = select(model).order_by(model.id)
+        if filters.candidate_id is not None:
+            candidate_stmt = candidate_stmt.where(model.id == filters.candidate_id)
+        candidates_by_source[source_name] = db.scalars(candidate_stmt).all()
 
     outcomes: list[CandidateOutcome] = []
     for source_name in SUPPORTED_SOURCES:
@@ -501,7 +516,11 @@ def analyse_source_mapping_proposals(
                     reasons.append("multiple_eligible_sibling_prints_in_resolved_release")
             assert status is not None
 
-            exact_mappings = exact_mapping_by_listing.get((source_name, listing_identity or ""), [])
+            exact_mappings = (
+                []
+                if ignore_existing_mappings
+                else exact_mapping_by_listing.get((source_name, listing_identity or ""), [])
+            )
             already_mapped = bool(exact_mappings)
             if already_mapped and eligible:
                 eligible_ids = {row.id for row in eligible}
@@ -559,18 +578,49 @@ def analyse_source_mapping_proposals(
         outcome for outcome in outcomes
         if in_release_scope(outcome.release_product_id)
     ]
-    report = _build_report(
-        db=db,
-        releases=releases,
-        selected_release_ids=selected_release_ids,
-        target_prints=target_prints,
-        outcomes=selected_outcomes,
-        plans=plans,
-        approved_mapping_prints=approved_mapping_prints,
-        exact_mapping_print_ids=exact_mapping_print_ids,
-        selected_sources=(SUPPORTED_SOURCES if filters.source == "all" else (filters.source,)),
+    report = (
+        _build_report(
+            db=db,
+            releases=releases,
+            selected_release_ids=selected_release_ids,
+            target_prints=target_prints,
+            outcomes=selected_outcomes,
+            plans=plans,
+            approved_mapping_prints=approved_mapping_prints,
+            exact_mapping_print_ids=exact_mapping_print_ids,
+            selected_sources=(
+                SUPPORTED_SOURCES if filters.source == "all" else (filters.source,)
+            ),
+        )
+        if build_report
+        else {}
     )
     return ProposalAnalysis(plans=plans, outcomes=selected_outcomes, report=report)
+
+
+def resolve_current_candidate_proposal(
+    db: Session, *, source_name: str, candidate_id: int
+) -> ProposalPlan | None:
+    """Rerun the canonical resolver for one stored candidate without persisting.
+
+    This intentionally delegates to the same resolver used to materialize the
+    queue; approval must not grow a second copy of its evidence rules.  The
+    filters ensure callers receive only the named source/candidate outcome.
+    """
+    analysis = analyse_source_mapping_proposals(
+        db,
+        ProposalFilters(source=source_name, candidate_id=candidate_id),
+        ignore_existing_mappings=True,
+        build_report=False,
+    )
+    outcomes = [
+        outcome
+        for outcome in analysis.outcomes
+        if outcome.source_name == source_name and outcome.candidate_id == candidate_id
+    ]
+    if len(outcomes) != 1:
+        return None
+    return outcomes[0].proposal
 
 
 def _build_report(
