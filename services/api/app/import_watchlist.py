@@ -3,6 +3,7 @@ import csv
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.db import SessionLocal
 from app.models import Card, Source, SourceCardMapping
@@ -122,7 +123,14 @@ def _upsert_mapping(
         mapping.is_active = True
         if mapping.review_status != "approved":
             mapping.review_status = "needs_review"
-    db.flush()  # Make the next row's canonical lookup see this mapping.
+    try:
+        db.flush()  # Make the next row's canonical lookup see this mapping.
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise ValueError(conflict.code) from exc
+        raise
 
 
 def _import_row(
@@ -189,7 +197,14 @@ def import_watchlist(csv_path: str, db: Session | None = None) -> ImportSummary:
             reader = csv.DictReader(f)
             for row in reader:
                 _import_row(db, row, summary, seen_urls)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            from app.services.current_source_mapping import current_identity_conflict
+            conflict = current_identity_conflict(db, exc)
+            if conflict is not None:
+                raise ValueError(conflict.code) from exc
+            raise
     finally:
         if owns_session:
             db.close()

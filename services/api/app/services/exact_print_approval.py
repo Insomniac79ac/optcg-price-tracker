@@ -49,11 +49,9 @@ exact purely because the product they named - a Premium Card Collection box, a
 Weekly Shonen Jump mail-in premium - has no Atlas ReleaseProduct, leaving one
 unrelated printing standing unopposed.
 
-WHAT IT DELIBERATELY DOES NOT DO. It does not fetch anything, does not create
-price observations, does not touch the 74 existing mappings, and does not
-invent a uniqueness rule - duplicate protection is already the database's
-`uq_source_card_mappings_source_url` UNIQUE (source_id, source_url), and that
-constraint is what stops one listing reaching two prints.
+WHAT IT DELIBERATELY DOES NOT DO. It does not fetch anything or create price
+observations. The database now enforces one current mapping per non-NULL
+canonical listing identity, including alternate URL spellings of a listing.
 """
 
 from __future__ import annotations
@@ -97,6 +95,7 @@ REFUSAL_SOURCE_URL_NOT_CANONICAL = "source_url_not_canonical"
 # picked would be a guess, and the loser would go on pointing at a print
 # nobody re-examined - so the set is reported and a human resolves it.
 REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING = "multiple_mappings_for_listing"
+REFUSAL_LISTING_ALREADY_MAPPED = "listing_already_mapped"
 # A person rejected this listing. An approval that silently overwrote that
 # decision would erase the only record that it was ever made.
 REFUSAL_MAPPING_WAS_REJECTED = "existing_mapping_was_rejected"
@@ -140,6 +139,7 @@ NEEDS_REVIEW_REFUSALS = frozenset(
         REFUSAL_UNRESOLVED_SOURCE_PRODUCT,
         REFUSAL_LEGACY_MAPPING_HAS_NO_PRINT,
         REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
+        REFUSAL_LISTING_ALREADY_MAPPED,
         REFUSAL_MAPPING_WAS_REJECTED,
         REFUSAL_MAPPING_NAMES_ANOTHER_PRINT,
         # All four discovery-provenance refusals are reviewable rather than

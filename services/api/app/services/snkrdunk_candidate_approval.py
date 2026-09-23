@@ -39,6 +39,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.models import Card, Source, SourceCardMapping
 from app.models.snkrdunk_candidate import SnkrdunkCandidate
@@ -281,7 +282,14 @@ def approve_candidate_onto_print(
     candidate.ambiguous_matches_json = None
 
     # So the caller can report the mapping id without committing.
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise conflict from exc
+        raise
 
     return CandidateApprovalResult(
         candidate=candidate,

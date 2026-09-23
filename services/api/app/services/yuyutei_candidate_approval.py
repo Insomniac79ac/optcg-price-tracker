@@ -46,6 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import CanonicalCard, CardPrint, Source, SourceCardMapping
@@ -416,7 +417,14 @@ def approve_candidate(
     # that can drift out of sync with the mappings table.
 
     # So the caller can report the mapping id without committing.
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise conflict from exc
+        raise
 
     return YuyuteiApprovalResult(
         candidate=candidate,
@@ -545,7 +553,14 @@ def approve_candidate_from_exact_proposal(
 
     # Deliberately do not touch match_status or matched_card_print_id.  The
     # candidate remains truthful about needing release-scoped reasoning.
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise conflict from exc
+        raise
     return YuyuteiApprovalResult(
         candidate=candidate,
         mapping=mapping,

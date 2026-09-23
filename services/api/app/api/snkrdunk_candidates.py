@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
@@ -193,7 +194,14 @@ def match_candidate(
     mapping.is_active = True
     mapping.review_status = "approved" if body.manual_verified else "needs_review"
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise approval_http_error(conflict) from exc
+        raise
     db.refresh(candidate)
     # Re-read rather than reusing `card`: a print-authoritative match leaves
     # any pre-existing matched_card_id in place, and the response must show
