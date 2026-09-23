@@ -18,7 +18,9 @@ two HUMAN paths to the same contract, which is where the defect actually was.
 """
 
 import pytest
+from datetime import datetime, timezone
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.models import (
     CanonicalCard,
@@ -31,9 +33,7 @@ from app.models import (
 from app.seed import SOURCES
 from app.services.exact_print_approval import (
     REFUSAL_MAPPING_WAS_REJECTED,
-    REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
     REFUSAL_SOURCE_URL_NOT_CANONICAL,
-    ExactPrintApprovalError,
 )
 from app.services.snkrdunk_candidate_approval import find_mapping_for_listing
 
@@ -152,15 +152,14 @@ def test_an_unrecognised_url_matches_nothing(world):
 # --- C. duplicates fail closed ------------------------------------------------
 
 
-def test_two_mappings_for_one_listing_raise_rather_than_pick_one(world):
+def test_database_refuses_two_current_mappings_for_one_listing(world):
     db, source = world["db"], world["source"]
-    _mapping(db, source, JP_URL, card_print_id=world["print"].id)
-    _mapping(db, source, DISCOVERY_URL, card_print_id=world["print"].id)
-    with pytest.raises(ExactPrintApprovalError) as exc:
-        find_mapping_for_listing(db, source=source, url=EN_URL)
-    assert exc.value.code == REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING
-    assert exc.value.needs_review is True
-    assert len(exc.value.alternatives) == 2
+    current = _mapping(db, source, JP_URL, card_print_id=world["print"].id)
+    with pytest.raises(IntegrityError):
+        _mapping(db, source, DISCOVERY_URL, card_print_id=world["print"].id)
+    db.rollback()
+    assert find_mapping_for_listing(db, source=source, url=EN_URL).id == current.id
+    assert len(_all_mappings(db)) == 1
 
 
 # --- the two human endpoints --------------------------------------------------
@@ -251,19 +250,32 @@ def test_approving_updates_the_equivalent_url_mapping_instead_of_duplicating(
         "/snkrdunk/candidates/{cid}/match",
     ],
 )
-def test_duplicate_listing_identity_fails_closed_on_both_endpoints(world, client, endpoint):
-    """C. end to end."""
+def test_historical_duplicate_does_not_displace_current_on_either_endpoint(world, client, endpoint):
+    """C. Historical lineage remains visible while only one row is current."""
     db, source = world["db"], world["source"]
-    _mapping(db, source, JP_URL, card_print_id=world["print"].id)
-    _mapping(db, source, DISCOVERY_URL, card_print_id=world["print"].id)
+    current = _mapping(db, source, JP_URL, card_print_id=world["print"].id)
+    historical = SourceCardMapping(
+        source_id=source.id,
+        source_card_id="OP01-001",
+        source_url=DISCOVERY_URL,
+        card_print_id=world["print"].id,
+        review_status="rejected",
+        is_active=False,
+        superseded_at=datetime.now(timezone.utc),
+        superseded_by_mapping_id=current.id,
+        supersession_reason="Historical duplicate retained",
+    )
+    db.add(historical)
+    db.commit()
     response = client.post(
         endpoint.format(cid=world["candidate"].id),
         json={"card_print_id": world["print"].id, "manual_verified": True},
     )
-    assert response.status_code == 409, response.text
-    assert response.json()["detail"]["code"] == REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING
+    assert response.status_code == 200, response.text
     db.expire_all()
     assert len(_all_mappings(db)) == 2
+    assert db.get(SourceCardMapping, current.id).superseded_at is None
+    assert db.get(SourceCardMapping, historical.id).superseded_by_mapping_id == current.id
 
 
 @pytest.mark.parametrize(

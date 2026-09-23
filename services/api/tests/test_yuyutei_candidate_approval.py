@@ -7,14 +7,14 @@ is about the two ways that can go wrong: approving a candidate whose
 superseded enumeration), and approving one twice so a single Yuyu-Tei listing
 ends up with two mappings pointing at different printings.
 
-The database is the real schema (Base.metadata), so the constraints asserted
-here - the candidate's match-status CHECK, the mapping's
-(source_id, source_url) uniqueness - are the ones production has.
+The database is the real schema (Base.metadata), including the candidate's
+match-status CHECK and the mapping's partial current canonical-identity index.
 """
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.main import app
 from app.models import (
@@ -524,26 +524,34 @@ def test_a_rejected_mapping_is_not_silently_overturned(client, seeded, db_sessio
     assert db_session.scalars(select(SourceCardMapping)).one().review_status == "rejected"
 
 
-def test_two_mappings_for_one_listing_are_reported_not_chosen_between(
-    client, seeded, db_session
+def test_second_current_mapping_for_one_listing_is_refused_by_database(
+    seeded, db_session
 ):
-    for suffix in ("", "?ref=a"):
-        db_session.add(
-            SourceCardMapping(
-                source_id=seeded["source"].id,
-                card_print_id=seeded["print"].id,
-                source_card_id="OP01-001",
-                source_url=listing("op01", "10001") + suffix,
-                review_status="approved",
-                is_active=True,
-            )
+    db_session.add(
+        SourceCardMapping(
+            source_id=seeded["source"].id,
+            card_print_id=seeded["print"].id,
+            source_card_id="OP01-001",
+            source_url=listing("op01", "10001"),
+            review_status="approved",
+            is_active=True,
         )
+    )
     db_session.commit()
-
-    response = approve(client, seeded["candidate"].id)
-    assert response.status_code == 409
-    assert refusal(response) == "multiple_mappings_for_listing"
-    assert len(response.json()["detail"]["alternatives"]) == 2
+    db_session.add(
+        SourceCardMapping(
+            source_id=seeded["source"].id,
+            card_print_id=seeded["print"].id,
+            source_card_id="OP01-001",
+            source_url=listing("op01", "10001") + "?ref=a",
+            review_status="approved",
+            is_active=True,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+    assert db_session.scalars(select(SourceCardMapping)).one().canonical_source_listing_identity == "op01:10001"
 
 
 def test_a_mapping_for_another_product_in_the_same_set_is_not_a_conflict(

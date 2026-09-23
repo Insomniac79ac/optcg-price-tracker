@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin_token
@@ -242,7 +243,14 @@ def update_source_mapping(
     for field, value in updates.items():
         setattr(mapping, field, value)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        from app.services.current_source_mapping import current_identity_conflict
+        conflict = current_identity_conflict(db, exc)
+        if conflict is not None:
+            raise approval_http_error(conflict) from exc
+        raise
     db.refresh(mapping)
     delete_cache_prefix("admin/catalog_coverage")
     delete_cache_prefix("admin/price_source_health")

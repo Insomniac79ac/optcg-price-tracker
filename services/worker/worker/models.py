@@ -17,6 +17,7 @@ from sqlalchemy import (
     event,
     inspect,
     select,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -85,16 +86,28 @@ class CardPrint(Base):
 class SourceCardMapping(Base):
     __tablename__ = "source_card_mappings"
     __table_args__ = (
-        # The real uniqueness contract, mirroring app.models.source_card_
-        # mapping. It is (source_id, source_url) - one listing, one mapping -
-        # and NOT the (card_id, source_id) key this mirror carried until now,
+        # URL uniqueness, mirroring app.models.source_card_mapping. It is
+        # (source_id, source_url), not the old (card_id, source_id) key which
         # which the api replaced in ff75028d733f because it collapsed every
         # printing of a card onto a single row. Keeping the stale key here
         # mattered once ingest_snkrdunk_candidate_prices started looking a
         # mapping up BY (source_id, source_url): worker-built test schemas
-        # would otherwise permit two mappings for one listing while forbidding
-        # two listings for one legacy card - the exact inverse of production.
+        # would otherwise permit two identical URLs while forbidding two
+        # listings for one legacy card. The partial index below also prevents
+        # alternate URL forms from claiming one current canonical listing.
         UniqueConstraint("source_id", "source_url", name="uq_source_card_mappings_source_url"),
+        Index(
+            "uq_mapping_current_canonical_listing_identity",
+            "source_id",
+            "canonical_source_listing_identity",
+            unique=True,
+            postgresql_where=text(
+                "superseded_at IS NULL AND canonical_source_listing_identity IS NOT NULL"
+            ),
+            sqlite_where=text(
+                "superseded_at IS NULL AND canonical_source_listing_identity IS NOT NULL"
+            ),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
