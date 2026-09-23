@@ -7,8 +7,8 @@ audited staging data transaction before this schema-only revision.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "f2c7d91b6a40"
-down_revision = "b8e04219d6c3"
+revision: str = "f2c7d91b6a40"
+down_revision: str = "b8e04219d6c3"
 branch_labels = None
 depends_on = None
 

@@ -18,6 +18,7 @@ comparing every column of the resulting mapping.
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.approve_exact_snkrdunk_candidates import (
     CONFIRM_PHRASE,
@@ -32,7 +33,6 @@ from app.approve_exact_snkrdunk_candidates import (
 )
 from app.services.exact_print_approval import (
     REFUSAL_MAPPING_WAS_REJECTED,
-    REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING,
 )
 from app.models import (
     CanonicalCard,
@@ -376,26 +376,32 @@ def test_a_non_canonical_url_on_a_matching_mapping_is_refused(world):
     assert "SECOND mapping" in plan.refusal_reason
 
 
-def test_two_mappings_for_one_listing_are_refused_rather_than_chosen_between(world):
+def test_second_current_mapping_for_one_listing_is_refused_by_database(world):
     db = world["db"]
-    for url in (
-        "https://snkrdunk.com/apparels/900001",
-        "https://snkrdunk.com/en/trading-cards/900001",
-    ):
-        db.add(
-            SourceCardMapping(
-                source_id=world["source"].id,
-                source_card_id="OP01-999",
-                source_url=url,
-                card_print_id=world["prints"]["solo"].id,
-                review_status="approved",
-                is_active=True,
-            )
-        )
+    db.add(SourceCardMapping(
+        source_id=world["source"].id,
+        source_card_id="OP01-999",
+        source_url="https://snkrdunk.com/apparels/900001",
+        card_print_id=world["prints"]["solo"].id,
+        review_status="approved",
+        is_active=True,
+    ))
     db.commit()
-    plan = plan_batch(db, _ids(world, "solo")).plans[0]
-    assert plan.refusal_code == REFUSAL_MULTIPLE_MAPPINGS_FOR_LISTING
-    assert "2 mappings" in plan.refusal_reason
+    db.add(SourceCardMapping(
+        source_id=world["source"].id,
+        source_card_id="OP01-999",
+        source_url="https://snkrdunk.com/en/trading-cards/900001",
+        card_print_id=world["prints"]["solo"].id,
+        review_status="approved",
+        is_active=True,
+    ))
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+    assert db.scalar(select(SourceCardMapping.id).where(
+        SourceCardMapping.canonical_source_listing_identity == "900001"
+    )) is not None
+    assert db.query(SourceCardMapping).filter_by(canonical_source_listing_identity="900001").count() == 1
 
 
 # --- applying ----------------------------------------------------------------
