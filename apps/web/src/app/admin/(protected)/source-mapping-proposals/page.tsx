@@ -5,12 +5,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { AdminSessionExpired } from "@/components/AdminSessionExpired";
-import { AppHeader } from "@/components/AppHeader";
+import { AdminBreadcrumbs, AdminFilterPanel, AdminMetricStrip, AdminPageHeader, AdminPageShell, AdminStatusBadge } from "@/components/admin/AdminPage";
 import { PaginationControls } from "@/components/PaginationControls";
 import { EmptyState, ErrorState, LoadingState } from "@/components/StateBlocks";
 import { FILTER_INPUT_CLASS, FILTER_LABEL_CLASS, FilterBar } from "@/components/ui/FilterBar";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { StatCard } from "@/components/ui/StatCard";
 import { AdminAuthRequiredError } from "@/lib/api";
 import { formatDateTime, formatJpy } from "@/lib/format";
 import {
@@ -78,12 +77,7 @@ export default function ProposalReviewPage() {
 }
 
 function ProposalReviewShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
-    </div>
-  );
+  return <AdminPageShell>{children}</AdminPageShell>;
 }
 
 function ProposalReviewPageInner() {
@@ -214,20 +208,19 @@ function ProposalReviewPageInner() {
 
   return (
     <ProposalReviewShell>
-      <PageHeader
+      <AdminBreadcrumbs items={[{ label: "Proposal Review" }]} />
+      <AdminPageHeader
         title="Proposal Review"
         description="Review persisted source-listing evidence against exact physical printings. Nothing on this page approves a mapping."
         actions={
-          <span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">
-            Read-only queue
-          </span>
+          <AdminStatusBadge>Read-only queue</AdminStatusBadge>
         }
       />
       <ReadOnlyNotice />
 
       <section aria-labelledby="queue-summary-heading" className="mt-4">
         <h2 id="queue-summary-heading" className="sr-only">Queue summary</h2>
-        <StatGrid>
+        <AdminMetricStrip>
           <StatCard label="Total proposals" value={summary?.total_current_groups.toLocaleString() ?? "—"} />
           <StatCard label="Exact" value={summary?.by_resolution.exact.toLocaleString() ?? "—"} hint="Human review still required" />
           <StatCard label="Ambiguous" value={summary?.by_resolution.ambiguous.toLocaleString() ?? "—"} />
@@ -236,7 +229,7 @@ function ProposalReviewPageInner() {
           <StatCard label="Yuyu" value={summary?.by_source.yuyutei?.total_current_groups.toLocaleString() ?? "—"} />
           <StatCard label="SNKRDUNK" value={summary?.by_source.snkrdunk?.total_current_groups.toLocaleString() ?? "—"} />
           <StatCard label="Multiple alternatives" value={summary?.groups_with_multiple_alternatives.toLocaleString() ?? "—"} />
-        </StatGrid>
+        </AdminMetricStrip>
       </section>
 
       <section aria-labelledby="quick-filters-heading" className="mt-5 space-y-3">
@@ -267,7 +260,7 @@ function ProposalReviewPageInner() {
         />
       </section>
 
-      <section aria-labelledby="detailed-filters-heading" className="mt-5 rounded-panel border border-border-default bg-bg-surface p-3">
+      <AdminFilterPanel labelledBy="detailed-filters-heading">
         <h2 id="detailed-filters-heading" className="mb-3 text-sm font-semibold text-text-primary">Detailed filters</h2>
         <FilterBar>
           <label className={FILTER_LABEL_CLASS}>
@@ -352,7 +345,7 @@ function ProposalReviewPageInner() {
         <p className="text-[11px] text-text-muted">
           Release dates are not available in the catalogue yet; this list uses the current deterministic catalogue order.
         </p>
-      </section>
+      </AdminFilterPanel>
 
       <section aria-labelledby="queue-results-heading" className="mt-5">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -491,20 +484,20 @@ function EvidenceSummary({ item, returnTo }: { item: ProposalReviewGroup; return
       <div className="font-medium text-text-primary">{item.alternative_count} {item.alternative_count === 1 ? "possible printing" : "possible printings"}</div>
       <div className="text-text-secondary">{item.recommended_alternative_count > 0 ? `${item.recommended_alternative_count} recommended print` : "No recommended print"}</div>
       <div className="text-text-muted">Created {formatDateTime(item.created_at)}</div>
-      <Link href={detailHref(item, returnTo)} className="inline-flex rounded-control border border-border-default px-2 py-1 font-medium text-sky-300 hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60" aria-label={`Review evidence for proposal ${item.id}`}>Review evidence</Link>
+      <Link href={detailHref(item, returnTo)} className="inline-flex rounded-control border border-border-default px-2 py-1 font-medium text-accent-teal-hover hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60" aria-label={`Review evidence for proposal ${item.id}`}>Review evidence</Link>
     </div>
   );
 }
 
 function ProposalDesktopTable({ items, returnTo }: { items: ProposalReviewGroup[]; returnTo: string }) {
   return (
-    <div className="hidden overflow-hidden rounded-panel border border-border-default md:block">
+    <div className="hidden overflow-hidden rounded-panel border border-border-default xl:block">
       <table className="data-table w-full table-fixed text-left text-xs">
         <thead><tr><th className="w-[31%]">Card identity</th><th className="w-[25%]">Source listing evidence</th><th className="w-[27%]">Resolver state and release</th><th className="w-[17%]">Alternatives</th></tr></thead>
         <tbody>
           {items.map((item) => (
             <tr key={item.id} className="align-top">
-              <td><div className="flex gap-3"><ProposalArtwork print={item.recommended_print} alt={`${item.name_en ?? item.name_jp ?? item.card_code ?? "Card"} artwork`} /><div className="space-y-2"><div className="flex flex-wrap gap-1.5"><ProposalSourceBadge source={item.source_name} /></div><CardIdentity item={item} /></div></div></td>
+              <td><div className="flex gap-3"><ProposalArtwork print={item.recommended_print} alt={`${item.name_en ?? item.name_jp ?? item.card_code ?? "Card"} artwork`} /><div className="min-w-0 space-y-2 break-words"><div className="flex flex-wrap gap-1.5"><ProposalSourceBadge source={item.source_name} /></div><CardIdentity item={item} /></div></div></td>
               <td><CandidateEvidence item={item} /></td>
               <td><ResolverContext item={item} /></td>
               <td><EvidenceSummary item={item} returnTo={returnTo} /></td>
@@ -518,13 +511,13 @@ function ProposalDesktopTable({ items, returnTo }: { items: ProposalReviewGroup[
 
 function ProposalMobileCards({ items, returnTo }: { items: ProposalReviewGroup[]; returnTo: string }) {
   return (
-    <div className="space-y-3 md:hidden">
+    <div className="space-y-3 xl:hidden">
       {items.map((item) => (
         <article key={item.id} className="rounded-panel border border-border-default bg-bg-surface p-3">
           <div className="mb-3 flex flex-wrap gap-1.5"><ProposalSourceBadge source={item.source_name} /><ProposalResolutionBadge status={item.resolution_status} /></div>
           <div className="flex gap-3"><ProposalArtwork print={item.recommended_print} alt={`${item.name_en ?? item.name_jp ?? item.card_code ?? "Card"} artwork`} /><div className="min-w-0 flex-1"><CardIdentity item={item} /><div className="mt-2 text-xs font-medium text-text-primary">{releaseDisplayName(item.release)}</div><div className="mt-1 text-xs text-text-secondary">{formatJpy(item.candidate.price_jpy)} · {item.alternative_count} {item.alternative_count === 1 ? "printing" : "possible printings"}</div></div></div>
           <div className="mt-3 border-t border-border-muted pt-3"><CandidateEvidence item={item} /></div>
-          <div className="mt-3 flex items-center justify-between gap-3"><span className="text-xs text-text-muted">{resolutionHint(item)}</span><Link href={detailHref(item, returnTo)} className="shrink-0 rounded-control border border-border-default px-2.5 py-1.5 text-xs font-medium text-sky-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60" aria-label={`Review evidence for proposal ${item.id}`}>Review evidence</Link></div>
+          <div className="mt-3 flex items-center justify-between gap-3"><span className="text-xs text-text-muted">{resolutionHint(item)}</span><Link href={detailHref(item, returnTo)} className="shrink-0 rounded-control border border-border-default px-2.5 py-1.5 text-xs font-medium text-accent-teal-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60" aria-label={`Review evidence for proposal ${item.id}`}>Review evidence</Link></div>
         </article>
       ))}
     </div>

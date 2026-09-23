@@ -1,0 +1,23 @@
+.card { container: printing / inline-size; min-width: 0; border: 1px solid var(--border-default); border-radius: 6px; background: var(--bg-page); padding: 1rem; }
+.recommended { border-color: #33565b; }
+.title { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.25rem; }
+.title > div { min-width: 0; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 1.5rem; }
+.artwork { display: flex; min-width: 0; justify-content: center; }
+.content { min-width: 0; display: grid; gap: 1.25rem; }
+.metadata { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 1rem 1.5rem; font-size: .875rem; line-height: 1.5; }
+.metadata dt { text-transform: none; letter-spacing: normal; font-size: .75rem; }
+.metadata dd { margin-top: .25rem; }
+.technical { min-width: 0; border: 1px solid var(--border-default); border-radius: 4px; padding: .75rem; background: var(--bg-surface); }
+.technical summary { cursor: pointer; color: var(--text-secondary); font-size: .8125rem; font-weight: 600; }
+.technical[open] summary { margin-bottom: 1rem; }
+.evidence { border-top: 1px solid var(--border-default); padding-top: 1rem; min-width: 0; }
+.evidence h4 { margin-bottom: .5rem; color: var(--text-primary); font-size: .8125rem; font-weight: 600; }
+@container printing (min-width: 36rem) {
+  .metadata { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Use actual card width, including rail/section padding, rather than viewport
+   width. Tablet stacks before the text column becomes cramped. */
+@container printing (min-width: 56rem) {
+  .body { grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr); gap: 2rem; }
+}

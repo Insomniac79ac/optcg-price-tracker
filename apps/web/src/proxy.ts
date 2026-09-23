@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { ADMIN_CALLBACK_HEADER, safeAdminCallbackUrl } from "@/lib/adminLoginUrl";
 import {
   GUARD_EVALUATED_HEADER,
   buildAdminLoginRedirect,
@@ -57,13 +58,18 @@ import {
 // too (see src/lib/adminProxy.ts) - proxy is purely a fast, optimistic
 // UX redirect layered on top of both.
 /** Turn a policy decision into the response that carries it out. */
-function toResponse(outcome: GuardOutcome, origin: string, pathname: string, search: string) {
+function toResponse(outcome: GuardOutcome, origin: string, pathname: string, search: string, requestHeaders?: Headers) {
   switch (outcome.kind) {
     case "redirect-admin-login":
-      return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search));
+      return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search, outcome.expired));
     case "redirect-sign-in":
       return NextResponse.redirect(buildSignInRedirect(origin, pathname, search));
     case "allow":
+      if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+        const forwarded = new Headers(requestHeaders);
+        forwarded.set(ADMIN_CALLBACK_HEADER, safeAdminCallbackUrl(`${pathname}${search}`));
+        return NextResponse.next({ request: { headers: forwarded } });
+      }
       return NextResponse.next();
   }
 }
@@ -74,14 +80,32 @@ function toResponse(outcome: GuardOutcome, origin: string, pathname: string, sea
 const evaluate = auth((req) => {
   const { pathname, search, origin } = req.nextUrl;
   const response = toResponse(
-    guardOutcome(pathname, hasCollectorSession(req.auth)),
+    guardOutcome(pathname, hasCollectorSession(req.auth), req.auth?.sessionKind === "admin" && req.auth.adminSessionExpired === true),
     origin,
     pathname,
     search,
+    req.headers,
   );
   response.headers.set(GUARD_EVALUATED_HEADER, "1");
   return response;
 });
+
+/** Auth.js replaces req.nextUrl's origin with AUTH_URL when that variable is
+ * set. The dedicated staging project's AUTH_URL points at its stable domain,
+ * but an immutable staged deployment must send its own signed-out visitors
+ * back to /admin/login on the host they actually requested. Only this
+ * guard's two login destinations are rebased; authorization and cookies are
+ * still evaluated by Auth.js against the same request. */
+function keepLoginRedirectOnRequestOrigin(response: Response, requestOrigin: string): Response {
+  const location = response.headers.get("location");
+  if (!location || response.status < 300 || response.status >= 400) return response;
+  const destination = new URL(location, requestOrigin);
+  if (destination.pathname !== "/admin/login" && destination.pathname !== "/sign-in") return response;
+  if (destination.origin !== requestOrigin) {
+    response.headers.set("location", new URL(`${destination.pathname}${destination.search}${destination.hash}`, requestOrigin).toString());
+  }
+  return response;
+}
 
 // Fail closed.
 //
@@ -105,7 +129,7 @@ export default async function proxy(
   try {
     const response = await evaluate(request, event);
     if (response && guardDidEvaluate(response.headers)) {
-      return response;
+      return keepLoginRedirectOnRequestOrigin(response, origin);
     }
   } catch {
     // Swallowed on purpose - the reason is a server concern, and the response

@@ -230,6 +230,58 @@ function makeAccount(provider: string): Account {
 }
 
 describe("applyJwtCallback", () => {
+  it("recovers an already-demoted legacy administrator without granting access", async () => {
+    const token = applyJwtCallback({ token: { sub: "staging-admin", email: "admin@example.com" } });
+    const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as Session, token });
+    expect(session).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
+    expect(session.user?.role).toBeUndefined();
+    expect(session.apiToken).toBeUndefined();
+    expect(token.roleExpiresAt).toBeUndefined();
+  });
+
+  it.each([
+    { sub: "google-123", email: "admin@example.com" },
+    { sub: "staging-admin", sessionKind: "collector" as const },
+  ])("does not infer administrator expiry from a collector identity %#", async (input) => {
+    const token = applyJwtCallback({ token: input });
+    const session = await applySessionCallback({ session: { user: {} } as Session, token });
+    expect(session.sessionKind).toBe("collector");
+    expect(session.adminSessionExpired).toBe(false);
+    expect(session.user?.role).toBeUndefined();
+  });
+
+  it("keeps a four-hour boundary, retains expired kind and renews only on a fresh sign-in", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    try {
+      const start = Date.now();
+      expect(ADMIN_SESSION_MAX_AGE_MS).toBe(4 * 60 * 60 * 1000);
+      const signIn = () => ({ account: makeAccount(ADMIN_CREDENTIALS_PROVIDER_ID), user: { id: "staging-admin", email: "admin@example.com" } as User });
+      let token = applyJwtCallback({ token: {}, ...signIn() });
+      expect(token.sessionKind).toBe("admin");
+      expect(token.roleExpiresAt).toBe(start + ADMIN_SESSION_MAX_AGE_MS);
+      clock.mockReturnValue(start + ADMIN_SESSION_MAX_AGE_MS - 1);
+      expect(applyJwtCallback({ token }).role).toBe("admin");
+      clock.mockReturnValue(start + ADMIN_SESSION_MAX_AGE_MS);
+      token = applyJwtCallback({ token });
+      expect(token).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
+      expect(token.role).toBeUndefined();
+      expect(applyJwtCallback({ token }).role).toBeUndefined();
+      const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as Session, token });
+      expect(session).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
+      expect(session.user?.role).toBeUndefined();
+      expect(session.apiToken).toBeUndefined();
+      expect(JSON.stringify(session)).not.toMatch(/roleExpiresAt|password|hash|secret|ADMIN_TOKEN|stale/);
+      token = applyJwtCallback({ token, ...signIn() });
+      expect(token).toMatchObject({ role: "admin", sessionKind: "admin", adminSessionExpired: false, roleExpiresAt: Date.now() + ADMIN_SESSION_MAX_AGE_MS });
+    } finally { clock.mockRestore(); }
+  });
+
+  it("resets an expired admin state on collector sign-in", async () => {
+    const token = applyJwtCallback({ token: { sessionKind: "admin", adminSessionExpired: true }, profile: { sub: "google-123", email: "collector@example.com" } });
+    const session = await applySessionCallback({ session: { user: {} } as Session, token });
+    expect(session).toMatchObject({ sessionKind: "collector", adminSessionExpired: false });
+    expect(session.user?.role).toBeUndefined();
+  });
   it("sets role=admin and a roleExpiresAt on an admin Credentials sign-in", () => {
     const token = {} as JWT;
 

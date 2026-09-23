@@ -5,14 +5,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AdminSessionExpired } from "@/components/AdminSessionExpired";
-import { AppHeader } from "@/components/AppHeader";
+import { AdminBreadcrumbs, AdminPageHeader, AdminPageShell, AdminSection, AdminStatusBadge } from "@/components/admin/AdminPage";
 import { ErrorState, LoadingState } from "@/components/StateBlocks";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminAuthRequiredError, AdminNotFoundError } from "@/lib/api";
 import { formatDateTime, formatJpy } from "@/lib/format";
 import {
   fetchProposalReviewGroup,
-  type ProposalReviewAlternative,
   type ProposalReviewGroupDetail,
   type ProposalReviewJsonValue,
 } from "@/lib/proposalReview";
@@ -23,7 +21,6 @@ import {
   ExternalSourceLink,
   KeyValue,
   KeyValueGrid,
-  ProposalArtwork,
   ProposalResolutionBadge,
   ProposalReviewStatusBadge,
   ProposalSourceBadge,
@@ -32,6 +29,7 @@ import {
   jsonValueText,
   releaseDisplayName,
 } from "../ProposalReviewComponents";
+import { AlternativeCard } from "./AlternativeCard";
 import { ExactProposalApprovalPanel } from "./ExactProposalApprovalPanel";
 
 export default function ProposalReviewDetailPage() {
@@ -43,12 +41,7 @@ export default function ProposalReviewDetailPage() {
 }
 
 function DetailShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
-    </div>
-  );
+  return <AdminPageShell>{children}</AdminPageShell>;
 }
 
 function ProposalReviewDetailPageInner() {
@@ -107,15 +100,11 @@ function ProposalReviewDetailPageInner() {
 
   return (
     <DetailShell>
-      <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-        <Link href={returnTo} className="text-sky-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60">Proposal Review</Link>
-        <span aria-hidden="true">→</span>
-        <span aria-current="page">Proposal #{proposal.id}</span>
-      </nav>
-      <PageHeader
+      <AdminBreadcrumbs items={[{ label: "Proposal Review", href: returnTo }, { label: `Proposal #${proposal.id}` }]} />
+      <AdminPageHeader
         title={`Proposal #${proposal.id}`}
         description="Complete persisted resolver and exact-print evidence. Approval is available only after deliberate review of an eligible exact proposal."
-        actions={<span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">Detail review</span>}
+        actions={<AdminStatusBadge>Detail review</AdminStatusBadge>}
       />
 
       <div className="mt-5 space-y-5">
@@ -161,13 +150,13 @@ function ProposalReviewDetailPageInner() {
             {proposal.candidate.image_url ? (
               <>
                 Stored candidate artwork URL is present but is not loaded automatically.{" "}
-                <a href={proposal.candidate.image_url} target="_blank" rel="noreferrer noopener" className="text-sky-300 hover:underline">
+                <a href={proposal.candidate.image_url} target="_blank" rel="noreferrer noopener" className="text-accent-teal-hover hover:underline">
                   Open stored candidate image <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </>
             ) : "Candidate artwork is missing."}
           </div>
-          {proposal.candidate.raw_listing_text && <div className="mt-4 rounded-control border border-border-muted bg-bg-page p-3 text-sm whitespace-pre-wrap text-text-secondary">{proposal.candidate.raw_listing_text}</div>}
+          {proposal.candidate.raw_listing_text && <div className="mt-4 rounded-control border border-border-muted bg-bg-page p-3 text-sm whitespace-pre-wrap break-words text-text-secondary">{proposal.candidate.raw_listing_text}</div>}
           {proposal.candidate.discovery_run ? (
             <div className="mt-4">
               <h3 className="mb-2 text-sm font-medium text-text-primary">Discovery provenance</h3>
@@ -220,7 +209,7 @@ function ProposalReviewDetailPageInner() {
 
         <DetailSection title={`Proposed printings (${proposal.alternatives.length})`}>
           {proposal.alternatives.length > 0 ? (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-5" data-proposed-printings="">
               {proposal.alternatives.map((alternative) => <AlternativeCard key={alternative.alternative_id} alternative={alternative} />)}
             </div>
           ) : <p className="text-sm text-text-muted">No exact-print alternatives were established.</p>}
@@ -241,7 +230,7 @@ function ProposalReviewDetailPageInner() {
             </div>
           </div>
           <KeyValueGrid>
-            <KeyValue label="Evidence digest">{proposal.evidence_digest}</KeyValue>
+            <KeyValue label="Evidence digest" technical>{proposal.evidence_digest}</KeyValue>
             <KeyValue label="Resolver version">{proposal.resolver_version}</KeyValue>
           </KeyValueGrid>
           <div className="mt-4 space-y-2">
@@ -284,51 +273,9 @@ function ProposalReviewDetailPageInner() {
           </div>
         </DetailSection>
       </div>
-      <div className="mt-6"><Link href={returnTo} className="rounded-control border border-border-default px-3 py-2 text-sm font-medium text-sky-300 hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60">← Return to filtered queue</Link></div>
+      <div className="mt-6"><Link href={returnTo} className="rounded-control border border-border-default px-3 py-2 text-sm font-medium text-accent-teal-hover hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60">← Return to filtered queue</Link></div>
     </DetailShell>
   );
 }
 
-function DetailSection({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="rounded-panel border border-border-default bg-bg-surface p-4"><h2 className="mb-4 text-base font-semibold text-text-primary">{title}</h2>{children}</section>;
-}
-
-function AlternativeCard({ alternative }: { alternative: ProposalReviewAlternative }) {
-  const cardName = alternative.canonical_card.name_en ?? alternative.canonical_card.name_jp ?? alternative.canonical_card.card_code;
-  return (
-    <article className={`min-w-0 rounded-panel border p-4 ${alternative.recommended ? "border-sky-500/45 bg-sky-500/5" : "border-border-default bg-bg-page"}`}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div><h3 className="font-semibold text-text-primary">{cardName}</h3><p className="mono text-xs text-text-muted">{alternative.canonical_card.card_code} · CardPrint #{alternative.card_print_id}</p></div>
-        {alternative.recommended && <span className="rounded-control border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-200">Recommended proposal</span>}
-      </div>
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <ProposalArtwork print={alternative} alt={`${cardName} ${alternative.printing_label ?? "printing"} artwork`} size="detail" />
-        <div className="min-w-0 flex-1 space-y-4">
-          <KeyValueGrid>
-            <KeyValue label="Exact release">{releaseDisplayName(alternative.release)}</KeyValue>
-            <KeyValue label="Asset variant">{alternative.official_asset_variant ?? "Not stored"}</KeyValue>
-            <KeyValue label="Printing label">{alternative.printing_label ?? "Not stored"}</KeyValue>
-            <KeyValue label="Special print">{alternative.special_print_label ?? "None"}</KeyValue>
-            <KeyValue label="Treatment">{alternative.treatment ?? "Not stored"}</KeyValue>
-            <KeyValue label="Official rarity">{alternative.official_rarity ?? "Not stored"}</KeyValue>
-            <KeyValue label="Official block icon">{alternative.official_block_icon ?? "Not stored"}</KeyValue>
-            <KeyValue label="Official name">{alternative.official_name ?? "Not stored"}</KeyValue>
-            <KeyValue label="Artwork key">{alternative.artwork_key ?? "Not stored"}</KeyValue>
-            <KeyValue label="Artist">{alternative.artist ?? "Not stored"}</KeyValue>
-            <KeyValue label="Language">{alternative.language}</KeyValue>
-            <KeyValue label="Print state">{alternative.is_active ? "Active" : "Inactive"} · {alternative.verification_status}</KeyValue>
-            <KeyValue label="Review disposition">{alternative.review_disposition}</KeyValue>
-            <KeyValue label="Reviewed at">{formatDateTime(alternative.reviewed_at)}</KeyValue>
-            <KeyValue label="Alternative created">{formatDateTime(alternative.created_at)}</KeyValue>
-            <KeyValue label="Alternative updated">{formatDateTime(alternative.updated_at)}</KeyValue>
-          </KeyValueGrid>
-          {alternative.official_effect_text && <details className="rounded-control border border-border-muted bg-bg-surface px-3 py-2"><summary className="cursor-pointer text-xs font-medium text-text-secondary">Official effect text</summary><p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{alternative.official_effect_text}</p></details>}
-          <div><h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Supporting evidence</h4><EvidenceList values={alternative.supporting_evidence} /></div>
-          <div><h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Missing evidence</h4><EvidenceList values={alternative.missing_evidence} /></div>
-          <div><h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-text-muted">Conflict reasons</h4><EvidenceList values={alternative.conflict_reasons} /></div>
-          {alternative.review_notes && <p className="text-sm text-text-secondary">Review notes: {alternative.review_notes}</p>}
-        </div>
-      </div>
-    </article>
-  );
-}
+const DetailSection = AdminSection;

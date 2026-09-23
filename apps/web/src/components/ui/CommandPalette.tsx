@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchSavedViews, type SavedView } from "@/lib/api";
+import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
 import { COMMAND_REGISTRY, searchCommands, type Command } from "@/lib/commandRegistry";
 import {
   MIN_QUERY_LENGTH,
@@ -39,8 +40,10 @@ type CardSearchStatus = "idle" | "loading" | "ready" | "error";
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const adminSurface = useAdminSurface();
   const isAuthenticated = status === "authenticated";
-  const isAdmin = session?.user?.role === "admin";
+  const isAdmin = adminSurface?.authorized === true || session?.user?.role === "admin";
+  const canSeeAuthenticatedCommands = isAuthenticated || adminSurface?.authorized === true;
   const [query, setQuery] = useState("");
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [recent, setRecent] = useState<RecentWorkflowEntry[]>([]);
@@ -133,8 +136,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   }, [open, query]);
 
   const filteredCommands = useMemo(
-    () => searchCommands(query, { isAuthenticated, isAdmin }),
-    [query, isAuthenticated, isAdmin],
+    () => searchCommands(query, { isAuthenticated: canSeeAuthenticatedCommands, isAdmin }),
+    [query, canSeeAuthenticatedCommands, isAdmin],
   );
 
   const filteredSavedViews = useMemo(() => {
@@ -148,7 +151,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const out: PaletteItem[] = cardResults.map((result) => ({ kind: "card", key: result.key, result }));
     if (!query.trim()) {
       for (const entry of recent.filter((entry) => {
-        if (entry.route_path.startsWith("/admin") || entry.item_type === "admin_action") return isAuthenticated && isAdmin;
+        if (entry.route_path.startsWith("/admin") || entry.item_type === "admin_action") return canSeeAuthenticatedCommands && isAdmin;
         if (isAuthenticated) return true;
         if (entry.item_type === "card") return /^\/(cards\/(code\/[^/?#]+|\d+)|prints\/\d+)$/.test(entry.route_path);
         return entry.item_type === "route" && COMMAND_REGISTRY.some((command) => command.scope === "public" && command.route_path === entry.route_path && command.label === entry.label);
@@ -163,7 +166,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       out.push({ kind: "command", key: `command-${command.id}`, command });
     }
     return out;
-  }, [query, recent, filteredSavedViews, filteredCommands, cardResults, isAuthenticated, isAdmin]);
+  }, [query, recent, filteredSavedViews, filteredCommands, cardResults, isAuthenticated, canSeeAuthenticatedCommands, isAdmin]);
 
   useEffect(() => {
     // A new result list starts keyboard selection at its first row.

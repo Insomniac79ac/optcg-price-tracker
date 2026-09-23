@@ -10,6 +10,9 @@ const { authMock, redirectMock, notFoundMock } = vi.hoisted(() => ({
   }),
 }));
 
+let callbackPath = "/admin/source-mapping-proposals/1128?returnTo=%2Fadmin%2Fsource-mapping-proposals%3Fpage%3D4";
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-atlas-admin-callback": callbackPath }) }));
+
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
 vi.mock("next/navigation", () => ({ redirect: redirectMock, notFound: notFoundMock }));
 // The real `server-only` package throws whenever `window` exists - true
@@ -19,14 +22,37 @@ vi.mock("next/navigation", () => ({ redirect: redirectMock, notFound: notFoundMo
 vi.mock("server-only", () => ({}));
 
 import { getAdminIdentityForRouteHandler, requireAdminSession } from "./adminSession";
+import { proxyAdminJson } from "./adminProxy";
+import { NextRequest } from "next/server";
 
 beforeEach(() => {
+  callbackPath = "/admin/source-mapping-proposals/1128?returnTo=%2Fadmin%2Fsource-mapping-proposals%3Fpage%3D4";
   authMock.mockReset();
   redirectMock.mockClear();
   notFoundMock.mockClear();
 });
 
 describe("requireAdminSession", () => {
+  it("redirects an expired administrator with the exact callback and reason", async () => {
+    authMock.mockResolvedValue({ user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true });
+    await expect(requireAdminSession()).rejects.toThrow("NEXT_REDIRECT:");
+    const destination = new URL(redirectMock.mock.calls[0][0], "https://atlas.example");
+    expect(destination.pathname).toBe("/admin/login");
+    expect(destination.searchParams.get("callbackUrl")).toBe(callbackPath);
+    expect(destination.searchParams.get("reason")).toBe("session-expired");
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes a forged navigation hint without using it to authorize", async () => {
+    callbackPath = "https://evil.example";
+    authMock.mockResolvedValue(null);
+    await expect(requireAdminSession()).rejects.toThrow("NEXT_REDIRECT:/admin/login?callbackUrl=%2Fadmin");
+  });
+
+  it("never treats a collector as expired admin even with an unrelated expiry flag", async () => {
+    authMock.mockResolvedValue({ user: { email: "collector@example.com" }, sessionKind: "collector", adminSessionExpired: true });
+    await expect(requireAdminSession()).rejects.toThrow("NEXT_NOT_FOUND");
+  });
   it("returns the identity for a valid admin session", async () => {
     authMock.mockResolvedValueOnce({
       user: { id: "staging-admin", email: "admin@example.com", role: "admin" },
@@ -70,6 +96,37 @@ describe("requireAdminSession", () => {
 
   it("never reads role from anything other than auth()'s own session - takes no request/header argument at all", () => {
     expect(requireAdminSession).toHaveLength(0);
+  });
+});
+
+describe("real admin API authorization boundary", () => {
+  it.each([
+    null,
+    { user: { email: "collector@example.com" }, sessionKind: "collector" },
+    { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true },
+  ])("returns JSON 401 with no upstream call for unauthorized session %#", async (session) => {
+    authMock.mockResolvedValue(session);
+    const network = vi.spyOn(globalThis, "fetch");
+    try {
+      const response = await proxyAdminJson(new NextRequest("https://atlas.example/api/admin/cards"), "/admin/cards");
+      expect(response.status).toBe(401);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("location")).toBeNull();
+      expect(await response.json()).toEqual({ error: "Admin session required." });
+      expect(network).not.toHaveBeenCalled();
+      expect(redirectMock).not.toHaveBeenCalled();
+    } finally { network.mockRestore(); }
+  });
+
+  it("allows an active administrator API read", async () => {
+    authMock.mockResolvedValue({ user: { role: "admin", email: "admin@example.com" }, sessionKind: "admin" });
+    const network = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"items":[]}'));
+    try {
+      const response = await proxyAdminJson(new NextRequest("https://atlas.example/api/admin/cards"), "/admin/cards");
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ items: [] });
+      expect(network).toHaveBeenCalledTimes(1);
+    } finally { network.mockRestore(); }
   });
 });
 

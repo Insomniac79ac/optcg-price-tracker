@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => ({ data: currentPathname.startsWith("/admin") ? { user: { role: "admin" } } : null, status: "unauthenticated" }),
   signOut: vi.fn(),
 }));
 let currentPathname = "/";
@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { TopBar } from "./TopBar";
+import { AdminSurfaceProvider } from "@/components/admin/AdminSurfaceProvider";
 
 describe("TopBar", () => {
   it("uses the canonical public compass wordmark while retaining navigation and search", () => {
@@ -23,15 +24,14 @@ describe("TopBar", () => {
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
   });
-  it("preserves supplied brand artwork on private admin tools", () => {
+  it("shares the compact Atlas compass and wordmark on admin tools", () => {
     currentPathname = "/admin/catalog-ops";
-    render(<TopBar />);
+    render(<AdminSurfaceProvider><TopBar /></AdminSurfaceProvider>);
     const link = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
-    const srcs = Array.from(link.querySelectorAll("img")).map((i) => i.getAttribute("src") ?? "");
-    // Full lockup for desktop, square mark for mobile - both real assets from
-    // public/brand, swapped by CSS rather than re-drawn at either size.
-    expect(srcs.some((s) => s.includes("cardpirate-atlas-logo"))).toBe(true);
-    expect(srcs.some((s) => s.includes("cardpirate-atlas-mark"))).toBe(true);
+    expect(link.querySelector("svg")).not.toBeNull();
+    expect(link.querySelector("img")).toBeNull();
+    expect(link).toHaveTextContent("CARDPIRATEATLAS");
+    expect(screen.queryByRole("navigation", { name: "Public sections" })).not.toBeInTheDocument();
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/optcg vault|tcg vault/i);
   });

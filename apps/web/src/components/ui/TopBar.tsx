@@ -6,19 +6,15 @@ import { signOut, useSession } from "next-auth/react";
 
 import { AtlasLogoImage, AtlasMarkImage } from "@/components/brand/AtlasBrandAssets";
 import styles from "./PublicShell.module.css";
+import adminStyles from "@/components/admin/AdminShell.module.css";
+import { AdminReauthenticateLink } from "@/components/admin/AdminReauthenticateLink";
+import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
 import { isPublicShellRoute, publicSectionActive } from "./publicNavigation";
 import { brand } from "@/lib/brand";
 import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
 
-/** Shared header mechanics for public browsing and private tools.
- * PublicShell supplies the canonical compact compass, blue-black foundation,
- * underline navigation and >=44px targets. Private routes retain their existing
- * logo assets, token values and control sizing.
- *
- * Public sections share one destination list with the mobile bottom bar. Below
- * md the desktop links are hidden; the drawer also keeps signed-in collector
- * tools reachable. The admin rail remains owned by AppShell.
- */
+/** Shared controls and compact Atlas branding. Public and admin palettes are
+ * scoped separately; the admin rail/drawer is owned by AppShell. */
 // Private tools retain compact desktop icons; PublicShell increases their
 // effective target to 44px on public routes without enlarging the glyphs.
 const ICON_BUTTON_CLASS =
@@ -45,13 +41,22 @@ export function TopBar({
   onToggleMobileNav,
   onOpenPalette,
   onOpenShortcuts,
+  mobileNavOpen = false,
 }: {
   onToggleMobileNav?: () => void;
   onOpenPalette?: () => void;
   onOpenShortcuts?: () => void;
+  mobileNavOpen?: boolean;
 }) {
-  const publicShell = isPublicShellRoute(usePathname() ?? "");
+  const pathname = usePathname() ?? "";
+  const publicShell = isPublicShellRoute(pathname);
   const { status } = useSession();
+  const adminSurface = useAdminSurface();
+  const adminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  // A concealed not-found page must not disclose operational chrome to a
+  // collector. The login entry point itself remains publicly reachable.
+  const adminNavigation = adminRoute && adminSurface?.authorized === true;
+  const adminShell = pathname === "/admin/login" || adminNavigation;
   const authenticated = status === "authenticated";
 
   return (
@@ -62,19 +67,21 @@ export function TopBar({
     <header
       data-app-header=""
       data-public-shell={publicShell ? "" : undefined}
-      className={`sticky top-0 z-30 h-[var(--header-h)] border-b border-border-default bg-bg-page/95 backdrop-blur ${publicShell ? styles.header : ""}`}
+      data-admin-shell={adminShell ? "" : undefined}
+      className={`sticky top-0 z-30 h-[var(--header-h)] border-b border-border-default bg-bg-page/95 backdrop-blur ${publicShell ? styles.header : adminShell ? adminStyles.header : ""}`}
     >
       <div className="flex h-full items-center gap-2.5 px-3 sm:gap-3 md:gap-5 md:px-6">
-        <button
+        {(!adminShell || adminNavigation) && <button
           type="button"
           onClick={onToggleMobileNav}
-          aria-label="Toggle navigation"
+          aria-label={adminShell ? "Open admin navigation" : "Toggle navigation"}
+          aria-expanded={mobileNavOpen}
           className={`${ICON_BUTTON_CLASS} rounded text-base ${
-            authenticated ? "" : "md:hidden"
+            adminShell ? "xl:hidden" : authenticated ? "" : "md:hidden"
           }`}
         >
           ☰
-        </button>
+        </button>}
 
         {/* Single explicit aria-label on the link itself - both brand images
             are decorative (alt="") so the link's accessible name is exactly
@@ -86,13 +93,13 @@ export function TopBar({
           className="flex shrink-0 items-center pr-1 md:pr-0"
           aria-label={`${brand.productName} — Home`}
         >
-          {publicShell ? <PublicLogo /> : <>
+          {publicShell || adminShell ? <PublicLogo /> : <>
             <AtlasMarkImage className="h-11 w-11 md:hidden" />
             <AtlasLogoImage className="hidden h-16 w-auto md:block" />
           </>}
         </Link>
 
-        <PublicNav />
+        {adminNavigation ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : adminShell ? null : <PublicNav />}
 
         <div className="flex-1" />
 
@@ -142,7 +149,7 @@ export function TopBar({
           ?
         </button>
 
-        <AuthControl />
+        <AuthControl adminShell={adminShell} adminDisplayName={adminNavigation ? adminSurface.displayName : null} />
       </div>
     </header>
   );
@@ -176,7 +183,7 @@ function PublicNav() {
   );
 }
 
-function AuthControl() {
+function AuthControl({ adminShell, adminDisplayName }: { adminShell: boolean; adminDisplayName: string | null }) {
   const { data: session, status } = useSession();
   // Deliberately pathname-only (no query string) - useSearchParams() would
   // require every page that renders <AppHeader /> (nearly all of them) to
@@ -187,11 +194,37 @@ function AuthControl() {
   const pathname = usePathname() ?? "/";
   const currentPath = pathname;
 
+  if (adminDisplayName) {
+    return <div className="flex min-w-0 items-center gap-2 text-xs text-text-secondary">
+      <span className="hidden max-w-[10rem] truncate sm:inline">{session?.sessionKind === "admin" && session.adminSessionExpired ? "Admin session expired" : adminDisplayName}</span>
+      {session?.sessionKind === "admin" && session.adminSessionExpired && <AdminReauthenticateLink />}
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/" })}
+        title={`Sign out ${adminDisplayName}`}
+        className="flex h-11 shrink-0 items-center rounded-control border border-border-default px-2.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 md:px-2"
+      >
+        Sign out
+      </button>
+    </div>;
+  }
+
   if (status === "loading") {
     return <span className="text-xs text-text-faint">…</span>;
   }
 
+  if (session?.sessionKind === "admin" && session.adminSessionExpired) {
+    if (pathname === "/admin/login") {
+      return <span className="max-w-28 text-xs text-text-muted">Admin session expired</span>;
+    }
+    return <div className="flex min-w-0 items-center gap-2">
+      <span className="hidden text-xs text-text-muted sm:inline">Admin session expired</span>
+      <AdminReauthenticateLink />
+    </div>;
+  }
+
   if (!session) {
+    if (adminShell) return <span className="text-xs text-text-muted">Admin sign-in</span>;
     // Routes to /sign-in rather than calling next-auth's signIn() directly -
     // that page is the single place that checks whether Google OAuth is
     // actually configured (it isn't, in this staging build) before showing
@@ -214,7 +247,7 @@ function AuthControl() {
   return (
     <div className="flex items-center gap-2 text-xs text-text-secondary">
       <span
-        className="hidden max-w-[10rem] truncate sm:inline"
+        className={`hidden max-w-[10rem] truncate ${adminShell ? "xl:inline" : "sm:inline"}`}
         title={session.user?.email ?? undefined}
       >
         {session.user?.name || session.user?.email}
@@ -231,8 +264,7 @@ function AuthControl() {
   );
 }
 
-/** Canonical public compass and wordmark, decorative inside the labelled Home link.
- * Private tools retain their existing brand assets and styling. */
+/** Canonical Atlas compass and wordmark, decorative inside the Home link. */
 function PublicLogo() {
   return <span className={styles.logo} aria-hidden="true">
     <svg viewBox="0 0 36 36" fill="none" focusable="false">
