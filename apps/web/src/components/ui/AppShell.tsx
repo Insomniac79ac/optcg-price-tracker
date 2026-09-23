@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { CommandPalette } from "./CommandPalette";
@@ -9,6 +10,8 @@ import { SidebarNav } from "./SidebarNav";
 import { TopBar } from "./TopBar";
 import { PublicBottomNav } from "./PublicBottomNav";
 import { isPublicShellRoute } from "./publicNavigation";
+import { AdminNavigation, AdminNavigationDrawer } from "@/components/admin/AdminNavigation";
+import adminStyles from "@/components/admin/AdminShell.module.css";
 
 // "g then <key>" goto-shortcut targets (design brief - "Workflow
 // shortcuts"). Kept in sync with KeyboardShortcutsModal's reference list and
@@ -31,26 +34,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
-/** Drop-in replacement for the old flat AppHeader nav bar. Renders a sticky
- * topbar (full width, in document flow, so growing it to `--header-h` pushes
- * every page's content down without any page needing new top padding), and -
- * on the admin surface only - a fixed-position navigation rail below it.
- *
- * The rail used to be permanent on every page at `lg`+. It isn't any more:
- * a persistent left nav made the *public* product read as an internal
- * dashboard, so collector-facing pages now navigate from the header
- * (TopBar's PublicNav) and get the full viewport width. The rail survives
- * for /admin, where a dense operational route list genuinely needs one, and
- * SidebarNav itself is untouched and still shared by both the rail and the
- * mobile drawer.
- *
- * The rail is `position: fixed`, so it doesn't require any page to
- * restructure its wrapper - the matching body padding is applied by
- * globals.css off the `data-app-rail` attribute, only when a rail exists.
- *
- * Also owns the global command palette / keyboard-shortcuts modal mount
- * point and keyboard listener, so every page gets Cmd/Ctrl+K, "?", "/", and
- * the "g then <key>" goto-sequences with zero per-page wiring. */
+/** Shared top bar, route-appropriate navigation and keyboard commands.
+ * Admin pages have a grouped operational rail and native modal drawer.
+ * Collector pages keep their existing header, drawer and public bottom nav.
+ */
 export function AppShell() {
   const pathname = usePathname();
   const router = useRouter();
@@ -58,15 +45,17 @@ export function AppShell() {
   // *surface*, not to the person. An admin browsing /cards is a collector at
   // that moment and gets the same header-led chrome as everybody else.
   const isAdminRoute = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { data: session } = useSession();
+  const showAdminNavigation = isAdminRoute && pathname !== "/admin/login" && session?.user?.role === "admin" && !session.adminSessionExpired;
+  const [mobileNavigation, setMobileNavigation] = useState({ pathname, open: false });
+  const mobileNavOpen = mobileNavigation.pathname === pathname && mobileNavigation.open;
+  const setMobileNavOpen = (open: boolean) => setMobileNavigation({ pathname, open });
+  // Reset during navigation, before rendering the new page's drawer.
+  if (mobileNavigation.pathname !== pathname) setMobileNavigation({ pathname, open: false });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const gotoPendingRef = useRef(false);
   const gotoTimerRef = useRef<number | undefined>(undefined);
-
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     function resetGoto() {
@@ -132,33 +121,27 @@ export function AppShell() {
   return (
     <>
       <TopBar
-        onToggleMobileNav={() => setMobileNavOpen((v) => !v)}
+        onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        mobileNavOpen={mobileNavOpen}
       />
 
       {isPublicShellRoute(pathname ?? "") && <PublicBottomNav />}
 
-      {/* Admin-only navigation rail - fixed, clears the topbar via
-          --header-h (the one place that height is defined - globals.css),
-          own scroll region. Still only at `lg` (1024px)+: tablet keeps the
-          drawer so a 768px-wide screen isn't left with a squeezed <600px
-          content column next to a permanently-open 224px rail.
-
-          data-app-rail is what globals.css keys the body padding and the
-          header's negative margin off, so the attribute and the element have
-          to stay together. */}
-      {isAdminRoute && (
+      {/* Fixed admin rail; body clearance follows data-app-rail in globals.css. */}
+      {showAdminNavigation && (
         <aside
           data-app-rail=""
-          className="fixed left-0 top-[var(--header-h)] z-20 hidden h-[calc(100vh-var(--header-h))] w-56 border-r border-border-default bg-bg-surface lg:block"
+          className={adminStyles.rail}
         >
-          <SidebarNav className="h-full" />
+          <AdminNavigation />
         </aside>
       )}
 
       {/* Mobile/tablet nav - toggled overlay, covers everything below `lg` */}
-      {mobileNavOpen && (
+      {mobileNavOpen && showAdminNavigation && <AdminNavigationDrawer onClose={() => setMobileNavOpen(false)} />}
+      {mobileNavOpen && !isAdminRoute && (
         <div className="fixed inset-0 top-[var(--header-h)] z-40 lg:hidden">
           <button
             type="button"

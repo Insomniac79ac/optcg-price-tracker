@@ -1,7 +1,5 @@
 import { requireAdminSession } from "@/lib/adminSession";
 
-import { AdminSubNav } from "./AdminSubNav";
-
 /**
  * Shared server-side boundary for every real /admin/* page - everything
  * except /admin/login, which lives outside this route group (Next.js route
@@ -34,10 +32,5 @@ import { AdminSubNav } from "./AdminSubNav";
  */
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdminSession();
-  return (
-    <>
-      <AdminSubNav />
-      {children}
-    </>
-  );
+  return children;
 }

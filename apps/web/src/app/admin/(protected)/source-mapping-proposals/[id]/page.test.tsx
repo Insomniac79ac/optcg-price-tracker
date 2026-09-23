@@ -34,7 +34,7 @@ describe("ProposalReviewDetailPage", () => {
   });
 
   it("loads a direct proposal URL and renders complete enriched evidence", async () => {
-    render(<ProposalReviewDetailPage />);
+    const { container } = render(<ProposalReviewDetailPage />);
     await waitFor(() => expect(fetchProposalReviewGroup).toHaveBeenCalledWith(1127, expect.any(AbortSignal)));
     expect(await screen.findByRole("heading", { name: "Proposal #1127" })).toBeInTheDocument();
     for (const heading of ["Source evidence", "Canonical identity", "Authoritative release", "Proposed printings (1)", "Resolver reasoning", "Historical state"]) {
@@ -44,6 +44,9 @@ describe("ProposalReviewDetailPage", () => {
     expect(screen.getByText("a".repeat(64))).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Approve exact proposal" })).toBeInTheDocument();
     expect(screen.getByText("Eligible for exact-approval review")).toBeInTheDocument();
+    const printings = container.querySelector("[data-proposed-printings]")!;
+    expect(printings.children).toHaveLength(1);
+    expect(printings.className).toContain("grid-cols-1");
   });
 
   it.each([1128, 1129, 3815])("loads approved proposal %s without mutations, source fetches or reviewer leakage", async (id) => {
@@ -82,12 +85,16 @@ describe("ProposalReviewDetailPage", () => {
     fetchProposalReviewGroup.mockResolvedValue(makeReviewDetail({ resolution_status: "ambiguous", alternatives: [makeAlternative({ recommended: false }), second], recommended_print: null, recommended_alternative_count: 0, alternative_count: 2 }));
     render(<ProposalReviewDetailPage />);
     expect(await screen.findByRole("heading", { name: "Proposed printings (2)" })).toBeInTheDocument();
-    expect(screen.getByText(/CardPrint #501/)).toBeInTheDocument();
-    expect(screen.getByText(/CardPrint #502/)).toBeInTheDocument();
+    expect(screen.getByText("501")).toBeInTheDocument();
+    expect(screen.getByText("502")).toBeInTheDocument();
     expect(screen.getByText("Listing photo does not distinguish the treatment")).toBeInTheDocument();
     const images = (screen.getAllByRole("img") as HTMLImageElement[]).filter((image) => image.alt.includes("artwork"));
     expect(images.every((image) => image.className.includes("object-contain"))).toBe(true);
     expect(screen.getAllByText("Artwork unavailable").length).toBeGreaterThan(0);
+    const cards = screen.getAllByRole("article");
+    expect(cards).toHaveLength(2);
+    expect(cards[0].parentElement).toBe(cards[1].parentElement);
+    expect(cards[0].parentElement?.className).toContain("grid-cols-1");
   });
 
   it("keeps compatibility metadata collapsed and explicitly subordinate", async () => {

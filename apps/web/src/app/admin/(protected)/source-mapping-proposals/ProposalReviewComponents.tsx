@@ -22,7 +22,7 @@ const RESOLUTION_LABELS: Record<string, string> = {
 };
 
 const RESOLUTION_STYLES: Record<string, string> = {
-  exact: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  exact: "bg-accent-teal/15 text-accent-teal-hover ring-accent-teal/30",
   ambiguous: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
   unresolved_identity: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
   release_unresolved: "bg-violet-500/15 text-violet-300 ring-violet-500/30",
@@ -102,7 +102,7 @@ export function ProposalArtwork({
   const source = resolveCardImageUrl(safeDisplayUrl ?? print?.canonical_image_url ?? null);
   const showImage = Boolean(source && !failed && !print?.image_missing);
   const frameClass =
-    size === "detail" ? "h-80 w-56 sm:h-[28rem] sm:w-80" : "h-28 w-20";
+    size === "detail" ? "aspect-[63/88] w-full max-w-80 p-1.5" : "h-28 w-20";
 
   return (
     <div
@@ -159,11 +159,11 @@ export function KeyValueGrid({ children }: { children: ReactNode }) {
   return <dl className="grid gap-x-5 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{children}</dl>;
 }
 
-export function KeyValue({ label, children }: { label: string; children: ReactNode }) {
+export function KeyValue({ label, children, technical = false }: { label: string; children: ReactNode; technical?: boolean }) {
   return (
     <div className="min-w-0">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-text-muted">{label}</dt>
-      <dd className="mt-0.5 min-w-0 [overflow-wrap:anywhere] text-text-primary">{children ?? "—"}</dd>
+      <dd className={`mt-0.5 min-w-0 text-text-primary ${technical ? "mono [overflow-wrap:anywhere]" : "break-words"}`}>{children ?? "—"}</dd>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+let adminSession = false;
 let currentPathname = "/cards";
 
 vi.mock("next-auth/react", () => ({
-  useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
+  useSession: vi.fn(() => ({ data: adminSession ? { user: { role: "admin", email: "admin@example.com" } } : null, status: adminSession ? "authenticated" : "unauthenticated" })),
   signIn: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -23,6 +24,7 @@ import { AppShell } from "./AppShell";
 describe("AppShell navigation rail", () => {
   beforeEach(() => {
     currentPathname = "/cards";
+    adminSession = false;
   });
 
   it("renders no persistent rail on a public collector page", () => {
@@ -37,6 +39,7 @@ describe("AppShell navigation rail", () => {
   });
 
   it("keeps the rail on the admin surface", () => {
+    adminSession = true;
     currentPathname = "/admin/catalog-ops";
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-app-rail]")).not.toBeNull();
@@ -76,7 +79,7 @@ describe("shared public shell", () => {
     expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
   });
 
-  it.each(["/admin/catalog-ops", "/collection", "/analytics/collection", "/search", "/sign-in"])("preserves private/account presentation on %s", (pathname) => {
+  it.each(["/collection", "/analytics/collection", "/search", "/sign-in"])("preserves private/account presentation on %s", (pathname) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();
