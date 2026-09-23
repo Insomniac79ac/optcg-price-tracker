@@ -139,7 +139,7 @@ export function AppShell() {
         </aside>
       )}
 
-      {/* Mobile/tablet nav - toggled overlay, covers everything below `lg` */}
+      {/* Admin drawer through tablet widths; collector drawer below `lg`. */}
       {mobileNavOpen && showAdminNavigation && <AdminNavigationDrawer onClose={() => setMobileNavOpen(false)} />}
       {mobileNavOpen && !isAdminRoute && (
         <div className="fixed inset-0 top-[var(--header-h)] z-40 lg:hidden">

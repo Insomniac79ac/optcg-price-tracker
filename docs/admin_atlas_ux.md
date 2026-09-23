@@ -21,7 +21,8 @@ inherit the new shell palette and grouped navigation. Overview and Proposal
 Review queue/detail adopt the shared admin page primitives. The overview only
 renders static destinations; it performs no operational data fetch. The queue
 keeps its readable card layout through tablet widths and switches to a table at
-1280px. Admin account text and the workspace label also wait for desktop space.
+1280px. The grouped rail also begins at 1280px, leaving landscape tablets
+with the drawer and full-width content. Admin account text and the workspace label also wait for desktop space.
 
 ## Session contract
 
@@ -82,3 +83,12 @@ proposal mutation is part of this tranche.
 
 CI, exact Vercel preview review and deployment remain separate release gates.
 No merge is permitted before the exact reviewed head passes those gates.
+
+- Browser validation with the mock-only API: overview, queue and detail reviewed at
+  1512, 1024, 820 and 390 pixels. No horizontal page overflow; rail only on desktop;
+  native drawer and Escape behavior verified on tablets/mobile. Printing artwork
+  uses `object-fit: contain`, primary metadata has two columns on desktop/tablet
+  and one on mobile, and technical metadata is closed initially. Local artwork
+  fixtures replaced image requests, so no source sites were contacted.
+- The final landscape-tablet correction passed all three affected suites (26 tests)
+  and touched-file ESLint. These local checks do not replace exact-preview review.
