@@ -36,6 +36,7 @@ vi.mock("@/lib/prints", async () => {
 });
 
 import { CommandPalette } from "./CommandPalette";
+import { AdminSurfaceProvider } from "@/components/admin/AdminSurfaceProvider";
 
 const EMPTY_SAVED_VIEWS = {
   items: [],
@@ -217,6 +218,16 @@ describe("CommandPalette", () => {
     });
 
     await waitFor(() => expect(screen.getByText("Catalog Ops")).toBeInTheDocument());
+  });
+
+  it("keeps admin commands available on a server-authorized page when the client session is null", async () => {
+    render(<AdminSurfaceProvider><CommandPalette open onClose={vi.fn()} /></AdminSurfaceProvider>);
+    await screen.findByText("Pages");
+    fireEvent.change(screen.getByPlaceholderText(/search by name or code/i), {
+      target: { value: "Catalog Ops" },
+    });
+    await waitFor(() => expect(screen.getByText("Catalog Ops")).toBeInTheDocument());
+    expect(fetchSavedViews).not.toHaveBeenCalled();
   });
 
   it("hides collector-scoped commands when signed out", async () => {

@@ -1,4 +1,5 @@
 import { requireAdminSession } from "@/lib/adminSession";
+import { AdminSurfaceProvider } from "@/components/admin/AdminSurfaceProvider";
 
 /**
  * Shared server-side boundary for every real /admin/* page - everything
@@ -32,5 +33,5 @@ import { requireAdminSession } from "@/lib/adminSession";
  */
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdminSession();
-  return children;
+  return <AdminSurfaceProvider>{children}</AdminSurfaceProvider>;
 }

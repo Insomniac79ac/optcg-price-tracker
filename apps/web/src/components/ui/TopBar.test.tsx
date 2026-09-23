@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { TopBar } from "./TopBar";
+import { AdminSurfaceProvider } from "@/components/admin/AdminSurfaceProvider";
 
 describe("TopBar", () => {
   it("uses the canonical public compass wordmark while retaining navigation and search", () => {
@@ -25,7 +26,7 @@ describe("TopBar", () => {
   });
   it("shares the compact Atlas compass and wordmark on admin tools", () => {
     currentPathname = "/admin/catalog-ops";
-    render(<TopBar />);
+    render(<AdminSurfaceProvider><TopBar /></AdminSurfaceProvider>);
     const link = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
     expect(link.querySelector("svg")).not.toBeNull();
     expect(link.querySelector("img")).toBeNull();

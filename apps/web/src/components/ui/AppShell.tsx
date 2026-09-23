@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 import { CommandPalette } from "./CommandPalette";
@@ -11,6 +10,7 @@ import { TopBar } from "./TopBar";
 import { PublicBottomNav } from "./PublicBottomNav";
 import { isPublicShellRoute } from "./publicNavigation";
 import { AdminNavigation, AdminNavigationDrawer } from "@/components/admin/AdminNavigation";
+import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
 import adminStyles from "@/components/admin/AdminShell.module.css";
 
 // "g then <key>" goto-shortcut targets (design brief - "Workflow
@@ -45,8 +45,10 @@ export function AppShell() {
   // *surface*, not to the person. An admin browsing /cards is a collector at
   // that moment and gets the same header-led chrome as everybody else.
   const isAdminRoute = pathname === "/admin" || (pathname?.startsWith("/admin/") ?? false);
-  const { data: session } = useSession();
-  const showAdminNavigation = isAdminRoute && pathname !== "/admin/login" && session?.user?.role === "admin" && !session.adminSessionExpired;
+  // The protected server layout is the authorization boundary. A delayed or
+  // failed client session fetch must not strip chrome from authorized content.
+  const adminSurface = useAdminSurface();
+  const showAdminNavigation = isAdminRoute && adminSurface?.authorized === true;
   const [mobileNavigation, setMobileNavigation] = useState({ pathname, open: false });
   const mobileNavOpen = mobileNavigation.pathname === pathname && mobileNavigation.open;
   const setMobileNavOpen = (open: boolean) => setMobileNavigation({ pathname, open });

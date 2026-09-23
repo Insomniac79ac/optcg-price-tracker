@@ -8,6 +8,7 @@ import { AtlasLogoImage, AtlasMarkImage } from "@/components/brand/AtlasBrandAss
 import styles from "./PublicShell.module.css";
 import adminStyles from "@/components/admin/AdminShell.module.css";
 import { AdminReauthenticateLink } from "@/components/admin/AdminReauthenticateLink";
+import { useAdminSurface } from "@/components/admin/AdminSurfaceProvider";
 import { isPublicShellRoute, publicSectionActive } from "./publicNavigation";
 import { brand } from "@/lib/brand";
 import { PUBLIC_NAV_ITEMS } from "./SidebarNav";
@@ -49,13 +50,14 @@ export function TopBar({
 }) {
   const pathname = usePathname() ?? "";
   const publicShell = isPublicShellRoute(pathname);
-  const { data: session, status } = useSession();
+  const { status } = useSession();
+  const adminSurface = useAdminSurface();
   const adminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   // A concealed not-found page must not disclose operational chrome to a
   // collector. The login entry point itself remains publicly reachable.
-  const adminShell = adminRoute && (pathname === "/admin/login" || session?.sessionKind === "admin" || session?.user?.role === "admin");
+  const adminNavigation = adminRoute && adminSurface?.authorized === true;
+  const adminShell = pathname === "/admin/login" || adminNavigation;
   const authenticated = status === "authenticated";
-  const adminNavigation = adminShell && pathname !== "/admin/login" && session?.user?.role === "admin" && !session.adminSessionExpired;
 
   return (
     // No negative margin any more: <body> carries no sidebar padding on the
@@ -97,7 +99,7 @@ export function TopBar({
           </>}
         </Link>
 
-        {adminShell ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : <PublicNav />}
+        {adminNavigation ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : adminShell ? null : <PublicNav />}
 
         <div className="flex-1" />
 
@@ -147,7 +149,7 @@ export function TopBar({
           ?
         </button>
 
-        <AuthControl adminShell={adminShell} />
+        <AuthControl adminShell={adminShell} adminDisplayName={adminNavigation ? adminSurface.displayName : null} />
       </div>
     </header>
   );
@@ -181,7 +183,7 @@ function PublicNav() {
   );
 }
 
-function AuthControl({ adminShell }: { adminShell: boolean }) {
+function AuthControl({ adminShell, adminDisplayName }: { adminShell: boolean; adminDisplayName: string | null }) {
   const { data: session, status } = useSession();
   // Deliberately pathname-only (no query string) - useSearchParams() would
   // require every page that renders <AppHeader /> (nearly all of them) to
@@ -191,6 +193,21 @@ function AuthControl({ adminShell }: { adminShell: boolean }) {
   // route) already has it - see src/lib/proxyGuard.ts.
   const pathname = usePathname() ?? "/";
   const currentPath = pathname;
+
+  if (adminDisplayName) {
+    return <div className="flex min-w-0 items-center gap-2 text-xs text-text-secondary">
+      <span className="hidden max-w-[10rem] truncate sm:inline">{session?.sessionKind === "admin" && session.adminSessionExpired ? "Admin session expired" : adminDisplayName}</span>
+      {session?.sessionKind === "admin" && session.adminSessionExpired && <AdminReauthenticateLink />}
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/" })}
+        title={`Sign out ${adminDisplayName}`}
+        className="flex h-11 shrink-0 items-center rounded-control border border-border-default px-2.5 font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60 md:h-8 md:px-2"
+      >
+        Sign out
+      </button>
+    </div>;
+  }
 
   if (status === "loading") {
     return <span className="text-xs text-text-faint">…</span>;
