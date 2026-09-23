@@ -230,6 +230,26 @@ function makeAccount(provider: string): Account {
 }
 
 describe("applyJwtCallback", () => {
+  it("recovers an already-demoted legacy administrator without granting access", async () => {
+    const token = applyJwtCallback({ token: { sub: "staging-admin", email: "admin@example.com" } });
+    const session = await applySessionCallback({ session: { user: {}, apiToken: "stale" } as Session, token });
+    expect(session).toMatchObject({ sessionKind: "admin", adminSessionExpired: true });
+    expect(session.user?.role).toBeUndefined();
+    expect(session.apiToken).toBeUndefined();
+    expect(token.roleExpiresAt).toBeUndefined();
+  });
+
+  it.each([
+    { sub: "google-123", email: "admin@example.com" },
+    { sub: "staging-admin", sessionKind: "collector" as const },
+  ])("does not infer administrator expiry from a collector identity %#", async (input) => {
+    const token = applyJwtCallback({ token: input });
+    const session = await applySessionCallback({ session: { user: {} } as Session, token });
+    expect(session.sessionKind).toBe("collector");
+    expect(session.adminSessionExpired).toBe(false);
+    expect(session.user?.role).toBeUndefined();
+  });
+
   it("keeps a four-hour boundary, retains expired kind and renews only on a fresh sign-in", async () => {
     const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     try {

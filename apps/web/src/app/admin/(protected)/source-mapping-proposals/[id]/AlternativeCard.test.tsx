@@ -14,7 +14,7 @@ describe("printing evidence card", () => {
     }
     const technical = screen.getByText("Technical print metadata").closest("details")!;
     expect(technical.open).toBe(false);
-    for (const label of ["Alternative ID", "CardPrint ID", "Asset variant", "Artwork key", "Review disposition", "Reviewed at", "Alternative created", "Alternative updated"]) {
+    for (const label of ["Alternative ID", "CardPrint ID", "Official asset variant", "Artwork key", "Review disposition", "Reviewed at", "Alternative created", "Alternative updated"]) {
       expect(within(technical).getByText(label)).toBeInTheDocument();
     }
     for (const value of primary.querySelectorAll("dd")) {
@@ -23,6 +23,10 @@ describe("printing evidence card", () => {
     }
     expect(screen.getByText("Recommended proposal")).toBeVisible();
     expect(screen.queryByText("Approved")).not.toBeInTheDocument();
+  });
+  it.each(["ja", "jp"])("displays Japanese for the persisted language code %s", (language) => {
+    render(<AlternativeCard alternative={makeAlternative({ language })} />);
+    expect(screen.getByText("Japanese")).toBeVisible();
   });
   it("keeps each evidence section explicit when empty and artwork uncropped", () => {
     render(<AlternativeCard alternative={makeAlternative({ supporting_evidence: [], missing_evidence: [], conflict_reasons: [] })} />);

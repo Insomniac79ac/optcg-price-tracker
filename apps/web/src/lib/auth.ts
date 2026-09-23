@@ -161,6 +161,18 @@ export function applyJwtCallback({ token, profile, user, account }: JwtCallbackP
     return token;
   }
 
+  // Before sessionKind existed, expiry removed both role claims from the
+  // signed JWT. The backend's fixed ADMIN_LOGIN_ID is the one remaining
+  // identifier issued exclusively by this Credentials provider. Recover only
+  // a reauthentication state for those existing sessions, never a role or a
+  // renewed lifetime. Explicit collector sessions and email matches are not
+  // used for this compatibility path.
+  if (!token.sessionKind && token.sub === "staging-admin" && !token.role) {
+    token.sessionKind = "admin";
+    token.adminSessionExpired = true;
+    token.roleExpiresAt = undefined;
+  }
+
   // Every subsequent request for an existing admin token: enforce the
   // short admin-specific lifetime by demoting the role claim once it
   // expires, without touching the underlying Auth.js session cookie (see

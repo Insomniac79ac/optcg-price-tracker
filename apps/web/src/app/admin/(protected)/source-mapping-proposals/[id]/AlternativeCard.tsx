@@ -20,7 +20,7 @@ export function AlternativeCard({ alternative }: { alternative: ProposalReviewAl
           <KeyValue label="Special print">{alternative.special_print_label ?? "None"}</KeyValue>
           <KeyValue label="Official rarity">{alternative.official_rarity ?? "Not stored"}</KeyValue>
           <KeyValue label="Treatment">{alternative.treatment ?? "Not stored"}</KeyValue>
-          <KeyValue label="Language">{alternative.language === "ja" ? "Japanese" : alternative.language}</KeyValue>
+          <KeyValue label="Language">{["ja", "jp"].includes(alternative.language) ? "Japanese" : alternative.language}</KeyValue>
           <KeyValue label="Print state">{alternative.is_active ? "Active" : "Inactive"} · {alternative.verification_status}</KeyValue>
         </dl>
         <details className={styles.technical}>
@@ -28,7 +28,7 @@ export function AlternativeCard({ alternative }: { alternative: ProposalReviewAl
           <dl className={styles.metadata}>
             <KeyValue label="Alternative ID">{alternative.alternative_id}</KeyValue>
             <KeyValue label="CardPrint ID">{alternative.card_print_id}</KeyValue>
-            <KeyValue label="Asset variant">{alternative.official_asset_variant ?? "Not stored"}</KeyValue>
+            <KeyValue label="Official asset variant">{alternative.official_asset_variant ?? "Not stored"}</KeyValue>
             <KeyValue label="Official block icon">{alternative.official_block_icon ?? "Not stored"}</KeyValue>
             <KeyValue label="Official name">{alternative.official_name ?? "Not stored"}</KeyValue>
             <KeyValue label="Artwork key" technical>{alternative.artwork_key ?? "Not stored"}</KeyValue>

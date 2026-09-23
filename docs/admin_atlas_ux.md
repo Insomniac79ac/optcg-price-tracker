@@ -39,10 +39,12 @@ callback is validated again. Collector sessions remain concealed by not-found.
 API handlers retain JSON authorization failures with no HTML redirect or upstream
 call for unauthorized sessions. The login form returns to the validated callback.
 
-Existing active JWTs gain the kind marker on their next evaluation. Historical
-tokens already demoted before this change contain no reliable admin-kind marker;
-they are not promoted or classified from an email or subject guess. A normal
-fresh admin sign-in establishes the explicit contract.
+Existing active JWTs gain the kind marker on their next evaluation. For already
+demoted legacy JWTs, the backend's fixed Credentials-provider subject
+`staging-admin` restores only the expired-session navigation state. It never
+restores authorization or a lifetime. Explicit collector sessions are preserved;
+matching the administrator email is insufficient. A fresh verified admin sign-in
+is required to establish a new four-hour role.
 
 ## Proposal layout and safety
 
@@ -92,3 +94,32 @@ No merge is permitted before the exact reviewed head passes those gates.
   fixtures replaced image requests, so no source sites were contacted.
 - The final landscape-tablet correction passed all three affected suites (26 tests)
   and touched-file ESLint. These local checks do not replace exact-preview review.
+
+### Final implementation checks
+
+The final targeted run passed **275 tests across 17 files**, including recovery
+for already-demoted legacy admin sessions and both stored Japanese language
+codes. TypeScript, touched-file ESLint and whitespace checks passed.
+
+Saved, read-only staging responses were replayed against the local development
+server for overview, queue, 1128, 1129, 3815, ambiguous 1501 and unresolved 1710 at
+1512, 820 and 390 pixels. This exposed and fixed a long release-selector overflow
+that short mock labels did not exercise. Every page then fit its viewport. The
+three approved pages showed masked reviewers, selected printings, resulting
+mappings, review times, decision basis and candidate status with no decision
+actions. This is local replay evidence, not authenticated Vercel preview review.
+Artwork was replaced by a same-origin aspect-ratio fixture; source requests and
+operational mutations were blocked by the browser harness.
+
+Before/after staging read-only checks matched, including full-row digests of all
+proposal groups, alternatives and mappings. All supplied counts and approved
+mapping links remained unchanged. No database migration, proposal decision,
+mapping repair, collector/discovery invocation or production access occurred.
+
+PR: https://github.com/Insomniac79ac/optcg-price-tracker/pull/11 (base `staging`).
+A previous head built successfully on both GitHub and Vercel after transient
+Vercel font-generation failures. Final-head checks and authenticated exact-preview
+review remain merge gates. The staging Vercel project's Preview environment has
+no API/auth settings, and its preview is behind Vercel SSO. Deployment-only staging
+settings and administrator sign-in access have been requested; neither persistent
+configuration changes nor a staging merge has been performed.
