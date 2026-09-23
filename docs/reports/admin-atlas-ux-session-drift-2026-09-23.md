@@ -31,9 +31,19 @@ successful authenticated visual review.
   stale after login. No cookie, token, email, or secret was read. The
   server-authorized page shows that a usable server session existed for those
   `/admin` requests, but it does not establish what `useSession()` received.
+- A separate unauthenticated GET made through Vercel CLI's existing protection
+  bypass to the immutable deployment returned HTTP 307 from `/admin` to
+  `/admin/login` on **the stable staging host**. The detail route did the same
+  while preserving its callback path. This was a real host bug, independent of
+  the rail drift, and explains how navigation could leave the immutable URL.
+  Auth.js's `reqWithEnvURL` replaces `req.nextUrl`'s origin with the configured
+  `AUTH_URL`; the proxy used that rewritten origin to construct the login
+  redirect. No response body, cookie, or credential was read by this check.
 
-The confirmed defect is that already authorized admin content can render with
-public chrome because the shell uses a separate client session as its authority.
+The confirmed defects are that already authorized admin content can render
+with public chrome because the shell uses a separate client session as its
+authority, and that the proxy redirects an unauthenticated immutable-host
+request to the stable host because Auth.js rewrites its request origin.
 There is no evidence of a broken Auth.js secret or failing session endpoint in
 the available logs. A client session payload issue remains possible and cannot
 be ruled out without an authenticated browser review; no persistent Auth.js
@@ -53,6 +63,11 @@ still redirects signed-out and expired administrators or conceals collectors
 before the provider is rendered. Existing per-page `AppHeader` ownership is
 preserved, so the protected layout does not introduce a second header or rail.
 The proposal-detail implementation and its printing layout are unchanged.
+
+The proxy now rebases only its signed-out login redirects to the origin of the
+actual incoming request, preserving the exact callback path. Auth.js still
+evaluates the same session, and no persistent `AUTH_URL` or protection setting
+changes are needed.
 
 The next immutable staged deployment and desktop/mobile manual review remain
 required before any success classification or merge.

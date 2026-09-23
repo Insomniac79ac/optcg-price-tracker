@@ -90,6 +90,23 @@ const evaluate = auth((req) => {
   return response;
 });
 
+/** Auth.js replaces req.nextUrl's origin with AUTH_URL when that variable is
+ * set. The dedicated staging project's AUTH_URL points at its stable domain,
+ * but an immutable staged deployment must send its own signed-out visitors
+ * back to /admin/login on the host they actually requested. Only this
+ * guard's two login destinations are rebased; authorization and cookies are
+ * still evaluated by Auth.js against the same request. */
+function keepLoginRedirectOnRequestOrigin(response: Response, requestOrigin: string): Response {
+  const location = response.headers.get("location");
+  if (!location || response.status < 300 || response.status >= 400) return response;
+  const destination = new URL(location, requestOrigin);
+  if (destination.pathname !== "/admin/login" && destination.pathname !== "/sign-in") return response;
+  if (destination.origin !== requestOrigin) {
+    response.headers.set("location", new URL(`${destination.pathname}${destination.search}${destination.hash}`, requestOrigin).toString());
+  }
+  return response;
+}
+
 // Fail closed.
 //
 // auth() evaluates the session, and it can fail for reasons that have nothing
@@ -112,7 +129,7 @@ export default async function proxy(
   try {
     const response = await evaluate(request, event);
     if (response && guardDidEvaluate(response.headers)) {
-      return response;
+      return keepLoginRedirectOnRequestOrigin(response, origin);
     }
   } catch {
     // Swallowed on purpose - the reason is a server concern, and the response

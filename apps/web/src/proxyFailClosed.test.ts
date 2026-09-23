@@ -13,13 +13,16 @@ type AuthMode =
   | { mode: "swallows" };
 
 let authMode: AuthMode = { mode: "session", session: null };
+let authRewrittenOrigin: string | null = null;
 
 vi.mock("@/lib/auth", () => ({
   auth: (handler: (req: { nextUrl: URL; auth: unknown }) => NextResponse) => {
     return async (request: Request) => {
       if (authMode.mode === "throws") throw authMode.error;
       if (authMode.mode === "swallows") return NextResponse.next();
-      return handler({ nextUrl: new URL(request.url), auth: authMode.session });
+      const original = new URL(request.url);
+      const nextUrl = authRewrittenOrigin ? new URL(`${original.pathname}${original.search}`, authRewrittenOrigin) : original;
+      return handler({ nextUrl, auth: authMode.session });
     };
   },
 }));
@@ -54,6 +57,7 @@ const PROTECTED_TOOLS = [
 
 beforeEach(() => {
   authMode = { mode: "session", session: null };
+  authRewrittenOrigin = null;
 });
 
 /** /cards/:id became public collector surface on 2026-09-01, so the guard no
@@ -76,6 +80,20 @@ describe("normal signed-out visitor", () => {
 
   it("is redirected to the admin login from an admin route", async () => {
     expect(location(await get("/admin/logs"))).toBe("/admin/login?callbackUrl=%2Fadmin%2Flogs");
+  });
+
+  it("keeps immutable deployment login callbacks on the incoming host even when AUTH_URL rewrites the Auth.js request", async () => {
+    authRewrittenOrigin = "https://optcg-price-tracker-staging.vercel.app";
+    for (const path of ["/admin", "/admin/source-mapping-proposals/1128?returnTo=%2Fadmin"]) {
+      const res = await get(path);
+      const redirect = new URL(res.headers.get("location")!);
+      expect(redirect.origin).toBe(ORIGIN);
+      expect(redirect.pathname).toBe("/admin/login");
+      expect(redirect.searchParams.get("callbackUrl")).toBe(path);
+    }
+    const collector = new URL((await get("/search")).headers.get("location")!);
+    expect(collector.origin).toBe(ORIGIN);
+    expect(collector.pathname).toBe("/sign-in");
   });
 });
 
