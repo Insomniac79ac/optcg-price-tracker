@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { ADMIN_CALLBACK_HEADER, safeAdminCallbackUrl } from "@/lib/adminLoginUrl";
 import {
   GUARD_EVALUATED_HEADER,
   buildAdminLoginRedirect,
@@ -57,13 +58,18 @@ import {
 // too (see src/lib/adminProxy.ts) - proxy is purely a fast, optimistic
 // UX redirect layered on top of both.
 /** Turn a policy decision into the response that carries it out. */
-function toResponse(outcome: GuardOutcome, origin: string, pathname: string, search: string) {
+function toResponse(outcome: GuardOutcome, origin: string, pathname: string, search: string, requestHeaders?: Headers) {
   switch (outcome.kind) {
     case "redirect-admin-login":
-      return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search));
+      return NextResponse.redirect(buildAdminLoginRedirect(origin, pathname, search, outcome.expired));
     case "redirect-sign-in":
       return NextResponse.redirect(buildSignInRedirect(origin, pathname, search));
     case "allow":
+      if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+        const forwarded = new Headers(requestHeaders);
+        forwarded.set(ADMIN_CALLBACK_HEADER, safeAdminCallbackUrl(`${pathname}${search}`));
+        return NextResponse.next({ request: { headers: forwarded } });
+      }
       return NextResponse.next();
   }
 }
@@ -74,10 +80,11 @@ function toResponse(outcome: GuardOutcome, origin: string, pathname: string, sea
 const evaluate = auth((req) => {
   const { pathname, search, origin } = req.nextUrl;
   const response = toResponse(
-    guardOutcome(pathname, hasCollectorSession(req.auth)),
+    guardOutcome(pathname, hasCollectorSession(req.auth), req.auth?.sessionKind === "admin" && req.auth.adminSessionExpired === true),
     origin,
     pathname,
     search,
+    req.headers,
   );
   response.headers.set(GUARD_EVALUATED_HEADER, "1");
   return response;

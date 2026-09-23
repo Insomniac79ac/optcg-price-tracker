@@ -102,9 +102,10 @@ export function buildSignInRedirect(origin: string, pathname: string, search: st
 /** Same idea as buildSignInRedirect, for a signed-out visitor hitting a
  * protected /admin/* route - always /admin/login, never /sign-in (the
  * collector-only entry point - see src/app/sign-in/page.tsx). */
-export function buildAdminLoginRedirect(origin: string, pathname: string, search: string): URL {
+export function buildAdminLoginRedirect(origin: string, pathname: string, search: string, expired = false): URL {
   const adminLoginUrl = new URL("/admin/login", origin);
   adminLoginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+  if (expired) adminLoginUrl.searchParams.set("reason", "session-expired");
   return adminLoginUrl;
 }
 
@@ -121,19 +122,20 @@ export function isAdminLoginPath(pathname: string): boolean {
 export type GuardOutcome =
   | { kind: "allow" }
   | { kind: "redirect-sign-in" }
-  | { kind: "redirect-admin-login" };
+  | { kind: "redirect-admin-login"; expired?: boolean };
 
 /** The policy for one matched path.
  *
- * `hasSession` is the ONLY input beyond the path: a request with no session
+ * An explicit expired-admin flag improves navigation only. A request with no session
  * and a request whose authentication could not be evaluated at all are
  * deliberately handed the same conservative answer (see failClosedOutcome).
  * The two remain distinct at the call site, which is where the distinction
  * actually matters.
  */
-export function guardOutcome(pathname: string, hasSession: boolean): GuardOutcome {
-  if (pathname.startsWith("/admin")) {
+export function guardOutcome(pathname: string, hasSession: boolean, expiredAdmin = false): GuardOutcome {
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     if (isAdminLoginPath(pathname)) return { kind: "allow" };
+    if (hasSession && expiredAdmin) return { kind: "redirect-admin-login", expired: true };
     return hasSession ? { kind: "allow" } : { kind: "redirect-admin-login" };
   }
   return hasSession ? { kind: "allow" } : { kind: "redirect-sign-in" };

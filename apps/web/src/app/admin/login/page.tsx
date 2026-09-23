@@ -4,11 +4,10 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { auth, isAdminLoginEnabled } from "@/lib/auth";
-import { sanitizeCallbackUrl } from "@/lib/callbackUrl";
+import { safeAdminCallbackUrl } from "@/lib/adminLoginUrl";
 
 import { AdminLoginForm } from "./AdminLoginForm";
 
-const DEFAULT_ADMIN_DESTINATION = "/admin";
 
 /** The public admin sign-in page - deliberately outside the
  * app/admin/(protected) route group so it stays reachable without a
@@ -23,16 +22,15 @@ const DEFAULT_ADMIN_DESTINATION = "/admin";
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; reason?: string }>;
 }) {
   const params = await searchParams;
-  const callbackUrl = sanitizeCallbackUrl(params.callbackUrl) || DEFAULT_ADMIN_DESTINATION;
-  const safeDestination = callbackUrl === "/" ? DEFAULT_ADMIN_DESTINATION : callbackUrl;
+  const safeDestination = safeAdminCallbackUrl(params.callbackUrl);
 
   // An already-signed-in admin visiting /admin/login again is sent straight
   // to their destination rather than shown the form a second time.
   const session = await auth();
-  if (session?.user?.role === "admin") {
+  if (session?.user?.role === "admin" && !session.adminSessionExpired) {
     redirect(safeDestination);
   }
 
@@ -48,6 +46,11 @@ export default async function AdminLoginPage({
         />
 
         <div className="panel space-y-4 p-6 text-sm text-text-secondary">
+          {params.reason === "session-expired" && (
+            <p role="status" className="rounded-control border border-accent-teal/40 bg-accent-teal/10 p-3 text-text-primary">
+              Your administrator session expired. Sign in again to continue.
+            </p>
+          )}
           {enabled ? (
             <AdminLoginForm callbackUrl={safeDestination} />
           ) : (

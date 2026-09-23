@@ -2,6 +2,8 @@ import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
+    sessionKind?: "admin" | "collector";
+    adminSessionExpired?: boolean;
     apiToken?: string;
     user?: DefaultSession["user"] & {
       id?: string;
@@ -22,6 +24,8 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    sessionKind?: "admin" | "collector";
+    adminSessionExpired?: boolean;
     role?: "admin";
     // Epoch-ms expiry for the `role` claim specifically, independent of
     // the underlying Auth.js session/cookie lifetime - see

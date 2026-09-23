@@ -79,6 +79,29 @@ describe("normal signed-out visitor", () => {
   });
 });
 
+describe("expired admin navigation", () => {
+  it("preserves the full proposal callback and leaves login reachable", async () => {
+    authMode = { mode: "session", session: { user: { email: "admin@example.com" }, sessionKind: "admin", adminSessionExpired: true } };
+    const path = "/admin/source-mapping-proposals/1128?returnTo=%2Fadmin%2Fsource-mapping-proposals%3Fpage%3D4";
+    const response = await get(path);
+    const destination = new URL(response.headers.get("location")!);
+    expect(destination.pathname).toBe("/admin/login");
+    expect(destination.searchParams.get("callbackUrl")).toBe(path);
+    expect(destination.searchParams.get("reason")).toBe("session-expired");
+    expect(location(await get("/admin/login"))).toBe("");
+  });
+  it("does not redirect collector sessions or match admin API handlers", async () => {
+    authMode = { mode: "session", session: { user: { email: "collector@example.com" }, sessionKind: "collector" } };
+    expect(location(await get("/admin/source-mapping-proposals/1128"))).toBe("");
+    expect(proxyModule.config.matcher.some((path) => path.startsWith("/api"))).toBe(false);
+  });
+  it("forwards a safe callback for the independent server authorization boundary", async () => {
+    authMode = { mode: "session", session: { user: { role: "admin", email: "admin@example.com" } } };
+    const response = await get("/admin/source-mapping-proposals/1128?page=2");
+    expect(response.headers.get("x-middleware-request-x-atlas-admin-callback")).toBe("/admin/source-mapping-proposals/1128?page=2");
+  });
+});
+
 describe("signed-in visitor", () => {
   beforeEach(() => {
     authMode = { mode: "session", session: { user: { email: "collector@example.com" } } };

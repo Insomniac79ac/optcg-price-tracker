@@ -144,6 +144,8 @@ export function applyJwtCallback({ token, profile, user, account }: JwtCallbackP
     token.picture = profile.picture as string | undefined;
     token.role = undefined;
     token.roleExpiresAt = undefined;
+    token.sessionKind = "collector";
+    token.adminSessionExpired = false;
     return token;
   }
 
@@ -153,6 +155,8 @@ export function applyJwtCallback({ token, profile, user, account }: JwtCallbackP
     token.sub = user.id;
     token.email = user.email as string;
     token.role = "admin";
+    token.sessionKind = "admin";
+    token.adminSessionExpired = false;
     token.roleExpiresAt = Date.now() + ADMIN_SESSION_MAX_AGE_MS;
     return token;
   }
@@ -162,9 +166,12 @@ export function applyJwtCallback({ token, profile, user, account }: JwtCallbackP
   // expires, without touching the underlying Auth.js session cookie (see
   // ADMIN_SESSION_MAX_AGE_MS above).
   const roleExpiresAt = token.roleExpiresAt as number | undefined;
-  if (token.role === "admin" && (!roleExpiresAt || Date.now() > roleExpiresAt)) {
+  // Upgrade still-active tokens issued before sessionKind was introduced.
+  if (token.role === "admin") token.sessionKind = "admin";
+  if (token.role === "admin" && (!roleExpiresAt || Date.now() >= roleExpiresAt)) {
     token.role = undefined;
     token.roleExpiresAt = undefined;
+    token.adminSessionExpired = true;
   }
 
   return token;
@@ -181,18 +188,21 @@ export async function applySessionCallback({
   session: Session;
   token: JWT;
 }): Promise<Session> {
+  session.sessionKind = token.sessionKind ?? (token.role === "admin" ? "admin" : "collector");
+  session.adminSessionExpired = session.sessionKind === "admin" && token.adminSessionExpired === true;
   if (session.user) {
     session.user.id = token.sub as string;
-    session.user.role = token.role === "admin" ? "admin" : undefined;
+    session.user.role = token.role === "admin" && !session.adminSessionExpired ? "admin" : undefined;
   }
 
-  if (token.role === "admin") {
+  if (session.sessionKind === "admin") {
     // Admin sessions authenticate to the backend via a server-side-
     // injected ADMIN_TOKEN (see src/lib/adminProxy.ts), never this
     // per-user bearer JWT - minting one here would needlessly JIT-
     // provision a phantom `users` row for the fixed "staging-admin"
     // subject the moment anything ever presented it to
     // require_current_user (see services/api/app/auth.py).
+    delete session.apiToken;
     return session;
   }
 
