@@ -596,7 +596,10 @@ def validate_backup(backup: Any) -> ValidationResult:
         duplicates = sum(count > 1 for count in current_identities.values())
         summary["duplicate_current_canonical_identities"] = duplicates
         if duplicates:
-            warnings.append(f"{duplicates} duplicate current canonical listing identities; retained without automatic repair")
+            errors.append(
+                f"{duplicates} duplicate current canonical listing identities; "
+                "restore requires explicit source-mapping repair"
+            )
         try:
             _mapping_restore_order(list(mappings_by_id.values()))
         except ValueError as exc:

@@ -646,7 +646,6 @@ def test_rejected_conflicting_and_duplicate_mappings_use_writer_refusals(db_sess
     [
         ("rejected", "existing_mapping_was_rejected"),
         ("different_print", "existing_mapping_names_another_print"),
-        ("duplicate", "multiple_mappings_for_listing"),
     ],
 )
 def test_snkrdunk_reusable_writer_owns_mapping_guards(db_session, case, expected_code):
@@ -663,17 +662,6 @@ def test_snkrdunk_reusable_writer_owns_mapping_guards(db_session, case, expected
         is_active=False,
     )
     db_session.add(first)
-    if case == "duplicate":
-        db_session.add(
-            SourceCardMapping(
-                source_id=source.id,
-                source_card_id=candidate.detected_card_code,
-                source_url=candidate.source_url + "?duplicate=1",
-                card_print_id=physical.id,
-                review_status="needs_review",
-                is_active=False,
-            )
-        )
     db_session.commit()
     with pytest.raises(ExactPrintApprovalError) as exc:
         approve_exact_proposal(db_session, group.id, _request(group), ACTOR)

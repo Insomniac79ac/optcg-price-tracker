@@ -15,6 +15,7 @@ from sqlalchemy import (
     event,
     inspect,
     select,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +30,18 @@ class SourceCardMapping(Base):
         UniqueConstraint("source_id", "source_url", name="uq_source_card_mappings_source_url"),
         Index("ix_source_card_mappings_card_id_source_id", "card_id", "source_id"),
         Index("ix_mapping_current_listing", "source_id", "canonical_source_listing_identity", "superseded_at"),
+        Index(
+            "uq_mapping_current_canonical_listing_identity",
+            "source_id",
+            "canonical_source_listing_identity",
+            unique=True,
+            postgresql_where=text(
+                "superseded_at IS NULL AND canonical_source_listing_identity IS NOT NULL"
+            ),
+            sqlite_where=text(
+                "superseded_at IS NULL AND canonical_source_listing_identity IS NOT NULL"
+            ),
+        ),
         CheckConstraint(
             "(superseded_at IS NULL AND superseded_by_mapping_id IS NULL AND supersession_reason IS NULL) OR "
             "(superseded_at IS NOT NULL AND superseded_by_mapping_id IS NOT NULL AND "
