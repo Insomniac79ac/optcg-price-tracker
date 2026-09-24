@@ -11,6 +11,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, event, inspect, select, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -42,7 +44,9 @@ ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 DATABASE_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
 PREVIOUS = "e3a7c5d9b102"
 REVISION = "f4c8a2d91b60"
-CURRENT_HEAD = "b8e04219d6c3"
+_config = Config()
+_config.set_main_option("script_location", str(ROOT / "alembic"))
+CURRENT_HEAD = ScriptDirectory.from_config(_config).get_current_head()
 
 
 def _alembic(*args):
@@ -101,7 +105,7 @@ def test_upgrade_and_downgrade_source_scoped_alias_and_proposal_schema(migration
     assert "source_id" not in {c["name"] for c in inspector.get_columns("release_product_aliases")}
     assert "source_mapping_proposal_groups" not in inspector.get_table_names()
     # The remainder of this module exercises the current ORM. Preserve the
-    # f4 round trip above, then advance through the additive decision schema.
+    # f4 round trip above, then advance through all current model columns.
     _alembic("upgrade", CURRENT_HEAD)
 
 

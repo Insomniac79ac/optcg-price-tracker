@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -33,7 +35,11 @@ USER = os.environ.get("TEST_POSTGRES_USER", "opcg")
 PASSWORD = os.environ.get("TEST_POSTGRES_PASSWORD", "opcg")
 ADMIN_URL = f"postgresql+psycopg://{USER}:{PASSWORD}@{HOST}:{PORT}/postgres"
 
-HEAD = "d1c48b7f36ae"
+# These tests execute the current ORM, so their disposable schema must include
+# every current model column. Historical migration tests pin revisions separately.
+_config = Config()
+_config.set_main_option("script_location", str(REPO_ROOT / "alembic"))
+HEAD = ScriptDirectory.from_config(_config).get_current_head()
 CARD_LIST = "https://www.onepiece-cardgame.com/images/cardlist/card"
 SERIES_URL = "https://www.onepiece-cardgame.com/cardlist/?series="
 
