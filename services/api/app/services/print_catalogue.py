@@ -41,12 +41,13 @@ fill in.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Literal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint, PriceObservation, Source
+from app.models import CanonicalCard, CardPrint, PriceObservation, ReleaseProduct, Source
 from app.schemas import (
     CardPrintOut,
     CardPrintSiblingOut,
@@ -62,7 +63,15 @@ from app.services.print_market_index import get_market_index_for_prints
 from app.services.print_series import KIND_SOURCE
 from app.services.rarity_facets import facet_values, filter_tokens
 
-SortKey = Literal["card_code", "card_code_asc", "name", "index_desc", "index_asc", "updated"]
+SortKey = Literal[
+    "card_code",
+    "card_code_asc",
+    "name",
+    "index_desc",
+    "index_asc",
+    "updated",
+    "created_desc",
+]
 # `card_code_asc` is an explicit ALIAS for the long-standing `card_code`, not a
 # new ordering: same expression, same tie-breakers, same rows in the same
 # sequence. It exists so a caller that needs a neutral, deterministic order can
@@ -76,6 +85,7 @@ SORT_KEYS: tuple[SortKey, ...] = (
     "index_desc",
     "index_asc",
     "updated",
+    "created_desc",
 )
 
 _INDEX_SORTS = {"index_desc", "index_asc"}
@@ -154,6 +164,7 @@ def to_print_out(
     market_index: PrintMarketIndexOut,
     siblings: list[CardPrintSiblingOut],
     display_image: DisplayImageOut | None = None,
+    release_product: ReleaseProduct | None = None,
 ) -> CardPrintOut:
     return CardPrintOut(
         card_print_id=print_row.id,
@@ -167,6 +178,9 @@ def to_print_out(
         colors=canonical.colors,
         language=print_row.language,
         treatment=print_row.treatment,
+        release_product_id=print_row.release_product_id,
+        release_code=release_product.official_code if release_product else None,
+        release_name=release_product.display_name if release_product else None,
         release_product_code=print_row.release_product_code,
         original_set_code=canonical.original_set_code,
         official_asset_variant=print_row.official_asset_variant,
@@ -174,6 +188,7 @@ def to_print_out(
         image_url=print_row.image_url,
         display_image=display_image,
         verification_status=print_row.verification_status,
+        created_at=print_row.created_at,
         market_index=market_index,
         siblings=siblings,
     )
@@ -194,6 +209,7 @@ def _to_catalogue_item(
     market_index: PrintMarketIndexOut,
     display_image: DisplayImageOut | None = None,
     market_index_change_7d_pct: float | None = None,
+    release_product: ReleaseProduct | None = None,
 ) -> PrintCatalogueItemOut:
     return PrintCatalogueItemOut(
         card_print_id=print_row.id,
@@ -206,12 +222,16 @@ def _to_catalogue_item(
         card_type=canonical.card_type,
         treatment=print_row.treatment,
         language=print_row.language,
+        release_product_id=print_row.release_product_id,
+        release_code=release_product.official_code if release_product else None,
+        release_name=release_product.display_name if release_product else None,
         release_product_code=print_row.release_product_code,
         original_set_code=canonical.original_set_code,
         official_asset_variant=print_row.official_asset_variant,
         image_url=print_row.image_url,
         display_image=display_image,
         verification_status=print_row.verification_status,
+        created_at=print_row.created_at,
         market_index=market_index,
         source_coverage=_source_coverage(market_index),
         latest_observation_at=market_index.freshest_observation_at,
@@ -228,38 +248,73 @@ def _canonical_map(db: Session, canonical_ids: set[int]) -> dict[int, CanonicalC
     }
 
 
+def _release_product_map(
+    db: Session, release_product_ids: set[int]
+) -> dict[int, ReleaseProduct]:
+    if not release_product_ids:
+        return {}
+    return {
+        product.id: product
+        for product in db.scalars(
+            select(ReleaseProduct).where(ReleaseProduct.id.in_(release_product_ids))
+        ).all()
+    }
+
+
+def _filter_values(values: str | Sequence[str] | None) -> tuple[str, ...]:
+    """Deduplicate repeated query values without inventing normalization.
+
+    A direct service caller may still pass the pre-existing scalar shape.
+    Empty values retain the old no-filter behavior; every other unknown value
+    remains an exact-match filter that naturally returns no rows.
+    """
+    if values is None:
+        return ()
+    candidates = (values,) if isinstance(values, str) else tuple(values)
+    return tuple(dict.fromkeys(value for value in candidates if value))
+
+
 def _apply_filters(
     stmt,
     *,
     q: str | None,
-    treatment: str | None,
+    treatment: str | Sequence[str] | None,
     language: str | None,
-    rarity: str | None,
+    rarity: str | Sequence[str] | None,
     verification_status: str | None,
     set_code: str | None = None,
+    release_product_id: int | None = None,
 ):
     stmt = stmt.where(CardPrint.is_active.is_(True))
-    # The SAME column and the SAME spelling `/analytics/market/filters`
-    # publishes and `/analytics/market/overview?set=` filters on
-    # (`release_product_code`, e.g. `OP-01`) - never the legacy `cards.set_code`
-    # vocabulary, which spells the same product `OP01` and carries legacy card
-    # identity. One set vocabulary, published in one place, honoured here.
-    #
-    # Equality on an explicit value, so a print with no release product is not
-    # selectable by any set - the same rule the filter endpoint keeps when it
-    # declines to invent an "Unknown" option for NULL.
+    # Keep the spelling `/analytics/market/filters` publishes and
+    # `/analytics/market/overview?set=` accepts (`OP-01`, not legacy `OP01`),
+    # but resolve it through ReleaseProduct and constrain the print's
+    # authoritative FK. A print in an uncoded product remains selectable by
+    # release_product_id even though no saved `?set=` URL can name it.
     if set_code:
-        stmt = stmt.where(CardPrint.release_product_code == set_code)
-    # Only ever an equality match on an explicit value - a NULL treatment can
-    # therefore never be returned by a treatment filter, and no filter value
-    # selects "unclassified".
-    if treatment:
-        stmt = stmt.where(CardPrint.treatment == treatment)
+        # `official_code` is not identity, so first resolve it through the
+        # authoritative products and then constrain CardPrint by its FK. This
+        # preserves the saved `?set=OP-01` URL while avoiding the denormalized
+        # CardPrint.release_product_code as membership authority.
+        matching_product_ids = select(ReleaseProduct.id).where(
+            ReleaseProduct.source_catalogue == "bandai_jp",
+            ReleaseProduct.official_code == set_code
+        )
+        stmt = stmt.where(CardPrint.release_product_id.in_(matching_product_ids))
+    if release_product_id is not None:
+        stmt = stmt.where(CardPrint.release_product_id == release_product_id)
+    # Only explicit values are members of this IN set - NULL can therefore
+    # never be returned by a treatment filter, and no synthetic value selects
+    # "unclassified".
+    treatments = _filter_values(treatment)
+    if treatments:
+        stmt = stmt.where(CardPrint.treatment.in_(treatments))
     if language:
         stmt = stmt.where(CardPrint.language == language)
     if verification_status:
         stmt = stmt.where(CardPrint.verification_status == verification_status)
-    if rarity:
+    rarities = _filter_values(rarity)
+    if rarities:
         # Matched against the same value the tile displays (see
         # effective_rarity), never against the card-level column alone - a
         # print whose rarity comes from its own catalogue entry must be
@@ -270,7 +325,12 @@ def _apply_filters(
         # single SP Card option selects the whole category rather than the
         # larger half of it. Every other value expands to itself, so this stays
         # an equality match for them - see app.services.rarity_facets.
-        stmt = stmt.where(effective_rarity_sql().in_(filter_tokens(rarity)))
+        rarity_tokens = {
+            stored_token
+            for requested in rarities
+            for stored_token in filter_tokens(requested)
+        }
+        stmt = stmt.where(effective_rarity_sql().in_(rarity_tokens))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -337,11 +397,12 @@ def list_print_catalogue(
     db: Session,
     *,
     q: str | None = None,
-    treatment: str | None = None,
+    treatment: str | Sequence[str] | None = None,
     language: str | None = None,
-    rarity: str | None = None,
+    rarity: str | Sequence[str] | None = None,
     verification_status: str | None = None,
     set_code: str | None = None,
+    release_product_id: int | None = None,
     price_basis: BasisRequest | None = None,
     sort: SortKey = "card_code",
     limit: int = 24,
@@ -356,6 +417,7 @@ def list_print_catalogue(
         rarity=rarity,
         verification_status=verification_status,
         set_code=set_code,
+        release_product_id=release_product_id,
     )
 
     if price_basis is not None:
@@ -398,6 +460,11 @@ def list_print_catalogue(
             )
         elif sort == "updated":
             ordered = ordered.order_by(CardPrint.updated_at.desc(), CardPrint.id.asc())
+        elif sort == "created_desc":
+            # "Recently added to Atlas": ingestion chronology, explicitly not
+            # a product release date. Descending id is the deterministic tie
+            # breaker required for stable adjacent offset pages.
+            ordered = ordered.order_by(CardPrint.created_at.desc(), CardPrint.id.desc())
         else:  # "card_code" / its explicit alias "card_code_asc"
             # NULLS LAST explicitly: an unclassified print sorts after the
             # classified siblings of the same card rather than wherever the
@@ -414,6 +481,9 @@ def list_print_catalogue(
         page_index_by_print = get_market_index_for_prints(db, [p.id for p in page_prints])
 
     canonical_by_id = _canonical_map(db, {p.canonical_card_id for p in page_prints})
+    release_by_id = _release_product_map(
+        db, {p.release_product_id for p in page_prints if p.release_product_id is not None}
+    )
     # One extra mapping query for the whole page - never per item, and never
     # a raw_snapshots read (see app.services.display_image).
     display_by_print = get_display_images_for_prints(db, list(page_prints))
@@ -429,6 +499,7 @@ def list_print_catalogue(
             page_index_by_print[p.id],
             display_by_print.get(p.id),
             change_by_print.get(p.id),
+            release_by_id.get(p.release_product_id) if p.release_product_id is not None else None,
         )
         for p in page_prints
     ]

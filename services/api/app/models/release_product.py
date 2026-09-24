@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Index, String, func, text
+from sqlalchemy import CheckConstraint, Date, DateTime, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -21,6 +21,7 @@ from app.models.card_print import VERIFICATION_STATUSES
 # Only `bandai_jp` is seeded today; the others exist here as vocabulary, not
 # as data.
 SOURCE_CATALOGUES = ("bandai_jp", "bandai_asia_en", "bandai_en")
+RELEASE_DATE_SOURCES = ("DATE_VERIFIED_CORROBORATED", "DATE_VERIFIED_SINGLE_SOURCE")
 
 
 class ReleaseProduct(Base):
@@ -49,8 +50,8 @@ class ReleaseProduct(Base):
     frozen `(source_catalogue, source_series_id, first_seen_name, source_url)`
     evidence, never auto-merged by name.
 
-    Nothing reads or writes this table yet: it is dormant infrastructure
-    added alongside `card_prints.release_product_id`.
+    Authoritative release chronology is separate from Atlas ingestion time.
+    Undated special products remain valid members of the catalogue.
     """
 
     __tablename__ = "release_products"
@@ -89,6 +90,16 @@ class ReleaseProduct(Base):
             "verification_status IN ('verified', 'unverified', 'needs_review')",
             name="ck_release_products_verification_status",
         ),
+        CheckConstraint(
+            "released_on IS NULL OR (release_date_source IS NOT NULL "
+            "AND trim(release_date_source, ' \t\n\r') <> '')",
+            name="ck_release_products_dated_requires_source",
+        ),
+        CheckConstraint(
+            "release_date_source IS NULL OR release_date_source IN "
+            "('DATE_VERIFIED_CORROBORATED', 'DATE_VERIFIED_SINGLE_SOURCE')",
+            name="ck_release_products_release_date_source",
+        ),
         # A code is unique only within the catalogue that published it, so
         # bandai_jp OP-01 and bandai_en OP-01 must be able to coexist as
         # separate rows. A global UNIQUE(official_code) would collide the
@@ -114,6 +125,8 @@ class ReleaseProduct(Base):
     verification_status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="unverified", server_default="unverified"
     )
+    released_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    release_date_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -125,4 +138,4 @@ class ReleaseProduct(Base):
 
 # Re-exported so callers can validate against the same three-state vocabulary
 # card_prints uses, rather than a second copy that could drift.
-__all__ = ["ReleaseProduct", "SOURCE_CATALOGUES", "VERIFICATION_STATUSES"]
+__all__ = ["ReleaseProduct", "SOURCE_CATALOGUES", "RELEASE_DATE_SOURCES", "VERIFICATION_STATUSES"]

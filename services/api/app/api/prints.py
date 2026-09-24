@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
 from app.db import get_db
-from app.models import CanonicalCard, CardPrint, PriceObservation
+from app.models import CanonicalCard, CardPrint, PriceObservation, ReleaseProduct
 from app.schemas import (
     CardPrintOut,
     PrintAnalyticsOut,
@@ -74,13 +74,18 @@ def _get_canonical_or_404(db: Session, canonical_card_id: int) -> CanonicalCard:
 @router.get("", response_model=PrintCatalogueListOut)
 def get_print_catalogue(
     q: str | None = Query(default=None, min_length=1, max_length=128),
-    treatment: str | None = Query(default=None),
+    treatment: list[str] | None = Query(default=None),
     language: str | None = Query(default=None),
-    rarity: str | None = Query(default=None),
+    rarity: list[str] | None = Query(default=None),
     verification_status: str | None = Query(default=None),
     set_code: str | None = Query(default=None, alias="set", max_length=32),
+    release_product_id: int | None = Query(default=None, ge=1),
     price_basis: str | None = Query(default=None, max_length=64),
-    sort: str = Query(default="card_code"),
+    sort: str = Query(
+        default="card_code",
+        json_schema_extra={"enum": list(SORT_KEYS)},
+        description="Catalogue sort; created_desc means recently added to Atlas.",
+    ),
     limit: int = Query(default=24, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
@@ -90,12 +95,17 @@ def get_print_catalogue(
     Market Index. Sibling prints of the same canonical card (e.g. Sanji base
     and Sanji parallel) each appear as their own separate entry.
 
-    `set` takes the SAME identifiers `/analytics/market/filters` publishes and
-    `/analytics/market/overview?set=` accepts - `OP-01`, `EB-02` - because they
-    are the same catalogue column (`release_product_code`). Until this
-    parameter existed a client that sent `?set=` got HTTP 200 and the whole
-    unfiltered catalogue back, which is worse than an error: the page looked
-    scoped and was not.
+    `set` keeps accepting the SAME identifiers `/analytics/market/filters`
+    publishes and `/analytics/market/overview?set=` accepts - `OP-01`,
+    `EB-02`. It resolves that code through ReleaseProduct and filters by the
+    print's `release_product_id`; the denormalized print code and the card-code
+    prefix are not membership authority. `release_product_id` is the explicit,
+    unambiguous form, including for uncoded products. If both forms are sent,
+    they must name the same ReleaseProduct.
+
+    `rarity` and `treatment` are repeatable. Values within either family are
+    ORed, while the two families and every other filter compose with AND.
+    Rarity values retain the existing collector-facing facet expansion.
 
     `price_basis` narrows to prints that basis can price RIGHT NOW, in the
     grammar the print series endpoint already publishes (`market_index` |
@@ -105,7 +115,11 @@ def get_print_catalogue(
     a platform-floor listing does not qualify - see
     app.services.price_basis.usable_basis_value, which is the same rule the
     market overview counts with. The item shape is unchanged; this only decides
-    WHICH prints are on the page."""
+    WHICH prints are on the page.
+
+    `sort=created_desc` means recently added to Atlas: CardPrint.created_at
+    descending, then CardPrint.id descending. It is not product release
+    chronology."""
     if sort not in SORT_KEYS:
         raise HTTPException(
             status_code=400, detail=f"Invalid sort. Must be one of {list(SORT_KEYS)}"
@@ -115,6 +129,18 @@ def get_print_catalogue(
     except BasisError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    if set_code is not None and release_product_id is not None:
+        release_product = db.get(ReleaseProduct, release_product_id)
+        if (
+            release_product is None
+            or release_product.source_catalogue != "bandai_jp"
+            or release_product.official_code != set_code
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="set and release_product_id identify different release products",
+            )
+
     items, total = list_print_catalogue(
         db,
         q=q,
@@ -123,6 +149,7 @@ def get_print_catalogue(
         rarity=rarity,
         verification_status=verification_status,
         set_code=set_code,
+        release_product_id=release_product_id,
         price_basis=basis,
         sort=sort,  # type: ignore[arg-type]
         limit=limit,
@@ -145,7 +172,19 @@ def get_print(print_id: int, db: Session = Depends(get_db)):
     market_index = get_market_index_for_print(db, print_id)
     siblings = get_siblings(db, print_row.canonical_card_id, print_id)
     display_image = get_display_image_for_print(db, print_row)
-    return to_print_out(print_row, canonical, market_index, siblings, display_image)
+    release_product = (
+        db.get(ReleaseProduct, print_row.release_product_id)
+        if print_row.release_product_id is not None
+        else None
+    )
+    return to_print_out(
+        print_row,
+        canonical,
+        market_index,
+        siblings,
+        display_image,
+        release_product,
+    )
 
 
 @router.get("/{print_id}/market-index", response_model=PrintMarketIndexOut)

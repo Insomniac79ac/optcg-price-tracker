@@ -1,0 +1,474 @@
+{
+  "evidence_bundle_version": "bandai_release_archive_v1",
+  "source_catalogue": "bandai_jp",
+  "acquisition_date": "2026-09-24",
+  "format": "tar.gz",
+  "object_key": "official-evidence/bandai_jp/release-dates/2026-09-24/sha256/247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54.tar.gz",
+  "archive_sha256": "247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54",
+  "archive_size": 657098,
+  "file_count": 149,
+  "accepted_product_count": 59,
+  "accepted_date_count": 59,
+  "conflict_count": 0,
+  "acquisition_record_count": 75,
+  "raw_payload_count": 67,
+  "product_source_association_count": 117,
+  "accepted_mapping": [
+    {
+      "release_product_id": 1,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-01",
+      "release_date": "2022-07-22",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 2,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-02",
+      "release_date": "2022-11-04",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 3,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-03",
+      "release_date": "2023-02-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 4,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-04",
+      "release_date": "2023-05-27",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 174,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-05",
+      "release_date": "2023-08-26",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 175,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-06",
+      "release_date": "2023-11-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 176,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-07",
+      "release_date": "2024-02-24",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 177,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-08",
+      "release_date": "2024-05-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 178,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-09",
+      "release_date": "2024-08-31",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 179,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-10",
+      "release_date": "2024-11-30",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 180,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-11",
+      "release_date": "2025-03-01",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 181,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-12",
+      "release_date": "2025-05-31",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 182,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-13",
+      "release_date": "2025-08-23",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 183,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-14",
+      "release_date": "2025-11-22",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 184,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-15",
+      "release_date": "2026-02-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 185,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-16",
+      "release_date": "2026-05-30",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 186,
+      "source_catalogue": "bandai_jp",
+      "official_code": "OP-17",
+      "release_date": "2026-08-22",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 170,
+      "source_catalogue": "bandai_jp",
+      "official_code": "EB-01",
+      "release_date": "2024-01-27",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 171,
+      "source_catalogue": "bandai_jp",
+      "official_code": "EB-02",
+      "release_date": "2025-01-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 172,
+      "source_catalogue": "bandai_jp",
+      "official_code": "EB-03",
+      "release_date": "2025-10-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 173,
+      "source_catalogue": "bandai_jp",
+      "official_code": "EB-04",
+      "release_date": "2026-01-31",
+      "classification": "DATE_VERIFIED_SINGLE_SOURCE"
+    },
+    {
+      "release_product_id": 187,
+      "source_catalogue": "bandai_jp",
+      "official_code": "PRB-01",
+      "release_date": "2024-07-27",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 188,
+      "source_catalogue": "bandai_jp",
+      "official_code": "PRB-02",
+      "release_date": "2025-07-26",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 189,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-01",
+      "release_date": "2022-07-08",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 190,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-02",
+      "release_date": "2022-07-08",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 191,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-03",
+      "release_date": "2022-07-08",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 192,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-04",
+      "release_date": "2022-07-08",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 193,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-05",
+      "release_date": "2022-08-06",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 194,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-06",
+      "release_date": "2022-09-30",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 195,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-07",
+      "release_date": "2023-01-21",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 196,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-08",
+      "release_date": "2023-03-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 197,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-09",
+      "release_date": "2023-03-25",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 198,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-10",
+      "release_date": "2023-07-29",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 199,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-11",
+      "release_date": "2023-10-07",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 200,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-12",
+      "release_date": "2023-10-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 201,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-13",
+      "release_date": "2023-12-23",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 202,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-14",
+      "release_date": "2024-04-27",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 203,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-15",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 204,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-16",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 205,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-17",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 206,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-18",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 207,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-19",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 208,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-20",
+      "release_date": "2024-07-13",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 209,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-21",
+      "release_date": "2024-12-21",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 210,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-22",
+      "release_date": "2025-04-26",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 211,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-23",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 212,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-24",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 213,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-25",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 214,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-26",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 215,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-27",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 216,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-28",
+      "release_date": "2025-06-28",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 217,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-29",
+      "release_date": "2025-12-20",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 218,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-30",
+      "release_date": "2026-04-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 219,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-31",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 220,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-32",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 221,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-33",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 222,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-34",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 223,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-35",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    },
+    {
+      "release_product_id": 224,
+      "source_catalogue": "bandai_jp",
+      "official_code": "ST-36",
+      "release_date": "2026-07-11",
+      "classification": "DATE_VERIFIED_CORROBORATED"
+    }
+  ],
+  "mapping_sha256": "313f1d4bd09865d6198bc5949000f38065fce2daea2d723d97aa34e4f1412090",
+  "audited_mapping_sha256": "abad5b6ed5f94a55805c5dc85318121f8585955ea208ee011712552a553f914d",
+  "accepted_mapping_reference": {
+    "archive_member": "release_date_evidence_audited.json",
+    "receipt_field": "accepted_mapping"
+  },
+  "verification_status": "DURABLE_GET_AND_RECOVERY_VERIFIED",
+  "storage": {
+    "bucket": "cardpirate-atlas-evidence-staging",
+    "purpose": "private official evidence archive",
+    "environment": "staging",
+    "public_delivery": false
+  },
+  "destination_verification": {
+    "bucket_reachable": true,
+    "public_base_url_required": false,
+    "public_url_constructed": false,
+    "privacy_basis": "operator-provided private archive configuration",
+    "cloudflare_management_configuration_accessed": false,
+    "display_bucket_accessed": false,
+    "display_bucket_configuration_changed": false
+  },
+  "verified_at": "2026-09-24T16:00:59.871684+00:00",
+  "head_result": "absent",
+  "get_back_sha256": "247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54",
+  "get_back_size": 657098,
+  "recovery": {
+    "result": "passed",
+    "accepted_product_count": 59,
+    "accepted_date_count": 59,
+    "conflict_count": 0,
+    "acquisition_record_count": 75,
+    "raw_payload_count": 67,
+    "product_source_association_count": 117,
+    "file_count": 149,
+    "all_internal_file_hashes_verified": true,
+    "all_raw_payload_hashes_verified": true,
+    "mapping_sha256": "313f1d4bd09865d6198bc5949000f38065fce2daea2d723d97aa34e4f1412090",
+    "audited_mapping_sha256": "abad5b6ed5f94a55805c5dc85318121f8585955ea208ee011712552a553f914d",
+    "verified_at": "2026-09-24T16:00:59.871260+00:00",
+    "source_directory_used": false,
+    "temporary_extraction_removed": true
+  }
+}
