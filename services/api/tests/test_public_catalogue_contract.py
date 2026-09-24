@@ -340,7 +340,7 @@ def test_releases_include_only_products_used_by_active_verified_jp_prints(
     assert first.id != second.id
 
 
-def test_release_order_is_deterministic_and_explicitly_not_chronology(
+def test_undated_release_fallback_is_deterministic(
     client, db_session
 ):
     op17 = _release(db_session, code="OP-17", name="OP17", series="550117")
@@ -354,8 +354,10 @@ def test_release_order_is_deterministic_and_explicitly_not_chronology(
     second = _items(client.get("/releases"))
 
     assert first == second
-    assert first["chronology_available"] is False
-    assert first["ordering_basis"] == "deterministic_catalogue_fallback"
+    assert first["chronology_available"] is True
+    assert first["ordering_basis"] == "released_on_desc_then_deterministic_fallback"
+    assert all(item["released_on"] is None and item["chronology_available"] is False
+               and item["release_date_source"] is None for item in first["items"])
     assert [item["official_code"] for item in first["items"]] == [
         "EB-04",
         "OP-17",
@@ -422,3 +424,7 @@ def test_openapi_describes_repeated_filters_release_id_recent_sort_and_releases(
     assert '"type": "integer"' in json.dumps(parameters["release_product_id"]["schema"])
     assert "created_desc" in json.dumps(parameters["sort"]["schema"])
     assert "/releases" in document["paths"]
+    fields = document["components"]["schemas"]["ReleaseCatalogueItemOut"]["properties"]
+    assert {"released_on", "release_date_source", "chronology_available"} <= fields.keys()
+    assert "source_url" not in fields
+    assert '"format": "date"' in json.dumps(fields["released_on"])
