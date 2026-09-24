@@ -1636,14 +1636,16 @@ class ReleaseCatalogueItemOut(BaseModel):
     # Provenance for when Atlas first persisted the catalogue product. It is
     # not a product release date and must not be presented as one.
     created_at: datetime
+    released_on: date | None
+    chronology_available: bool
+    release_date_source: Literal["DATE_VERIFIED_CORROBORATED", "DATE_VERIFIED_SINGLE_SOURCE"] | None
 
 
 class ReleaseCatalogueListOut(BaseModel):
     items: list[ReleaseCatalogueItemOut]
-    # False until authoritative cross-family release chronology is persisted.
-    # Consumers must not label the fallback order "newest".
+    # Dated products have authoritative chronology; undated products follow.
     chronology_available: bool
-    ordering_basis: Literal["deterministic_catalogue_fallback"]
+    ordering_basis: Literal["released_on_desc_then_deterministic_fallback"]
 
 
 class SnkrdunkCandidateOut(BaseModel):

@@ -14,8 +14,8 @@ router = APIRouter(prefix="/releases", tags=["releases"])
 def get_releases(db: Session = Depends(get_db)):
     """Relevant Bandai JP products with authoritative print counts.
 
-    The response explicitly reports that cross-family release chronology is
-    unavailable; its order is a stable catalogue fallback, not a release-date
-    claim.
+    Dated products appear newest first. Same-day ties and undated products use
+    deterministic catalogue ordering; undated products follow all dated rows.
+    Item chronology availability is separate from endpoint chronology support.
     """
     return list_public_releases(db)

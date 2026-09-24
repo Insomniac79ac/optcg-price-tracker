@@ -1,23 +1,20 @@
 """Public release-navigation read model.
 
-Release membership comes only from CardPrint.release_product_id. The current
-schema has no release date or persisted cross-family catalogue sequence, so
-this module deliberately returns a deterministic fallback and says that
-chronology is unavailable. Consumers must not present this order as newest-
-first until an authoritative sequence is persisted.
+Release membership comes only from CardPrint.release_product_id. Dated products
+sort newest first, with a deterministic fallback for ties and undated products.
+The tie breakers express no chronology between products released on the same day.
 """
 
-from sqlalchemy import case, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import CardPrint, ReleaseProduct
 from app.schemas import ReleaseCatalogueItemOut, ReleaseCatalogueListOut
 
-ORDERING_BASIS = "deterministic_catalogue_fallback"
+ORDERING_BASIS = "released_on_desc_then_deterministic_fallback"
 
 
 def list_public_releases(db: Session) -> ReleaseCatalogueListOut:
-    uncoded_last = case((ReleaseProduct.official_code.is_(None), 1), else_=0)
     rows = db.execute(
         select(ReleaseProduct, func.count(CardPrint.id))
         .join(CardPrint, CardPrint.release_product_id == ReleaseProduct.id)
@@ -29,8 +26,9 @@ def list_public_releases(db: Session) -> ReleaseCatalogueListOut:
         )
         .group_by(ReleaseProduct.id)
         .order_by(
-            uncoded_last.asc(),
-            ReleaseProduct.official_code.asc(),
+            ReleaseProduct.released_on.desc().nulls_last(),
+            ReleaseProduct.source_catalogue.asc(),
+            ReleaseProduct.official_code.asc().nulls_last(),
             ReleaseProduct.display_name.asc(),
             ReleaseProduct.id.asc(),
         )
@@ -45,9 +43,12 @@ def list_public_releases(db: Session) -> ReleaseCatalogueListOut:
                 verification_status=product.verification_status,
                 print_count=print_count,
                 created_at=product.created_at,
+                released_on=product.released_on,
+                chronology_available=product.released_on is not None,
+                release_date_source=product.release_date_source,
             )
             for product, print_count in rows
         ],
-        chronology_available=False,
+        chronology_available=True,
         ordering_basis=ORDERING_BASIS,
     )
