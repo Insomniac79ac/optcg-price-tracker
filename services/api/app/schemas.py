@@ -1515,6 +1515,13 @@ class CardPrintOut(BaseModel):
     colors: list[str] | None
     language: str
     treatment: str | None
+    # Authoritative physical-product identity. The legacy
+    # `release_product_code` below remains additive/backward-compatible, but
+    # clients that need identity or a display label use these fields, which
+    # come from ReleaseProduct via CardPrint.release_product_id.
+    release_product_id: int | None
+    release_code: str | None
+    release_name: str | None
     # The product THIS printing appeared in. Not the card's set: a reprint
     # carries the later product here, so a UI must not label it "Set".
     release_product_code: str | None
@@ -1531,6 +1538,8 @@ class CardPrintOut(BaseModel):
     image_url: str | None
     display_image: DisplayImageOut | None
     verification_status: str
+    # Atlas ingestion chronology, not the product's release date.
+    created_at: datetime
     market_index: PrintMarketIndexOut
     siblings: list[CardPrintSiblingOut]
 
@@ -1555,6 +1564,11 @@ class PrintCatalogueItemOut(BaseModel):
     card_type: str
     treatment: str | None
     language: str
+    # Authoritative release identity resolved through
+    # CardPrint.release_product_id. Never derived from card_code.
+    release_product_id: int | None
+    release_code: str | None
+    release_name: str | None
     # Same reading as CardPrintOut's two: the product this printing appeared
     # in, the set the card came from, and which official asset it carries.
     release_product_code: str | None
@@ -1563,6 +1577,9 @@ class PrintCatalogueItemOut(BaseModel):
     image_url: str | None
     display_image: DisplayImageOut | None
     verification_status: str
+    # When this physical printing was added to Atlas. This is deliberately
+    # distinct from any real-world product release date.
+    created_at: datetime
     market_index: PrintMarketIndexOut
     source_coverage: list[str]
     latest_observation_at: datetime | None
@@ -1604,6 +1621,29 @@ class PrintCatalogueListOut(BaseModel):
     offset: int
     pagination: PaginationMeta
     facets: PrintCatalogueFacetsOut
+
+
+class ReleaseCatalogueItemOut(BaseModel):
+    """One public Bandai JP product represented by at least one active,
+    verified Japanese CardPrint."""
+
+    release_product_id: int
+    official_code: str | None
+    display_name: str
+    source_catalogue: str
+    verification_status: str
+    print_count: int
+    # Provenance for when Atlas first persisted the catalogue product. It is
+    # not a product release date and must not be presented as one.
+    created_at: datetime
+
+
+class ReleaseCatalogueListOut(BaseModel):
+    items: list[ReleaseCatalogueItemOut]
+    # False until authoritative cross-family release chronology is persisted.
+    # Consumers must not label the fallback order "newest".
+    chronology_available: bool
+    ordering_basis: Literal["deterministic_catalogue_fallback"]
 
 
 class SnkrdunkCandidateOut(BaseModel):
