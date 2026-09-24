@@ -8,6 +8,23 @@ Infrastructure provisioning and archive upload are separate operations. Adding
 the client or running `prepare` does not create a bucket or configure credentials.
 A successful local preparation is **not** a durability receipt.
 
+## Verified API3 archive
+
+The 2026-09-24 Bandai release-date evidence is durably archived. The
+[durable manifest and receipt](evidence/public-ux-1a-release-dates-2026-09-24.json)
+records authenticated bucket reachability, an absent object HEAD, conditional
+PUT, matching GET-back bytes, and successful recovery using only the download.
+See the [durability report](reports/public-ux-1a-api3e-evidence-archive-2026-09-24.md).
+
+The deterministic tar.gz contains 149 files and is 657,098 bytes. Its SHA-256 is
+`247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54`.
+The receipt includes its exact content-addressed key and accepted product/date
+mapping. Downloaded-only recovery verified 59 products, 59 dates, zero conflicts,
+75 acquisition records, 67 raw payloads, 117 source associations, and all internal
+SHA-256 digests. All 151 original local evidence files remain unchanged.
+The public asset bucket was not accessed or modified. No chronology migration
+is included; PR #13 remains open and unmerged.
+
 ## Operator configuration
 
 The upload workflow assumes the operator has already provisioned the private

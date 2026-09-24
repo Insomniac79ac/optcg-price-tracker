@@ -1,25 +1,36 @@
-# Public UX 1A-API3E — private archive durability resume
+# Public UX 1A-API3E — private evidence durability
 
-PUBLIC_UX_1A_EVIDENCE_ARCHIVE_INFRA_BLOCKED
+PUBLIC_UX_1A_EVIDENCE_DURABLE
 
-## Current blocker
+The configuration issue is resolved. `PrivateR2ObjectStorage.from_settings()`
+accepted the operator configuration and the dedicated staging bucket before any
+network request. Authenticated bucket HEAD, content-addressed object HEAD,
+conditional PUT, GET-back verification, and recovery from the downloaded archive
+all passed on 2026-09-24. The durable manifest/receipt is
+[`docs/evidence/public-ux-1a-release-dates-2026-09-24.json`](../evidence/public-ux-1a-release-dates-2026-09-24.json).
 
-The restarted operator process has all four required `EVIDENCE_R2_*` settings
-present. The existing client rejects `EVIDENCE_R2_ACCOUNT_ID` as malformed:
-it requires a 32-character hexadecimal Cloudflare account ID. The validation
-failed before constructing an S3 client or issuing any network request.
-Only setting presence and the validator's static error category were reported;
-no configuration values, provider endpoints, headers, or credentials were printed.
+## Destination and remote operations
 
-The operator reports that private archive configuration is now provisioned.
-This supersedes the earlier missing-configuration diagnosis, but reachability,
-remote object existence, upload, GET-back, and remote recovery remain unverified.
-No Cloudflare management configuration was accessed or changed. Correct the
-account ID through the secure operator configuration and make it available to
-the process; do not paste any value into chat. Resume the documented upload only
-after the existing client accepts the configuration.
+The sole destination was `cardpirate-atlas-evidence-staging`. No public URL or
+public base URL was required or constructed. The client consumed only the
+separate `EVIDENCE_R2_*` operator settings. No credential values, provider
+endpoints, response headers, or exception tracebacks were printed.
 
-## Recomputed local evidence
+| Operation | Result | Completed at (UTC) |
+|---|---|---|
+| Bucket HEAD | Reachable | 2026-09-24T16:00:54.824756Z |
+| Exact object HEAD | Absent | 2026-09-24T16:00:55.004059Z |
+| Conditional PUT | Created with `If-None-Match: *` | 2026-09-24T16:00:55.339183Z |
+| GET | Size and SHA-256 exactly match the local archive | 2026-09-24T16:00:55.547650Z |
+| Downloaded-only recovery | Passed; temporary extraction removed | 2026-09-24T16:00:59.871260Z |
+
+The existing public `cardpirate-atlas-assets` bucket received no requests and
+was not changed. No Cloudflare management API or infrastructure configuration
+was accessed or changed. Authenticated bucket HEAD establishes reachability;
+privacy and credential scope remain operator-provided configuration premises,
+not a new Cloudflare management attestation. The receipt makes this distinction.
+
+## Reverified evidence and deterministic archive
 
 | Field | Result |
 |---|---|
@@ -31,14 +42,15 @@ after the existing client accepts the configuration.
 | Acquisition records | 75 |
 | Unique raw payloads | 67 |
 | Product/source associations | 117 |
-| All raw payload SHA-256 digests | Verified |
+| Embedded file and raw payload SHA-256 digests | All verified |
 | Accepted audited rows and product/date mapping | Exact match |
-| Local archive recovery | Passed; not a remote durability proof |
+| Two independent local archive builds | Byte-identical; match prior preparation |
+| Downloaded archive recovery | Passed |
 
-Archive SHA-256:
+Archive and downloaded SHA-256:
 `247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54`
 
-Intended content-addressed object key (remote presence not checked):
+Verified remote object key:
 `official-evidence/bandai_jp/release-dates/2026-09-24/sha256/247eaa5fd75590c49f8323dc0662c54cff91820df5200236ffe21f7616d69e54.tar.gz`
 
 Audited mapping member: `release_date_evidence_audited.json`.
@@ -46,63 +58,49 @@ Its SHA-256 is `abad5b6ed5f94a55805c5dc85318121f8585955ea208ee011712552a553f914d
 Canonical accepted product/date mapping SHA-256:
 `313f1d4bd09865d6198bc5949000f38065fce2daea2d723d97aa34e4f1412090`.
 
-Local artifacts:
+## Recovery and source preservation
 
-- `/tmp/api3e-release-dates-2026-09-24.tar.gz`
-- `/tmp/api3e-release-dates-2026-09-24.prepared.json`
+The GET response was persisted locally before recovery. Only those downloaded
+bytes were extracted into a fresh `bandai-evidence-recovery-*` directory.
+Recovery verified the archive size and digest, all embedded file sizes and
+SHA-256 hashes, all raw payload digests, the 59 accepted audited rows, and the
+exact product/date mapping against the receipt. The extractor reproduced all
+required counts from that extraction. An operator wrapper blocked reads or
+directory enumeration of the original evidence directory during upload and
+remote recovery, and confirmed the temporary extraction no longer existed.
 
-Both were regenerated from the retained API3 evidence. The archive digest, size,
-and file count match the previous preparation. They are local preparation
-artifacts, not a durable receipt. No successful receipt was created at
-`docs/evidence/public-ux-1a-release-dates-2026-09-24.json`.
+A before/after checksum inventory confirms all 151 original files remain
+unchanged in `data/official_snapshots/bandai_jp/release_dates/2026-09-24_api3`.
+The archive intentionally includes its 148 selected evidence files plus the
+generated checksum manifest. Only temporary recovery extraction directories
+were deleted. Local archives and the original evidence were retained.
 
-## Implementation and verification
+Retained local artifacts in `/tmp/api3e-durability-om8f_ygh/`:
 
-The private client uses only the separate evidence configuration, needs no public
-base URL, and constructs no public URL. Added bucket HEAD verifies reachability
-without listing contents. The upload command refuses any destination outside
-the dedicated staging archive before making a request. Existing objects require
-a matching GET SHA-256 followed by a second verified GET. Conditional PUT still
-uses `If-None-Match: *`; mismatched existing objects are never overwritten.
+- `release-dates.tar.gz` and `prepared.json`: deterministic local preparation.
+- `downloaded.tar.gz`: authenticated GET response, verified byte-for-byte.
+- `remote-operations.json`: redacted operation results and UTC timestamps.
+- `original-files-before.json` and `source-preservation.json`: preservation checks.
+- `local-recovery.json`: offline pre-upload recovery result.
 
-The resume workflow consumes the operator-provided private configuration and
-records this premise separately from live checks. It does not fabricate a
-Cloudflare privacy or credential-policy verification attestation. See
-[private archive operations](../evidence-archive.md).
+These temporary local paths are supplementary. Future recovery needs only the
+committed receipt, the private object, and operator credentials; it does not
+depend on this Codespace or the original source directory. Follow
+[the independent recovery instructions](../evidence-archive.md#independent-recovery).
 
-Recovery extracts only the supplied archive bytes into a fresh temporary
-directory, verifies embedded file and raw payload digests, and reruns the offline
-audit. The separate `recover` command works from `/tmp` using the local archive
-and prepared manifest, without reading the original evidence directory. It
-reproduces 59 coded products, 59 dates, zero conflicts, and the identical mapping.
-The recovery directory is removed. Remote-download recovery remains outstanding.
+## Validation and scope
 
-Final focused archive/evidence tests: **28 passed**. An earlier combined run with
-public-storage regressions passed all **171 tests**, before adding the account-ID
-validation regression. A later combined repeat stalled in the existing
-`test_unrelated_api_code_serves_with_every_r2_setting_unset` at its local
-TestClient `/health` request; a bounded repeat timed out after 45 seconds in
-AnyIO's thread portal. No public/API implementation was changed to address this
-unrelated test-run limitation. The final 28 focused tests passed independently.
+The focused private archive and offline evidence suites passed: **28 tests**.
+The receipt was checked against the downloaded bytes and all required counts,
+and checked for the actual evidence credential values without printing them.
+Git whitespace validation and the repository secret scanner passed.
 
-Required API compilation, dependency checks, Git whitespace checks, and the
-repository secret scanner passed. No Docker or frontend build ran. A checksum
-inventory confirms all 151 original source-bundle files remain unchanged (the
-archive intentionally includes only its 148 evidence files plus its generated
-manifest).
+This resume commits only the durable manifest/receipt and archive documentation.
+No application code, storage client, tests, infrastructure configuration, or
+chronology migration changed. PR #13 remains open and unmerged on
+`feature/public-ux-1a-api-contract`; the resume commit is local and was not pushed.
 
-Implementation/tests/documentation are the only authorized commit scope.
-PR #13 remains open and unmerged on `feature/public-ux-1a-api-contract`.
-No migration, ReleaseProduct backfill, or chronology API ordering change was made.
-
-## Safety
-
-No staging/production database access or mutation, source fetch, collector,
-proposal/mapping/candidate mutation, production access, Cloudflare mutation,
-public asset bucket access/change, or secret disclosure occurred. Public storage
-implementation and application configuration files are unchanged. Tests use
-mock storage and disposable in-memory application data only.
-
-Durability cannot be declared until authenticated bucket HEAD, content-addressed
-upload/reuse, GET-back SHA-256, independent recovery from the downloaded bytes,
-and a committed successful receipt are complete.
+No database access or mutation, new Bandai fetch, collector, external job,
+backfill, mapping/candidate change, production access, Railway/Vercel
+configuration change, or credential disclosure occurred. Durability is verified;
+chronology work remains deferred.
