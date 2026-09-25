@@ -39,22 +39,24 @@ describe('release-first collector discovery',()=>{
     expect(push).toHaveBeenLastCalledWith(null,'','/cards?release_product_id=186');
     search='release_product_id=186';view.rerender(<Page/>);
     await waitFor(()=>expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,offset:0})));
-    expect(screen.getByRole('link',{name:'OP-17 — OP-17 official name'})).toHaveAttribute('aria-current','page');
+    expect(screen.getByRole('link',{name:"OP-17 — The World's Strongest Warriors"})).toHaveAttribute('aria-current','page');
     fireEvent.click(screen.getByRole('link',{name:/All releases/}));
     expect(push).toHaveBeenLastCalledWith(null,'','/cards');
   });
   it('resolves legacy codes and ignores conflicting set when ID exists',async()=>{
     search='set=OP-01&release_product_id=186';await ready();
-    expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,set:undefined}));
+    expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186}));
+    expect(vi.mocked(fetchPrintCatalogue).mock.lastCall?.[0]?.set).toBeUndefined();
   });
   it('resolves a legacy set to its authoritative ReleaseProduct',async()=>{
     search='set=OP-17';await ready();
-    expect(fetchPrintCatalogue).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({release_product_id:186,set:undefined}));
+    expect(fetchPrintCatalogue).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({release_product_id:186}));
+    expect(vi.mocked(fetchPrintCatalogue).mock.lastCall?.[0]?.set).toBeUndefined();
   });
   it('renders mixed-code OP17 membership and authoritative name unchanged',async()=>{
     search='release_product_id=186';vi.mocked(fetchPrintCatalogue).mockResolvedValue(catalogueFixture([printFixture(99,{card_code:'OP01-001',release_product_code:'OP-01'})]));
     render(<Page/>);const link=await screen.findByRole('link',{name:/^Print 99,/});
-    expect(link).toHaveAttribute('href','/prints/99');expect(link).toHaveTextContent('OP01-001');expect(link).toHaveTextContent('Found in OP-17 — A new adventure');
+    expect(link).toHaveAttribute('href','/prints/99');expect(link).toHaveTextContent('OP01-001');expect(link).toHaveTextContent('Found in OP-17');
   });
   it('arrows are visible labelled controls and move the strip only',async()=>{
     await ready(); const strip=screen.getByRole('navigation',{name:'Browse releases'});strip.scrollBy=vi.fn();
@@ -64,17 +66,37 @@ describe('release-first collector discovery',()=>{
   });
   it('commits desktop multi-select immediately, counts selections and removes one chip',async()=>{
     search='rarity=SR&treatment=parallel&treatment=sp';const view=await ready();const push=vi.spyOn(window.history,'pushState');
+    fireEvent.click(screen.getByRole('button',{name:/^Rarity/}));
     fireEvent.click(screen.getByRole('checkbox',{name:'Secret Rare'}));expect(push).toHaveBeenLastCalledWith(null,'','/cards?rarity=SR&rarity=SEC&treatment=parallel&treatment=sp');
     search='rarity=SR&rarity=SEC&treatment=parallel&treatment=sp';view.rerender(<Page/>);
     await waitFor(()=>expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({rarity:['SR','SEC'],treatment:['parallel','sp']})));
-    expect(screen.getByText('4 active')).toBeInTheDocument();
+    expect(screen.getByRole('heading',{name:'Collector filters · 4'})).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Remove rarity filter Super Rare'}));expect(push).toHaveBeenLastCalledWith(null,'','/cards?rarity=SEC&treatment=parallel&treatment=sp');
     fireEvent.click(within(screen.getByLabelText('Active catalogue filters')).getByRole('button',{name:'Clear all'}));expect(push).toHaveBeenLastCalledWith(null,'','/cards');
+  });
+  it('keeps the dropdown and focused option mounted during immediate query refreshes', async () => {
+    const view = await ready();
+    const trigger = screen.getByRole('button', { name: 'Rarity Any' });
+    fireEvent.click(trigger);
+    const option = screen.getByRole('checkbox', { name: 'Super Rare' });
+    option.focus();
+    let resolve!: (data: ReturnType<typeof catalogueFixture>) => void;
+    vi.mocked(fetchPrintCatalogue).mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    fireEvent.click(option);
+    search = 'rarity=SR'; view.rerender(<Page />);
+    expect(screen.getByRole('button', { name: 'Rarity 1 selected' })).toBe(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('checkbox', { name: 'Super Rare' })).toBe(option);
+    expect(option).toHaveFocus(); expect(option).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Secret Rare' }));
+    expect(window.location.search).toBe('?rarity=SR&rarity=SEC');
+    await act(async () => resolve(catalogueFixture([printFixture(1)])));
   });
   it('returns to the beginning of changed results after deep scrolling',async()=>{
     await ready();const results=document.getElementById('catalogue-results')!;
     vi.spyOn(results,'getBoundingClientRect').mockReturnValue({top:-2000} as DOMRect);
     results.scrollIntoView=vi.fn();
+    fireEvent.click(screen.getByRole('button',{name:/^Rarity/}));
     fireEvent.click(screen.getByRole('checkbox',{name:'Secret Rare'}));
     expect(results.scrollIntoView).toHaveBeenCalledExactlyOnceWith({block:'start',behavior:'instant'});
   });
@@ -82,7 +104,12 @@ describe('release-first collector discovery',()=>{
     window.matchMedia=vi.fn().mockImplementation(query=>({matches:query.includes('max-width'),addEventListener:vi.fn(),removeEventListener:vi.fn()}));
     await ready();const push=vi.spyOn(window.history,'pushState');
     fireEvent.click(screen.getByRole('button',{name:'Filters'}));const dialog=screen.getByRole('dialog',{name:'Filters'});
-    for(const name of ['Super Rare','Secret Rare','parallel','sp'])fireEvent.click(within(dialog).getByRole('checkbox',{name}));
+    fireEvent.click(within(dialog).getByRole('button',{name:/^Rarity/}));
+    for(const name of ['Super Rare','Secret Rare'])fireEvent.click(within(dialog).getByRole('checkbox',{name}));
+    fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));
+    fireEvent.click(within(dialog).getByRole('button',{name:/^Treatment/}));
+    for(const name of ['parallel','sp'])fireEvent.click(within(dialog).getByRole('checkbox',{name}));
+    fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));
     expect(push).not.toHaveBeenCalled();fireEvent.click(within(dialog).getByRole('button',{name:'Apply filters'}));
     expect(push).toHaveBeenCalledExactlyOnceWith(null,'','/cards?rarity=SR&rarity=SEC&treatment=parallel&treatment=sp');expect(screen.queryByRole('dialog')).toBeNull();
   });

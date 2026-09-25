@@ -74,6 +74,33 @@ describe('progressive catalogue', () => {
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2);
     expect(window.history.scrollRestoration).not.toBe('manual');
   });
+  it('resets by query without a remount and ignores a previous query append response', async () => {
+    const { result, rerender } = renderHook(({ query, rarity }) => useProgressiveCatalogue(query, { rarity }, 0), { initialProps: { query: '', rarity: [] as string[] } });
+    await waitFor(() => expect(result.current.data?.items).toHaveLength(24));
+    let resolve!: (data: ReturnType<typeof batch>) => void;
+    vi.mocked(fetchPrintCatalogue).mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    act(() => { void result.current.loadMore(); });
+    rerender({ query: '?rarity=SEC', rarity: ['SEC'] });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(fetchPrintCatalogue).toHaveBeenLastCalledWith({ rarity: ['SEC'], limit: 24, offset: 0 });
+    await act(async () => resolve(batch(24)));
+    expect(result.current.data?.items).toHaveLength(24);
+    expect(result.current.appending).toBe(false);
+    await act(() => result.current.loadMore());
+    expect(fetchPrintCatalogue).toHaveBeenLastCalledWith({ rarity: ['SEC'], limit: 24, offset: 24 });
+  });
+  it('keeps published facets available while a changed query is loading', async () => {
+    const { result, rerender } = renderHook(({ query }) => useProgressiveCatalogue(query, { q: new URLSearchParams(query).get('q') ?? undefined }, 0), { initialProps: { query: '' } });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const facets = result.current.facets;
+    let resolve!: (data: ReturnType<typeof batch>) => void;
+    vi.mocked(fetchPrintCatalogue).mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    rerender({ query: '?q=Luffy' });
+    expect(result.current.data).toBeNull();
+    expect(result.current.status).toBe('loading');
+    expect(result.current.facets).toEqual(facets);
+    await act(async () => resolve(batch(0)));
+  });
   it('still browses when session storage is unavailable', async () => {
     vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('blocked');});
     const {result}=renderHook(()=>useProgressiveCatalogue('',{},0));

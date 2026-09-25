@@ -14,7 +14,7 @@ import { facetLabel, PrintCatalogueSortControl, PrintCatalogueToolbar } from "@/
 import { ReleaseNavigation } from "@/components/ui/ReleaseNavigation";
 import { usePublicResource } from "@/hooks/usePublicResource";
 import { useProgressiveCatalogue } from "@/hooks/useProgressiveCatalogue";
-import { activeFilterCount, buildCatalogueQuery, catalogueParams, EMPTY_PRINT_FILTERS, hasActivePrintFilters, parseCatalogueState, resolveLegacyRelease, type PrintCatalogueFilters } from "@/lib/catalogueState";
+import { buildCatalogueQuery, catalogueParams, EMPTY_PRINT_FILTERS, hasActivePrintFilters, parseCatalogueState, resolveLegacyRelease, type PrintCatalogueFilters } from "@/lib/catalogueState";
 import { toPrintUiModel, printsNeedingArtOrdinal } from "@/lib/prints";
 import { fetchReleases, releaseLabel, type ReleaseCatalogueItem } from "@/lib/releases";
 import styles from "./CardsAtlas.module.css";
@@ -34,7 +34,7 @@ function CatalogueRoute() {
   const releases = releaseResource.data?.items ?? [];
   const filters = resolveLegacyRelease(rawFilters, releases);
   const query = buildCatalogueQuery(filters, offset);
-  return <CatalogueView key={query} query={query} filters={filters} offset={offset} releases={releases} releaseStatus={releaseResource.status} retryReleases={releaseResource.retry} />;
+  return <CatalogueView query={query} filters={filters} offset={offset} releases={releases} releaseStatus={releaseResource.status} retryReleases={releaseResource.retry} />;
 }
 const emptyFacets = { treatments: [], rarities: [], languages: [], verification_statuses: [] };
 function CatalogueView({ query, filters, offset, releases, releaseStatus, retryReleases }: {
@@ -42,7 +42,7 @@ function CatalogueView({ query, filters, offset, releases, releaseStatus, retryR
   releaseStatus: "loading" | "ready" | "error"; retryReleases: () => void;
 }) {
   const pathname = usePathname();
-  const { data, status, appending, appendError, hasMore, sentinel, loadMore, save, retry } = useProgressiveCatalogue(query, catalogueParams(filters), offset);
+  const { data, facets, status, appending, appendError, hasMore, sentinel, loadMore, save, retry } = useProgressiveCatalogue(query, catalogueParams(filters), offset);
   const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
   const ordinalNeeded = useMemo(() => printsNeedingArtOrdinal(prints), [prints]);
   const total = status === "ready" && data ? data.total : null;
@@ -70,7 +70,7 @@ function CatalogueView({ query, filters, offset, releases, releaseStatus, retryR
         hrefFor={(id) => `${pathname}${buildCatalogueQuery({ ...filters, releaseProductId: id, legacySet: '' })}`}
         onSelect={chooseRelease} onRetry={retryReleases} />
       <div className={styles.catalogueLayout}>
-        <PrintCatalogueToolbar filters={filters} facets={data?.facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
+        <PrintCatalogueToolbar filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
         <div id="catalogue-results" className={styles.catalogueContent}>
           <div className={styles.catalogueBar}>
             <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact printings</h2>
@@ -106,7 +106,6 @@ function ActiveFilterChips({ filters, releases, onChange }: {
     ...(filters.q ? [{ key: 'q', label: 'Search', value: filters.q, remove: () => onChange({ ...filters, q: '' }) }] : []),
   ];
   return <div className={styles.activeRow} aria-label="Active catalogue filters">
-    <span className="text-xs text-text-muted">{activeFilterCount(filters)} active</span>
     {chips.map((chip) => <button key={chip.key} type="button" onClick={chip.remove} aria-label={`Remove ${chip.label.toLowerCase()} filter ${chip.value}`} className={styles.activeChip}>{chip.label}: <strong>{chip.value}</strong><span aria-hidden="true">×</span></button>)}
     <button type="button" className={styles.clearAll} onClick={() => onChange(EMPTY_PRINT_FILTERS)}>Clear all</button>
   </div>;

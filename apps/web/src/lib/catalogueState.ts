@@ -14,6 +14,11 @@ export const EMPTY_PRINT_FILTERS: PrintCatalogueFilters = {
   q: "", releaseProductId: null, legacySet: "", rarities: [], treatments: [], sort: "index_desc",
 };
 
+/** Collector refinements exclude the release/search browse context. */
+export function collectorRefinementCount(filters: PrintCatalogueFilters): number {
+  return filters.rarities.length + filters.treatments.length;
+}
+
 export function activeFilterCount(filters: PrintCatalogueFilters): number {
   return Number(Boolean(filters.releaseProductId || filters.legacySet)) + Number(Boolean(filters.q)) + filters.rarities.length + filters.treatments.length;
 }

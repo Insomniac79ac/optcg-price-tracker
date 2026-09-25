@@ -3,8 +3,9 @@
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { classifyRarityToken } from "@/lib/terminology";
 import type { PrintCatalogueFacets, PrintCatalogueSort } from "@/lib/prints";
-import { activeFilterCount, EMPTY_PRINT_FILTERS, hasActivePrintFilters, toggleFilter, type PrintCatalogueFilters } from "@/lib/catalogueState";
+import { collectorRefinementCount, EMPTY_PRINT_FILTERS, type PrintCatalogueFilters } from "@/lib/catalogueState";
 import { CatalogueDialog } from "./CatalogueDialog";
+import { CollectorMultiSelect } from "./CollectorMultiSelect";
 export { EMPTY_PRINT_FILTERS, hasActivePrintFilters, type PrintCatalogueFilters } from "@/lib/catalogueState";
 
 const MOBILE_QUERY = "(max-width: 63.999rem)";
@@ -26,13 +27,13 @@ export function PrintCatalogueToolbar({ filters, facets, onChange, legend }: {
   const mobile = useSyncExternalStore(subscribeToMobile, () => window.matchMedia(MOBILE_QUERY).matches, () => false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(filters);
-  const count = activeFilterCount(filters);
+  const count = collectorRefinementCount(filters);
   if (!mobile) return (
-    <aside className="sticky top-[calc(var(--header-h)+1rem)] max-h-[calc(100dvh-var(--header-h)-2rem)] overflow-y-auto rounded-panel border border-border-default bg-bg-surface p-4" aria-labelledby="catalogue-filters-title">
+    <aside className="sticky top-[calc(var(--header-h)+1rem)] rounded-panel border border-border-default bg-bg-surface p-4" aria-labelledby="catalogue-filters-title">
       <h2 id="catalogue-filters-title" className="font-display text-lg font-semibold">Collector filters{count > 0 ? ` · ${count}` : ""}</h2>
       <CatalogueFilterFields filters={filters} facets={facets} onChange={onChange} />
-      {hasActivePrintFilters(filters) && <button type="button" className="mt-4 min-h-11 text-sm underline" onClick={() => onChange(EMPTY_PRINT_FILTERS)}>Clear all</button>}
       <div className="mt-4 border-t border-border-muted pt-4">{legend}</div>
+      {count > 0 && <button type="button" className="mt-2 min-h-11 text-xs underline" onClick={() => onChange({ ...filters, rarities: [], treatments: [] })}>Clear collector filters</button>}
     </aside>
   );
   return <>
@@ -66,18 +67,10 @@ export function facetLabel(value: string): string {
 function CatalogueFilterFields({ filters, facets, onChange }: {
   filters: PrintCatalogueFilters; facets: PrintCatalogueFacets; onChange: (next: PrintCatalogueFilters) => void;
 }) {
-  return <div className="mt-4 flex flex-col gap-5">
-    <p className="text-xs leading-relaxed text-text-muted">Choose any in each group. Rarity and treatment groups combine.</p>
-    {([['rarities', 'Rarity or special print'], ['treatments', 'Treatment']] as const).map(([key, label]) => (
-      <fieldset key={key}>
-        <legend className="mb-2 text-xs font-semibold text-text-secondary">{label}</legend>
-        <div className="flex flex-wrap gap-1.5">
-          {[...new Set([...facets[key], ...filters[key]])].map((value) => <label key={value} className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-2.5 text-xs ${filters[key].includes(value) ? 'border-accent-teal bg-accent-teal/10 text-text-primary' : 'border-border-default text-text-secondary'}`}>
-            <input type="checkbox" checked={filters[key].includes(value)} onChange={() => onChange({ ...filters, [key]: toggleFilter(filters[key], value) })} className="accent-accent-teal" />
-            {key === 'rarities' ? facetLabel(value) : value}
-          </label>)}
-        </div>
-      </fieldset>
-    ))}
+  return <div className="mt-4 flex flex-col gap-3">
+    <CollectorMultiSelect label="Rarity" options={facets.rarities} selected={filters.rarities} optionLabel={facetLabel}
+      onChange={(rarities) => onChange({ ...filters, rarities })} />
+    <CollectorMultiSelect label="Treatment" options={facets.treatments} selected={filters.treatments}
+      onChange={(treatments) => onChange({ ...filters, treatments })} />
   </div>;
 }

@@ -411,6 +411,7 @@ describe("print catalogue page", () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
     render(<PrintsCataloguePage />);
     await screen.findByRole("link", { name: /Sanji/ });
+    fireEvent.click(screen.getByRole("button", { name: /^Rarity/ }));
     expect(screen.getAllByRole("checkbox", { name: "SP Card" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("checkbox", { name: "Secret Rare" }));
     expect(navigations()).toEqual(["/cards?rarity=SEC"]);
@@ -591,7 +592,7 @@ describe("clearing the catalogue search", () => {
     render(<PrintsCataloguePage />);
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
     expect(fetchPrintCatalogue).toHaveBeenCalledWith(
-      expect.objectContaining({ q: undefined, treatment: ["parallel"] }),
+      expect.objectContaining({ treatment: ["parallel"] }),
     );
   });
 

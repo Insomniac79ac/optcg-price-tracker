@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeFilterCount, buildCatalogueQuery, catalogueParams, EMPTY_PRINT_FILTERS, parseCatalogueState, resolveLegacyRelease, toggleFilter } from './catalogueState';
+import { collectorRefinementCount, activeFilterCount, buildCatalogueQuery, catalogueParams, EMPTY_PRINT_FILTERS, parseCatalogueState, resolveLegacyRelease, toggleFilter } from './catalogueState';
 import type { ReleaseCatalogueItem } from './releases';
 describe('committed catalogue URL', () => {
   it('round-trips repeated filters, release identity, search, sort and legacy offset', () => {
@@ -27,5 +27,18 @@ describe('committed catalogue URL', () => {
     expect(toggleFilter(['SR'],'SEC')).toEqual(['SR','SEC']);
     expect(buildCatalogueQuery(EMPTY_PRINT_FILTERS)).toBe('');
     expect(parseCatalogueState(new URLSearchParams('release_product_id=-1&offset=NaN&sort=bad')).filters).toEqual(EMPTY_PRINT_FILTERS);
+  });
+});
+
+describe('collector refinement count', () => {
+  it.each([
+    [{ releaseProductId: 186 }, 0],
+    [{ q: 'Luffy' }, 0],
+    [{ rarities: ['SR'] }, 1],
+    [{ rarities: ['SR', 'SEC'] }, 2],
+    [{ rarities: ['SR'], treatments: ['normal', 'parallel'] }, 3],
+    [{ releaseProductId: 186, q: 'Luffy', rarities: ['SR'] }, 1],
+  ])('counts only rarity and treatment for %o', (filters, expected) => {
+    expect(collectorRefinementCount({ ...EMPTY_PRINT_FILTERS, ...filters })).toBe(expected);
   });
 });
