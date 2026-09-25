@@ -1,87 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
-
+import { useState } from "react";
 import { LEGEND_INTRO, LEGEND_SECTIONS } from "@/lib/terminology";
+import { CatalogueDialog } from "./CatalogueDialog";
 
-/** The catalogue's terminology key.
- *
- * WHAT IT HAS TO ACHIEVE, beyond defining words. A collector meeting a print
- * badged Super Rare AND SP Card AND Alt Art has to be able to see that those
- * are three answers to three questions rather than three competing answers to
- * one - otherwise the tile reads as self-contradictory. So the panel opens by
- * saying exactly that, and the terms are grouped under their dimension:
- * Rarity, Special print, Printing. Reading "SP Card" under the heading
- * "Special print" is what stops it being read as a scarcity tier, and no
- * amount of definition text does that job on its own.
- *
- * WHY A DISCLOSURE AND NOT TOOLTIPS. A tooltip is a hover affordance first,
- * and hover does not exist on a phone - where most of this catalogue is read.
- * This is a real <button> controlling a real panel: it works with a mouse, a
- * tap and a keyboard alike, is announced by a screen reader through
- * aria-expanded/aria-controls, and closes on Escape. Individual chips still
- * carry a `title` for the mouse user who hovers one, but that is an
- * enhancement on top of this, never the only route to the words.
- *
- * The panel is rendered in the DOM only while open, so a closed legend adds
- * nothing for assistive technology to walk past. Escape returns focus to the
- * toggle, so a keyboard user is never dropped at the top of the document.
- */
 export function CatalogueLegend() {
   const [open, setOpen] = useState(false);
-  const panelId = useId();
-  const toggleRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      // Focus goes back where the user left it, not to <body>.
-      toggleRef.current?.focus();
-    }
-
-    function onPointerDown(event: PointerEvent) {
-      const target = event.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (toggleRef.current?.contains(target)) return;
-      setOpen(false);
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [open]);
-
-  return (
-    <div className="relative">
-      <button
-        ref={toggleRef}
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        className="inline-flex items-center gap-1.5 rounded-control border border-border-default px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60"
-      >
-        <span aria-hidden="true">?</span>
-        What do these labels mean?
-      </button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          id={panelId}
-          role="group"
-          aria-label="Catalogue terminology"
-          className="absolute left-0 z-20 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-panel border border-border-default bg-bg-elevated p-4 shadow-lg"
-        >
-          {/* The panel's thesis, before any term: the three vocabularies are
-              not in competition. Everything below is an instance of it. */}
+  return <>
+    <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open} className="min-h-11 rounded-control px-2 text-xs text-text-secondary underline focus-visible:outline-2 focus-visible:outline-accent-teal">What do these labels mean?</button>
+    {open && <CatalogueDialog label="Catalogue terminology" onClose={() => setOpen(false)}>
           <p className="text-xs leading-relaxed text-text-secondary">{LEGEND_INTRO}</p>
 
           <div className="mt-3 flex max-h-[60vh] flex-col gap-3.5 overflow-y-auto">
@@ -119,8 +46,6 @@ export function CatalogueLegend() {
               </section>
             ))}
           </div>
-        </div>
-      )}
-    </div>
-  );
+    </CatalogueDialog>}
+  </>;
 }
