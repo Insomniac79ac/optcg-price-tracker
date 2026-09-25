@@ -156,13 +156,14 @@ export interface PrintCatalogueList {
   facets: PrintCatalogueFacets;
 }
 
-export interface PrintSibling {
-  card_print_id: number;
-  treatment: string | null;
-  artwork_key: string | null;
-  image_url: string | null;
-  verification_status: string;
-}
+/** Identity-only version reference, with the same semantics as PrintDetail.
+ * No price/index fields and no release inference from the card code. */
+export type PrintSibling = Pick<PrintDetail,
+  | "card_print_id" | "canonical_card_id" | "card_code" | "name_en" | "name_jp"
+  | "release_product_id" | "release_code" | "release_name"
+  | "rarity" | "canonical_rarity" | "official_asset_variant" | "treatment"
+  | "language" | "verification_status" | "image_url" | "display_image"
+>;
 
 /** Which image to *show* for a print - see schemas.py DisplayImageOut.
  *

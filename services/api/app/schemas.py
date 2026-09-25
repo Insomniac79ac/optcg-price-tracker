@@ -424,13 +424,26 @@ class CardCatalogueListOut(BaseModel):
 
 
 class CardPrintSiblingOut(BaseModel):
-    """A lightweight reference to another CardPrint sharing the same
-    canonical_card_id - no market data, just enough to link to it (see
-    CardPrintOut.siblings)."""
+    """Another collectible version, with CardPrintOut identity semantics.
+
+    Card identity comes from CanonicalCard; physical product identity comes
+    only from this print's release_product_id. No market data.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     card_print_id: int
+    canonical_card_id: int
+    card_code: str
+    name_en: str | None
+    name_jp: str | None
+    release_product_id: int | None
+    release_code: str | None
+    release_name: str | None
+    rarity: str | None
+    canonical_rarity: str | None
+    official_asset_variant: str | None
+    display_image: "DisplayImageOut | None"
     # Nullable ahead of treatment becoming optional on card_prints: NULL means
     # "Atlas has not classified this printing", and consumers render no badge
     # and invent no label for it. Every current row is non-null, so today's

@@ -86,6 +86,19 @@ def _detail(client, print_id: int) -> dict:
     return response.json()
 
 
+def test_sibling_display_image_remains_exact_print_scoped(client, db_session, sanji_pair):
+    pair = sanji_pair
+    make_mapping(
+        db_session, pair["legacy"], pair["snkrdunk"], pair["parallel"],
+        match_explanation_json={"display_image": _payload(pair["parallel"].id)},
+    )
+    sibling = _detail(client, pair["base"].id)["siblings"][0]
+    assert sibling["display_image"] == _detail(client, pair["parallel"].id)["display_image"]
+    assert sibling["display_image"]["url"] == SNKRDUNK_URL
+    reverse = _detail(client, pair["parallel"].id)["siblings"][0]
+    assert reverse["display_image"]["url"] == BANDAI_URL
+
+
 def _catalogue_item(client, print_id: int) -> dict:
     items = client.get("/prints", params={"limit": 100}).json()["items"]
     return next(i for i in items if i["card_print_id"] == print_id)

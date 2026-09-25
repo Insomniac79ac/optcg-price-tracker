@@ -76,7 +76,20 @@ export function releaseDisplayNameEnglish(code?: string | null): string {
     : code || "Special product";
 }
 
-export function releaseLabelEnglish(code?: string | null): string {
+// Exact source product titles, translated for uncoded product presentation.
+// This map labels an already-resolved ReleaseProduct; it never assigns one.
+const UNCODED_RELEASE_NAMES: Readonly<Record<string, string>> = {
+  "プレミアムカードコレクション 25周年エディション":
+    "Premium Card Collection — 25th Anniversary Edition",
+};
+
+export function releaseLabelEnglish(code?: string | null, sourceName?: string | null): string {
+  if (!code && sourceName) {
+    if (Object.hasOwn(UNCODED_RELEASE_NAMES, sourceName)) return UNCODED_RELEASE_NAMES[sourceName];
+    // Preserve an English source label when available; never expose an
+    // untranslated Japanese title in the English release presentation.
+    if (/^[\x20-\x7e]+$/.test(sourceName.trim())) return sourceName.trim();
+  }
   const name = releaseDisplayNameEnglish(code);
   return code && name !== code ? `${code} — ${name}` : name;
 }
