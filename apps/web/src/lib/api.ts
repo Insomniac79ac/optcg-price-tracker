@@ -797,14 +797,17 @@ async function _readJsonBody<T>(res: Response, path: string): Promise<T> {
   }
 }
 
-function buildQueryString(
-  params?: Record<string, string | number | boolean | null | undefined>,
+export type QueryValue = string | number | boolean | readonly (string | number | boolean)[] | null | undefined;
+
+export function buildQueryString(
+  params?: Record<string, QueryValue>,
 ): string {
   if (!params) return "";
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined) continue;
-    query.set(key, String(value));
+    if (Array.isArray(value)) value.forEach((entry) => query.append(key, String(entry)));
+    else query.set(key, String(value));
   }
   const qs = query.toString();
   return qs ? `?${qs}` : "";
@@ -813,7 +816,7 @@ function buildQueryString(
 export interface ApiRequestOptions {
   /** Query params - null/undefined values are omitted, everything else is
    * stringified (so booleans/numbers don't need manual String() calls). */
-  params?: Record<string, string | number | boolean | null | undefined>;
+  params?: Record<string, QueryValue>;
   /** Defaults to ADMIN_FETCH_TIMEOUT_MS (15s). */
   timeoutMs?: number;
 }

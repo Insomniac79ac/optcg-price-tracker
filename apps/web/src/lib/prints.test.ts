@@ -565,3 +565,19 @@ describe("printsNeedingArtOrdinal", () => {
     expect(printsNeedingArtOrdinal(prints).size).toBe(0);
   });
 });
+
+
+describe("authoritative public release fields", () => {
+  it("prefers the physical product fields over legacy code and preserves a real zero change", () => {
+    const print = toPrintUiModel(catalogueItem({
+      card_code: "EB04-007", release_product_code: "EB-04", release_product_id: 186,
+      release_code: "OP-17", release_name: "決戦の刻", created_at: "2026-09-25T00:00:00Z",
+      market_index_change_7d_pct: 0,
+    }));
+    expect(print).toMatchObject({releaseProductId:186,releaseCode:"OP-17",releaseName:"決戦の刻",createdAt:"2026-09-25T00:00:00Z",marketIndexChange7dPct:0});
+  });
+  it("does not overwrite an authoritative uncoded product with a legacy code", () => {
+    const print=toPrintUiModel(catalogueItem({release_code:null,release_name:"Special product",release_product_code:"OP-01"}));
+    expect(print.releaseCode).toBeNull();expect(print.releaseName).toBe("Special product");
+  });
+});
