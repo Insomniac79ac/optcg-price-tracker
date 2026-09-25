@@ -69,7 +69,8 @@ from __future__ import annotations
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
-from app.models import CanonicalCard, CardPrint, PriceObservation, Source
+from app.models import CanonicalCard, CardPrint, PriceObservation, ReleaseProduct, Source
+from app.services.release_scope import resolve_release_scope
 from app.services.print_catalogue import effective_rarity_sql
 from app.services.print_market_index import INDEX_EVIDENCE_PRICE_TYPES
 from app.services.price_basis import (
@@ -151,7 +152,8 @@ def _scoped_prints_from():
 
 
 def scoped_print_ids(
-    db: Session, *, set_code: str | None = None, rarity: str | None = None
+    db: Session, *, release_product_id: int | None = None,
+    set_code: str | None = None, rarity: str | None = None
 ) -> list[int]:
     """The active prints one request is about, as ids, in one query.
 
@@ -162,8 +164,14 @@ def scoped_print_ids(
     thing print_catalogue's docstring exists to prevent.
     """
     stmt = _scoped_prints_from().with_only_columns(CardPrint.id)
-    if set_code:
-        stmt = stmt.where(CardPrint.release_product_code == set_code)
+    if release_product_id is not None:
+        stmt = stmt.where(CardPrint.release_product_id == release_product_id)
+    elif set_code:
+        matching_product_ids = select(ReleaseProduct.id).where(
+            ReleaseProduct.source_catalogue == "bandai_jp",
+            ReleaseProduct.official_code == set_code,
+        )
+        stmt = stmt.where(CardPrint.release_product_id.in_(matching_product_ids))
     if rarity:
         stmt = stmt.where(effective_rarity_sql().in_(filter_tokens(rarity)))
     return list(db.scalars(stmt).all())
@@ -389,6 +397,7 @@ def build_overview(
     db: Session,
     *,
     basis: BasisRequest,
+    release_product_id: int | None = None,
     set_code: str | None = None,
     rarity: str | None = None,
 ) -> dict:
@@ -400,7 +409,12 @@ def build_overview(
     issuing queries - a 4,316-print scope costs the same round trips as a
     10-print one.
     """
-    print_ids = scoped_print_ids(db, set_code=set_code, rarity=rarity)
+    release_product_id = resolve_release_scope(
+        db, release_product_id=release_product_id, set_code=set_code
+    )
+    print_ids = scoped_print_ids(
+        db, release_product_id=release_product_id, set_code=set_code, rarity=rarity
+    )
     # The scope's size is the denominator of coverage and is counted here, in
     # full. Only the observed subset is then RESOLVED - see
     # prints_with_observations for why that cannot move a published number.
@@ -450,7 +464,10 @@ def build_overview(
         "evidence_type": evidence_type,
         "available": available,
         "unavailable_reason": unavailable_reason,
-        "scope": {"active_prints": active_prints, "set": set_code, "rarity": rarity},
+        "scope": {
+            "active_prints": active_prints, "set": set_code, "rarity": rarity,
+            "release_product_id": release_product_id,
+        },
         "coverage": {
             "observed_prints": observed,
             "usable_priced_prints": constituent_count,

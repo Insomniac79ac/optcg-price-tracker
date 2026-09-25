@@ -51,6 +51,7 @@ from app.services.print_series import (
     get_print_series,
     parse_series_key,
 )
+from app.services.release_scope import ReleaseScopeError, resolve_release_scope
 from app.services.source_instruments import describe_instrument
 from app.services.source_semantics import classify_observation
 
@@ -130,16 +131,10 @@ def get_print_catalogue(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if set_code is not None and release_product_id is not None:
-        release_product = db.get(ReleaseProduct, release_product_id)
-        if (
-            release_product is None
-            or release_product.source_catalogue != "bandai_jp"
-            or release_product.official_code != set_code
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="set and release_product_id identify different release products",
-            )
+        try:
+            resolve_release_scope(db, release_product_id=release_product_id, set_code=set_code)
+        except ReleaseScopeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     items, total = list_print_catalogue(
         db,
