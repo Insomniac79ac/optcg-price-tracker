@@ -1,0 +1,242 @@
+{
+  "market_index": {
+    "price_basis": "market_index",
+    "kind": "market_index",
+    "source": null,
+    "reference_type": null,
+    "evidence_type": null,
+    "available": true,
+    "unavailable_reason": null,
+    "scope": {
+      "active_prints": 5,
+      "set": null,
+      "rarity": null
+    },
+    "coverage": {
+      "observed_prints": null,
+      "usable_priced_prints": 5,
+      "coverage_pct": 100.0,
+      "excluded_constrained_prints": null,
+      "unavailable_prints": 0
+    },
+    "current_price": {
+      "constituent_count": 5,
+      "median_jpy": 1980,
+      "p10_jpy": 392,
+      "p90_jpy": 2800,
+      "unavailable_reason": null
+    },
+    "distribution": [
+      {
+        "lower_jpy": 0,
+        "upper_jpy": 99,
+        "label": "Under \u00a5100",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100,
+        "upper_jpy": 299,
+        "label": "\u00a5100\u2013299",
+        "count": 1
+      },
+      {
+        "lower_jpy": 300,
+        "upper_jpy": 999,
+        "label": "\u00a5300\u2013999",
+        "count": 1
+      },
+      {
+        "lower_jpy": 1000,
+        "upper_jpy": 2999,
+        "label": "\u00a51,000\u20132,999",
+        "count": 2
+      },
+      {
+        "lower_jpy": 3000,
+        "upper_jpy": 9999,
+        "label": "\u00a53,000\u20139,999",
+        "count": 1
+      },
+      {
+        "lower_jpy": 10000,
+        "upper_jpy": 29999,
+        "label": "\u00a510,000\u201329,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 30000,
+        "upper_jpy": 99999,
+        "label": "\u00a530,000\u201399,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100000,
+        "upper_jpy": null,
+        "label": "\u00a5100,000+",
+        "count": 0
+      }
+    ],
+    "index_composition": {
+      "single_source_prints": 5,
+      "multi_source_prints": 0
+    }
+  },
+  "source:yuyutei": {
+    "price_basis": "source:yuyutei",
+    "kind": "source",
+    "source": "yuyutei",
+    "reference_type": "retail_sell",
+    "evidence_type": "listing",
+    "available": true,
+    "unavailable_reason": null,
+    "scope": {
+      "active_prints": 5,
+      "set": null,
+      "rarity": null
+    },
+    "coverage": {
+      "observed_prints": 5,
+      "usable_priced_prints": 5,
+      "coverage_pct": 100.0,
+      "excluded_constrained_prints": 0,
+      "unavailable_prints": 0
+    },
+    "current_price": {
+      "constituent_count": 5,
+      "median_jpy": 1980,
+      "p10_jpy": 392,
+      "p90_jpy": 2800,
+      "unavailable_reason": null
+    },
+    "distribution": [
+      {
+        "lower_jpy": 0,
+        "upper_jpy": 99,
+        "label": "Under \u00a5100",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100,
+        "upper_jpy": 299,
+        "label": "\u00a5100\u2013299",
+        "count": 1
+      },
+      {
+        "lower_jpy": 300,
+        "upper_jpy": 999,
+        "label": "\u00a5300\u2013999",
+        "count": 1
+      },
+      {
+        "lower_jpy": 1000,
+        "upper_jpy": 2999,
+        "label": "\u00a51,000\u20132,999",
+        "count": 2
+      },
+      {
+        "lower_jpy": 3000,
+        "upper_jpy": 9999,
+        "label": "\u00a53,000\u20139,999",
+        "count": 1
+      },
+      {
+        "lower_jpy": 10000,
+        "upper_jpy": 29999,
+        "label": "\u00a510,000\u201329,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 30000,
+        "upper_jpy": 99999,
+        "label": "\u00a530,000\u201399,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100000,
+        "upper_jpy": null,
+        "label": "\u00a5100,000+",
+        "count": 0
+      }
+    ],
+    "index_composition": null
+  },
+  "source:not_configured": {
+    "price_basis": "source:not_configured",
+    "kind": "source",
+    "source": "not_configured",
+    "reference_type": null,
+    "evidence_type": null,
+    "available": false,
+    "unavailable_reason": "source_not_configured",
+    "scope": {
+      "active_prints": 5,
+      "set": null,
+      "rarity": null
+    },
+    "coverage": {
+      "observed_prints": 0,
+      "usable_priced_prints": 0,
+      "coverage_pct": 0.0,
+      "excluded_constrained_prints": 0,
+      "unavailable_prints": 5
+    },
+    "current_price": {
+      "constituent_count": 0,
+      "median_jpy": null,
+      "p10_jpy": null,
+      "p90_jpy": null,
+      "unavailable_reason": "no_usable_prices"
+    },
+    "distribution": [
+      {
+        "lower_jpy": 0,
+        "upper_jpy": 99,
+        "label": "Under \u00a5100",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100,
+        "upper_jpy": 299,
+        "label": "\u00a5100\u2013299",
+        "count": 0
+      },
+      {
+        "lower_jpy": 300,
+        "upper_jpy": 999,
+        "label": "\u00a5300\u2013999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 1000,
+        "upper_jpy": 2999,
+        "label": "\u00a51,000\u20132,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 3000,
+        "upper_jpy": 9999,
+        "label": "\u00a53,000\u20139,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 10000,
+        "upper_jpy": 29999,
+        "label": "\u00a510,000\u201329,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 30000,
+        "upper_jpy": 99999,
+        "label": "\u00a530,000\u201399,999",
+        "count": 0
+      },
+      {
+        "lower_jpy": 100000,
+        "upper_jpy": null,
+        "label": "\u00a5100,000+",
+        "count": 0
+      }
+    ],
+    "index_composition": null
+  }
+}

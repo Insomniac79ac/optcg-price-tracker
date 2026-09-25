@@ -266,7 +266,8 @@ def test_flat_constituents_are_omitted_but_still_counted(client, archive):
     assert body["unchanged_count"] == 6
 
 
-def test_a_contradicted_constituent_count_fails_closed(db_session, client):
+@pytest.mark.parametrize("order", ["move", "impact"])
+def test_a_contradicted_constituent_count_fails_closed(db_session, client, order):
     seed_print(db_session, 1, code="OP01-016")
     snap(db_session, 1, D6, 100)
     snap(db_session, 1, D7, 200)
@@ -275,12 +276,13 @@ def test_a_contradicted_constituent_count_fails_closed(db_session, client):
     point(db_session, D7, prior=D6, constituents=99, eligible=99,
           value="1000.1", chain=Decimal("0.1"), up=99, flat=0)
     db_session.commit()
-    r = client.get("/analytics/index/movers")
+    r = client.get("/analytics/index/movers", params={"order": order})
     assert r.status_code == 500
     assert "integrity" in r.json()["detail"].lower()
 
 
-def test_a_contradicted_step_fails_closed(db_session, client):
+@pytest.mark.parametrize("order", ["move", "impact"])
+def test_a_contradicted_step_fails_closed(db_session, client, order):
     """The count can be right while the arithmetic is wrong. A published step
     the constituents cannot produce is still a contradiction."""
     seed_print(db_session, 1, code="OP01-016")
@@ -291,7 +293,7 @@ def test_a_contradicted_step_fails_closed(db_session, client):
     point(db_session, D7, prior=D6, constituents=1, eligible=1,
           value="1000.1", chain=Decimal("0.999999999999"), up=1, flat=0)
     db_session.commit()
-    r = client.get("/analytics/index/movers")
+    r = client.get("/analytics/index/movers", params={"order": order})
     assert r.status_code == 500
     assert "chain_link" in r.json()["detail"]
 
