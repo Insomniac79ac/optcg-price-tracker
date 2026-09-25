@@ -50,13 +50,15 @@ import {
   fetchPrintPrices,
   sourceDisplayName,
   type PrintDetail,
+  type PrintSibling,
   type PrintMarketIndex,
   type PrintMarketIndexSourceValue,
   type PrintUiModel,
   toPrintUiModel,
 } from "@/lib/prints";
 import { describeSourceEvidence } from "@/lib/sourceEvidence";
-import { getTerm, type Term } from "@/lib/terminology";
+import { getTerm, specialPrintTerm, versionPrintingLabel, type Term } from "@/lib/terminology";
+import { releaseLabelEnglish } from "@/lib/releaseNames";
 
 /** The evidence type behind one source value: what kind of number this is,
  * and one sentence saying what it is not.
@@ -184,6 +186,8 @@ export default function PrintDetailPage() {
   useEffect(() => {
     if (!printId) return;
     let cancelled = false;
+    // Reset on exact-print navigation before its asynchronous reads resolve.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("loading");
     // Cleared on every id change so a previous print's history can never be
     // shown beneath a newly-loaded print while its own request is in flight.
@@ -301,7 +305,7 @@ export default function PrintDetailPage() {
             <Identity print={print} />
             <PrintMarketIndexHeadline analytics={analyticsForPrint} />
             <LiveMarket print={print} history={history} historyStatus={historyStatus} />
-            <OtherPrintings siblings={detail.siblings} print={print} />
+            <OtherVersions detail={detail} />
             <PrintAnalyticsSection
               analytics={analyticsForPrint}
               identity={{
@@ -383,7 +387,6 @@ function Identity({ print }: { print: PrintUiModel }) {
       <div className={styles.secondaryIdentity}>
         {print.nameJp && print.nameJp !== print.displayName && <span lang="ja">{print.nameJp}</span>}
         {print.releaseCode && <span>Found in <span className="mono">{print.releaseCode}</span></span>}
-        <span className="mono">Print #{print.cardPrintId}</span>
       </div>
     </header>
   );
@@ -661,33 +664,49 @@ function SourcePanels({ sources }: { sources: PrintMarketIndexSourceValue[] }) {
   );
 }
 
-/** Only the server's canonical-family siblings. This contract has artwork
- * and exact IDs, but no sibling prices; no follow-up request is made. */
-function OtherPrintings({ siblings, print }: { siblings: PrintDetail["siblings"]; print: PrintUiModel }) {
+/** Exact-print identity only: no sibling prices or follow-up requests. */
+function OtherVersions({ detail }: { detail: PrintDetail }) {
+  const siblings = detail.siblings.filter((sibling) => sibling.card_print_id !== detail.card_print_id);
   if (siblings.length === 0) return null;
   return (
-    <section className={styles.siblings}>
-      <h2>Other printings</h2>
-      <ul className={styles.printingStrip}>
+    <section className={styles.siblings} aria-labelledby="other-versions-heading">
+      <h2 id="other-versions-heading">Other versions</h2>
+      <ul className={styles.printingStrip} aria-label="Card versions" tabIndex={0}>
         <li className={styles.currentPrinting}>
-          <CardImageFrame imageUrl={print.imageUrl} alt={`${print.displayName} — current printing`}
-            cardCode={print.cardCode} size="full" padded geometry={print.imageGeometry} />
-          <span className={styles.printingLabel}>Current printing</span>
-          <span className="mono">Print #{print.cardPrintId}</span>
+          <VersionCard version={detail} current />
         </li>
-        {siblings.filter((sibling) => sibling.card_print_id !== print.cardPrintId).map((sibling) => (
+        {siblings.map((sibling) => (
           <li key={sibling.card_print_id}>
             <Link href={`/prints/${sibling.card_print_id}`} className={styles.printingLink}>
-              <CardImageFrame imageUrl={resolveCardImageUrl(sibling.image_url)}
-                alt={`${print.cardCode} — print #${sibling.card_print_id}`} cardCode={print.cardCode}
-                size="full" padded />
-              <span className={styles.printingLabel}>{sibling.treatment ?? `Print #${sibling.card_print_id}`}</span>
-              {sibling.treatment && <span className="mono">Print #{sibling.card_print_id}</span>}
+              <VersionCard version={sibling} />
             </Link>
           </li>
         ))}
       </ul>
     </section>
+  );
+}
+
+function VersionCard({ version, current = false }: { version: PrintSibling; current?: boolean }) {
+  const name = version.name_en || version.name_jp || version.card_code || "Card version";
+  // Special category and printing type are independent facts. Ordinary
+  // rarity stays in the detail metadata; raw treatment tokens add no label.
+  const descriptors = [specialPrintTerm(version.rarity)?.label, versionPrintingLabel(version.official_asset_variant)]
+    .filter(Boolean).join(" · ");
+  const release = version.release_product_id != null
+    ? releaseLabelEnglish(version.release_code, version.release_name)
+    : null;
+  return (
+    <>
+      <CardImageFrame imageUrl={resolveCardImageUrl(version.display_image?.url || version.image_url)}
+        alt={`${name} (${version.card_code ?? ""})`} cardCode={version.card_code}
+        size="full" padded geometry={version.display_image?.url ? version.display_image.geometry : null} />
+      <span className={styles.versionName}>{name}</span>
+      <span className={`${styles.versionCode} mono`}>{version.card_code}</span>
+      {descriptors && <span className={styles.versionDescriptor}>{descriptors}</span>}
+      <span className={styles.versionRelease}>{release ? `Found in ${release}` : "Release not recorded"}</span>
+      {current && <span className={styles.currentBadge}>Current</span>}
+    </>
   );
 }
 

@@ -130,9 +130,25 @@ def effective_rarity_sql():
     )
 
 
-def _sibling_out(sibling: CardPrint) -> CardPrintSiblingOut:
+def _sibling_out(
+    sibling: CardPrint,
+    canonical: CanonicalCard,
+    product: ReleaseProduct | None,
+    display_image: DisplayImageOut | None,
+) -> CardPrintSiblingOut:
     return CardPrintSiblingOut(
         card_print_id=sibling.id,
+        canonical_card_id=canonical.id,
+        card_code=canonical.card_code,
+        name_en=canonical.name_en,
+        name_jp=canonical.name_jp,
+        release_product_id=sibling.release_product_id,
+        release_code=product.official_code if product else None,
+        release_name=product.display_name if product else None,
+        rarity=effective_rarity(sibling, canonical),
+        canonical_rarity=canonical.rarity,
+        official_asset_variant=sibling.official_asset_variant,
+        display_image=display_image,
         treatment=sibling.treatment,
         language=sibling.language,
         verification_status=sibling.verification_status,
@@ -146,8 +162,10 @@ def get_siblings(
     """Every other active print of the same canonical card - e.g. for OP01-
     013 Sanji's base print, this returns the parallel print (and vice
     versa), never the requested print itself."""
-    rows = db.scalars(
-        select(CardPrint)
+    rows = db.execute(
+        select(CardPrint, CanonicalCard, ReleaseProduct)
+        .join(CanonicalCard, CanonicalCard.id == CardPrint.canonical_card_id)
+        .outerjoin(ReleaseProduct, ReleaseProduct.id == CardPrint.release_product_id)
         .where(
             CardPrint.canonical_card_id == canonical_card_id,
             CardPrint.id != exclude_print_id,
@@ -155,7 +173,11 @@ def get_siblings(
         )
         .order_by(CardPrint.id.asc())
     ).all()
-    return [_sibling_out(r) for r in rows]
+    images = get_display_images_for_prints(db, [print_row for print_row, _, _ in rows])
+    return [
+        _sibling_out(print_row, canonical, product, images.get(print_row.id))
+        for print_row, canonical, product in rows
+    ]
 
 
 def to_print_out(

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
+import { releaseLabelEnglish } from "@/lib/releaseNames";
 import { type PrintUiModel, sourceDisplayName } from "@/lib/prints";
 import {
   describeUnavailableSource,
@@ -72,7 +73,7 @@ export function PrintCardTile({
     print.unknownRarityToken,
     printingType?.label,
     artOrdinal,
-    print.releaseCode ? `found in ${print.releaseCode}` : null,
+    print.releaseCode || print.releaseProductId ? `found in ${releaseLabelEnglish(print.releaseCode)}` : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -80,6 +81,7 @@ export function PrintCardTile({
   return (
     <Link
       href={`/prints/${print.cardPrintId}`}
+      prefetch={false}
       aria-label={accessibleName}
       className={`group flex flex-col rounded-panel border border-border-muted bg-bg-elevated p-2 ${styles.tile}`}
     >
@@ -126,16 +128,16 @@ export function PrintCardTile({
           </span>
         )}
 
-        <div className="mono flex flex-wrap items-center gap-x-1.5 text-[10px] leading-none text-text-muted">
+        <div className="mono flex flex-wrap items-center gap-x-1.5 text-[10px] leading-relaxed text-text-muted">
           <span>{print.cardCode}</span>
-          {print.releaseCode && (
+          {(print.releaseCode || print.releaseProductId) && (
             <>
               <span aria-hidden="true">·</span>
               {/* "Found in", not "Set": for a reprint this product is a later
                   release than the set the card came from. */}
               <span>
                 <span className="text-text-faint">Found in </span>
-                {print.releaseCode}
+                {print.releaseCode ?? "Special product"}
               </span>
             </>
           )}
@@ -179,20 +181,16 @@ export function PrintCardTile({
             it is the monetary focal point without becoming a price block
             bigger than the artwork. */}
         <div className="mt-auto pt-3">
-          <span className="mono block text-[10px] font-medium uppercase leading-none tracking-[0.14em] text-text-muted">
-            Market Index
-          </span>
-          <div className="mt-1.5">
-            <MarketIndexValue
-              index={print.marketIndex}
-              size="base"
-              tone="gold"
-              // Coverage is stated by the per-source rows below, which carry
-              // strictly more information than the chip would.
-              showCoverage={false}
-            />
-          </div>
-          <SourcePrices print={print} />
+          {print.marketIndexJpy === null && displayedSourceValues(print.marketIndex.source_values).length === 0 ? (
+            <div className="min-h-16 text-text-secondary">
+              <p className="text-sm font-medium">No market price yet</p>
+              <p className="mt-1 text-xs leading-relaxed text-text-muted">Price coverage is still being added.</p>
+            </div>
+          ) : <>
+            <span className="mono block text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">Market Index</span>
+            <div className="mt-1.5"><MarketIndexValue index={print.marketIndex} size="base" tone="gold" showCoverage={false} /></div>
+            <SourcePrices print={print} />
+          </>}
         </div>
       </div>
     </Link>

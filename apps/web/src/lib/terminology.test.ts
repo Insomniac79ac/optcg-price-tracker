@@ -13,6 +13,7 @@ import {
   rarityTerm,
   SP_CARD_FILTER_VALUE,
   specialPrintTerm,
+  versionPrintingLabel,
 } from "./terminology";
 
 describe("printing type", () => {
@@ -46,6 +47,29 @@ describe("printing type", () => {
     expect(printingTypeTerm(null)).toBeNull();
     expect(printingTypeTerm(undefined)).toBeNull();
   });
+});
+
+describe("version printing labels", () => {
+  it("names the original artwork only for the explicit official base asset", () => {
+    expect(versionPrintingLabel("base")).toBe("Original artwork");
+    expect(versionPrintingLabel(" BASE ")).toBe("Original artwork");
+  });
+
+  it("uses the established alt-art authority for alternate artwork", () => {
+    for (const variant of ["p1", "p2", "p10", " P3 "]) {
+      expect(printingTypeTerm(variant)?.key).toBe("printing.alt_art");
+      expect(versionPrintingLabel(variant)).toBe("Alternate artwork");
+    }
+  });
+
+  it("keeps reprint terminology without claiming original or alternate artwork", () => {
+    expect(versionPrintingLabel("r1")).toBe("Reprint");
+  });
+
+  it.each([null, undefined, "", " ", "x1", "p", "normal", "parallel"])(
+    "omits artwork claims for ambiguous provenance %s",
+    (variant) => expect(versionPrintingLabel(variant)).toBeNull(),
+  );
 });
 
 describe("art ordinal", () => {

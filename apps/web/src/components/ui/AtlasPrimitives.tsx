@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import { CardImageFrame } from "./CardImageFrame";
 import styles from "./AtlasPrimitives.module.css";
-import { releaseDisplayName } from "@/lib/releaseNames";
+import { releaseDisplayNameEnglish } from "@/lib/releaseNames";
 
 /** Explicit opt-in: importing this module changes no existing route or token. */
 export function AtlasVisualSystem({ children }: { children: ReactNode }) {
@@ -80,18 +80,19 @@ export function AtlasArtworkStage({ image, caption }: { image: ArtworkProps; cap
 }
 
 /** The caller owns the release code and URL. Naming is display-only and
- * prefers a supplied product name over the saved official catalogue label. */
-export function AtlasReleaseDestination({ releaseCode, releaseName, href }: {
-  releaseCode: string;
-  releaseName?: string | null;
+ * explicitly selects English presentation without changing source metadata. */
+export function AtlasReleaseDestination({ releaseCode, releasedOn, href }: {
+  releaseCode: string | null;
+  releasedOn?: string | null;
   href: string;
 }) {
   return (
     <Link href={href} prefetch={false} className={styles.destination}>
       <span className={styles.destinationDot} aria-hidden="true" />
       <span className={styles.destinationCopy}>
-        <span className={styles.releaseCode}>{releaseCode}</span>{" "}
-        <span className={styles.destinationLabel}>{releaseDisplayName(releaseCode, releaseName)}</span>
+        <span className={styles.releaseCode}>{releaseCode ?? "Special product"}</span>{" "}
+        {releaseDisplayNameEnglish(releaseCode) !== (releaseCode ?? "Special product") && <span className={styles.destinationLabel}>{releaseDisplayNameEnglish(releaseCode)}</span>}
+        {releasedOn && <time dateTime={releasedOn} className="mt-1 text-xs text-text-muted">{releasedOn}</time>}
       </span>
       <span className={styles.destinationArrow} aria-hidden="true">→</span>
     </Link>

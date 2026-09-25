@@ -45,14 +45,18 @@
 .sourcePrice { font-size: 20px; font-weight: 650; text-align: right; }
 .sourceRow > p { margin-top: 4px; }
 .siblings { grid-column: 2; grid-row: 6; min-width: 0; }
-.printingStrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 16px; margin-top: 16px; list-style: none; }
-.printingStrip > li { min-width: 0; max-width: 180px; font-size: 10px; color: #819ba4; }
+.printingStrip { display: flex; gap: 16px; margin-top: 16px; padding: 4px 4px 12px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+.printingStrip:focus-visible { outline: 2px solid #78c4bf; outline-offset: 3px; }
+.printingStrip > li { flex: 0 0 220px; min-width: 0; font-size: 14px; line-height: 1.4; color: #b5c6cd; scroll-snap-align: start; }
 .printingLink { display: flex; flex-direction: column; height: 100%; border-radius: 8px; }
 .printingLink:hover { color: #a5dad5; }
 .printingLink:hover :global(.vault-frame) { border-color: #76b9b5; }
 .currentPrinting :global(.vault-frame) { outline: 1px solid #7ebfba; outline-offset: 2px; }
-.printingLabel { display: block; margin: 10px 0 4px; color: #bfd2d5; font-size: 12px; }
-.currentPrinting .printingLabel { color: #87c3be; }
+.versionName { display: block; margin-top: 12px; color: #e6eeee; font-size: 16px; font-weight: 600; }
+.versionCode { display: block; margin-top: 2px; }
+.versionDescriptor { display: block; margin-top: 8px; color: #a5dad5; }
+.versionRelease { display: block; margin-top: 6px; overflow-wrap: anywhere; }
+.currentBadge { display: inline-block; margin-top: 10px; padding: 2px 8px; border: 1px solid #527f7c; border-radius: 4px; font-size: 12px; color: #a5dad5; }
 .performance { grid-column: 2; grid-row: 7; min-width: 0; }
 .performance > section { margin-top: 0; }
 @media (max-width: 1023px) {
@@ -73,8 +77,7 @@
   .secondaryIdentity { font-size: 12px; margin-top: 8px; }
   .index { padding: 18px; }
   .indexValue { font-size: 40px; }
-  .printingStrip { grid-template-columns: repeat(auto-fill, minmax(95px,1fr)); gap: 14px; }
-  .printingStrip > li { max-width: 180px; }
+  .printingStrip { gap: 14px; }
 }
 @media (max-width: 359px) {
   .page { padding-inline: 16px; }
@@ -83,7 +86,6 @@
   .codes { font-size: 12px; }
   .index { padding: 16px; }
   .indexValue { font-size: 36px; }
-  .printingStrip { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 /* Seven real periods remain reachable at 320px without shrinking targets. */
 .history :global([data-testid="print-analytics-window"]) { flex-wrap: wrap; max-width: 100%; }

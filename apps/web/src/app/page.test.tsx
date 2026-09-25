@@ -1,264 +1,92 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("next-auth/react", () => ({
-  useSession: vi.fn(() => ({ data: null, status: "unauthenticated" })),
-  signIn: vi.fn(),
-  signOut: vi.fn(),
-}));
-const push = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, replace: vi.fn() }),
-  usePathname: () => "/",
-}));
-
-const { fetchSavedViews, fetchCardsCatalogue, apiGet } = vi.hoisted(() => ({
-  apiGet: vi.fn(),
-  fetchSavedViews: vi.fn().mockResolvedValue({
-    items: [],
-    pagination: { total: 0, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
-  }),
-  // Guard: Discover must never reach for the legacy canonical-card catalogue
-  // again. That payload carries no print identity, so nothing built from it
-  // could link to an exact printing without guessing which one it meant.
-  fetchCardsCatalogue: vi.fn(),
-}));
-vi.mock("@/lib/api", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, fetchSavedViews, fetchCardsCatalogue, apiGet };
+import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchPrintCatalogue, fetchPrint } from '@/lib/prints';
+import { fetchReleases } from '@/lib/releases';
+import { fetchIndexMovers, type IndexMover } from '@/lib/cardPirateIndex';
+import { catalogueFixture, printFixture, releaseFixture } from '@/lib/publicDiscoveryFixtures';
+import Page, { buildCardsSearchHref } from './page';
+const push=vi.fn();
+vi.mock('next/navigation',()=>({useRouter:()=>({push})}));
+vi.mock('@/components/AppHeader',()=>({AppHeader:()=>null}));
+vi.mock('@/lib/prints',async()=>({...await vi.importActual<typeof import('@/lib/prints')>('@/lib/prints'),fetchPrintCatalogue:vi.fn(),fetchPrint:vi.fn()}));
+vi.mock('@/lib/releases',async()=>({...await vi.importActual<typeof import('@/lib/releases')>('@/lib/releases'),fetchReleases:vi.fn()}));
+vi.mock('@/lib/cardPirateIndex',async()=>({...await vi.importActual<typeof import('@/lib/cardPirateIndex')>('@/lib/cardPirateIndex'),fetchIndexMovers:vi.fn()}));
+const mover=(id:number,direction:'up'|'down'='up'):IndexMover=>({card_print_id:id,card_code:'OP01-001',name:`Mover ${id}`,rarity:'SR',display_image_url:`https://www.onepiece-cardgame.com/images/${id}.png`,treatment:'parallel',language:'jp',prior_value_jpy:100,current_value_jpy:200,direction,raw_pct:direction==='up'?30.77:-12.5,capped_log_return:'0.2231',was_capped:true,contribution_log_return:'0.0001',approx_index_points:'0.1000',move_rank:id,impact_rank:id});
+const moves=(count=4)=>({as_of:'2026-09-25',prior_point_date:'2026-09-24',constituent_count:100,movers_count:count,unchanged_count:100-count,chain_link_log_return:'0.001',truncated:false,movers:Array.from({length:count},(_,i)=>mover(100+i,i%2?'down':'up'))});
+beforeEach(async()=>{
+  await Promise.resolve();
+  push.mockReset();
+  vi.mocked(fetchPrintCatalogue).mockReset().mockImplementation(async p=>catalogueFixture(Array.from({length:16},(_,i)=>printFixture((p?.rarity||p?.treatment?200:1)+i))));
+  vi.mocked(fetchPrint).mockReset().mockImplementation(async id=>({...printFixture(Number(id)),colors:null,artwork_key:null,siblings:[]}));
+  vi.mocked(fetchReleases).mockReset().mockResolvedValue(releaseFixture);
+  vi.mocked(fetchIndexMovers).mockReset().mockResolvedValue(moves());
 });
-
-const { fetchPrintCatalogue } = vi.hoisted(() => ({ fetchPrintCatalogue: vi.fn() }));
-vi.mock("@/lib/prints", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/prints")>("@/lib/prints");
-  return { ...actual, fetchPrintCatalogue };
-});
-
-import type { PrintCatalogueItem } from "@/lib/prints";
-import type { IndexMover, IndexMovers } from "@/lib/cardPirateIndex";
-
-import HomePage, { buildCardsSearchHref } from "./page";
-
-/** Shaped on the real `GET /prints` staging payload. `card_print_id` is the
- * only identity this page has, and the only one it may route with. */
-function makePrint(
-  // `market_index` is spread over the defaults below, so it takes a PARTIAL
-  // index - the signature said `PrintMarketIndex` while the body treated it as
-  // overrides, which only surfaced once a caller passed one.
-  overrides: Partial<Omit<PrintCatalogueItem, "market_index">> & {
-    card_print_id: number;
-    market_index?: Partial<PrintCatalogueItem["market_index"]>;
-  },
-): PrintCatalogueItem {
-  const { market_index: indexOverrides, ...rest } = overrides;
-  return {
-    canonical_card_id: 900 + overrides.card_print_id,
-    card_code: `OP01-0${overrides.card_print_id}`,
-    name_en: `Test Card ${overrides.card_print_id}`,
-    name_jp: null,
-    rarity: "R",
-    card_type: "Character",
-    treatment: "normal",
-    language: "jp",
-    release_product_code: "OP-01",
-    image_url: null,
-    display_image: null,
-    verification_status: "verified",
-    source_coverage: [],
-    latest_observation_at: null,
-    market_index: {
-      card_print_id: overrides.card_print_id,
-      index_version: 1,
-      index_value_jpy: null,
-      calculation_method: "median_of_sources",
-      source_count: 0,
-      coverage_status: "none",
-      confidence: "low",
-      source_values: [],
-      auxiliary_values: [],
-      freshest_observation_at: null,
-      stalest_eligible_source_at: null,
-      stale_sources: [],
-      calculated_at: "2026-07-01T00:00:00Z",
-      ...indexOverrides,
-    },
-    ...rest,
-  };
-}
-
-const catalogueResponse = (items: PrintCatalogueItem[]) => ({
-  items,
-  total: items.length,
-  limit: 100,
-  offset: 0,
-  pagination: { total: items.length, limit: 100, offset: 0, has_next: false, has_previous: false, next_offset: null, previous_offset: null },
-  facets: { treatments: [], rarities: [], languages: [], verification_statuses: [] },
-});
-
-
-const mover = (id: number, overrides: Partial<IndexMover> = {}): IndexMover => ({
-  card_print_id: id, card_code: "OP01-001", name: `Mover ${id}`, rarity: "SR",
-  display_image_url: `https://www.onepiece-cardgame.com/images/${id}.png`,
-  treatment: "parallel", language: "jp", prior_value_jpy: 100, current_value_jpy: 200,
-  direction: "up", raw_pct: 30.77, capped_log_return: "0.2231", was_capped: true,
-  contribution_log_return: "0.0001", approx_index_points: "0.1000", move_rank: id, impact_rank: id,
-  ...overrides,
-});
-const moves = (overrides: Partial<IndexMovers> = {}): IndexMovers => ({
-  as_of: "2026-09-10", prior_point_date: "2026-09-09", constituent_count: 100,
-  movers_count: 2, unchanged_count: 98, chain_link_log_return: "0.001", truncated: false,
-  movers: [mover(88), mover(2)], ...overrides,
-});
-beforeEach(() => {
-  apiGet.mockReset().mockResolvedValue(moves());
-  fetchPrintCatalogue.mockReset().mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 9 })]));
-});
-afterEach(() => vi.clearAllMocks());
-async function ready() {
-  render(<HomePage />);
-  await screen.findByText("Mover 88");
-  await screen.findByText("Test Card 9");
-}
-const moveSection = () => screen.getByRole("region", { name: "Cards on the move" });
-const recentSection = () => screen.getByRole("region", { name: "Recent finds" });
-
-describe("Home discovery", () => {
-  it("has one catalogue action, compact search and an editorial Market entry", async () => {
-    await ready();
-    const main = within(screen.getByRole("main"));
-    expect(main.getByRole("heading", { level: 1 })).toHaveTextContent("Find your next card.");
-    expect(main.getAllByRole("link").filter((a) => a.getAttribute("href") === "/cards")).toHaveLength(1);
-    expect(main.getByRole("link", { name: "Browse all cards" })).toHaveAttribute("href", "/cards");
-    expect(main.getByRole("link", { name: "See what moved" })).toHaveAttribute("href", "/analytics#latest-moves");
-    expect(main.getByRole("link", { name: "View Market →" })).toHaveAttribute("href", "/analytics");
-    expect(main.getByRole("heading", { name: "Card Pirate Index" })).toBeInTheDocument();
-    expect(main.queryByRole("table")).not.toBeInTheDocument();
-    expect(main.queryByText(/Trending|Hot|Opportunities|Newly added|Browse every printing|View full catalogue/)).not.toBeInTheDocument();
+const section=(name:string)=>within(screen.getByRole('region',{name}));
+async function ready(){render(<Page/>);await screen.findByText('Mover 100');await waitFor(()=>expect(section('Recent finds').getAllByRole('link')).toHaveLength(4));await waitFor(()=>expect(section('Find your next card.').getAllByRole('link')).toHaveLength(3));}
+describe('Home discovery',()=>{
+  it('has three eligible unique hero print links separate from four unpriced recently added prints',async()=>{
+    await ready();const hero=section('Find your next card.').getAllByRole('link');
+    expect(new Set(hero.map(a=>a.getAttribute('href'))).size).toBe(3);expect(hero.every(a=>a.getAttribute('href')?.startsWith('/prints/2'))).toBe(true);
+    expect(section('Recent finds').getAllByText('No market price yet')).toHaveLength(4);
+    expect(section('Recent finds').getByText(/Recently added to Atlas/)).toBeInTheDocument();
+    expect(fetchPrintCatalogue).toHaveBeenCalledWith({sort:'created_desc',limit:16});
+    expect(vi.mocked(fetchPrintCatalogue).mock.calls.some(([p])=>p?.sort==='updated')).toBe(false);
   });
-  it.each([1, 2, 4])("renders exactly %i supplied movers without decorative slots", async (count) => {
-    apiGet.mockResolvedValue(moves({ movers: [88, 2, 91, 7].slice(0, count).map((id) => mover(id)) }));
-    await ready();
-    expect(within(moveSection()).getAllByRole("listitem")).toHaveLength(count);
-    expect(within(moveSection()).getAllByRole("img")).toHaveLength(count);
-    expect(within(moveSection()).getByRole("heading", { name: "Cards on the move" })).toHaveAttribute("id", "home-movers");
-    expect(within(moveSection()).getByText("01")).toHaveAttribute("aria-hidden", "true");
+  it('uses releases in server chronology and authoritative release ID links',async()=>{
+    const source = { ...releaseFixture, items: releaseFixture.items.map(r => ({ ...r, display_name: '世界最強の戦士' })) };
+    vi.mocked(fetchReleases).mockResolvedValue(source);
+    await ready();const links=section('Explore the Atlas').getAllByRole('link').filter(a=>a.getAttribute('href')?.includes('release_product_id'));
+    expect(links).toHaveLength(8);expect(links.map(a=>a.getAttribute('href'))).toEqual(releaseFixture.items.slice(0,8).map(r=>`/cards?release_product_id=${r.release_product_id}`));
+    expect(links[0]).toHaveTextContent("The World's Strongest Warriors");expect(links[0]).toHaveTextContent('2026-08-22');expect(fetchReleases).toHaveBeenCalledTimes(1);
+    expect(section('Explore the Atlas').queryByText(/世界最強の戦士/)).toBeNull();
+    expect(source.items[0].display_name).toBe('世界最強の戦士');
   });
-  it("reuses catalogue artwork and release codes without putting movers in the hero", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({ card_print_id: 9, image_url: "https://www.onepiece-cardgame.com/images/9.png", release_product_code: "EB-01" })]));
-    await ready();
-    const hero = screen.getByRole("region", { name: "Find your next card." });
-    expect(within(hero).getByRole("link", { name: /Preview Test Card 9/ })).toHaveAttribute("href", "/prints/9");
-    expect(within(hero).queryByText("Mover 88")).not.toBeInTheDocument();
-    expect(within(hero).queryByText(/Market Index|Price move/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "EB-01 Memorial Collection" })).toHaveAttribute("href", "/cards?set=EB-01");
-    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
-    expect(apiGet).toHaveBeenCalledTimes(1);
-    const headings = within(screen.getByRole("main")).getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(headings).toEqual(["Cards on the move", "Recent finds", "Explore the Atlas", "Card Pirate Index"]);
+  it('makes direction textual and signed, with current index and exact release enrichment',async()=>{
+    await ready();const s=section('Cards on the move');expect(s.getAllByText('Up')).toHaveLength(2);expect(s.getAllByText('Down')).toHaveLength(2);
+    expect(s.getAllByText('+30.77%')).toHaveLength(2);expect(s.getAllByText('−12.50%')).toHaveLength(2);
+    expect(s.getAllByText('Market Index ￥200')).toHaveLength(4);expect(await s.findAllByText('Found in OP-17')).toHaveLength(4);
+    const links=s.getAllByRole('listitem').map(li=>within(li).getByRole('link'));expect(links.map(a=>a.getAttribute('href'))).toEqual(['/prints/100','/prints/101','/prints/102','/prints/103']);
+    expect(links.every(a=>a.querySelector('img')?.classList.contains('object-contain'))).toBe(true);
   });
-  it("renders four movers at most, preserving supplied order rather than sorting ranks or prices", async () => {
-    apiGet.mockResolvedValue(moves({ movers: [mover(88), mover(2), mover(91), mover(7), mover(1)] }));
-    await ready();
-    const links = within(moveSection()).getAllByRole("listitem").map((li) => within(li).getByRole("link"));
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/prints/88", "/prints/2", "/prints/91", "/prints/7"]);
+  it('enriches at most four displayed movers in parallel and fails softly per item',async()=>{
+    vi.mocked(fetchIndexMovers).mockResolvedValue(moves(8));vi.mocked(fetchPrint).mockRejectedValueOnce(new Error('offline'));
+    await ready();expect(fetchPrint).toHaveBeenCalledTimes(4);expect(section('Cards on the move').getAllByRole('listitem')).toHaveLength(4);
+    expect(section('Cards on the move').getByText('Mover 100')).toBeInTheDocument();expect(section('Cards on the move').getAllByText(/Found in/)).toHaveLength(3);
   });
-  it("keeps duplicate card codes on distinct exact print links and uses payload artwork", async () => {
-    await ready();
-    for (const id of [88, 2]) {
-      const link = within(moveSection()).getByRole("link", { name: new RegExp(`Mover ${id}`) });
-      expect(link).toHaveAttribute("href", `/prints/${id}`);
-      expect(within(link).getByRole("img")).toHaveAttribute("src", `/api/card-image?u=${encodeURIComponent(`https://www.onepiece-cardgame.com/images/${id}.png`)}`);
-      expect(within(link).getByRole("img")).toHaveClass("object-contain");
-      expect(link).toHaveClass("focus-visible:outline-2");
-      expect(link.querySelector("button, a")).toBeNull();
-    }
+  it('styles a zero mover neutrally without an up/down claim',async()=>{
+    const data=moves(1);data.movers[0].raw_pct=0;vi.mocked(fetchIndexMovers).mockResolvedValue(data);await ready();
+    expect(section('Cards on the move').getByText('Unchanged').parentElement).toHaveAttribute('data-direction','neutral');
+    expect(section('Cards on the move').queryByText('Up')).toBeNull();
   });
-  it("does not need a card code to open an exact printing", async () => {
-    apiGet.mockResolvedValue(moves({ movers: [mover(88, { card_code: null })] }));
-    await ready();
-    expect(within(moveSection()).getByRole("link", { name: /Mover 88/ })).toHaveAttribute("href", "/prints/88");
+  it('does not issue new discovery requests for typing or focus',async()=>{
+    await ready();const count=vi.mocked(fetchPrintCatalogue).mock.calls.length;
+    fireEvent.change(screen.getByRole('searchbox'),{target:{value:'Zoro'}});fireEvent.focus(section('Cards on the move').getByText('Mover 100'));
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(count);expect(count).toBe(4);expect(fetchIndexMovers).toHaveBeenCalledTimes(1);expect(fetchPrint).toHaveBeenCalledTimes(4);
   });
-  it("formats the server raw move without deriving it from prices or the cap", async () => {
-    await ready();
-    expect(within(moveSection()).getAllByText("+30.77%")).toHaveLength(2);
-    expect(within(moveSection()).queryByText("+100.00%")).not.toBeInTheDocument();
-    expect(within(moveSection()).queryByText("+25.00%")).not.toBeInTheDocument();
-    expect(within(moveSection()).getByText("Sep 10, 2026")).toBeInTheDocument();
+  it('shows bounded skeletons for each independent section',()=>{
+    vi.mocked(fetchPrintCatalogue).mockReturnValue(new Promise(()=>{}));vi.mocked(fetchIndexMovers).mockReturnValue(new Promise(()=>{}));vi.mocked(fetchReleases).mockReturnValue(new Promise(()=>{}));render(<Page/>);
+    expect(screen.getByRole('status',{name:'Loading featured printings'})).toBeInTheDocument();expect(screen.getByRole('status',{name:'Loading cards on the move'})).toBeInTheDocument();expect(screen.getByLabelText('Loading releases')).toBeInTheDocument();
   });
-  it("uses exactly one catalogue and one movers request, with no per-card requests on rerender", async () => {
-    await ready();
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "OP01-001" } });
-    fireEvent.focus(within(moveSection()).getByRole("link", { name: /Mover 88/ }));
-    expect(fetchPrintCatalogue).toHaveBeenCalledExactlyOnceWith({ sort: "updated", limit: 100 });
-    expect(apiGet).toHaveBeenCalledExactlyOnceWith("/analytics/index/movers");
-    expect(fetchCardsCatalogue).not.toHaveBeenCalled();
+  it('retains every other section when Recent Finds fails, and retries independently',async()=>{
+    vi.mocked(fetchPrintCatalogue).mockImplementation(async p=>{if(!p?.rarity&&!p?.treatment)throw new Error('offline');return catalogueFixture([printFixture(200),printFixture(201),printFixture(202)]);});
+    render(<Page/>);const retry=await screen.findByRole('button',{name:'Retry Recent Finds'});await screen.findByText('Mover 100');expect(await screen.findByText("The World's Strongest Warriors")).toBeInTheDocument();
+    vi.mocked(fetchPrintCatalogue).mockResolvedValue(catalogueFixture([printFixture(1)]));fireEvent.click(retry);expect(await screen.findByText('Print 1')).toBeInTheDocument();expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
   });
-  it("shows an accessible loading state", () => {
-    apiGet.mockReturnValue(new Promise(() => {}));
-    render(<HomePage />);
-    expect(screen.getByRole("status", { name: "Loading cards on the move" })).toBeInTheDocument();
+  it.each(['hero','releases','movers'])('isolates %s failure',async(which)=>{
+    if(which==='hero')vi.mocked(fetchPrintCatalogue).mockImplementation(async p=>{if(p?.rarity)throw new Error('offline');return catalogueFixture([printFixture(1)]);});
+    if(which==='releases')vi.mocked(fetchReleases).mockRejectedValue(new Error('offline'));
+    if(which==='movers')vi.mocked(fetchIndexMovers).mockRejectedValue(new Error('offline'));
+    render(<Page/>);await waitFor(()=>expect(section('Recent finds').getAllByRole('link').length).toBeGreaterThan(0));
+    expect(await screen.findByRole('button',{name:which==='hero'?'Retry featured printings':which==='releases'?'Retry releases':'Retry movers'})).toBeInTheDocument();
   });
-  it.each([
-    ["zero", moves({ movers: [], movers_count: 0 }), "No cards moved on this published day."],
-    ["base", moves({ movers: [], prior_point_date: null }), "The latest index update has no previous point to compare."],
-  ])("handles %s movers honestly without replacement cards", async (_, payload, copy) => {
-    apiGet.mockResolvedValue(payload);
-    render(<HomePage />);
-    expect(await screen.findByText(copy as string)).toBeInTheDocument();
-    expect(within(moveSection()).queryByRole("list")).not.toBeInTheDocument();
-    expect(await screen.findByText("Test Card 9")).toBeInTheDocument();
-  });
-  it("keeps catalogue discovery available if movers are unavailable", async () => {
-    apiGet.mockRejectedValue(new Error("offline"));
-    render(<HomePage />);
-    expect(await screen.findByText("We can’t show the cards on the move right now.")).toBeInTheDocument();
-    expect(await screen.findByText("Test Card 9")).toBeInTheDocument();
-    expect(within(moveSection()).queryByRole("list")).not.toBeInTheDocument();
-  });
-  it("retains priced-first selection within recently updated records only", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([1, 2, 3, 4, 5].map((id) => makePrint({card_print_id: id, market_index: {index_value_jpy: id === 3 || id === 5 ? 100 : null}}))));
-    render(<HomePage />);
-    await screen.findByText("Test Card 3");
-    expect(within(recentSection()).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/prints/3", "/prints/5", "/prints/1", "/prints/2"]);
-  });
-  it("keeps recently updated sibling printings directly openable", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([makePrint({card_print_id: 9, card_code: "OP01-001"}), makePrint({card_print_id: 10, card_code: "OP01-001"})]));
-    await ready();
-    expect(within(recentSection()).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/prints/9", "/prints/10"]);
-  });
-  it("does not add another catalogue CTA when the catalogue is empty", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([]));
-    render(<HomePage />);
-    expect(await screen.findByText("No recently updated printings are available right now.")).toBeInTheDocument();
-    expect(within(screen.getByRole("main")).getAllByRole("link", { name: "Browse all cards" })).toHaveLength(1);
-  });
-  it("retries the catalogue independently without refetching movers", async () => {
-    fetchPrintCatalogue.mockRejectedValueOnce(new Error("offline"));
-    render(<HomePage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    await screen.findByText("Test Card 9");
-    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2);
-    expect(apiGet).toHaveBeenCalledTimes(1);
+  it('handles insufficient hero inventory and empty recent/movers without fabricated cards',async()=>{
+    vi.mocked(fetchPrintCatalogue).mockResolvedValue(catalogueFixture([]));vi.mocked(fetchIndexMovers).mockResolvedValue(moves(0));render(<Page/>);
+    expect(await screen.findByText(/More SR, SP and Parallel artwork/)).toBeInTheDocument();expect(await screen.findByText('No recently added printings are available right now.')).toBeInTheDocument();expect(await screen.findByText('No cards moved on this published day.')).toBeInTheDocument();
   });
 });
-
-describe("Home search", () => {
-  it.each(["Kaido", "OP01-001", "カイドウ", "  Kaido  ", "", "   "])("submits %s to public Cards without lookup requests", async (term) => {
-    await ready();
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search cards by name or code" }), { target: { value: term } });
-    fireEvent.submit(screen.getByRole("search"));
-    expect(push).toHaveBeenCalledWith(term.trim() ? `/cards?q=${encodeURIComponent(term.trim())}` : "/cards");
-    expect(apiGet).toHaveBeenCalledTimes(1);
-    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
+describe('Home search',()=>{
+  it.each(['Kaido','OP01-001','カイドウ','  Kaido  ','','   '])('submits %s without a search lookup',async term=>{
+    await ready();fireEvent.change(screen.getByRole('searchbox'),{target:{value:term}});fireEvent.submit(screen.getByRole('search'));expect(push).toHaveBeenCalledWith(buildCardsSearchHref(term));expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
   });
-  it("has a visible submit control in the same responsive form", async () => {
-    await ready();
-    fireEvent.change(screen.getByRole("searchbox"), {target: {value: "OP01-001"}});
-    fireEvent.click(within(screen.getByRole("search")).getByRole("button", {name: "Search"}));
-    expect(push).toHaveBeenCalledWith("/cards?q=OP01-001");
-    expect(screen.getAllByRole("search")).toHaveLength(1);
-  });
-  it("bounds the query to the catalogue's existing limit", () => {
-    expect(buildCardsSearchHref("a".repeat(200))).toBe(`/cards?q=${"a".repeat(128)}`);
-  });
+  it('bounds the search length',()=>expect(buildCardsSearchHref('a'.repeat(200))).toBe(`/cards?q=${'a'.repeat(128)}`));
 });

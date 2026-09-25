@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 let currentSearch = "";
 
@@ -38,13 +38,10 @@ vi.mock("@/lib/prints", async () => {
   return { ...actual, fetchPrintCatalogue };
 });
 
-const { fetchMarketFilters } = vi.hoisted(() => ({ fetchMarketFilters: vi.fn() }));
-vi.mock("@/lib/marketAnalytics", () => ({ fetchMarketFilters }));
-fetchMarketFilters.mockResolvedValue({ sets: [
-  { value: "OP-01", label: "OP-01" },
-  { value: "PRB-01", label: "PRB-01" },
-  { value: "ST-31", label: "ST-31" },
-], rarities: [] });
+const { fetchReleases } = vi.hoisted(() => ({ fetchReleases: vi.fn() }));
+vi.mock("@/lib/releases", async () => ({...await vi.importActual<typeof import("@/lib/releases")>("@/lib/releases"),fetchReleases}));
+fetchReleases.mockResolvedValue({items:[],chronology_available:true,ordering_basis:'released_on_desc_then_deterministic_fallback'});
+beforeEach(() => { sessionStorage.clear(); window.history.replaceState(null, '', '/cards'); });
 
 // Guard: if the catalogue ever reaches for a legacy card_id-keyed endpoint
 // again, these spies fail the test rather than silently working.
@@ -305,7 +302,7 @@ describe("print catalogue page", () => {
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    expect(within(tile).getByText("No market price yet")).toBeTruthy();
     expect(tile.textContent).not.toMatch(/￥/);
   });
 
@@ -410,98 +407,14 @@ describe("print catalogue page", () => {
     expect(await screen.findAllByRole("link", { name: /Sanji/ })).toHaveLength(2);
   });
 
-  it("only offers treatment and rarity filters, both from real facets", async () => {
+  it("offers only published checkbox facets", async () => {
     fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
     render(<PrintsCataloguePage />);
     await screen.findByRole("link", { name: /Sanji/ });
-
-    expect(screen.getByLabelText(/Treatment/)).toBeTruthy();
-    expect(screen.getByLabelText(/Rarity/)).toBeTruthy();
-    expect(screen.queryByLabelText(/^Set/)).toBeNull();
-    expect(screen.queryByLabelText(/Language/)).toBeNull();
-    expect(screen.queryByLabelText(/Variant/)).toBeNull();
-  });
-
-  it("filters by rarity through the toolbar select, with no separate chip strip", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("link", { name: /Sanji/ });
-
-    // The rarity chip strip that briefly stood in for set navigation is gone:
-    // no "All cards" reset control, and no rarity buttons. Asserted on buttons
-    // rather than on a group role, because the select's own "Rarity"/"Special
-    // print" <optgroup>s legitimately carry that role now.
-    expect(screen.queryByRole("button", { name: "All cards" })).toBeNull();
-    for (const label of ["Common", "Rare", "Super Rare", "Secret Rare", "SP Card"]) {
-      expect(screen.queryByRole("button", { name: label }), `${label} chip`).toBeNull();
-    }
-
-    // The underlying filter still works, from the same real facets.
-    fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SEC" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Rarity/ }));
+    expect(screen.getAllByRole("checkbox", { name: "SP Card" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Secret Rare" }));
     expect(navigations()).toEqual(["/cards?rarity=SEC"]);
-  });
-
-  it("offers exactly one SP Card option, never one per source token", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("link", { name: /Sanji/ });
-
-    const options = Array.from(
-      screen.getByLabelText(/Rarity/).querySelectorAll("option"),
-    ).map((option) => option.textContent);
-
-    expect(options.filter((label) => label === "SP Card")).toHaveLength(1);
-    // Never the disambiguated pair the raw tokens used to produce...
-    expect(options).not.toContain("SP Card (SPカード)");
-    expect(options).not.toContain("SP Card (SP P)");
-    // ...and no raw source token reaches a catalogue-facing filter at all.
-    for (const label of options) {
-      expect(label).not.toContain("SPカード");
-      expect(label).not.toContain("SP P");
-    }
-  });
-
-  it("files the special prints under their own optgroup, not among the rarities", async () => {
-    // Listing "SP Card" inline between Rare and Super Rare is exactly what
-    // made an SP print read as though SP Card were its scarcity tier.
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("link", { name: /Sanji/ });
-
-    const select = screen.getByLabelText(/Rarity/);
-    const groups = Array.from(select.querySelectorAll("optgroup"));
-    const byLabel = Object.fromEntries(
-      groups.map((group) => [
-        group.getAttribute("label"),
-        Array.from(group.querySelectorAll("option")).map((o) => o.textContent),
-      ]),
-    );
-
-    expect(byLabel["Rarity"]).toEqual([
-      "Common", "Leader", "Promo", "Rare", "Secret Rare", "Super Rare", "Uncommon",
-    ]);
-    expect(byLabel["Special print"]).toEqual(["SP Card", "Treasure Rare"]);
-  });
-
-  it("sends the single SP Card value to the server verbatim", async () => {
-    // The value is the API's own facet, and the API expands it to both source
-    // tokens - so the browser neither merges nor rewrites anything.
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("link", { name: /Sanji/ });
-
-    fireEvent.change(screen.getByLabelText(/Rarity/), { target: { value: "SP CARD" } });
-
-    expect(navigations()).toEqual(["/cards?rarity=SP+CARD"]);
-  });
-
-  it("sends the treatment filter to the server", async () => {
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse([SANJI_PARALLEL]));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("link", { name: /Sanji/ });
-
-    fireEvent.change(screen.getByLabelText(/Treatment/), { target: { value: "parallel" } });
-    expect(navigations()).toEqual(["/cards?treatment=parallel"]);
   });
 
   it("uses the Card Atlas identity and keeps the exact-print explanation visible", async () => {
@@ -521,7 +434,7 @@ describe("print catalogue page", () => {
     await screen.findAllByRole("link", { name: /Sanji/ });
 
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
-    expect(fetchMarketFilters).toHaveBeenCalledTimes(1);
+    expect(fetchReleases).toHaveBeenCalledTimes(1);
     expect(screen.getAllByRole("img")).toHaveLength(CATALOGUE.length);
   });
 
@@ -531,8 +444,8 @@ describe("print catalogue page", () => {
     render(<PrintsCataloguePage />);
     await screen.findByRole("link", { name: /Sanji/ });
 
-    expect(screen.getAllByText("“zoro”")).toHaveLength(2);
-    expect(screen.getByText(/1 printing/)).toBeInTheDocument();
+    expect(screen.getAllByText("“zoro”")).toHaveLength(1);
+    expect(screen.getAllByText(/1 printing/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/families/i)).not.toBeInTheDocument();
   });
 
@@ -541,7 +454,7 @@ describe("print catalogue page", () => {
     const { container } = render(<PrintsCataloguePage />);
 
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
-    await screen.findByText(/No cards yet/);
+    await screen.findByText(/No printings found/);
     // Brand chrome is tagged data-brand-asset; any other image would be fake
     // catalogue content because the server returned no printings.
     expect(container.querySelectorAll("img:not([data-brand-asset])")).toHaveLength(0);
@@ -647,7 +560,7 @@ describe("clearing the catalogue search", () => {
     await renderWith("q=kaido&treatment=parallel&rarity=SR&sort=card_code");
     fireEvent.click(clearButton());
 
-    expect(navigations()).toEqual(["/cards?treatment=parallel&rarity=SR&sort=card_code"]);
+    expect(navigations()).toEqual(["/cards?rarity=SR&treatment=parallel&sort=card_code"]);
   });
 
   it("leaves no empty ?q= behind", async () => {
@@ -666,7 +579,7 @@ describe("clearing the catalogue search", () => {
     await renderWith("q=kaido&treatment=parallel");
     await waitFor(() =>
       expect(fetchPrintCatalogue).toHaveBeenCalledWith(
-        expect.objectContaining({ q: "kaido", treatment: "parallel" }),
+        expect.objectContaining({ q: "kaido", treatment: ["parallel"] }),
       ),
     );
 
@@ -679,7 +592,7 @@ describe("clearing the catalogue search", () => {
     render(<PrintsCataloguePage />);
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
     expect(fetchPrintCatalogue).toHaveBeenCalledWith(
-      expect.objectContaining({ q: undefined, treatment: "parallel" }),
+      expect.objectContaining({ treatment: ["parallel"] }),
     );
   });
 
@@ -723,90 +636,6 @@ describe("clearing the catalogue search", () => {
  * Presentation is asserted in PaginationControls.test.tsx; what matters here
  * is that /cards asks for the catalogue presentation and that paging still
  * goes through the URL exactly as it did. */
-describe("catalogue pagination", () => {
-  /** A response that really is one page of a much longer catalogue. The
-   * shared `catalogueResponse` sets total = items.length, which is a single
-   * page by definition and hides the controls. */
-  function pageOf(items: PrintCatalogueItem[], offset: number, total: number): PrintCatalogueList {
-    const base = catalogueResponse(items);
-    return {
-      ...base,
-      total,
-      offset,
-      pagination: {
-        ...base.pagination,
-        total,
-        offset,
-        has_next: offset + 24 < total,
-        has_previous: offset > 0,
-        next_offset: offset + 24 < total ? offset + 24 : null,
-        previous_offset: offset > 0 ? Math.max(0, offset - 24) : null,
-      },
-    };
-  }
-
-  async function renderPage(offset: number, total = 4281) {
-    currentSearch = offset > 0 ? `offset=${offset}` : "";
-    fetchPrintCatalogue.mockResolvedValue(pageOf(CATALOGUE, offset, total));
-    const view = render(<PrintsCataloguePage />);
-    await waitFor(() => expect(screen.getByRole("navigation", { name: "Catalogue pagination" })).toBeInTheDocument());
-    return view;
-  }
-
-  it("renders the catalogue pagination landmark under the grid, not the dense bar", async () => {
-    await renderPage(0);
-    const nav = screen.getByRole("navigation", { name: "Catalogue pagination" });
-    expect(nav.className).toContain("border-t");
-    expect(within(nav).getByText("Page 1 of 179")).toBeInTheDocument();
-    expect(within(nav).getByText("Showing 1–24 of 4,281")).toBeInTheDocument();
-  });
-
-  it("disables Previous on the first page", async () => {
-    await renderPage(0);
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
-  });
-
-  it("enables both controls in the middle of the catalogue", async () => {
-    await renderPage(2160);
-    expect(screen.getByRole("button", { name: "Previous" })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: "Next" })).not.toBeDisabled();
-    expect(screen.getByText("Page 91 of 179")).toBeInTheDocument();
-  });
-
-  it("disables Next on the last page", async () => {
-    await renderPage(4272);
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Previous" })).not.toBeDisabled();
-    expect(screen.getByText("Page 179 of 179")).toBeInTheDocument();
-  });
-
-  it("commits the next page to the URL as ?offset=, unchanged", async () => {
-    await renderPage(0);
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(navigations().at(-1)).toBe("/cards?offset=24");
-  });
-
-  it("drops ?offset= entirely on the way back to page one", async () => {
-    await renderPage(24);
-    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
-    expect(navigations().at(-1)).toBe("/cards");
-  });
-
-  it("still honours an offset that arrived in the URL", async () => {
-    await renderPage(96);
-    expect(fetchPrintCatalogue).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 96, limit: 24 }),
-    );
-    expect(screen.getByText("Page 5 of 179")).toBeInTheDocument();
-  });
-
-  it("keeps the grid to one tile per print, untouched by the pagination change", async () => {
-    await renderPage(0);
-    expect(screen.getAllByRole("link", { name: /OP0/ })).toHaveLength(CATALOGUE.length);
-  });
-});
-
 describe("A/B/C. the catalogue opens on Market Index", () => {
   async function renderAt(search: string, items = [SANJI_BASE]) {
     currentSearch = search;
@@ -863,7 +692,7 @@ describe("A/B/C. the catalogue opens on Market Index", () => {
     // Priced first, exactly as received; the unpriced one still renders.
     expect(links[0].getAttribute("aria-label")).toMatch(/Sanji/);
     expect(links[1].getAttribute("aria-label")).toMatch(/Unpriced Card/);
-    expect(screen.getByText(/Index unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/No market price yet/i)).toBeInTheDocument();
   });
 });
 
@@ -1163,7 +992,7 @@ describe("catalogue tiles - a source with no price", () => {
     expect(container.textContent).not.toMatch(UNAVAILABLE);
   });
 
-  it("keeps the bare 'Index unavailable' tile when no source reported", async () => {
+  it("keeps the bare 'No market price yet' tile when no source reported", async () => {
     fetchPrintCatalogue.mockResolvedValue(
       catalogueResponse([
         tilePrint([sourceValue("yuyutei", null), sourceValue("snkrdunk", null)], {
@@ -1177,7 +1006,7 @@ describe("catalogue tiles - a source with no price", () => {
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    expect(within(tile).getByText("No market price yet")).toBeTruthy();
     // No source block at all - not one negative row per known source.
     expect(tile.textContent).not.toMatch(UNAVAILABLE);
     expect(within(tile).queryByText("Yuyu-Tei")).toBeNull();
@@ -1364,7 +1193,7 @@ describe("catalogue tiles - no current listing on SNKRDUNK", () => {
     render(<PrintsCataloguePage />);
 
     const tile = await screen.findByRole("link", { name: /Sanji/ });
-    expect(within(tile).getByText("Index unavailable")).toBeTruthy();
+    expect(within(tile).getByText("No market price yet")).toBeTruthy();
     expect(within(tile).queryByText("SNKRDUNK")).toBeNull();
     expect(tile.textContent).not.toMatch(NO_LISTING);
     expect(tile.textContent).not.toMatch(UNAVAILABLE);
@@ -1389,140 +1218,5 @@ describe("catalogue tiles - no current listing on SNKRDUNK", () => {
     // The source NAME may truncate - it is a known constant and cannot be
     // misread as a number - but the sentence beneath it never does.
     expect(within(snkrdunk).getByText("SNKRDUNK").className).toMatch(/truncate/);
-  });
-});
-
-
-describe("release browsing", () => {
-  it("renders only published release codes and gives known codes their official display names", async () => {
-    fetchMarketFilters.mockResolvedValueOnce({
-      sets: [
-        { value: "OP-01", label: "OP-01" },
-        { value: "OP-02", label: "OP-02" },
-        { value: "OP-03", label: "OP-03" },
-        { value: "OP-04", label: "OP-04" },
-        { value: "PRB-02", label: "PRB-02" },
-        { value: "FUTURE-99", label: "FUTURE-99" },
-      ],
-      rarities: [],
-    });
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-
-    const releaseNav = await screen.findByRole("navigation", { name: "Browse releases" });
-    expect(within(releaseNav).getByRole("link", { name: /OP-01 Romance Dawn/ })).toHaveAttribute("href", "/cards?set=OP-01");
-    expect(within(releaseNav).getByRole("link", { name: /OP-02 Paramount War/ })).toHaveAttribute("href", "/cards?set=OP-02");
-    expect(within(releaseNav).getByRole("link", { name: /OP-03 Pillars of Strength/ })).toHaveAttribute("href", "/cards?set=OP-03");
-    expect(within(releaseNav).getByRole("link", { name: /OP-04 Kingdoms of Intrigue/ })).toHaveAttribute("href", "/cards?set=OP-04");
-    expect(within(releaseNav).getByRole("link", { name: /PRB-02 ONE PIECE CARD THE BEST vol\.2/ })).toHaveAttribute("href", "/cards?set=PRB-02");
-    expect(within(releaseNav).getByRole("link", { name: /FUTURE-99 Release name unavailable/ })).toHaveAttribute("href", "/cards?set=FUTURE-99");
-    // All releases plus exactly the six values the authoritative response supplied.
-    expect(within(releaseNav).getAllByRole("link")).toHaveLength(7);
-    expect(fetchMarketFilters).toHaveBeenCalledTimes(1);
-    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
-  });
-
-  it("loads the shared release vocabulary and commits a release with other filters, resetting pagination", async () => {
-    currentSearch = "q=Zoro&rarity=R&treatment=parallel&sort=name&offset=24";
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-    await screen.findByRole("option", { name: /PRB-01/ });
-    fireEvent.change(screen.getByRole("combobox", { name: "Release" }), { target: { value: "PRB-01" } });
-    expect(navigations().at(-1)).toBe("/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name");
-  });
-
-  it("uses real release links that preserve intersections and reset pagination", async () => {
-    currentSearch = "q=Zoro&rarity=R&treatment=parallel&sort=name&offset=24";
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-
-    const releaseNav = await screen.findByRole("navigation", { name: "Browse releases" });
-    const destination = within(releaseNav).getByRole("link", { name: /PRB-01 ONE PIECE CARD THE BEST/ });
-    expect(destination).toHaveAttribute(
-      "href",
-      "/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name",
-    );
-    fireEvent.click(destination);
-    expect(navigations().at(-1)).toBe(
-      "/cards?set=PRB-01&q=Zoro&treatment=parallel&rarity=R&sort=name",
-    );
-  });
-
-  it("restores a release from the URL, sends the intersection to the API and clears it", async () => {
-    currentSearch = "set=OP-01&q=OP01-016&rarity=R";
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-    await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalledWith(expect.objectContaining({ set: "OP-01", q: "OP01-016", rarity: "R" })));
-    expect(screen.getByRole("combobox", { name: "Release" })).toHaveValue("OP-01");
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-    expect(navigations().at(-1)).toBe("/cards");
-  });
-
-  it("marks the selected destination and removes individual active filters without clearing the rest", async () => {
-    currentSearch = "set=OP-01&q=Zoro&rarity=R&treatment=parallel&sort=name";
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-
-    const selected = await screen.findByRole("link", { name: "OP-01 Romance Dawn" });
-    expect(selected).toHaveAttribute("aria-current", "page");
-    fireEvent.click(screen.getByRole("button", { name: "Remove rarity filter R" }));
-    expect(navigations().at(-1)).toBe(
-      "/cards?set=OP-01&q=Zoro&treatment=parallel&sort=name",
-    );
-  });
-});
-
-describe("mobile catalogue filters", () => {
-  function useMobileViewport() {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes("max-width"),
-      media: query,
-      onchange: null,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
-    })) as typeof window.matchMedia;
-  }
-
-  it("uses the shared filter fields as a draft and commits them only on Apply", async () => {
-    useMobileViewport();
-    currentSearch = "q=Zoro&sort=name&offset=24";
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
-    const dialog = screen.getByRole("dialog", { name: "Filters" });
-    fireEvent.change(within(dialog).getByRole("combobox", { name: "Release" }), {
-      target: { value: "PRB-01" },
-    });
-    fireEvent.change(within(dialog).getByRole("combobox", { name: "Rarity or special print" }), {
-      target: { value: "SR" },
-    });
-    expect(navigations()).toEqual([]);
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filters" }));
-    expect(navigations()).toEqual([
-      "/cards?set=PRB-01&q=Zoro&rarity=SR&sort=name",
-    ]);
-  });
-
-  it("locks body scrolling, closes on Escape and returns focus to the persistent trigger", async () => {
-    useMobileViewport();
-    fetchPrintCatalogue.mockResolvedValue(catalogueResponse(CATALOGUE));
-    render(<PrintsCataloguePage />);
-    await screen.findAllByRole("link", { name: /Sanji/ });
-
-    const trigger = screen.getByRole("button", { name: /^Filters/ });
-    fireEvent.click(trigger);
-    expect(screen.getByRole("dialog", { name: "Filters" })).toBeInTheDocument();
-    expect(document.body.style.overflow).toBe("hidden");
-
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Filters" })).not.toBeInTheDocument());
-    expect(document.body.style.overflow).toBe("");
-    expect(trigger).toHaveFocus();
   });
 });

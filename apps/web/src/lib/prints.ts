@@ -118,6 +118,11 @@ export interface PrintCatalogueItem {
   language: string;
   /** The product THIS printing appeared in - not the card's set. A reprint
    * carries the later product here, so it must never be labelled "Set". */
+  /** Authoritative physical product; optional only for older API responses. */
+  release_product_id?: number | null;
+  release_code?: string | null;
+  release_name?: string | null;
+  created_at?: string;
   release_product_code: string | null;
   /** The set the card was originally published in. null for promos, which
    * belong to no numbered set. Optional so an older API response parses. */
@@ -132,6 +137,7 @@ export interface PrintCatalogueItem {
   market_index: PrintMarketIndex;
   source_coverage: string[];
   latest_observation_at: string | null;
+  market_index_change_7d_pct?: number | null;
 }
 
 export interface PrintCatalogueFacets {
@@ -150,13 +156,14 @@ export interface PrintCatalogueList {
   facets: PrintCatalogueFacets;
 }
 
-export interface PrintSibling {
-  card_print_id: number;
-  treatment: string | null;
-  artwork_key: string | null;
-  image_url: string | null;
-  verification_status: string;
-}
+/** Identity-only version reference, with the same semantics as PrintDetail.
+ * No price/index fields and no release inference from the card code. */
+export type PrintSibling = Pick<PrintDetail,
+  | "card_print_id" | "canonical_card_id" | "card_code" | "name_en" | "name_jp"
+  | "release_product_id" | "release_code" | "release_name"
+  | "rarity" | "canonical_rarity" | "official_asset_variant" | "treatment"
+  | "language" | "verification_status" | "image_url" | "display_image"
+>;
 
 /** Which image to *show* for a print - see schemas.py DisplayImageOut.
  *
@@ -219,6 +226,11 @@ export interface PrintDetail {
   treatment: string | null;
   /** The product THIS printing appeared in - not the card's set. A reprint
    * carries the later product here, so it must never be labelled "Set". */
+  /** Authoritative physical product; optional only for older API responses. */
+  release_product_id?: number | null;
+  release_code?: string | null;
+  release_name?: string | null;
+  created_at?: string;
   release_product_code: string | null;
   /** The set the card was originally published in. null for promos, which
    * belong to no numbered set. Optional so an older API response parses. */
@@ -235,7 +247,7 @@ export interface PrintDetail {
   siblings: PrintSibling[];
 }
 
-export type PrintCatalogueSort = "card_code" | "name" | "index_desc" | "index_asc" | "updated";
+export type PrintCatalogueSort = "card_code" | "name" | "index_desc" | "index_asc" | "updated" | "created_desc";
 
 export const PRINT_SORT_VALUES: PrintCatalogueSort[] = [
   "card_code",
@@ -243,6 +255,7 @@ export const PRINT_SORT_VALUES: PrintCatalogueSort[] = [
   "index_desc",
   "index_asc",
   "updated",
+  "created_desc",
 ];
 
 /** The API's canonical source names, as they appear in
@@ -313,6 +326,10 @@ export interface PrintUiModel {
   /** The product this printing appeared in. Rendered under "Found in", never
    * "Set" - for a reprint the two are different products. */
   releaseCode: string | null;
+  releaseProductId: number | null;
+  releaseName: string | null;
+  createdAt: string | null;
+  marketIndexChange7dPct: number | null;
   /** The set the card was originally published in, where the API supplies it.
    * null for promos and for an API older than this field. */
   originalSetCode: string | null;
@@ -460,7 +477,11 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
     treatment: item.treatment,
     isDistinctTreatment: isDistinctTreatment(item.treatment),
     language: item.language,
-    releaseCode: item.release_product_code,
+    releaseCode: item.release_code !== undefined ? item.release_code : item.release_product_code,
+    releaseProductId: item.release_product_id ?? null,
+    releaseName: item.release_name ?? null,
+    createdAt: item.created_at ?? null,
+    marketIndexChange7dPct: "market_index_change_7d_pct" in item ? (item.market_index_change_7d_pct ?? null) : null,
     originalSetCode: item.original_set_code ?? null,
     printingType: printingTypeTerm(item.official_asset_variant),
     artOrdinal: artOrdinalLabel(item.official_asset_variant),
@@ -497,10 +518,12 @@ export function toPrintUiModel(item: PrintCatalogueItem | PrintDetail): PrintUiM
 }
 
 export interface PrintCatalogueParams {
+  /** Compatibility for old shared URLs; new navigation uses release_product_id. */
   set?: string;
+  release_product_id?: number;
   q?: string;
-  treatment?: string;
-  rarity?: string;
+  treatment?: string[];
+  rarity?: string[];
   language?: string;
   verification_status?: string;
   sort?: PrintCatalogueSort;

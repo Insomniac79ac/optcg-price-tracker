@@ -88,6 +88,17 @@ export function printingTypeTerm(officialAssetVariant: string | null | undefined
   return null;
 }
 
+/** Explicit artwork labels for sibling comparisons. Only the official base
+ * asset establishes original artwork; missing/unknown provenance must not be
+ * treated as base. Reprints keep their printing label without claiming which
+ * artwork they reuse. Release order and treatment are not evidence here. */
+export function versionPrintingLabel(officialAssetVariant: string | null | undefined): string | null {
+  const printing = printingTypeTerm(officialAssetVariant);
+  if (printing?.key === "printing.alt_art") return "Alternate artwork";
+  if (officialAssetVariant?.trim().toLowerCase() === "base") return "Original artwork";
+  return printing?.label ?? null;
+}
+
 /** Which artwork of a card this printing uses, as a human ordinal.
  *
  * `p2` is Bandai's second additional artwork, so it is the *third* image of

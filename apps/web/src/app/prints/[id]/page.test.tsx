@@ -116,6 +116,99 @@ function makeDetail(overrides: Partial<PrintDetail> = {}): PrintDetail {
 
 afterEach(() => vi.clearAllMocks());
 
+describe("Other versions", () => {
+  const anniversary = "プレミアムカードコレクション 25周年エディション";
+  function franky(overrides: Partial<PrintDetail> = {}): PrintDetail {
+    return makeDetail({
+      card_print_id: 6823, canonical_card_id: 7474, card_code: "ST01-010",
+      name_en: "Franky", name_jp: "フランキー", rarity: "C", canonical_rarity: "C",
+      treatment: null, official_asset_variant: "p1", release_product_id: 230,
+      release_code: null, release_name: anniversary, release_product_code: null,
+      ...overrides,
+    });
+  }
+
+  it("shows the real Franky family with its exact uncoded product and English labels", async () => {
+    const base = franky({card_print_id: 6785, official_asset_variant: "base", release_product_id: 189,
+      release_code: "ST-01", release_name: "スタートデッキ 麦わらの一味【ST-01】",
+      image_url: "https://images.example.com/franky-base.png", display_image: null});
+    const detail = franky({siblings: [base]});
+    fetchPrint.mockResolvedValue(detail);
+    render(<PrintDetailPage />);
+    const section = await screen.findByRole("region", {name: "Other versions"});
+    const cards = within(section).getAllByRole("listitem");
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent("Franky");
+    expect(cards[0]).toHaveTextContent("ST01-010");
+    expect(cards[0]).toHaveTextContent("Alternate artwork");
+    expect(cards[0]).not.toHaveTextContent("Original artwork");
+    expect(cards[0]).toHaveTextContent("Found in Premium Card Collection — 25th Anniversary Edition");
+    expect(within(cards[0]).getByText("Current")).toBeInTheDocument();
+    expect(within(cards[0]).queryByRole("link")).toBeNull();
+    expect(cards[1]).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
+    expect(cards[1]).toHaveTextContent("Original artwork");
+    expect(cards[1]).not.toHaveTextContent("Alternate artwork");
+    expect(within(cards[1]).getByRole("link")).toHaveAttribute("href", "/prints/6785");
+    expect(within(cards[1]).getByRole("img")).toHaveAttribute("src", base.image_url);
+    expect(section).not.toHaveTextContent(/Print #|Current printing|Base card|Alt Art|SP Card|プレミアム|スタートデッキ/);
+    expect(document.body).not.toHaveTextContent(/Print #|Current printing/);
+    expect(detail.release_name).toBe(anniversary);
+  });
+
+  it("keeps special category and printing type separate and uses each version's physical release", async () => {
+    const special = franky({card_print_id: 14, card_code: "OP01-021", rarity: "SPカード",
+      canonical_rarity: "UC", official_asset_variant: "p2", treatment: "parallel",
+      release_product_id: 186, release_code: "OP-17", release_name: "世界最強の戦士"});
+    const treasure = franky({card_print_id: 15, rarity: "TR", official_asset_variant: "r1",
+      release_product_id: 1, release_code: "OP-01", release_name: "ROMANCE DAWN"});
+    fetchPrint.mockResolvedValue(franky({siblings: [special, treasure]}));
+    render(<PrintDetailPage />);
+    const section = await screen.findByRole("region", {name: "Other versions"});
+    const sp = within(section).getByRole("link", {name: /SP Card/});
+    expect(sp).toHaveAttribute("href", "/prints/14");
+    expect(sp).toHaveTextContent("OP01-021");
+    expect(sp).toHaveTextContent("SP Card · Alternate artwork");
+    expect(sp).toHaveTextContent("Found in OP-17 — The World's Strongest Warriors");
+    expect(within(section).getByRole("link", {name: /Treasure Rare/})).toHaveTextContent("Treasure Rare · Reprint");
+    expect(section).toHaveTextContent("Found in OP-01 — Romance Dawn");
+    expect(section).not.toHaveTextContent(/世界最強|SPカード|parallel|Print #/);
+  });
+
+  it("does not infer a missing release, fabricate a code for an uncoded product, or borrow artwork", async () => {
+    fetchPrint.mockResolvedValue(franky({siblings: [
+      franky({card_print_id: 15, release_product_id: null, release_code: "OP-01", release_product_code: "OP-01"}),
+      franky({card_print_id: 16, release_name: "記念商品", official_asset_variant: null, treatment: "raw-treatment",
+        display_image: null, image_url: null}),
+      franky({card_print_id: 17, release_name: "Premium Card Collection"}),
+    ]}));
+    render(<PrintDetailPage />);
+    const section = await screen.findByRole("region", {name: "Other versions"});
+    expect(within(section).getByRole("link", {name: /Release not recorded/})).not.toHaveTextContent("OP-01");
+    const uncoded = within(section).getByRole("link", {name: /Found in Special product/});
+    expect(within(uncoded).queryByRole("img")).toBeNull();
+    expect(uncoded).not.toHaveTextContent(/記念商品|raw-treatment|Alternate artwork|Original artwork/);
+    expect(within(section).getByRole("link", {name: /Found in Premium Card Collection$/})).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, "", "x1", "r1"])(
+    "does not infer artwork from an original release or normal treatment when provenance is %s",
+    async (variant) => {
+      // Even the family's earlier original product does not
+      // establish base artwork without explicit official asset evidence.
+      const ambiguous = franky({card_print_id: 6785, official_asset_variant: variant,
+        treatment: "normal", release_product_id: 189, release_code: "ST-01",
+        release_name: "スタートデッキ 麦わらの一味【ST-01】"});
+      fetchPrint.mockResolvedValue(franky({siblings: [ambiguous]}));
+      render(<PrintDetailPage />);
+      const section = await screen.findByRole("region", {name: "Other versions"});
+      const sibling = within(section).getByRole("link");
+      expect(sibling).toHaveAttribute("href", "/prints/6785");
+      expect(sibling).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
+      expect(sibling).not.toHaveTextContent(/Original artwork|Alternate artwork|Base card/);
+    },
+  );
+});
+
 /** The card image specifically - the page's brand texture is tagged
  * data-brand-asset. */
 function cardImage(container: HTMLElement): HTMLImageElement | null {
@@ -176,7 +269,7 @@ describe("print detail page", () => {
     expect(screen.queryByText("parallel")).toBeNull();
   });
 
-  it("identifies an unclassified sibling by its exact print ID", async () => {
+  it("identifies an unclassified sibling by its card identity", async () => {
     // A missing treatment must not hide a real server-provided sibling.
     fetchPrint.mockResolvedValue(
       makeDetail({
@@ -184,7 +277,18 @@ describe("print detail page", () => {
           {
             card_print_id: 12,
             treatment: null,
-            artwork_key: null,
+            canonical_card_id: 2,
+            card_code: "OP01-001",
+            name_en: "Roronoa Zoro",
+            name_jp: "ロロノア・ゾロ",
+            rarity: "L",
+            canonical_rarity: "L",
+            language: "jp",
+            release_product_id: 1,
+            release_code: "OP-01",
+            release_name: "ブースターパック ROMANCE DAWN【OP-01】",
+            official_asset_variant: "base",
+            display_image: null,
             image_url: null,
             verification_status: "verified",
           },
@@ -194,10 +298,10 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Print #12");
+    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Roronoa Zoro");
     expect(container.textContent).not.toMatch(/unclassified|unknown/i);
-    expect(screen.getByText("Current printing")).toBeInTheDocument();
-    expect(screen.getByText("Other printings")).toBeInTheDocument();
+    expect(screen.getByText("Current")).toBeInTheDocument();
+    expect(screen.getByText("Other versions")).toBeInTheDocument();
   });
 
   it("still lists a classified sibling beside an unclassified one", async () => {
@@ -207,14 +311,36 @@ describe("print detail page", () => {
           {
             card_print_id: 12,
             treatment: null,
-            artwork_key: null,
+            canonical_card_id: 2,
+            card_code: "OP01-001",
+            name_en: "Roronoa Zoro",
+            name_jp: "ロロノア・ゾロ",
+            rarity: "L",
+            canonical_rarity: "L",
+            language: "jp",
+            release_product_id: 1,
+            release_code: "OP-01",
+            release_name: "ブースターパック ROMANCE DAWN【OP-01】",
+            official_asset_variant: "base",
+            display_image: null,
             image_url: null,
             verification_status: "verified",
           },
           {
             card_print_id: 13,
             treatment: "normal",
-            artwork_key: null,
+            canonical_card_id: 2,
+            card_code: "OP01-001",
+            name_en: "Roronoa Zoro",
+            name_jp: "ロロノア・ゾロ",
+            rarity: "L",
+            canonical_rarity: "L",
+            language: "jp",
+            release_product_id: 1,
+            release_code: "OP-01",
+            release_name: "ブースターパック ROMANCE DAWN【OP-01】",
+            official_asset_variant: "base",
+            display_image: null,
             image_url: null,
             verification_status: "verified",
           },
@@ -224,10 +350,10 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(screen.getByText("Other printings")).toBeTruthy();
-    const link = screen.getByRole("link", { name: /normal/ });
+    expect(screen.getByText("Other versions")).toBeTruthy();
+    const link = container.querySelector('a[href="/prints/13"]')!;
     expect(link.getAttribute("href")).toBe("/prints/13");
-    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Print #12");
+    expect(container.querySelector('a[href="/prints/12"]')).toHaveTextContent("Roronoa Zoro");
   });
 
   it("never reaches for a legacy card_id-keyed endpoint", async () => {
@@ -485,6 +611,9 @@ describe("print detail page", () => {
   });
 
   it("offers the terminology key on the page, not only on the catalogue", async () => {
+    // jsdom does not implement the native dialog methods.
+    HTMLDialogElement.prototype.showModal = vi.fn(function(this: HTMLDialogElement) { this.open = true; });
+    HTMLDialogElement.prototype.close = vi.fn(function(this: HTMLDialogElement) { this.open = false; });
     // The detail page is where "Super Rare" and "SP Card" sit next to each
     // other, so the explanation has to be reachable here without a hover.
     fetchPrint.mockResolvedValue(makeDetail({ rarity: "SPカード", canonical_rarity: "SR" }));
@@ -492,9 +621,9 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const toggle = screen.getByRole("button", { name: /what do these labels mean/i });
-    toggle.click();
+    fireEvent.click(toggle);
     await waitFor(() =>
-      expect(screen.getByRole("group", { name: "Catalogue terminology" })).toBeTruthy(),
+      expect(screen.getByRole("dialog", { name: "Catalogue terminology" })).toBeTruthy(),
     );
   });
 
@@ -505,7 +634,18 @@ describe("print detail page", () => {
           {
             card_print_id: 4,
             treatment: "normal",
-            artwork_key: null,
+            canonical_card_id: 2,
+            card_code: "OP01-001",
+            name_en: "Roronoa Zoro",
+            name_jp: "ロロノア・ゾロ",
+            rarity: "L",
+            canonical_rarity: "L",
+            language: "jp",
+            release_product_id: 1,
+            release_code: "OP-01",
+            release_name: "ブースターパック ROMANCE DAWN【OP-01】",
+            official_asset_variant: "base",
+            display_image: null,
             image_url: null,
             verification_status: "verified",
           },
@@ -518,7 +658,7 @@ describe("print detail page", () => {
     const index = screen.getByRole("heading", { name: "Market Index" });
     const live = screen.getByRole("heading", { name: "Current prices" });
     const about = screen.getByRole("heading", { name: "Atlas entry" });
-    const others = screen.getByRole("heading", { name: "Other printings" });
+    const others = screen.getByRole("heading", { name: "Other versions" });
 
     expect(index.closest("section")).not.toContainElement(live);
     expect(live.closest("section")).not.toContainElement(about);
@@ -555,7 +695,7 @@ describe("print detail page", () => {
     fetchPrint.mockResolvedValue(makeDetail());
     const { unmount } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
-    expect(screen.queryByRole("heading", { name: "Other printings" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Other versions" })).toBeNull();
     unmount();
 
     fetchPrint.mockResolvedValue(
@@ -564,7 +704,18 @@ describe("print detail page", () => {
           {
             card_print_id: 4,
             treatment: "normal",
-            artwork_key: null,
+            canonical_card_id: 2,
+            card_code: "OP01-001",
+            name_en: "Roronoa Zoro",
+            name_jp: "ロロノア・ゾロ",
+            rarity: "L",
+            canonical_rarity: "L",
+            language: "jp",
+            release_product_id: 1,
+            release_code: "OP-01",
+            release_name: "ブースターパック ROMANCE DAWN【OP-01】",
+            official_asset_variant: "base",
+            display_image: null,
             image_url: null,
             verification_status: "verified",
           },
@@ -572,8 +723,8 @@ describe("print detail page", () => {
       }),
     );
     render(<PrintDetailPage />);
-    await screen.findByRole("heading", { name: "Other printings" });
-    expect(screen.getByRole("link", { name: /normal/ }).getAttribute("href")).toBe("/prints/4");
+    await screen.findByRole("heading", { name: "Other versions" });
+    expect(screen.getByRole("link", { name: /Roronoa Zoro.*Found in OP-01/ }).getAttribute("href")).toBe("/prints/4");
   });
 
   it("surfaces a failure rather than an empty page", async () => {

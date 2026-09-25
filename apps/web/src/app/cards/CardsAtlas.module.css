@@ -312,6 +312,7 @@
 }
 
 .catalogueContent {
+  scroll-margin-top: calc(var(--header-h) + 1rem);
   min-width: 0;
 }
 
@@ -550,4 +551,27 @@
   .releaseCard {
     transition: none;
   }
+}
+
+.releaseCarousel { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: .6rem; }
+.releaseTrack { position: relative; min-width: 0; }
+.releaseTrack::before, .releaseTrack::after { position: absolute; z-index: 1; top: 0; bottom: .55rem; width: 1.5rem; pointer-events: none; content: ""; opacity: 0; }
+.releaseTrack::before { left: 0; background: linear-gradient(to right, var(--bg-page), transparent); }
+.releaseTrack::after { right: 0; background: linear-gradient(to left, var(--bg-page), transparent); }
+.releaseTrack[data-overflow-left="true"]::before, .releaseTrack[data-overflow-right="true"]::after { opacity: 1; }
+.releaseArrow { min-height: 64px; width: 44px; margin-bottom: .55rem; border: 1px solid var(--accent-gold); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--parchment); font-size: 1.15rem; cursor: pointer; }
+.releaseArrow:hover:not(:disabled) { background: var(--bg-elevated); }
+.releaseArrow:disabled { border-color: var(--border-default); color: var(--text-faint); opacity: .4; cursor: default; }
+.releaseArrow:focus-visible, .activeChip:focus-visible, .clearAll:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.releaseScroller { position: relative; }
+.releaseList { grid-auto-columns: 13rem; }
+.activeChip, .clearAll { min-height: 44px; }
+.progress { display: flex; min-height: 8rem; flex-direction: column; justify-content: center; align-items: center; gap: .75rem; margin-top: 1rem; color: var(--text-secondary); font-size: .875rem; text-align: center; }
+.progress button { min-height: 44px; padding: .5rem 1.5rem; border: 1px solid var(--border-default); border-radius: var(--radius-control); }
+.progress button:focus-visible { outline: 2px solid var(--accent-teal); }
+@media (max-width: 63.999rem) {
+  .releaseList { grid-auto-columns: 12rem; }
+  .releaseCarousel { display: block; }
+  .releaseArrow { display: none; }
+  .releaseName { font-size: .75rem; }
 }
