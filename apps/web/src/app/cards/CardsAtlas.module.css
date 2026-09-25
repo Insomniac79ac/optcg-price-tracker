@@ -551,3 +551,20 @@
     transition: none;
   }
 }
+
+.releaseArrows { display: flex; gap: .5rem; }
+.releaseArrows button { min-height: 44px; min-width: 44px; border: 1px solid var(--border-default); border-radius: var(--radius-control); color: var(--text-primary); }
+.releaseArrows button:focus-visible, .releaseSelector select:focus-visible, .activeChip:focus-visible, .clearAll:focus-visible { outline: 2px solid var(--accent-teal); outline-offset: 2px; }
+.releaseSelector { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; font-size: .8rem; color: var(--text-secondary); }
+.releaseSelector select { min-height: 44px; min-width: 0; max-width: 32rem; flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-primary); padding: .5rem; }
+.releaseScroller { position: relative; }
+.releaseList { grid-auto-columns: 13rem; }
+.activeChip, .clearAll { min-height: 44px; }
+.progress { display: flex; min-height: 8rem; flex-direction: column; justify-content: center; align-items: center; gap: .75rem; margin-top: 1rem; color: var(--text-secondary); font-size: .875rem; text-align: center; }
+.progress button { min-height: 44px; padding: .5rem 1.5rem; border: 1px solid var(--border-default); border-radius: var(--radius-control); }
+.progress button:focus-visible { outline: 2px solid var(--accent-teal); }
+@media (max-width: 63.999rem) {
+  .releaseList { grid-auto-columns: 12rem; }
+  .releaseSelector { flex-direction: column; align-items: stretch; gap: .35rem; }
+  .releaseName { font-size: .75rem; }
+}
