@@ -204,6 +204,17 @@ def test_catalogue_item_serializes_a_null_treatment(future_session):
 def test_sibling_schema_serializes_a_null_treatment():
     sibling = CardPrintSiblingOut(
         card_print_id=7,
+        canonical_card_id=1,
+        card_code="OP01-013",
+        name_en="Sanji",
+        name_jp=None,
+        release_product_id=None,
+        release_code=None,
+        release_name=None,
+        rarity="R",
+        canonical_rarity="R",
+        official_asset_variant=None,
+        display_image=None,
         treatment=None,
         language="jp",
         verification_status="verified",
