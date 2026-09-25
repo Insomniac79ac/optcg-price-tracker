@@ -387,7 +387,6 @@ function Identity({ print }: { print: PrintUiModel }) {
       <div className={styles.secondaryIdentity}>
         {print.nameJp && print.nameJp !== print.displayName && <span lang="ja">{print.nameJp}</span>}
         {print.releaseCode && <span>Found in <span className="mono">{print.releaseCode}</span></span>}
-        <span className="mono">Print #{print.cardPrintId}</span>
       </div>
     </header>
   );

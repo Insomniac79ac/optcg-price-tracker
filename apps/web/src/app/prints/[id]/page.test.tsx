@@ -148,6 +148,7 @@ describe("Other versions", () => {
     expect(within(cards[1]).getByRole("link")).toHaveAttribute("href", "/prints/6785");
     expect(within(cards[1]).getByRole("img")).toHaveAttribute("src", base.image_url);
     expect(section).not.toHaveTextContent(/Print #|Current printing|SP Card|プレミアム|スタートデッキ/);
+    expect(document.body).not.toHaveTextContent(/Print #|Current printing/);
     expect(detail.release_name).toBe(anniversary);
   });
 
