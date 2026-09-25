@@ -44,11 +44,11 @@ describe("Atlas presentation contracts", () => {
     expect(screen.getByRole("link", { name: `${code} ${name}` })).toHaveAttribute("href", `/cards?set=${code}`);
   });
 
-  it("prefers a name supplied by the caller and does not guess unknown releases", () => {
-    const { rerender } = render(<AtlasReleaseDestination releaseCode="OP-01" releaseName="Current product title" href="/cards?set=OP-01" />);
-    expect(screen.getByText("Current product title")).toBeInTheDocument();
-    rerender(<AtlasReleaseDestination releaseCode="FUTURE-99" href="/cards?set=FUTURE-99" />);
-    expect(screen.getByRole("link", { name: "FUTURE-99 Release name unavailable" })).toHaveAttribute("href", "/cards?set=FUTURE-99");
+  it("uses concise neutral fallbacks for unknown and uncoded products", () => {
+    const { rerender } = render(<AtlasReleaseDestination releaseCode="FUTURE-99" href="/cards?release_product_id=999" />);
+    expect(screen.getByRole("link", { name: "FUTURE-99" })).toHaveAttribute("href", "/cards?release_product_id=999");
+    rerender(<AtlasReleaseDestination releaseCode={null} href="/cards?release_product_id=1000" />);
+    expect(screen.getByRole("link", { name: "Special product" })).toHaveAttribute("href", "/cards?release_product_id=1000");
   });
 
   it("keeps captions outside the image frame and resets a failed image for a different printing", () => {

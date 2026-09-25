@@ -3,9 +3,9 @@
  * Source: https://asia-en.onepiece-cardgame.com/cardlist/
  * Only product-type wrappers and trailing [codes] were removed; ROMANCE DAWN
  * uses title case. These labels never determine membership or destinations.
- * The current Home catalogue contract exposes codes, not product names, so
- * this small reference avoids an additional request. Prefer a supplied name
- * whenever a caller already has one; unknown codes get no invented title.
+ * Source API display_name/release_name may be Japanese. The current public
+ * locale is English, so this official Asia-English mapping supplies presentation.
+ * Keep source names intact: a future Japanese locale may display them directly.
  */
 const OFFICIAL_RELEASE_NAMES: Readonly<Record<string, string>> = {
   "PRB-02": "ONE PIECE CARD THE BEST vol.2",
@@ -69,8 +69,14 @@ const OFFICIAL_RELEASE_NAMES: Readonly<Record<string, string>> = {
   "ST-01": "Straw Hat Crew",
 };
 
-export function releaseDisplayName(code: string, suppliedName?: string | null): string {
-  return suppliedName?.trim() || (Object.hasOwn(OFFICIAL_RELEASE_NAMES, code)
+/** Presentation only: never derives membership or changes source metadata. */
+export function releaseDisplayNameEnglish(code?: string | null): string {
+  return code && Object.hasOwn(OFFICIAL_RELEASE_NAMES, code)
     ? OFFICIAL_RELEASE_NAMES[code]
-    : "Release name unavailable");
+    : code || "Special product";
+}
+
+export function releaseLabelEnglish(code?: string | null): string {
+  const name = releaseDisplayNameEnglish(code);
+  return code && name !== code ? `${code} — ${name}` : name;
 }

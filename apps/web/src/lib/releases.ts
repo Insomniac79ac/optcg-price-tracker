@@ -1,4 +1,5 @@
 import { apiGet } from "./api";
+import { releaseLabelEnglish } from "./releaseNames";
 
 export interface ReleaseCatalogueItem {
   release_product_id: number;
@@ -25,5 +26,5 @@ export function fetchReleases(): Promise<ReleaseCatalogueList> {
 }
 
 export function releaseLabel(release: ReleaseCatalogueItem): string {
-  return [release.official_code, release.display_name].filter(Boolean).join(" — ");
+  return releaseLabelEnglish(release.official_code);
 }

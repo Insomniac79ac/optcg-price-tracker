@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RarityTermBadge, SpecialPrintBadge, UnknownRarityBadge } from "@/components/RarityBadge";
 import { formatJpy } from "@/lib/format";
+import { releaseLabelEnglish } from "@/lib/releaseNames";
 import { type PrintUiModel, sourceDisplayName } from "@/lib/prints";
 import {
   describeUnavailableSource,
@@ -72,7 +73,7 @@ export function PrintCardTile({
     print.unknownRarityToken,
     printingType?.label,
     artOrdinal,
-    print.releaseCode || print.releaseName ? `found in ${[print.releaseCode, print.releaseName].filter(Boolean).join(" — ")}` : null,
+    print.releaseCode || print.releaseProductId ? `found in ${releaseLabelEnglish(print.releaseCode)}` : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -129,14 +130,14 @@ export function PrintCardTile({
 
         <div className="mono flex flex-wrap items-center gap-x-1.5 text-[10px] leading-relaxed text-text-muted">
           <span>{print.cardCode}</span>
-          {(print.releaseCode || print.releaseName) && (
+          {(print.releaseCode || print.releaseProductId) && (
             <>
               <span aria-hidden="true">·</span>
               {/* "Found in", not "Set": for a reprint this product is a later
                   release than the set the card came from. */}
               <span>
                 <span className="text-text-faint">Found in </span>
-                {[print.releaseCode, print.releaseName].filter(Boolean).join(" — ")}
+                {print.releaseCode ?? "Special product"}
               </span>
             </>
           )}

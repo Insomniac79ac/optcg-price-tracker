@@ -68,7 +68,7 @@ export default function HomePage() {
             {releases.status === "loading" && <div className={styles.releaseGrid} aria-label="Loading releases">{Array.from({length: 8}, (_, i) => <div key={i} className="h-24 animate-pulse rounded-panel bg-bg-surface" />)}</div>}
             {releases.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={releases.retry}>Retry releases</button>}>Release discovery is unavailable right now.</ErrorState>}
             {releases.status === "ready" && <div className={styles.releaseGrid}>
-              {releases.data?.items.slice(0, 8).map((release) => <AtlasReleaseDestination key={release.release_product_id} releaseCode={release.official_code ?? "Special product"} releaseName={release.display_name} releasedOn={release.released_on} href={`/cards?release_product_id=${release.release_product_id}`} />)}
+              {releases.data?.items.slice(0, 8).map((release) => <AtlasReleaseDestination key={release.release_product_id} releaseCode={release.official_code} releasedOn={release.released_on} href={`/cards?release_product_id=${release.release_product_id}`} />)}
               {releases.data?.items.length === 0 && <p>No releases are available right now.</p>}
             </div>}
             <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>

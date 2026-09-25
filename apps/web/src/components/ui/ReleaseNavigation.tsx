@@ -2,6 +2,7 @@
 import { useEffect, useRef, type MouseEvent } from "react";
 import type { ReleaseCatalogueItem } from "@/lib/releases";
 import { releaseLabel } from "@/lib/releases";
+import { releaseDisplayNameEnglish } from "@/lib/releaseNames";
 import styles from "@/app/cards/CardsAtlas.module.css";
 
 export function ReleaseNavigation({ releases, status, selected, hrefFor, onSelect, onRetry }: {
@@ -34,7 +35,7 @@ export function ReleaseNavigation({ releases, status, selected, hrefFor, onSelec
       <select aria-label="Release" value={selected ?? ""} onChange={(event) => onSelect(event.target.value ? Number(event.target.value) : null)}>
         <option value="">All releases</option>
         {selected && !releases.some((r) => r.release_product_id === selected) && <option value={selected}>Selected release</option>}
-        {releases.map((r) => <option key={r.release_product_id} value={r.release_product_id}>{releaseLabel(r)} · {r.print_count} printings</option>)}
+        {releases.map((r) => <option key={r.release_product_id} value={r.release_product_id}>{releaseLabel(r)}</option>)}
       </select>
     </label>
     <nav ref={scroller} className={styles.releaseScroller} aria-label="Browse releases">
@@ -44,7 +45,7 @@ export function ReleaseNavigation({ releases, status, selected, hrefFor, onSelec
         </a>
         {releases.map((r) => <a key={r.release_product_id} ref={selected === r.release_product_id ? selectedRef : undefined} href={hrefFor(r.release_product_id)} onClick={(e) => select(e, r.release_product_id)} aria-label={releaseLabel(r)} aria-current={selected === r.release_product_id ? 'page' : undefined} className={`${styles.releaseCard} ${selected === r.release_product_id ? styles.releaseCardSelected : ''}`}>
           <span className={styles.releaseCode}>{r.official_code ?? 'Special product'}</span>
-          <span className={styles.releaseName}>{r.display_name}</span>
+          {releaseDisplayNameEnglish(r.official_code) !== (r.official_code ?? "Special product") && <span className={styles.releaseName}>{releaseDisplayNameEnglish(r.official_code)}</span>}
           <span className={styles.releaseName}>{r.print_count} printings{r.released_on ? ` · ${r.released_on}` : ' · Date unavailable'}</span>
         </a>)}
       </div>

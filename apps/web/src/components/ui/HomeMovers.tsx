@@ -27,7 +27,7 @@ export function HomeMovers() {
       data.movers.slice(0, HOME_MOVERS_LIMIT).forEach((mover) => {
         fetchPrint(mover.card_print_id).then((detail) => {
           if (cancelled) return;
-          const label = [detail.release_code, detail.release_name].filter(Boolean).join(" — ");
+          const label = detail.release_code || (detail.release_product_id ? "Special product" : null);
           if (label) setReleases((current) => ({ ...current, [mover.card_print_id]: label }));
         }).catch(() => {});
       });
