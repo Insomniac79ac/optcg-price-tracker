@@ -57,7 +57,7 @@ import {
   toPrintUiModel,
 } from "@/lib/prints";
 import { describeSourceEvidence } from "@/lib/sourceEvidence";
-import { getTerm, printingTypeTerm, specialPrintTerm, type Term } from "@/lib/terminology";
+import { getTerm, specialPrintTerm, versionPrintingLabel, type Term } from "@/lib/terminology";
 import { releaseLabelEnglish } from "@/lib/releaseNames";
 
 /** The evidence type behind one source value: what kind of number this is,
@@ -691,7 +691,7 @@ function VersionCard({ version, current = false }: { version: PrintSibling; curr
   const name = version.name_en || version.name_jp || version.card_code || "Card version";
   // Special category and printing type are independent facts. Ordinary
   // rarity stays in the detail metadata; raw treatment tokens add no label.
-  const descriptors = [specialPrintTerm(version.rarity)?.label, printingTypeTerm(version.official_asset_variant)?.label]
+  const descriptors = [specialPrintTerm(version.rarity)?.label, versionPrintingLabel(version.official_asset_variant)]
     .filter(Boolean).join(" · ");
   const release = version.release_product_id != null
     ? releaseLabelEnglish(version.release_code, version.release_name)

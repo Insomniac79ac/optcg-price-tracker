@@ -140,14 +140,17 @@ describe("Other versions", () => {
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveTextContent("Franky");
     expect(cards[0]).toHaveTextContent("ST01-010");
-    expect(cards[0]).toHaveTextContent("Alt Art");
+    expect(cards[0]).toHaveTextContent("Alternate artwork");
+    expect(cards[0]).not.toHaveTextContent("Original artwork");
     expect(cards[0]).toHaveTextContent("Found in Premium Card Collection — 25th Anniversary Edition");
     expect(within(cards[0]).getByText("Current")).toBeInTheDocument();
     expect(within(cards[0]).queryByRole("link")).toBeNull();
     expect(cards[1]).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
+    expect(cards[1]).toHaveTextContent("Original artwork");
+    expect(cards[1]).not.toHaveTextContent("Alternate artwork");
     expect(within(cards[1]).getByRole("link")).toHaveAttribute("href", "/prints/6785");
     expect(within(cards[1]).getByRole("img")).toHaveAttribute("src", base.image_url);
-    expect(section).not.toHaveTextContent(/Print #|Current printing|SP Card|プレミアム|スタートデッキ/);
+    expect(section).not.toHaveTextContent(/Print #|Current printing|Base card|Alt Art|SP Card|プレミアム|スタートデッキ/);
     expect(document.body).not.toHaveTextContent(/Print #|Current printing/);
     expect(detail.release_name).toBe(anniversary);
   });
@@ -164,7 +167,7 @@ describe("Other versions", () => {
     const sp = within(section).getByRole("link", {name: /SP Card/});
     expect(sp).toHaveAttribute("href", "/prints/14");
     expect(sp).toHaveTextContent("OP01-021");
-    expect(sp).toHaveTextContent("SP Card · Alt Art");
+    expect(sp).toHaveTextContent("SP Card · Alternate artwork");
     expect(sp).toHaveTextContent("Found in OP-17 — The World's Strongest Warriors");
     expect(within(section).getByRole("link", {name: /Treasure Rare/})).toHaveTextContent("Treasure Rare · Reprint");
     expect(section).toHaveTextContent("Found in OP-01 — Romance Dawn");
@@ -183,9 +186,27 @@ describe("Other versions", () => {
     expect(within(section).getByRole("link", {name: /Release not recorded/})).not.toHaveTextContent("OP-01");
     const uncoded = within(section).getByRole("link", {name: /Found in Special product/});
     expect(within(uncoded).queryByRole("img")).toBeNull();
-    expect(uncoded).not.toHaveTextContent(/記念商品|raw-treatment|Alt Art/);
+    expect(uncoded).not.toHaveTextContent(/記念商品|raw-treatment|Alternate artwork|Original artwork/);
     expect(within(section).getByRole("link", {name: /Found in Premium Card Collection$/})).toBeInTheDocument();
   });
+
+  it.each([null, undefined, "", "x1", "r1"])(
+    "does not infer artwork from an original release or normal treatment when provenance is %s",
+    async (variant) => {
+      // Even the family's earlier original product does not
+      // establish base artwork without explicit official asset evidence.
+      const ambiguous = franky({card_print_id: 6785, official_asset_variant: variant,
+        treatment: "normal", release_product_id: 189, release_code: "ST-01",
+        release_name: "スタートデッキ 麦わらの一味【ST-01】"});
+      fetchPrint.mockResolvedValue(franky({siblings: [ambiguous]}));
+      render(<PrintDetailPage />);
+      const section = await screen.findByRole("region", {name: "Other versions"});
+      const sibling = within(section).getByRole("link");
+      expect(sibling).toHaveAttribute("href", "/prints/6785");
+      expect(sibling).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
+      expect(sibling).not.toHaveTextContent(/Original artwork|Alternate artwork|Base card/);
+    },
+  );
 });
 
 /** The card image specifically - the page's brand texture is tagged
