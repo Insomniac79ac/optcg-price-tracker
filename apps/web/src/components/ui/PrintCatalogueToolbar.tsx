@@ -5,6 +5,8 @@ import { classifyRarityToken } from "@/lib/terminology";
 import type { PrintCatalogueFacets, PrintCatalogueSort } from "@/lib/prints";
 import { collectorRefinementCount, EMPTY_PRINT_FILTERS, type PrintCatalogueFilters } from "@/lib/catalogueState";
 import { CatalogueDialog } from "./CatalogueDialog";
+import type { ReleaseCatalogueItem } from "@/lib/releases";
+import { ReleaseSelector } from "./ReleaseSelector";
 import { CollectorMultiSelect } from "./CollectorMultiSelect";
 export { EMPTY_PRINT_FILTERS, hasActivePrintFilters, type PrintCatalogueFilters } from "@/lib/catalogueState";
 
@@ -20,8 +22,8 @@ function subscribeToMobile(onChange: () => void) {
   return () => media.removeEventListener("change", onChange);
 }
 
-export function PrintCatalogueToolbar({ filters, facets, onChange, legend }: {
-  filters: PrintCatalogueFilters; facets: PrintCatalogueFacets;
+export function PrintCatalogueToolbar({ filters, facets, releases, onChange, legend }: {
+  filters: PrintCatalogueFilters; facets: PrintCatalogueFacets; releases: ReleaseCatalogueItem[];
   onChange: (next: PrintCatalogueFilters) => void; legend?: ReactNode;
 }) {
   const mobile = useSyncExternalStore(subscribeToMobile, () => window.matchMedia(MOBILE_QUERY).matches, () => false);
@@ -31,7 +33,7 @@ export function PrintCatalogueToolbar({ filters, facets, onChange, legend }: {
   if (!mobile) return (
     <aside className="sticky top-[calc(var(--header-h)+1rem)] rounded-panel border border-border-default bg-bg-surface p-4" aria-labelledby="catalogue-filters-title">
       <h2 id="catalogue-filters-title" className="font-display text-lg font-semibold">Collector filters{count > 0 ? ` · ${count}` : ""}</h2>
-      <CatalogueFilterFields filters={filters} facets={facets} onChange={onChange} />
+      <CatalogueFilterFields releases={releases} filters={filters} facets={facets} onChange={onChange} />
       <div className="mt-4 border-t border-border-muted pt-4">{legend}</div>
       {count > 0 && <button type="button" className="mt-2 min-h-11 text-xs underline" onClick={() => onChange({ ...filters, rarities: [], treatments: [] })}>Clear collector filters</button>}
     </aside>
@@ -42,7 +44,7 @@ export function PrintCatalogueToolbar({ filters, facets, onChange, legend }: {
       {legend}
     </div>
     {open && <CatalogueDialog label="Filters" sheet onClose={() => setOpen(false)}>
-      <CatalogueFilterFields filters={draft} facets={facets} onChange={setDraft} />
+      <CatalogueFilterFields releases={releases} filters={draft} facets={facets} onChange={setDraft} />
       <div className="sticky bottom-0 mt-5 flex gap-3 border-t border-border-default bg-bg-elevated pt-4">
         <button type="button" onClick={() => setDraft(EMPTY_PRINT_FILTERS)} className="min-h-11 flex-1 rounded-control border border-border-default">Clear all</button>
         <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="min-h-11 flex-1 rounded-control border border-accent-gold text-parchment">Apply filters</button>
@@ -64,10 +66,12 @@ export function facetLabel(value: string): string {
   const facts = classifyRarityToken(value);
   return facts.rarity?.label ?? facts.specialPrint?.label ?? value;
 }
-function CatalogueFilterFields({ filters, facets, onChange }: {
-  filters: PrintCatalogueFilters; facets: PrintCatalogueFacets; onChange: (next: PrintCatalogueFilters) => void;
+function CatalogueFilterFields({ filters, facets, releases, onChange }: {
+  filters: PrintCatalogueFilters; facets: PrintCatalogueFacets; releases: ReleaseCatalogueItem[]; onChange: (next: PrintCatalogueFilters) => void;
 }) {
   return <div className="mt-4 flex flex-col gap-3">
+    <ReleaseSelector releases={releases} selected={filters.releaseProductId}
+      onChange={(releaseProductId) => onChange({ ...filters, releaseProductId, legacySet: "" })} />
     <CollectorMultiSelect label="Rarity" options={facets.rarities} selected={filters.rarities} optionLabel={facetLabel}
       onChange={(rarities) => onChange({ ...filters, rarities })} />
     <CollectorMultiSelect label="Treatment" options={facets.treatments} selected={filters.treatments}

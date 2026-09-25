@@ -4,6 +4,7 @@ import { releaseDisplayNameEnglish, releaseLabelEnglish } from './releaseNames';
 import { releaseLabel } from './releases';
 import { printFixture, releaseFixture } from './publicDiscoveryFixtures';
 import { toPrintUiModel } from './prints';
+import { ReleaseSelector } from '@/components/ui/ReleaseSelector';
 import { ReleaseNavigation } from '@/components/ui/ReleaseNavigation';
 import { PrintCardTile } from '@/components/ui/PrintCardTile';
 import { AtlasReleaseDestination } from '@/components/ui/AtlasPrimitives';
@@ -23,7 +24,8 @@ describe('English release presentation', () => {
   it('uses English strip/select labels without mutating source metadata, chronology or ID navigation', () => {
     const release = Object.freeze({ ...releaseFixture.items[0], display_name: '世界最強の戦士' });
     const onSelect = vi.fn();
-    render(<ReleaseNavigation releases={[release]} selected={186} status="ready" hrefFor={(id) => `/cards?release_product_id=${id}`} onSelect={onSelect} onRetry={vi.fn()} />);
+    render(<><ReleaseNavigation releases={[release]} selected={186} status="ready" hrefFor={(id) => `/cards?release_product_id=${id}`} onSelect={onSelect} onRetry={vi.fn()} /><ReleaseSelector releases={[release]} selected={186} onChange={onSelect} /></>);
+    expect(within(screen.getByRole('region', { name: 'Browse by release' })).queryByRole('combobox')).toBeNull();
     const strip = within(screen.getByRole('navigation', { name: 'Browse releases' }));
     expect(strip.getByText("The World's Strongest Warriors")).toBeInTheDocument();
     expect(strip.queryByText(/世界最強の戦士/)).toBeNull();

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
+import { releaseFixture } from '@/lib/publicDiscoveryFixtures';
 import { CollectorMultiSelect } from './CollectorMultiSelect';
 import { PrintCatalogueToolbar } from './PrintCatalogueToolbar';
 import { EMPTY_PRINT_FILTERS, type PrintCatalogueFilters } from '@/lib/catalogueState';
@@ -10,7 +11,7 @@ const facets = { rarities: ['SR', 'SEC', 'R'], treatments: ['normal', 'parallel'
 const matchMedia = window.matchMedia;
 function Toolbar({ initial = EMPTY_PRINT_FILTERS }: { initial?: PrintCatalogueFilters }) {
   const [filters, setFilters] = useState(initial);
-  return <PrintCatalogueToolbar filters={filters} facets={facets} onChange={(value) => { changed(value); setFilters(value); }} />;
+  return <PrintCatalogueToolbar releases={releaseFixture.items} filters={filters} facets={facets} onChange={(value) => { changed(value); setFilters(value); }} />;
 }
 beforeEach(() => {
   changed.mockReset();
@@ -21,6 +22,18 @@ afterEach(() => { window.matchMedia = matchMedia; });
 const openRarity = () => fireEvent.click(screen.getByRole('button', { name: /^Rarity/ }));
 
 describe('compact desktop collector filters', () => {
+  it('places the controlled Release selector before both collector refinements', () => {
+    render(<Toolbar initial={{ ...EMPTY_PRINT_FILTERS, releaseProductId: 186 }} />);
+    const release = screen.getByRole('combobox', { name: 'Release' });
+    expect(release).toHaveValue('186');
+    expect(release).toHaveAttribute('title', "OP-17 — The World's Strongest Warriors");
+    expect(release.compareDocumentPosition(screen.getByRole('button', { name: 'Rarity Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(release.compareDocumentPosition(screen.getByRole('button', { name: 'Treatment Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Collector filters' })).toBeInTheDocument();
+    fireEvent.change(release, { target: { value: '' } });
+    expect(changed).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ releaseProductId: null, legacySet: '' }));
+    expect(release).toHaveValue('');
+  });
   it('is initially closed, exposes multi-selection and updates its closed summary', () => {
     render(<Toolbar />);
     const trigger = screen.getByRole('button', { name: 'Rarity Any' });
@@ -80,10 +93,13 @@ describe('compact desktop collector filters', () => {
 describe('mobile compact draft filters', () => {
   beforeEach(() => { window.matchMedia = vi.fn().mockImplementation((query) => ({ matches: query.includes('max-width'), addEventListener: vi.fn(), removeEventListener: vi.fn() })); });
   it('edits both dropdowns without committing, then applies exactly once', () => {
-    render(<Toolbar initial={{ ...EMPTY_PRINT_FILTERS, releaseProductId: 186 }} />);
+    render(<Toolbar />);
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     const sheet = screen.getByRole('dialog', { name: 'Filters' });
     expect(within(sheet).queryByRole('checkbox')).toBeNull();
+    const release = within(sheet).getByRole('combobox', { name: 'Release' });
+    fireEvent.change(release, { target: { value: '186' } });
+    expect(release.compareDocumentPosition(within(sheet).getByRole('button', { name: 'Rarity Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     openRarity();
     for (const name of ['Super Rare', 'Secret Rare']) fireEvent.click(screen.getByRole('checkbox', { name }));
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });

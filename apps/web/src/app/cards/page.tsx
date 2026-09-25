@@ -70,7 +70,7 @@ function CatalogueView({ query, filters, offset, releases, releaseStatus, retryR
         hrefFor={(id) => `${pathname}${buildCatalogueQuery({ ...filters, releaseProductId: id, legacySet: '' })}`}
         onSelect={chooseRelease} onRetry={retryReleases} />
       <div className={styles.catalogueLayout}>
-        <PrintCatalogueToolbar filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
+        <PrintCatalogueToolbar releases={releases} filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
         <div id="catalogue-results" className={styles.catalogueContent}>
           <div className={styles.catalogueBar}>
             <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact printings</h2>

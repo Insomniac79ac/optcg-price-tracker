@@ -30,18 +30,34 @@ describe('release-first collector discovery',()=>{
     const strip=within(screen.getByRole('navigation',{name:'Browse releases'}));
     expect(strip.getAllByRole('link').slice(1).map(a=>a.getAttribute('href'))).toEqual(releaseFixture.items.map(r=>`/cards?release_product_id=${r.release_product_id}`));
     expect(strip.getAllByRole('link')[1]).toHaveTextContent('OP-17');
-    const options=within(screen.getByRole('combobox',{name:'Release'})).getAllByRole('option');
+    expect(within(screen.getByRole('region',{name:'Browse by release'})).queryByRole('combobox')).toBeNull();
+    const options=within(within(screen.getByRole('complementary')).getByRole('combobox',{name:'Release'})).getAllByRole('option');
     expect(options.slice(-6).every(o=>o.textContent?.includes('Special product'))).toBe(true);
   });
-  it('uses selector and strip navigation, and restores All releases',async()=>{
+  it('synchronizes tiles, selector, active chip and URL in both directions including Back',async()=>{
     const push=vi.spyOn(window.history,'pushState');const view=await ready();
-    fireEvent.change(screen.getByRole('combobox',{name:'Release'}),{target:{value:'186'}});
+    const release = screen.getByRole('combobox',{name:'Release'});
+    const op17 = screen.getByRole('link',{name:"OP-17 — The World's Strongest Warriors"});
+    const all = screen.getByRole('link',{name:/All releases/});
+    fireEvent.click(op17);
     expect(push).toHaveBeenLastCalledWith(null,'','/cards?release_product_id=186');
     search='release_product_id=186';view.rerender(<Page/>);
     await waitFor(()=>expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,offset:0})));
-    expect(screen.getByRole('link',{name:"OP-17 — The World's Strongest Warriors"})).toHaveAttribute('aria-current','page');
-    fireEvent.click(screen.getByRole('link',{name:/All releases/}));
+    expect(release).toHaveValue('186');expect(op17).toHaveAttribute('aria-current','page');
+    expect(screen.getByRole('heading',{name:'Collector filters'})).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Active catalogue filters')).getByRole('button',{name:/Remove release filter OP-17/})).toBeInTheDocument();
+    fireEvent.change(release,{target:{value:''}});
     expect(push).toHaveBeenLastCalledWith(null,'','/cards');
+    search='';view.rerender(<Page/>);expect(release).toHaveValue('');expect(all).toHaveAttribute('aria-current','page');
+    // App Router supplies the prior committed URL after the browser popstate.
+    window.history.replaceState(null,'','/cards?release_product_id=186');fireEvent.popState(window);
+    search='release_product_id=186';view.rerender(<Page/>);
+    expect(release).toHaveValue('186');expect(op17).toHaveAttribute('aria-current','page');
+    expect(push).toHaveBeenCalledTimes(2);
+    fireEvent.click(all);search='';view.rerender(<Page/>);
+    expect(release).toHaveValue('');expect(all).toHaveAttribute('aria-current','page');
+    fireEvent.change(release,{target:{value:'186'}});search='release_product_id=186';view.rerender(<Page/>);
+    expect(op17).toHaveAttribute('aria-current','page');expect(release).toHaveValue('186');
   });
   it('resolves legacy codes and ignores conflicting set when ID exists',async()=>{
     search='set=OP-01&release_product_id=186';await ready();
@@ -58,11 +74,24 @@ describe('release-first collector discovery',()=>{
     render(<Page/>);const link=await screen.findByRole('link',{name:/^Print 99,/});
     expect(link).toHaveAttribute('href','/prints/99');expect(link).toHaveTextContent('OP01-001');expect(link).toHaveTextContent('Found in OP-17');
   });
-  it('arrows are visible labelled controls and move the strip only',async()=>{
-    await ready(); const strip=screen.getByRole('navigation',{name:'Browse releases'});strip.scrollBy=vi.fn();
-    Object.defineProperty(strip,'clientWidth',{value:600});
-    fireEvent.click(screen.getByRole('button',{name:'Scroll releases right'}));expect(strip.scrollBy).toHaveBeenCalledWith({left:480,behavior:'smooth'});
-    fireEvent.click(screen.getByRole('button',{name:'Scroll releases left'}));expect(strip.scrollBy).toHaveBeenLastCalledWith({left:-480,behavior:'smooth'});
+  it('keeps carousel arrows beside the track and reflects start/end/resize bounds',async()=>{
+    await ready();const strip=screen.getByRole('navigation',{name:'Browse releases'});strip.scrollBy=vi.fn();
+    Object.defineProperties(strip,{clientWidth:{value:600,configurable:true},scrollWidth:{value:1800},scrollLeft:{value:0,writable:true}});
+    const previous=screen.getByRole('button',{name:'Scroll releases left'});const next=screen.getByRole('button',{name:'Scroll releases right'});
+    expect(next.parentElement).toBe(strip.parentElement?.parentElement);expect(next).toHaveAttribute('aria-controls',strip.id);
+    fireEvent.scroll(strip);expect(previous).toBeDisabled();expect(next).toBeEnabled();
+    fireEvent.click(next);expect(strip.scrollBy).toHaveBeenLastCalledWith({left:480,behavior:'smooth'});
+    strip.scrollLeft=480;fireEvent.scroll(strip);expect(previous).toBeEnabled();
+    fireEvent.click(previous);expect(strip.scrollBy).toHaveBeenLastCalledWith({left:-480,behavior:'smooth'});
+    strip.scrollLeft=1200;fireEvent.scroll(strip);expect(next).toBeDisabled();expect(previous).toBeEnabled();
+    strip.scrollLeft=0;Object.defineProperty(strip,'clientWidth',{value:1800});fireEvent(window,new Event('resize'));
+    expect(previous).toBeDisabled();expect(next).toBeDisabled();
+  });
+  it('respects reduced motion when advancing the release strip',async()=>{
+    window.matchMedia=vi.fn().mockImplementation(query=>({matches:query.includes('prefers-reduced-motion'),addEventListener:vi.fn(),removeEventListener:vi.fn()}));
+    await ready();const strip=screen.getByRole('navigation',{name:'Browse releases'});strip.scrollBy=vi.fn();
+    Object.defineProperties(strip,{clientWidth:{value:600},scrollWidth:{value:1800}});fireEvent.scroll(strip);
+    fireEvent.click(screen.getByRole('button',{name:'Scroll releases right'}));expect(strip.scrollBy).toHaveBeenCalledWith({left:480,behavior:'instant'});
   });
   it('commits desktop multi-select immediately, counts selections and removes one chip',async()=>{
     search='rarity=SR&treatment=parallel&treatment=sp';const view=await ready();const push=vi.spyOn(window.history,'pushState');
@@ -102,16 +131,22 @@ describe('release-first collector discovery',()=>{
   });
   it('mobile edits a multi-select draft and commits only once on Apply',async()=>{
     window.matchMedia=vi.fn().mockImplementation(query=>({matches:query.includes('max-width'),addEventListener:vi.fn(),removeEventListener:vi.fn()}));
-    await ready();const push=vi.spyOn(window.history,'pushState');
+    const view=await ready();const push=vi.spyOn(window.history,'pushState');
+    expect(screen.queryByRole('combobox',{name:'Release'})).toBeNull();
     fireEvent.click(screen.getByRole('button',{name:'Filters'}));const dialog=screen.getByRole('dialog',{name:'Filters'});
+    fireEvent.change(within(dialog).getByRole('combobox',{name:'Release'}),{target:{value:'186'}});
+    expect(screen.getByRole('link',{name:/All releases/})).toHaveAttribute('aria-current','page');
+    const initialRequests=vi.mocked(fetchPrintCatalogue).mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button',{name:/^Rarity/}));
     for(const name of ['Super Rare','Secret Rare'])fireEvent.click(within(dialog).getByRole('checkbox',{name}));
     fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));
     fireEvent.click(within(dialog).getByRole('button',{name:/^Treatment/}));
     for(const name of ['parallel','sp'])fireEvent.click(within(dialog).getByRole('checkbox',{name}));
     fireEvent.click(within(dialog).getByRole('button',{name:'Done'}));
-    expect(push).not.toHaveBeenCalled();fireEvent.click(within(dialog).getByRole('button',{name:'Apply filters'}));
-    expect(push).toHaveBeenCalledExactlyOnceWith(null,'','/cards?rarity=SR&rarity=SEC&treatment=parallel&treatment=sp');expect(screen.queryByRole('dialog')).toBeNull();
+    expect(push).not.toHaveBeenCalled();expect(fetchPrintCatalogue).toHaveBeenCalledTimes(initialRequests);fireEvent.click(within(dialog).getByRole('button',{name:'Apply filters'}));
+    expect(push).toHaveBeenCalledExactlyOnceWith(null,'','/cards?release_product_id=186&rarity=SR&rarity=SEC&treatment=parallel&treatment=sp');expect(screen.queryByRole('dialog')).toBeNull();
+    search='release_product_id=186&rarity=SR&rarity=SEC&treatment=parallel&treatment=sp';view.rerender(<Page/>);
+    expect(screen.getByRole('link',{name:"OP-17 — The World's Strongest Warriors"})).toHaveAttribute('aria-current','page');
   });
   it('intersection appends with no history entry; manual fallback remains and end is explicit',async()=>{
     await ready();const push=vi.spyOn(window.history,'pushState');expect(tiles()).toHaveLength(24);
