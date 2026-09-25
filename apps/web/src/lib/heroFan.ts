@@ -29,6 +29,7 @@
  */
 
 import type { PrintUiModel } from "./prints";
+import { resolveCardImageUrl } from "./cardImage";
 
 /** How many prints the composition holds: one front card and two behind. */
 export const HERO_FAN_SIZE = 3;
@@ -61,15 +62,18 @@ function hash(seed: string): number {
  * - no usable image URL means `CardImageFrame` would render its
  *   code/rarity placeholder, which is a fine tile state and a poor
  *   decoration - the fan omits the print instead.
- * - `exact_print_verified === false` means the API has looked and found the
- *   image is *not* this exact print. Where that evidence doesn't exist at all
- *   (no display image, so the value is null) there is nothing to fail, and
- *   the canonical artwork stays eligible.
+ * - an explicitly non-exact display image is excluded. The canonical Bandai
+ *   fallback is still usable: it reports false when no owned exact asset was
+ *   selected, but repeats this print's canonical image_url. A different URL
+ *   or a non-exact owned image cannot use that exception.
  */
 export function isHeroFanEligible(print: PrintUiModel): boolean {
   const url = print.imageUrl?.trim() ?? "";
   if (url === "") return false;
-  return print.imageExactPrintVerified !== false;
+  return print.imageExactPrintVerified !== false || (
+    print.imageSource === "bandai" && !print.imageOwnedAssetSelected
+    && print.imageUrl === resolveCardImageUrl(print.sourceImageUrl)
+  );
 }
 
 /** True for an image we mirror ourselves and have verified as this exact

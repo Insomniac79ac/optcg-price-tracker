@@ -125,3 +125,6 @@
     gap:1rem;
   }
 }
+
+.move[data-direction="up"] { color: var(--accent-teal-hover); }
+.move[data-direction="down"] { color: var(--accent-gold); }

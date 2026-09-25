@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/StateBlocks";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
@@ -11,45 +11,22 @@ import { HomeMovers } from "@/components/ui/HomeMovers";
 import { AtlasVisualSystem, AtlasSectionIntro, AtlasReleaseDestination } from "@/components/ui/AtlasPrimitives";
 import styles from "./Home.module.css";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
-import { fetchPrintCatalogue, toPrintUiModel, type PrintUiModel } from "@/lib/prints";
+import { toPrintUiModel } from "@/lib/prints";
+import { fetchReleases } from "@/lib/releases";
+import { usePublicResource } from "@/hooks/usePublicResource";
+import { fetchHeroCatalogue, fetchRecentFinds, homeHeroPrints, rotateRecentFinds, utcDayKey } from "@/lib/homeDiscovery";
 
-// One catalogue request, shared by every recently updated tile. "updated"
-// means CardPrint.updated_at, not release, listing or price-observation date.
-const CATALOGUE_FETCH_LIMIT = 100;
-const RECENT_FINDS_LIMIT = 4;
 const LINK_CLASS = "text-sm font-medium text-accent-teal hover:text-accent-teal-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-teal";
-type CatalogueStatus =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; items: PrintUiModel[] };
-
-// Preserve the existing selection: priced entries first within the latest
-// 100 updated records, keeping server order within each group.
-function pickRecentFinds(items: PrintUiModel[]): PrintUiModel[] {
-  return [...items.filter((p) => p.marketIndexJpy !== null),
-    ...items.filter((p) => p.marketIndexJpy === null)].slice(0, RECENT_FINDS_LIMIT);
-}
+// The time bucket is captured after hydration, alongside fetched data. Server
+// and first client render both show the same bounded skeleton.
+const loadHero = async () => homeHeroPrints(await fetchHeroCatalogue(), utcDayKey());
+const loadRecent = async () => rotateRecentFinds((await fetchRecentFinds()).items.map(toPrintUiModel), utcDayKey());
 
 export default function HomePage() {
-  const [status, setStatus] = useState<CatalogueStatus>({ kind: "loading" });
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    fetchPrintCatalogue({ sort: "updated", limit: CATALOGUE_FETCH_LIMIT })
-      .then((data) => {
-        if (!cancelled) setStatus({ kind: "ready", items: data.items.map(toPrintUiModel) });
-      })
-      .catch(() => { if (!cancelled) setStatus({ kind: "error" }); });
-    return () => { cancelled = true; };
-  }, [attempt]);
-
-  const recent = status.kind === "ready" ? pickRecentFinds(status.items) : [];
-  const preview = recent.filter((print) => print.imageUrl).slice(0, 3);
-  // Codes come from the existing response, never a parallel release vocabulary.
-  const releases = status.kind === "ready"
-    ? [...new Set(status.items.map((print) => print.releaseCode).filter((code): code is string => Boolean(code)))].slice(0, 6)
-    : [];
-
+  const hero = usePublicResource(loadHero);
+  const recent = usePublicResource(loadRecent);
+  const releases = usePublicResource(fetchReleases);
+  const preview = hero.data ?? [];
   return (
     <div className={styles.root}>
       <AppHeader />
@@ -62,7 +39,10 @@ export default function HomePage() {
                 <h1 id="home-title">Find your <span>next card.</span></h1>
                 <HomeCardSearch />
               </div>
-              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Artwork previews from recently updated printings">
+              {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured printings"><div /><div /><div /></div>}
+              {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured printings are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured printings</button></p></div>}
+              {hero.status === "ready" && preview.length === 0 && <div className={styles.heroPlaceholder}><p>More SR, SP and Parallel artwork is being added to the Atlas.</p></div>}
+              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Featured SR, SP and Parallel printings">
                 {preview.map((print) => <Link key={print.cardPrintId} href={`/prints/${print.cardPrintId}`} prefetch={false} aria-label={`Preview ${print.displayName}, ${print.cardCode}, ${print.printingType?.label ?? "printing"}`}>
                   <CardImageFrame imageUrl={print.imageUrl} alt="" cardCode={print.cardCode} rarity={print.rarity} geometry={print.imageGeometry} size="full" />
                 </Link>)}
@@ -74,26 +54,22 @@ export default function HomePage() {
 
           <section aria-labelledby="updated-printings">
             <div data-atlas-chapter>
-              <AtlasSectionIntro id="updated-printings" number="02" title="Recent finds" description="A few recently updated catalogue entries, with priced cards shown first." />
+              <AtlasSectionIntro id="updated-printings" number="02" title="Recent finds" description="Recently added to Atlas. Discover a different selection each day." />
             </div>
-            {status.kind === "loading" && <CardGridSkeleton count={RECENT_FINDS_LIMIT} />}
-            {status.kind === "error" && (
-              <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={() => {
-                setStatus({ kind: "loading" });
-                setAttempt((value) => value + 1);
-              }}>Try again</button>}>The catalogue couldn&rsquo;t be loaded right now.</ErrorState>
-            )}
-            {status.kind === "ready" && (status.items.length === 0
-              ? <p className="text-sm text-text-secondary">No recently updated printings are available right now.</p>
-              : <div className={styles.recentGrid}>
-                  {recent.map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}
-                </div>)}
+            {recent.status === "loading" && <div className={styles.recentLoading}><CardGridSkeleton count={4} /></div>}
+            {recent.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={recent.retry}>Retry Recent Finds</button>}>Recent Finds couldn&rsquo;t be loaded right now.</ErrorState>}
+            {recent.status === "ready" && (recent.data?.length
+              ? <div className={styles.recentGrid}>{recent.data.map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}</div>
+              : <p className="text-sm text-text-secondary">No recently added printings are available right now.</p>)}
           </section>
 
           <section className={styles.explore} aria-labelledby="home-explore">
             <div data-atlas-chapter><AtlasSectionIntro id="home-explore" number="03" title="Explore the Atlas" /></div>
-            {releases.length > 0 && <div className={styles.releaseGrid}>
-              {releases.map((code) => <AtlasReleaseDestination key={code} releaseCode={code} href={`/cards?set=${encodeURIComponent(code)}`} />)}
+            {releases.status === "loading" && <div className={styles.releaseGrid} aria-label="Loading releases">{Array.from({length: 8}, (_, i) => <div key={i} className="h-24 animate-pulse rounded-panel bg-bg-surface" />)}</div>}
+            {releases.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={releases.retry}>Retry releases</button>}>Release discovery is unavailable right now.</ErrorState>}
+            {releases.status === "ready" && <div className={styles.releaseGrid}>
+              {releases.data?.items.slice(0, 8).map((release) => <AtlasReleaseDestination key={release.release_product_id} releaseCode={release.official_code ?? "Special product"} releaseName={release.display_name} releasedOn={release.released_on} href={`/cards?release_product_id=${release.release_product_id}`} />)}
+              {releases.data?.items.length === 0 && <p>No releases are available right now.</p>}
             </div>}
             <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>Browse all cards</Link>
           </section>

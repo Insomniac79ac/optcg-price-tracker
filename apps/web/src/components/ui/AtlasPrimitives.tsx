@@ -81,9 +81,10 @@ export function AtlasArtworkStage({ image, caption }: { image: ArtworkProps; cap
 
 /** The caller owns the release code and URL. Naming is display-only and
  * prefers a supplied product name over the saved official catalogue label. */
-export function AtlasReleaseDestination({ releaseCode, releaseName, href }: {
+export function AtlasReleaseDestination({ releaseCode, releaseName, releasedOn, href }: {
   releaseCode: string;
   releaseName?: string | null;
+  releasedOn?: string | null;
   href: string;
 }) {
   return (
@@ -91,7 +92,8 @@ export function AtlasReleaseDestination({ releaseCode, releaseName, href }: {
       <span className={styles.destinationDot} aria-hidden="true" />
       <span className={styles.destinationCopy}>
         <span className={styles.releaseCode}>{releaseCode}</span>{" "}
-        <span className={styles.destinationLabel}>{releaseDisplayName(releaseCode, releaseName)}</span>
+        <span className={styles.destinationLabel}>{releaseName ?? releaseDisplayName(releaseCode)}</span>
+        {releasedOn && <time dateTime={releasedOn} className="mt-1 text-xs text-text-muted">{releasedOn}</time>}
       </span>
       <span className={styles.destinationArrow} aria-hidden="true">→</span>
     </Link>
