@@ -312,6 +312,7 @@
 }
 
 .catalogueContent {
+  scroll-margin-top: calc(var(--header-h) + 1rem);
   min-width: 0;
 }
 

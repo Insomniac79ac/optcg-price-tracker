@@ -71,6 +71,13 @@ describe('release-first collector discovery',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Remove rarity filter Super Rare'}));expect(push).toHaveBeenLastCalledWith(null,'','/cards?rarity=SEC&treatment=parallel&treatment=sp');
     fireEvent.click(within(screen.getByLabelText('Active catalogue filters')).getByRole('button',{name:'Clear all'}));expect(push).toHaveBeenLastCalledWith(null,'','/cards');
   });
+  it('returns to the beginning of changed results after deep scrolling',async()=>{
+    await ready();const results=document.getElementById('catalogue-results')!;
+    vi.spyOn(results,'getBoundingClientRect').mockReturnValue({top:-2000} as DOMRect);
+    results.scrollIntoView=vi.fn();
+    fireEvent.click(screen.getByRole('checkbox',{name:'Secret Rare'}));
+    expect(results.scrollIntoView).toHaveBeenCalledExactlyOnceWith({block:'start',behavior:'instant'});
+  });
   it('mobile edits a multi-select draft and commits only once on Apply',async()=>{
     window.matchMedia=vi.fn().mockImplementation(query=>({matches:query.includes('max-width'),addEventListener:vi.fn(),removeEventListener:vi.fn()}));
     await ready();const push=vi.spyOn(window.history,'pushState');

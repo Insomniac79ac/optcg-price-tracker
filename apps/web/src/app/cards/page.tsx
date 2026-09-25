@@ -50,6 +50,13 @@ function CatalogueView({ query, filters, offset, releases, releaseStatus, retryR
     const href = `${pathname}${buildCatalogueQuery(next)}`;
     if (href === `${pathname}${query}`) return;
     save();
+    // A user changing filters after several batches should start at the new
+    // results, not leave the sentinel visible at the old, now-clamped depth.
+    // Back restoration is separate and never takes this navigation path.
+    const results = document.getElementById("catalogue-results");
+    if (results && results.getBoundingClientRect().top < 0) {
+      results.scrollIntoView({ block: "start", behavior: "instant" });
+    }
     // Next App Router integrates native history with useSearchParams. Only
     // committed user changes push; automatic appends never touch the URL.
     window.history.pushState(null, "", href);
@@ -64,7 +71,7 @@ function CatalogueView({ query, filters, offset, releases, releaseStatus, retryR
         onSelect={chooseRelease} onRetry={retryReleases} />
       <div className={styles.catalogueLayout}>
         <PrintCatalogueToolbar filters={filters} facets={data?.facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
-        <div className={styles.catalogueContent}>
+        <div id="catalogue-results" className={styles.catalogueContent}>
           <div className={styles.catalogueBar}>
             <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact printings</h2>
               {total !== null && <p className={styles.catalogueCount}>{total.toLocaleString()} {total === 1 ? 'entry' : 'entries'} in this view</p>}
