@@ -45,6 +45,7 @@ function print(id: number, overrides: Partial<PrintUiModel> = {}): PrintUiModel 
     treatment: "normal",
     isDistinctTreatment: false,
     language: "jp",
+    releaseProductId: null, releaseName: null, createdAt: null, marketIndexChange7dPct: null,
     releaseCode: "SET",
     originalSetCode: "SET",
     printingType: null,
