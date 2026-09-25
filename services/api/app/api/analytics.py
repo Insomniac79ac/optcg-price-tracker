@@ -46,7 +46,9 @@ from app.services.card_pirate_index_composition import (
     get_index_composition,
 )
 from app.services.card_pirate_index_movers import (
+    MOVER_ORDERS,
     MoversIntegrityError,
+    UnknownMoverOrderError,
     get_index_movers,
 )
 from app.services.card_pirate_index_read import (
@@ -63,6 +65,7 @@ from app.services.market_analytics import (
     parse_price_basis,
 )
 from app.services.portfolio_risk import get_portfolio_risk
+from app.services.release_scope import ReleaseScopeError
 from app.services.sell_decision_support import get_sell_decision_support
 from app.services.wishlist_analytics import get_wishlist_analytics
 from app.settings import settings
@@ -121,6 +124,7 @@ def get_market_filters_endpoint(db: Session = Depends(get_db)):
 def get_market_overview_endpoint(
     price_basis: str = Query(default="market_index"),
     set_code: str | None = Query(default=None, alias="set", max_length=32),
+    release_product_id: int | None = Query(default=None, ge=1),
     rarity: str | None = Query(default=None, max_length=64),
     db: Session = Depends(get_db),
 ):
@@ -130,14 +134,21 @@ def get_market_overview_endpoint(
     how they moved. An unrecognised source is not a 404 - it comes back as an
     explicitly unavailable basis with truthful zero counts, the same way a
     print series does, because "Atlas does not price with that" is an answer.
+
+    Physical release membership uses the print's ReleaseProduct FK. Legacy
+    `set` resolves an official JP product code; both selectors must agree.
+    Unknown positive IDs and unknown codes select an empty scope, as /prints
+    does, while invalid IDs and conflicting selectors are refused.
     """
     try:
         basis = parse_price_basis(price_basis)
-    except BasisError as exc:
+        overview = build_overview(
+            db, basis=basis, release_product_id=release_product_id,
+            set_code=set_code, rarity=rarity,
+        )
+    except (BasisError, ReleaseScopeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return MarketAnalyticsOverviewOut(
-        **build_overview(db, basis=basis, set_code=set_code, rarity=rarity)
-    )
+    return MarketAnalyticsOverviewOut(**overview)
 
 
 @router.get("/index", response_model=CardPirateIndexOut)
@@ -346,6 +357,10 @@ def get_card_pirate_index_composition_endpoint(
 def get_card_pirate_index_movers_endpoint(
     response: Response,
     date_: date | None = Query(default=None, alias="date"),
+    order: str = Query(
+        default="move", json_schema_extra={"enum": list(MOVER_ORDERS)},
+        description="Rank the full mover population by move or index impact before limiting.",
+    ),
     db: Session = Depends(get_db),
 ):
     """Which constituents moved the Card Pirate Index on one published day.
@@ -367,11 +382,13 @@ def get_card_pirate_index_movers_endpoint(
 
     TWO RANKINGS, BOTH THE SERVER'S. `move_rank` answers "which card moved
     most" and `impact_rank` answers "which card moved the index most". They
-    are different orders whenever the daily cap binds, and the client sorts
-    nothing.
+    may differ. `order` selects the visible cohort before truncation; both
+    rank fields still describe the full mover population.
     """
     try:
-        movers = get_index_movers(db, on=date_)
+        movers = get_index_movers(db, on=date_, order=order)  # type: ignore[arg-type]
+    except UnknownMoverOrderError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MoversIntegrityError as exc:
         # 500, not a degraded 200: a reconstruction that disagrees with the
         # published point means one of the two is wrong and this endpoint
@@ -395,9 +412,10 @@ def get_card_pirate_index_movers_endpoint(
         response,
         hit=False,
         ttl_seconds=300,
-        cache_key=f"analytics:index:movers:{movers.as_of.isoformat()}",
+        cache_key=f"analytics:index:movers:{movers.as_of.isoformat()}:{movers.order}",
     )
     return CardPirateIndexMoversOut(
+        order=movers.order,
         as_of=movers.as_of,
         prior_point_date=movers.prior_point_date,
         constituent_count=movers.constituent_count,

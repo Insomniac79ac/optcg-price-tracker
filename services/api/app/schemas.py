@@ -560,11 +560,13 @@ class MarketAnalyticsFiltersOut(BaseModel):
 
 class MarketAnalyticsScopeOut(BaseModel):
     """What the request was about. `active_prints` is the denominator of
-    `coverage_pct` and is the full active catalogue when no filter is set."""
+    `coverage_pct` and is the full active catalogue when no filter is set.
+    `release_product_id` also identifies a successfully resolved legacy set."""
 
     active_prints: int
     set: str | None
     rarity: str | None
+    release_product_id: int | None = None
 
 
 class MarketAnalyticsCoverageOut(BaseModel):
@@ -847,7 +849,8 @@ class CardPirateIndexMoversOut(BaseModel):
     `truncated` says the day had more movers than the payload carries. The
     integrity arithmetic and both rank sequences are computed over every
     constituent first, so a truncated payload still carries true ranks rather
-    than positions within the visible slice."""
+    than positions within the visible slice. `order` selects the full-population
+    ranking used to choose the visible cohort, and defaults to `move`."""
 
     as_of: date
     prior_point_date: date | None = None
@@ -857,6 +860,7 @@ class CardPirateIndexMoversOut(BaseModel):
     chain_link_log_return: Decimal | None = None
     movers: list[CardPirateIndexMoverOut] = []
     truncated: bool = False
+    order: Literal["move", "impact"] = "move"
 
 
 class CardPirateIndexCompositionOut(BaseModel):

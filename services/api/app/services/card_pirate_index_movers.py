@@ -37,6 +37,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -70,6 +71,9 @@ DIRECTION_FLAT = "flat"
 # serialised, so a day on which most of 296 constituents move cannot turn one
 # analytics panel into a several-hundred-row response.
 MAX_MOVERS = 20
+MoverOrder = Literal["move", "impact"]
+MOVER_ORDERS: tuple[MoverOrder, ...] = ("move", "impact")
+
 
 _PCT_PLACES = Decimal("0.01")
 _POINTS_PLACES = Decimal("0.0001")
@@ -87,6 +91,10 @@ _LOG_PLACES = Decimal("0.000000000001")
 # above deliberately runs on the UNROUNDED values - it checks the arithmetic,
 # not the formatting.
 _WIRE_PLACES = Decimal("0.000000000000000001")
+
+
+class UnknownMoverOrderError(ValueError):
+    """The requested ranking mode is not supported."""
 
 
 class MoversIntegrityError(RuntimeError):
@@ -132,6 +140,7 @@ class IndexMoversOut:
     chain_link_log_return: Decimal | None
     movers: tuple[Mover, ...]
     truncated: bool
+    order: MoverOrder = "move"
 
 
 @dataclass(frozen=True)
@@ -304,12 +313,15 @@ def get_index_movers(
     scope_key: str = "",
     methodology_version: int = METHODOLOGY_VERSION,
     limit: int = MAX_MOVERS,
+    order: MoverOrder = "move",
 ) -> IndexMoversOut | None:
     """Which constituents moved on one published day, and by how much.
 
     `None` means no published point for the request - a 404 at the route,
     never a substituted neighbouring day.
     """
+    if order not in MOVER_ORDERS:
+        raise UnknownMoverOrderError("Invalid order. Must be one of: move, impact")
     point = _published_point(
         db,
         on=on,
@@ -345,6 +357,7 @@ def get_index_movers(
             chain_link_log_return=point.chain_link_log_return,
             movers=(),
             truncated=False,
+            order=order,
         )
 
     days = {
@@ -404,7 +417,7 @@ def get_index_movers(
     impact_rank = {r.card_print_id: i + 1 for i, r in enumerate(by_impact)}
 
     truncated = len(by_move) > limit
-    visible = by_move[:limit]
+    visible = (by_move if order == "move" else by_impact)[:limit]
     identity = _identity(db, [r.card_print_id for r in visible])
 
     prior_level = _prior_index_value(db, point, scope_kind, scope_key, methodology_version)
@@ -455,6 +468,7 @@ def get_index_movers(
         chain_link_log_return=point.chain_link_log_return,
         movers=movers,
         truncated=truncated,
+        order=order,
     )
 
 
