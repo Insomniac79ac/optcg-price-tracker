@@ -14,6 +14,7 @@ from app.models import (
     CardPirateIndexPoint,
     CardPrint,
     MarketIndexSnapshot,
+    MarketValuePoint,
     PriceObservation,
     RawSnapshot,
     ReleaseProduct,
@@ -71,6 +72,7 @@ def exact_archive(*, include_prices: bool = False) -> dict:
             source_collection_attempts=[],
             market_index_snapshots=[{"id": 1, "card_print_id": 1}],
             card_pirate_index_points=[],
+            market_value_points=[],
             snkrdunk_candidates=[{"id": 1, "discovery_run_id": None}],
         )
     return {
@@ -226,6 +228,7 @@ def test_registry_is_fk_safe_and_has_required_exact_lineage_order():
         "source_collection_attempts",
         "market_index_snapshots",
         "card_pirate_index_points",
+        "market_value_points",
     }
 
     assert backup_registry_errors() == []
@@ -243,6 +246,8 @@ def test_registry_is_fk_safe_and_has_required_exact_lineage_order():
     assert order["price_observations"] < order["source_collection_attempts"]
     assert order["card_prints"] < order["market_index_snapshots"]
     assert order["market_index_snapshots"] < order["card_pirate_index_points"]
+    assert order["market_index_snapshots"] < order["market_value_points"]
+    assert order["release_products"] < order["market_value_points"]
 
 
 def test_system_check_uses_the_authoritative_registry():
@@ -346,6 +351,9 @@ def test_exact_lineage_clean_database_round_trip(include_raw_snapshots):
             assert target_session.get(SnkrdunkCandidate, ids["candidate_id"])
             assert target_session.get(MarketIndexSnapshot, ids["market_snapshot_id"])
             assert target_session.get(CardPirateIndexPoint, ids["pirate_point_id"])
+            assert target_session.get(
+                MarketValuePoint, ids["market_value_point_id"]
+            )
             restored_raw_snapshot = target_session.scalar(select(RawSnapshot).limit(1))
             if include_raw_snapshots:
                 assert restored_raw_snapshot is not None

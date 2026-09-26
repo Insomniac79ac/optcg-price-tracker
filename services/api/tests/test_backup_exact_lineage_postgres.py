@@ -20,6 +20,7 @@ from app.db import Base
 from app.models import (
     CardPrint,
     MarketIndexSnapshot,
+    MarketValuePoint,
     PriceObservation,
     RawSnapshot,
     SnkrdunkCandidate,
@@ -99,6 +100,9 @@ def test_postgres_clean_database_exact_lineage_round_trip(
         assert observation.candidate_id == ids["candidate_id"]
         assert target_session.get(SnkrdunkCandidate, ids["candidate_id"])
         assert target_session.get(MarketIndexSnapshot, ids["market_snapshot_id"])
+        assert target_session.get(
+            MarketValuePoint, ids["market_value_point_id"]
+        )
 
         if include_raw_snapshots:
             assert target_session.get(RawSnapshot, ids["raw_snapshot_id"])

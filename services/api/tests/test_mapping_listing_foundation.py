@@ -144,7 +144,7 @@ def test_backup_supersession_chain(db_session):
     assert restored.review_status == "rejected"
 
 
-@pytest.mark.parametrize("version", [12, 13])
+@pytest.mark.parametrize("version", [12, 13, 14])
 def test_backup_refuses_two_current_rows_for_one_listing(db_session, version):
     source, card = seed(db_session)
     current = mapping(db_session, source, card, "https://snkrdunk.com/apparels/104428")
@@ -174,7 +174,7 @@ def test_backup_refuses_two_current_rows_for_one_listing(db_session, version):
     assert db_session.get(SourceCardMapping, old.id).superseded_by_mapping_id == current.id
 
 
-def test_backup_v13_restores_two_historical_rows_before_current(db_session):
+def test_current_backup_restores_two_historical_rows_before_current(db_session):
     source, card = seed(db_session)
     current = mapping(db_session, source, card, "https://snkrdunk.com/apparels/93522")
     historical_ids = []
@@ -189,7 +189,7 @@ def test_backup_v13_restores_two_historical_rows_before_current(db_session):
         historical_ids.append(old.id)
     db_session.commit()
     archive = export_backup(db_session)
-    assert archive["metadata"]["backup_version"] == 13
+    assert archive["metadata"]["backup_version"] == 14
     assert validate_backup(archive).valid
     archive["tables"]["source_card_mappings"].reverse()
     result = restore_backup(db_session, archive, dry_run=False, mode="replace", confirm="RESTORE", skip_lock=True)
