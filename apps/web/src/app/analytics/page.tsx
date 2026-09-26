@@ -24,6 +24,7 @@ import {
   pressedWindow,
   type IndexComposition,
   type IndexMovers,
+  type MoverOrder,
   type IndexSeries,
 } from "@/lib/cardPirateIndex";
 import {
@@ -39,28 +40,12 @@ import {
   type MarketOverview,
 } from "@/lib/marketAnalytics";
 
-/** /analytics - the current market landscape.
- *
- * WHAT THIS PAGE ANSWERS. Where the One Piece market stands today and how it
- * has moved - the Card Pirate Index, which leads the page and owns its
- * hierarchy - and then how much of the catalogue Atlas can price to say so,
- * and how that coverage changes when read through the Market Index versus one
- * platform, or narrowed to a set or a rarity.
- *
- * It is still NOT a movers dashboard: no gainers, no losers, no rankings, no
- * per-card sentiment. The index is an aggregate over the whole priced
- * catalogue, and the one movement figure on the page is the server's own
- * published change across a window the reader selected. Until this tranche the
- * page carried a section whose entire content was that the archive could not
- * answer a movement question; the index answers it, so that section is gone
- * rather than left standing beside a chart that contradicts it.
- *
- * STATE LIVES IN THE URL, the same convention /cards keeps, so a view a
- * collector arrives at is a view they can share and return to. Every value
- * read out of the query string is validated against the SERVER's own option
- * lists before it is used - a `?basis=` naming a retired platform, or a
- * `?set=` naming a set that no longer has active prints, falls back to the
- * default rather than requesting a slice nothing can answer.
+import { fetchReleases, releaseLabel, type ReleaseCatalogueItem } from "@/lib/releases";
+import { releaseLabelEnglish } from "@/lib/releaseNames";
+
+/** Broad-market Index above a separately scoped current-price snapshot.
+ * Release membership and mover cohorts are always the server's decisions.
+ * Snapshot scope lives in the URL; mover mode and Index window are independent.
  */
 export default function MarketLandscapePage() {
   return (
@@ -118,6 +103,7 @@ function MarketLandscapeFallback() {
  * about knowing nothing, a guessed one is not. */
 interface Vocabulary {
   bases: MarketBasis[];
+  releases: ReleaseCatalogueItem[] | null;
   sets: MarketFilterOption[];
   rarities: MarketFilterOption[];
 }
@@ -176,7 +162,7 @@ function MarketLandscapePageInner() {
     data: IndexComposition | null;
     status: "loading" | "ready" | "error";
   }>({ data: null, status: "loading" });
-  /** What moved the index, fetched ONCE per mount and never per window.
+  /** What moved the index, fetched per mode and never per scope or window.
    *
    * Exactly the composition's discipline, and for exactly the same reason: it
    * describes the newest published point, which does not change when a reader
@@ -187,20 +173,23 @@ function MarketLandscapePageInner() {
    * unavailable line inside the movers panel while the hero, the chart, the
    * composition and the breadth panel - all built from other responses - keep
    * rendering untouched. */
+  const [moverOrder, setMoverOrder] = useState<MoverOrder>("move");
   const [movers, setMovers] = useState<{
+    order: MoverOrder;
     data: IndexMovers | null;
     status: "loading" | "ready" | "error";
-  }>({ data: null, status: "loading" });
-  // The two vocabulary endpoints, once per mount. They describe the catalogue,
+  }>({ data: null, status: "loading", order: "move" });
+  // Server vocabularies, once per mount. They describe the catalogue,
   // not the current view, so nothing about changing a filter can invalidate
   // them.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchMarketBases(), fetchMarketFilters()])
-      .then(([basesResponse, filtersResponse]) => {
+    Promise.all([fetchMarketBases(), fetchMarketFilters(), fetchReleases().catch(() => null)])
+      .then(([basesResponse, filtersResponse, releasesResponse]) => {
         if (cancelled) return;
         setVocabulary({
           bases: basesResponse.bases,
+          releases: releasesResponse?.items ?? null,
           sets: filtersResponse.sets,
           rarities: filtersResponse.rarities,
         });
@@ -218,11 +207,33 @@ function MarketLandscapePageInner() {
   // arrives there is nothing to validate against, and the request waits.
   const rawBasis = searchParams.get("basis") ?? "";
   const rawSet = searchParams.get("set") ?? "";
+  const rawRelease = searchParams.get("release_product_id");
   const rawRarity = searchParams.get("rarity") ?? "";
 
   const selectedBasis =
     vocabulary && isOfferedBasis(vocabulary.bases, rawBasis) ? rawBasis : MARKET_INDEX_BASIS;
-  const selectedSet = vocabulary && isOfferedOption(vocabulary.sets, rawSet) ? rawSet : "";
+  const legacyMatches = vocabulary?.releases?.filter((r) => r.official_code === rawSet) ?? [];
+  const legacyReleaseId = rawRelease === null && legacyMatches.length === 1
+    ? legacyMatches[0].release_product_id : undefined;
+  // Explicit IDs stay authoritative even if a product is absent from the picker.
+  const selectedReleaseId = rawRelease !== null
+    ? (/^[1-9]\d*$/.test(rawRelease) && Number.isSafeInteger(Number(rawRelease)) ? Number(rawRelease) : undefined)
+    : legacyReleaseId;
+  // Old bookmarks that cannot be uniquely canonicalized retain the legacy
+  // server selector. New navigation writes only authoritative product IDs.
+  const legacySet = rawRelease === null && selectedReleaseId === undefined
+    && vocabulary && isOfferedOption(vocabulary.sets, rawSet) ? rawSet : "";
+  const selectedRelease = vocabulary?.releases?.find((r) => r.release_product_id === selectedReleaseId);
+
+  useEffect(() => {
+    if (legacyReleaseId === undefined) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("release_product_id")) return;
+    params.delete("set");
+    params.set("release_product_id", String(legacyReleaseId));
+    window.history.replaceState(null, "", `${pathname}?${params}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, [legacyReleaseId, pathname]);
   const selectedRarity =
     vocabulary && isOfferedOption(vocabulary.rarities, rawRarity) ? rawRarity : "";
 
@@ -230,14 +241,15 @@ function MarketLandscapePageInner() {
 
   // One string identifying the whole selection, so the effect has a single
   // dependency and the settled result has something to be compared against.
-  const requestKey = `${selectedBasis}|${selectedSet}|${selectedRarity}`;
+  const requestKey = `${selectedBasis}|${selectedReleaseId ?? legacySet}|${selectedRarity}`;
 
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
     fetchMarketOverview({
       priceBasis: selectedBasis,
-      set: selectedSet || undefined,
+      release_product_id: selectedReleaseId,
+      ...(legacySet ? { set: legacySet } : {}),
       rarity: selectedRarity || undefined,
     })
       .then((result) => {
@@ -249,7 +261,7 @@ function MarketLandscapePageInner() {
     return () => {
       cancelled = true;
     };
-  }, [ready, requestKey, selectedBasis, selectedSet, selectedRarity]);
+  }, [ready, requestKey, selectedBasis, selectedReleaseId, selectedRarity, legacySet]);
 
   // The index, once per mount, requested with NO window at all.
   //
@@ -289,11 +301,10 @@ function MarketLandscapePageInner() {
     };
   }, []);
 
-  // The movers, once per mount. No window parameter, so a timeframe change
-  // cannot reach it.
+  // Each mode requests its own server cohort. Scope and window cannot reach it.
   useEffect(() => {
     let cancelled = false;
-    fetchIndexMovers()
+    fetchIndexMovers(moverOrder)
       .then((data) => {
         if (cancelled) return;
         // VALIDATED AT THE TRUST BOUNDARY, the same way the composition is. A
@@ -302,18 +313,18 @@ function MarketLandscapePageInner() {
         // escalates into a blank Analytics page - so a malformed body is a
         // failure here, and failures here are section-local by design.
         if (!data || !Array.isArray(data.movers)) {
-          setMovers({ data: null, status: "error" });
+          setMovers({ data: null, status: "error", order: moverOrder });
           return;
         }
-        setMovers({ data, status: "ready" });
+        setMovers({ data, status: "ready", order: moverOrder });
       })
       .catch(() => {
-        if (!cancelled) setMovers({ data: null, status: "error" });
+        if (!cancelled) setMovers({ data: null, status: "error", order: moverOrder });
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [moverOrder]);
 
   useEffect(() => {
     let cancelled = false;
@@ -408,13 +419,13 @@ function MarketLandscapePageInner() {
    * that already carries search params with a replaceState back to where you
    * are, so the address bar never changes and `useSearchParams()` never fires.
    */
-  function commit(next: { basis?: string; set?: string; rarity?: string }) {
+  function commit(next: { basis?: string; release?: string; rarity?: string }) {
     const params = new URLSearchParams();
     const basis = next.basis ?? selectedBasis;
-    const set = next.set ?? selectedSet;
+    const release = next.release ?? (selectedReleaseId === undefined ? "" : String(selectedReleaseId));
     const rarity = next.rarity ?? selectedRarity;
     if (basis && basis !== MARKET_INDEX_BASIS) params.set("basis", basis);
-    if (set) params.set("set", set);
+    if (release) params.set("release_product_id", release);
     if (rarity) params.set("rarity", rarity);
     const qs = params.toString();
     window.history.pushState(null, "", `${pathname}${qs ? `?${qs}` : ""}`);
@@ -448,7 +459,12 @@ function MarketLandscapePageInner() {
       </div>
 
       {/* The cards behind the latest move follow the chart. */}
-      <IndexMoversPanel movers={movers.data} status={movers.status} />
+      <IndexMoversPanel
+        movers={movers.order === moverOrder ? movers.data : null}
+        status={movers.order === moverOrder ? movers.status : "loading"}
+        order={moverOrder}
+        onOrderChange={setMoverOrder}
+      />
 
       {/* SECONDARY ANALYSIS, and sized to say so. Two panels of similar weight
           below the movers, stacking on mobile. The breadth panel reads the
@@ -471,10 +487,10 @@ function MarketLandscapePageInner() {
           id="market-landscape-heading"
           className="font-display text-[20px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[23px]"
         >
-          Prices across the catalogue
+          {selectedRelease ? releaseLabel(selectedRelease) : selectedReleaseId ? "Selected release" : legacySet ? releaseLabelEnglish(legacySet) : "Market snapshot"}
         </h2>
         <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-text-secondary">
-          {description}
+          {selectedReleaseId !== undefined || legacySet ? "Current prices in this release. " : ""}{description}
         </p>
       </section>
 
@@ -489,15 +505,15 @@ function MarketLandscapePageInner() {
           <>
             <MarketLandscapeFilters
               bases={vocabulary.bases}
-              sets={vocabulary.sets}
+              releases={vocabulary.releases}
               rarities={vocabulary.rarities}
               selectedBasis={selectedBasis}
-              selectedSet={selectedSet}
+              selectedRelease={selectedReleaseId === undefined ? (legacySet ? `legacy:${legacySet}` : "") : String(selectedReleaseId)}
               selectedRarity={selectedRarity}
               onBasisChange={(basis) => commit({ basis })}
-              onSetChange={(set) => commit({ set })}
+              onReleaseChange={(release) => commit({ release })}
               onRarityChange={(rarity) => commit({ rarity })}
-              onClear={() => commit({ set: "", rarity: "" })}
+              onClear={() => commit({ release: "", rarity: "" })}
             />
 
             {overviewStatus === "error" ? (
@@ -530,21 +546,24 @@ function MarketLandscapePageInner() {
  *
  * The generic LoadingState is a small centred box; used here it made the page
  * ~1000px shorter while loading and taller the instant data arrived. This
- * mirrors the real layout - four stat tiles, then a chart-sized block - so the
+ * mirrors the real layout - coverage and supporting prices, then a chart-sized block - so the
  * page occupies roughly its final height from the first frame. It carries the
  * loading caption for assistive tech rather than showing it as a heading. */
 function MarketLandscapeSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite">
       <span className="sr-only">Loading catalogue prices…</span>
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="panel px-3.5 py-3">
-            <div className="h-2.5 w-20 rounded bg-bg-elevated" />
-            <div className="mt-2.5 h-6 w-24 rounded bg-bg-elevated" />
-            <div className="mt-2 h-2 w-28 rounded bg-bg-elevated" />
-          </div>
-        ))}
+      <div className="panel p-4 sm:p-5">
+        <div className="h-8 w-3/4 rounded bg-bg-elevated" />
+        <div className="mt-2 h-4 w-28 rounded bg-bg-elevated" />
+        <div className="mt-5 grid gap-4 border-t border-border-muted pt-4 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i}>
+              <div className="h-3 w-28 rounded bg-bg-elevated" />
+              <div className="mt-2 h-6 w-32 rounded bg-bg-elevated" />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="panel mt-3 px-4 py-3.5">
         <div className="h-3 w-36 rounded bg-bg-elevated" />

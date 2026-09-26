@@ -73,6 +73,7 @@ export interface MarketFiltersResponse {
 }
 
 export interface MarketScope {
+  release_product_id: number | null;
   active_prints: number;
   set: string | null;
   rarity: string | null;
@@ -138,6 +139,7 @@ export function fetchMarketFilters(): Promise<MarketFiltersResponse> {
 }
 
 export interface MarketOverviewParams {
+  release_product_id?: number;
   priceBasis?: string;
   set?: string;
   rarity?: string;
@@ -154,7 +156,8 @@ export function fetchMarketOverview(params: MarketOverviewParams = {}): Promise<
   return apiGet<MarketOverview>("/analytics/market/overview", {
     params: {
       price_basis: params.priceBasis || undefined,
-      set: params.set || undefined,
+      release_product_id: params.release_product_id,
+      set: params.release_product_id !== undefined ? undefined : params.set || undefined,
       rarity: params.rarity || undefined,
     },
   });

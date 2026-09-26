@@ -12,40 +12,11 @@ import {
   formatRawPct,
   type IndexMover,
   type IndexMovers,
+  type MoverOrder,
 } from "@/lib/cardPirateIndex";
 
-/** WHICH cards moved the Card Pirate Index on its newest published day.
- *
- * TWO COLUMNS BECAUSE THERE ARE TWO ANSWERS, and this panel is careful never
- * to let them collapse into one. "Price move" is what the CARD did, between
- * two archived Market Index values. "Index impact" is what the card did to the
- * INDEX, after the methodology's unconditional +/-25 % daily cap and a division
- * by the constituent count. They are the same story only on an uncapped day:
- * on 2026-09-07 a 41.18 % fall and a 25.00 % fall contributed exactly the same
- * amount, and a single merged figure would have had to discard one of those two
- * true statements. So they sit side by side, separately labelled, and the
- * capped rows say so.
- *
- * NOTHING HERE IS COMPUTED. Ranks, contributions, capped values, index points
- * and the ordering are all the server's, rendered as received. The list is not
- * sorted - `movers` arrives in `move_rank` order and is mapped in place - and
- * no arithmetic is performed on a price, a percentage or a log return. The two
- * formatters this file calls choose a sign glyph and a thousands separator and
- * do nothing else.
- *
- * IT DOES NOT MOVE WITH THE TIMEFRAME. Movers describe the newest published
- * point, the same point whether the chart above shows two weeks or everything,
- * so the panel takes no window prop and its request takes no window argument.
- * It also renders the movers API's OWN `as_of` rather than the chart's last
- * plotted day: if the two ever disagree, saying so is honest and quietly
- * relabelling one of them is not.
- *
- * NOT RED AND GREEN, for the reason MarketBreadthPanel states at length: the
- * signal palette is reserved for the admin surface. Direction uses the Atlas
- * mark's own gold-north / teal-south pairing, which carries no
- * profit-and-loss connotation and survives the common colour-vision
- * deficiencies. Direction is never the only channel - every figure carries an
- * explicit sign.
+/** Latest broad-market movers. Each mode renders its server-selected cohort
+ * in server order. Scope and Index window never reach this panel.
  */
 
 const UP_COLOR = "var(--accent-gold)";
@@ -71,23 +42,21 @@ function ColumnLabel({ children }: { children: React.ReactNode }) {
 /** WHAT THE CARD DID. Two archived Market Index values and the server's own
  * percentage between them - never derived from the capped log return, because
  * the cap is an index rule and not a claim about the card. */
-function PriceMove({ mover }: { mover: IndexMover }) {
+function PriceMove({ mover, primary }: { mover: IndexMover; primary: boolean }) {
   return (
     <div className="min-w-0 sm:w-[136px] sm:shrink-0" data-testid="mover-price-move">
       <ColumnLabel>Price move</ColumnLabel>
-      <p className="mono mt-1.5 whitespace-nowrap text-[12px] tabular-nums text-text-secondary">
-        {formatJpy(mover.prior_value_jpy)}
-        <span aria-hidden="true" className="mx-1 text-text-faint">
-          →
-        </span>
-        <span className="text-text-primary">{formatJpy(mover.current_value_jpy)}</span>
-      </p>
       <p
-        className="mono mt-1 text-[13px] font-medium tabular-nums"
+        className={`mono mt-1.5 font-medium tabular-nums ${primary ? "text-xl" : "text-sm"}`}
         style={{ color: directionColor(mover.direction) }}
         data-testid="mover-raw-pct"
+        data-primary={primary}
       >
         {formatRawPct(mover.raw_pct)}
+      </p>
+      <p className="mt-1 text-[11px] text-text-muted">{mover.direction === "up" ? "↑ Up" : "↓ Down"}</p>
+      <p className="mono mt-1.5 text-[12px] tabular-nums text-text-secondary">
+        {formatJpy(mover.prior_value_jpy)} → {formatJpy(mover.current_value_jpy)}
       </p>
     </div>
   );
@@ -101,17 +70,18 @@ function PriceMove({ mover }: { mover: IndexMover }) {
  * multiplicatively in level space, so these figures genuinely do not sum to
  * the day's level change. A value the server could not express as a number is
  * dropped rather than printed as NaN beside a real price. */
-function IndexImpact({ mover }: { mover: IndexMover }) {
+function IndexImpact({ mover, primary }: { mover: IndexMover; primary: boolean }) {
   const points = formatIndexPoints(mover.approx_index_points);
   return (
     <div className="min-w-0 sm:w-[116px] sm:shrink-0 sm:text-right" data-testid="mover-index-impact">
       <ColumnLabel>Index impact</ColumnLabel>
       <p
-        className="mono mt-1.5 text-[13px] font-medium tabular-nums"
+        className={`mono mt-1.5 font-medium tabular-nums ${primary ? "text-xl" : "text-sm"}`}
         style={{ color: directionColor(mover.direction) }}
         data-testid="mover-index-points"
+        data-primary={primary}
       >
-        {points ?? "—"}
+        {points ?? "—"} <span className="text-[11px]">pts</span>
         <span className="sr-only"> index points, approximate</span>
       </p>
       {/* QUIET, NOT ALARMIST. A capped move is ordinary methodology, not a
@@ -168,7 +138,7 @@ function MoverIdentity({ mover }: { mover: IndexMover }) {
  * promotes the same three blocks into one row of three columns, with fixed
  * metric widths so the figures form real columns down the list rather than
  * ragged text. */
-function MoverRow({ mover }: { mover: IndexMover }) {
+function MoverRow({ mover, order }: { mover: IndexMover; order: MoverOrder }) {
   return (
     <li
       className="group border-t border-border-muted first:border-t-0"
@@ -202,9 +172,10 @@ function MoverRow({ mover }: { mover: IndexMover }) {
           />
         </div>
         <MoverIdentity mover={mover} />
-        <div className="col-start-2 flex items-start gap-5 sm:col-start-3 sm:gap-6">
-          <PriceMove mover={mover} />
-          <IndexImpact mover={mover} />
+        <div className="col-start-2 grid grid-cols-2 items-start gap-3 sm:col-start-3 sm:flex sm:gap-6">
+          {order === "impact" && <IndexImpact mover={mover} primary />}
+          <PriceMove mover={mover} primary={order === "move"} />
+          {order === "move" && <IndexImpact mover={mover} primary={false} />}
         </div>
       </Link>
     </li>
@@ -249,8 +220,12 @@ function CappedNote() {
 export function IndexMoversPanel({
   movers,
   status,
+  order = "move",
+  onOrderChange,
 }: {
   movers: IndexMovers | null;
+  order?: MoverOrder;
+  onOrderChange?: (order: MoverOrder) => void;
   status: "loading" | "ready" | "error";
 }) {
   const ready = status === "ready" && movers !== null;
@@ -273,8 +248,19 @@ export function IndexMoversPanel({
         id="index-movers-heading"
         className="font-display text-[16px] font-semibold leading-tight tracking-tight text-text-primary"
       >
-        What moved it?
+        What moved
       </h3>
+      <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label="Mover ranking">
+        {(["move", "impact"] as const).map((mode) => (
+          <button key={mode} type="button" aria-pressed={order === mode} onClick={() => onOrderChange?.(mode)}
+            className={`rounded-control border px-3 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-accent-teal ${order === mode ? "border-accent-teal bg-accent-teal/12 text-accent-teal-hover" : "border-border-default text-text-secondary"}`}>
+            {mode === "move" ? "Move %" : "Index impact"}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-text-secondary">
+        {order === "move" ? "Which cards changed the most in price." : "Which cards contributed most to the latest Index move."}
+      </p>
       {/* The movers API's OWN as_of and constituent count. `movers_count` is
           the server's count over the FULL constituent set, so it stays correct
           on a day the payload is truncated - `movers.length` would quietly
@@ -318,7 +304,7 @@ export function IndexMoversPanel({
         <>
           <ul className="mt-4" data-testid="movers-list">
             {rows.map((mover) => (
-              <MoverRow key={mover.card_print_id} mover={mover} />
+              <MoverRow key={mover.card_print_id} mover={mover} order={order} />
             ))}
           </ul>
           {movers.truncated && (
@@ -326,7 +312,7 @@ export function IndexMoversPanel({
               className="mt-3 text-[11px] leading-relaxed text-text-muted"
               data-testid="movers-truncated"
             >
-              Showing the {rows.length} largest moves of {movers.movers_count}.
+              Showing the {rows.length} largest {order === "move" ? "moves" : "Index impacts"} of {movers.movers_count}.
             </p>
           )}
           {anyCapped && <CappedNote />}

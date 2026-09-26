@@ -8,9 +8,7 @@ import {
   type MarketOverview,
 } from "@/lib/marketAnalytics";
 
-/** The body of the current market landscape: four headline statistics, where
- * prices cluster, how complete the coverage behind them is, and one honest
- * blank where movement will eventually go.
+/** The current market snapshot, distribution and source coverage.
  *
  * NOTHING IN THIS FILE COMPUTES A PRICE. Every number is read from the
  * overview response and rendered; none is summed, scaled into a percentage,
@@ -30,55 +28,46 @@ const UNAVAILABLE = "Unavailable";
 
 // --- A. Primary statistics --------------------------------------------------
 
-/** The four numbers a collector opens this page for.
- *
- * Deliberately four, and deliberately not a row of dense mono tiles: this is
- * the collector surface, so the value leads at display weight with a quiet
- * caption under it, rather than the terminal-style stat grid the admin
- * screens use. The supporting line beneath a stat is where a source's
- * observed/usable distinction gets explained in words, because that is a
- * sentence, not a metric.
+/** Coverage leads; median and the server's deciles support it.
+ * Observed source readings remain distinct from usable prices.
  */
 export function MarketLandscapeStats({ overview }: { overview: MarketOverview }) {
   const { coverage, scope, current_price: price } = overview;
+  const pricedHint = pricedPrintsHint(overview);
   const band =
     hasValue(price.p10_jpy) && hasValue(price.p90_jpy)
       ? `${formatJpy(price.p10_jpy)} – ${formatJpy(price.p90_jpy)}`
       : UNAVAILABLE;
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-      <Stat
-        label="Priced prints"
-        value={coverage.usable_priced_prints.toLocaleString()}
-        hint={pricedPrintsHint(overview)}
-      />
-      <Stat
-        label="Catalogue coverage"
-        // Null when the scope holds no active prints at all. 0/0 is not 0%,
-        // and a coverage figure for an empty scope would be inventing a
-        // denominator.
-        value={hasValue(coverage.coverage_pct) ? `${coverage.coverage_pct}%` : UNAVAILABLE}
-        hint={`of ${scope.active_prints.toLocaleString()} active ${
-          scope.active_prints === 1 ? "print" : "prints"
-        } in scope`}
-      />
-      <Stat label="Median price" value={formatOrUnavailable(price.median_jpy)} />
-      <Stat
-        label="Price band"
-        value={band}
-        // The reason is the server's own, and it distinguishes "nothing is
-        // priced" from "too few priced things to describe a spread" - which
-        // look identical if you only look at the nulls.
-        hint={band === UNAVAILABLE ? bandReason(price.unavailable_reason) : "10th to 90th percentile"}
-      />
+    <div className="rounded-panel border border-border-muted bg-bg-surface p-4 sm:p-5">
+      <div className="mb-5" data-testid="market-coverage">
+        <p className="font-display text-2xl font-semibold tracking-tight text-text-primary sm:text-3xl">
+          {coverage.usable_priced_prints.toLocaleString()} of {scope.active_prints.toLocaleString()} prints priced
+        </p>
+        <p className="mt-1 text-sm text-text-secondary">
+          {hasValue(coverage.coverage_pct) ? `${coverage.coverage_pct}% coverage` : "Coverage unavailable"}
+        </p>
+        {pricedHint && <p className="mt-2 text-xs text-text-muted">{pricedHint}</p>}
+      </div>
+      <div className="grid grid-cols-1 gap-4 border-t border-border-muted pt-4 sm:grid-cols-2">
+        <Stat label="Median price" value={formatOrUnavailable(price.median_jpy)} />
+        <Stat
+          label="Typical price range"
+          value={band}
+          // The reason is the server's own, and it distinguishes "nothing is
+          // priced" from "too few priced things to describe a spread" - which
+          // look identical if you only look at the nulls.
+          hint={band === UNAVAILABLE ? bandReason(price.unavailable_reason) : "10th to 90th percentile"}
+        />
+      </div>
     </div>
   );
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string | null }) {
   return (
-    <div className="panel px-3.5 py-3">
+    <div className="min-w-0">
       <div className="text-xs font-medium text-text-muted">
         {label}
       </div>
