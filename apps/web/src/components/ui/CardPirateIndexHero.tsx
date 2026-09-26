@@ -83,9 +83,12 @@ export function CardPirateIndexHero({
             it - the eyebrow above this panel and the "Current market
             landscape" H2 below both hang off it. See PageFrame in
             app/analytics/page.tsx for why the old H1 moved. */}
-        <h1 className="font-display text-[22px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[26px]">
-          Card Pirate Index
-        </h1>
+        <div>
+          <h1 className="font-display text-[22px] font-semibold leading-[1.15] tracking-tight text-text-primary sm:text-[26px]">
+            Card Pirate Index
+          </h1>
+          <p className="mt-1 text-xs text-text-muted">Broad One Piece market</p>
+        </div>
         <WindowTokenControl
           window={window}
           windows={series?.windows ?? []}

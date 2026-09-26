@@ -55,15 +55,16 @@ function startAt(query: string) {
   window.history.replaceState(null, "", `/analytics${query ? `?${query}` : ""}`);
 }
 
-const { fetchMarketBases, fetchMarketFilters, fetchMarketOverview } = vi.hoisted(() => ({
+const { fetchMarketBases, fetchMarketFilters, fetchMarketOverview, fetchMarketCards } = vi.hoisted(() => ({
   fetchMarketBases: vi.fn(),
   fetchMarketFilters: vi.fn(),
   fetchMarketOverview: vi.fn(),
+  fetchMarketCards: vi.fn(),
 }));
 vi.mock("@/lib/marketAnalytics", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/marketAnalytics")>("@/lib/marketAnalytics");
-  return { ...actual, fetchMarketBases, fetchMarketFilters, fetchMarketOverview };
+  return { ...actual, fetchMarketBases, fetchMarketFilters, fetchMarketOverview, fetchMarketCards };
 });
 
 /** The Card Pirate Index hero is exercised in indexHero.test.tsx; here it only
@@ -85,6 +86,16 @@ import type {
   MarketBucket,
   MarketOverview,
 } from "@/lib/marketAnalytics";
+
+const { fetchReleases } = vi.hoisted(() => ({ fetchReleases: vi.fn() }));
+vi.mock("@/lib/releases", async () => ({
+  ...await vi.importActual<typeof import("@/lib/releases")>("@/lib/releases"), fetchReleases,
+}));
+const RELEASES = [
+  { release_product_id: 186, official_code: "OP-17", display_name: "世界最強の戦士達" },
+  { release_product_id: 2, official_code: "EB-01", display_name: "メモリアルコレクション" },
+  { release_product_id: 1, official_code: "OP-01", display_name: "ロマンスドーン" },
+];
 
 import MarketLandscapePage from "./page";
 
@@ -164,7 +175,7 @@ function overview(partial: Partial<MarketOverview> = {}): MarketOverview {
     evidence_type: null,
     available: true,
     unavailable_reason: null,
-    scope: { active_prints: 4316, set: null, rarity: null },
+    scope: { release_product_id: null, active_prints: 4316, set: null, rarity: null },
     coverage: {
       observed_prints: null,
       usable_priced_prints: 296,
@@ -267,9 +278,11 @@ const INDEX_SERIES = {
 
 beforeEach(() => {
   startAt("");
+  fetchReleases.mockResolvedValue({ items: RELEASES });
   fetchMarketBases.mockResolvedValue({ bases: BASES });
   fetchMarketFilters.mockResolvedValue(FILTERS);
   fetchMarketOverview.mockResolvedValue(overview());
+  fetchMarketCards.mockResolvedValue({items:[]});
   fetchIndexDefault.mockResolvedValue(INDEX_SERIES);
   fetchIndexSeries.mockResolvedValue(INDEX_SERIES);
 });
@@ -354,10 +367,10 @@ describe("the price basis control is built from /analytics/market/bases", () => 
 describe("the scope controls are built from /analytics/market/filters", () => {
   it("offers exactly the sets and rarities the server published", async () => {
     await renderPage();
-    const setOptions = within(screen.getByLabelText("Set"))
+    const setOptions = within(screen.getByLabelText("Release"))
       .getAllByRole("option")
       .map((o) => o.textContent);
-    expect(setOptions).toEqual(["All sets", "EB-01", "OP-01"]);
+    expect(setOptions).toEqual(["All releases", "OP-17 — The World's Strongest Warriors", "EB-01 — Memorial Collection", "OP-01 — Romance Dawn"]);
 
     const rarityOptions = within(screen.getByLabelText("Rarity or special print"))
       .getAllByRole("option")
@@ -369,21 +382,21 @@ describe("the scope controls are built from /analytics/market/filters", () => {
     // The `OP01` vs `OP-01` trap: the wire value is the option value, with no
     // client-side reshaping between the dropdown and the request.
     await renderPage();
-    fireEvent.change(screen.getByLabelText("Set"), { target: { value: "OP-01" } });
+    fireEvent.change(screen.getByLabelText("Release"), { target: { value: "1" } });
     await waitFor(() =>
       expect(fetchMarketOverview).toHaveBeenLastCalledWith(
-        expect.objectContaining({ set: "OP-01" }),
+        expect.objectContaining({ release_product_id: 1 }),
       ),
     );
   });
 
   it("disables a scope control the server published nothing for", async () => {
-    fetchMarketFilters.mockResolvedValue({ sets: [], rarities: FILTERS.rarities });
+    fetchReleases.mockResolvedValue({ items: [] });
     await renderPage();
-    const select = screen.getByLabelText("Set") as HTMLSelectElement;
+    const select = screen.getByLabelText("Release") as HTMLSelectElement;
     expect(select.disabled).toBe(true);
     expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "No set options",
+      "No release options",
     ]);
   });
 });
@@ -406,10 +419,10 @@ describe("changing a control re-requests the overview", () => {
 
   it("re-fetches when the set filter changes", async () => {
     await renderPage();
-    fireEvent.change(screen.getByLabelText("Set"), { target: { value: "EB-01" } });
+    fireEvent.change(screen.getByLabelText("Release"), { target: { value: "2" } });
     await waitFor(() =>
       expect(fetchMarketOverview).toHaveBeenLastCalledWith(
-        expect.objectContaining({ set: "EB-01" }),
+        expect.objectContaining({ release_product_id: 2 }),
       ),
     );
   });
@@ -431,7 +444,7 @@ describe("changing a control re-requests the overview", () => {
     await renderPage();
     expect(fetchMarketOverview).toHaveBeenCalledWith({
       priceBasis: "source:yuyutei",
-      set: "OP-01",
+      release_product_id: 1,
       rarity: "C",
     });
   });
@@ -444,7 +457,7 @@ describe("changing a control re-requests the overview", () => {
     await renderPage();
     expect(fetchMarketOverview).toHaveBeenCalledWith({
       priceBasis: "market_index",
-      set: undefined,
+      release_product_id: undefined,
       rarity: undefined,
     });
   });
@@ -456,7 +469,7 @@ describe("changing a control re-requests the overview", () => {
     startAt("window=30d");
     await renderPage();
     const call = fetchMarketOverview.mock.calls[0][0];
-    expect(Object.keys(call)).toEqual(["priceBasis", "set", "rarity"]);
+    expect(Object.keys(call)).toEqual(["priceBasis", "release_product_id", "rarity"]);
   });
 });
 
@@ -473,7 +486,7 @@ describe("a statistic with no answer reads Unavailable, never a number", () => {
           excluded_constrained_prints: null,
           unavailable_prints: 105,
         },
-        scope: { active_prints: 105, set: "EB-02", rarity: null },
+        scope: { release_product_id: null, active_prints: 105, set: "EB-02", rarity: null },
         current_price: {
           constituent_count: 0,
           median_jpy: null,
@@ -519,7 +532,7 @@ describe("a statistic with no answer reads Unavailable, never a number", () => {
     await renderPage();
 
     expect(screen.getByText("￥7,750")).toBeTruthy();
-    const band = screen.getByText("Price band").closest("div")!.parentElement!;
+    const band = screen.getByText("Typical price range").closest("div")!.parentElement!;
     expect(within(band).getByText("Unavailable")).toBeTruthy();
     expect(band.textContent).toContain("too few priced prints to describe a spread");
   });
@@ -529,7 +542,7 @@ describe("a statistic with no answer reads Unavailable, never a number", () => {
     // zeros against a denominator that does not exist.
     fetchMarketOverview.mockResolvedValue(
       overview({
-        scope: { active_prints: 0, set: "OP-01", rarity: "TR" },
+        scope: { release_product_id: null, active_prints: 0, set: "OP-01", rarity: "TR" },
         coverage: {
           observed_prints: null,
           usable_priced_prints: 0,
@@ -561,7 +574,7 @@ describe("a statistic with no answer reads Unavailable, never a number", () => {
     // be its own dishonesty.
     fetchMarketOverview.mockResolvedValue(
       overview({
-        scope: { active_prints: 105, set: "EB-02", rarity: null },
+        scope: { release_product_id: null, active_prints: 105, set: "EB-02", rarity: null },
         coverage: {
           observed_prints: null,
           usable_priced_prints: 0,
@@ -581,7 +594,7 @@ describe("a statistic with no answer reads Unavailable, never a number", () => {
       }),
     );
     await renderPage();
-    const coverage = screen.getByText("Catalogue coverage").closest("div")!.parentElement!;
+    const coverage = screen.getByTestId("market-coverage");
     expect(coverage.textContent).toContain("0%");
     expect(coverage.textContent).toContain("105");
   });
@@ -632,7 +645,7 @@ describe("price distribution", () => {
           excluded_constrained_prints: null,
           unavailable_prints: 105,
         },
-        scope: { active_prints: 105, set: "EB-02", rarity: null },
+        scope: { release_product_id: null, active_prints: 105, set: "EB-02", rarity: null },
         current_price: {
           constituent_count: 0,
           median_jpy: null,
@@ -690,10 +703,10 @@ describe("the page states the index's composition exactly once", () => {
     // request stays and so do they. Removing the section is not removing the
     // basis.
     await renderPage();
-    expect(screen.getByText("Priced prints")).toBeTruthy();
-    expect(screen.getByText("Catalogue coverage")).toBeTruthy();
+    expect(screen.getByTestId("market-coverage")).toBeTruthy();
+    expect(screen.getByTestId("market-coverage")).toBeTruthy();
     expect(screen.getByText("Price distribution")).toBeTruthy();
-    expect(screen.getByText("Browse the card catalogue →")).toBeTruthy();
+    expect(screen.getByText("Browse these cards →")).toBeTruthy();
   });
 });
 
@@ -706,8 +719,8 @@ describe("a source's observed, usable and excluded counts stay three different n
   it("shows all three, and does not present the observed count as priced", async () => {
     await renderPage();
 
-    const priced = screen.getByText("Priced prints").closest("div")!.parentElement!;
-    expect(within(priced).getByText("25")).toBeTruthy();
+    const priced = screen.getByTestId("market-coverage");
+    expect(within(priced).getByText("25 of 4,316 prints priced")).toBeTruthy();
     expect(priced.textContent).toContain("43 observed on this source");
 
     const section = screen.getByText("What this source reports").closest("section")!;
@@ -771,7 +784,7 @@ describe("a source's observed, usable and excluded counts stay three different n
     expect(section.textContent).not.toMatch(/never enters the median/i);
     // The supporting "N observed" line is suppressed too - observed equals
     // usable, so there is nothing to explain.
-    const priced = screen.getByText("Priced prints").closest("div")!.parentElement!;
+    const priced = screen.getByTestId("market-coverage");
     expect(priced.textContent).not.toMatch(/observed/i);
   });
 });
@@ -781,33 +794,26 @@ describe("a source's observed, usable and excluded counts stay three different n
 describe("the page is not a dead end", () => {
   it("offers a way into the card catalogue", async () => {
     await renderPage();
-    const link = screen.getByRole("link", { name: /browse the card catalogue/i });
+    const link = screen.getByRole("link", { name: /browse these cards/i });
     expect(link.getAttribute("href")).toBe("/cards");
   });
 
   it("carries rarity into the catalogue, because /prints actually filters on it", async () => {
     fetchMarketOverview.mockResolvedValue(
-      overview({ scope: { active_prints: 307, set: null, rarity: "L" } }),
+      overview({ scope: { release_product_id: null, active_prints: 307, set: null, rarity: "L" } }),
     );
+    fetchMarketFilters.mockResolvedValue({...FILTERS,rarities:[...FILTERS.rarities,{value:"L",label:"L"}]});
     startAt("rarity=L");
     await renderPage();
-    const link = screen.getByRole("link", { name: /browse L cards in the catalogue/i });
+    const link = screen.getByRole("link", { name: /browse these cards/i });
     expect(link.getAttribute("href")).toBe("/cards?rarity=L");
   });
 
-  it("never carries a set, because /prints has no set parameter to honour it", async () => {
-    // Passing ?set= would put a parameter in the URL that /cards silently
-    // ignores, landing the collector on the whole catalogue while believing
-    // they were looking at one set. The label must not claim it either.
-    fetchMarketOverview.mockResolvedValue(
-      overview({ scope: { active_prints: 154, set: "OP-01", rarity: null } }),
-    );
-    startAt("set=OP-01");
+  it("carries the canonical release ID, never legacy set or basis", async () => {
+    startAt("set=OP-01&basis=source:yuyutei");
     await renderPage();
-    const link = screen.getByRole("link", { name: /browse the card catalogue/i });
-    expect(link.getAttribute("href")).toBe("/cards");
-    expect(link.getAttribute("href")).not.toContain("set=");
-    expect(link.textContent).not.toMatch(/OP-01|these cards/i);
+    const link = screen.getByRole("link", { name: /browse these cards/i });
+    expect(link.getAttribute("href")).toBe("/cards?release_product_id=1");
   });
 });
 
@@ -846,7 +852,7 @@ describe("refreshing does not collapse the page", () => {
     // control change collapsed ~1000px of content and snapped it back, a
     // visible layout shift on the interaction a collector repeats most.
     await renderPage();
-    expect(screen.getByText("Priced prints")).toBeTruthy();
+    expect(screen.getByTestId("market-coverage")).toBeTruthy();
 
     let release: (value: MarketOverview) => void = () => {};
     fetchMarketOverview.mockReturnValue(
@@ -868,24 +874,24 @@ describe("refreshing does not collapse the page", () => {
     // not have.
     const landscapeBusy = () =>
       [...document.querySelectorAll("[aria-busy='true']")].find((el) =>
-        el.contains(screen.getByText("Priced prints")),
+        el.contains(screen.getByTestId("market-coverage")),
       );
     await waitFor(() => expect(landscapeBusy()).toBeTruthy());
-    expect(screen.getByText("Priced prints")).toBeTruthy();
+    expect(screen.getByTestId("market-coverage")).toBeTruthy();
     // The STAT TILE's 296, not any 296 on the page - the breadth panel prints the
     // same constituent count, so a bare text query is ambiguous. Same scoping
     // the SNKRDUNK assertion below already uses for exactly this reason.
     const pricedTile = () =>
-      screen.getByText("Priced prints").closest("div")!.parentElement!;
-    expect(within(pricedTile()).getByText("296")).toBeTruthy();
+      screen.getByTestId("market-coverage");
+    expect(within(pricedTile()).getByText("296 of 4,316 prints priced")).toBeTruthy();
     expect(screen.queryByText("Loading catalogue prices…")).toBeNull();
 
     release(snkrdunkOverview());
     // "25" appears twice once SNKRDUNK loads (the stat and the legend), so
     // this asserts on the stat tile specifically rather than on the string.
     await waitFor(() => {
-      const priced = screen.getByText("Priced prints").closest("div")!.parentElement!;
-      expect(within(priced).getByText("25")).toBeTruthy();
+      const priced = screen.getByTestId("market-coverage");
+      expect(within(priced).getByText("25 of 4,316 prints priced")).toBeTruthy();
     });
     expect(landscapeBusy()).toBeUndefined();
   });
@@ -900,9 +906,9 @@ describe("refreshing does not collapse the page", () => {
     const busy = screen
       .getByText("Loading catalogue prices…")
       .closest("[aria-busy='true']")!;
-    // Four stat placeholders and a chart-sized block, so the first frame is
+    // A snapshot placeholder and a chart-sized block, so the first frame is
     // roughly the height the real content will be.
-    expect(busy.querySelectorAll(".panel")).toHaveLength(5);
+    expect(busy.querySelectorAll(".panel")).toHaveLength(1);
   });
 });
 
@@ -910,7 +916,7 @@ describe("a section with nothing to say is omitted, not padded with zeroes", () 
   it("drops the index composition when nothing in scope is priced", async () => {
     fetchMarketOverview.mockResolvedValue(
       overview({
-        scope: { active_prints: 105, set: "EB-02", rarity: null },
+        scope: { release_product_id: null, active_prints: 105, set: "EB-02", rarity: null },
         coverage: {
           observed_prints: null,
           usable_priced_prints: 0,
@@ -934,7 +940,7 @@ describe("a section with nothing to say is omitted, not padded with zeroes", () 
     // empty one - see "the page states the index's composition exactly once".
     expect(screen.queryByText("What the index is made of")).toBeNull();
     // The stats themselves still report the real zero.
-    expect(screen.getByText("Catalogue coverage")).toBeTruthy();
+    expect(screen.getByTestId("market-coverage")).toBeTruthy();
   });
 
   it("drops the source breakdown when the source observed nothing in scope", async () => {
@@ -942,7 +948,7 @@ describe("a section with nothing to say is omitted, not padded with zeroes", () 
       snkrdunkOverview({
         available: false,
         unavailable_reason: "no_usable_prices_in_scope",
-        scope: { active_prints: 17, set: "ST-01", rarity: null },
+        scope: { release_product_id: null, active_prints: 17, set: "ST-01", rarity: null },
         coverage: {
           observed_prints: 0,
           usable_priced_prints: 0,
@@ -988,7 +994,7 @@ describe("failure states", () => {
     // The filters survive, so the visitor can change scope and try again
     // rather than being left on a dead page.
     expect(screen.getByRole("button", { name: "Market Index" })).toBeTruthy();
-    expect(screen.queryByText("Priced prints")).toBeNull();
+    expect(screen.queryByTestId("market-coverage")).toBeNull();
   });
 
   it("shows an explicitly unavailable basis without hiding its real zeros", async () => {
@@ -996,7 +1002,7 @@ describe("failure states", () => {
       snkrdunkOverview({
         available: false,
         unavailable_reason: "no_usable_prices_in_scope",
-        scope: { active_prints: 17, set: "ST-01", rarity: null },
+        scope: { release_product_id: null, active_prints: 17, set: "ST-01", rarity: null },
         coverage: {
           observed_prints: 0,
           usable_priced_prints: 0,
@@ -1028,7 +1034,7 @@ describe("control structure is mobile-safe and accessible", () => {
     await renderPage();
     // The visible "Set"/"Rarity" captions are hidden below `sm`, so the
     // accessible name has to carry them at every width.
-    expect(screen.getByLabelText("Set")).toBeTruthy();
+    expect(screen.getByLabelText("Release")).toBeTruthy();
     expect(screen.getByLabelText("Rarity or special print")).toBeTruthy();
     expect(screen.getByRole("group", { name: /price basis/i })).toBeTruthy();
     for (const button of within(
@@ -1042,8 +1048,8 @@ describe("control structure is mobile-safe and accessible", () => {
     await renderPage();
     const group = screen.getByRole("group", { name: /price basis/i });
     expect(group.querySelector(".flex-wrap")).toBeTruthy();
-    const scope = screen.getByLabelText("Set").closest("div.flex")!;
-    expect(scope.className).toContain("flex-wrap");
+    const scope = screen.getByLabelText("Release").closest("fieldset")!;
+    expect(scope.className).toContain("min-w-0");
   });
 
   it("gives the numeric bars no accessible presence of their own", async () => {
@@ -1071,4 +1077,125 @@ describe("the page reads as a landscape, not a terminal", () => {
     await renderPage();
     expect(screen.getByText(/Using SNKRDUNK · Current listing/)).toBeTruthy();
   });
+});
+
+describe("authoritative Market release scope", () => {
+  it("opens broad with a coverage-led snapshot using exact server figures", async () => {
+    await renderPage();
+    expect(screen.getByRole("heading", { name: "Market snapshot" })).toBeInTheDocument();
+    expect(screen.getByTestId("market-coverage")).toHaveTextContent("296 of 4,316 prints priced");
+    expect(screen.getByTestId("market-coverage")).toHaveTextContent("6.86% coverage");
+    expect(screen.getByText("Median price")).toBeInTheDocument();
+    expect(screen.getByText("Typical price range")).toBeInTheDocument();
+    expect(screen.getByText("￥30 – ￥220")).toBeInTheDocument();
+  });
+
+  it("uses release ID and rarity from a shared URL with English-only presentation", async () => {
+    startAt("release_product_id=186&rarity=C");
+    await renderPage();
+    expect(fetchMarketOverview).toHaveBeenLastCalledWith({priceBasis:"market_index", release_product_id:186, rarity:"C"});
+    expect(screen.getByLabelText("Release")).toHaveValue("186");
+    expect(screen.getByRole("heading", { name: "OP-17 — The World's Strongest Warriors" })).toBeInTheDocument();
+    expect(screen.getByText(/Current prices in this release/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/世界最強|メモリアル|ロマンス/);
+    expect(screen.getByRole("heading", {level:1})).toHaveTextContent(/^Card Pirate Index$/);
+    expect(screen.getByLabelText("Rarity or special print")).not.toHaveAttribute("multiple");
+  });
+
+  it("canonicalizes a unique legacy code with replace, retaining basis and rarity", async () => {
+    startAt("basis=source:yuyutei&set=OP-17&rarity=C");
+    const historyLength = window.history.length;
+    await renderPage();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("release_product_id")).toBe("186"));
+    expect(window.location.search).not.toContain("set=");
+    expect(window.history.length).toBe(historyLength);
+    expect(fetchMarketOverview).toHaveBeenLastCalledWith({ priceBasis:"source:yuyutei", release_product_id:186, rarity:"C" });
+  });
+
+  it("treats an explicit release ID as authoritative over a conflicting legacy set", async () => {
+    startAt("release_product_id=186&set=OP-01");
+    await renderPage();
+    expect(fetchMarketOverview).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186}));
+    expect(fetchMarketOverview.mock.calls.every(([p]) => p.set === undefined)).toBe(true);
+  });
+
+  it("does not canonicalize an ambiguous official code", async () => {
+    fetchReleases.mockResolvedValue({items:[...RELEASES,{...RELEASES[0],release_product_id:187}]});
+    startAt("set=OP-17");
+    await renderPage();
+    expect(window.location.search).toBe("?set=OP-17");
+  });
+
+  it("keeps an explicit unknown positive ID scoped instead of silently widening it", async () => {
+    startAt("release_product_id=999999");
+    fetchMarketOverview.mockResolvedValue(overview({scope:{release_product_id:999999,active_prints:0,set:null,rarity:null}}));
+    await renderPage();
+    expect(fetchMarketOverview).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:999999}));
+    expect(screen.getByText("No active prints match this scope.")).toBeInTheDocument();
+  });
+
+  it("writes only the release ID for new navigation and Clear preserves price basis", async () => {
+    startAt("basis=source:snkrdunk&rarity=C");
+    await renderPage();
+    fireEvent.change(screen.getByLabelText("Release"), {target:{value:"186"}});
+    await waitFor(() => expect(fetchMarketOverview).toHaveBeenLastCalledWith({priceBasis:"source:snkrdunk",release_product_id:186,rarity:"C"}));
+    expect(window.location.search).not.toContain("set=");
+    fireEvent.click(screen.getByRole("button", {name:"Clear all"}));
+    await waitFor(() => expect(fetchMarketOverview).toHaveBeenLastCalledWith({priceBasis:"source:snkrdunk",release_product_id:undefined,rarity:undefined}));
+    expect(new URLSearchParams(window.location.search).get("basis")).toBe("source:snkrdunk");
+    expect(screen.getByRole("heading", {name:"Market snapshot"})).toBeInTheDocument();
+  });
+
+  it("Back and Forward restore the aggregate scope", async () => {
+    await renderPage();
+    fireEvent.change(screen.getByLabelText("Release"), {target:{value:"186"}});
+    fireEvent.change(screen.getByLabelText("Rarity or special print"), {target:{value:"C"}});
+    await waitFor(() => expect(fetchMarketOverview).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,rarity:"C"})));
+    window.history.back();
+    await waitFor(() => expect(screen.getByLabelText("Rarity or special print")).toHaveValue(""));
+    expect(screen.getByLabelText("Release")).toHaveValue("186");
+    window.history.forward();
+    await waitFor(() => expect(screen.getByLabelText("Rarity or special print")).toHaveValue("C"));
+    expect(fetchMarketOverview).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,rarity:"C"}));
+  });
+
+  it("loads the broad snapshot without a Release selector when releases fail", async () => {
+    fetchReleases.mockRejectedValue(new Error("offline"));
+    await renderPage();
+    expect(screen.queryByLabelText("Release")).toBeNull();
+    expect(screen.getByTestId("market-coverage")).toBeInTheDocument();
+    expect(screen.getByRole("heading", {level:1})).toHaveTextContent("Card Pirate Index");
+  });
+
+  it("retains the settled snapshot while a release refresh is pending", async () => {
+    await renderPage();
+    fetchMarketOverview.mockReturnValue(new Promise(() => {}));
+    fireEvent.change(screen.getByLabelText("Release"), {target:{value:"186"}});
+    await waitFor(() => expect(screen.getByTestId("market-coverage").closest('[aria-busy]')).toHaveAttribute("aria-busy","true"));
+    expect(screen.getByTestId("market-coverage")).toHaveTextContent("296 of 4,316 prints priced");
+  });
+});
+
+it("retains legacy server scope when release discovery is unavailable", async () => {
+  startAt("set=OP-01");
+  fetchReleases.mockRejectedValue(new Error("offline"));
+  await renderPage();
+  expect(fetchMarketOverview).toHaveBeenLastCalledWith({priceBasis:"market_index",release_product_id:undefined,set:"OP-01",rarity:undefined});
+  expect(screen.getByRole("heading", {name:"OP-01 — Romance Dawn"})).toBeInTheDocument();
+  expect(screen.getByRole("button", {name:"Clear all"})).toBeInTheDocument();
+});
+
+it("preserves the server's OP-17 aggregate including the mixed-code EB04-007 fixture", async () => {
+  const { printFixture } = await import("@/lib/publicDiscoveryFixtures");
+  const mixed = printFixture(3686, {card_code:"EB04-007",release_product_id:186,release_product_code:"EB-04",release_code:"OP-17"});
+  startAt(`release_product_id=${mixed.release_product_id}&rarity=C`);
+  // Matches the authoritative mixed-code backend regression: three physical
+  // OP-17 prints, two usable prices (including EB04-007). No card list fetch
+  // or prefix matching is needed to display this aggregate.
+  fetchMarketOverview.mockResolvedValue(overview({scope:{active_prints:3,release_product_id:186,set:null,rarity:"C"},coverage:{observed_prints:null,usable_priced_prints:2,coverage_pct:66.67,excluded_constrained_prints:null,unavailable_prints:1}}));
+  await renderPage();
+  expect(fetchMarketOverview).toHaveBeenLastCalledWith({priceBasis:"market_index",release_product_id:186,rarity:"C"});
+  expect(screen.getByTestId("market-coverage")).toHaveTextContent("2 of 3 prints priced");
+  expect(screen.getByTestId("market-coverage")).toHaveTextContent("66.67% coverage");
+  expect(screen.getByRole("heading",{name:"OP-17 — The World's Strongest Warriors"})).toBeInTheDocument();
 });

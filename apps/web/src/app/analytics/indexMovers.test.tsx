@@ -213,6 +213,7 @@ const HANCOCK: IndexMover = {
 
 function movers(partial: Partial<IndexMovers> = {}): IndexMovers {
   return {
+    order: "move",
     as_of: "2026-09-07",
     prior_point_date: "2026-09-06",
     constituent_count: 296,
@@ -228,6 +229,7 @@ function movers(partial: Partial<IndexMovers> = {}): IndexMovers {
 /** Staging's real 2026-09-06: 296 constituents, none of which moved. */
 function quietDay(): IndexMovers {
   return {
+    order: "move",
     as_of: "2026-09-06",
     prior_point_date: "2026-09-05",
     constituent_count: 296,
@@ -242,6 +244,7 @@ function quietDay(): IndexMovers {
 /** Staging's real 2026-09-03 base point. */
 function basePoint(): IndexMovers {
   return {
+    order: "move",
     as_of: "2026-09-03",
     prior_point_date: null,
     constituent_count: 0,
@@ -264,7 +267,7 @@ const BASES = [
 const OVERVIEW = {
   price_basis: "market_index", kind: "market_index" as const, source: null,
   reference_type: null, evidence_type: null, available: true, unavailable_reason: null,
-  scope: { active_prints: 4316, set: null, rarity: null },
+  scope: { release_product_id: null, active_prints: 4316, set: null, rarity: null },
   coverage: {
     observed_prints: null, usable_priced_prints: 305, coverage_pct: 7.07,
     excluded_constrained_prints: null, unavailable_prints: 4011,
@@ -286,6 +289,7 @@ function stub({
   movFails = false,
 }: { mov?: unknown; movFails?: boolean } = {}) {
   apiGet.mockImplementation((path: string, opts?: { params?: { window?: string } }) => {
+    if (path === "/prints") return Promise.resolve({items:[]});
     if (path === "/analytics/index/movers") {
       return movFails ? Promise.reject(new Error("boom")) : Promise.resolve(mov);
     }
@@ -385,8 +389,8 @@ describe("exact print identity", () => {
       fireEvent.focus(link);
       fireEvent.mouseEnter(link);
     }
-    expect(apiGet).toHaveBeenCalledTimes(6);
-    expect(apiGet.mock.calls.some(([path]) => path.startsWith("/prints"))).toBe(false);
+    expect(apiGet).toHaveBeenCalledTimes(8);
+    expect(apiGet.mock.calls.some(([path]) => path.startsWith("/prints/"))).toBe(false);
   });
 
   it("keys and distinguishes rows by card_print_id, not card_code", async () => {
@@ -605,7 +609,7 @@ describe("request discipline", () => {
     // The section describes the NEWEST published point. A window or a date in
     // this request would make it answer a different question from the one the
     // heading asks.
-    expect(calls("/analytics/index/movers")[0][1]).toBeUndefined();
+    expect(calls("/analytics/index/movers")[0][1]).toEqual({ params: { order: "move" } });
   });
 
   it("does not refetch when any of the seven timeframes is pressed", async () => {
@@ -634,11 +638,13 @@ describe("request discipline", () => {
   it("fetches no print or card endpoint to render the rows", async () => {
     await renderPage();
     const paths = apiGet.mock.calls.map((c) => c[0] as string);
-    expect(paths.filter((p) => p.startsWith("/prints"))).toHaveLength(0);
+    expect(paths.filter((p) => p.startsWith("/prints/"))).toHaveLength(0);
     expect(paths.filter((p) => p.startsWith("/cards"))).toHaveLength(0);
     // Everything a row shows came from the one movers payload.
     expect(new Set(paths)).toEqual(
       new Set([
+        "/prints",
+        "/releases",
         "/analytics/index/movers",
         "/analytics/index/composition",
         "/analytics/index",
@@ -689,5 +695,182 @@ describe("placement and mobile structure", () => {
     // Mobile: second grid row of column 2. Desktop: the third column.
     expect(metrics.className).toContain("col-start-2");
     expect(metrics.className).toContain("sm:col-start-3");
+  });
+});
+
+describe("mover modes and broad Index boundary", () => {
+  it("opens Move %, then requests a distinct impact cohort without local sorting or changing scope/window", async () => {
+    const original = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation((path, opts) => {
+      if (path === "/analytics/index/movers" && opts?.params?.order === "impact") {
+        // Deliberately different membership AND rank order. The UI must render
+        // this payload verbatim, never re-sort the move cohort it already has.
+        return Promise.resolve(movers({order:"impact",movers:[{...HANCOCK,card_print_id:9001,impact_rank:9},LAW]}));
+      }
+      return original(path, opts);
+    });
+    window.history.replaceState(null,"","/analytics?release_product_id=186");
+    await renderPage();
+    expect(screen.getByRole("button",{name:"Move %"})).toHaveAttribute("aria-pressed","true");
+    expect(calls("/analytics/index/movers")[0][1]).toEqual({params:{order:"move"}});
+    expect(within(rows()[0]).getByTestId("mover-raw-pct")).toHaveAttribute("data-primary","true");
+    expect(rows()[0]).toHaveTextContent("↓ Down");
+    expect(rows()[2]).toHaveTextContent("↑ Up");
+    expect(rows()[2]).toHaveTextContent("+23.33%");
+    const indexCalls = calls("/analytics/index").length;
+    const overviewCalls = calls("/analytics/market/overview").length;
+    const url = window.location.href;
+    fireEvent.click(screen.getByRole("button",{name:"Index impact"}));
+    await waitFor(() => expect(rows().map(r=>r.getAttribute("data-card-print-id"))).toEqual(["9001",String(LAW.card_print_id)]));
+    expect(calls("/analytics/index/movers").at(-1)?.[1]).toEqual({params:{order:"impact"}});
+    expect(within(rows()[0]).getByTestId("mover-index-points")).toHaveAttribute("data-primary","true");
+    expect(within(rows()[0]).getByTestId("mover-raw-pct")).toHaveAttribute("data-primary","false");
+    expect(screen.getByText("Which cards contributed most to the latest Index move.")).toBeInTheDocument();
+    expect(calls("/analytics/index")).toHaveLength(indexCalls);
+    expect(calls("/analytics/market/overview")).toHaveLength(overviewCalls);
+    expect(window.location.href).toBe(url);
+    expect(screen.getByTestId("index-movers").textContent).not.toContain("contribution_log_return");
+  });
+
+  it("keeps all Index endpoints broad with OP-17 selected and after scope changes", async () => {
+    const original = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation((path, opts) => {
+      if(path === "/releases") return Promise.resolve({items:[{release_product_id:186,official_code:"OP-17",display_name:"世界最強の戦士"}]});
+      if(path === "/analytics/market/filters") return Promise.resolve({sets:[],rarities:[{value:"SEC",label:"SEC"}]});
+      return original(path,opts);
+    });
+    window.history.replaceState(null,"","/analytics?release_product_id=186");
+    await renderPage();
+    fireEvent.change(screen.getByLabelText("Rarity or special print"),{target:{value:"SEC"}});
+    await waitFor(()=>expect(calls("/analytics/market/overview").at(-1)?.[1]?.params).toMatchObject({release_product_id:186,rarity:"SEC"}));
+    for(const path of ["/analytics/index","/analytics/index/composition","/analytics/index/movers"]){
+      expect(calls(path)).toHaveLength(1);
+      expect(calls(path)[0][1]?.params ?? {}).not.toHaveProperty("release_product_id");
+      expect(calls(path)[0][1]?.params ?? {}).not.toHaveProperty("rarity");
+      expect(calls(path)[0][1]?.params ?? {}).not.toHaveProperty("price_basis");
+    }
+    expect(screen.getByRole("heading",{level:1})).toHaveTextContent(/^Card Pirate Index$/);
+    expect(document.body.textContent).not.toMatch(/OP-17 Index|Release Index|Set Index/);
+  });
+
+  it("keeps Index and snapshot usable when switching mover mode fails", async () => {
+    await renderPage();
+    const original = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation((path,opts)=>path==="/analytics/index/movers" ? Promise.reject(new Error("offline")) : original(path,opts));
+    fireEvent.click(screen.getByRole("button",{name:"Index impact"}));
+    await screen.findByTestId("movers-unavailable");
+    expect(screen.getByTestId("market-coverage")).toBeInTheDocument();
+    expect(screen.getByTestId("index-hero")).toBeInTheDocument();
+  });
+
+  it("keeps movers and Index usable when the snapshot fails", async () => {
+    const original = apiGet.getMockImplementation()!;
+    apiGet.mockImplementation((path,opts)=>path==="/analytics/market/overview" ? Promise.reject(new Error("offline")) : original(path,opts));
+    await renderPage();
+    await screen.findByText("This view of the market could not be loaded. Please try again shortly.");
+    expect(rows()).toHaveLength(4);
+    expect(screen.getByTestId("index-hero")).toBeInTheDocument();
+  });
+});
+
+it("keeps pending mover changes panel-local and ignores late responses from a previous mode", async () => {
+  await renderPage();
+  const original=apiGet.getMockImplementation()!;
+  let finishImpact: (value:IndexMovers)=>void = () => {};
+  apiGet.mockImplementation((path,opts)=>path==="/analytics/index/movers" && opts?.params?.order==="impact"
+    ? new Promise<IndexMovers>(resolve=>{finishImpact=resolve;}) : original(path,opts));
+  fireEvent.click(screen.getByRole("button",{name:"Index impact"}));
+  expect(screen.getByText("Loading what moved the index…")).toBeInTheDocument();
+  expect(screen.getByTestId("market-coverage")).toBeInTheDocument();
+  expect(screen.getByTestId("index-hero")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:"Move %"}));
+  await waitFor(()=>expect(rows()).toHaveLength(4));
+  finishImpact(movers({order:"impact",movers:[HANCOCK]}));
+  await waitFor(()=>expect(screen.getByRole("button",{name:"Move %"})).toHaveAttribute("aria-pressed","true"));
+  expect(rows()).toHaveLength(4);
+});
+
+describe("Market structure and discovery integration",()=>{
+  async function setupStructure({cardsFail=false,overviewFail=false}={}) {
+    const {catalogueFixture,printFixture}=await import("@/lib/publicDiscoveryFixtures");
+    const original=apiGet.getMockImplementation()!;
+    apiGet.mockImplementation((path,opts)=>{
+      const params=opts?.params ?? {};
+      if(path==="/releases") return Promise.resolve({items:[{release_product_id:186,official_code:"OP-17",display_name:"世界最強の戦士"}]});
+      if(path==="/analytics/market/bases") return Promise.resolve({bases:[...BASES,{...BASES[0],key:"source:snkrdunk",kind:"source",source:"snkrdunk",reference_type:"listing_floor"}]});
+      if(path==="/analytics/market/filters") return Promise.resolve({sets:[],rarities:[{value:"SEC",label:"SEC"}]});
+      if(path==="/prints") return cardsFail ? Promise.reject(new Error("offline")) : Promise.resolve(catalogueFixture([printFixture(3686,{card_code:"EB04-007",release_product_id:186,release_code:"OP-17"})]));
+      if(path==="/analytics/market/overview") return overviewFail ? Promise.reject(new Error("offline")) : Promise.resolve({
+        ...OVERVIEW,
+        scope:{...OVERVIEW.scope,release_product_id:params.release_product_id??null,rarity:params.rarity??null},
+        distribution:[{lower_jpy:0,upper_jpy:99,label:"Under ¥100",count:params.release_product_id ? 17 : 225},{lower_jpy:100,upper_jpy:299,label:"¥100–299",count:0}],
+      });
+      return original(path,opts);
+    });
+  }
+
+  it("renders the final section order once, with distinct scoped and broad structure",async()=>{
+    await setupStructure();await renderPage();await screen.findByTestId("market-cards-grid");
+    const sections=[screen.getByTestId("index-hero"),screen.getByTestId("index-movers"),screen.getByRole("heading",{name:"Market snapshot"}),screen.getByTestId("market-cards"),screen.getByTestId("market-structure")];
+    sections.slice(1).forEach((section,i)=>expect(sections[i].compareDocumentPosition(section)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy());
+    const structure=screen.getByTestId("market-structure");
+    expect(within(structure).getByText("Price distribution")).toBeInTheDocument();
+    expect(within(structure).getByTestId("index-composition")).toBeInTheDocument();
+    expect(within(structure).getByTestId("market-breadth")).toBeInTheDocument();
+    expect(screen.getAllByText("Price distribution")).toHaveLength(1);
+    expect(screen.getAllByTestId("index-composition")).toHaveLength(1);
+    expect(screen.getAllByTestId("market-breadth")).toHaveLength(1);
+    expect(screen.getByRole("region",{name:"Broad Index structure"})).toContainElement(screen.getByTestId("index-composition"));
+  });
+
+  it("makes exactly one overview/cards request per scope change without touching broad Index requests",async()=>{
+    await setupStructure();await renderPage();await screen.findByTestId("market-cards-grid");
+    expect(calls("/prints")).toHaveLength(1);expect(calls("/analytics/market/overview")).toHaveLength(1);
+    expect(calls("/prints")[0][1]?.params).toMatchObject({price_basis:"market_index",sort:"card_code_asc",limit:6});
+    fireEvent.change(screen.getByLabelText("Release"),{target:{value:"186"}});
+    await waitFor(()=>expect(calls("/prints")).toHaveLength(2));
+    expect(calls("/analytics/market/overview")).toHaveLength(2);
+    expect(calls("/prints").at(-1)?.[1]?.params).toMatchObject({release_product_id:186,price_basis:"market_index"});
+    const distribution=screen.getByText("Price distribution").closest("section")!;
+    await waitFor(()=>expect(within(distribution).getByText("17")).toBeInTheDocument());
+    expect(within(distribution).getByText("0")).toBeInTheDocument();
+    expect(screen.getByTestId("composition-count")).toHaveTextContent("296");
+    expect(screen.getByTestId("breadth-up")).toHaveTextContent("1");
+    expect(screen.getByRole("region",{name:"Broad Index structure"})).not.toHaveTextContent("OP-17");
+    fireEvent.click(screen.getByRole("button",{name:"SNKRDUNK · Current listing"}));
+    await waitFor(()=>expect(calls("/prints")).toHaveLength(3));
+    expect(calls("/analytics/market/overview")).toHaveLength(3);
+    expect(calls("/prints").at(-1)?.[1]?.params).toMatchObject({release_product_id:186,price_basis:"source:snkrdunk"});
+    fireEvent.change(screen.getByLabelText("Rarity or special print"),{target:{value:"SEC"}});
+    await waitFor(()=>expect(calls("/prints")).toHaveLength(4));
+    expect(calls("/analytics/market/overview")).toHaveLength(4);
+    expect(calls("/prints").at(-1)?.[1]?.params).toMatchObject({release_product_id:186,rarity:"SEC",price_basis:"source:snkrdunk",sort:"card_code_asc",limit:6});
+    await waitFor(()=>expect(screen.getByRole("link",{name:"Browse these cards →"})).toHaveAttribute("href","/cards?release_product_id=186&rarity=SEC"));
+    for(const path of ["/analytics/index","/analytics/index/composition","/analytics/index/movers"]){
+      expect(calls(path)).toHaveLength(1);
+      expect(calls(path)[0][1]?.params ?? {}).not.toHaveProperty("release_product_id");
+    }
+    expect(screen.getByTestId("market-card")).toHaveTextContent("EB04-007");
+    expect(screen.getByTestId("market-card")).toHaveTextContent("Found in OP-17");
+  });
+
+  it("a cards failure preserves every other region and Retry requests only cards",async()=>{
+    await setupStructure({cardsFail:true});await renderPage();
+    const retry=await screen.findByRole("button",{name:"Retry cards"});
+    expect(screen.getByTestId("market-coverage")).toBeInTheDocument();
+    expect(screen.getByTestId("index-hero")).toBeInTheDocument();
+    expect(rows()).toHaveLength(4);
+    expect(screen.getByText("Price distribution")).toBeInTheDocument();
+    expect(screen.getByTestId("index-composition")).toBeInTheDocument();
+    fireEvent.click(retry);await waitFor(()=>expect(calls("/prints")).toHaveLength(2));
+    expect(calls("/analytics/market/overview")).toHaveLength(1);
+    expect(calls("/analytics/index")).toHaveLength(1);
+  });
+
+  it("an overview failure does not hide discovery or the broad structure",async()=>{
+    await setupStructure({overviewFail:true});await renderPage();await screen.findByTestId("market-cards-grid");
+    expect(screen.getByTestId("index-composition")).toBeInTheDocument();
+    expect(screen.getByTestId("market-breadth")).toBeInTheDocument();
+    expect(screen.getByText("Current-price structure is unavailable for this view.")).toBeInTheDocument();
   });
 });

@@ -6,47 +6,33 @@ import {
   type MarketFilterOption,
 } from "@/lib/marketAnalytics";
 
-/** The three controls above the market landscape: which price basis to read
- * it through, and which slice of the catalogue to read.
- *
- * EVERY OPTION IN THIS COMPONENT COMES FROM THE SERVER. The bases come from
- * `GET /analytics/market/bases`, the sets and rarities from
- * `GET /analytics/market/filters`, and there is no fallback list anywhere
- * below - a build with no response renders no options rather than a plausible
- * guess. That is what makes a fourth platform, or next season's set, appear
- * here without a frontend release, and it is why this file contains no
- * platform name and no set code.
- *
- * There is deliberately NO window control. The overview endpoint has no window
- * parameter: it reports what prices ARE, not how they moved, and a 7D/30D
- * selector that changed nothing would be a promise the data cannot keep. The
- * page says so in its own words further down, where a collector can read it,
- * rather than by rendering a dead control here.
- */
+import { releaseLabel, type ReleaseCatalogueItem } from "@/lib/releases";
+
+/** Price basis and one aggregate release/rarity scope, all server supplied. */
 export function MarketLandscapeFilters({
   bases,
-  sets,
+  releases,
   rarities,
   selectedBasis,
-  selectedSet,
+  selectedRelease,
   selectedRarity,
   onBasisChange,
-  onSetChange,
+  onReleaseChange,
   onRarityChange,
   onClear,
 }: {
   bases: MarketBasis[];
-  sets: MarketFilterOption[];
+  releases: ReleaseCatalogueItem[] | null;
   rarities: MarketFilterOption[];
   selectedBasis: string;
-  selectedSet: string;
+  selectedRelease: string;
   selectedRarity: string;
   onBasisChange: (key: string) => void;
-  onSetChange: (value: string) => void;
+  onReleaseChange: (value: string) => void;
   onRarityChange: (value: string) => void;
   onClear: () => void;
 }) {
-  const scopeFiltered = Boolean(selectedSet || selectedRarity);
+  const scopeFiltered = Boolean(selectedRelease || selectedRarity);
 
   return (
     <div className="space-y-2.5">
@@ -84,20 +70,15 @@ export function MarketLandscapeFilters({
         </div>
       </fieldset>
 
-      {/* Scope filters share one bar, the same charcoal strip the print
-          catalogue's toolbar uses, so the two surfaces read as one product. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-panel border border-border-muted bg-bg-elevated px-3 py-1.5">
-        <span className="hidden text-xs font-medium text-text-muted sm:inline">
-          Scope
-        </span>
-
-        <ScopeSelect
-          label="Set"
-          value={selectedSet}
-          placeholder="All sets"
-          options={sets}
-          onSelect={onSetChange}
-        />
+      <fieldset className="min-w-0 space-y-2 rounded-panel border border-border-muted bg-bg-elevated p-3">
+        <legend className="px-1 text-xs font-medium text-text-muted">Scope</legend>
+        {releases !== null && <ScopeSelect
+          label="Release"
+          value={selectedRelease}
+          placeholder="All releases"
+          options={releases.map((r) => ({ value: String(r.release_product_id), label: releaseLabel(r) }))}
+          onSelect={onReleaseChange}
+        />}
 
         <ScopeSelect
           label="Rarity"
@@ -117,22 +98,15 @@ export function MarketLandscapeFilters({
             Clear all
           </button>
         )}
-      </div>
+      </fieldset>
     </div>
   );
 }
 
 const SELECT_CLASS =
-  "min-w-0 rounded-control border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary transition-colors hover:border-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal";
+  "w-full min-w-0 rounded-control border border-border-default bg-bg-page px-2 py-1 text-xs text-text-primary transition-colors hover:border-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal";
 
-/** One labelled scope control, matching PrintCatalogueToolbar's FilterSelect
- * idiom: the visible caption is hidden below `sm` where the placeholder
- * already says what the control is, while `aria-label` carries the name at
- * every width so hiding the caption never costs the accessible name.
- *
- * An empty option list renders a disabled control saying so, rather than an
- * enabled dropdown containing only "All ..." - a control that cannot narrow
- * anything should not look like it can. */
+/** Visible labels and full-width selectors remain readable on mobile. */
 function ScopeSelect({
   label,
   accessibleName,
@@ -149,9 +123,10 @@ function ScopeSelect({
   onSelect: (value: string) => void;
 }) {
   const empty = options.length === 0;
+  const unlisted = value && !options.some((option) => option.value === value);
   return (
-    <label className="flex min-w-0 items-center gap-1.5">
-      <span className="hidden text-[11px] text-text-muted sm:inline">{label}</span>
+    <label className="grid min-w-0 gap-1.5">
+      <span className="text-xs text-text-muted">{label}</span>
       <select
         aria-label={accessibleName ?? label}
         value={value}
@@ -160,6 +135,7 @@ function ScopeSelect({
         className={`${SELECT_CLASS} ${empty ? "cursor-not-allowed opacity-60" : ""}`}
       >
         <option value="">{empty ? `No ${label.toLowerCase()} options` : placeholder}</option>
+        {unlisted && <option value={value}>Selected release</option>}
         {/* `value` and `label` are used for exactly what each is named for.
             Nothing here derives one from the other, which is how `OP01` and
             `OP-01` became two spellings of one set in the first place. */}

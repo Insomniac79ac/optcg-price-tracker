@@ -500,7 +500,7 @@ export interface IndexMover {
 /** GET /analytics/index/movers - WHICH constituents moved on one published day.
  *
  * `movers` carries non-flat actual constituents only, already ordered by the
- * server's `move_rank`. Flat constituents are reported as `unchanged_count`
+ * server's requested `order`. Flat constituents are reported as `unchanged_count`
  * rather than listed, and `movers_count + unchanged_count === constituent_count`
  * holds over the FULL set - `movers_count` is therefore the honest count of
  * what moved even when `truncated` says the payload carries fewer rows.
@@ -509,7 +509,10 @@ export interface IndexMover {
  * `constituent_count: 0`: it opened a segment and had nothing to move against.
  * That is a different state from a quiet day, which has a full constituent
  * count and an empty list. */
+export type MoverOrder = "move" | "impact";
+
 export interface IndexMovers {
+  order: MoverOrder;
   as_of: string;
   prior_point_date: string | null;
   constituent_count: number;
@@ -520,16 +523,16 @@ export interface IndexMovers {
   truncated: boolean;
 }
 
-/** Fetched ONCE per page load, and deliberately not per window.
+/** Fetched per mover mode, never per window or release scope.
  *
- * Same rule as `fetchIndexComposition`, and it matters more here because the
+ * Same scope boundary as `fetchIndexComposition`, and it matters more here because the
  * answer looks like it belongs to the chart: it does not. Movers describe the
  * NEWEST published point, so pressing 2W or 1Y cannot change which day this
  * answers. The function takes no window argument to pass one, and it takes no
  * date either - the surface asks for the newest point and renders the `as_of`
  * that comes back rather than aligning it to the chart's last plotted day. */
-export function fetchIndexMovers(): Promise<IndexMovers> {
-  return apiGet<IndexMovers>("/analytics/index/movers");
+export function fetchIndexMovers(order: MoverOrder = "move"): Promise<IndexMovers> {
+  return apiGet<IndexMovers>("/analytics/index/movers", { params: { order } });
 }
 
 /** `approx_index_points` as the server sent it, with an explicit sign.

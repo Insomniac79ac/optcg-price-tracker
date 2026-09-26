@@ -132,7 +132,7 @@ const BASES = [
 const OVERVIEW = {
   price_basis: "market_index", kind: "market_index" as const, source: null,
   reference_type: null, evidence_type: null, available: true, unavailable_reason: null,
-  scope: { active_prints: 4316, set: null, rarity: null },
+  scope: { release_product_id: null, active_prints: 4316, set: null, rarity: null },
   coverage: {
     observed_prints: null, usable_priced_prints: 305, coverage_pct: 7.07,
     excluded_constrained_prints: null, unavailable_prints: 4011,
@@ -258,7 +258,7 @@ describe("the composition is fetched once and never again", () => {
 
   it("asks for no catalogue endpoint to build either panel", async () => {
     await renderPage();
-    for (const path of ["/prints", "/cards", "/analytics/index/constituents"]) {
+    for (const path of ["/prints/", "/cards", "/analytics/index/constituents"]) {
       expect(calls(path)).toHaveLength(0);
     }
   });
@@ -435,7 +435,7 @@ describe("composition edge cases are handled honestly", () => {
     expect(screen.getByTestId("breadth-flat").textContent).toBe("292");
     expect(screen.getByTestId("index-level")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" }),
+      screen.getByRole("heading", { level: 2, name: "Market snapshot" }),
     ).toBeTruthy();
   });
 });
@@ -565,13 +565,13 @@ describe("the row reads as secondary analysis below the hero", () => {
     expect(hero.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("sits before the market landscape section", async () => {
+  it("sits after the market snapshot and cards", async () => {
     await renderPage();
     const row = screen.getByTestId("index-analytics-row");
     const landscape = screen.getByRole("heading", {
-      level: 2, name: "Prices across the catalogue",
+      level: 2, name: "Market snapshot",
     });
-    expect(row.compareDocumentPosition(landscape) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(landscape.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
   });
 

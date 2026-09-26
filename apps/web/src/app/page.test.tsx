@@ -12,7 +12,7 @@ vi.mock('@/lib/prints',async()=>({...await vi.importActual<typeof import('@/lib/
 vi.mock('@/lib/releases',async()=>({...await vi.importActual<typeof import('@/lib/releases')>('@/lib/releases'),fetchReleases:vi.fn()}));
 vi.mock('@/lib/cardPirateIndex',async()=>({...await vi.importActual<typeof import('@/lib/cardPirateIndex')>('@/lib/cardPirateIndex'),fetchIndexMovers:vi.fn()}));
 const mover=(id:number,direction:'up'|'down'='up'):IndexMover=>({card_print_id:id,card_code:'OP01-001',name:`Mover ${id}`,rarity:'SR',display_image_url:`https://www.onepiece-cardgame.com/images/${id}.png`,treatment:'parallel',language:'jp',prior_value_jpy:100,current_value_jpy:200,direction,raw_pct:direction==='up'?30.77:-12.5,capped_log_return:'0.2231',was_capped:true,contribution_log_return:'0.0001',approx_index_points:'0.1000',move_rank:id,impact_rank:id});
-const moves=(count=4)=>({as_of:'2026-09-25',prior_point_date:'2026-09-24',constituent_count:100,movers_count:count,unchanged_count:100-count,chain_link_log_return:'0.001',truncated:false,movers:Array.from({length:count},(_,i)=>mover(100+i,i%2?'down':'up'))});
+const moves=(count=4)=>({order:'move' as const,as_of:'2026-09-25',prior_point_date:'2026-09-24',constituent_count:100,movers_count:count,unchanged_count:100-count,chain_link_log_return:'0.001',truncated:false,movers:Array.from({length:count},(_,i)=>mover(100+i,i%2?'down':'up'))});
 beforeEach(async()=>{
   await Promise.resolve();
   push.mockReset();
