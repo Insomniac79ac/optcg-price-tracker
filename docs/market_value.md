@@ -79,6 +79,12 @@ yen before taking the ratio; there is no equal weighting and no CPI daily cap.
 Per-print market impact is `delta_jpy = v(i,d) - v(i,p)` and percentage-point
 contribution is `100 * delta_jpy / P`.
 
+JPY inputs and comparable sums remain integers. Non-terminating ratios use a
+private 50-significant-digit Decimal context, independent of mutable process
+state, with no display quantization. Window and segment chains multiply the
+integer numerators and denominators first and convert the resulting exact
+rational once, avoiding sequential rounding drift.
+
 ## Coverage neutrality and breaks
 
 An entrant is excluded from its first transition. A leaver is excluded from

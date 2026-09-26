@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 import pytest
 
 from app.services.market_value import (
+    CALCULATION_DECIMAL_PRECISION,
     MarketValueDay,
     MarketValueObservation,
     MarketValueScope,
@@ -140,7 +141,10 @@ def test_expensive_print_naturally_has_more_basket_weight() -> None:
         [observation(1, 200), observation(2, 100_000)],
         total=2,
     )
-    assert step.ratio == Decimal(100_200) / Decimal(100_100)
+    with localcontext() as context:
+        context.prec = CALCULATION_DECIMAL_PRECISION
+        expected_ratio = Decimal(100_200) / Decimal(100_100)
+    assert step.ratio == expected_ratio
     precision = Decimal("0.000000000000000000000001")
     assert step.return_fraction.quantize(precision) == (
         Decimal(100) / Decimal(100_100)
@@ -263,6 +267,25 @@ def test_input_order_does_not_change_step_or_contribution_order() -> None:
     reverse, _ = decision(list(reversed(prior)), list(reversed(current)), total=100)
     assert forward == reverse
     assert [row.card_print_id for row in forward.contributions] == list(range(1, 41))
+
+
+def test_outputs_do_not_depend_on_process_decimal_precision() -> None:
+    days = tuple(
+        day(offset, stable_rows(10, value=100 + offset), total=10)
+        for offset in range(8)
+    )
+    with localcontext() as context:
+        context.prec = 9
+        low_precision = evaluate_market_value_window(
+            days, scope=MarketValueScope.release(1), window_days=7
+        )
+    with localcontext() as context:
+        context.prec = 40
+        high_precision = evaluate_market_value_window(
+            days, scope=MarketValueScope.release(1), window_days=7
+        )
+    assert low_precision == high_precision
+    assert low_precision.movement_fraction == Decimal("0.07")
 
 
 def test_small_release_near_complete_gate_passes() -> None:

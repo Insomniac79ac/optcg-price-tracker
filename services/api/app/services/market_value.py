@@ -23,12 +23,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from enum import Enum
 from typing import Iterable
 
 METHODOLOGY_VERSION = 1
 SUPPORTED_WINDOW_DAYS = (7, 30)
+CALCULATION_DECIMAL_PRECISION = 50
 
 RELEASE_LARGE_MIN_PHYSICAL = 30
 RELEASE_LARGE_MIN_COMPARABLE = 30
@@ -41,6 +42,25 @@ OVERALL_MIN_PHYSICAL_FRACTION = Decimal("0.10")
 MIN_COMPARABLE_VALUE_FRACTION = Decimal("0.80")
 
 ContributorKey = tuple[str, str]
+
+
+def _decimal_ratio(numerator: int, denominator: int) -> Decimal:
+    """Divide independently of mutable process-wide Decimal context."""
+    with localcontext() as context:
+        context.prec = CALCULATION_DECIMAL_PRECISION
+        return Decimal(numerator) / Decimal(denominator)
+
+
+def _decimal_multiply(left: Decimal, right: int | Decimal) -> Decimal:
+    with localcontext() as context:
+        context.prec = CALCULATION_DECIMAL_PRECISION
+        return left * Decimal(right)
+
+
+def _decimal_subtract(left: Decimal, right: int | Decimal) -> Decimal:
+    with localcontext() as context:
+        context.prec = CALCULATION_DECIMAL_PRECISION
+        return left - Decimal(right)
 
 
 class ScopeKind(str, Enum):
@@ -172,7 +192,7 @@ class TrackedValueResult:
     def physical_coverage_pct(self) -> Decimal | None:
         if self.physical_coverage_fraction is None:
             return None
-        return self.physical_coverage_fraction * Decimal(100)
+        return _decimal_multiply(self.physical_coverage_fraction, 100)
 
 
 @dataclass(frozen=True)
@@ -210,7 +230,7 @@ class MonetaryStep:
     def return_pct(self) -> Decimal | None:
         if self.return_fraction is None:
             return None
-        return self.return_fraction * Decimal(100)
+        return _decimal_multiply(self.return_fraction, 100)
 
 
 @dataclass(frozen=True)
@@ -246,7 +266,7 @@ class MarketValueWindow:
     def movement_pct(self) -> Decimal | None:
         if self.movement_fraction is None:
             return None
-        return self.movement_fraction * Decimal(100)
+        return _decimal_multiply(self.movement_fraction, 100)
 
     @property
     def primary_reason(self) -> PublicationReason:
@@ -321,7 +341,7 @@ def current_tracked_value(
     priced_count = len(usable)
     value_jpy = sum(observation.value_jpy for observation in usable) if usable else None
     coverage = (
-        Decimal(priced_count) / Decimal(total_physical_print_count)
+        _decimal_ratio(priced_count, total_physical_print_count)
         if total_physical_print_count > 0
         else None
     )
@@ -445,11 +465,11 @@ def compute_monetary_step(
     comparable_prior = sum(row.value_jpy for row, _ in comparable)
     comparable_current = sum(row.value_jpy for _, row in comparable)
     ratio = (
-        Decimal(comparable_current) / Decimal(comparable_prior)
+        _decimal_ratio(comparable_current, comparable_prior)
         if comparable_prior > 0
         else None
     )
-    return_fraction = ratio - Decimal(1) if ratio is not None else None
+    return_fraction = _decimal_subtract(ratio, 1) if ratio is not None else None
 
     contributions = tuple(
         MarketValueContribution(
@@ -457,12 +477,11 @@ def compute_monetary_step(
             prior_value_jpy=before.value_jpy,
             current_value_jpy=after.value_jpy,
             delta_jpy=after.value_jpy - before.value_jpy,
-            return_fraction=(Decimal(after.value_jpy) / Decimal(before.value_jpy))
-            - Decimal(1),
-            percentage_point_contribution=(
-                Decimal(100)
-                * Decimal(after.value_jpy - before.value_jpy)
-                / Decimal(comparable_prior)
+            return_fraction=_decimal_subtract(
+                _decimal_ratio(after.value_jpy, before.value_jpy), 1
+            ),
+            percentage_point_contribution=_decimal_ratio(
+                100 * (after.value_jpy - before.value_jpy), comparable_prior
             ),
         )
         for before, after in comparable
@@ -480,12 +499,12 @@ def compute_monetary_step(
         comparable_prior_value_jpy=comparable_prior,
         comparable_current_value_jpy=comparable_current,
         comparable_prior_value_fraction=(
-            Decimal(comparable_prior) / Decimal(prior_sum)
+            _decimal_ratio(comparable_prior, prior_sum)
             if prior_sum is not None and prior_sum > 0
             else None
         ),
         comparable_current_value_fraction=(
-            Decimal(comparable_current) / Decimal(current_sum)
+            _decimal_ratio(comparable_current, current_sum)
             if current_sum is not None and current_sum > 0
             else None
         ),
@@ -557,12 +576,12 @@ def evaluate_market_value_publication(
     prior_total = step.prior_tracked.total_physical_print_count
     current_total = step.current_tracked.total_physical_print_count
     prior_physical_fraction = (
-        Decimal(step.comparable_print_count) / Decimal(prior_total)
+        _decimal_ratio(step.comparable_print_count, prior_total)
         if prior_total > 0
         else None
     )
     current_physical_fraction = (
-        Decimal(step.comparable_print_count) / Decimal(current_total)
+        _decimal_ratio(step.comparable_print_count, current_total)
         if current_total > 0
         else None
     )
@@ -660,11 +679,17 @@ def evaluate_market_value_window(
 
     movement = None
     if not reasons:
-        factor = Decimal(1)
+        # Multiplying already-rounded Decimal ratios can accumulate a residue
+        # even when integer P/Q factors telescope exactly. Keep the chain as
+        # one exact rational and convert once at the output boundary.
+        factor_numerator = 1
+        factor_denominator = 1
         for step in steps:
-            assert step.ratio is not None
-            factor *= step.ratio
-        movement = factor - Decimal(1)
+            factor_numerator *= step.comparable_current_value_jpy
+            factor_denominator *= step.comparable_prior_value_jpy
+        movement = _decimal_subtract(
+            _decimal_ratio(factor_numerator, factor_denominator), 1
+        )
         reasons.append(PublicationReason.PUBLISHABLE)
 
     physical_fractions: list[Decimal | None] = []
@@ -673,7 +698,7 @@ def evaluate_market_value_window(
         for tracked in (step.prior_tracked, step.current_tracked):
             total = tracked.total_physical_print_count
             physical_fractions.append(
-                Decimal(step.comparable_print_count) / Decimal(total)
+                _decimal_ratio(step.comparable_print_count, total)
                 if total > 0
                 else None
             )
@@ -710,6 +735,8 @@ def replay_market_value(
     points: list[MarketValueReplayPoint] = []
     segment = 0
     factor = Decimal(1)
+    factor_numerator = 1
+    factor_denominator = 1
     for index, day in enumerate(ordered):
         tracked = current_tracked_value(
             _scoped_observations(day, scope),
@@ -733,12 +760,15 @@ def replay_market_value(
         step = compute_monetary_step(ordered[index - 1], day, scope=scope)
         publication = evaluate_market_value_publication(step, scope=scope)
         if publication.publishable:
-            assert step.ratio is not None
-            factor *= step.ratio
+            factor_numerator *= step.comparable_current_value_jpy
+            factor_denominator *= step.comparable_prior_value_jpy
+            factor = _decimal_ratio(factor_numerator, factor_denominator)
             break_reason = None
         else:
             segment += 1
             factor = Decimal(1)
+            factor_numerator = 1
+            factor_denominator = 1
             break_reason = publication.primary_reason
         points.append(
             MarketValueReplayPoint(
@@ -755,6 +785,7 @@ def replay_market_value(
 
 
 __all__ = [
+    "CALCULATION_DECIMAL_PRECISION",
     "METHODOLOGY_VERSION",
     "MIN_COMPARABLE_VALUE_FRACTION",
     "MarketValueContribution",
