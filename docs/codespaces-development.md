@@ -26,9 +26,16 @@ rebuild, and the editor waits for it to finish. It installs:
   [npm installation method](https://docs.railway.com/cli#npm-macos-linux-windows),
   using `~/.local` as its user-writable prefix. Authentication is a later
   operator/session/plugin action.
+- Codex CLI via the official [`@openai/codex` npm package](https://developers.openai.com/codex/cli).
+  If `codex` is missing or `codex --version` fails, bootstrap installs it globally
+  with npm using the user-writable `~/.local` prefix. A usable existing install is
+  retained; bootstrap always verifies `codex --version`. It does not authenticate
+  Codex or request or store API keys. Authentication remains an operator/runtime
+  concern, and credentials must not be stored in repository files.
 
-The image and CLI are versioned, frontend dependencies are locked, and Python
+The image and Railway CLI are versioned, frontend dependencies are locked, and Python
 packages follow the repository's declared constraints (some are unpinned).
+New Codex CLI installs use the current npm release rather than a pinned version.
 Playwright manages its matching browser revision; branded Chrome follows its
 stable channel. Rerunning bootstrap is safe, but is an install, not a health-only
 command. No application build, database startup, migration, restore, collector,
@@ -80,6 +87,7 @@ apps/web/node_modules/.bin/vitest --version
 python -m playwright install --list
 google-chrome --version
 railway --version
+codex --version
 ```
 
 Run real bootstrap validation only after the authorized full rebuild; the old
