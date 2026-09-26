@@ -31,6 +31,7 @@ from app.models import (
     ImportValidationReport,
     MarketIntelligenceReport,
     MarketIndexSnapshot,
+    MarketValuePoint,
     MarketReportDigestSend,
     MarketSignalEvent,
     MarketWorkflowRun,
@@ -72,9 +73,11 @@ from app.services.job_locks import with_job_lock
 # an earlier version is never silently reinterpreted under this contract.
 # v13 carries operational supersession. Old runtimes must refuse it, rather
 # than ignore lifecycle fields and resurrect historical mappings. v12 remains
-# explicitly readable with derived identity and NULL lifecycle metadata.
-BACKUP_VERSION = 13
-READABLE_BACKUP_VERSIONS = (12, 13)
+# explicitly readable with derived identity and NULL lifecycle metadata. v14
+# adds persisted Market Value evidence beside CPI under include_prices. Older
+# readable archives legitimately omit that new derived table.
+BACKUP_VERSION = 14
+READABLE_BACKUP_VERSIONS = (12, 13, 14)
 APP_NAME = "opcg-price-tracker"
 
 
@@ -122,6 +125,7 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("source_collection_attempts", SourceCollectionAttempt, "include_prices"),
     BackupTableSpec("market_index_snapshots", MarketIndexSnapshot, "include_prices"),
     BackupTableSpec("card_pirate_index_points", CardPirateIndexPoint, "include_prices"),
+    BackupTableSpec("market_value_points", MarketValuePoint, "include_prices"),
     BackupTableSpec("market_intelligence_reports", MarketIntelligenceReport),
     BackupTableSpec("market_signal_events", MarketSignalEvent),
     BackupTableSpec("market_report_digest_sends", MarketReportDigestSend),
@@ -164,6 +168,7 @@ CASCADE_RISK_OPTIONAL_TABLES: tuple[str, ...] = (
     "price_observations",
     "source_collection_attempts",
     "market_index_snapshots",
+    "market_value_points",
     "raw_snapshots",
     "price_refresh_runs",
 )
@@ -705,6 +710,20 @@ def validate_backup(backup: Any) -> ValidationResult:
                         f"card_pirate_index_points[{i}] {field_name} does not match "
                         f"carried_from_point_id {carried_from_id!r}"
                     )
+
+        for i, row in enumerate(tables.get("market_value_points", [])):
+            product_id = row.get("release_product_id")
+            scope_kind = row.get("scope_kind")
+            if scope_kind == "overall" and product_id is not None:
+                errors.append(
+                    f"market_value_points[{i}] overall scope carries "
+                    f"release_product_id {product_id!r}"
+                )
+            elif scope_kind == "release" and product_id not in release_product_ids:
+                errors.append(
+                    f"market_value_points[{i}] references missing "
+                    f"release_product_id {product_id!r}"
+                )
 
         for i, row in enumerate(tables.get("market_signal_events", [])):
             card_id = row.get("card_id")
