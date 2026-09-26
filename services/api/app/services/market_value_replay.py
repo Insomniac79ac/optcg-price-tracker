@@ -31,6 +31,7 @@ from app.models.market_index_snapshot import MarketIndexSnapshot
 from app.models.release_product import ReleaseProduct
 from app.services.market_index_change import eligible_contributor_set
 from app.services.market_value import (
+    METHODOLOGY_VERSION,
     MarketValueDay,
     MarketValueObservation,
     MarketValueScope,
@@ -39,6 +40,11 @@ from app.services.market_value import (
     current_tracked_value,
     evaluate_market_value_window,
     replay_market_value,
+)
+from app.services.market_value_persistence import (
+    MarketValuePointDraft,
+    publication_reasons_text,
+    version_pairs_text,
 )
 from app.services.print_market_index import get_market_index_for_prints
 from app.snapshot_market_index import select_snapshottable_print_ids
@@ -365,6 +371,134 @@ def current_scope_value(
     )
 
 
+def _day_version_pairs(
+    day: MarketValueDay,
+) -> frozenset[tuple[int, int]]:
+    return frozenset(
+        (row.index_version, row.source_semantics_version)
+        for row in day.observations
+        if row.has_usable_value
+    )
+
+
+def _scope_point_drafts(
+    loaded: MarketValueReplayInput,
+    *,
+    scope: MarketValueScope,
+    total_physical_print_count: int,
+) -> tuple[MarketValuePointDraft, ...]:
+    """Derive persistence-shaped facts without writing or recalculating A2."""
+    days = scope_replay_days(
+        loaded,
+        scope=scope,
+        total_physical_print_count=total_physical_print_count,
+    )
+    days_by_date = {day.point_date: day for day in days}
+    replay = replay_market_value(days, scope=scope)
+    scope_kind = "overall" if scope.release_product_id is None else "release"
+    drafts: list[MarketValuePointDraft] = []
+    for point in replay:
+        step = point.step
+        publication = point.publication
+        if step is None:
+            prior_point_date = None
+            step_days = None
+            prior_tracked_value_jpy = None
+            prior_priced_print_count = None
+            prior_total_physical_print_count = None
+            comparable_print_count = None
+            prior_comparable_value_jpy = None
+            current_comparable_value_jpy = None
+            step_ratio = None
+            step_publication_eligible = None
+            publication_reasons = None
+            prior_version_pairs = None
+            current_pairs = _day_version_pairs(days_by_date[point.point_date])
+        else:
+            assert publication is not None
+            prior_point_date = step.prior_date
+            step_days = step.step_days
+            prior_tracked_value_jpy = step.prior_tracked.value_jpy
+            prior_priced_print_count = step.prior_tracked.priced_print_count
+            prior_total_physical_print_count = (
+                step.prior_tracked.total_physical_print_count
+            )
+            comparable_print_count = step.comparable_print_count
+            prior_comparable_value_jpy = step.comparable_prior_value_jpy
+            current_comparable_value_jpy = step.comparable_current_value_jpy
+            step_ratio = step.ratio
+            step_publication_eligible = publication.publishable
+            publication_reasons = publication_reasons_text(publication.reasons)
+            prior_version_pairs = version_pairs_text(step.prior_version_pairs)
+            current_pairs = step.current_version_pairs
+
+        drafts.append(
+            MarketValuePointDraft(
+                scope_kind=scope_kind,
+                release_product_id=scope.release_product_id,
+                methodology_version=METHODOLOGY_VERSION,
+                point_date=point.point_date,
+                tracked_value_jpy=point.tracked.value_jpy,
+                priced_print_count=point.tracked.priced_print_count,
+                total_physical_print_count=point.tracked.total_physical_print_count,
+                prior_point_date=prior_point_date,
+                step_days=step_days,
+                prior_tracked_value_jpy=prior_tracked_value_jpy,
+                prior_priced_print_count=prior_priced_print_count,
+                prior_total_physical_print_count=prior_total_physical_print_count,
+                comparable_print_count=comparable_print_count,
+                prior_comparable_value_jpy=prior_comparable_value_jpy,
+                current_comparable_value_jpy=current_comparable_value_jpy,
+                step_ratio=step_ratio,
+                segment_number=point.segment_number,
+                performance_factor=point.performance_factor,
+                step_publication_eligible=step_publication_eligible,
+                publication_reasons=publication_reasons,
+                membership_revision=days_by_date[
+                    point.point_date
+                ].membership_revision,
+                prior_version_pairs=prior_version_pairs,
+                current_version_pairs=version_pairs_text(current_pairs),
+            )
+        )
+    return tuple(drafts)
+
+
+def build_market_value_point_drafts(
+    loaded: MarketValueReplayInput,
+) -> tuple[MarketValuePointDraft, ...]:
+    """Build Overall and every active coded release draft, in stable order."""
+    drafts = list(
+        _scope_point_drafts(
+            loaded,
+            scope=MarketValueScope.overall(),
+            total_physical_print_count=len(loaded.active_prints),
+        )
+    )
+    for release in sorted(
+        loaded.coded_releases,
+        key=lambda row: (row.release_product_id, row.official_code),
+    ):
+        drafts.extend(
+            _scope_point_drafts(
+                loaded,
+                scope=MarketValueScope.release(release.release_product_id),
+                total_physical_print_count=release.active_physical_print_count,
+            )
+        )
+    return tuple(
+        sorted(
+            drafts,
+            key=lambda row: (
+                row.scope_kind,
+                row.release_product_id or 0,
+                row.methodology_version,
+                row.point_date,
+            ),
+        )
+    )
+
+
 def _decimal_text(value: Decimal | None) -> str | None:
     return str(value) if value is not None else None
 
@@ -541,6 +675,7 @@ __all__ = [
     "ActivePrintIdentity",
     "MarketValueReplayInput",
     "build_market_value_replay_report",
+    "build_market_value_point_drafts",
     "current_scope_value",
     "load_market_value_replay_input",
     "scope_replay_days",
