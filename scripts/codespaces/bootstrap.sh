@@ -68,4 +68,11 @@ progress "Installing Railway CLI without authentication"
 npm install --global --prefix "$HOME/.local" --no-audit --no-fund @railway/cli@5.62.1
 railway --version
 
-progress "Ready: Python, frontend tools, host browsers, and Railway CLI"
+progress "Ensuring Codex CLI is available without authentication"
+if ! command -v codex >/dev/null || ! codex --version >/dev/null 2>&1; then
+  npm install --global --prefix "$HOME/.local" --no-audit --no-fund @openai/codex
+  hash -r
+fi
+codex --version
+
+progress "Ready: Python, frontend tools, host browsers, Railway CLI, and Codex CLI"
