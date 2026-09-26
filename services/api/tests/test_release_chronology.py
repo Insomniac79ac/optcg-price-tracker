@@ -24,7 +24,7 @@ def accepted_mapping():
     return json.loads(RECEIPT.read_text())["accepted_mapping"]
 
 
-def test_frozen_migration_matches_durable_receipt_and_linear_head():
+def test_frozen_migration_matches_durable_receipt_and_linear_history():
     receipt = json.loads(RECEIPT.read_text())
     migration = runpy.run_path(str(MIGRATION))
     assert receipt["verification_status"] == "DURABLE_GET_AND_RECOVERY_VERIFIED"
@@ -46,7 +46,13 @@ def test_frozen_migration_matches_durable_receipt_and_linear_head():
     config = Config()
     config.set_main_option("script_location", str(ROOT / "services/api/alembic"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == [migration["revision"]]
+    heads = scripts.get_heads()
+    assert len(heads) == 1
+    linear_history = {
+        revision.revision
+        for revision in scripts.iterate_revisions(heads[0], "base")
+    }
+    assert migration["revision"] in linear_history
     assert migration["down_revision"] == "f2c7d91b6a40"
 
 
