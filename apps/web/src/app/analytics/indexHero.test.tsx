@@ -261,7 +261,7 @@ beforeEach(() => {
   fetchMarketOverview.mockResolvedValue({
     price_basis: "market_index", kind: "market_index", source: null,
     reference_type: null, evidence_type: null, available: true, unavailable_reason: null,
-    scope: { active_prints: 4316, set: null, rarity: null },
+    scope: { release_product_id: null, active_prints: 4316, set: null, rarity: null },
     coverage: {
       observed_prints: null, usable_priced_prints: 305, coverage_pct: 7.07,
       excluded_constrained_prints: null, unavailable_prints: 4011,
@@ -879,9 +879,10 @@ describe("'Cards in this view' is not part of the index experience", () => {
     expect(document.body.textContent).not.toMatch(/a few of the priced prints counted above/i);
   });
 
-  it("does not even request the card strip", async () => {
+  it("requests one bounded discovery cohort outside the Index hero", async () => {
     await renderPage();
-    expect(fetchMarketCards).not.toHaveBeenCalled();
+    expect(fetchMarketCards).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("index-hero").contains(screen.getByTestId("market-cards"))).toBe(false);
   });
 
   it("leaves the reusable component in the tree for other owners", async () => {
@@ -938,13 +939,13 @@ describe("the index establishes the page hierarchy", () => {
   it("is the page's H1, above the market landscape section", async () => {
     await renderPage();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Card Pirate Index");
-    expect(screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Market snapshot" })).toBeTruthy();
   });
 
   it("puts the chart before the coverage statistics in document order", async () => {
     await renderPage();
     const hero = screen.getByTestId("index-hero");
-    const landscape = screen.getByRole("heading", { level: 2, name: "Prices across the catalogue" });
+    const landscape = screen.getByRole("heading", { level: 2, name: "Market snapshot" });
     expect(hero.compareDocumentPosition(landscape) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
