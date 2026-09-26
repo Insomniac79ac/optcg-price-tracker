@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -9,6 +8,7 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardPirateIndexHero, type IndexStatus } from "@/components/ui/CardPirateIndexHero";
 import { IndexCompositionPanel } from "@/components/ui/IndexCompositionPanel";
 import { IndexMoversPanel } from "@/components/ui/IndexMoversPanel";
+import { MarketCardsSection } from "@/components/ui/MarketCardsSection";
 import { MarketBreadthPanel } from "@/components/ui/MarketBreadthPanel";
 import { MarketLandscapeFilters } from "@/components/ui/MarketLandscapeFilters";
 import {
@@ -466,22 +466,6 @@ function MarketLandscapePageInner() {
         onOrderChange={setMoverOrder}
       />
 
-      {/* SECONDARY ANALYSIS, and sized to say so. Two panels of similar weight
-          below the movers, stacking on mobile. The breadth panel reads the
-          newest point off the series the hero is already holding - no request
-          of its own - and the composition panel holds a response that does not
-          vary with the window control above it. */}
-      <div
-        className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2"
-        data-testid="index-analytics-row"
-      >
-        <IndexCompositionPanel
-          composition={composition.data}
-          status={composition.status}
-        />
-        <MarketBreadthPanel point={newestIndexPoint} />
-      </div>
-
       <section className="mt-8" aria-labelledby="market-landscape-heading">
         <h2
           id="market-landscape-heading"
@@ -538,6 +522,37 @@ function MarketLandscapePageInner() {
           </>
         )}
       </div>
+      <MarketCardsSection
+        selection={{ priceBasis: selectedBasis, release_product_id: selectedReleaseId, rarity: selectedRarity || undefined, ...(legacySet ? { set: legacySet } : {}) }}
+        basis={vocabulary?.bases.find((basis) => basis.key === selectedBasis) ?? null}
+        ready={ready}
+        unavailable={vocabularyFailed}
+      />
+
+      <section className="mt-10 border-t border-border-muted pt-5" aria-labelledby="market-structure-heading" data-testid="market-structure">
+        <h2 id="market-structure-heading" className="font-display text-lg font-semibold text-text-secondary">Market structure</h2>
+        <div className="mt-5" data-testid="current-price-structure">
+          <h3 className="text-sm font-medium text-text-secondary">Current-price structure</h3>
+          <p className="mt-1 text-xs leading-relaxed text-text-muted">Price distribution and source coverage follow the Release, Rarity and Price basis above.</p>
+          {overviewStatus === "error" || vocabularyFailed ? (
+            <p className="mt-4 text-sm text-text-muted">Current-price structure is unavailable for this view.</p>
+          ) : !overview ? (
+            <p className="mt-4 text-sm text-text-muted" aria-busy="true">Loading current-price structure…</p>
+          ) : overview.scope.active_prints > 0 ? (
+            <div aria-busy={refreshing} className={`mt-3 space-y-4 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:px-0 ${refreshing ? "opacity-60" : ""}`}>
+              <MarketPriceDistribution overview={overview} />
+              <MarketCoverageComposition overview={overview} />
+            </div>
+          ) : <p className="mt-4 text-sm text-text-muted">There are no active prints to describe in this scope.</p>}
+        </div>
+        <section className="mt-6 border-t border-border-muted pt-5" aria-labelledby="broad-index-structure-heading">
+          <h3 id="broad-index-structure-heading" className="text-sm font-medium text-text-secondary">Broad Index structure</h3>
+          <div className="mt-3 grid grid-cols-1 gap-5 lg:grid-cols-2 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:px-0" data-testid="index-analytics-row">
+            <IndexCompositionPanel composition={composition.data} status={composition.status} />
+            <MarketBreadthPanel point={newestIndexPoint} />
+          </div>
+        </section>
+      </section>
     </PageFrame>
   );
 }
@@ -546,7 +561,7 @@ function MarketLandscapePageInner() {
  *
  * The generic LoadingState is a small centred box; used here it made the page
  * ~1000px shorter while loading and taller the instant data arrived. This
- * mirrors the real layout - coverage and supporting prices, then a chart-sized block - so the
+ * mirrors the real layout - coverage and supporting prices - so the
  * page occupies roughly its final height from the first frame. It carries the
  * loading caption for assistive tech rather than showing it as a heading. */
 function MarketLandscapeSkeleton() {
@@ -562,14 +577,6 @@ function MarketLandscapeSkeleton() {
               <div className="h-3 w-28 rounded bg-bg-elevated" />
               <div className="mt-2 h-6 w-32 rounded bg-bg-elevated" />
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="panel mt-3 px-4 py-3.5">
-        <div className="h-3 w-36 rounded bg-bg-elevated" />
-        <div className="mt-4 space-y-2.5">
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className="h-3.5 rounded bg-bg-elevated" />
           ))}
         </div>
       </div>
@@ -609,40 +616,7 @@ function MarketLandscapeBody({ overview }: { overview: MarketOverview }) {
     <>
       {!overview.available && <BasisUnavailableNote overview={overview} />}
       <MarketLandscapeStats overview={overview} />
-      <CatalogueLink rarity={overview.scope.rarity} />
-      <MarketPriceDistribution overview={overview} />
-      <MarketCoverageComposition overview={overview} />
     </>
-  );
-}
-
-/** The way out, into the card-first surface.
- *
- * Without it this page is a terminal dead end: a collector reads that 296
- * prints are priced and has nowhere to go and look at one. The link is
- * deliberately modest about what it promises, because /cards cannot reproduce
- * this page's scope.
- *
- * RARITY IS CARRIED, SET IS NOT, and that asymmetry is the API's, not a
- * shortcut: `GET /prints` accepts `rarity` - filtered through the same
- * `effective_rarity_sql` + alias expansion this page's rarity values come from,
- * so the token means the same thing on both sides - and accepts no set or
- * release parameter at all. Passing `?set=` would put a parameter in the URL
- * that /cards silently ignores, and the collector would land on the whole
- * catalogue believing they were looking at one set. So the label never claims
- * "these cards": it offers the catalogue, and narrows it only by the one
- * dimension that genuinely survives the trip. */
-function CatalogueLink({ rarity }: { rarity: string | null }) {
-  const href = rarity ? `/cards?rarity=${encodeURIComponent(rarity)}` : "/cards";
-  return (
-    <p className="text-[13px]">
-      <Link
-        href={href}
-        className="rounded-control text-accent-teal underline-offset-2 transition-colors hover:text-accent-teal-hover hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-teal/60"
-      >
-        {rarity ? `Browse ${rarity} cards in the catalogue` : "Browse the card catalogue"} →
-      </Link>
-    </p>
   );
 }
 

@@ -182,7 +182,8 @@ export function fetchMarketOverview(params: MarketOverviewParams = {}): Promise<
 export function fetchMarketCards(params: MarketOverviewParams = {}): Promise<PrintCatalogueList> {
   return apiGet<PrintCatalogueList>("/prints", {
     params: {
-      set: params.set || undefined,
+      release_product_id: params.release_product_id,
+      set: params.release_product_id !== undefined ? undefined : params.set || undefined,
       rarity: params.rarity || undefined,
       price_basis: params.priceBasis || undefined,
       sort: "card_code_asc",
