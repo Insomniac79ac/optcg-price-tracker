@@ -21,6 +21,10 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from app.models.market_value_point import MarketValuePoint
+from app.services.market_value_provenance import (
+    publication_reasons_text,
+    version_pairs_text,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,19 +81,6 @@ class MarketValuePointDraft:
 
 
 PERSISTED_VALUE_COLUMNS = tuple(MarketValuePointDraft.__dataclass_fields__)
-
-
-def version_pairs_text(pairs: Iterable[tuple[int, int]]) -> str:
-    """Canonical compact representation of exact (index, semantics) pairs."""
-    return ",".join(f"{index}:{semantics}" for index, semantics in sorted(set(pairs)))
-
-
-def publication_reasons_text(reasons: Iterable[object]) -> str:
-    """Preserve A2 reason order without inventing another vocabulary."""
-    values = [getattr(reason, "value", str(reason)) for reason in reasons]
-    if not values:
-        raise ValueError("a movement step must carry at least one publication reason")
-    return "|".join(values)
 
 
 def _sort_key(draft: MarketValuePointDraft) -> tuple[object, ...]:

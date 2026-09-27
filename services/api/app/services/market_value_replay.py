@@ -16,7 +16,6 @@ persisted series needs the immutable membership ledger specified by A1.
 
 from __future__ import annotations
 
-import hashlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
@@ -46,14 +45,12 @@ from app.services.market_value_persistence import (
     publication_reasons_text,
     version_pairs_text,
 )
+from app.services.market_value_provenance import (
+    ActivePrintIdentity,
+    membership_revision as _membership_revision,
+)
 from app.services.print_market_index import get_market_index_for_prints
 from app.snapshot_market_index import select_snapshottable_print_ids
-
-
-@dataclass(frozen=True)
-class ActivePrintIdentity:
-    card_print_id: int
-    release_product_id: int
 
 
 @dataclass(frozen=True)
@@ -216,16 +213,6 @@ def _load_archive_rows(
             )
         )
     )
-
-
-def _membership_revision(active_prints: list[ActivePrintIdentity]) -> str:
-    payload = "\n".join(
-        f"{row.card_print_id}:{row.release_product_id}"
-        for row in sorted(active_prints, key=lambda row: row.card_print_id)
-    )
-    return "current-corrected-card-print-release-v1:" + hashlib.sha256(
-        payload.encode("utf-8")
-    ).hexdigest()
 
 
 def load_market_value_replay_input(
