@@ -10,8 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import CardPrint, ReleaseProduct
 from app.schemas import ReleaseCatalogueItemOut, ReleaseCatalogueListOut
-
-ORDERING_BASIS = "released_on_desc_then_deterministic_fallback"
+from app.services.release_ordering import ORDERING_BASIS, public_release_ordering
 
 
 def list_public_releases(db: Session) -> ReleaseCatalogueListOut:
@@ -25,13 +24,7 @@ def list_public_releases(db: Session) -> ReleaseCatalogueListOut:
             CardPrint.language == "jp",
         )
         .group_by(ReleaseProduct.id)
-        .order_by(
-            ReleaseProduct.released_on.desc().nulls_last(),
-            ReleaseProduct.source_catalogue.asc(),
-            ReleaseProduct.official_code.asc().nulls_last(),
-            ReleaseProduct.display_name.asc(),
-            ReleaseProduct.id.asc(),
-        )
+        .order_by(*public_release_ordering())
     ).all()
     return ReleaseCatalogueListOut(
         items=[

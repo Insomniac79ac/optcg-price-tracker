@@ -41,6 +41,7 @@ from app.api.file_jobs import router as file_jobs_router
 from app.api.grading import router as grading_router
 from app.api.health import router as health_router
 from app.api.market import router as market_router
+from app.api.market_value import router as market_value_router
 from app.api.market_workflow_runs import router as market_workflow_runs_router
 from app.api.prints import router as prints_router
 from app.api.refresh_runs import router as refresh_runs_router
@@ -196,6 +197,7 @@ app.include_router(wishlist_router)
 app.include_router(dashboard_router)
 app.include_router(saved_views_router)
 app.include_router(analytics_router)
+app.include_router(market_value_router)
 app.include_router(admin_actions_router)
 app.include_router(admin_backup_router)
 app.include_router(admin_cache_router)
