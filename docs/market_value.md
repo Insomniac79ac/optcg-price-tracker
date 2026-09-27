@@ -1,11 +1,11 @@
 # Atlas Market Value methodology
 
 This document describes the frozen A2 calculation boundary and the A3A
-persistence boundary. The design authority and
+persistence boundary, and the A4A persisted public read contract. The design authority and
 audit evidence are [A0](reports/public-ux-market-value-a0-2026-09-26.md) and
 [A1](reports/public-ux-market-value-a1-2026-09-26.md). A2 adds a pure engine
 and a read-only diagnostic. A3A adds append-only replay storage and
-verification, but still no scheduler or public API.
+verification. A4A reads that stored evidence without a scheduler or request-time replay.
 
 ## Frozen v1 rule ledger
 
@@ -198,3 +198,75 @@ Market Value points are exported and restored when `include_prices=true`, and
 are intentionally absent when price history is excluded. The points remain
 fully replayable from retained snapshot evidence; backup inclusion preserves
 the exact series Atlas had persisted rather than changing its derivation.
+
+## Public persisted read API (A4A)
+
+`GET /analytics/market-value?release_product_id=<positive ID>&window=7d|30d|all`
+is public. The default is Overall and `7d`; Overall has null release fields.
+Release IDs, codes and display names come from `ReleaseProduct`, including
+legitimate uncoded products when their series exists. Unknown IDs return 404;
+invalid IDs/windows return 422. Missing Overall v1 data, or a known release
+without a persisted v1 series, returns 503 with
+`{"detail":"market_value_not_seeded"}`.
+
+`as_of` is the latest persisted UTC date **for the selected scope**. It is not
+the HTTP request time or a live quote timestamp. The initial staging series
+ends on **2026-09-26**; API requests neither advance it nor invent a bridge to
+today. Version 1 is selected explicitly, so another methodology cannot extend
+or mix into its history.
+
+The response separates three measurements:
+
+- `tracked_value`: literal partial JPY sum, priced/physical counts, physical
+  coverage percentage and `is_partial`. No prices means null JPY, not zero.
+  Zero physical population means null coverage. This is not market cap and
+  does not estimate unpriced prints.
+- `movement`: requested window, availability, exact required start/end dates,
+  return fraction/percent, and a stable reason. Every required UTC date and
+  adjacent stored prior-date link must exist. Each step must be publishable,
+  with a positive comparable P/Q pair and unchanged segment. The return is
+  `product(stored Q) / product(stored P) - 1`, multiplying integers and then
+  dividing once with the frozen 50-digit Decimal precision. This is the A2
+  rule applied to persisted chain evidence; it never divides tracked sums.
+  Unavailable fractions/percentages are null. `all` measures the entire stored
+  date span and is unavailable if any break exists, or fewer than two dates.
+- `series`: only the stored points within the requested inclusive date span
+  (8 endpoints for a complete 7D window; 31 for 30D). Each carries date, literal
+  JPY value, counts, daily publication flag/reason and server-calculated
+  performance. Missing dates are not filled.
+
+Chart performance is `100 * (F(date) / F(anchor) - 1)`, using persisted
+`performance_factor` and a private 50-digit Decimal context. The anchor is
+the first visible positive-value point with a publishable step, or the initial
+series base when it has a value. Its performance is 0%. A failed step's reset
+factor of 1 is **not** a zero return: that chart point is null. Any subsequent
+gap, failed step or segment change ends the anchor's comparable span; later
+performance stays null instead of connecting an independently rebased segment.
+Selecting a shorter window can expose a later valid segment with its own
+first-visible anchor. Literal historical JPY sums remain present independently
+and must not be presented as coverage-neutral values.
+
+Decimal percentages and fractions serialize as JSON strings, following the
+existing API's Decimal convention. JPY values and counts are JSON integers.
+Surrogate point IDs, membership digests, serialized version pairs, factors,
+and writer/job metadata are excluded from public responses.
+
+`GET /analytics/market-value/releases` returns `items` and `ordering_basis`.
+Every active coded, verified JP release in the persisted model is included,
+even with sparse or no prices. `ReleaseProduct` has no active flag; active
+membership is therefore the latest **persisted** positive physical count,
+not a query of today's mutable `CardPrint` catalogue. Each row has its own
+`as_of`, identity, version, tracked value, and separate 7D/30D availability,
+percentage and reason. The read fetch is bounded to the last 31 stored points
+per scope. It shares `/releases` ordering: official `released_on` descending,
+undated last, then catalogue/code/name/ID as deterministic ties. Those ties
+do not assert chronology.
+
+The service performs SELECTs only against `market_value_points` and
+`release_products`, with autoflush disabled. It never invokes the writer,
+replays snapshots, computes live prices, or accesses a source. Local tests
+use mock persisted rows, an A2 oracle comparison, explicit forbidden-call/SQL
+guards, and PostgreSQL REPEATABLE READ READ ONLY. The frozen census regression
+uses the audited 59-release counts/sums with synthetic chain evidence;
+independent staging validation compares the service with the real Sep-26
+persisted rows before publication of the PR.
