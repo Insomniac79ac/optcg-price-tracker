@@ -79,6 +79,10 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     # rows - so it is sized to match its predecessor rather than its own
     # (much shorter) runtime.
     "card_pirate_index": 10 * 60,
+    # Operator-controlled initial seed/replay.  It may scan the entire Market
+    # Index archive, so allow a full hour while still failing closed against a
+    # concurrent writer.
+    "market_value_writer": 60 * 60,
     "market_signal_snapshot": 10 * 60,
     "market_report_generation": 10 * 60,
     "analytics_digest_generation": 10 * 60,
