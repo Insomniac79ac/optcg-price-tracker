@@ -11,6 +11,7 @@ from app.models import (
     CardPirateIndexPoint,
     CardPrint,
     MarketIndexSnapshot,
+    MarketValuePoint,
     PriceObservation,
     RawSnapshot,
     ReleaseProduct,
@@ -156,7 +157,22 @@ def seed_exact_lineage(session: Session) -> dict[str, int]:
         eligible_print_count=0,
         calculated_at=now,
     )
-    session.add_all([observation, market_snapshot, pirate_point])
+    market_value_point = MarketValuePoint(
+        scope_kind="release",
+        release_product_id=product.id,
+        methodology_version=1,
+        point_date=date(2026, 9, 16),
+        tracked_value_jpy=1234,
+        priced_print_count=1,
+        total_physical_print_count=1,
+        segment_number=0,
+        performance_factor=Decimal("1"),
+        membership_revision="current-corrected-card-print-release-v1:backup-test",
+        current_version_pairs="1:1",
+    )
+    session.add_all(
+        [observation, market_snapshot, pirate_point, market_value_point]
+    )
     session.flush()
 
     attempt = SourceCollectionAttempt(
@@ -188,4 +204,5 @@ def seed_exact_lineage(session: Session) -> dict[str, int]:
         "attempt_id": attempt.id,
         "market_snapshot_id": market_snapshot.id,
         "pirate_point_id": pirate_point.id,
+        "market_value_point_id": market_value_point.id,
     }

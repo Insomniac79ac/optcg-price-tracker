@@ -1,9 +1,11 @@
 # Atlas Market Value methodology
 
-This document describes the A2 calculation boundary. The design authority and
+This document describes the frozen A2 calculation boundary and the A3A
+persistence boundary. The design authority and
 audit evidence are [A0](reports/public-ux-market-value-a0-2026-09-26.md) and
 [A1](reports/public-ux-market-value-a1-2026-09-26.md). A2 adds a pure engine
-and a read-only diagnostic; it does not add persistence or a public API.
+and a read-only diagnostic. A3A adds append-only replay storage and
+verification, but still no scheduler or public API.
 
 ## Frozen v1 rule ledger
 
@@ -151,3 +153,48 @@ not fetch a source, generate a snapshot, persist a point, or run a collector.
 The implementation is intentionally separate from Card Pirate Index. CPI
 remains its existing equal-weight, capped, base-1000 series; changing either
 algorithm does not change the other.
+
+## Persisted replay evidence
+
+`market_value_points` stores one Overall or Release point per archived UTC
+snapshot day and Market Value methodology version. Release identity is the
+`ReleaseProduct` foreign key; the database rejects a release row without that
+FK and an Overall row with one. Its natural keys are:
+
+- Overall: `(methodology_version, point_date)` under `scope_kind=overall`.
+- Release: `(release_product_id, methodology_version, point_date)` under
+  `scope_kind=release`.
+
+These are separate partial unique indexes because PostgreSQL otherwise treats
+NULL release IDs as distinct and would permit duplicate Overall points. The
+internal surrogate ID is not a public identity.
+
+The row records the literal `tracked_value_jpy` and its priced/physical counts
+separately from movement evidence: prior endpoint facts, comparable count,
+integer `P` and `Q`, exact Decimal `Q/P`, segment number, and the dimensionless
+performance factor. It does not create an anchored monetary chart level.
+Physical coverage and comparable JPY-value coverage remain exactly derivable
+from those source facts, so rounded percentages are not stored. An unavailable
+step keeps its ordered A2 reason tuple and a nonpublishable flag; it never
+stores a fabricated return. A factor of `1` on such a row is only the frozen
+A2 new-segment base, not `0%` movement.
+
+Each point also freezes the current-corrected catalogue membership digest and
+canonical index/source-semantics version-pair sets used by replay. It does not
+copy constituent IDs into aggregate rows or create another historical card
+catalogue. The immutable `market_index_snapshots` archive remains the detailed
+source evidence.
+
+The writer accepts already-derived drafts; it contains no basket arithmetic or
+membership decisions. Drafts are sorted by natural key, inserted with `ON
+CONFLICT DO NOTHING`, and immediately compared with the stored row. An
+identical rerun is a verified no-op. A natural-key collision with any different
+fact is an integrity error and is never overwritten. The independent verify
+path recomputes drafts from archived snapshots and compares every deterministic
+field by natural key, ignoring only the surrogate ID and `created_at`.
+
+Application backup v14 follows the existing CPI historical-evidence policy:
+Market Value points are exported and restored when `include_prices=true`, and
+are intentionally absent when price history is excluded. The points remain
+fully replayable from retained snapshot evidence; backup inclusion preserves
+the exact series Atlas had persisted rather than changing its derivation.

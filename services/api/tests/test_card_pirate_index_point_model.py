@@ -314,7 +314,7 @@ ALLOWED_REFERENCES = {
     "card_pirate_index_writer.py",
     # The versioned application backup path exports and clean-restores the
     # published series as data; it does not calculate points or participate
-    # in normal runtime writes. Backup v12 validates carry references and
+    # in normal runtime writes. The current backup validates carry references and
     # restores this table after market_index_snapshots.
     "services/backup.py",
 }
