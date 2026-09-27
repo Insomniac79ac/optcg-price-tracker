@@ -270,3 +270,110 @@ guards, and PostgreSQL REPEATABLE READ READ ONLY. The frozen census regression
 uses the audited 59-release counts/sums with synthetic chain evidence;
 independent staging validation compares the service with the real Sep-26
 persisted rows before publication of the PR.
+
+## Monetary rankings (A4B)
+
+Both ranking endpoints are public and SELECT-only. Optional positive
+`release_product_id` selects the authoritative ReleaseProduct FK; omission
+selects Overall. Unknown IDs are 404. Missing Overall data or a known release
+without its own persisted series is 503 `market_value_not_seeded`, as in A4A.
+Neither endpoint changes the A4A release table or adds per-release queries to it.
+
+### Daily Market Movers
+
+`GET /analytics/market-value/movers?order=gainers|losers|impact&limit=10`
+selects the newest persisted **publication-eligible daily step** for the scope.
+There is no 7D/30D attribution parameter: daily denominators compound, and
+multi-day attribution remains deferred. `scope_as_of` is the latest persisted
+scope date; `step_date` and `prior_date` identify the actual selected daily
+step, even when it is older. An older step is never called today's movement.
+
+Only those two exact snapshot dates are read. The frozen A2 pure engine
+reconstructs comparability, contributions and publication eligibility. Before
+any ranking is returned, the service requires exact agreement with the stored
+point's dates, P/Q/C, ratio, publication decision/reasons, version-pair sets,
+membership revision, and both endpoints' tracked values and counts. It never
+uses live PriceObservations, the current price resolver, full archive replay,
+the writer, or CPI movers.
+
+All comparable prints, including flat ones, participate in reconciliation:
+
+- `sum(delta_jpy) = Q - P`, exactly in integer JPY.
+- Each contribution is the frozen A2 50-significant-digit Decimal value
+  `100 * delta_jpy / P`. The Decimal sum must equal `100 * (Q - P) / P`
+  within only the sum of individual and aggregate half-ULP rounding bounds at
+  that precision. There is no price/percentage epsilon, correction bucket,
+  cap, or adjusted contribution. Persisted ratios must match exactly; the
+  rounding allowance applies only to summing independently rounded fractions.
+
+Ranking occurs over the full qualifying population, then truncates to `limit`
+(default 10, 1–50). Gainers are positive deltas sorted by move fraction DESC;
+losers are negative deltas sorted by move fraction ASC; impact is every
+non-flat delta sorted by absolute JPY change DESC. All ties use print ID ASC.
+The payload retains signed deltas and signed percentage-point contributions.
+A ¥100,000 print gaining ¥10,000 outranks a ¥500 print gaining 100% by impact,
+while the cheap print wins by percentage gain. No CPI equal weighting or
+`approx_index_points` is reused.
+
+Response: `available`, `reason`, scope/release identity, methodology version,
+the three dates, `panel` (C, P, Q, basket JPY delta and percent), `order`,
+`total_ranked`, `returned`, `truncated`, and `movers`. Rows include exact print
+identity, prior/current JPY, signed delta, Decimal move fraction/percent,
+percentage-point contribution, direction and full-population rank. If no
+published step exists, return 200 with `available=false`,
+`reason=no_published_daily_step`, null step dates/panel measurements, and
+`movers=[]`. This is different from a published flat panel, whose actual
+movement is zero and whose ranking can legitimately be empty.
+
+### Most Valuable exact physical prints
+
+`GET /analytics/market-value/most-valuable?limit=10&offset=0` decomposes the
+selected scope's latest persisted partial tracked basket. It reads only
+`snapshot_date == as_of`, never a newer live price. `limit` is 1–50 and offset
+is nonnegative. Every positive snapshot value is eligible; null, zero and
+negative values are excluded. Exact siblings remain separate.
+
+Before sorting/pagination, the **entire** eligible population must match the
+persisted priced count and JPY sum. Its version set must match persistence,
+and every eligible row must share one UTC `calculated_at` whose calendar date
+equals `as_of`. Mixed batches fail closed, even if the conflicting row would
+fall outside the returned page. An unpriced basket has zero eligible items,
+null calculation time and an empty list, not an invented zero-JPY valuation.
+
+Sort is snapshot JPY DESC, print ID ASC. Response: scope/release identity,
+methodology version, `as_of`, `calculated_at`, `total_eligible`, `limit`,
+`offset`, `items`. Each item has print/canonical IDs, card code, preferred
+catalogue name, the exact print's official rarity (nullable), treatment,
+official asset variant, authoritative release identity, structured display
+image, snapshot JPY and calculation timestamp. There is no family collapse,
+confidence/investment score, or internal snapshot ID.
+
+### Membership, images, and integrity failures
+
+Initial replay froze a **global** digest of active verified JP print IDs and
+release FKs, including uncoded releases. Both rankings reproduce that same
+digest before using today's identity metadata. Even a change outside the
+selected release conservatively refuses decomposition: the archive has no
+historical membership ledger with which to prove a narrower correction safe.
+The digest algorithm and evidence serializers are shared pure helpers,
+extracted unchanged from A2/A3; HTTP imports neither replay nor persistence.
+
+Names/artwork remain current stored presentation metadata. Only returned
+prints are image-enriched in one batched read using the existing display-image
+helper: verified stored artwork, canonical fallback, then null if absent.
+No image is fetched. Unexpected database/enrichment failures propagate as on
+the print catalogue; prices and identity are not fabricated to hide them.
+
+Integrity errors return typed HTTP 503:
+`{"detail":{"code":"market_value_integrity_mismatch","reason":"..."}}`.
+Stable reasons are `membership_revision_mismatch`, `persisted_step_mismatch`,
+`panel_reconciliation_failed`, `tracked_value_mismatch`,
+`mixed_valuation_batch`, and `snapshot_version_mismatch`. No partial ranking
+is returned. Internal digests, raw version serialization and job metadata are
+not public. Fractions/percentages serialize as Decimal strings; JPY/counts
+are integers. Tests enforce bounded snapshot dates, forbidden replay/writer/
+source/current-price/CPI calls, no autoflush, and PostgreSQL READ ONLY.
+
+Optional release-table top movers are deferred: these dedicated endpoints
+must not produce 59 independent attribution/reconstruction queries per table
+request. A future batched design must retain the same reconciliation authority.

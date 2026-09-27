@@ -94,7 +94,7 @@ per-endpoint sweep.
 |---|---|---|---|
 | `/health` | `GET /health` | none | 200, `{"status": "ok", ...}` - exempt from rate limiting (Docker healthchecks poll it) |
 | `/version` | `GET /version` | none | 200, version/git-commit/build-time |
-| `/analytics/market-value*` | `GET /analytics/market-value`, `GET /analytics/market-value/releases` | none | 200 with persisted `as_of`, partial JPY sum and separate coverage-neutral movement; 404 unknown release, 422 invalid query, 503 unseeded |
+| `/analytics/market-value*` | `GET /analytics/market-value`, `/releases`, `/movers`, `/most-valuable` | none | 200 with persisted dates, partial JPY basket, separate movement and exact-print rankings; movers are one published daily step only; 404 unknown release, 422 invalid query, 503 unseeded or ranking integrity mismatch |
 | `/cards*` | `GET /cards`, `GET /cards/{id}`, `GET /cards/{id}/prices`, `POST`/`DELETE /cards/{id}/tags/{tag_id}` | none | 200 |
 | `/search*` | `GET /search`, `GET /search/suggestions` | none | 200 |
 | `/dashboard/*` | `GET`/`PATCH /dashboard/preferences`, `GET /dashboard/overview` | none (per-user personalization only via optional bearer) | 200 |

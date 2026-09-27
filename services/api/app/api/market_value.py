@@ -4,6 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.market_value_ranking_schemas import (
+    MarketValueMostValuableOut,
+    MarketValueMoverOrder,
+    MarketValueMoversOut,
+    MarketValueRankingErrorOut,
+)
 from app.market_value_schemas import (
     MarketValueErrorOut,
     MarketValueOut,
@@ -16,6 +22,11 @@ from app.services.market_value_read import (
     get_market_value,
     list_market_value_releases,
 )
+from app.services.market_value_rankings import (
+    MarketValueIntegrityError,
+    get_market_value_most_valuable,
+    get_market_value_movers,
+)
 
 router = APIRouter(prefix="/analytics/market-value", tags=["analytics"])
 UNSEEDED = {
@@ -23,6 +34,13 @@ UNSEEDED = {
         "model": MarketValueErrorOut,
         "description": "Persisted Market Value series has not been seeded.",
     }
+}
+RANKING_ERRORS = {
+    404: {"model": MarketValueErrorOut, "description": "Unknown ReleaseProduct ID."},
+    503: {
+        "model": MarketValueRankingErrorOut,
+        "description": "Unseeded persisted scope, or fail-closed archive/persistence integrity mismatch. No rankings returned.",
+    },
 }
 
 
@@ -79,3 +97,70 @@ def get_market_value_releases_endpoint(db: Session = Depends(get_db)):
         return list_market_value_releases(db)
     except MarketValueUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/movers", response_model=MarketValueMoversOut, responses=RANKING_ERRORS)
+def get_market_value_movers_endpoint(
+    release_product_id: int | None = Query(
+        default=None,
+        ge=1,
+        description="Exact ReleaseProduct scope; omitted means Overall, unknown ID returns 404.",
+    ),
+    order: MarketValueMoverOrder = Query(
+        default="gainers",
+        description="Gainers/losers rank exact-print percentage changes; impact ranks absolute JPY changes, retaining signed values. Ties use card_print_id ASC.",
+    ),
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """One latest published DAILY monetary Market Value step, never 7D/30D attribution.
+
+    Public SELECT-only reconstruction from exactly two immutable snapshot
+    dates. scope_as_of may be later than step_date; neither claims live prices.
+    The full comparable panel must reconcile to persistence before truncation.
+    No published step returns available=false with null basket movement.
+    """
+    try:
+        return get_market_value_movers(
+            db, release_product_id=release_product_id, order=order, limit=limit
+        )
+    except UnknownMarketValueReleaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MarketValueUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except MarketValueIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=exc.detail.model_dump()) from exc
+
+
+@router.get(
+    "/most-valuable",
+    response_model=MarketValueMostValuableOut,
+    responses=RANKING_ERRORS,
+)
+def get_market_value_most_valuable_endpoint(
+    release_product_id: int | None = Query(
+        default=None,
+        ge=1,
+        description="Exact ReleaseProduct scope; omitted means Overall. Membership must match the frozen persisted revision.",
+    ),
+    limit: int = Query(default=10, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Exact physical prints decomposing the persisted headline's partial JPY basket.
+
+    One persisted as_of date and one coherent UTC calculation instant. Positive
+    snapshot values only, ordered value DESC then card_print_id ASC. Siblings
+    remain separate. Full count and JPY sum reconcile before pagination; no live
+    resolver, source fetch, canonical-family collapse or inferred missing price.
+    """
+    try:
+        return get_market_value_most_valuable(
+            db, release_product_id=release_product_id, limit=limit, offset=offset
+        )
+    except UnknownMarketValueReleaseError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MarketValueUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except MarketValueIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=exc.detail.model_dump()) from exc
