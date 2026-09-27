@@ -19,7 +19,7 @@ from __future__ import annotations
 import hashlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -103,8 +103,15 @@ def _compact_contributors(
     return frozenset(contributors)
 
 
-def _load_archive_rows(db: Session) -> list[Any]:
-    """Load exact archive inputs without shipping unrelated JSON over the wire."""
+def _load_archive_rows(
+    db: Session, *, through: date | None = None
+) -> list[Any]:
+    """Load exact archive inputs without shipping unrelated JSON over the wire.
+
+    ``through`` is applied in SQL, not after loading.  Operator-controlled
+    persistence runs can therefore freeze their archive boundary without even
+    reading a snapshot day that is outside the intended batch.
+    """
     if db.get_bind().dialect.name == "postgresql":
         # The archive keeps complete provenance JSON. A remote replay only
         # needs the contributor identity set, but it must preserve
@@ -112,10 +119,11 @@ def _load_archive_rows(db: Session) -> list[Any]:
         # returns NULL when source_values is not an array, a required field is
         # absent, source/type is not a string, or contributes_to_index is
         # unknown. Otherwise it returns the compact contributing pairs.
-        return list(
-            db.execute(
-                text(
-                    """
+        through_clause = (
+            "AND snapshot.snapshot_date <= :through" if through is not None else ""
+        )
+        statement = text(
+            f"""
                     SELECT
                         snapshot.snapshot_date,
                         snapshot.card_print_id,
@@ -173,14 +181,23 @@ def _load_archive_rows(db: Session) -> list[Any]:
                     AND print.verification_status = 'verified'
                     AND print.language = 'jp'
                     AND print.release_product_id IS NOT NULL
+                    {through_clause}
                     ORDER BY snapshot.snapshot_date, snapshot.card_print_id
                     """
-                )
-            )
         )
+        parameters = {"through": through} if through is not None else {}
+        return list(db.execute(statement, parameters))
 
     # SQLite/local-test fallback. It intentionally uses the same Python
     # helper as existing Market Index change calculations.
+    conditions = [
+        CardPrint.is_active.is_(True),
+        CardPrint.verification_status == "verified",
+        CardPrint.language == "jp",
+        CardPrint.release_product_id.is_not(None),
+    ]
+    if through is not None:
+        conditions.append(MarketIndexSnapshot.snapshot_date <= through)
     return list(
         db.execute(
             select(
@@ -192,12 +209,7 @@ def _load_archive_rows(db: Session) -> list[Any]:
                 MarketIndexSnapshot.provenance,
             )
             .join(CardPrint, CardPrint.id == MarketIndexSnapshot.card_print_id)
-            .where(
-                CardPrint.is_active.is_(True),
-                CardPrint.verification_status == "verified",
-                CardPrint.language == "jp",
-                CardPrint.release_product_id.is_not(None),
-            )
+            .where(*conditions)
             .order_by(
                 MarketIndexSnapshot.snapshot_date,
                 MarketIndexSnapshot.card_print_id,
@@ -216,8 +228,19 @@ def _membership_revision(active_prints: list[ActivePrintIdentity]) -> str:
     ).hexdigest()
 
 
-def load_market_value_replay_input(db: Session) -> MarketValueReplayInput:
-    """Load archive, current stored pricing evidence, and catalogue by SELECT."""
+def load_market_value_replay_input(
+    db: Session,
+    *,
+    through: date | None = None,
+    include_current: bool = True,
+) -> MarketValueReplayInput:
+    """Load archive and catalogue inputs by SELECT.
+
+    Reporting keeps ``include_current=True`` for its live literal-sum panel.
+    Persistence callers set it to false because current observations do not
+    contribute to archived point drafts and must not widen a fixed backfill's
+    read surface.
+    """
     active_rows = db.execute(
         select(CardPrint.id, CardPrint.release_product_id)
         .where(
@@ -261,7 +284,7 @@ def load_market_value_replay_input(db: Session) -> MarketValueReplayInput:
         if release_counts[row.id] > 0
     )
 
-    snapshots = _load_archive_rows(db)
+    snapshots = _load_archive_rows(db, through=through)
     archive_dates = tuple(sorted({row.snapshot_date for row in snapshots}))
     grouped: dict[date, list[MarketValueObservation]] = defaultdict(list)
     for snapshot in snapshots:
@@ -290,31 +313,42 @@ def load_market_value_replay_input(db: Session) -> MarketValueReplayInput:
         for point_date in archive_dates
     }
 
-    snapshottable_ids = [
-        print_id
-        for print_id in select_snapshottable_print_ids(db)
-        if print_id in active_ids
-    ]
-    live_by_print = get_market_index_for_prints(db, snapshottable_ids)
-    current_observations = tuple(
-        MarketValueObservation(
-            card_print_id=print_id,
-            value_jpy=value.index_value_jpy,
-            index_version=value.index_version,
-            source_semantics_version=value.source_semantics_version,
-            contributors=_contributors(value.source_values),
-            release_product_id=release_by_print[print_id],
+    if include_current:
+        snapshottable_ids = [
+            print_id
+            for print_id in select_snapshottable_print_ids(db)
+            if print_id in active_ids
+        ]
+        live_by_print = get_market_index_for_prints(db, snapshottable_ids)
+        current_observations = tuple(
+            MarketValueObservation(
+                card_print_id=print_id,
+                value_jpy=value.index_value_jpy,
+                index_version=value.index_version,
+                source_semantics_version=value.source_semantics_version,
+                contributors=_contributors(value.source_values),
+                release_product_id=release_by_print[print_id],
+            )
+            for print_id, value in sorted(live_by_print.items())
         )
-        for print_id, value in sorted(live_by_print.items())
-    )
-    # The batch resolver takes one clock instant for every print. That exact
-    # UTC instant is the honest as-of time for the live literal sum; it is
-    # never joined to an archived movement step by this adapter.
-    current_as_of = (
-        _as_utc(next(iter(live_by_print.values())).calculated_at)
-        if live_by_print
-        else datetime.now(timezone.utc)
-    )
+        # The batch resolver takes one clock instant for every print. That exact
+        # UTC instant is the honest as-of time for the live literal sum; it is
+        # never joined to an archived movement step by this adapter.
+        current_as_of = (
+            _as_utc(next(iter(live_by_print.values())).calculated_at)
+            if live_by_print
+            else datetime.now(timezone.utc)
+        )
+    else:
+        current_observations = ()
+        # This field is irrelevant to persistence drafts.  Keep the skipped
+        # current-value projection deterministic rather than consulting the
+        # wall clock.
+        current_as_of = (
+            datetime.combine(archive_dates[-1], time.min, tzinfo=timezone.utc)
+            if archive_dates
+            else datetime(1970, 1, 1, tzinfo=timezone.utc)
+        )
     return MarketValueReplayInput(
         catalogue_membership_revision=revision,
         archive_dates=archive_dates,

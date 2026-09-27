@@ -229,52 +229,71 @@ class MarketValueVerificationResult:
 
 
 def verify_market_value_points(
-    db: Session, expected_drafts: Iterable[MarketValuePointDraft]
+    db: Session,
+    expected_drafts: Iterable[MarketValuePointDraft],
+    *,
+    exact_archive: bool = False,
+    through: date | None = None,
 ) -> MarketValueVerificationResult:
-    """Compare recomputed drafts to stored rows by natural key, never by id."""
+    """Compare recomputed drafts to stored rows by natural key, never by id.
+
+    The default preserves the focused A3A comparison over the expected
+    scopes/date range.  ``exact_archive=True`` is the operator-writer gate: it
+    compares against every stored point through the requested cutoff (or the
+    whole table without one), so obsolete scopes and stray dates cannot hide
+    outside an expected draft's range.
+    """
     expected_rows = tuple(sorted(expected_drafts, key=_sort_key))
     expected = {draft.natural_key: draft for draft in expected_rows}
     if len(expected) != len(expected_rows):
         raise ValueError("market value verification contains duplicate expected keys")
-    if not expected:
+    if through is not None and any(row.point_date > through for row in expected_rows):
+        raise ValueError("market value verification received a point after cutoff")
+    if not expected and not exact_archive:
         return MarketValueVerificationResult(0, 0, 0, (), (), ())
 
-    versions = sorted({draft.methodology_version for draft in expected_rows})
-    first_date = min(draft.point_date for draft in expected_rows)
-    last_date = max(draft.point_date for draft in expected_rows)
-    overall_expected = any(draft.scope_kind == "overall" for draft in expected_rows)
-    release_ids = sorted(
-        {
-            draft.release_product_id
-            for draft in expected_rows
-            if draft.release_product_id is not None
-        }
-    )
-    scope_clauses = []
-    if overall_expected:
-        scope_clauses.append(
-            (MarketValuePoint.scope_kind == "overall")
-            & MarketValuePoint.release_product_id.is_(None)
+    if exact_archive:
+        statement = select(MarketValuePoint)
+        if through is not None:
+            statement = statement.where(MarketValuePoint.point_date <= through)
+    else:
+        versions = sorted({draft.methodology_version for draft in expected_rows})
+        first_date = min(draft.point_date for draft in expected_rows)
+        last_date = max(draft.point_date for draft in expected_rows)
+        overall_expected = any(
+            draft.scope_kind == "overall" for draft in expected_rows
         )
-    if release_ids:
-        scope_clauses.append(
-            (MarketValuePoint.scope_kind == "release")
-            & MarketValuePoint.release_product_id.in_(release_ids)
+        release_ids = sorted(
+            {
+                draft.release_product_id
+                for draft in expected_rows
+                if draft.release_product_id is not None
+            }
         )
-    scope_filter = scope_clauses[0]
-    for clause in scope_clauses[1:]:
-        scope_filter = scope_filter | clause
+        scope_clauses = []
+        if overall_expected:
+            scope_clauses.append(
+                (MarketValuePoint.scope_kind == "overall")
+                & MarketValuePoint.release_product_id.is_(None)
+            )
+        if release_ids:
+            scope_clauses.append(
+                (MarketValuePoint.scope_kind == "release")
+                & MarketValuePoint.release_product_id.in_(release_ids)
+            )
+        scope_filter = scope_clauses[0]
+        for clause in scope_clauses[1:]:
+            scope_filter = scope_filter | clause
+        statement = select(MarketValuePoint).where(
+            MarketValuePoint.methodology_version.in_(versions),
+            MarketValuePoint.point_date >= first_date,
+            MarketValuePoint.point_date <= last_date,
+            scope_filter,
+        )
 
     persisted_rows = tuple(
         db.scalars(
-            select(MarketValuePoint)
-            .where(
-                MarketValuePoint.methodology_version.in_(versions),
-                MarketValuePoint.point_date >= first_date,
-                MarketValuePoint.point_date <= last_date,
-                scope_filter,
-            )
-            .order_by(
+            statement.order_by(
                 MarketValuePoint.scope_kind,
                 MarketValuePoint.release_product_id,
                 MarketValuePoint.methodology_version,
