@@ -13,7 +13,7 @@ from app.models.release_product import ReleaseProduct
 from app.services import market_value_replay
 
 
-def test_replay_input_loader_selects_only_and_uses_release_fk(
+def test_replay_input_loader_selects_only_uses_release_fk_and_bounds_archive(
     db_session, monkeypatch
 ) -> None:
     release = ReleaseProduct(
@@ -43,7 +43,7 @@ def test_replay_input_loader_selects_only_and_uses_release_fk(
     )
     db_session.add(physical_print)
     db_session.flush()
-    db_session.add(
+    snapshots = [
         MarketIndexSnapshot(
             card_print_id=physical_print.id,
             calculated_at=datetime(2026, 9, 25, 20, tzinfo=timezone.utc),
@@ -65,14 +65,41 @@ def test_replay_input_loader_selects_only_and_uses_release_fk(
                     }
                 ]
             },
-        )
-    )
+        ),
+        MarketIndexSnapshot(
+            card_print_id=physical_print.id,
+            calculated_at=datetime(2026, 9, 26, 20, tzinfo=timezone.utc),
+            snapshot_date=date(2026, 9, 26),
+            index_value_jpy=550,
+            calculation_method="median",
+            source_count=1,
+            coverage_status="full",
+            confidence="high",
+            index_version=3,
+            source_semantics_version=2,
+            provenance={
+                "source_values": [
+                    {
+                        "source": "yuyutei",
+                        "reference_type": "retail_ask",
+                        "contributes_to_index": True,
+                        "value_jpy": 550,
+                    }
+                ]
+            },
+        ),
+    ]
+    db_session.add_all(snapshots)
     db_session.commit()
 
-    # Keep this test about archived projection. The live resolver is already
-    # covered at its own boundary and is intentionally not needed here.
+    # A persistence plan must not call the live resolver at all.
+    def current_projection_forbidden(_db):
+        raise AssertionError("fixed archive load attempted a current-value projection")
+
     monkeypatch.setattr(
-        market_value_replay, "select_snapshottable_print_ids", lambda _db: []
+        market_value_replay,
+        "select_snapshottable_print_ids",
+        current_projection_forbidden,
     )
     statements: list[str] = []
 
@@ -81,7 +108,11 @@ def test_replay_input_loader_selects_only_and_uses_release_fk(
 
     event.listen(db_session.get_bind(), "before_cursor_execute", record_statement)
     try:
-        loaded = market_value_replay.load_market_value_replay_input(db_session)
+        loaded = market_value_replay.load_market_value_replay_input(
+            db_session,
+            through=date(2026, 9, 25),
+            include_current=False,
+        )
     finally:
         event.remove(
             db_session.get_bind(), "before_cursor_execute", record_statement
@@ -90,6 +121,8 @@ def test_replay_input_loader_selects_only_and_uses_release_fk(
     assert statements and set(statements) == {"SELECT"}
     assert loaded.active_prints[0].release_product_id == release.id
     assert loaded.coded_releases[0].release_product_id == release.id
+    assert loaded.archive_dates == (date(2026, 9, 25),)
+    assert date(2026, 9, 26) not in loaded.observations_by_date
     assert loaded.observations_by_date[date(2026, 9, 25)][0].card_print_id == (
         physical_print.id
     )
