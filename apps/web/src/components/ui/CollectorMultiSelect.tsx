@@ -7,12 +7,15 @@ import styles from "./CollectorMultiSelect.module.css";
 /** Native popover puts options above artwork and inside a modal sheet's top
  * layer. Checkboxes retain normal Tab/Space semantics and never act like a
  * single-select menu. The fallback stays usable in older browsers. */
-export function CollectorMultiSelect({ label, options, selected, onChange, optionLabel = (value) => value }: {
+export function CollectorMultiSelect({ label, options, selected, onChange, optionLabel = (value) => value, optionDisabledReason, maxSelected, emptyLabel = "Any" }: {
   label: string;
   options: string[];
   selected: string[];
   onChange: (values: string[]) => void;
   optionLabel?: (value: string) => string;
+  optionDisabledReason?: (value: string) => string | null;
+  maxSelected?: number;
+  emptyLabel?: string;
 }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -49,7 +52,7 @@ export function CollectorMultiSelect({ label, options, selected, onChange, optio
     position();
     if (typeof element.showPopover === "function") element.showPopover();
     else { element.removeAttribute("popover"); element.dataset.fallback = "true"; }
-    (element.querySelector<HTMLElement>('input[type="search"]') ?? element.querySelector<HTMLElement>('input[type="checkbox"]') ?? element.querySelector<HTMLElement>('button:not(:disabled)'))?.focus({ preventScroll: true });
+    (element.querySelector<HTMLElement>('input[type="search"]') ?? element.querySelector<HTMLElement>('input[type="checkbox"]:not(:disabled)') ?? element.querySelector<HTMLElement>('button:not(:disabled)'))?.focus({ preventScroll: true });
     window.addEventListener("resize", position);
     window.addEventListener("scroll", position, true);
     return () => {
@@ -82,11 +85,11 @@ export function CollectorMultiSelect({ label, options, selected, onChange, optio
   }, [open, close]);
 
   return <div ref={root} className={styles.field}>
-    <button ref={trigger} type="button" className={styles.trigger} aria-label={`${label} ${selected.length ? `${selected.length} selected` : "Any"}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
+    <button ref={trigger} type="button" className={styles.trigger} aria-label={`${label} ${selected.length ? `${selected.length} selected` : emptyLabel}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => { if (open) close(); else { setSearch(""); setOpen(true); } }}
       onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setSearch(""); setOpen(true); } }}>
       <span>{label}</span>
-      <span className={styles.summary}>{selected.length ? `${selected.length} selected` : "Any"}</span>
+      <span className={styles.summary}>{selected.length ? `${selected.length} selected` : emptyLabel}</span>
       <span aria-hidden="true">⌄</span>
     </button>
     {open && <div ref={panel} id={id} role="dialog" aria-label={`${label} options`} popover="auto" className={styles.panel}
@@ -95,12 +98,18 @@ export function CollectorMultiSelect({ label, options, selected, onChange, optio
         <span>{label}</span>
         <button type="button" disabled={!selected.length} onClick={() => onChange([])} aria-label={`Clear ${label.toLowerCase()}`}>Clear</button>
       </div>
+      {maxSelected !== undefined && <p className={styles.limit} role="status">{selected.length} of {maxSelected} selected.{selected.length >= maxSelected ? " Remove one to add another." : ""}</p>}
       {searchable && <input type="search" className={styles.search} aria-label={`Search ${label.toLowerCase()} options`} placeholder="Find an option…" value={search} onChange={(event) => setSearch(event.target.value)} />}
       <div className={styles.options} role="group" aria-label={label}>
-        {visible.map((value) => <label key={value} className={styles.option}>
-          <input type="checkbox" checked={selected.includes(value)} onChange={() => onChange(toggleFilter(selected, value))} />
-          <span>{optionLabel(value)}</span>
-        </label>)}
+        {visible.map((value, index) => {
+          const checked = selected.includes(value);
+          const reason = optionDisabledReason?.(value);
+          const disabled = !checked && (Boolean(reason) || (maxSelected !== undefined && selected.length >= maxSelected));
+          return <label key={value} className={styles.option} data-disabled={disabled}>
+            <input type="checkbox" aria-label={optionLabel(value)} aria-describedby={reason ? `${id}-reason-${index}` : undefined} checked={checked} disabled={disabled} onChange={() => { if (!disabled) onChange(toggleFilter(selected, value)); }} />
+            <span>{optionLabel(value)}{reason && <small id={`${id}-reason-${index}`} className={styles.reason}>{reason}</small>}</span>
+          </label>;
+        })}
         {!visible.length && <p className={styles.empty}>No matching options</p>}
       </div>
       <button type="button" className={styles.done} onClick={close}>Done</button>

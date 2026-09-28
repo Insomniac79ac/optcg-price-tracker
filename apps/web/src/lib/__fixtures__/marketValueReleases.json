@@ -1,0 +1,2307 @@
+{
+  "releases": {
+    "items": [
+      {
+        "release_product_id": 198,
+        "release_code": "OP-17",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 14780,
+          "priced_print_count": 20,
+          "total_physical_print_count": 169,
+          "physical_coverage_pct": "11.83432",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 301,
+        "release_code": "OP-16",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 302,
+        "release_code": "OP-15",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 303,
+        "release_code": "OP-14",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 304,
+        "release_code": "OP-13",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 305,
+        "release_code": "OP-12",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 306,
+        "release_code": "OP-11",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 307,
+        "release_code": "OP-10",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 308,
+        "release_code": "OP-09",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 309,
+        "release_code": "OP-08",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 310,
+        "release_code": "OP-07",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 311,
+        "release_code": "OP-06",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 186,
+        "release_code": "OP-05",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 480,
+          "priced_print_count": 4,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "2.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 313,
+        "release_code": "OP-04",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "-3.10",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 314,
+        "release_code": "OP-03",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "0.00",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 315,
+        "release_code": "OP-02",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "-1.20",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 181,
+        "release_code": "OP-01",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "4.20",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 317,
+        "release_code": "EB-04",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 318,
+        "release_code": "EB-03",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "1.60",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 319,
+        "release_code": "EB-02",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "0.70",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 320,
+        "release_code": "EB-01",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "2.40",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 321,
+        "release_code": "PRB-02",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 322,
+        "release_code": "PRB-01",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "-0.40",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 323,
+        "release_code": "ST-36",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 324,
+        "release_code": "ST-35",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 325,
+        "release_code": "ST-34",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 326,
+        "release_code": "ST-33",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 327,
+        "release_code": "ST-32",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 328,
+        "release_code": "ST-31",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 329,
+        "release_code": "ST-30",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 330,
+        "release_code": "ST-29",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 331,
+        "release_code": "ST-28",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 332,
+        "release_code": "ST-27",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 333,
+        "release_code": "ST-26",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 334,
+        "release_code": "ST-25",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 335,
+        "release_code": "ST-24",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 336,
+        "release_code": "ST-23",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 337,
+        "release_code": "ST-22",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 338,
+        "release_code": "ST-21",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 339,
+        "release_code": "ST-20",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 340,
+        "release_code": "ST-19",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 341,
+        "release_code": "ST-18",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 342,
+        "release_code": "ST-17",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 343,
+        "release_code": "ST-16",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 344,
+        "release_code": "ST-15",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 345,
+        "release_code": "ST-14",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 346,
+        "release_code": "ST-13",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 347,
+        "release_code": "ST-12",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 348,
+        "release_code": "ST-11",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 349,
+        "release_code": "ST-10",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 350,
+        "release_code": "ST-09",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 351,
+        "release_code": "ST-08",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 352,
+        "release_code": "ST-07",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 353,
+        "release_code": "ST-06",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 354,
+        "release_code": "ST-05",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 355,
+        "release_code": "ST-04",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 356,
+        "release_code": "ST-03",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 357,
+        "release_code": "ST-02",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 358,
+        "release_code": "ST-01",
+        "release_name": "\u539f\u984c",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "0.30",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      }
+    ],
+    "ordering_basis": "released_on_desc_then_deterministic_fallback"
+  },
+  "series": {
+    "313": {
+      "scope_kind": "release",
+      "release_product_id": 313,
+      "release_code": "OP-04",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "-3.10",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "-0.031"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.4",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-1.2",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-1.4",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-2.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-2.6",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-3.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "314": {
+      "scope_kind": "release",
+      "release_product_id": 314,
+      "release_code": "OP-03",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "0.00",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.0"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "315": {
+      "scope_kind": "release",
+      "release_product_id": 315,
+      "release_code": "OP-02",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "-1.20",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "-0.012"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-1.2",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "181": {
+      "scope_kind": "release",
+      "release_product_id": 181,
+      "release_code": "OP-01",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "4.20",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.042"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.2",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.9",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "2.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "3.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "4.2",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "318": {
+      "scope_kind": "release",
+      "release_product_id": 318,
+      "release_code": "EB-03",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "1.60",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.016"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.2",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.9",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.6",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "319": {
+      "scope_kind": "release",
+      "release_product_id": 319,
+      "release_code": "EB-02",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "0.70",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.006999999999999999"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "320": {
+      "scope_kind": "release",
+      "release_product_id": 320,
+      "release_code": "EB-01",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "2.40",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.024"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "2.4",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "322": {
+      "scope_kind": "release",
+      "release_product_id": 322,
+      "release_code": "PRB-01",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "-0.40",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "-0.004"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.4",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    },
+    "358": {
+      "scope_kind": "release",
+      "release_product_id": 358,
+      "release_code": "ST-01",
+      "release_name": "\u539f\u984c",
+      "methodology_version": 1,
+      "as_of": "2026-09-26",
+      "tracked_value": {
+        "value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "physical_coverage_pct": "52.597403",
+        "is_partial": true
+      },
+      "movement": {
+        "available": true,
+        "pct": "0.30",
+        "reason": "publishable",
+        "window": "7d",
+        "from_date": "2026-09-19",
+        "to_date": "2026-09-26",
+        "fraction": "0.003"
+      },
+      "series": [
+        {
+          "date": "2026-09-19",
+          "tracked_value_jpy": 46200,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-20",
+          "tracked_value_jpy": 46500,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-21",
+          "tracked_value_jpy": 46800,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-22",
+          "tracked_value_jpy": 47100,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "-0.5",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-23",
+          "tracked_value_jpy": 47400,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.7",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-24",
+          "tracked_value_jpy": 47700,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "1.1",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-25",
+          "tracked_value_jpy": 48000,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.8",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        },
+        {
+          "date": "2026-09-26",
+          "tracked_value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "performance_pct": "0.3",
+          "step_publication_eligible": true,
+          "publication_reason": "publishable"
+        }
+      ]
+    }
+  }
+}
