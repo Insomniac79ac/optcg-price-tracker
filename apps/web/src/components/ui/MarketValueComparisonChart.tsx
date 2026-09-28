@@ -25,7 +25,7 @@ export function MarketValueComparisonChart({ lines }: { lines: ComparisonLine[] 
       <LineChart data={rows} margin={{ top: 16, right: 14, bottom: 10, left: 0 }} accessibilityLayer>
         <CartesianGrid vertical={false} stroke="var(--border-muted)" strokeDasharray="3 6" />
         <XAxis dataKey="timestamp" type="number" scale="time" domain={["dataMin", "dataMax"]} tickLine={false} axisLine={false} minTickGap={40} tickMargin={12} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickFormatter={(value: number) => marketDate(new Date(value).toISOString().slice(0, 10))} />
-        <YAxis width={48} tickLine={false} axisLine={false} tickCount={5} tickMargin={8} tick={{ fill: "var(--text-muted)", fontSize: 11 }} domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} tickFormatter={(value: number) => `${value}%`} />
+        <YAxis width={48} tickLine={false} axisLine={false} tickCount={5} tickMargin={8} tick={{ fill: "var(--text-muted)", fontSize: 11 }} domain={[(min: number) => Math.min(0, min), (max: number) => Math.max(0, max)]} tickFormatter={(value: number) => `${Number(value.toFixed(1))}%`} />
         <ReferenceLine y={0} stroke="var(--text-faint)" strokeDasharray="3 6" label={{ value: "0%", position: "insideTopLeft", fill: "var(--text-muted)", fontSize: 10 }} />
         <Tooltip content={<MarketValueComparisonTooltip lines={lines} />} cursor={{ stroke: "var(--text-muted)", strokeDasharray: "3 4" }} />
         {lines.map((line) => <Line key={line.id} dataKey={`values.${line.id}`} name={line.code} type="linear" stroke={COMPARISON_COLORS[line.slot]} strokeDasharray={DASHES[line.slot]} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} connectNulls={false} isAnimationActive={false} />)}

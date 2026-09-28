@@ -47,6 +47,9 @@ evidence is deliberately excluded from staging.
   moved. Two new regressions cover empty directional cohorts; 140 affected
   tests passed after the correction, including all **93 focused tests**.
   TypeScript and touched-file ESLint passed again.
+- Native Preview screenshot inspection found long decimal comparison axis labels
+  clipping. Axis labels now round to one decimal for display; server series and
+  tooltip precision are unchanged. A regression covers this real-data case.
 - TypeScript, touched-file ESLint, secret checks and diff whitespace checks pass.
 - Prior B3 fixture browser validation: 70 checks at 1500px and 390px, covering
   responsive layout, artwork containment, charts/tooltips/watermarks, eligibility,
