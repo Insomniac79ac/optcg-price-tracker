@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { AtlasMark } from "@/components/brand/AtlasMark";
+import { PUBLIC_CHART_PALETTE } from "@/lib/chartPalette";
 import { formatDate, formatJpy } from "@/lib/format";
 import { type PriceHistorySeriesView, type PriceHistoryView } from "@/lib/printPriceHistory";
 import {
@@ -67,17 +68,17 @@ import { describeSourceConstraint } from "@/lib/sourceConstraint";
  * these are four different platforms, not four verdicts.
  */
 const SERIES_COLOR: Record<string, string> = {
-  [YUYUTEI]: "var(--accent-teal)",
-  [SNKRDUNK]: "var(--parchment)",
-  [BANDAI]: "var(--signal-blue)",
+  [YUYUTEI]: PUBLIC_CHART_PALETTE.teal,
+  [SNKRDUNK]: PUBLIC_CHART_PALETTE.parchment,
+  [BANDAI]: PUBLIC_CHART_PALETTE.blue,
 };
 
-const MARKET_INDEX_COLOR = "var(--accent-gold)";
+const MARKET_INDEX_COLOR = PUBLIC_CHART_PALETTE.gold;
 
 /** Hues for a platform this build has never heard of, assigned by the order
  * the server returned it. Enough to keep two unknown sources apart on one
  * chart; never a claim about either. */
-const FALLBACK_COLORS = ["var(--signal-purple)", "var(--accent-coral)", "var(--text-muted)"];
+const FALLBACK_COLORS = [PUBLIC_CHART_PALETTE.purple, PUBLIC_CHART_PALETTE.coral, PUBLIC_CHART_PALETTE.muted];
 
 function seriesColorFor(series: { kind: string; source: string | null }, index: number): string {
   if (series.kind === "market_index") return MARKET_INDEX_COLOR;
