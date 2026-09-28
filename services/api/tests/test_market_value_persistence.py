@@ -130,7 +130,7 @@ def test_unavailable_step_is_null_not_fake_movement():
 
 def test_application_backup_follows_cpi_historical_evidence_policy(db_session):
     registry = {spec.name: spec for spec in BACKUP_REGISTRY}
-    assert BACKUP_VERSION == 14
+    assert BACKUP_VERSION == 15
     assert registry["market_value_points"].include_flag == "include_prices"
 
     without_prices = export_backup(db_session, include_prices=False)

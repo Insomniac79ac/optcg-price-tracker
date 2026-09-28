@@ -28,23 +28,31 @@ Idempotency
 Insertion is ON CONFLICT (card_print_id, snapshot_date) DO NOTHING. A second
 run on the same UTC day writes nothing and changes nothing; the first
 snapshot of a day is the one Atlas stands behind. There is deliberately no
-upsert and no UPDATE anywhere in this module - a retry after a partial
-failure fills in only the prints that are still missing, and never touches a
-row that already exists.
+upsert and no UPDATE anywhere in this module. New batches and their completion
+receipts commit atomically. A retry verifies the first completed batch; missing
+rows or receipt-less legacy rows are never silently repaired or certified.
 """
 
 import argparse
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from uuid import uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import CardPrint, MarketIndexSnapshot, PriceObservation, Source
 from app.schemas import PrintMarketIndexOut
 from app.services.job_locks import LockHeldError, with_job_lock
+from app.services.market_index_completion import (
+    SnapshotCompletionError,
+    batch_facts,
+    insert_atomic_completion,
+    selected_print_ids_digest,
+    verify_pending_snapshot_completion,
+)
 from app.services.print_market_index import (
     INDEX_EVIDENCE_PRICE_TYPES,
     get_market_index_for_prints,
@@ -65,6 +73,9 @@ class SnapshotRunResult:
     rows_created: int
     rows_skipped_existing: int
     dry_run: bool
+    completion_status: str = "unverified"
+    completion_receipt_created: bool = False
+    completion_verified: bool = False
 
     def report_lines(self) -> list[str]:
         return [
@@ -74,6 +85,9 @@ class SnapshotRunResult:
             f"rows_created: {self.rows_created}",
             f"rows_skipped_existing: {self.rows_skipped_existing}",
             f"dry_run: {self.dry_run}",
+            f"completion_status: {self.completion_status}",
+            f"completion_receipt_created: {self.completion_receipt_created}",
+            f"completion_verified: {self.completion_verified}",
         ]
 
 
@@ -325,14 +339,6 @@ def _insert_ignoring_existing(db: Session, rows: list[dict]) -> None:
     )
 
 
-def _count_for_date(db: Session, snapshot_date: date) -> int:
-    return db.scalar(
-        select(func.count())
-        .select_from(MarketIndexSnapshot)
-        .where(MarketIndexSnapshot.snapshot_date == snapshot_date)
-    )
-
-
 def snapshot_market_index(
     db: Session, *, dry_run: bool = False, skip_lock: bool = False
 ) -> SnapshotRunResult:
@@ -343,18 +349,49 @@ def snapshot_market_index(
     test/dev-CLI only, never exposed to the admin UI/API - same convention as
     snapshot_portfolio_valuation.
 
-    The entire run is one transaction: one batch calculation, one INSERT, one
-    commit. A failure part-way therefore leaves no partial day behind, and
+    The entire run is one transaction: one batch calculation, snapshot and
+    receipt insertion/verification, one commit. Failure leaves neither behind;
     since the calculation is a single get_market_index_for_prints call every
     row shares one calculated_at.
     """
-    with with_job_lock(LOCK_NAME, skip_lock=skip_lock):
-        return _snapshot_market_index_locked(db, dry_run=dry_run)
+    try:
+        with with_job_lock(LOCK_NAME, skip_lock=skip_lock) as owner_id:
+            return _snapshot_market_index_locked(
+                db, dry_run=dry_run, run_id=owner_id or f"test:{uuid4()}"
+            )
+    except Exception:
+        db.rollback()
+        raise
 
 
-def _snapshot_market_index_locked(db: Session, *, dry_run: bool) -> SnapshotRunResult:
+def _snapshot_market_index_locked(
+    db: Session, *, dry_run: bool, run_id: str
+) -> SnapshotRunResult:
+    today = datetime.now(timezone.utc).date()
     print_ids = select_snapshottable_print_ids(db)
+    existing = verify_pending_snapshot_completion(db, today)
+    if existing.receipt_exists:
+        existing.require_valid()
+        if existing.selected_print_ids_digest != selected_print_ids_digest(print_ids):
+            raise SnapshotCompletionError("selected_population_changed")
+        result = SnapshotRunResult(
+            snapshot_date=today,
+            calculated_at=existing.calculated_at,
+            prints_selected=len(print_ids),
+            rows_created=0,
+            rows_skipped_existing=existing.observed_rows,
+            dry_run=dry_run,
+            completion_status="verified_existing",
+            completion_verified=True,
+        )
+        db.rollback()
+        return result
+    if existing.observed_rows:
+        # Historical/pre-receipt or otherwise unqualified data. There is no
+        # automatic legacy certification or partial-batch repair here.
+        raise SnapshotCompletionError("receipt_missing")
     if not print_ids:
+        db.rollback()
         return SnapshotRunResult(
             snapshot_date=None,
             calculated_at=None,
@@ -362,6 +399,7 @@ def _snapshot_market_index_locked(db: Session, *, dry_run: bool) -> SnapshotRunR
             rows_created=0,
             rows_skipped_existing=0,
             dry_run=dry_run,
+            completion_status="empty_selection",
         )
 
     # One batch call for every print - get_market_index_for_prints issues a
@@ -373,6 +411,9 @@ def _snapshot_market_index_locked(db: Session, *, dry_run: bool) -> SnapshotRunR
     rows = [build_snapshot_row(indexes[print_id]) for print_id in print_ids]
     snapshot_date = rows[0]["snapshot_date"]
     calculated_at = rows[0]["calculated_at"]
+    if snapshot_date != today:
+        raise SnapshotCompletionError("snapshot_date_changed")
+    batch_facts(rows, snapshot_date)
 
     if dry_run:
         # Nothing is inserted and nothing is committed. The rollback discards
@@ -386,27 +427,34 @@ def _snapshot_market_index_locked(db: Session, *, dry_run: bool) -> SnapshotRunR
             rows_created=0,
             rows_skipped_existing=0,
             dry_run=True,
+            completion_status="dry_run",
         )
 
-    # Measured rather than inferred from rowcount: with ON CONFLICT DO
-    # NOTHING, "rows attempted" and "rows actually written" differ, and
-    # rowcount's meaning for a partially-ignored multi-row insert is not
-    # something to rely on across two dialects. Counting before and after
-    # gives the true number on both.
-    before = _count_for_date(db, snapshot_date)
     _insert_ignoring_existing(db, rows)
-    db.commit()
-    after = _count_for_date(db, snapshot_date)
-
-    created = after - before
-    return SnapshotRunResult(
+    insert_atomic_completion(
+        db,
+        rows=rows,
+        selected_ids=print_ids,
+        snapshot_date=snapshot_date,
+        run_id=run_id,
+    )
+    verified = verify_pending_snapshot_completion(db, snapshot_date)
+    verified.require_valid()
+    result = SnapshotRunResult(
         snapshot_date=snapshot_date,
         calculated_at=calculated_at,
         prints_selected=len(print_ids),
-        rows_created=created,
-        rows_skipped_existing=len(rows) - created,
+        rows_created=verified.observed_rows,
+        rows_skipped_existing=0,
         dry_run=False,
+        completion_status="verified_new",
+        completion_receipt_created=True,
+        completion_verified=True,
     )
+    # Every fact authorizing this commit was read from the pending database
+    # batch, in this transaction. No post-commit count is used as proof.
+    db.commit()
+    return result
 
 
 def print_report(result: SnapshotRunResult) -> None:
@@ -445,6 +493,9 @@ def main() -> None:
         except LockHeldError as exc:
             print(f"Job already running: {exc.lock_name}")
             sys.exit(2)
+        except SnapshotCompletionError as exc:
+            print(f"ABORTED: {exc.reason}", file=sys.stderr)
+            sys.exit(1)
     finally:
         db.close()
 

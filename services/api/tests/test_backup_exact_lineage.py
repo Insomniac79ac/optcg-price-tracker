@@ -71,6 +71,7 @@ def exact_archive(*, include_prices: bool = False) -> dict:
             ],
             source_collection_attempts=[],
             market_index_snapshots=[{"id": 1, "card_print_id": 1}],
+            market_index_snapshot_completions=[],
             card_pirate_index_points=[],
             market_value_points=[],
             snkrdunk_candidates=[{"id": 1, "discovery_run_id": None}],
@@ -227,6 +228,7 @@ def test_registry_is_fk_safe_and_has_required_exact_lineage_order():
         "price_observations",
         "source_collection_attempts",
         "market_index_snapshots",
+        "market_index_snapshot_completions",
         "card_pirate_index_points",
         "market_value_points",
     }
