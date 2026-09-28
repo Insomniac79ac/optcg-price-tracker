@@ -77,7 +77,7 @@ export function TopBar({
           aria-label={adminShell ? "Open admin navigation" : "Toggle navigation"}
           aria-expanded={mobileNavOpen}
           className={`${ICON_BUTTON_CLASS} rounded text-base ${
-            adminShell ? "xl:hidden" : authenticated ? "" : "md:hidden"
+            adminShell ? "xl:hidden" : publicShell || !authenticated ? "md:hidden" : ""
           }`}
         >
           ☰

@@ -141,10 +141,10 @@ export function AppShell() {
         </aside>
       )}
 
-      {/* Admin drawer through tablet widths; collector drawer below `lg`. */}
+      {/* Public drawer matches the header toggle below `md`; private/admin rules stay separate. */}
       {mobileNavOpen && showAdminNavigation && <AdminNavigationDrawer onClose={() => setMobileNavOpen(false)} />}
       {mobileNavOpen && !isAdminRoute && (
-        <div className="fixed inset-0 top-[var(--header-h)] z-40 lg:hidden">
+        <div className={`fixed inset-0 top-[var(--header-h)] z-40 ${isPublicShellRoute(pathname ?? "") ? "md:hidden" : "lg:hidden"}`}>
           <button
             type="button"
             aria-label="Close navigation"
