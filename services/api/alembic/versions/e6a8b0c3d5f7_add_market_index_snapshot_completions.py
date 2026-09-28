@@ -7,10 +7,10 @@ Revises: d5f7a9c2e4b6
 from alembic import op
 import sqlalchemy as sa
 
-revision = "e6a8b0c3d5f7"
-down_revision = "d5f7a9c2e4b6"
-branch_labels = None
-depends_on = None
+revision: str = "e6a8b0c3d5f7"
+down_revision: str | None = "d5f7a9c2e4b6"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
 def upgrade() -> None:

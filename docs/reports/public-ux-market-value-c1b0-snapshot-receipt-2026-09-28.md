@@ -62,10 +62,11 @@ evidence. Existing archives are not mutated.
 | Receipt backup compatibility/integrity tests | 7 passed |
 | Snapshot, Market Index, CPI, Market Value, API, backup/migration regressions | 727 passed |
 | Mapping/backup foundation regressions | 18 passed |
+| Existing migration discovery/structure regressions | 38 passed |
 | Yuyutei mock/transaction regressions | 480 passed, 42 subtests passed |
 | SNKRDUNK mock regressions | 364 passed, 32 skipped, 48 subtests passed |
 
-Totals: **49 focused tests; 1,589 regression tests passed**, excluding subtests.
+Totals: **49 focused tests; 1,627 regression tests passed**, excluding subtests.
 The collector suites invoked tests with mocked source responses, not collectors.
 Eight existing Yuyutei transaction tests require PostgreSQL 16; the initial run
 against PostgreSQL 18 correctly rejected that environment. All eight passed
@@ -86,3 +87,18 @@ containers used temporary memory-backed data and were stopped/removed after test
 Disk before/after local validation: **13 GB available, 59% used (~41% free)**.
 No application Docker stack was recreated. Stop point: PR review, before migration
 application or C1B1 orchestration.
+
+## Initial CI correction
+
+Run `36387748764`, backend job `108816648510`, reported three failures before any
+correction was made; the traceback was captured in `/tmp/c1b0-ci-backend-failure.log`.
+The existing `test_migration_history_has_exactly_one_head` checks in
+`test_canonical_original_set_code_nullable_migration.py:138`,
+`test_canonical_rarity_nullable_migration.py:134` and
+`test_print_official_metadata_migration.py:106` asserted
+`expected a single head, found []`. Their discovery pattern requires a typed
+`revision: str` declaration. The new revision now follows that convention;
+its schema operations, revision ID and parent are unchanged. No test was weakened.
+All 38 tests in those three modules pass locally, and Alembic reports the sole
+head `e6a8b0c3d5f7`. The initial full CI run otherwise passed 4,898 backend tests
+with 42 skips. A fresh CI run validates the corrected PR head.
