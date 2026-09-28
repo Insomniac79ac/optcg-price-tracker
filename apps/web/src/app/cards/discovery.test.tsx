@@ -23,6 +23,12 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();window.matchMedia=matchMedia;});
 async function ready(){const view=render(<Page/>);await screen.findByRole('link',{name:/^Print 1,/});return view;}
+const releaseTrigger = () => screen.getByRole('button', { name: /^Release / });
+function selectRelease(name: string) {
+  fireEvent.click(releaseTrigger());
+  fireEvent.click(screen.getByRole('radio', { name }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+}
 const tiles=()=>screen.getAllByRole('link').filter(a=>a.getAttribute('href')?.startsWith('/prints/'));
 describe('release-first collector discovery',()=>{
   it('retains server order including same-day rows and six undated products',async()=>{
@@ -31,38 +37,68 @@ describe('release-first collector discovery',()=>{
     expect(strip.getAllByRole('link').slice(1).map(a=>a.getAttribute('href'))).toEqual(releaseFixture.items.map(r=>`/cards?release_product_id=${r.release_product_id}`));
     expect(strip.getAllByRole('link')[1]).toHaveTextContent('OP-17');
     expect(within(screen.getByRole('region',{name:'Browse by release'})).queryByRole('combobox')).toBeNull();
-    const options=within(within(screen.getByRole('complementary')).getByRole('combobox',{name:'Release'})).getAllByRole('option');
+    fireEvent.click(releaseTrigger());
+    const options=screen.getAllByRole('radio').map(radio => radio.closest('label')!);
     expect(options.slice(-6).every(o=>o.textContent?.includes('Special product'))).toBe(true);
   });
   it('synchronizes tiles, selector, active chip and URL in both directions including Back',async()=>{
     const push=vi.spyOn(window.history,'pushState');const view=await ready();
-    const release = screen.getByRole('combobox',{name:'Release'});
+    const release = releaseTrigger();
     const op17 = screen.getByRole('link',{name:"OP-17 — The World's Strongest Warriors"});
     const all = screen.getByRole('link',{name:/All releases/});
     fireEvent.click(op17);
     expect(push).toHaveBeenLastCalledWith(null,'','/cards?release_product_id=186');
     search='release_product_id=186';view.rerender(<Page/>);
     await waitFor(()=>expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186,offset:0})));
-    expect(release).toHaveValue('186');expect(op17).toHaveAttribute('aria-current','page');
+    expect(release).toHaveAccessibleName('Release OP-17');expect(op17).toHaveAttribute('aria-current','page');
     expect(screen.getByRole('heading',{name:'Collector filters'})).toBeInTheDocument();
     expect(within(screen.getByLabelText('Active catalogue filters')).getByRole('button',{name:/Remove release filter OP-17/})).toBeInTheDocument();
-    fireEvent.change(release,{target:{value:''}});
+    selectRelease('All releases');
     expect(push).toHaveBeenLastCalledWith(null,'','/cards');
-    search='';view.rerender(<Page/>);expect(release).toHaveValue('');expect(all).toHaveAttribute('aria-current','page');
+    search='';view.rerender(<Page/>);expect(release).toHaveAccessibleName('Release All releases');expect(all).toHaveAttribute('aria-current','page');
     // App Router supplies the prior committed URL after the browser popstate.
     window.history.replaceState(null,'','/cards?release_product_id=186');fireEvent.popState(window);
     search='release_product_id=186';view.rerender(<Page/>);
-    expect(release).toHaveValue('186');expect(op17).toHaveAttribute('aria-current','page');
+    expect(release).toHaveAccessibleName('Release OP-17');expect(op17).toHaveAttribute('aria-current','page');
     expect(push).toHaveBeenCalledTimes(2);
     fireEvent.click(all);search='';view.rerender(<Page/>);
-    expect(release).toHaveValue('');expect(all).toHaveAttribute('aria-current','page');
-    fireEvent.change(release,{target:{value:'186'}});search='release_product_id=186';view.rerender(<Page/>);
-    expect(op17).toHaveAttribute('aria-current','page');expect(release).toHaveValue('186');
+    expect(release).toHaveAccessibleName('Release All releases');expect(all).toHaveAttribute('aria-current','page');
+    selectRelease("OP-17 — The World's Strongest Warriors");search='release_product_id=186';view.rerender(<Page/>);
+    expect(op17).toHaveAttribute('aria-current','page');expect(release).toHaveAccessibleName('Release OP-17');
   });
   it('resolves legacy codes and ignores conflicting set when ID exists',async()=>{
     search='set=OP-01&release_product_id=186';await ready();
     expect(fetchPrintCatalogue).toHaveBeenLastCalledWith(expect.objectContaining({release_product_id:186}));
     expect(vi.mocked(fetchPrintCatalogue).mock.lastCall?.[0]?.set).toBeUndefined();
+  });
+  it('searches locally, replaces one release ID, preserves refinements and clears only the release chip', async () => {
+    search = 'set=OP-17&rarity=SR&treatment=parallel';
+    const view = await ready();
+    const push = vi.spyOn(window.history, 'pushState');
+    const requests = vi.mocked(fetchPrintCatalogue).mock.calls.length;
+    fireEvent.click(releaseTrigger());
+    const input = screen.getByRole('searchbox', { name: 'Search release options' });
+    for (const value of ['OP-16', 'time of battle']) fireEvent.change(input, { target: { value } });
+    expect(fetchPrintCatalogue).toHaveBeenCalledTimes(requests);
+    expect(fetchReleases).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('radio', { name: 'OP-16 — THE TIME OF BATTLE' }));
+    expect(push).toHaveBeenLastCalledWith(null, '', '/cards?release_product_id=185&rarity=SR&treatment=parallel');
+    search = 'release_product_id=185&rarity=SR&treatment=parallel'; view.rerender(<Page />);
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    const chip = screen.getByRole('button', { name: 'Remove release filter OP-16 — THE TIME OF BATTLE' });
+    expect(chip).toHaveTextContent('Release: OP-16 — THE TIME OF BATTLE');
+    fireEvent.click(chip);
+    expect(push).toHaveBeenLastCalledWith(null, '', '/cards?rarity=SR&treatment=parallel');
+    search = 'rarity=SR&treatment=parallel'; view.rerender(<Page />);
+    expect(releaseTrigger()).toHaveAccessibleName('Release All releases');
+    // App Router supplies restored search params for browser Back and Forward.
+    for (const query of ['release_product_id=185&rarity=SR&treatment=parallel', 'rarity=SR&treatment=parallel']) {
+      window.history.replaceState(null, '', `/cards?${query}`); fireEvent.popState(window);
+      search = query; view.rerender(<Page />);
+      expect(releaseTrigger()).toHaveAccessibleName(query.startsWith('release_product_id') ? 'Release OP-16' : 'Release All releases');
+    }
+    expect(push).toHaveBeenCalledTimes(2);
   });
   it('resolves a legacy set to its authoritative ReleaseProduct',async()=>{
     search='set=OP-17';await ready();
@@ -132,9 +168,9 @@ describe('release-first collector discovery',()=>{
   it('mobile edits a multi-select draft and commits only once on Apply',async()=>{
     window.matchMedia=vi.fn().mockImplementation(query=>({matches:query.includes('max-width'),addEventListener:vi.fn(),removeEventListener:vi.fn()}));
     const view=await ready();const push=vi.spyOn(window.history,'pushState');
-    expect(screen.queryByRole('combobox',{name:'Release'})).toBeNull();
+    expect(screen.queryByRole('button',{name:/^Release /})).toBeNull();
     fireEvent.click(screen.getByRole('button',{name:'Filters'}));const dialog=screen.getByRole('dialog',{name:'Filters'});
-    fireEvent.change(within(dialog).getByRole('combobox',{name:'Release'}),{target:{value:'186'}});
+    selectRelease("OP-17 — The World's Strongest Warriors");
     expect(screen.getByRole('link',{name:/All releases/})).toHaveAttribute('aria-current','page');
     const initialRequests=vi.mocked(fetchPrintCatalogue).mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button',{name:/^Rarity/}));

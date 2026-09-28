@@ -21,7 +21,7 @@ describe('English release presentation', () => {
     expect(releaseDisplayNameEnglish(null)).toBe('Special product');
     expect(releaseLabel({ ...releaseFixture.items[0], official_code: null, display_name: '記念商品' })).toBe('Special product');
   });
-  it('uses English strip/select labels without mutating source metadata, chronology or ID navigation', () => {
+  it('uses English strip/popover labels without mutating source metadata, chronology or ID navigation', () => {
     const release = Object.freeze({ ...releaseFixture.items[0], display_name: '世界最強の戦士' });
     const onSelect = vi.fn();
     render(<><ReleaseNavigation releases={[release]} selected={186} status="ready" hrefFor={(id) => `/cards?release_product_id=${id}`} onSelect={onSelect} onRetry={vi.fn()} /><ReleaseSelector releases={[release]} selected={186} onChange={onSelect} /></>);
@@ -29,13 +29,15 @@ describe('English release presentation', () => {
     const strip = within(screen.getByRole('navigation', { name: 'Browse releases' }));
     expect(strip.getByText("The World's Strongest Warriors")).toBeInTheDocument();
     expect(strip.queryByText(/世界最強の戦士/)).toBeNull();
-    const option = screen.getByRole('option', { name: "OP-17 — The World's Strongest Warriors" });
-    expect(option).toHaveValue('186');
+    fireEvent.click(screen.getByRole('button', { name: 'Release OP-17' }));
+    const option = screen.getByRole('radio', { name: "OP-17 — The World's Strongest Warriors" });
+    expect(option).toHaveAttribute('value', '186');
+    expect(option).toBeChecked();
     expect(option).not.toHaveTextContent('printings');
     const link = strip.getByRole('link', { name: "OP-17 — The World's Strongest Warriors" });
     expect(link).toHaveAttribute('href', '/cards?release_product_id=186');
     fireEvent.click(link); expect(onSelect).toHaveBeenLastCalledWith(186);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '186' } }); expect(onSelect).toHaveBeenLastCalledWith(186);
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(release.display_name).toBe('世界最強の戦士');
     expect(release.released_on).toBe('2026-08-22');
   });
