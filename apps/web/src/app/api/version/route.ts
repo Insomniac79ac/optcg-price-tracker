@@ -1,39 +1,16 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { NextResponse } from "next/server";
+
+import { buildVersion } from "@/generated/buildVersion";
 
 // Server-side only - never exposed to the browser bundle (not NEXT_PUBLIC_*).
 // Same reasoning as src/app/api/backend-health/route.ts.
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || "http://api:8000";
 const BACKEND_TIMEOUT_MS = 5_000;
 
-/** apps/web's own Docker build context (./apps/web - see apps/web/Dockerfile)
- * doesn't include the repo-root VERSION file, so this only ever resolves
- * outside Docker (a local `next dev`/`next start` run from the repo
- * checkout). APP_VERSION (baked in as a build-time env var - see the
- * Makefile's prod-build target) is the real source of truth in a built
- * image; this is only the local-dev fallback. */
-function readVersionFile(): string | null {
-  const candidates = [
-    path.join(/* turbopackIgnore: true */ process.cwd(), "VERSION"),
-    path.join(/* turbopackIgnore: true */ process.cwd(), "..", "..", "VERSION"),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const content = fs.readFileSync(candidate, "utf-8").trim();
-      if (content) return content;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
 function getWebVersionInfo() {
   return {
-    version: process.env.APP_VERSION || readVersionFile() || "0.0.0-unknown",
-    git_commit: process.env.GIT_COMMIT || "unknown",
+    version: process.env.APP_VERSION || buildVersion,
+    git_commit: process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
     build_time: process.env.BUILD_TIME || "unknown",
   };
 }

@@ -1,11 +1,12 @@
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/apps/web
 
-COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY VERSION /app/VERSION
+COPY apps/web/ .
 
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
@@ -16,7 +17,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 # target for how these get computed and passed in.
 ARG GIT_COMMIT=unknown
 ARG BUILD_TIME=unknown
-ARG APP_VERSION=0.1.0
+ARG APP_VERSION
 ENV GIT_COMMIT=${GIT_COMMIT}
 ENV BUILD_TIME=${BUILD_TIME}
 ENV APP_VERSION=${APP_VERSION}

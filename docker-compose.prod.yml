@@ -172,12 +172,13 @@ services:
 
   web:
     build:
-      context: ./apps/web
+      context: .
+      dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         BUILD_TIME: ${BUILD_TIME:-unknown}
-        APP_VERSION: ${APP_VERSION:-0.1.0}
+        APP_VERSION: ${APP_VERSION:-}
     container_name: opcg-web-prod
     restart: unless-stopped
     env_file:

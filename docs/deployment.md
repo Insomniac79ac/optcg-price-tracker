@@ -670,6 +670,21 @@ system check, market workflow run, backup, and error into one `release_readiness
 app's own `GET /api/version` reports its own build metadata plus (best-effort) the backend's, for
 a single call that covers both services.
 
+The web app generates `apps/web/src/generated/buildVersion.ts` from repo-root
+`VERSION` when Next.js loads its build or development configuration. This covers
+`npm run build`, `vercel build`, direct `next build`, and `next dev`; no manual
+generation is needed. A missing or empty `VERSION` fails the build clearly.
+The route imports only the generated value, avoiding runtime filesystem tracing.
+`APP_VERSION` still overrides it, `GIT_COMMIT` takes precedence over
+`VERCEL_GIT_COMMIT_SHA`, and absent commit/build-time values remain `unknown`.
+The generated file is checked in for standalone tests/type checks and refreshed
+automatically on every build; do not edit it by hand.
+
+The web Docker build also uses the repository root as its context:
+`docker build -f apps/web/Dockerfile .`. Its Dockerfile-specific ignore file
+allows only the web app and `VERSION`, excluding dependencies, local build
+outputs, and environment files. Compose uses this same context automatically.
+
 If you build images outside of `make prod-build` (a separate CI/CD pipeline, a registry push
 step), pass the same three build args yourself:
 
