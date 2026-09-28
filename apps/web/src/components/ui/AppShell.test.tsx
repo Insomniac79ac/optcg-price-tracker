@@ -148,6 +148,59 @@ describe("AppShell navigation rail", () => {
 
 
 describe("shared public shell", () => {
+  beforeEach(() => {
+    currentPathname = "/cards";
+    clientSession = { data: null, status: "unauthenticated" };
+  });
+
+  describe.each([
+    ["signed out", { data: null, status: "unauthenticated" }],
+    ["collector", { data: { user: { email: "collector@example.com" } }, status: "authenticated" }],
+    ["admin browsing public pages", { data: { user: { role: "admin" } }, status: "authenticated" }],
+  ])("mobile public drawer — %s", (_label, session) => {
+    beforeEach(() => { clientSession = session; });
+
+    it("opens with the hamburger, keeps the existing groups and closes via backdrop or toggle", () => {
+      render(<AppShell />);
+      const toggle = screen.getByRole("button", { name: "Toggle navigation" });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "Close navigation" })).not.toBeInTheDocument();
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const backdrop = screen.getByRole("button", { name: "Close navigation" });
+      const drawer = backdrop.parentElement!;
+      expect(drawer).toHaveClass("md:hidden");
+      expect(drawer).not.toHaveClass("lg:hidden", "xl:hidden");
+      for (const name of ["Home", "Cards", "Market"]) {
+        expect(within(drawer).getByRole("link", { name })).toBeInTheDocument();
+      }
+      for (const name of ["My Collection", "Wishlist", "Grading", "Activity"]) {
+        expect(Boolean(within(drawer).queryByRole("link", { name }))).toBe(session.status === "authenticated");
+      }
+      expect(Boolean(within(drawer).queryByRole("link", { name: "Admin" }))).toBe(clientSession.data?.user.role === "admin");
+      fireEvent.click(backdrop);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "Close navigation" })).not.toBeInTheDocument();
+      fireEvent.click(toggle);
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "Close navigation" })).not.toBeInTheDocument();
+    });
+
+    it("resets the open drawer on route change and keeps it closed on return", () => {
+      const { rerender } = render(<AppShell />);
+      fireEvent.click(screen.getByRole("button", { name: "Toggle navigation" }));
+      currentPathname = "/analytics";
+      rerender(<AppShell />);
+      expect(screen.getByRole("button", { name: "Toggle navigation" })).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "Close navigation" })).not.toBeInTheDocument();
+      currentPathname = "/cards";
+      rerender(<AppShell />);
+      expect(screen.getByRole("button", { name: "Toggle navigation" })).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "Close navigation" })).not.toBeInTheDocument();
+    });
+  });
+
   it.each([["/", "Home"], ["/cards", "Cards"], ["/cards/code/OP01-001", "Cards"], ["/analytics", "Market"], ["/prints/1", "Cards"]])("shares branding and both navigation states on %s", (pathname, active) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);

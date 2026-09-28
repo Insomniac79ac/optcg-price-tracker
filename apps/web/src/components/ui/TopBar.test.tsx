@@ -2,11 +2,15 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: currentPathname.startsWith("/admin") ? { user: { role: "admin" } } : null, status: "unauthenticated" }),
+  useSession: () => clientSession,
   signOut: vi.fn(),
 }));
 let currentPathname = "/";
-beforeEach(() => { currentPathname = "/"; });
+let clientSession: { data: { user: { role?: string; email?: string } } | null; status: string };
+beforeEach(() => {
+  currentPathname = "/";
+  clientSession = { data: null, status: "unauthenticated" };
+});
 vi.mock("next/navigation", () => ({
   usePathname: () => currentPathname,
 }));
@@ -15,6 +19,28 @@ import { TopBar } from "./TopBar";
 import { AdminSurfaceProvider } from "@/components/admin/AdminSurfaceProvider";
 
 describe("TopBar", () => {
+  describe.each([
+    ["signed out", { data: null, status: "unauthenticated" }],
+    ["collector", { data: { user: { email: "collector@example.com" } }, status: "authenticated" }],
+    ["admin browsing public pages", { data: { user: { role: "admin" } }, status: "authenticated" }],
+    ["loading", { data: null, status: "loading" }],
+  ])("public hamburger — %s", (_label, session) => {
+    it.each(["/", "/cards", "/cards/code/OP01-001", "/analytics", "/prints/1"])("switches from hamburger to header links at md on %s", (pathname) => {
+      currentPathname = pathname;
+      clientSession = session;
+      render(<TopBar />);
+      // jsdom cannot evaluate media queries. Guard the Tailwind visibility
+      // contract here; Chrome checks exercise the compiled CSS at real widths.
+      const toggle = screen.getByRole("button", { name: "Toggle navigation" });
+      expect(toggle).toHaveClass("flex", "md:hidden");
+      expect(toggle).not.toHaveClass("hidden", "lg:hidden", "xl:hidden");
+      const nav = screen.getByRole("navigation", { name: "Public sections" });
+      expect(nav).toHaveClass("hidden", "md:flex");
+      expect(Array.from(nav.querySelectorAll("a")).map(a => a.textContent)).toEqual(["Home", "Cards", "Market"]);
+      expect(screen.queryByRole("link", { name: "My Collection" })).not.toBeInTheDocument();
+    });
+  });
+
   it("uses the canonical public compass wordmark while retaining navigation and search", () => {
     render(<TopBar />);
     const logo = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
@@ -32,6 +58,9 @@ describe("TopBar", () => {
     expect(link.querySelector("img")).toBeNull();
     expect(link).toHaveTextContent("CARDPIRATEATLAS");
     expect(screen.queryByRole("navigation", { name: "Public sections" })).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Open admin navigation" });
+    expect(toggle).toHaveClass("flex", "xl:hidden");
+    expect(toggle).not.toHaveClass("md:hidden", "lg:hidden");
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/optcg vault|tcg vault/i);
   });
