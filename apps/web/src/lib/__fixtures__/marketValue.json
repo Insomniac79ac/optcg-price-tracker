@@ -1,0 +1,569 @@
+{
+  "overall": {
+    "scope_kind": "overall",
+    "release_product_id": null,
+    "release_code": null,
+    "release_name": null,
+    "methodology_version": 1,
+    "as_of": "2026-09-26",
+    "tracked_value": {
+      "value_jpy": 262279,
+      "priced_print_count": 639,
+      "total_physical_print_count": 4316,
+      "physical_coverage_pct": "14.805375",
+      "is_partial": true
+    },
+    "movement": {
+      "available": true,
+      "pct": "-3.943982",
+      "reason": "publishable",
+      "window": "7d",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-26",
+      "fraction": "-0.03943982"
+    },
+    "series": [
+      {
+        "date": "2026-09-19",
+        "tracked_value_jpy": 259040,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "0",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-20",
+        "tracked_value_jpy": 258889,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-0.058292",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-21",
+        "tracked_value_jpy": 256139,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-1.119904",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-22",
+        "tracked_value_jpy": 253429,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.297329",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-23",
+        "tracked_value_jpy": 250989,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.781736",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-24",
+        "tracked_value_jpy": 264639,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.169077",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-25",
+        "tracked_value_jpy": 265539,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.750053",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-26",
+        "tracked_value_jpy": 262279,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.943982",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      }
+    ]
+  },
+  "eligible": {
+    "scope_kind": "release",
+    "release_product_id": 181,
+    "release_code": "OP-01",
+    "release_name": "ロマンスドーン",
+    "methodology_version": 1,
+    "as_of": "2026-09-26",
+    "tracked_value": {
+      "value_jpy": 48300,
+      "priced_print_count": 81,
+      "total_physical_print_count": 154,
+      "physical_coverage_pct": "52.597403",
+      "is_partial": true
+    },
+    "movement": {
+      "available": true,
+      "pct": "4.20",
+      "reason": "publishable",
+      "window": "7d",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-26",
+      "fraction": "0.042"
+    },
+    "series": [
+      {
+        "date": "2026-09-19",
+        "tracked_value_jpy": 46200,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "0",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-20",
+        "tracked_value_jpy": 46500,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "0.4",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-21",
+        "tracked_value_jpy": 46800,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "1.1",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-22",
+        "tracked_value_jpy": 47100,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "0.9",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-23",
+        "tracked_value_jpy": 47400,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "2.8",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-24",
+        "tracked_value_jpy": 47700,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "2.5",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-25",
+        "tracked_value_jpy": 48000,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "3.4",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-26",
+        "tracked_value_jpy": 48300,
+        "priced_print_count": 81,
+        "total_physical_print_count": 154,
+        "performance_pct": "4.2",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      }
+    ]
+  },
+  "sparse": {
+    "scope_kind": "release",
+    "release_product_id": 186,
+    "release_code": "OP-05",
+    "release_name": "新時代の主役",
+    "methodology_version": 1,
+    "as_of": "2026-09-26",
+    "tracked_value": {
+      "value_jpy": 480,
+      "priced_print_count": 4,
+      "total_physical_print_count": 154,
+      "physical_coverage_pct": "2.597403",
+      "is_partial": true
+    },
+    "movement": {
+      "available": false,
+      "pct": null,
+      "reason": "insufficient_comparable_prints",
+      "window": "7d",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-26",
+      "fraction": null
+    },
+    "series": [
+      {
+        "date": "2026-09-19",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-20",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-21",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-22",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-23",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-24",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-25",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      },
+      {
+        "date": "2026-09-26",
+        "tracked_value_jpy": 480,
+        "priced_print_count": 4,
+        "total_physical_print_count": 154,
+        "performance_pct": null,
+        "step_publication_eligible": false,
+        "publication_reason": "insufficient_comparable_prints"
+      }
+    ]
+  },
+  "releases": {
+    "items": [
+      {
+        "release_product_id": 198,
+        "release_code": "OP-17",
+        "release_name": "世界最強の戦士達",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 14780,
+          "priced_print_count": 20,
+          "total_physical_print_count": 169,
+          "physical_coverage_pct": "11.83432",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 186,
+        "release_code": "OP-05",
+        "release_name": "新時代の主役",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 480,
+          "priced_print_count": 4,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "2.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_comparable_prints"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      },
+      {
+        "release_product_id": 181,
+        "release_code": "OP-01",
+        "release_name": "ロマンスドーン",
+        "as_of": "2026-09-26",
+        "methodology_version": 1,
+        "tracked_value": {
+          "value_jpy": 48300,
+          "priced_print_count": 81,
+          "total_physical_print_count": 154,
+          "physical_coverage_pct": "52.597403",
+          "is_partial": true
+        },
+        "seven_day": {
+          "available": true,
+          "pct": "4.20",
+          "reason": "publishable"
+        },
+        "thirty_day": {
+          "available": false,
+          "pct": null,
+          "reason": "insufficient_window_continuity"
+        }
+      }
+    ],
+    "ordering_basis": "released_on_desc_then_deterministic_fallback"
+  },
+  "all": {
+    "scope_kind": "overall",
+    "release_product_id": null,
+    "release_code": null,
+    "release_name": null,
+    "methodology_version": 1,
+    "as_of": "2026-09-26",
+    "tracked_value": {
+      "value_jpy": 262279,
+      "priced_print_count": 639,
+      "total_physical_print_count": 4316,
+      "physical_coverage_pct": "14.805375",
+      "is_partial": true
+    },
+    "movement": {
+      "available": true,
+      "pct": "-3.943982",
+      "reason": "publishable",
+      "window": "all",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-26",
+      "fraction": "-0.03943982"
+    },
+    "series": [
+      {
+        "date": "2026-09-19",
+        "tracked_value_jpy": 259040,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "0",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-20",
+        "tracked_value_jpy": 258889,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-0.058292",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-21",
+        "tracked_value_jpy": 256139,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-1.119904",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-22",
+        "tracked_value_jpy": 253429,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.297329",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-23",
+        "tracked_value_jpy": 250989,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.781736",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-24",
+        "tracked_value_jpy": 264639,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.169077",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-25",
+        "tracked_value_jpy": 265539,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.750053",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-26",
+        "tracked_value_jpy": 262279,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.943982",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      }
+    ]
+  },
+  "thirtyDay": {
+    "scope_kind": "overall",
+    "release_product_id": null,
+    "release_code": null,
+    "release_name": null,
+    "methodology_version": 1,
+    "as_of": "2026-09-26",
+    "tracked_value": {
+      "value_jpy": 262279,
+      "priced_print_count": 639,
+      "total_physical_print_count": 4316,
+      "physical_coverage_pct": "14.805375",
+      "is_partial": true
+    },
+    "movement": {
+      "available": false,
+      "pct": null,
+      "reason": "insufficient_window_continuity",
+      "window": "30d",
+      "from_date": "2026-08-27",
+      "to_date": "2026-09-26",
+      "fraction": null
+    },
+    "series": [
+      {
+        "date": "2026-09-19",
+        "tracked_value_jpy": 259040,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "0",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-20",
+        "tracked_value_jpy": 258889,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-0.058292",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-21",
+        "tracked_value_jpy": 256139,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-1.119904",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-22",
+        "tracked_value_jpy": 253429,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.297329",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-23",
+        "tracked_value_jpy": 250989,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.781736",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-24",
+        "tracked_value_jpy": 264639,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.169077",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-25",
+        "tracked_value_jpy": 265539,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-2.750053",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      },
+      {
+        "date": "2026-09-26",
+        "tracked_value_jpy": 262279,
+        "priced_print_count": 639,
+        "total_physical_print_count": 4316,
+        "performance_pct": "-3.943982",
+        "step_publication_eligible": true,
+        "publication_reason": "publishable"
+      }
+    ]
+  }
+}
