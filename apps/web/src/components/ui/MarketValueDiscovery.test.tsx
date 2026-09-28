@@ -75,6 +75,14 @@ describe("daily Market Value movers", () => {
     expect(screen.queryByText(/coverage/i)).not.toBeInTheDocument();
   });
 
+  it.each(["gainers", "losers"] as const)("does not call a non-flat basket flat when there are no %s", async (order) => {
+    apiGet.mockResolvedValue({ ...gainers, order, total_ranked: 0, returned: 0, movers: [], panel: { ...gainers.panel, basket_delta_jpy: order === "gainers" ? -3260 : 460 } });
+    render(<MarketValueMoversSection releaseProductId={null} />);
+    await settled();
+    expect(screen.getByText(`No ${order} in the latest published step.`)).toBeInTheDocument();
+    expect(screen.queryByText("No cards moved in the latest published step.")).not.toBeInTheDocument();
+  });
+
   it("labels an older published step without claiming latest prices", async () => {
     apiGet.mockResolvedValue({ ...gainers, step_date: "2026-09-24", prior_date: "2026-09-23" });
     render(<MarketValueMoversSection releaseProductId={null} />);

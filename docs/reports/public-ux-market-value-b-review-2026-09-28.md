@@ -42,6 +42,11 @@ evidence is deliberately excluded from staging.
 
 - 91 focused B1/B2/B3 tests and 321 relevant shared regressions: **412 passed**
   across 28 suites in the final combined run.
+- Real staging inspection then exposed an empty Gainers cohort on a non-flat
+  negative day. Its message now says “No gainers” instead of claiming no cards
+  moved. Two new regressions cover empty directional cohorts; 140 affected
+  tests passed after the correction, including all **93 focused tests**.
+  TypeScript and touched-file ESLint passed again.
 - TypeScript, touched-file ESLint, secret checks and diff whitespace checks pass.
 - Prior B3 fixture browser validation: 70 checks at 1500px and 390px, covering
   responsive layout, artwork containment, charts/tooltips/watermarks, eligibility,

@@ -107,7 +107,9 @@ export function MarketValueMoversSection({ releaseProductId }: { releaseProductI
             : <>Movement: {data.prior_date && <><time dateTime={data.prior_date}>{marketDate(data.prior_date)}</time> → </>}<time dateTime={data.step_date}>{marketDate(data.step_date)}</time></>}</p>}
         </div>
         {!data.available ? <div className={styles.empty}><h3>No published price movement yet</h3><p>Price coverage is still being built for {data.scope_kind === "release" ? "this release" : "this market"}.</p></div>
-          : data.total_ranked === 0 ? <div className={styles.empty}><p>No cards moved in the latest published step.</p></div>
+          : data.total_ranked === 0 ? <div className={styles.empty}><p>{displayOrder === "impact" || data.panel.basket_delta_jpy === 0
+            ? "No cards moved in the latest published step."
+            : `No ${displayOrder} in the latest published step.`}</p></div>
           : <ul className={styles.movers}>{data.movers.map((item) => <MoverCard key={item.card_print_id} item={item} order={displayOrder} />)}</ul>}
       </>}
     </div>
