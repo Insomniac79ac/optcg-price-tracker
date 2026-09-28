@@ -24,15 +24,16 @@ const openRarity = () => fireEvent.click(screen.getByRole('button', { name: /^Ra
 describe('compact desktop collector filters', () => {
   it('places the controlled Release selector before both collector refinements', () => {
     render(<Toolbar initial={{ ...EMPTY_PRINT_FILTERS, releaseProductId: 186 }} />);
-    const release = screen.getByRole('combobox', { name: 'Release' });
-    expect(release).toHaveValue('186');
-    expect(release).toHaveAttribute('title', "OP-17 — The World's Strongest Warriors");
+    const release = screen.getByRole('button', { name: 'Release OP-17' });
+    expect(release).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(release).toHaveTextContent('OP-17');
     expect(release.compareDocumentPosition(screen.getByRole('button', { name: 'Rarity Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(release.compareDocumentPosition(screen.getByRole('button', { name: 'Treatment Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Collector filters' })).toBeInTheDocument();
-    fireEvent.change(release, { target: { value: '' } });
+    fireEvent.click(release);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear release' }));
     expect(changed).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ releaseProductId: null, legacySet: '' }));
-    expect(release).toHaveValue('');
+    expect(release).toHaveAccessibleName('Release All releases');
   });
   it('is initially closed, exposes multi-selection and updates its closed summary', () => {
     render(<Toolbar />);
@@ -97,8 +98,10 @@ describe('mobile compact draft filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     const sheet = screen.getByRole('dialog', { name: 'Filters' });
     expect(within(sheet).queryByRole('checkbox')).toBeNull();
-    const release = within(sheet).getByRole('combobox', { name: 'Release' });
-    fireEvent.change(release, { target: { value: '186' } });
+    const release = within(sheet).getByRole('button', { name: 'Release All releases' });
+    fireEvent.click(release);
+    fireEvent.click(screen.getByRole('radio', { name: "OP-17 — The World's Strongest Warriors" }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(release.compareDocumentPosition(within(sheet).getByRole('button', { name: 'Rarity Any' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     openRarity();
     for (const name of ['Super Rare', 'Secret Rare']) fireEvent.click(screen.getByRole('checkbox', { name }));

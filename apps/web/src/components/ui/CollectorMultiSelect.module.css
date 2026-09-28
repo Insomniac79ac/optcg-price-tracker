@@ -5,7 +5,7 @@
   background: var(--bg-elevated); padding: .65rem .7rem; color: var(--text-primary);
   font-size: .8rem; text-align: left; cursor: pointer;
 }
-.summary { flex: 1; color: var(--text-muted); font-size: .7rem; text-align: right; }
+.summary { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); font-size: .7rem; text-align: right; }
 .trigger[aria-expanded="true"] { border-color: var(--accent-teal); }
 .panel {
   position: fixed; z-index: 100; inset: auto; margin: 0; display: none; flex-direction: column;
