@@ -6,6 +6,7 @@
  * config module reads process.env at import time, so each case resets the
  * module registry and re-imports it. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PHASE_PRODUCTION_SERVER } from "next/constants";
 
 const SETTING = "R2_PUBLIC_BASE_URL";
 
@@ -26,7 +27,8 @@ async function imgSrcDirective(configured: string | undefined): Promise<string> 
   if (configured === undefined) delete process.env[SETTING];
   else process.env[SETTING] = configured;
 
-  const { default: config } = await import("../../next.config");
+  const { default: loadConfig } = await import("../../next.config");
+  const config = loadConfig(PHASE_PRODUCTION_SERVER);
   const routes = await config.headers!();
   const csp = routes[0].headers.find((header) => header.key === "Content-Security-Policy");
   const directive = csp!.value.split("; ").find((part) => part.startsWith("img-src "));

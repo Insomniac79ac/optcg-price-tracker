@@ -1,0 +1,15 @@
+# Root context for the web image: only the app and authoritative version.
+**
+!VERSION
+!apps/
+!apps/web/
+!apps/web/**
+**/node_modules
+**/.next
+**/.vercel
+**/.git
+**/.env*
+**/coverage
+**/*.log
+**/*.pem
+**/*.key
