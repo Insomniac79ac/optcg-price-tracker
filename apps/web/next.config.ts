@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
 
+import { generateBuildVersion } from "./scripts/generate-build-version";
 import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -105,4 +107,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default function config(phase: string): NextConfig {
+  // Also covers direct `next build` / `next dev`, Vercel, and the analyzer.
+  // `next start` serves the built value without needing source files on disk.
+  if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_DEVELOPMENT_SERVER) {
+    generateBuildVersion();
+  }
+  return nextConfig;
+}
