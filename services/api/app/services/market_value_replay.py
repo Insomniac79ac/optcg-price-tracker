@@ -22,7 +22,7 @@ from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import bindparam, select, text
 from sqlalchemy.orm import Session
 
 from app.models.card_print import CardPrint
@@ -101,7 +101,10 @@ def _compact_contributors(
 
 
 def _load_archive_rows(
-    db: Session, *, through: date | None = None
+    db: Session,
+    *,
+    through: date | None = None,
+    archive_dates: tuple[date, ...] | None = None,
 ) -> list[Any]:
     """Load exact archive inputs without shipping unrelated JSON over the wire.
 
@@ -109,6 +112,8 @@ def _load_archive_rows(
     persistence runs can therefore freeze their archive boundary without even
     reading a snapshot day that is outside the intended batch.
     """
+    if archive_dates == ():
+        return []
     if db.get_bind().dialect.name == "postgresql":
         # The archive keeps complete provenance JSON. A remote replay only
         # needs the contributor identity set, but it must preserve
@@ -119,8 +124,12 @@ def _load_archive_rows(
         through_clause = (
             "AND snapshot.snapshot_date <= :through" if through is not None else ""
         )
-        statement = text(
-            f"""
+        dates_clause = (
+            "AND snapshot.snapshot_date IN :archive_dates"
+            if archive_dates is not None
+            else ""
+        )
+        statement = text(f"""
                     SELECT
                         snapshot.snapshot_date,
                         snapshot.card_print_id,
@@ -179,10 +188,13 @@ def _load_archive_rows(
                     AND print.language = 'jp'
                     AND print.release_product_id IS NOT NULL
                     {through_clause}
+                    {dates_clause}
                     ORDER BY snapshot.snapshot_date, snapshot.card_print_id
-                    """
-        )
+                    """)
         parameters = {"through": through} if through is not None else {}
+        if archive_dates is not None:
+            statement = statement.bindparams(bindparam("archive_dates", expanding=True))
+            parameters["archive_dates"] = archive_dates
         return list(db.execute(statement, parameters))
 
     # SQLite/local-test fallback. It intentionally uses the same Python
@@ -195,6 +207,8 @@ def _load_archive_rows(
     ]
     if through is not None:
         conditions.append(MarketIndexSnapshot.snapshot_date <= through)
+    if archive_dates is not None:
+        conditions.append(MarketIndexSnapshot.snapshot_date.in_(archive_dates))
     return list(
         db.execute(
             select(
@@ -220,6 +234,7 @@ def load_market_value_replay_input(
     *,
     through: date | None = None,
     include_current: bool = True,
+    archive_dates: tuple[date, ...] | None = None,
 ) -> MarketValueReplayInput:
     """Load archive and catalogue inputs by SELECT.
 
@@ -227,6 +242,11 @@ def load_market_value_replay_input(
     Persistence callers set it to false because current observations do not
     contribute to archived point drafts and must not widen a fixed backfill's
     read surface.
+
+    ``archive_dates`` is an explicit SQL allowlist for forward publication:
+    previously published dates plus verified new receipt dates. None preserves
+    the historical/recovery replay; an empty tuple reads no archive rows.
+    Eligibility is decided by the caller, not inferred by this adapter.
     """
     active_rows = db.execute(
         select(CardPrint.id, CardPrint.release_product_id)
@@ -271,7 +291,7 @@ def load_market_value_replay_input(
         if release_counts[row.id] > 0
     )
 
-    snapshots = _load_archive_rows(db, through=through)
+    snapshots = _load_archive_rows(db, through=through, archive_dates=archive_dates)
     archive_dates = tuple(sorted({row.snapshot_date for row in snapshots}))
     grouped: dict[date, list[MarketValueObservation]] = defaultdict(list)
     for snapshot in snapshots:
@@ -475,9 +495,7 @@ def _scope_point_drafts(
                 performance_factor=point.performance_factor,
                 step_publication_eligible=step_publication_eligible,
                 publication_reasons=publication_reasons,
-                membership_revision=days_by_date[
-                    point.point_date
-                ].membership_revision,
+                membership_revision=days_by_date[point.point_date].membership_revision,
                 prior_version_pairs=prior_version_pairs,
                 current_version_pairs=version_pairs_text(current_pairs),
             )
@@ -529,9 +547,7 @@ def _tracked_payload(tracked: TrackedValueResult) -> dict[str, Any]:
         "value_jpy": tracked.value_jpy,
         "priced_physical_prints": tracked.priced_print_count,
         "total_physical_prints": tracked.total_physical_print_count,
-        "physical_coverage_fraction": _decimal_text(
-            tracked.physical_coverage_fraction
-        ),
+        "physical_coverage_fraction": _decimal_text(tracked.physical_coverage_fraction),
         "physical_coverage_pct": _decimal_text(tracked.physical_coverage_pct),
         "status": tracked.status.value,
         "is_partial": tracked.is_partial,
@@ -603,9 +619,7 @@ def _scope_summary(
         if point.publication is not None and point.publication.publishable
     ]
     break_counts = Counter(
-        point.break_reason.value
-        for point in replay
-        if point.break_reason is not None
+        point.break_reason.value for point in replay if point.break_reason is not None
     )
     gap_dates = [
         str(point.point_date)
@@ -616,7 +630,9 @@ def _scope_summary(
         "current": _tracked_payload(current),
         "archive_first_date": str(days[0].point_date),
         "archive_last_date": str(days[-1].point_date),
-        "earliest_usable_movement_date": str(min(usable_dates)) if usable_dates else None,
+        "earliest_usable_movement_date": (
+            str(min(usable_dates)) if usable_dates else None
+        ),
         "latest_usable_movement_date": str(max(usable_dates)) if usable_dates else None,
         "break_counts": dict(sorted(break_counts.items())),
         "gap_dates": gap_dates,
@@ -667,8 +683,12 @@ def build_market_value_replay_report(db: Session) -> dict[str, Any]:
         "historical_membership_basis": "current_corrected_card_print_release_product_id",
         "catalogue_membership_revision": loaded.catalogue_membership_revision,
         "current_as_of": loaded.current_as_of.isoformat(),
-        "archive_first_date": str(loaded.archive_dates[0]) if loaded.archive_dates else None,
-        "archive_last_date": str(loaded.archive_dates[-1]) if loaded.archive_dates else None,
+        "archive_first_date": (
+            str(loaded.archive_dates[0]) if loaded.archive_dates else None
+        ),
+        "archive_last_date": (
+            str(loaded.archive_dates[-1]) if loaded.archive_dates else None
+        ),
         "overall": overall,
         "coded_release_count": len(releases),
         "releases": releases,
