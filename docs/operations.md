@@ -1401,6 +1401,26 @@ warning specifically if the `market_workflow` lock (the longest-running one) is 
 
 ## Scheduled index jobs (Railway cron)
 
+The snapshot writer now requires the additive `market_index_snapshot_completions`
+migration (`e6a8b0c3d5f7`, parent `d5f7a9c2e4b6`) before deployment. Each new,
+nonempty daily batch and its immutable completion receipt commit together after
+count, membership, timestamp, version and content-digest verification. Same-day
+retries verify the existing receipt and rows without recalculating or rewriting
+them. Contradictory or receipt-less existing rows fail closed; the normal writer
+does not repair or retrospectively certify legacy days.
+
+The reusable read-only verifier returns structured evidence and refuses an active
+producer. Future downstream jobs must verify it from a fresh transaction and
+qualify every consumed pending day, rather than trusting row existence or an
+in-memory snapshot result. See [the complete receipt contract](market_index_snapshot_completion.md)
+for hash encoding, failure states, legacy handling and backup version 15. Receipts
+follow `include_prices`; versions 12–14 remain readable without invented receipts.
+
+C1B0 adds this foundation only. It does not install the proposed daily pipeline
+orchestrator, apply a staging migration, or change the Railway command/schedule
+described below. Source collectors remain separate; no source fetching occurs in
+the snapshot or completion verifier.
+
 The Market Index snapshot and the Card Pirate Index writer are **one Railway cron service**, not
 two. `market-index-snapshot` runs on the API image at `0 20 * * *` UTC with restart policy `NEVER`,
 and its start command chains both jobs in a single container run:
@@ -1439,8 +1459,9 @@ archive day, never a half-written one.
 | What happened | What the chain does |
 | --- | --- |
 | Snapshot succeeds with a new day | Writer appends exactly that day's point. |
-| Snapshot re-runs on a day it already archived | `ON CONFLICT DO NOTHING`, exit 0; the writer finds its point already stored and inserts 0. |
-| Snapshot fails | Non-zero exit; writer never runs; nothing is written by either job. |
+| Snapshot re-runs on a certified day with unchanged selected membership | Receipt and immutable rows verify, exit 0; the writer finds its point already stored and inserts 0. |
+| Snapshot fails before commit | Non-zero exit; snapshot and receipt roll back together; writer never runs. |
+| Snapshot finds unqualified legacy rows or contradictory receipt evidence | Non-zero exit; no automatic certification or repair; writer never runs. |
 | Snapshot archives nothing (no priced prints) | Exit 0 with `prints_selected: 0`; the writer finds no new archive day and inserts 0. |
 | `card_pirate_index` lock still held | Writer prints `Job already running: card_pirate_index` and exits 2 rather than overlapping. |
 | The job did not run for several days | The chain is not a reset. The writer rebuilds from `history_start` and appends every missing day in ascending order, so a catch-up run writes exactly the points the daily runs would have. |

@@ -38,6 +38,7 @@ from app.models import (
     SourceCardMapping,
 )
 from app.services.job_locks import LockHeldError, acquire_lock
+from app.services.market_index_completion import SnapshotCompletionError
 from app.services.market_index import CALCULATION_METHOD, INDEX_VERSION
 from app.services.print_market_index import (
     AUXILIARY_ONLY_PRICE_TYPES,
@@ -855,7 +856,7 @@ def test_repeated_run_does_not_overwrite_first_snapshot(db_session, catalogue):
     assert rows[0].calculated_at == original_calculated_at
 
 
-def test_partial_retry_fills_only_missing_prints(db_session, catalogue):
+def test_partial_retry_refuses_to_repair_a_completed_batch(db_session, catalogue):
     snapshot_market_index(db_session, skip_lock=True)
     # Simulate a run that had failed to write one print.
     db_session.query(MarketIndexSnapshot).filter_by(
@@ -863,11 +864,9 @@ def test_partial_retry_fills_only_missing_prints(db_session, catalogue):
     ).delete()
     db_session.commit()
 
-    result = snapshot_market_index(db_session, skip_lock=True)
-
-    assert result.rows_created == 1
-    assert result.rows_skipped_existing == 3
-    assert db_session.query(MarketIndexSnapshot).count() == 4
+    with pytest.raises(SnapshotCompletionError, match="row_count_mismatch"):
+        snapshot_market_index(db_session, skip_lock=True)
+    assert db_session.query(MarketIndexSnapshot).count() == 3
 
 
 # --- dry run --------------------------------------------------------------

@@ -193,7 +193,8 @@ fact is an integrity error and is never overwritten. The independent verify
 path recomputes drafts from archived snapshots and compares every deterministic
 field by natural key, ignoring only the surrogate ID and `created_at`.
 
-Application backup v14 follows the existing CPI historical-evidence policy:
+Application backup v14 introduced the existing CPI historical-evidence policy
+for Market Value (retained in v15, which also includes snapshot completion receipts):
 Market Value points are exported and restored when `include_prices=true`, and
 are intentionally absent when price history is excluded. The points remain
 fully replayable from retained snapshot evidence; backup inclusion preserves

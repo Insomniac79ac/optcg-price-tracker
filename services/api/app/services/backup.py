@@ -31,6 +31,7 @@ from app.models import (
     ImportValidationReport,
     MarketIntelligenceReport,
     MarketIndexSnapshot,
+    MarketIndexSnapshotCompletion,
     MarketValuePoint,
     MarketReportDigestSend,
     MarketSignalEvent,
@@ -76,8 +77,10 @@ from app.services.job_locks import with_job_lock
 # explicitly readable with derived identity and NULL lifecycle metadata. v14
 # adds persisted Market Value evidence beside CPI under include_prices. Older
 # readable archives legitimately omit that new derived table.
-BACKUP_VERSION = 14
-READABLE_BACKUP_VERSIONS = (12, 13, 14)
+# v15 carries atomic snapshot completion receipts alongside their immutable
+# snapshot batches. Older archives remain readable without inventing receipts.
+BACKUP_VERSION = 15
+READABLE_BACKUP_VERSIONS = (12, 13, 14, 15)
 APP_NAME = "opcg-price-tracker"
 
 
@@ -124,6 +127,11 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("price_observations", PriceObservation, "include_prices"),
     BackupTableSpec("source_collection_attempts", SourceCollectionAttempt, "include_prices"),
     BackupTableSpec("market_index_snapshots", MarketIndexSnapshot, "include_prices"),
+    BackupTableSpec(
+        "market_index_snapshot_completions",
+        MarketIndexSnapshotCompletion,
+        "include_prices",
+    ),
     BackupTableSpec("card_pirate_index_points", CardPirateIndexPoint, "include_prices"),
     BackupTableSpec("market_value_points", MarketValuePoint, "include_prices"),
     BackupTableSpec("market_intelligence_reports", MarketIntelligenceReport),
@@ -168,6 +176,7 @@ CASCADE_RISK_OPTIONAL_TABLES: tuple[str, ...] = (
     "price_observations",
     "source_collection_attempts",
     "market_index_snapshots",
+    "market_index_snapshot_completions",
     "market_value_points",
     "raw_snapshots",
     "price_refresh_runs",
@@ -840,6 +849,33 @@ def _restore_mapping_rows(db, rows, *, merge):
 def _upsert_rows(db: Session, table: str, rows: list[dict[str, Any]]) -> tuple[int, int]:
     if table == "source_card_mappings":
         return _restore_mapping_rows(db, rows, merge=True)
+    if table == "market_index_snapshot_completions":
+        # Receipt identity is the date, not a transport/surrogate row id.
+        # Restoring evidence must not introduce a correction/upsert path.
+        from app.services.market_index_completion import canonical_value
+
+        created = 0
+        for row in rows:
+            kwargs = _deserialize_row(MarketIndexSnapshotCompletion, row)
+            existing = db.scalar(
+                select(MarketIndexSnapshotCompletion).where(
+                    MarketIndexSnapshotCompletion.snapshot_date == kwargs["snapshot_date"]
+                )
+            )
+            if existing is not None:
+                facts = {
+                    c.name: getattr(existing, c.name)
+                    for c in MarketIndexSnapshotCompletion.__table__.columns
+                    if c.name != "id"
+                }
+                incoming = {key: value for key, value in kwargs.items() if key != "id"}
+                if canonical_value(facts) != canonical_value(incoming):
+                    raise ValueError("Snapshot completion receipt conflict")
+            else:
+                db.add(MarketIndexSnapshotCompletion(**kwargs))
+                created += 1
+            db.flush()
+        return created, 0
     model = MODEL_BY_TABLE[table]
     created = updated = 0
     deferred: list[tuple[int, Any]] = []
@@ -1025,6 +1061,16 @@ def _restore_backup_locked(
         for table in included:
             _reset_sequence(db, table)
 
+        # Also protects existing receipts when an older archive is merged:
+        # changed snapshot contents cannot leave a falsely valid certificate.
+        from app.services.market_index_completion import (
+            verify_market_index_snapshot_completion,
+        )
+
+        for snapshot_date in db.scalars(
+            select(MarketIndexSnapshotCompletion.snapshot_date)
+        ):
+            verify_market_index_snapshot_completion(db, snapshot_date).require_valid()
         db.commit()
     except Exception as exc:
         db.rollback()
