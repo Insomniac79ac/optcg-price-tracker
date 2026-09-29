@@ -74,6 +74,9 @@ LOCK_TTL_SECONDS: dict[str, int] = {
     "market_workflow": 60 * 60,
     "portfolio_snapshot": 10 * 60,
     "market_index_snapshot": 10 * 60,
+    # One scheduled container run owns the snapshot, receipt gate, and both
+    # independent downstream attempts. Refuse overlapping coordinators.
+    "market_index_daily_pipeline": 60 * 60,
     # Runs immediately after market_index_snapshot in the same container,
     # reads the day it just archived, and inserts at most a handful of
     # rows - so it is sized to match its predecessor rather than its own
