@@ -1401,6 +1401,13 @@ warning specifically if the `market_workflow` lock (the longest-running one) is 
 
 ## Scheduled index jobs (Railway cron)
 
+An opt-in coordinator is prepared at `python -m app.market_index_daily_pipeline`.
+It is not the configured Railway start command. See [the daily pipeline
+activation checklist](market_value_daily_pipeline.md) for its behavior,
+proposed replacement command, and rollback. The 20:00 UTC schedule described
+below is the expected baseline from this runbook; this code change does not
+verify or alter live Railway configuration.
+
 Market Value forward publication is a separate, unscheduled operator command:
 `python -m app.market_value_publisher --write` (or `--dry-run` to plan only).
 It accepts only new verified receipt-backed dates and never fills receipt-less
