@@ -1,4 +1,8 @@
-"""Operator-safe Market Value archive writer.
+"""Explicit historical/recovery Market Value archive replay writer.
+
+Normal forward publication uses ``app.market_value_publisher``. This recovery
+path intentionally replays all archived dates, including receipt-less history;
+CLI writes require ``--replay`` acknowledgement.
 
 This command is deliberately not scheduled.  It turns the existing A2 replay
 adapter and A3A append-only persistence layer into three explicit operations:
@@ -43,7 +47,6 @@ from app.services.market_value_replay import (
     build_market_value_point_drafts,
     load_market_value_replay_input,
 )
-
 
 LOCK_NAME = "market_value_writer"
 Mode = Literal["dry-run", "verify", "write"]
@@ -91,7 +94,9 @@ class MarketValueWriterResult:
     def ok(self) -> bool:
         if self.mode == "verify":
             return self.verification.ok
-        return not self.verification.unexpected_keys and not self.verification.mismatches
+        return (
+            not self.verification.unexpected_keys and not self.verification.mismatches
+        )
 
     def report_lines(self) -> list[str]:
         cutoff = str(self.plan.through) if self.plan.through is not None else "none"
@@ -156,7 +161,9 @@ def _require_supported_methodology(db: Session) -> None:
             .order_by(MarketValuePoint.methodology_version)
         )
     )
-    unexpected = tuple(version for version in versions if version != METHODOLOGY_VERSION)
+    unexpected = tuple(
+        version for version in versions if version != METHODOLOGY_VERSION
+    )
     if unexpected:
         raise WriterAbort(
             "market_value_points contains unsupported methodology version(s): "
@@ -200,9 +207,7 @@ def _validate_release_identity(loaded: MarketValueReplayInput) -> None:
 def _build_plan(db: Session, through: date | None) -> MarketValueWriterPlan:
     _require_schema(db)
     _require_supported_methodology(db)
-    loaded = load_market_value_replay_input(
-        db, through=through, include_current=False
-    )
+    loaded = load_market_value_replay_input(db, through=through, include_current=False)
     _validate_release_identity(loaded)
     drafts = build_market_value_point_drafts(loaded)
 
@@ -258,7 +263,9 @@ def _require_coherent_extension(plan: MarketValueWriterPlan) -> None:
         )
 
 
-def _execute(db: Session, *, mode: Mode, through: date | None) -> MarketValueWriterResult:
+def _execute(
+    db: Session, *, mode: Mode, through: date | None
+) -> MarketValueWriterResult:
     try:
         _configure_transaction(db, mode)
         plan = _build_plan(db, through)
@@ -355,12 +362,21 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     modes = parser.add_mutually_exclusive_group(required=True)
-    modes.add_argument("--dry-run", action="store_true", help="Plan only; write nothing.")
-    modes.add_argument("--verify", action="store_true", help="Require an exact persisted replay.")
+    modes.add_argument(
+        "--dry-run", action="store_true", help="Plan only; write nothing."
+    )
+    modes.add_argument(
+        "--verify", action="store_true", help="Require an exact persisted replay."
+    )
     modes.add_argument(
         "--write",
         action="store_true",
         help="Persist and verify atomically under the Market Value writer lock.",
+    )
+    parser.add_argument(
+        "--replay",
+        action="store_true",
+        help="Acknowledge historical recovery: may fill receipt-less archive dates.",
     )
     parser.add_argument(
         "--through",
@@ -372,7 +388,13 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    parser = _parser()
+    args = parser.parse_args(argv)
+    if args.write and not args.replay:
+        parser.error(
+            "historical writes require --replay; use app.market_value_publisher "
+            "--write for receipt-gated forward publication"
+        )
     mode: Mode = "dry-run" if args.dry_run else "verify" if args.verify else "write"
     db = SessionLocal()
     try:
@@ -406,8 +428,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             if verification.mismatches:
                 detail = tuple(
-                    (item.natural_key, item.fields)
-                    for item in verification.mismatches
+                    (item.natural_key, item.fields) for item in verification.mismatches
                 )
                 print(
                     "mismatched keys: " + _natural_key_sample(detail),

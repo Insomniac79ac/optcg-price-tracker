@@ -1401,6 +1401,12 @@ warning specifically if the `market_workflow` lock (the longest-running one) is 
 
 ## Scheduled index jobs (Railway cron)
 
+Market Value forward publication is a separate, unscheduled operator command:
+`python -m app.market_value_publisher --write` (or `--dry-run` to plan only).
+It accepts only new verified receipt-backed dates and never fills receipt-less
+gaps. See [the forward publication runbook](market_value_forward_publication.md)
+for single-date mode, race protection and the separate historical recovery CLI.
+
 The snapshot writer now requires the additive `market_index_snapshot_completions`
 migration (`e6a8b0c3d5f7`, parent `d5f7a9c2e4b6`) before deployment. Each new,
 nonempty daily batch and its immutable completion receipt commit together after

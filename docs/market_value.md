@@ -156,6 +156,10 @@ algorithm does not change the other.
 
 ## Persisted replay evidence
 
+Normal new-day publication uses the [receipt-gated forward publisher](market_value_forward_publication.md),
+which skips unpublished receipt-less dates and verifies the immutable persisted
+prefix. Historical/recovery replay remains a separate explicit operator path.
+
 `market_value_points` stores one Overall or Release point per archived UTC
 snapshot day and Market Value methodology version. Release identity is the
 `ReleaseProduct` foreign key; the database rejects a release row without that
