@@ -10,6 +10,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import sessionmaker
 
+from freshness_offline import offline_only
+
 from app.db import Base
 from app.models import (
     CanonicalCard,
@@ -602,7 +604,7 @@ def test_backup_roundtrip_disables_dispatch_and_fences_restored_claims(
             )
         )
     assert validate_backup(archive).valid
-    assert archive["metadata"]["backup_version"] == 16
+    assert archive["metadata"]["backup_version"] == 18
     assert archive["tables"]["freshness_price_states"][0]["last_observation_id"] == (
         obs if include_prices else None
     )

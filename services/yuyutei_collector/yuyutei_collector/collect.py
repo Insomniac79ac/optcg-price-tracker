@@ -184,12 +184,15 @@ def run_one_mapping_detailed(
     mapping_id: int,
     validate_only: bool = False,
     batch_run_id: str | None = None,
+    freshness=None,
 ) -> MappingOutcome:
     """Does the actual navigation/extraction/write work for one mapping and
     returns a structured MappingOutcome. Takes an already-open `session`
     (rather than opening/closing its own, as run_one_mapping did) so batch
     mode can reuse one session across mappings without each mapping's
     rollback/commit touching a different connection."""
+    if freshness is not None and validate_only:
+        raise ValueError("due collection cannot use legacy validate-only")
     mapping, source, load_reasons = _load_mapping(session, mapping_id)
     if load_reasons:
         log_event(
@@ -259,7 +262,9 @@ def run_one_mapping_detailed(
                         browser = p.chromium.launch(
                             headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
                         )
-                        context = browser.new_context()
+                        context = browser.new_context(**({"service_workers": "block"} if freshness else {}))
+                        if freshness:
+                            freshness.install_browser(context)
                         page = context.new_page()
 
                     # Same call discovery makes, so the two cannot drift apart -
@@ -516,6 +521,12 @@ def run_one_mapping_detailed(
         )
 
     result_holder["failure_stage"] = "validation"
+    if freshness:
+        from yuyutei_collector.due import write_capture
+        freshness.begin_result()
+        freshness.result = write_capture(session, mapping, result_holder)
+        return MappingOutcome(mapping_id=mapping_id, stage=freshness.result.outcome,
+                              written=bool(freshness.result.observation_ids))
     try:
         write_result = validate_and_write_observation(
             session=session,
@@ -652,6 +663,7 @@ def run_one_mapping(mapping_id: int, validate_only: bool = False) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--due-work", action="store_true", help="Opt in to preplanned shared due work; requires explicitly configured source admission.")
     group.add_argument("--mapping-id", type=int, help="Collect exactly one mapping by id.")
     group.add_argument(
         "--approved-mappings",
@@ -703,6 +715,16 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    if args.due_work:
+        if args.validate_only or args.mapping_ids or args.limit:
+            parser.error("--due-work cannot be combined with legacy collection/validation filters")
+        if args.shard_count != 9 or args.shard_index is None or not 0 <= args.shard_index < 9:
+            parser.error("--due-work requires --shard-count 9 and --shard-index 0..8")
+        from yuyutei_collector.due import run_due
+        run_due(shard_index=args.shard_index)
+        return
+
 
     if args.approved_mappings:
         from yuyutei_collector.batch import run_batch, validate_shard  # local import avoids a top-level cycle

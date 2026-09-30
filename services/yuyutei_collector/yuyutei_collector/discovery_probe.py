@@ -260,6 +260,7 @@ def run_probe(
     max_products_per_slug: int = DEFAULT_MAX_PRODUCTS_PER_SLUG,
     max_pages_per_slug: int = DEFAULT_MAX_PAGES_PER_SLUG,
     timeout_s: int = 90,
+    admission=None,
 ) -> dict[str, Any]:
     report: dict[str, Any] = {
         "slugs_requested": slugs,
@@ -274,7 +275,9 @@ def run_probe(
         browser = playwright.chromium.launch(
             headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
         )
-        context = browser.new_context()
+        context = browser.new_context(**({"service_workers": "block"} if admission else {}))
+        if admission:
+            admission.install_browser(context)
         page = context.new_page()
         try:
             for slug in slugs:

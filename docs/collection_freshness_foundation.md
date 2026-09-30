@@ -1,7 +1,8 @@
 # Shared freshness and due-work foundation
 
-This is an inactive foundation. No collector, cron, Celery entry point, customer API,
-or valuation reader calls it. Migration `7c9e4a12b6d0` adds four empty tables on top
+This is an inactive foundation. The dependent [collector adapter slice](collection_freshness_adapters.md)
+adds explicit opt-in consumers; default collectors, cron, Celery entry points,
+customer APIs and valuation readers do not call it. Migration `7c9e4a12b6d0` adds four empty tables on top
 of `e6a8b0c3d5f7`; it does not backfill prices, create source limits, or enable work.
 Source admission also requires an explicitly enabled budget row. Importing the
 modules performs no scheduling, collection, or database writes.

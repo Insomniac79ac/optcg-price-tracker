@@ -65,6 +65,17 @@ def find_condition_chip_container(soup: BeautifulSoup) -> tuple[Tag | None, dict
 
     container = chip_buttons[0].parent
     diagnostics["reason"] = "ok"
+    # Absence requires a coherent picker, not missing/unlabelled DOM evidence.
+    labels = []
+    complete = True
+    for chip in chip_buttons:
+        variants = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")]
+        values = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__price") or _class_has_suffix(p, "__awaiting")]
+        if len(variants) != 1 or not variants[0].get_text(strip=True) or len(values) != 1 or not values[0].get_text(strip=True):
+            complete = False
+        else:
+            labels.append(variants[0].get_text(strip=True))
+    diagnostics["category_labels_complete"] = complete and len(labels) == len(set(labels))
     diagnostics["container_selector"] = 'div (parent of button[class$="__chip"])'
     diagnostics["row_selector"] = 'button[class$="__chip"]'
     diagnostics["condition_label_selector"] = 'p[class$="__variant"]'
@@ -126,6 +137,34 @@ def extract_raw_conditions(soup: BeautifulSoup) -> dict[str, Any]:
         result["raw_floor_jpy"] = floor_price
         result["raw_floor_condition"] = floor_condition
     return result
+
+
+def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:
+    """Exact PSA10 asking price from the product picker, never related listings.
+
+    Absence is not no-listing; duplicate/malformed chips are not availability.
+    """
+    container, diagnostics = find_condition_chip_container(soup)
+    if container is None:
+        return {"outcome": "parsing_failure", "price_jpy": None}
+    chips = []
+    for chip in container.find_all("button", recursive=False):
+        variants = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")]
+        if _class_has_suffix(chip, "__chip") and len(variants) == 1 and variants[0].get_text(strip=True) == "PSA10":
+            chips.append(chip)
+    if not chips:
+        return {"outcome": "absent" if diagnostics["category_labels_complete"] else "parsing_failure", "price_jpy": None}
+    if len(chips) != 1:
+        return {"outcome": "parsing_failure", "price_jpy": None}
+    prices = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _class_has_suffix(p, "__price")]
+    waiting = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _class_has_suffix(p, "__awaiting")]
+    if not prices and waiting == ["出品待ち"]:
+        return {"outcome": "no_listing", "price_jpy": None}
+    if len(prices) == 1 and not waiting:
+        match = re.fullmatch(r"[¥￥]([1-9][0-9]*(?:,[0-9]{3})*)[~〜～]?", prices[0])
+        if match:
+            return {"outcome": "captured", "price_jpy": int(match.group(1).replace(",", ""))}
+    return {"outcome": "parsing_failure", "price_jpy": None}
 
 
 def find_main_product_image(soup: BeautifulSoup) -> tuple[str | None, dict[str, Any]]:
@@ -216,6 +255,7 @@ def extract_product(
     embedded = find_embedded_json_blocks(html)
     product_ld_node = find_product_ld_node(embedded["ld_json_nodes"])
     raw_conditions = extract_raw_conditions(soup)
+    psa10 = extract_psa10(soup)
 
     resolved_card_code = parsed_identity.get("card_code")
     resolved_treatment = parsed_identity.get("treatment")
@@ -276,6 +316,8 @@ def extract_product(
             "release_product_code": observed_release_product_code,
             "set_token": observed_set_token,
             "product_image_url": image_url,
+            "psa10": psa10,
+            "psa10_price_jpy": psa10["price_jpy"],
             "raw_floor_jpy": raw_conditions["raw_floor_jpy"],
             "raw_floor_condition": raw_conditions["raw_floor_condition"],
             "conditions": raw_conditions["conditions"],

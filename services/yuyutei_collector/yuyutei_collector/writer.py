@@ -114,6 +114,7 @@ def validate_and_write_observation(
     raw_snapshot_id: int | None,
     write_observation: bool = True,
     price_type: str = "sell",
+    use_capture_time: bool = False,
 ) -> WriteResult:
     reasons: list[str] = []
 
@@ -179,7 +180,7 @@ def validate_and_write_observation(
     if reasons:
         return WriteResult(written=False, reasons=reasons)
 
-    observed_at = datetime.now(timezone.utc)
+    observed_at = raw_snapshot.fetched_at if use_capture_time and write_observation else datetime.now(timezone.utc)
 
     if not write_observation:
         return WriteResult(

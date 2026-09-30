@@ -143,7 +143,9 @@ class SnkrdunkSitemapSource:
         sleep_fn: Callable[[float], None] = time.sleep,
         monotonic_fn: Callable[[], float] = time.monotonic,
         sitemap_index_url: str = SITEMAP_INDEX_URL,
+        admission=None,
     ):
+        self._admission = admission
         self._client = client or httpx.Client(
             timeout=30.0,
             follow_redirects=True,
@@ -179,7 +181,7 @@ class SnkrdunkSitemapSource:
             raise SnkrdunkSitemapError(f"refusing to fetch off-domain url: {url!r}")
         self._throttle()
         try:
-            return self._client.get(url)
+            return (self._admission.http_get(self._client, url) if self._admission else self._client.get(url))
         finally:
             self._last_request_at = self._monotonic_fn()
 

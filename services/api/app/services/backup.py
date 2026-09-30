@@ -84,9 +84,12 @@ from app.services.job_locks import with_job_lock
 # readable archives legitimately omit that new derived table.
 # v15 carries atomic snapshot completion receipts. v16 adds dormant freshness
 # work, price evidence and source budgets. Older archives restore without
-# inventing outstanding work or source limits.
-BACKUP_VERSION = 16
-READABLE_BACKUP_VERSIONS = (12, 13, 14, 15, 16)
+# inventing outstanding work or source limits. v17 adds nullable per-category
+# attempt outcomes; v16 archives retain unknown category results on restore.
+# v18 adds durable per-category retry gates/streaks. v16/v17 rows without those
+# nullable fields start with no category retry history; no old evidence is renewed.
+BACKUP_VERSION = 18
+READABLE_BACKUP_VERSIONS = (12, 13, 14, 15, 16, 17, 18)
 APP_NAME = "opcg-price-tracker"
 
 

@@ -158,12 +158,28 @@ def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, S
 
 
 def run_one_mapping_detailed(
-    session, mapping_id: int, validate_only: bool = False, batch_run_id: str | None = None
+    session, mapping_id: int, validate_only: bool = False, batch_run_id: str | None = None,
+    *, freshness=None,
 ) -> MappingOutcome:
+    if freshness is not None and validate_only:
+        raise ValueError("due collection cannot use legacy validate-only")
     mapping, source, card_print, load_reasons = _load_mapping(session, mapping_id)
     if load_reasons:
         log_event("mapping_load_failed", mapping_id=mapping_id, reasons=load_reasons, batch_run_id=batch_run_id)
         return MappingOutcome(mapping_id=mapping_id, stage="mapping_load_failed", reasons=load_reasons)
+
+    def capture_page(page, url):
+        if freshness is None:
+            return goto_and_capture(page, url)
+        def persist(step):
+            snapshot_id = freshness.snapshot(mapping.source_id, url, step, PARSER_VERSION)
+            if url == mapping.source_url:
+                freshness.raw_snapshot_id = snapshot_id
+        step = goto_and_capture(page, url, before_parse=persist)
+        if step.get("classification") in SOURCE_DENIAL_CLASSIFICATIONS and not freshness.denied:
+            freshness.deny()
+        freshness.check()
+        return step
 
     expected_card_code = mapping.source_card_id
     expected_treatment = card_print.treatment if card_print else None
@@ -204,11 +220,14 @@ def run_one_mapping_detailed(
                         viewport=DESKTOP_VIEWPORT,
                         locale="ja-JP",
                         extra_http_headers={"Accept-Language": DESKTOP_ACCEPT_LANGUAGE},
+                        **({"service_workers": "block"} if freshness else {}),
                     )
+                    if freshness:
+                        freshness.install_browser(context)
                     page = context.new_page()
 
                 with deadline(settings.HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
-                    homepage_step = goto_and_capture(page, HOMEPAGE_URL)
+                    homepage_step = capture_page(page, HOMEPAGE_URL)
                 log_event(
                     "homepage_result",
                     mapping_id=mapping.id,
@@ -236,7 +255,7 @@ def run_one_mapping_detailed(
                     browser.close()
                 else:
                     with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                        product_step = goto_and_capture(page, mapping.source_url)
+                        product_step = capture_page(page, mapping.source_url)
                     log_event(
                         "product_result",
                         mapping_id=mapping.id,
@@ -290,8 +309,9 @@ def run_one_mapping_detailed(
                         official_image_url = card_print.image_url if card_print else None
                         if candidate_image_url and official_image_url:
                             with deadline(settings.IMAGE_FETCH_TIMEOUT_S, "image_fetch"):
-                                official_bytes = fetch_bytes(page, official_image_url)
-                                candidate_bytes = fetch_bytes(page, candidate_image_url)
+                                image_fetch = freshness.request_bytes if freshness else fetch_bytes
+                                official_bytes = image_fetch(page, official_image_url)
+                                candidate_bytes = image_fetch(page, candidate_image_url)
                             if official_bytes and candidate_bytes:
                                 holder["artwork_comparison"] = compare_artwork(official_bytes, candidate_bytes)
                             else:
@@ -319,7 +339,7 @@ def run_one_mapping_detailed(
                         if history_href:
                             history_url = urljoin(product_step["final_url"], history_href)
                             with deadline(settings.SALES_HISTORY_NAV_TIMEOUT_S, "sales_history_navigation"):
-                                history_step = goto_and_capture(page, history_url)
+                                history_step = capture_page(page, history_url)
                             log_event(
                                 "sales_history_result",
                                 mapping_id=mapping.id,
@@ -388,6 +408,13 @@ def run_one_mapping_detailed(
             source_denied=source_denied,
             reasons=reasons,
         )
+
+    if freshness:
+        from snkrdunk_collector.due import write_capture
+        freshness.begin_result()
+        freshness.result = write_capture(session, mapping, holder, freshness)
+        return MappingOutcome(mapping_id=mapping_id, stage=freshness.result.outcome,
+                              written=bool(freshness.result.observation_ids))
 
     write_result = validate_and_write_observation(
         session=session,
@@ -551,6 +578,7 @@ def run_one_mapping(mapping_id: int, validate_only: bool = False) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--due-work", action="store_true", help="Opt in to preplanned shared due work; requires explicitly configured source admission.")
     group.add_argument("--mapping-id", type=int, help="Collect exactly one mapping by id.")
     group.add_argument(
         "--approved-mappings",
@@ -597,6 +625,14 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    if args.due_work:
+        if args.validate_only or args.mapping_ids or args.limit or args.allow_unapproved:
+            parser.error("--due-work cannot be combined with legacy collection/validation filters")
+        from snkrdunk_collector.due import run_due
+        run_due()
+        return
+
 
     if args.allow_unapproved and not (args.approved_mappings and args.validate_only and args.mapping_ids):
         parser.error("--allow-unapproved requires --approved-mappings, --validate-only, and --mapping-ids together.")

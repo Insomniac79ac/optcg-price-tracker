@@ -49,6 +49,24 @@ class FreshnessPolicy:
     def expiry(self, observed_at: datetime, *, high_interest: bool) -> datetime:
         return require_utc(observed_at) + self.target(high_interest=high_interest)
 
+    def retry_interval(
+        self, *, absent: bool, consecutive_failures: int, high_interest: bool
+    ) -> timedelta:
+        """Retry eligibility is separate from the unchanged evidence deadline.
+
+        A confidently absent category is checked each normal dispatch interval.
+        Malformed/transient results back off from 15m, bounded by that interval.
+        Neither rule depends on source or grade; neither renews a price.
+        """
+        ceiling = self.target(high_interest=high_interest) - self.headroom
+        if absent:
+            return ceiling
+        if consecutive_failures < 1:
+            raise ValueError("failure retry requires a positive streak")
+        return min(
+            timedelta(minutes=15) * 2 ** min(consecutive_failures - 1, 7), ceiling
+        )
+
     def next_due(
         self,
         observed_at: datetime | None,

@@ -13,10 +13,12 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 
+from freshness_offline import offline_only
+
 from app.db import Base
 
 PREVIOUS = "e6a8b0c3d5f7"
-REVISION = "7c9e4a12b6d0"
+REVISION = "c4e8a1d7b902"
 API_ROOT = Path(__file__).resolve().parents[1]
 TABLES = (
     "source_dispatch_budgets",
@@ -79,8 +81,27 @@ def test_additive_migration_upgrade_downgrade_and_model_parity():
                     "INSERT INTO sources (name,base_url) VALUES ('fixture','https://example.test')"
                 )
             )
+        migrate("upgrade", "9d2b7a1c4e60")
+        before_retry = schema()
         migrate("upgrade", REVISION)
         after = schema()
+        assert {
+            name: columns
+            for name, columns in after.items()
+            if name != "freshness_price_states"
+        } == {
+            name: columns
+            for name, columns in before_retry.items()
+            if name != "freshness_price_states"
+        }
+        assert [
+            c
+            for c in after["freshness_price_states"]
+            if c not in before_retry["freshness_price_states"]
+        ] == [
+            ("consecutive_failures", "INTEGER", True),
+            ("retry_not_before_at", "TIMESTAMP", True),
+        ]
         assert set(after) - set(before) == set(TABLES)
         assert {name: after[name] for name in before} == before
         with engine.connect() as conn:
