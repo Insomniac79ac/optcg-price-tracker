@@ -8,13 +8,13 @@ No backfill, scheduler activation or change to existing pricing tables.
 from alembic import op
 import sqlalchemy as sa
 
-revision = "7c9e4a12b6d0"
-down_revision = "e6a8b0c3d5f7"
-branch_labels = None
-depends_on = None
+revision: str = "7c9e4a12b6d0"
+down_revision: str | None = "e6a8b0c3d5f7"
+branch_labels: str | None = None
+depends_on: str | None = None
 
 
-def upgrade():
+def upgrade() -> None:
     op.create_table(
         "source_dispatch_budgets",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -193,7 +193,7 @@ def upgrade():
     )
 
 
-def downgrade():
+def downgrade() -> None:
     op.drop_table("freshness_attempts")
     op.drop_table("freshness_price_states")
     op.drop_table("freshness_work")

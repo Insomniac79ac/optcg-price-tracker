@@ -59,7 +59,9 @@ Validation uses synthetic fixtures, mock transports and disposable local Postgre
 16. No source-site request, staging database write, external job, deployment or
 scheduler activation is part of this change. Existing collector files, discovery
 checkpoint code, local artifacts, Yuyu approvals and promotion policy remain unchanged.
-The only change to a Market Value test is its expected selective backup version.
+Market Value test changes only update the expected selective backup version and
+restore the shared disposable migration fixture to head after testing an old revision.
+The daily pipeline implementation is unchanged.
 
 The focused suite covers policy boundaries and derived input lineage; product/category
 coalescing; unchanged recapture; no-listing and failures; concurrent ownership and
@@ -77,6 +79,7 @@ the ORM schema. Existing backup and latest-price regressions are included.
 | Yuyu nine-shard routing and collection telemetry | 92 passed, 15 subtests passed |
 | SNKRDUNK existing fair selection and real PostgreSQL singleton ownership | 53 passed |
 | Capacity report regression after request-cost accounting review | 2 passed |
+| CI compatibility follow-up: migration chain, backup and shared PostgreSQL fixtures | 83 passed |
 
 The API runs overlap; these counts are not a summed total. PostgreSQL tests ran
 without skips. Existing dependency warnings concern Starlette/httpx and test JWT
@@ -85,6 +88,14 @@ compile, the diff passes whitespace checks, and the repository secret scanner pa
 
 CI runs the repository's full suite after PR publication. Local validation stays
 focused on the changed contract and the existing collector boundaries.
+
+The first CI run found six compatibility failures (4,985 backend tests passed):
+three existing migration-history checks require typed revision metadata, two backup
+tests expected version 15, and a module-scoped migration fixture left later backup
+tests on the old schema. The follow-up commit adopts the repository's migration
+metadata convention, updates those backup expectations and restores the shared
+fixture to head. Worker CI passed 600 tests (18 skipped); all nine other CI jobs
+passed. The PR records the follow-up full-suite result.
 
 ## Deployment exclusion audit
 
