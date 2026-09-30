@@ -146,7 +146,7 @@ def classify_page(status: int | None, html: str, title: str) -> tuple[str, list[
     return "error", [f"http_status:{status}"]
 
 
-def goto_and_capture(page: Page, url: str) -> dict:
+def goto_and_capture(page: Page, url: str, *, before_parse=None) -> dict:
     """One bounded navigation attempt. Returns a dict with either an "error"
     key (navigation-level exception, e.g. DNS/timeout) or the captured
     page state + classification."""
@@ -158,6 +158,8 @@ def goto_and_capture(page: Page, url: str) -> dict:
         html = page.content()
         title = page.title()
         status = response.status if response else None
+        if before_parse is not None:
+            before_parse({"html": html, "http_status": status, "final_url": page.url})
         classification, evidence = classify_page(status, html, title)
         return {
             "final_url": page.url,

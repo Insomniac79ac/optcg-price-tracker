@@ -77,7 +77,9 @@ class SnkrdunkDiscoveryAdapter:
         request_delay_ms: int | None = None,
         sleep_fn: Callable[[float], None] = time.sleep,
         monotonic_fn: Callable[[], float] = time.monotonic,
+        admission=None,
     ):
+        self._admission = admission
         self._client = client or httpx.Client(timeout=10.0, follow_redirects=True)
         self._request_delay_ms = (
             request_delay_ms if request_delay_ms is not None else settings.SNKRDUNK_REQUEST_DELAY_MS
@@ -101,7 +103,7 @@ class SnkrdunkDiscoveryAdapter:
 
         self._throttle()
         try:
-            response = self._client.get(url)
+            response = (self._admission.http_get(self._client, url) if self._admission else self._client.get(url))
         finally:
             self._last_request_at = self._monotonic_fn()
 

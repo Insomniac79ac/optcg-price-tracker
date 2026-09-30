@@ -373,6 +373,8 @@ def validate_and_write_observation(
     source_url: str,
     parser_version: str,
     price_type: str = "floor",
+    raw_snapshot_id: int | None = None,
+    category: str = "raw",
 ) -> WriteResult:
     extracted = extraction.get("extracted") or {}
 
@@ -411,8 +413,10 @@ def validate_and_write_observation(
     reasons = list(identity_reasons)
     reasons.extend(validate_mapping_for_write(session, mapping))
 
-    price_jpy = extracted.get("raw_floor_jpy")
-    condition_label = extracted.get("raw_floor_condition")
+    if category not in {"raw", "psa10"}:
+        raise ValueError("unsupported current-price category")
+    price_jpy = extracted.get("raw_floor_jpy" if category == "raw" else "psa10_price_jpy")
+    condition_label = extracted.get("raw_floor_condition") if category == "raw" else "PSA10"
     if price_jpy is None:
         reasons.append("no_raw_condition_price_available")
 
@@ -451,23 +455,29 @@ def validate_and_write_observation(
     content_hash = hashlib.sha256(raw_html.encode("utf-8")).hexdigest()
     observed_at = datetime.now(timezone.utc)
 
-    raw_snapshot = RawSnapshot(
-        source_id=mapping.source_id,
-        source_url=source_url,
-        fetched_at=observed_at,
-        http_status=http_status or 0,
-        content_hash=content_hash,
-        raw_content=raw_html,
-        parser_version=parser_version,
-    )
-    session.add(raw_snapshot)
-    session.flush()  # obtain raw_snapshot.id without committing yet
+    if raw_snapshot_id is None:
+        raw_snapshot = RawSnapshot(
+            source_id=mapping.source_id,
+            source_url=source_url,
+            fetched_at=observed_at,
+            http_status=http_status or 0,
+            content_hash=content_hash,
+            raw_content=raw_html,
+            parser_version=parser_version,
+        )
+        session.add(raw_snapshot)
+        session.flush()  # obtain raw_snapshot.id without committing yet
+    else:
+        raw_snapshot = session.get(RawSnapshot, raw_snapshot_id)
+        if raw_snapshot is None or raw_snapshot.source_id != mapping.source_id:
+            raise ValueError("capture snapshot/source mismatch")
+        observed_at = raw_snapshot.fetched_at
 
     observation = PriceObservation(
         card_id=mapping.card_id,
         source_id=mapping.source_id,
         observed_at=observed_at,
-        price_type=price_type,
+        price_type=price_type if category == "raw" else "psa10_asking",
         price_jpy=price_jpy,
         condition_label=condition_label,
         raw_snapshot_id=raw_snapshot.id,

@@ -26,6 +26,11 @@ WORKDIR /app
 COPY services/snkrdunk_collector/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Same service package used by API and both opt-in adapters; no scheduler copy.
+COPY packages/opcg_source_identity /tmp/opcg_source_identity
+COPY services/api /tmp/opcg_collection_services
+RUN pip install --no-cache-dir /tmp/opcg_source_identity /tmp/opcg_collection_services
+
 COPY services/snkrdunk_collector/. .
 
 ARG GIT_COMMIT=unknown
