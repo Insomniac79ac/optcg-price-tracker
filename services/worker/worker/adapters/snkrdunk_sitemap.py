@@ -142,8 +142,8 @@ class SnkrdunkSitemapSource:
         bounds: CrawlBounds | None = None,
         sleep_fn: Callable[[float], None] = time.sleep,
         monotonic_fn: Callable[[], float] = time.monotonic,
-        admission=None,
         sitemap_index_url: str = SITEMAP_INDEX_URL,
+        admission=None,
     ):
         self._admission = admission
         self._client = client or httpx.Client(

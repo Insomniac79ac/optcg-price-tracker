@@ -216,3 +216,12 @@ no deploy hooks. A separate minimal commit excludes only
 `feature/collection-freshness-adapters` under `git.deploymentEnabled`, preserving
 all existing exclusions. GitHub workflows build/test; they do not deploy. Both
 PRs remain unmerged. No platform configuration was changed.
+
+The first CI run passed the full backend/worker suites, frontend and image builds.
+The new collector CI job initially supplied PostgreSQL 18 to Yuyu tests which
+explicitly require 16; that job failed and canceled its SNKRDUNK matrix sibling.
+The follow-up uses PostgreSQL 16 for collector tests, disables matrix fail-fast,
+and adds image-build import smoke checks for both opt-in adapters. Backend tests
+continue using their existing PostgreSQL 18 service. The sitemap admission
+argument also remains after every existing positional constructor argument;
+its affected regressions passed (23 tests).

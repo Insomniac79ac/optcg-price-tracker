@@ -38,6 +38,7 @@ COPY services/api /tmp/opcg_collection_services
 RUN pip install --no-cache-dir /tmp/opcg_source_identity /tmp/opcg_collection_services
 
 COPY services/yuyutei_collector/. .
+RUN python -c "from yuyutei_collector.due import run_due"
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}

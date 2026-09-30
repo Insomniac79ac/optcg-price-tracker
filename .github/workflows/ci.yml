@@ -78,11 +78,12 @@ jobs:
   collector-tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         collector: [snkrdunk_collector, yuyutei_collector]
     services:
       postgres:
-        image: postgres:18
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: opcg
           POSTGRES_PASSWORD: opcg
