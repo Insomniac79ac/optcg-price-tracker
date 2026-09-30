@@ -78,3 +78,20 @@ def test_duplicate_psa10_is_ambiguous():
     ).parent
     chip.parent.append(BeautifulSoup(str(chip), "html.parser"))
     assert parse(str(soup))["psa10"]["outcome"] == "parsing_failure"
+
+
+@pytest.mark.parametrize(
+    "broken", ["no_picker", "missing_label", "duplicate_label", "missing_value"]
+)
+def test_incomplete_picker_is_not_confident_absence(broken):
+    soup = BeautifulSoup(alter("PSA10", None), "html.parser")
+    chips = soup.select('button[class$="__chip"]')
+    if broken == "no_picker":
+        chips[0].parent.decompose()
+    elif broken == "missing_label":
+        chips[0].select_one('p[class$="__variant"]').decompose()
+    elif broken == "missing_value":
+        chips[0].select_one('p[class$="__price"]').decompose()
+    else:
+        chips[0].parent.append(BeautifulSoup(str(chips[0]), "html.parser"))
+    assert parse(str(soup))["psa10"]["outcome"] == "parsing_failure"

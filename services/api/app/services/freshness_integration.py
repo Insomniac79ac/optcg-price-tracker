@@ -260,6 +260,8 @@ def price_facts(session, work_id, *, clock=utc_now):
                 captured_at=capture,
                 observation_id=state.last_observation_id,
                 next_due_at=state.next_due_at,
+                retry_not_before_at=state.retry_not_before_at,
+                consecutive_failures=state.consecutive_failures or 0,
                 expires_at=(
                     policy.expiry(capture, high_interest=work.high_interest)
                     if capture

@@ -26,6 +26,8 @@ from test_freshness_queue_postgres import (
     snapshot,
     observation,
 )
+from freshness_offline import offline_only
+
 from app.models import (
     CanonicalCard,
     CardPrint,
@@ -164,7 +166,7 @@ def run(factory, source, **kwargs):
             mapping_seconds=180,
             chunk_size=2,
             delay_seconds=0,
-            clock=lambda: T0,
+            clock=kwargs.pop("clock", lambda: T0),
             sleep=lambda _: None,
             **kwargs,
         )
@@ -254,7 +256,7 @@ def test_partial_absence_keeps_deadline_and_does_not_recapture_in_same_run(
     with factory() as session:
         row = session.get(FreshnessWork, work)
         assert row.next_due_at == T0
-        assert row.retry_not_before_at == T0 + timedelta(minutes=15)
+        assert row.retry_not_before_at == T0 + timedelta(hours=23)
         assert (
             session.scalar(select(FreshnessAttempt.category_outcomes))["psa10"]
             == "absent"
@@ -461,17 +463,24 @@ def test_category_outcomes_backup_roundtrip_and_v16_compatibility(db):
     with factory() as session:
         attempt = Attempt(session, picked, clock=lambda: T0)
         attempt.admit()
+        raw_id = attempt.snapshot(
+            source,
+            "https://snkrdunk.com/apparels/123",
+            {"html": "fixture", "http_status": 200},
+            "fixture",
+        )
         attempt.begin_result()
         attempt.finish(
             CaptureResult(
                 "transient_failure",
+                raw_snapshot_id=raw_id,
                 category_outcomes={"raw": "absent", "psa10": "parsing_failure"},
             )
         )
         archive = export_backup(
             session, include_prices=True, include_raw_snapshots=True
         )
-    assert archive["metadata"]["backup_version"] == 17
+    assert archive["metadata"]["backup_version"] == 18
     assert validate_backup(archive).valid
     outcomes = archive["tables"]["freshness_attempts"][0]["category_outcomes"]
     assert outcomes == {"raw": "absent", "psa10": "parsing_failure"}
@@ -670,3 +679,77 @@ def test_shared_planner_coalesces_categories_and_rejects_wrong_source(db):
         )
         with pytest.raises(ValueError, match="requested source"):
             plan_product(session, mid, "yuyutei", high_interest=False, request_bound=30)
+
+
+@pytest.mark.parametrize("missing", ["raw", "psa10"])
+@pytest.mark.parametrize("malformed", [False, True])
+def test_real_adapter_retries_over_48_simulated_hours(
+    db, monkeypatch, missing, malformed
+):
+    from bs4 import BeautifulSoup
+
+    factory, source, mid, _ = db
+    work = seed(factory, mid)
+    soup = BeautifulSoup(HTML, "html.parser")
+    labels = {"PSA10"} if missing == "psa10" else {"A", "B", "C", "D"}
+    for label in labels:
+        chip = next(
+            p for p in soup.find_all("p") if p.get_text(strip=True) == label
+        ).parent
+        if malformed:
+            for p in list(chip.find_all("p"))[1:]:
+                p.decompose()
+            chip.append(BeautifulSoup('<p class="c__price">要確認</p>', "html.parser"))
+        else:
+            chip.decompose()
+    transport = Transport(monkeypatch, str(soup))
+    times = []
+    for tick in range(193):
+        at = T0 + timedelta(minutes=15 * tick)
+        results = run(factory, source, clock=lambda: at)
+        assert len(results) <= 1
+        if results:
+            times.append(tick / 4)
+    assert times == (
+        [0, 0.25, 0.75, 1.75, 3.75, 7.75, 15.75, 31.75] if malformed else [0, 23, 46]
+    )
+    # Exactly one product navigation per capture; home/artwork/history remain
+    # separately admitted by the existing mock transport integration.
+    products = [
+        url
+        for url in transport.sent
+        if url.rstrip("/") == "https://snkrdunk.com/apparels/123"
+    ]
+    assert len(products) == len(times)
+    with factory() as session:
+        facts = {
+            r["category"]: r
+            for r in price_facts(session, work, clock=lambda: T0 + timedelta(hours=48))
+        }
+        assert facts[missing]["captured_at"] is None
+        assert facts[missing]["checked_at"] is None
+        assert facts[missing]["next_due_at"] == T0
+        assert facts[missing]["availability"] == "unknown"
+        assert facts[missing]["category_outcome"] == (
+            "parsing_failure" if malformed else "absent"
+        )
+        assert facts[missing]["consecutive_failures"] == (8 if malformed else 0)
+
+
+def test_missing_picker_is_parsing_failure_for_both_categories(db, monkeypatch):
+    from bs4 import BeautifulSoup
+
+    factory, source, mid, _ = db
+    work = seed(factory, mid)
+    soup = BeautifulSoup(HTML, "html.parser")
+    next(
+        p for p in soup.find_all("p") if p.get_text(strip=True) == "PSA10"
+    ).parent.parent.decompose()
+    Transport(monkeypatch, str(soup))
+    assert len(run(factory, source)) == 1
+    with factory() as session:
+        facts = price_facts(session, work, clock=lambda: T0)
+        assert {r["category_outcome"] for r in facts} == {"parsing_failure"}
+        assert {r["availability"] for r in facts} == {"unknown"}
+        assert {r["captured_at"] for r in facts} == {None}
+        assert {r["consecutive_failures"] for r in facts} == {1}

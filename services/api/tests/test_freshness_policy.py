@@ -85,3 +85,22 @@ def test_future_and_unknown_evidence_cannot_be_fresh():
     )
     with pytest.raises(ValueError):
         FreshnessPolicy(headroom=timedelta(0))
+
+
+@pytest.mark.parametrize("high,ceiling", [(False, 23), (True, 3)])
+def test_retry_intervals_share_freshness_headroom_and_are_bounded(high, ceiling):
+    policy = FreshnessPolicy()
+    assert policy.retry_interval(
+        absent=True, consecutive_failures=0, high_interest=high
+    ) == timedelta(hours=ceiling)
+    intervals = [
+        policy.retry_interval(absent=False, consecutive_failures=n, high_interest=high)
+        for n in range(1, 12)
+    ]
+    assert intervals[:4] == [timedelta(minutes=n) for n in (15, 30, 60, 120)]
+    assert intervals[-1] == timedelta(hours=ceiling)
+    assert all(
+        a <= b <= timedelta(hours=ceiling) for a, b in zip(intervals, intervals[1:])
+    )
+    with pytest.raises(ValueError):
+        policy.retry_interval(absent=False, consecutive_failures=0, high_interest=high)

@@ -171,6 +171,23 @@ def _upsert_work(
     return work
 
 
+def _refresh_retry_gate(work: FreshnessWork, states: list[FreshnessPriceState]) -> None:
+    """Keep evidence deadlines visible; dispatch when ANY category is eligible."""
+    work.next_due_at = min(require_utc(s.next_due_at) for s in states)
+    work.retry_not_before_at = (
+        min(
+            (
+                max(require_utc(s.next_due_at), require_utc(s.retry_not_before_at))
+                if s.retry_not_before_at is not None
+                else require_utc(s.next_due_at)
+            )
+            for s in states
+        )
+        if any(s.retry_not_before_at is not None for s in states)
+        else None
+    )
+
+
 def plan_refresh(
     db: Session,
     mapping_id: int,
@@ -259,7 +276,17 @@ def plan_refresh(
         # A priority escalation can bring due work forward; planning never
         # relaxes an outstanding deadline because capacity is insufficient.
         state.next_due_at = min(require_utc(state.next_due_at), due)
-    work.next_due_at = min(require_utc(s.next_due_at) for s in states)
+        if state.retry_not_before_at is not None:
+            # Interest escalation also bounds an existing retry; planning never
+            # pushes it later, clears its streak, or changes evidence freshness.
+            state.retry_not_before_at = min(
+                require_utc(state.retry_not_before_at),
+                now
+                + policy.retry_interval(
+                    absent=True, consecutive_failures=0, high_interest=high_interest
+                ),
+            )
+    _refresh_retry_gate(work, states)
     work.lane = (
         "coverage"
         if work.last_successfully_checked_at is None
@@ -751,7 +778,8 @@ def complete_claim(
             )
         ):
             raise ValueError("saved evidence cannot reaffirm a new check")
-    if outcome in SUCCESS and (
+    has_absence = "absent" in category_results.values()
+    if (outcome in SUCCESS or has_absence) and (
         snapshot is None or not 200 <= snapshot.http_status < 300
     ):
         raise ValueError("successful check requires a new successful source capture")
@@ -798,7 +826,7 @@ def complete_claim(
         state.price_category: (state.price_type, state.condition_label)
         for state in states
     }
-    if work.kind == "refresh" and outcome in SUCCESS:
+    if work.kind == "refresh" and (outcome in SUCCESS or has_absence):
         mapping = _eligible_mapping(db, work.source_card_mapping_id)
         source_name = db.scalar(select(Source.name).where(Source.id == work.source_id))
         if (
@@ -865,14 +893,6 @@ def complete_claim(
                 state.next_due_at = policy.next_due(
                     checked_at, high_interest=work.high_interest
                 )
-            work.next_due_at = min(require_utc(s.next_due_at) for s in states)
-            if category_results and any(
-                value in {"absent", "parsing_failure"}
-                for value in category_results.values()
-            ):
-                # The outstanding deadline stays visible; avoid repeatedly
-                # recapturing a product whose category was absent/malformed.
-                work.retry_not_before_at = now + retry_delay
             work.lane = "high" if work.high_interest else "ordinary"
         else:
             work.next_due_at = now if outcome == "discovery_progress" else due
@@ -880,6 +900,32 @@ def complete_claim(
         work.last_failure, work.last_failure_at = (failure or outcome)[:500], now
         # Preserve the overdue deadline; the retry gate is a separate fact.
         work.retry_not_before_at = now + retry_delay
+    if work.kind == "refresh" and (
+        outcome in SUCCESS or outcome == "transient_failure"
+    ):
+        for state in states:
+            category = state.price_category
+            if category in observed or category in unlisted:
+                state.consecutive_failures = 0
+                state.retry_not_before_at = None
+                continue
+            result = category_results.get(category)
+            if result == "absent":
+                # Confident absence resolves parsing uncertainty, not an old
+                # price or availability. Keep its original evidence deadline.
+                state.consecutive_failures = 0
+            elif result == "parsing_failure" or outcome == "transient_failure":
+                state.consecutive_failures = min(
+                    (state.consecutive_failures or 0) + 1, 8
+                )
+            else:
+                continue  # omitted/new demand retains its own due time and streak
+            state.retry_not_before_at = now + policy.retry_interval(
+                absent=result == "absent",
+                consecutive_failures=state.consecutive_failures,
+                high_interest=work.high_interest,
+            )
+        _refresh_retry_gate(work, states)
     if outcome == "source_denial":
         budget.pause_reason, budget.paused_until = "source_denial", None
     elif actual_request_cost > sum(attempt.request_costs):

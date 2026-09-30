@@ -65,6 +65,17 @@ def find_condition_chip_container(soup: BeautifulSoup) -> tuple[Tag | None, dict
 
     container = chip_buttons[0].parent
     diagnostics["reason"] = "ok"
+    # Absence requires a coherent picker, not missing/unlabelled DOM evidence.
+    labels = []
+    complete = True
+    for chip in chip_buttons:
+        variants = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__variant")]
+        values = [p for p in chip.find_all("p", recursive=False) if _class_has_suffix(p, "__price") or _class_has_suffix(p, "__awaiting")]
+        if len(variants) != 1 or not variants[0].get_text(strip=True) or len(values) != 1 or not values[0].get_text(strip=True):
+            complete = False
+        else:
+            labels.append(variants[0].get_text(strip=True))
+    diagnostics["category_labels_complete"] = complete and len(labels) == len(set(labels))
     diagnostics["container_selector"] = 'div (parent of button[class$="__chip"])'
     diagnostics["row_selector"] = 'button[class$="__chip"]'
     diagnostics["condition_label_selector"] = 'p[class$="__variant"]'
@@ -133,7 +144,7 @@ def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:
 
     Absence is not no-listing; duplicate/malformed chips are not availability.
     """
-    container, _ = find_condition_chip_container(soup)
+    container, diagnostics = find_condition_chip_container(soup)
     if container is None:
         return {"outcome": "parsing_failure", "price_jpy": None}
     chips = []
@@ -142,7 +153,7 @@ def extract_psa10(soup: BeautifulSoup) -> dict[str, Any]:
         if _class_has_suffix(chip, "__chip") and len(variants) == 1 and variants[0].get_text(strip=True) == "PSA10":
             chips.append(chip)
     if not chips:
-        return {"outcome": "absent", "price_jpy": None}
+        return {"outcome": "absent" if diagnostics["category_labels_complete"] else "parsing_failure", "price_jpy": None}
     if len(chips) != 1:
         return {"outcome": "parsing_failure", "price_jpy": None}
     prices = [p.get_text(strip=True) for p in chips[0].find_all("p", recursive=False) if _class_has_suffix(p, "__price")]

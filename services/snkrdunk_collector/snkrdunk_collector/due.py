@@ -58,7 +58,10 @@ def write_capture(session, mapping, holder, attempt):
                         and conditions[label]["raw_text"] == "出品待ち"
                         for label in expected
                     )
-                    else "parsing_failure" if conditions else "absent"
+                    else "absent"
+                    if not conditions
+                    and extraction["raw"]["condition_container"].get("category_labels_complete")
+                    else "parsing_failure"
                 )
             if category_outcomes[category] == "no_listing":
                 unlisted.add(category)

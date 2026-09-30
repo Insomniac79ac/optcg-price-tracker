@@ -147,6 +147,10 @@ class FreshnessWork(Base):
 class FreshnessPriceState(Base):
     __tablename__ = "freshness_price_states"
     __table_args__ = (
+        CheckConstraint(
+            "consecutive_failures IS NULL OR consecutive_failures BETWEEN 0 AND 8",
+            name="ck_freshness_price_failure_streak",
+        ),
         UniqueConstraint(
             "work_id", "price_category", name="uq_freshness_price_category"
         ),
@@ -163,6 +167,12 @@ class FreshnessPriceState(Base):
     price_category: Mapped[str] = mapped_column(String(32), nullable=False)
     price_type: Mapped[str] = mapped_column(String(32), nullable=False)
     condition_label: Mapped[str | None] = mapped_column(String(64))
+    # NULL is a legacy archive/row with no retry history. Saturates at the
+    # shared policy ceiling; a different category's success never resets it.
+    consecutive_failures: Mapped[int | None] = mapped_column(Integer)
+    retry_not_before_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
     last_successfully_checked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )

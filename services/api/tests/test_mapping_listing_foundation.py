@@ -189,7 +189,7 @@ def test_current_backup_restores_two_historical_rows_before_current(db_session):
         historical_ids.append(old.id)
     db_session.commit()
     archive = export_backup(db_session)
-    assert archive["metadata"]["backup_version"] == 17
+    assert archive["metadata"]["backup_version"] == 18
     assert validate_backup(archive).valid
     archive["tables"]["source_card_mappings"].reverse()
     result = restore_backup(db_session, archive, dry_run=False, mode="replace", confirm="RESTORE", skip_lock=True)

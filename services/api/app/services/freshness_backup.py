@@ -58,6 +58,14 @@ def validate_references(tables: dict) -> list[str]:
                     errors.append(
                         f"{model.__tablename__}[id={row['id']}] has invalid {column.name}"
                     )
+            if model is FreshnessPriceState:
+                streak = row.get("consecutive_failures")
+                if streak is not None and (
+                    type(streak) is not int or not 0 <= streak <= 8
+                ):
+                    errors.append(
+                        f"freshness_price_states[id={row['id']}] has invalid consecutive_failures"
+                    )
             if model is FreshnessAttempt:
                 outcomes = row.get("category_outcomes")
                 if outcomes is not None and (
