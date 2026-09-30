@@ -27,6 +27,9 @@ from app.models import (
     CollectorNote,
     CollectorTag,
     DashboardPreference,
+    FreshnessAttempt,
+    FreshnessPriceState,
+    FreshnessWork,
     GradingSubmission,
     ImportValidationReport,
     MarketIntelligenceReport,
@@ -49,11 +52,13 @@ from app.models import (
     Source,
     SourceCardMapping,
     SourceCollectionAttempt,
+    SourceDispatchBudget,
     User,
     WishlistItem,
     YuyuteiCandidate,
     YuyuteiDiscoveryRun,
 )
+from app.services import freshness_backup
 from app.services.job_locks import with_job_lock
 
 # Bumped 1 -> 2 when collector tags/groups tables were added, 2 -> 3 when
@@ -77,10 +82,11 @@ from app.services.job_locks import with_job_lock
 # explicitly readable with derived identity and NULL lifecycle metadata. v14
 # adds persisted Market Value evidence beside CPI under include_prices. Older
 # readable archives legitimately omit that new derived table.
-# v15 carries atomic snapshot completion receipts alongside their immutable
-# snapshot batches. Older archives remain readable without inventing receipts.
-BACKUP_VERSION = 15
-READABLE_BACKUP_VERSIONS = (12, 13, 14, 15)
+# v15 carries atomic snapshot completion receipts. v16 adds dormant freshness
+# work, price evidence and source budgets. Older archives restore without
+# inventing outstanding work or source limits.
+BACKUP_VERSION = 16
+READABLE_BACKUP_VERSIONS = (12, 13, 14, 15, 16)
 APP_NAME = "opcg-price-tracker"
 
 
@@ -105,6 +111,7 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("canonical_cards", CanonicalCard),
     BackupTableSpec("release_products", ReleaseProduct),
     BackupTableSpec("sources", Source),
+    BackupTableSpec("source_dispatch_budgets", SourceDispatchBudget),
     BackupTableSpec("release_product_aliases", ReleaseProductAlias),
     BackupTableSpec("card_prints", CardPrint),
     BackupTableSpec("collector_tags", CollectorTag),
@@ -118,6 +125,7 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("yuyutei_discovery_runs", YuyuteiDiscoveryRun),
     BackupTableSpec("yuyutei_candidates", YuyuteiCandidate),
     BackupTableSpec("source_card_mappings", SourceCardMapping),
+    BackupTableSpec("freshness_work", FreshnessWork),
     BackupTableSpec("collection_items", CollectionItem),
     BackupTableSpec("wishlist_items", WishlistItem),
     BackupTableSpec("card_tags", CardTag),
@@ -125,6 +133,8 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("collection_item_groups", CollectionItemGroup),
     BackupTableSpec("grading_submissions", GradingSubmission),
     BackupTableSpec("price_observations", PriceObservation, "include_prices"),
+    BackupTableSpec("freshness_price_states", FreshnessPriceState),
+    BackupTableSpec("freshness_attempts", FreshnessAttempt),
     BackupTableSpec("source_collection_attempts", SourceCollectionAttempt, "include_prices"),
     BackupTableSpec("market_index_snapshots", MarketIndexSnapshot, "include_prices"),
     BackupTableSpec(
@@ -295,6 +305,9 @@ def export_backup(
                     row["raw_snapshot_id"] = None
         tables[table] = serialized_rows
 
+    freshness_provenance = freshness_backup.omit_unexported_references(
+        tables, include_prices=include_prices, include_raw_snapshots=include_raw_snapshots
+    )
     return {
         "metadata": {
             "app": APP_NAME,
@@ -305,6 +318,7 @@ def export_backup(
             "include_refresh_runs": include_refresh_runs,
             "include_logs": include_logs,
             "include_validation_reports": include_validation_reports,
+            "freshness_provenance": freshness_provenance,
             "raw_snapshot_provenance": {
                 "mode": (
                     RAW_PROVENANCE_INCLUDED
@@ -470,6 +484,7 @@ def validate_backup(backup: Any) -> ValidationResult:
     # otherwise a malformed table (e.g. not a list) would make these crash
     # rather than produce a useful error.
     if not errors:
+        errors.extend(freshness_backup.validate_references(tables))
         card_ids = {row["id"] for row in tables.get("cards", [])}
         canonical_card_ids = {row["id"] for row in tables.get("canonical_cards", [])}
         release_product_ids = {row["id"] for row in tables.get("release_products", [])}
@@ -1000,9 +1015,11 @@ def _restore_backup_locked(
             errors=validation.errors,
         )
 
-    tables = backup["tables"]
+    tables, freshness_warnings = freshness_backup.prepare_restore(
+        backup["tables"], datetime.now(timezone.utc)
+    )
     included = _included_tables(tables)
-    warnings = list(validation.warnings)
+    warnings = list(validation.warnings) + freshness_warnings
 
     if mode == "replace":
         excluded_optional = [t for t in CASCADE_RISK_OPTIONAL_TABLES if t not in included]
