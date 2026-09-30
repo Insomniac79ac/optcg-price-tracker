@@ -126,10 +126,12 @@ def schema_signature(engine):
 
 
 def test_additive_upgrade_downgrade_upgrade_preserves_existing_schema_and_data(
-    pg_engine, db_session, catalogue
+    pg_engine, db_session, catalogue, request
 ):
     db_session.close()
     url = pg_engine.url.render_as_string(hide_password=False)
+    # Later tests share this database and use the current backup registry.
+    request.addfinalizer(lambda: alembic(url, "upgrade", "head"))
     alembic(url, "downgrade", PARENT)
     before = schema_signature(pg_engine)
     with pg_engine.connect() as connection:

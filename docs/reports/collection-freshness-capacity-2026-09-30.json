@@ -1,0 +1,383 @@
+[
+  {
+    "actual_simulated_request_cost": 128700,
+    "assumptions": {
+      "days": 7,
+      "discovery_scopes": 250,
+      "execution_headroom_seconds": 3600,
+      "first_coverage_scopes": 250,
+      "high_interest_products": 500,
+      "name": "Yuyu assumed serial capacity",
+      "processing_chunk": 70,
+      "requests_per_capture": 2,
+      "seconds_per_capture": 6,
+      "source_products": 5000,
+      "source_request_limit_per_day": 24000
+    },
+    "capacity_can_sustain_check_cadence": true,
+    "capacity_captures_per_day_upper_bound": 12000,
+    "daily": [
+      {
+        "backlog_growth_since_previous_day": 1,
+        "completed_captures_cumulative": 9193,
+        "day": 1,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 0,
+          "ordinary": 1
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 1
+      },
+      {
+        "backlog_growth_since_previous_day": -1,
+        "completed_captures_cumulative": 18386,
+        "day": 2,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 0,
+          "ordinary": 0
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 0
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 27579,
+        "day": 3,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 0,
+          "ordinary": 0
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 0
+      },
+      {
+        "backlog_growth_since_previous_day": 1,
+        "completed_captures_cumulative": 36771,
+        "day": 4,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 0,
+          "ordinary": 1
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 1
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 45964,
+        "day": 5,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 1,
+          "ordinary": 0
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 1
+      },
+      {
+        "backlog_growth_since_previous_day": -1,
+        "completed_captures_cumulative": 55156,
+        "day": 6,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 0,
+          "ordinary": 0
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 0
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 64349,
+        "day": 7,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 1,
+          "ordinary": 1
+        },
+        "expired_current_prices": 0,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 2
+      }
+    ],
+    "label": "SYNTHETIC SIMULATION \u2014 assumed timings, not live throughput",
+    "offered_captures_per_day": 9195.65,
+    "offered_load_deficit_captures_per_day": 0,
+    "offered_requests_per_day": 18391.3,
+    "policy_version": "current-price-v1",
+    "price_categories_share_product_capture": true,
+    "processing_chunks_started": 920,
+    "serial_workers": 1,
+    "simulated_deadlines_met": true
+  },
+  {
+    "actual_simulated_request_cost": 60480,
+    "assumptions": {
+      "days": 7,
+      "discovery_scopes": 250,
+      "execution_headroom_seconds": 3600,
+      "first_coverage_scopes": 250,
+      "high_interest_products": 500,
+      "name": "SNKRDUNK assumed singleton capacity",
+      "processing_chunk": 70,
+      "requests_per_capture": 2,
+      "seconds_per_capture": 20,
+      "source_products": 5000,
+      "source_request_limit_per_day": 20000
+    },
+    "capacity_can_sustain_check_cadence": false,
+    "capacity_captures_per_day_upper_bound": 4320.0,
+    "daily": [
+      {
+        "backlog_growth_since_previous_day": 3139,
+        "completed_captures_cumulative": 4319,
+        "day": 1,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 230,
+          "ordinary": 2909
+        },
+        "expired_current_prices": 2981,
+        "late_captures_cumulative": 3518,
+        "outstanding_due_work": 3139
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 8639,
+        "day": 2,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 230,
+          "ordinary": 2911
+        },
+        "expired_current_prices": 2981,
+        "late_captures_cumulative": 7338,
+        "outstanding_due_work": 3141
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 12959,
+        "day": 3,
+        "due_by_lane": {
+          "coverage": 1,
+          "discovery": 1,
+          "high": 230,
+          "ordinary": 2909
+        },
+        "expired_current_prices": 2979,
+        "late_captures_cumulative": 11160,
+        "outstanding_due_work": 3141
+      },
+      {
+        "backlog_growth_since_previous_day": 1,
+        "completed_captures_cumulative": 17279,
+        "day": 4,
+        "due_by_lane": {
+          "coverage": 1,
+          "discovery": 0,
+          "high": 230,
+          "ordinary": 2911
+        },
+        "expired_current_prices": 2980,
+        "late_captures_cumulative": 14980,
+        "outstanding_due_work": 3142
+      },
+      {
+        "backlog_growth_since_previous_day": -1,
+        "completed_captures_cumulative": 21599,
+        "day": 5,
+        "due_by_lane": {
+          "coverage": 1,
+          "discovery": 1,
+          "high": 230,
+          "ordinary": 2909
+        },
+        "expired_current_prices": 2979,
+        "late_captures_cumulative": 18802,
+        "outstanding_due_work": 3141
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 25919,
+        "day": 6,
+        "due_by_lane": {
+          "coverage": 1,
+          "discovery": 0,
+          "high": 230,
+          "ordinary": 2910
+        },
+        "expired_current_prices": 2980,
+        "late_captures_cumulative": 22622,
+        "outstanding_due_work": 3141
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 30239,
+        "day": 7,
+        "due_by_lane": {
+          "coverage": 1,
+          "discovery": 1,
+          "high": 230,
+          "ordinary": 2909
+        },
+        "expired_current_prices": 2979,
+        "late_captures_cumulative": 26444,
+        "outstanding_due_work": 3141
+      }
+    ],
+    "label": "SYNTHETIC SIMULATION \u2014 assumed timings, not live throughput",
+    "offered_captures_per_day": 9195.65,
+    "offered_load_deficit_captures_per_day": 4875.65,
+    "offered_requests_per_day": 18391.3,
+    "policy_version": "current-price-v1",
+    "price_categories_share_product_capture": true,
+    "processing_chunks_started": 432,
+    "serial_workers": 1,
+    "simulated_deadlines_met": false
+  },
+  {
+    "actual_simulated_request_cost": 70000,
+    "assumptions": {
+      "days": 7,
+      "discovery_scopes": 250,
+      "execution_headroom_seconds": 3600,
+      "first_coverage_scopes": 250,
+      "high_interest_products": 500,
+      "name": "Yuyu assumed constrained source budget",
+      "processing_chunk": 70,
+      "requests_per_capture": 2,
+      "seconds_per_capture": 6,
+      "source_products": 5000,
+      "source_request_limit_per_day": 10000
+    },
+    "capacity_can_sustain_check_cadence": false,
+    "capacity_captures_per_day_upper_bound": 5000,
+    "daily": [
+      {
+        "backlog_growth_since_previous_day": 2870,
+        "completed_captures_cumulative": 5000,
+        "day": 1,
+        "due_by_lane": {
+          "coverage": 114,
+          "discovery": 114,
+          "high": 500,
+          "ordinary": 2142
+        },
+        "expired_current_prices": 2446,
+        "late_captures_cumulative": 0,
+        "outstanding_due_work": 2870
+      },
+      {
+        "backlog_growth_since_previous_day": -720,
+        "completed_captures_cumulative": 10000,
+        "day": 2,
+        "due_by_lane": {
+          "coverage": 49,
+          "discovery": 49,
+          "high": 500,
+          "ordinary": 1552
+        },
+        "expired_current_prices": 1902,
+        "late_captures_cumulative": 3598,
+        "outstanding_due_work": 2150
+      },
+      {
+        "backlog_growth_since_previous_day": 0,
+        "completed_captures_cumulative": 15000,
+        "day": 3,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 500,
+          "ordinary": 1650
+        },
+        "expired_current_prices": 2000,
+        "late_captures_cumulative": 7098,
+        "outstanding_due_work": 2150
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 20000,
+        "day": 4,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 500,
+          "ordinary": 1652
+        },
+        "expired_current_prices": 2000,
+        "late_captures_cumulative": 10598,
+        "outstanding_due_work": 2152
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 25000,
+        "day": 5,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 500,
+          "ordinary": 1654
+        },
+        "expired_current_prices": 2000,
+        "late_captures_cumulative": 14098,
+        "outstanding_due_work": 2154
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 30000,
+        "day": 6,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 0,
+          "high": 500,
+          "ordinary": 1656
+        },
+        "expired_current_prices": 2000,
+        "late_captures_cumulative": 17598,
+        "outstanding_due_work": 2156
+      },
+      {
+        "backlog_growth_since_previous_day": 2,
+        "completed_captures_cumulative": 35000,
+        "day": 7,
+        "due_by_lane": {
+          "coverage": 0,
+          "discovery": 1,
+          "high": 500,
+          "ordinary": 1657
+        },
+        "expired_current_prices": 1999,
+        "late_captures_cumulative": 21099,
+        "outstanding_due_work": 2158
+      }
+    ],
+    "label": "SYNTHETIC SIMULATION \u2014 assumed timings, not live throughput",
+    "offered_captures_per_day": 9195.65,
+    "offered_load_deficit_captures_per_day": 4195.65,
+    "offered_requests_per_day": 18391.3,
+    "policy_version": "current-price-v1",
+    "price_categories_share_product_capture": true,
+    "processing_chunks_started": 500,
+    "serial_workers": 1,
+    "simulated_deadlines_met": false
+  }
+]

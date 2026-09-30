@@ -18,6 +18,12 @@ from app.models.collector_note import CollectorNote
 from app.models.collector_tag import CollectorTag
 from app.models.dashboard_preference import DashboardPreference
 from app.models.file_job import FileJob
+from app.models.freshness_work import (
+    FreshnessAttempt,
+    FreshnessPriceState,
+    FreshnessWork,
+    SourceDispatchBudget,
+)
 from app.models.grading_submission import GradingSubmission
 from app.models.import_validation_report import ImportValidationReport
 from app.models.job_lock import JobLock
@@ -95,6 +101,10 @@ __all__ = [
     "SearchHistory",
     "JobLock",
     "FileJob",
+    "FreshnessWork",
+    "FreshnessPriceState",
+    "FreshnessAttempt",
+    "SourceDispatchBudget",
     "AnalyticsDigestReport",
     "ImportValidationReport",
     "ReleaseProduct",
