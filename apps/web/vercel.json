@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "feature/market-value-receipt-forward": false,
-      "feature/market-value-daily-pipeline": false
+      "feature/market-value-daily-pipeline": false,
+      "feature/collection-freshness-foundation": false
     }
   }
 }
