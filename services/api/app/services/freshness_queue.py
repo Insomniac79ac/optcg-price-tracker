@@ -2,7 +2,7 @@
 
 Each public call belongs in a short caller-owned transaction. Commit before
 network I/O. Admit each request before dispatch; write results and complete in
-one transaction. No current collector imports or calls this module.
+one transaction. Only explicit opt-in adapters call this module.
 """
 
 from __future__ import annotations
@@ -418,6 +418,7 @@ def claim_due(
     lease: timedelta,
     clock: UTCClock = utc_now,
     yuyutei_shard_index: int | None = None,
+    supported_kinds: set[str] | None = None,
 ) -> list[Claim]:
     """Reserve a processing chunk. The next chunk can be claimed immediately."""
     if not owner or len(owner) > 128 or not 1 <= limit <= 100 or lease <= timedelta(0):
@@ -464,6 +465,10 @@ def claim_due(
         lane = LANE_CYCLE[budget.claim_sequence % len(LANE_CYCLE)]
         work = db.scalar(base.where(FreshnessWork.lane == lane)) or db.scalar(base)
         if work is None:
+            break
+        # Yield the source-wide lane to its responsible consumer. Filtering
+        # before lane selection would silently steal discovery's fair turn.
+        if supported_kinds is not None and work.kind not in supported_kinds:
             break
         if yuyutei_shard_index is not None:
             # A shard may take its own work from the selected source-wide
@@ -634,6 +639,23 @@ def _result_digest(**payload) -> str:
     ).hexdigest()
 
 
+def pause_source(db: Session, token: str, *, clock: UTCClock = utc_now) -> None:
+    """Stop subsequent requests immediately, including helper-page denials."""
+    budget, work, attempt = _locked_claim(db, token)
+    _require_owner(work, attempt, require_utc(clock()))
+    budget.pause_reason, budget.paused_until = "source_denial", None
+    db.flush()
+
+
+def _signature_matches(category, signature, observation):
+    actual = (observation.price_type, observation.condition_label)
+    # SNKRDUNK's established raw floor writer retains the winning A-D label.
+    # A raw wildcard must never accept PSA/BGS/ARS observations.
+    if category == "raw" and signature == ("floor", None):
+        return actual[0] == "floor" and actual[1] in {None, "A", "B", "C", "D"}
+    return actual == signature
+
+
 def complete_claim(
     db: Session,
     token: str,
@@ -643,6 +665,7 @@ def complete_claim(
     raw_snapshot_id: int | None = None,
     observation_ids: dict[str, int] | None = None,
     no_listing_categories: set[str] | None = None,
+    category_outcomes: dict[str, str] | None = None,
     resume_cursor: dict | None = None,
     next_due_at: datetime | None = None,
     failure: str | None = None,
@@ -665,9 +688,26 @@ def complete_claim(
     observed_ids, unlisted = observation_ids or {}, no_listing_categories or set()
     if set(observed_ids) & unlisted:
         raise ValueError("a category cannot be both priced and unlisted")
+    category_results = category_outcomes or {}
+    if any(
+        value not in {"captured", "no_listing", "absent", "parsing_failure"}
+        for value in category_results.values()
+    ):
+        raise ValueError("invalid category outcome")
+    if any(
+        (value == "captured" and key not in observed_ids)
+        or (value == "no_listing" and key not in unlisted)
+        or (
+            value in {"absent", "parsing_failure"}
+            and key in set(observed_ids) | unlisted
+        )
+        for key, value in category_results.items()
+    ):
+        raise ValueError("category outcome conflicts with evidence")
     due = require_utc(next_due_at) if next_due_at else None
     digest = _result_digest(
         outcome=outcome,
+        category_outcomes=category_results,
         actual_request_cost=actual_request_cost,
         raw_snapshot_id=raw_snapshot_id,
         observation_ids=observed_ids,
@@ -749,7 +789,9 @@ def complete_claim(
         .where(FreshnessPriceState.work_id == work.id)
         .with_for_update()
     ).all()
-    if not (set(observed_ids) | unlisted) <= {s.price_category for s in states}:
+    if not (set(observed_ids) | unlisted | set(category_results)) <= {
+        s.price_category for s in states
+    }:
         raise ValueError("result contains an unplanned price category")
     observed: dict[str, PriceObservation] = {}
     signatures = {
@@ -777,7 +819,7 @@ def complete_claim(
                 or obs.source_id != work.source_id
                 or obs.source_card_mapping_id != work.source_card_mapping_id
                 or obs.card_print_id != work.card_print_id
-                or (obs.price_type, obs.condition_label) != signatures[category]
+                or not _signature_matches(category, signatures[category], obs)
                 or obs.raw_snapshot_id != raw_snapshot_id
                 or not require_utc(snapshot.fetched_at)
                 <= require_utc(obs.observed_at)
@@ -794,6 +836,7 @@ def complete_claim(
     budget.used_requests += actual_request_cost
     attempt.actual_request_cost = attempt.charged_request_cost = actual_request_cost
     attempt.raw_snapshot_id = raw_snapshot_id
+    attempt.category_outcomes = category_results
     attempt.finished_at, attempt.outcome, attempt.result_digest = now, outcome, digest
     _clear_claim(
         work, now, state="blocked" if outcome == "identity_refusal" else "pending"
@@ -823,6 +866,13 @@ def complete_claim(
                     checked_at, high_interest=work.high_interest
                 )
             work.next_due_at = min(require_utc(s.next_due_at) for s in states)
+            if category_results and any(
+                value in {"absent", "parsing_failure"}
+                for value in category_results.values()
+            ):
+                # The outstanding deadline stays visible; avoid repeatedly
+                # recapturing a product whose category was absent/malformed.
+                work.retry_not_before_at = now + retry_delay
             work.lane = "high" if work.high_interest else "ordinary"
         else:
             work.next_due_at = now if outcome == "discovery_progress" else due

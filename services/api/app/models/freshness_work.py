@@ -1,4 +1,4 @@
-"""Dormant due work; no existing collector consumes these tables."""
+"""Shared due work; only explicit opt-in collectors consume these tables."""
 
 from datetime import datetime
 
@@ -217,6 +217,7 @@ class FreshnessAttempt(Base):
     request_costs: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     actual_request_cost: Mapped[int | None] = mapped_column(Integer)
     charged_request_cost: Mapped[int | None] = mapped_column(Integer)
+    category_outcomes: Mapped[dict | None] = mapped_column(JSON)
     result_digest: Mapped[str | None] = mapped_column(String(64))
     raw_snapshot_id: Mapped[int | None] = mapped_column(
         ForeignKey("raw_snapshots.id", ondelete="SET NULL")

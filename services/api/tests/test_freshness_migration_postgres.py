@@ -16,7 +16,7 @@ from sqlalchemy.exc import OperationalError
 from app.db import Base
 
 PREVIOUS = "e6a8b0c3d5f7"
-REVISION = "7c9e4a12b6d0"
+REVISION = "9d2b7a1c4e60"
 API_ROOT = Path(__file__).resolve().parents[1]
 TABLES = (
     "source_dispatch_budgets",

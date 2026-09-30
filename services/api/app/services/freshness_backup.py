@@ -59,6 +59,22 @@ def validate_references(tables: dict) -> list[str]:
                         f"{model.__tablename__}[id={row['id']}] has invalid {column.name}"
                     )
             if model is FreshnessAttempt:
+                outcomes = row.get("category_outcomes")
+                if outcomes is not None and (
+                    not isinstance(outcomes, dict)
+                    or any(
+                        not isinstance(key, str)
+                        or not key
+                        or len(key) > 32
+                        or not isinstance(value, str)
+                        or value
+                        not in {"captured", "no_listing", "absent", "parsing_failure"}
+                        for key, value in outcomes.items()
+                    )
+                ):
+                    errors.append(
+                        f"freshness_attempts[id={row['id']}] has invalid category_outcomes"
+                    )
                 costs = row.get("request_costs")
                 if not isinstance(costs, list) or any(
                     type(cost) is not int or cost <= 0 for cost in costs
