@@ -187,3 +187,36 @@ All five requested freshness/coverage items are explicitly P0 in the retained in
 | Exact print | [1440px](../ui/evidence/2026-10-01-collector-refinement/print-1440.png) | [390px](../ui/evidence/2026-10-01-collector-refinement/print-390.png) | [320px](../ui/evidence/2026-10-01-collector-refinement/print-320.png) |
 
 Social examples: [Home](../ui/evidence/2026-10-01-collector-refinement/social-home-site.png), [Zoro](../ui/evidence/2026-10-01-collector-refinement/social-print-1.png), [Franky anniversary](../ui/evidence/2026-10-01-collector-refinement/social-print-6823.png), [Market](../ui/evidence/2026-10-01-collector-refinement/social-market-overall.png), [release](../ui/evidence/2026-10-01-collector-refinement/social-release-181.png).
+
+
+## One Piece social-card design proofs (2026-10-01)
+
+These six completed 1200 × 630 design proofs are added for product review only.
+They use canonical One Piece card artwork, Wanted-poster framing, and manga-panel
+treatments, with CardPirate identified separately as the independent data publisher.
+Exact-card prices are visibly labeled illustrative sample data, not live prices.
+
+| Surface | Review proof | Visual treatment |
+| --- | --- | --- |
+| Homepage | [Homepage](../ui/evidence/2026-10-01-one-piece-social-cards/homepage.png) | Gear 5 Luffy leads the Straw Hat crew artwork composition. |
+| Exact card | [Luffy exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-card.png) | Full OP05-119 alternate artwork in a Wanted frame; sample JPY index outside the poster. |
+| Market | [Market](../ui/evidence/2026-10-01-one-piece-social-cards/market.png) | Manga panels with representative Luffy, Zoro and Sakazuki artwork. |
+| Set/release | [Romance Dawn](../ui/evidence/2026-10-01-one-piece-social-cards/release.png) | OP-01 release identity with Luffy, Zoro and Nami cards from that release. |
+| Zoro variant | [Zoro exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-zoro.png) | Straw Hat Wanted frame and green ink; swords remain part of the actual artwork. |
+| Marine variant | [Sakazuki exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-marine.png) | Blue Marine character-file framing with Sakazuki's canonical Navy artwork. |
+
+The proofs preserve the full primary card artwork and its source markings.
+They introduce no generic nautical symbols, invented crew insignia, or imitation
+of the official One Piece logo. These are visual proposals, not approval of new
+product copy or price terminology and not screenshots of the current application.
+
+This tranche copies the six existing PNGs byte-for-byte and adds their review
+links to this report. Application behavior, metadata, production social-image
+rendering, data semantics and deployment configuration remain unchanged. No
+renderer source, contact sheet, validation JSON, or other design assets are added.
+
+Validation for this documentation-only commit: all six PNGs decode at 1200 × 630,
+match the completed local proof bytes, and resolve from the links above; the
+commit contains only these six images and this report. Application tests/build
+are not rerun because no application files change. The existing branch deployment
+suppression remains intact. PR #33 must remain open and unmerged for product review.
