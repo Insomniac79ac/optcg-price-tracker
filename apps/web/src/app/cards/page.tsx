@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: Props) {
   const path = release ? `/cards?release_product_id=${release.release_product_id}` : "/cards";
   const name = release ? releaseLabelEnglish(release.official_code, release.display_name) : "One Piece";
   const index = ![...query.keys()].some((k) => !["release_product_id", "set"].includes(k)) && (!query.has("release_product_id") || !!release);
-  return pageMetadata(`${name} Card Prices`, `Find ${name} cards and compare Japanese source prices for each exact printing. Unpriced cards are shown as unavailable.`, path, release ? `/share/release/${release.release_product_id}` : undefined, index);
+  return pageMetadata(`${name} Card Prices`, `Find ${name} cards and compare Japanese source prices for each exact version. Unpriced cards are shown as unavailable.`, path, release ? `/share/release/${release.release_product_id}` : undefined, index);
 }
 export default async function CardsPage({ searchParams }: Props) {
   const query = searchParamsUrl(await searchParams);

@@ -213,7 +213,7 @@ export function movementUnavailable(data: MarketValue) {
   return {
     title: coverage ? "Price coverage in progress" : "Price movement unavailable",
     detail: coverage
-      ? "More comparable printings are needed to show price movement for this view."
+      ? "More comparable card variants are needed to show price movement for this view."
       : `There isn’t a continuous, comparable price history for ${data.movement.window === "all" ? "the full archive" : `this ${marketWindowLabel(data.movement.window)} window`} yet.`,
   };
 }

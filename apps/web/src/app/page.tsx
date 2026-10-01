@@ -1,3 +1,4 @@
+import { readMarketReleases } from "@/lib/publicServer";
 import HomeClient from "./HomeClient";
 import { pageMetadata } from "@/lib/publicSeo";
 import { brand } from "@/lib/brand";
@@ -5,4 +6,4 @@ export const metadata = pageMetadata("One Piece Card Prices & Collection Value",
 metadata.title = { absolute: brand.metadataTitleDefault };
 metadata.openGraph = { ...metadata.openGraph, title: brand.metadataTitleDefault };
 metadata.twitter = { ...metadata.twitter, title: brand.metadataTitleDefault };
-export default function HomePage() { return <HomeClient />; }
+export default async function HomePage() { return <HomeClient initialSets={await readMarketReleases()} />; }

@@ -140,14 +140,14 @@ describe("Other versions", () => {
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveTextContent("Franky");
     expect(cards[0]).toHaveTextContent("ST01-010");
-    expect(cards[0]).toHaveTextContent("Alternate artwork");
-    expect(cards[0]).not.toHaveTextContent("Original artwork");
+    expect(cards[0]).toHaveTextContent("Alternate art");
+    expect(cards[0]).not.toHaveTextContent("Regular art");
     expect(cards[0]).toHaveTextContent("Found in Premium Card Collection — 25th Anniversary Edition");
     expect(within(cards[0]).getByText("Current")).toBeInTheDocument();
     expect(within(cards[0]).queryByRole("link")).toBeNull();
     expect(cards[1]).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
-    expect(cards[1]).toHaveTextContent("Original artwork");
-    expect(cards[1]).not.toHaveTextContent("Alternate artwork");
+    expect(cards[1]).toHaveTextContent("Regular art");
+    expect(cards[1]).not.toHaveTextContent("Alternate art");
     expect(within(cards[1]).getByRole("link")).toHaveAttribute("href", "/prints/6785");
     expect(within(cards[1]).getByRole("img")).toHaveAttribute("src", base.image_url);
     expect(section).not.toHaveTextContent(/Print #|Current printing|Base card|Alt Art|SP Card|プレミアム|スタートデッキ/);
@@ -167,7 +167,7 @@ describe("Other versions", () => {
     const sp = within(section).getByRole("link", {name: /SP Card/});
     expect(sp).toHaveAttribute("href", "/prints/14");
     expect(sp).toHaveTextContent("OP01-021");
-    expect(sp).toHaveTextContent("SP Card · Alternate artwork");
+    expect(sp).toHaveTextContent("SP Card · Alternate art");
     expect(sp).toHaveTextContent("Found in OP-17 — The World's Strongest Warriors");
     expect(within(section).getByRole("link", {name: /Treasure Rare/})).toHaveTextContent("Treasure Rare · Reprint");
     expect(section).toHaveTextContent("Found in OP-01 — Romance Dawn");
@@ -186,7 +186,7 @@ describe("Other versions", () => {
     expect(within(section).getByRole("link", {name: /Release not recorded/})).not.toHaveTextContent("OP-01");
     const uncoded = within(section).getByRole("link", {name: /Found in Special product/});
     expect(within(uncoded).queryByRole("img")).toBeNull();
-    expect(uncoded).not.toHaveTextContent(/記念商品|raw-treatment|Alternate artwork|Original artwork/);
+    expect(uncoded).not.toHaveTextContent(/記念商品|raw-treatment|Alternate art|Regular art/);
     expect(within(section).getByRole("link", {name: /Found in Premium Card Collection$/})).toBeInTheDocument();
   });
 
@@ -204,7 +204,7 @@ describe("Other versions", () => {
       const sibling = within(section).getByRole("link");
       expect(sibling).toHaveAttribute("href", "/prints/6785");
       expect(sibling).toHaveTextContent("Found in ST-01 — Straw Hat Crew");
-      expect(sibling).not.toHaveTextContent(/Original artwork|Alternate artwork|Base card/);
+      expect(sibling).not.toHaveTextContent(/Regular art|Alternate art|Base card/);
     },
   );
 });
@@ -264,7 +264,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     expect(screen.getAllByText("Alt Art").length).toBeGreaterThan(0);
-    expect(screen.getByText("Printing")).toBeTruthy();
+    expect(screen.getByText("Version")).toBeTruthy();
     expect(screen.queryByText("Treatment")).toBeNull();
     expect(screen.queryByText("parallel")).toBeNull();
   });
@@ -460,7 +460,7 @@ describe("print detail page", () => {
 
     expect(screen.queryByText("Alt Art")).toBeNull();
     expect(screen.queryByText("Reprint")).toBeNull();
-    expect(screen.queryByText("Printing")).toBeNull();
+    expect(screen.queryByText("Version")).toBeNull();
     // The internal words never reach the page either way.
     expect(container.textContent).not.toMatch(/\bnormal\b|\btreatment\b/i);
   });
@@ -471,7 +471,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const about = screen
-      .getByRole("heading", { name: "About this printing" })
+      .getByRole("heading", { name: "About this card" })
       .closest("section")!;
     for (const term of ["Card code", "Set", "Found in", "Rarity", "Card type", "Colour", "Language"]) {
       expect(within(about).getByText(term)).toBeTruthy();
@@ -485,12 +485,12 @@ describe("print detail page", () => {
     expect(about.textContent).not.toMatch(/\b(Cost|Power|Attribute|Effect|Counter)\b/);
   });
 
-  /** The rows of "About this printing", as term -> value, in document order.
+  /** The rows of "About this card", as term -> value, in document order.
    * The whole point of this tranche is which rows exist and what each one
    * says, so the tests read them off the page rather than probing for text. */
   function aboutRows(): [string, string][] {
     const about = screen
-      .getByRole("heading", { name: "About this printing" })
+      .getByRole("heading", { name: "About this card" })
       .closest("section")!;
     return Array.from(about.querySelectorAll("dl > div")).map((row) => [
       row.querySelector("dt")!.textContent!,
@@ -519,12 +519,11 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "OP06-007"],
-      ["Print ID", "1"],
       ["Set", "OP-06"],
       ["Found in", "PRB-02"],
       ["Rarity", "Super Rare"],
-      ["Special print", "SP Card"],
-      ["Printing", "Alt Art"],
+      ["Variant", "SP Card"],
+      ["Version", "Alt Art"],
       ["Card type", "Character"],
       ["Colour", "Red"],
       ["Language", "Japanese"],
@@ -555,11 +554,10 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "OP16-042"],
-      ["Print ID", "1"],
       ["Set", "OP-16"],
       ["Found in", "OP-16"],
-      ["Special print", "Treasure Rare"],
-      ["Printing", "Alt Art"],
+      ["Variant", "Treasure Rare"],
+      ["Version", "Alt Art"],
       ["Card type", "Character"],
       ["Colour", "Red"],
       ["Language", "Japanese"],
@@ -589,10 +587,9 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "P-105"],
-      ["Print ID", "1"],
       ["Found in", "OP-15"],
-      ["Special print", "SP Card"],
-      ["Printing", "Alt Art"],
+      ["Variant", "SP Card"],
+      ["Version", "Alt Art"],
       ["Card type", "Character"],
       ["Colour", "Red"],
       ["Language", "Japanese"],
@@ -610,7 +607,7 @@ describe("print detail page", () => {
     const rows = Object.fromEntries(aboutRows());
     expect(rows["Published rarity"]).toBe("XR");
     expect(rows["Rarity"]).toBeUndefined();
-    expect(rows["Special print"]).toBeUndefined();
+    expect(rows["Variant"]).toBeUndefined();
   });
 
   it("offers the terminology key on the page, not only on the catalogue", async () => {
@@ -660,7 +657,7 @@ describe("print detail page", () => {
 
     const index = screen.getByRole("heading", { name: "Recorded Market Value" });
     const live = screen.getByRole("heading", { name: "Current prices" });
-    const about = screen.getByRole("heading", { name: "About this printing" });
+    const about = screen.getByRole("heading", { name: "About this card" });
     const others = screen.getByRole("heading", { name: "Other versions" });
 
     expect(index.closest("section")).not.toContainElement(live);
@@ -734,7 +731,7 @@ describe("print detail page", () => {
     fetchPrint.mockRejectedValue(new Error("boom"));
     render(<PrintDetailPage />);
 
-    expect(await screen.findByText("This print couldn’t be loaded right now.")).toBeTruthy();
+    expect(await screen.findByText("This card couldn’t be loaded right now.")).toBeTruthy();
   });
 
   it("tells a visitor a print does not exist rather than blaming the network", async () => {
@@ -743,8 +740,8 @@ describe("print detail page", () => {
     fetchPrint.mockRejectedValue(new ApiError("Not Found", 404));
     render(<PrintDetailPage />);
 
-    expect(await screen.findByText("This printing could not be found.")).toBeTruthy();
-    expect(screen.queryByText("This print couldn’t be loaded right now.")).toBeNull();
+    expect(await screen.findByText("This version could not be found.")).toBeTruthy();
+    expect(screen.queryByText("This card couldn’t be loaded right now.")).toBeNull();
     expect(screen.getByRole("link", { name: /Browse the catalogue/ })).toBeTruthy();
   });
 
@@ -1006,7 +1003,7 @@ describe("print detail page", () => {
     // ...and it is LABELLED live, so it cannot be read as the archived figure
     // in the analytics band above.
     expect(within(live).getByText("Current Market Value")).toBeTruthy();
-    expect(within(live).getByText(/estimates this exact printing’s worth from tracked Japanese market data/)).toHaveTextContent("Actual buying and selling prices may differ.");
+    expect(within(live).getByText(/estimates this exact version’s worth from tracked Japanese market data/)).toHaveTextContent("Actual buying and selling prices may differ.");
   });
 });
 

@@ -166,7 +166,7 @@ export function CatalogueIntro({
           >
             <span className="sm:hidden">Cards</span>
             <span className="hidden sm:inline">
-              Same code. Different print.
+              Same code. Different card.
               <br />
               <span className="text-parchment">Different price.</span>
             </span>
@@ -185,8 +185,8 @@ export function CatalogueIntro({
                   {totalPrints.toLocaleString()}
                 </span>{" "}
                 {filtered
-                  ? `matching ${totalPrints === 1 ? "printing" : "printings"}`
-                  : `${totalPrints === 1 ? "printing" : "printings"} in the Atlas`}
+                  ? `matching ${totalPrints === 1 ? "card variant" : "card variants"}`
+                  : `${totalPrints === 1 ? "card variant" : "card variants"} in the Atlas`}
               </p>
             )}
           </div>
@@ -292,7 +292,7 @@ function CatalogueSearchField({
               ? "Code or name…"
               : "Search by card code, English or Japanese name…"
           }
-          aria-label="Search prints by card code, English name, or Japanese name"
+          aria-label="Search cards by card code, English name, or Japanese name"
           className="min-h-11 w-full min-w-0 rounded-control sm:min-h-0 border border-border-default bg-bg-page/75 py-2.5 pl-3.5 pr-10 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal [&::-webkit-search-cancel-button]:appearance-none"
         />
         {value !== "" && (

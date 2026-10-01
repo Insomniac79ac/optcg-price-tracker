@@ -60,13 +60,23 @@ beforeEach(() => {
 });
 
 describe("Market Value hero", () => {
+  it("keeps the selected window in the shareable URL and follows history navigation", async () => {
+    navigate("/analytics?window=30d");
+    await ready();
+    expect(screen.getByTestId("market-coverage-state")).toHaveTextContent("this 30D window");
+    fireEvent.click(within(screen.getByRole("group", { name: "Market window" })).getByRole("button", { name: "ALL" }));
+    await waitFor(() => expect(screen.getByTestId("market-movement")).toHaveTextContent("ALL"));
+    expect(window.location.search).toBe("?window=all");
+    navigate("/analytics");
+    await waitFor(() => expect(screen.getByTestId("market-movement")).toHaveTextContent("7D"));
+  });
   it("leads with Overall 7D movement, and attaches partial coverage to the secondary JPY value", async () => {
     await ready();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("How is the One Piece market doing?");
     expect(screen.getByTestId("market-movement")).toHaveTextContent("−3.94%7D");
     const tracked = screen.getByTestId("market-tracked-value");
     expect(tracked).toHaveTextContent("¥262,279");
-    expect(tracked).toHaveTextContent("639 of 4,316 printings priced");
+    expect(tracked).toHaveTextContent("639 of 4,316 card variants priced");
     expect(tracked).toHaveTextContent("14.8% coverage");
     expect(screen.getByText(/Published/)).toHaveTextContent("Sep 26, 2026");
     expect(screen.getByRole("combobox", { name: "Choose a release" })).toHaveValue("");
@@ -97,7 +107,7 @@ describe("Market Value hero", () => {
     expect(screen.getByRole("note")).toHaveTextContent("Coverage additions and removals");
     expect(apiGet.mock.calls.filter(([path]) => path === BASE)).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "About tracked value" }));
-    expect(screen.getByText("Value of one copy of every physical printing Card Pirate currently prices in this scope.")).toBeInTheDocument();
+    expect(screen.getByText("Value of one copy of every physical version Card Pirate currently prices in this scope.")).toBeInTheDocument();
   });
 
   it("withholds an ALL performance chart when the full archive crosses a break", async () => {
@@ -138,7 +148,7 @@ describe("authoritative release scope", () => {
     expect(screen.getByRole("heading", { name: "OP-05 — Awakening of the New Era" })).toBeInTheDocument();
     expect(screen.getByText("Price coverage in progress")).toBeInTheDocument();
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent(/Tracked so far.*¥480/);
-    expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("4 of 154 printings priced");
+    expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("4 of 154 card variants priced");
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("2.6% coverage");
     expect(screen.queryByTestId("market-value-chart")).not.toBeInTheDocument();
     expect(document.body.textContent).not.toContain("新時代");

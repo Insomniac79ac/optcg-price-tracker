@@ -109,7 +109,7 @@ function imageProvenance(print: PrintUiModel): string | null {
   // "bandai" - the API's identifier for the official ONE PIECE Card List.
   const source = sourceDisplayName(print.imageSource);
   return print.imageExactPrintVerified
-    ? `${source} image · verified for this printing`
+    ? `${source} image · verified card version`
     : `${source} image`;
 }
 
@@ -272,13 +272,13 @@ export default function PrintDetailPage({ initialDetail = null }: { initialDetai
 
         {status === "loading" && (
           <div className="mt-4">
-            <LoadingState>Loading this print…</LoadingState>
+            <LoadingState>Loading this card…</LoadingState>
           </div>
         )}
         {status === "not_found" && (
           <div className="mt-4">
             <CollectorEmptyState
-              title="This printing could not be found."
+              title="This version could not be found."
               action={
                 <Link
                   href="/cards"
@@ -288,14 +288,14 @@ export default function PrintDetailPage({ initialDetail = null }: { initialDetai
                 </Link>
               }
             >
-              The link may be out of date, or this printing hasn’t been catalogued yet.
+              The link may be out of date, or this version hasn’t been catalogued yet.
             </CollectorEmptyState>
           </div>
         )}
         {status === "error" && (
           <div className="mt-4">
             <ErrorState tone="collector">
-              This print couldn’t be loaded right now.
+              This card couldn’t be loaded right now.
             </ErrorState>
           </div>
         )}
@@ -461,7 +461,7 @@ function LiveMarket({
         </p>
       )}
 
-      <p className="mt-3 text-sm text-text-secondary">Card Pirate Market Value estimates this exact printing’s worth from tracked Japanese market data. Actual buying and selling prices may differ. Source asking prices, buy quotes and completed sales are shown separately below where reported.</p>
+      <p className="mt-3 text-sm text-text-secondary">Card Pirate Market Value estimates this exact version’s worth from tracked Japanese market data. Actual buying and selling prices may differ. Source asking prices, buy quotes and completed sales are shown separately below where reported.</p>
       <SourcePanels sources={print.marketIndex.source_values} />
       {print.marketIndex.auxiliary_values.some((value) => value.value_jpy !== null) && <section className="mt-5" aria-label="Other source prices"><h3 className="text-sm font-semibold">Other source prices</h3><p className="mt-1 text-xs text-text-secondary">For reference only. These prices are not used in Market Value.</p><SourcePanels sources={print.marketIndex.auxiliary_values} /></section>}
 
@@ -726,7 +726,6 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
   // absent value is an absent row.
   const rows: { term: string; value: string; hint?: string }[] = [
     { term: "Card code", value: print.cardCode },
-    { term: "Print ID", value: String(detail.card_print_id) },
     ...termRow("Set", print.originalSetCode, getTerm("identity.set")),
     ...termRow("Found in", detail.release_product_id != null
       ? releaseLabelEnglish(detail.release_code, detail.release_name)
@@ -741,8 +740,8 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
       // beside "SP Card" without the two contradicting each other.
       print.rarityIsCardLevel ? "The card's rarity, from its own set." : undefined,
     ),
-    ...termRow("Special print", print.specialPrint?.label ?? null, print.specialPrint),
-    ...termRow("Printing", print.printingType?.label ?? null, print.printingType),
+    ...termRow("Variant", print.specialPrint?.label ?? null, print.specialPrint),
+    ...termRow("Version", print.printingType?.label ?? null, print.printingType),
     // The fail-safe: a rarity token this build cannot classify is still
     // published evidence, so it is shown verbatim under a heading that claims
     // nothing about what it means.
@@ -760,7 +759,7 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
     <section className={styles.metadata}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold leading-snug text-text-primary">
-          About this printing
+          About this card
         </h2>
         {/* The same key as the catalogue, on the page where a collector is
             most likely to be asking what "SP Card" is next to "Super Rare".

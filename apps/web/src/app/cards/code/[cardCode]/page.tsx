@@ -124,7 +124,7 @@ export default function CardFamilyPage() {
               </Link>
             }
           >
-            No printing carries the card code {cardCode}.
+            No version carries the card code {cardCode}.
           </CollectorEmptyState>
         )}
 

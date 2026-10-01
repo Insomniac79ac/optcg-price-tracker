@@ -445,7 +445,7 @@ describe("print catalogue page", () => {
     await screen.findByRole("link", { name: /Sanji/ });
 
     expect(screen.getAllByText("“zoro”")).toHaveLength(1);
-    expect(screen.getAllByText(/1 printing/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1 card variant/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/families/i)).not.toBeInTheDocument();
   });
 
@@ -454,7 +454,7 @@ describe("print catalogue page", () => {
     const { container } = render(<PrintsCataloguePage />);
 
     await waitFor(() => expect(fetchPrintCatalogue).toHaveBeenCalled());
-    await screen.findByText(/No printings found/);
+    await screen.findByText(/No card variants found/);
     // Brand chrome is tagged data-brand-asset; any other image would be fake
     // catalogue content because the server returned no printings.
     expect(container.querySelectorAll("img:not([data-brand-asset])")).toHaveLength(0);

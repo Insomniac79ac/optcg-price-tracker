@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 const { redirect } = vi.hoisted(() => ({ redirect: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect }));
 
-import MarketMoversPage, { MARKET_MOVERS_REDIRECT } from "./page";
+import MarketMoversPage from "./page";
 
 /** /market/movers is parked, not deleted (tranche 1A, 2026-08-19). These
  * tests pin the two things that make it parked rather than gone: it answers
@@ -16,7 +16,6 @@ describe("/market/movers", () => {
     MarketMoversPage();
 
     expect(redirect).toHaveBeenCalledWith("/cards?sort=index_desc");
-    expect(MARKET_MOVERS_REDIRECT).toBe("/cards?sort=index_desc");
   });
 
   it("redirects temporarily, never permanently", () => {

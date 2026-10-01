@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { PrintDetail, PrintCatalogueList } from "./prints";
 import type { ReleaseCatalogueList } from "./releases";
-import type { MarketValue } from "./marketValue";
+import type { MarketValue, MarketValueReleases, MarketValueWindow } from "./marketValue";
 
 // Public reads only: no cookie, session, token or private API is forwarded.
 // Cache bounded public responses, never relabel retrieval time as source freshness.
@@ -17,4 +17,5 @@ export const publicRead = cache(async <T,>(path: string): Promise<T | null> => {
 export const readPrint = (printId: string) => /^\d+$/.test(printId) ? publicRead<PrintDetail>(`/prints/${printId}`) : Promise.resolve(null);
 export const readReleases = () => publicRead<ReleaseCatalogueList>("/releases");
 export const readCatalogue = (query: string) => publicRead<PrintCatalogueList>(`/prints?${query}`);
-export const readMarket = (id: number | null) => publicRead<MarketValue>(`/analytics/market-value?window=7d${id ? `&release_product_id=${id}` : ""}`);
+export const readMarket = (id: number | null, window: MarketValueWindow = "7d") => publicRead<MarketValue>(`/analytics/market-value?window=${window}${id ? `&release_product_id=${id}` : ""}`);
+export const readMarketReleases = () => publicRead<MarketValueReleases>("/analytics/market-value/releases");

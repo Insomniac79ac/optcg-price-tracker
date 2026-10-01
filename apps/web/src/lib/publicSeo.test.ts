@@ -7,7 +7,8 @@ import fixtures from "./__fixtures__/marketValue.json";
 const print = { card_print_id: 1, canonical_card_id: 2, card_code: "OP01-001", name_en: "Roronoa Zoro", name_jp: null, language: "jp", official_asset_variant: "base", release_product_id: 181, release_code: "OP-01", release_name: "ROMANCE DAWN", image_url: null, display_image: null, market_index: { index_value_jpy: null, source_count: 0, freshest_observation_at: null, calculated_at: "2099-01-01", stale_sources: [] } } as unknown as PrintDetail;
 describe("public identity and sharing", () => {
   it("disambiguates two physical printings of the same card", () => {
-    expect(printIdentity(print).detail).not.toBe(printIdentity({ ...print, card_print_id: 2 }).detail);
+    expect(printProduct(print).sku).not.toBe(printProduct({ ...print, card_print_id: 2 }).sku);
+    expect(printIdentity(print).detail).not.toMatch(/Print \d/);
     const product = printProduct(print);
     expect(product.sku).toBe("card-print-1");
     expect(product.url).toMatch(/\/prints\/1$/);
@@ -37,10 +38,10 @@ describe("public identity and sharing", () => {
     const data = structuredClone(fixtures.overall) as MarketValue;
     data.movement.available = false;
     data.movement.pct = "0";
-    expect(marketShareContent(data).identity).toBe("Price movement unavailable");
-    expect(marketShareContent(data).context).toContain("639 of 4,316 printings priced");
+    expect(marketShareContent(data).movement).toBeUndefined();
+    expect(marketShareContent(data).context).toContain("639 of 4,316 card variants priced");
     data.movement.available = true;
-    expect(marketShareContent(data).identity).toBe("0.00% over 7 days");
+    expect(marketShareContent(data).movement).toEqual({ window: "7D", value: "0.00%" });
   });
 });
 
@@ -51,7 +52,7 @@ describe("concise exact-print titles", () => {
   });
   it("distinguishes base and alternate artwork using authoritative variants", () => {
     const alt = { ...print, card_print_id: 2, official_asset_variant: "p1", siblings: [print] };
-    expect(printPriceTitle({ ...print, siblings: [alt] })).toBe("Roronoa Zoro OP01-001 Original Art Price");
+    expect(printPriceTitle({ ...print, siblings: [alt] })).toBe("Roronoa Zoro OP01-001 Regular Art Price");
     expect(printPriceTitle(alt)).toBe("Roronoa Zoro OP01-001 Alt Art Price");
     expect(printPriceTitle({ ...alt, card_print_id: 3, official_asset_variant: "p2", siblings: [alt] })).toBe("Roronoa Zoro OP01-001 Art 3 Price");
   });
@@ -76,9 +77,10 @@ describe("concise exact-print titles", () => {
     const franky = { ...print, card_print_id: 6823, card_code: "ST01-010", name_en: "Franky", official_asset_variant: "p1", release_product_id: 230, release_code: null, release_name: "プレミアムカードコレクション 25周年エディション" };
     expect(printPriceTitle(franky)).toBe("Franky ST01-010 Alt Art Price");
     expect(printIdentity(franky).detail).toContain("25th Anniversary");
-    expect(printIdentity(franky).detail).toContain("Print 6823");
+    expect(printIdentity(franky).detail).not.toContain("6823");
+    expect(printProduct(franky).sku).toBe("card-print-6823");
   });
   it("labels social value as an estimate with its contributing evidence", () => {
-    expect(printShareContent(print).context).toBe("Market Value estimate · 0 contributing sources");
+    expect(printShareContent(print).context).toBe("0 contributing sources · Japanese sources · this version");
   });
 });

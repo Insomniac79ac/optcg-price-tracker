@@ -193,7 +193,7 @@ export function pressedAnalyticsWindow(analytics: PrintAnalytics): string {
 export function windowShortfall(row: PrintAnalyticsWindowRow): string | null {
   if (row.available || row.required_days === null) return null;
   const days = row.covered_days === 1 ? "1 day" : `${row.covered_days} days`;
-  return `Atlas has ${days} of history for this print; this window needs ${row.required_days}.`;
+  return `Atlas has ${days} of history for this card; this window needs ${row.required_days}.`;
 }
 
 /** The server's `change_unavailable_reason` as a collector-facing sentence.

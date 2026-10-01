@@ -1,0 +1,513 @@
+{
+  "scan": "All non-test public frontend TS/TSX string literals and JSX text; excludes admin, API handlers and generated/fixture directories. Comments, symbol names and CardPrint contract identifiers intentionally unchanged.",
+  "remaining": [
+    {
+      "file": "app/HomeClient.tsx",
+      "line": 14,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/HomeClient.tsx",
+      "line": 48,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/HomeClient.tsx",
+      "line": 57,
+      "text": "updated-printings",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/HomeClient.tsx",
+      "line": 59,
+      "text": "updated-printings",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/cards/CardsClient.tsx",
+      "line": 20,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/cards/[id]/page.tsx",
+      "line": 58,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/cards/code/[cardCode]/page.tsx",
+      "line": 17,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/PrintClient.tsx",
+      "line": 59,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/PrintClient.tsx",
+      "line": 679,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/page.tsx",
+      "line": 9,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/page.tsx",
+      "line": 11,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/page.tsx",
+      "line": 11,
+      "text": "/share/print/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/[id]/page.tsx",
+      "line": 16,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/prints/sitemap.ts",
+      "line": 14,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/robots.ts",
+      "line": 3,
+      "text": "./prints/sitemap",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/robots.ts",
+      "line": 9,
+      "text": "/prints/sitemap/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/share/[kind]/[id]/route.tsx",
+      "line": 10,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "app/share/[kind]/[id]/route.tsx",
+      "line": 29,
+      "text": "print",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/CardPrintingChooser.tsx",
+      "line": 8,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/CatalogueIntro.tsx",
+      "line": 8,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/HomeMovers.tsx",
+      "line": 10,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/HomeMovers.tsx",
+      "line": 58,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/IndexMoversPanel.tsx",
+      "line": 179,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/MarketLandscapeCards.tsx",
+      "line": 43,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/MarketValueDiscovery.tsx",
+      "line": 68,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/MarketValueDiscovery.tsx",
+      "line": 137,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 74,
+      "text": "print-analytics",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 83,
+      "text": "print-analytics-window",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 111,
+      "text": "print-analytics-headline",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 164,
+      "text": "print-export-error",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 172,
+      "text": "print-export",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 245,
+      "text": "print-analytics-current",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 264,
+      "text": "print-analytics-stats",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 352,
+      "text": "print-analytics-change-unavailable",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintAnalyticsSection.tsx",
+      "line": 370,
+      "text": "print-analytics-change",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintCardTile.tsx",
+      "line": 6,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintCardTile.tsx",
+      "line": 83,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintCatalogueToolbar.tsx",
+      "line": 5,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintPriceHistory.tsx",
+      "line": 33,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/PrintPriceHistory.tsx",
+      "line": 471,
+      "text": "print-chart-watermark",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/publicNavigation.ts",
+      "line": 6,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "components/ui/publicNavigation.ts",
+      "line": 12,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "hooks/useProgressiveCatalogue.ts",
+      "line": 3,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/api.ts",
+      "line": 5,
+      "text": "@/lib/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/api.ts",
+      "line": 1134,
+      "text": "/print-options",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/catalogueSession.ts",
+      "line": 1,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/catalogueState.ts",
+      "line": 1,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/heroFan.ts",
+      "line": 31,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/homeDiscovery.ts",
+      "line": 1,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/marketAnalytics.ts",
+      "line": 35,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/marketAnalytics.ts",
+      "line": 36,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/marketAnalytics.ts",
+      "line": 180,
+      "text": "/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/marketValue.ts",
+      "line": 2,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/printAnalytics.ts",
+      "line": 165,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/printPriceHistory.ts",
+      "line": 56,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/printSeries.ts",
+      "line": 45,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/printSeries.ts",
+      "line": 183,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/prints.ts",
+      "line": 543,
+      "text": "/prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/prints.ts",
+      "line": 548,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/prints.ts",
+      "line": 556,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/prints.ts",
+      "line": 638,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicCardSearch.ts",
+      "line": 19,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicCardSearch.ts",
+      "line": 55,
+      "text": "print-",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicCardSearch.ts",
+      "line": 58,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicDiscoveryFixtures.ts",
+      "line": 2,
+      "text": "./prints",
+      "classification": "internal/code only (test fixture)"
+    },
+    {
+      "file": "lib/publicDiscoveryFixtures.ts",
+      "line": 9,
+      "text": "Print ",
+      "classification": "internal/code only (test fixture)"
+    },
+    {
+      "file": "lib/publicSeo.ts",
+      "line": 2,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicSeo.ts",
+      "line": 40,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicSeo.ts",
+      "line": 40,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicSeo.ts",
+      "line": 40,
+      "text": "card-print-",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicServer.ts",
+      "line": 3,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicServer.ts",
+      "line": 17,
+      "text": "/prints/",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/publicServer.ts",
+      "line": 19,
+      "text": "/prints?",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/shareCard.tsx",
+      "line": 4,
+      "text": "print",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/shareCard.tsx",
+      "line": 31,
+      "text": "print",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/shareContent.ts",
+      "line": 1,
+      "text": "./prints",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/shareContent.ts",
+      "line": 24,
+      "text": "print",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 43,
+      "text": "printing",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 74,
+      "text": "printing.alt_art",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 77,
+      "text": "printing",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 82,
+      "text": "printing.reprint",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 85,
+      "text": "printing",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 97,
+      "text": "printing.alt_art",
+      "classification": "internal/code only"
+    },
+    {
+      "file": "lib/terminology.ts",
+      "line": 345,
+      "text": "printing",
+      "classification": "internal/code only"
+    }
+  ],
+  "intentional_public_exceptions": [
+    "Reprint: actual collector distinction for an authoritative r-prefixed asset variant; no standalone print/printing/printings exception."
+  ],
+  "needs_replacement": []
+}

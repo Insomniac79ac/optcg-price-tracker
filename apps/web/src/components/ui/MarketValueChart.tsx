@@ -47,7 +47,7 @@ export function MarketValueChartTooltip({ active, payload, mode }: {
     <div className={styles.tooltip}>
       <p>{marketDate(row.date, true)}</p>
       <strong>{mode === "performance" ? marketPercent(row.value) : marketJpy(row.value)}</strong>
-      {mode === "value" && row.priced !== null && row.physical !== null && <p>{row.priced.toLocaleString("en-US")} / {row.physical.toLocaleString("en-US")} printings priced</p>}
+      {mode === "value" && row.priced !== null && row.physical !== null && <p>{row.priced.toLocaleString("en-US")} / {row.physical.toLocaleString("en-US")} card variants priced</p>}
     </div>
   );
 }

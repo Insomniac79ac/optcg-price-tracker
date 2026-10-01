@@ -40,7 +40,7 @@ export function MarketValueHero(props: MarketValueHeroProps) {
         <div>
           <p className={styles.eyebrow}>One Piece card prices</p>
           <h1 id="market-title">How is the One Piece market doing?</h1>
-          <p className={styles.subtitle}>See what is rising or falling across the Japanese printings we track. Coverage is partial.</p>
+          <p className={styles.subtitle}>See what is rising or falling across the Japanese card variants we track. Coverage is partial.</p>
         </div>
         <div className={styles.scopeControl}>
           <label htmlFor="market-scope">Choose a release</label>
@@ -85,7 +85,7 @@ export function MarketValueHero(props: MarketValueHeroProps) {
                 {available ? (
                   <p className={styles.movement} data-testid="market-movement"><span>{marketPercent(data.movement.pct)}</span><span className={styles.period}>{marketWindowLabel(displayWindow)}</span></p>
                 ) : <p className={styles.unavailableHeadline}>{unavailable?.title}</p>}
-                {data.scope_kind === "release" && !available && tracked && <p className={styles.sparseCoverage}>{tracked.priced_print_count.toLocaleString("en-US")} / {tracked.total_physical_print_count.toLocaleString("en-US")} printings priced</p>}
+                {data.scope_kind === "release" && !available && tracked && <p className={styles.sparseCoverage}>{tracked.priced_print_count.toLocaleString("en-US")} / {tracked.total_physical_print_count.toLocaleString("en-US")} card variants priced</p>}
               </div>
               <p className={styles.asOf}>Published <time dateTime={data.as_of}>{marketDate(data.as_of, true)}</time></p>
             </div>
@@ -95,7 +95,7 @@ export function MarketValueHero(props: MarketValueHeroProps) {
                 <div className={styles.chartEmpty} data-testid="market-coverage-state">
                   <AtlasMark title={null} className={styles.emptyMark} />
                   <p>{unavailable?.detail}</p>
-                  <span>Tracked value shows only the printings Card Pirate can price.</span>
+                  <span>Tracked value shows only the card variants Card Pirate can price.</span>
                 </div>
               ) : <MarketValueChart series={data.series} mode={mode} />}
               <div className={styles.chartFooter}>
@@ -109,12 +109,12 @@ export function MarketValueHero(props: MarketValueHeroProps) {
 
             {tracked && <div className={styles.tracked} data-testid="market-tracked-value">
               <div>
-                <p className={styles.trackedLabel}>{data.scope_kind === "release" && !available ? "Tracked so far" : "Tracked value"}<InfoTip label="About tracked value" text="Value of one copy of every physical printing Card Pirate currently prices in this scope." /></p>
+                <p className={styles.trackedLabel}>{data.scope_kind === "release" && !available ? "Tracked so far" : "Tracked value"}<InfoTip label="About tracked value" text="Value of one copy of every physical version Card Pirate currently prices in this scope." /></p>
                 <p className={styles.trackedNumber}>{marketJpy(tracked.value_jpy)}</p>
               </div>
               <div className={styles.coverage}>
-                <p>{tracked.priced_print_count.toLocaleString("en-US")} of {tracked.total_physical_print_count.toLocaleString("en-US")} printings priced<span>{coverage === null ? "Coverage unavailable" : `${coverage.toFixed(1)}% coverage`}</span></p>
-                <p>{tracked.is_partial ? "A partial basket. Unpriced printings are not valued at zero." : "One copy of each priced physical printing."}</p>
+                <p>{tracked.priced_print_count.toLocaleString("en-US")} of {tracked.total_physical_print_count.toLocaleString("en-US")} card variants priced<span>{coverage === null ? "Coverage unavailable" : `${coverage.toFixed(1)}% coverage`}</span></p>
+                <p>{tracked.is_partial ? "A partial basket. Unpriced card variants are not valued at zero." : "One copy of each priced physical version."}</p>
               </div>
             </div>}
           </>

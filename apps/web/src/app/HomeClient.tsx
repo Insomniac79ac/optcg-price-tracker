@@ -8,11 +8,12 @@ import { ErrorState } from "@/components/StateBlocks";
 import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
 import { PrintCardTile } from "@/components/ui/PrintCardTile";
 import { HomeMovers } from "@/components/ui/HomeMovers";
-import { AtlasVisualSystem, AtlasSectionIntro, AtlasReleaseDestination } from "@/components/ui/AtlasPrimitives";
+import { AtlasVisualSystem, AtlasSectionIntro } from "@/components/ui/AtlasPrimitives";
 import styles from "./Home.module.css";
 import { CardImageFrame } from "@/components/ui/CardImageFrame";
 import { toPrintUiModel } from "@/lib/prints";
-import { fetchReleases } from "@/lib/releases";
+import { HomeSetMovers } from "@/components/ui/HomeSetMovers";
+import type { MarketValueReleases } from "@/lib/marketValue";
 import { usePublicResource } from "@/hooks/usePublicResource";
 import { fetchHeroCatalogue, fetchRecentFinds, homeHeroPrints, rotateRecentFinds, utcDayKey } from "@/lib/homeDiscovery";
 
@@ -22,10 +23,9 @@ const LINK_CLASS = "text-sm font-medium text-accent-teal hover:text-accent-teal-
 const loadHero = async () => homeHeroPrints(await fetchHeroCatalogue(), utcDayKey());
 const loadRecent = async () => rotateRecentFinds((await fetchRecentFinds()).items.map(toPrintUiModel), utcDayKey());
 
-export default function HomePage() {
+export default function HomePage({ initialSets = null }: { initialSets?: MarketValueReleases | null }) {
   const hero = usePublicResource(loadHero);
   const recent = usePublicResource(loadRecent);
-  const releases = usePublicResource(fetchReleases);
   const preview = hero.data ?? [];
   return (
     <div className={styles.root}>
@@ -36,17 +36,16 @@ export default function HomePage() {
             <div className={styles.heroContent}>
               <div className={styles.intro}>
                 <p className={styles.kicker}>One Piece card prices · JPY</p>
-                <h1 id="home-title">Know what your cards <span>are actually worth.</span></h1>
-                <p className={styles.supporting}>See what your cards are worth, compare prices for the ones you want and see where the One Piece market is moving.</p>
+                <h1 id="home-title">Know what your cards <span>are worth.</span></h1>
+                <p className={styles.supporting}>Prices for the cards you own, want and watch.</p>
                 <HomeCardSearch />
-                <p className="text-sm text-text-secondary">Search by name or code, then choose your exact printing to see its price context.</p>
                 <div className={styles.intentLinks}><Link href="/cards">See card prices</Link><Link href="/analytics">View the market</Link><Link href="/collection">My collection</Link></div>
               </div>
-              {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured printings"><div /><div /><div /></div>}
-              {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured printings are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured printings</button></p></div>}
+              {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured card variants"><div /><div /><div /></div>}
+              {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured card variants are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured card variants</button></p></div>}
               {hero.status === "ready" && preview.length === 0 && <div className={styles.heroPlaceholder}><p>Featured artwork is not available yet. Search for a card by name or code.</p></div>}
-              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Featured SR, SP and Parallel printings">
-                {preview.map((print) => <Link key={print.cardPrintId} href={`/prints/${print.cardPrintId}`} prefetch={false} aria-label={`Preview ${print.displayName}, ${print.cardCode}, ${print.printingType?.label ?? "printing"}`}>
+              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Featured SR, SP and Parallel card variants">
+                {preview.map((print) => <Link key={print.cardPrintId} href={`/prints/${print.cardPrintId}`} prefetch={false} aria-label={`Preview ${print.displayName}, ${print.cardCode}, ${print.printingType?.label ?? "card variant"}`}>
                   <CardImageFrame imageUrl={print.imageUrl} alt="" cardCode={print.cardCode} rarity={print.rarity} geometry={print.imageGeometry} size="full" />
                 </Link>)}
               </div>}
@@ -57,29 +56,20 @@ export default function HomePage() {
 
           <section aria-labelledby="updated-printings">
             <div data-atlas-chapter>
-              <AtlasSectionIntro id="updated-printings" number="02" title="Recently added cards" description="Newly added printings to price and compare. This is catalogue activity, not price movement." />
+              <AtlasSectionIntro id="updated-printings" number="02" title="Recently added cards" description="Newly added card variants to price and compare. This is catalogue activity, not price movement." />
             </div>
             {recent.status === "loading" && <div className={styles.recentLoading}><CardGridSkeleton count={4} /></div>}
             {recent.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={recent.retry}>Retry recently added cards</button>}>recently added cards couldn&rsquo;t be loaded right now.</ErrorState>}
             {recent.status === "ready" && (recent.data?.length
               ? <div className={styles.recentGrid}>{recent.data.map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}</div>
-              : <p className="text-sm text-text-secondary">No recently added printings are available right now.</p>)}
+              : <p className="text-sm text-text-secondary">No recently added card variants are available right now.</p>)}
           </section>
 
-          <section className={styles.explore} aria-labelledby="home-explore">
-            <div data-atlas-chapter><AtlasSectionIntro id="home-explore" number="03" title="Prices by release" /></div>
-            {releases.status === "loading" && <div className={styles.releaseGrid} aria-label="Loading releases">{Array.from({length: 8}, (_, i) => <div key={i} className="h-24 animate-pulse rounded-panel bg-bg-surface" />)}</div>}
-            {releases.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={releases.retry}>Retry releases</button>}>Release prices could not be loaded right now.</ErrorState>}
-            {releases.status === "ready" && <div className={styles.releaseGrid}>
-              {releases.data?.items.slice(0, 8).map((release) => <AtlasReleaseDestination key={release.release_product_id} releaseCode={release.official_code} releasedOn={release.released_on} href={`/cards?release_product_id=${release.release_product_id}`} />)}
-              {releases.data?.items.length === 0 && <p>No releases are available right now.</p>}
-            </div>}
-            <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>See all card prices</Link>
-          </section>
+          <HomeSetMovers initialData={initialSets} />
           <section aria-labelledby="home-market" className={styles.market}>
             <div>
               <h2 id="home-market">How is the One Piece market doing?</h2>
-              <p>Follow price movement across the Japanese printings we track, with coverage shown alongside the figures.</p>
+              <p>Follow price movement across the Japanese card variants we track, with coverage shown alongside the figures.</p>
             </div>
             <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>View Market →</Link>
           </section>

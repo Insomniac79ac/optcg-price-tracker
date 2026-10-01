@@ -30,7 +30,7 @@ describe('catalogue terminology modal', () => {
   it('keeps content clicks open and definitions unchanged', () => {
     open(); fireEvent.click(screen.getByRole('heading',{name:'Rarity'}));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    for (const name of ['Rarity','Special print','Printing']) expect(screen.getByRole('heading',{name})).toBeInTheDocument();
+    for (const name of ['Rarity','Variant','Version']) expect(screen.getByRole('heading',{name})).toBeInTheDocument();
     for (const term of ['Alt Art','Reprint','SP Card','Treasure Rare','Found in']) expect(screen.getAllByText(term,{exact:false}).length).toBeGreaterThan(0);
   });
   it('uses viewport-bounded mobile presentation and locks only while open', () => {

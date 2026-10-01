@@ -60,7 +60,7 @@ export function CardPrintingChooser({
   return (
     <section className="rounded-panel border border-border-default bg-bg-surface p-4">
       <h2 className="text-sm font-semibold text-text-primary">
-        Printings of{" "}
+        Card variants of{" "}
         {canonicalName ? (
           <>
             {canonicalName}{" "}
@@ -71,7 +71,7 @@ export function CardPrintingChooser({
         )}
       </h2>
       <p className="mt-1 text-xs text-text-secondary">
-        Each printing of this card is valued separately. Choose the one you
+        Each version of this card is valued separately. Choose the one you
         have to see its Market Index and price history.
       </p>
 
@@ -80,13 +80,13 @@ export function CardPrintingChooser({
 
         {status === "error" && (
           <p className="text-sm text-text-muted">
-            The printings of this card couldn’t be loaded right now.
+            The card variants of this card couldn’t be loaded right now.
           </p>
         )}
 
         {status === "ready" && prints.length === 0 && (
           <p className="text-sm text-text-muted">
-            No printings of this card have been catalogued yet.
+            No card variants of this card have been catalogued yet.
           </p>
         )}
 

@@ -101,7 +101,7 @@ export function MarketLandscapeFilters({
 
         <ScopeSelect
           label="Rarity"
-          accessibleName="Rarity or special print"
+          accessibleName="Rarity or Variant"
           value={selectedRarity}
           placeholder="All rarities"
           options={rarities}

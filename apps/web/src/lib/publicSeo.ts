@@ -17,7 +17,7 @@ export function printIdentity(print: PrintDetail) {
   const release = print.release_product_id ? releaseLabelEnglish(print.release_code, print.release_name) : null;
   const printing = versionPrintingLabel(print.official_asset_variant);
   // The stable physical-print ID also distinguishes different artwork with the same label.
-  return { name, detail: [release, printing, print.language?.toUpperCase(), `Print ${print.card_print_id}`].filter(Boolean).join(" · ") };
+  return { name, detail: [release, printing, print.language?.toUpperCase()].filter(Boolean).join(" · ") };
 }
 // Titles describe the printing briefly; canonical IDs and full physical identity
 // stay in the URL, description, visible page, social image and Product JSON-LD.
@@ -26,8 +26,8 @@ export function printPriceTitle(print: PrintDetail): string {
   const label = versionPrintingLabel(print.official_asset_variant);
   const special = classifyRarityToken(print.rarity).specialPrint?.label;
   let variant: string | null = null;
-  if (label === "Original artwork" && siblings.length) variant = "Original Art";
-  if (label === "Alternate artwork") {
+  if (label === "Regular art" && siblings.length) variant = "Regular Art";
+  if (label === "Alternate art") {
     const sharedLabel = siblings.some((sibling) => versionPrintingLabel(sibling.official_asset_variant) === label);
     variant = sharedLabel ? artOrdinalLabel(print.official_asset_variant) || "Alt Art" : "Alt Art";
   }
@@ -37,7 +37,7 @@ export function printPriceTitle(print: PrintDetail): string {
 export const breadcrumbs = (items: { name: string; path: string }[]) => ({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items.map((item, i) => ({ "@type": "ListItem", position: i + 1, name: item.name, item: absoluteUrl(item.path) })) });
 export function printProduct(print: PrintDetail) {
   const identity = printIdentity(print);
-  return { "@context": "https://schema.org", "@type": "Product", "@id": absoluteUrl(`/prints/${print.card_print_id}#product`), url: absoluteUrl(`/prints/${print.card_print_id}`), name: `${identity.name} ${print.card_code} · ${identity.detail}`, sku: `card-print-${print.card_print_id}`, category: "One Piece trading card printing", description: "Exact physical printing with Japanese market price references. Card Pirate is not the seller.", image: print.display_image?.url || print.image_url || undefined, additionalProperty: [{ "@type": "PropertyValue", name: "Card code", value: print.card_code }, { "@type": "PropertyValue", name: "Canonical card ID", value: String(print.canonical_card_id) }, ...(print.release_product_id ? [{ "@type": "PropertyValue", name: "Release ID", value: String(print.release_product_id) }] : [])] };
+  return { "@context": "https://schema.org", "@type": "Product", "@id": absoluteUrl(`/prints/${print.card_print_id}#product`), url: absoluteUrl(`/prints/${print.card_print_id}`), name: `${identity.name} ${print.card_code} · ${identity.detail}`, sku: `card-print-${print.card_print_id}`, category: "One Piece trading card version", description: "Exact physical version with Japanese market price references. Card Pirate is not the seller.", image: print.display_image?.url || print.image_url || undefined, additionalProperty: [{ "@type": "PropertyValue", name: "Card code", value: print.card_code }, { "@type": "PropertyValue", name: "Canonical card ID", value: String(print.canonical_card_id) }, ...(print.release_product_id ? [{ "@type": "PropertyValue", name: "Release ID", value: String(print.release_product_id) }] : [])] };
 }
 export function serializeJsonLd(value: unknown) { return JSON.stringify(value).replace(/</g, "\\u003c"); }
 export type PublicSearchParams = Record<string, string | string[] | undefined>;

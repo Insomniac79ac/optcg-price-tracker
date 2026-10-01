@@ -1,0 +1,644 @@
+{
+  "data": "Local public-response fixtures; actual production renderer; saved canonical artwork. Not live prices.",
+  "social": [
+    {
+      "name": "home",
+      "url": "/share/home/site",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "luffy",
+      "url": "/share/print/1",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "zoro",
+      "url": "/share/print/2",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "marine",
+      "url": "/share/print/3",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "neutral",
+      "url": "/share/print/5",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "market",
+      "url": "/share/market/overall",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "release",
+      "url": "/share/release/181",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    },
+    {
+      "name": "market-30d-unavailable",
+      "url": "/share/market/overall?window=30d",
+      "status": 200,
+      "width": 1200,
+      "height": 630
+    }
+  ],
+  "pages": [
+    {
+      "name": "home-desktop",
+      "url": "/",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP02-099.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "home-390",
+      "url": "/",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP02-099.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "home-320",
+      "url": "/",
+      "metrics": {
+        "width": 320,
+        "scrollWidth": 320,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP02-099.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "exact-desktop",
+      "url": "/prints/1",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "exact-mobile",
+      "url": "/prints/1",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "cards",
+      "url": "/cards",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "h1": 1,
+        "images": [
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP05-119_p1.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-025.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP02-099.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-003.png",
+            "loaded": true,
+            "fit": "contain"
+          },
+          {
+            "src": "/api/card-image?u=https%3A%2F%2Fwww.onepiece-cardgame.com%2Fimages%2Fcardlist%2Fcard%2FOP01-016.png",
+            "loaded": true,
+            "fit": "contain"
+          }
+        ]
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "market",
+      "url": "/analytics",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "h1": 1,
+        "images": []
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    },
+    {
+      "name": "set-market",
+      "url": "/analytics?release_product_id=181",
+      "metrics": {
+        "width": 390,
+        "scrollWidth": 390,
+        "h1": 1,
+        "images": []
+      },
+      "exceptions": [],
+      "accidental_terms": []
+    }
+  ],
+  "metadata": [
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "Mozilla/5.0",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "OAI-SearchBot",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "ChatGPT-User",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "Twitterbot",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "facebookexternalhit/1.1",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "Googlebot",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/prints/1",
+      "canonical": "http://127.0.0.1:3000/prints/1",
+      "image": "http://127.0.0.1:3000/share/print/1"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/prints/2",
+      "canonical": "http://127.0.0.1:3000/prints/2",
+      "image": "http://127.0.0.1:3000/share/print/2"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/prints/3",
+      "canonical": "http://127.0.0.1:3000/prints/3",
+      "image": "http://127.0.0.1:3000/share/print/3"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/analytics",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=7d"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/analytics?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/analytics?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181?window=7d"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/analytics?window=30d",
+      "canonical": "http://127.0.0.1:3000/analytics",
+      "image": "http://127.0.0.1:3000/share/market/overall?window=30d"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/cards?release_product_id=181",
+      "canonical": "http://127.0.0.1:3000/cards?release_product_id=181",
+      "image": "http://127.0.0.1:3000/share/release/181"
+    },
+    {
+      "agent": "GPTBot",
+      "url": "/",
+      "canonical": "http://127.0.0.1:3000",
+      "image": "http://127.0.0.1:3000/share/home/site"
+    }
+  ],
+  "window_history": "PASS: shared 30D URL, switch to 7D, back to unavailable 30D"
+}

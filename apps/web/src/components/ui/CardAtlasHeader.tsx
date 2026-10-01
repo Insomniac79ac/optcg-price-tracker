@@ -21,7 +21,7 @@ export function CardAtlasHeader({
         <div>
           <h1 id="card-atlas-title" className={styles.heading}>Card Prices</h1>
           <p className={styles.description}>
-            Find a One Piece card and compare prices for the exact printing you own or want.
+            Find a One Piece card and compare prices for the exact version you own or want.
           </p>
         </div>
 
@@ -31,7 +31,7 @@ export function CardAtlasHeader({
               <strong>&ldquo;{query}&rdquo;</strong> in card prices
               {totalPrints !== null && (
                 <span className={styles.resultCount}>
-                  {totalPrints.toLocaleString()} {totalPrints === 1 ? "printing" : "printings"}
+                  {totalPrints.toLocaleString()} {totalPrints === 1 ? "card variant" : "card variants"}
                 </span>
               )}
             </p>
@@ -83,7 +83,7 @@ function CardAtlasSearch({ query, onSearch }: { query: string; onSearch: (next: 
             commitIfCleared(event.target.value);
           }}
           placeholder="Search by card code or name…"
-          aria-label="Search prints by card code, English name, or Japanese name"
+          aria-label="Search cards by card code, English name, or Japanese name"
           className={styles.searchInput}
         />
         {value !== "" && (

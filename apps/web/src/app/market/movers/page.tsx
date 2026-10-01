@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
  * That is exactly what the retired page showed - `GET /prints?sort=index_desc`
  * rendered as print tiles - so nobody loses a view, and /cards keeps the
  * filters, pagination and search the standalone page never had. */
-export const MARKET_MOVERS_REDIRECT = "/cards?sort=index_desc";
+const MARKET_MOVERS_REDIRECT = "/cards?sort=index_desc";
 
 /** /market/movers, temporarily retired (tranche 1A, 2026-08-19).
  *

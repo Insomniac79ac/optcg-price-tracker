@@ -51,14 +51,14 @@ describe("printing type", () => {
 
 describe("version printing labels", () => {
   it("names the original artwork only for the explicit official base asset", () => {
-    expect(versionPrintingLabel("base")).toBe("Original artwork");
-    expect(versionPrintingLabel(" BASE ")).toBe("Original artwork");
+    expect(versionPrintingLabel("base")).toBe("Regular art");
+    expect(versionPrintingLabel(" BASE ")).toBe("Regular art");
   });
 
   it("uses the established alt-art authority for alternate artwork", () => {
     for (const variant of ["p1", "p2", "p10", " P3 "]) {
       expect(printingTypeTerm(variant)?.key).toBe("printing.alt_art");
-      expect(versionPrintingLabel(variant)).toBe("Alternate artwork");
+      expect(versionPrintingLabel(variant)).toBe("Alternate art");
     }
   });
 
@@ -159,7 +159,7 @@ describe("special print", () => {
 
   it("explains TR as language-specific, not one universal artwork", () => {
     expect(specialPrintTerm("TR")?.definition).toBe(
-      "Treasure Rare. A language-specific special-art printing. Artwork may " +
+      "Treasure Rare. A language-specific special-art version. Artwork may " +
         "differ between English, Japanese, Chinese and other editions.",
     );
   });
@@ -237,17 +237,17 @@ describe("legend", () => {
   it("separates the three dimensions into their own sections", () => {
     const titles = LEGEND_SECTIONS.map((section) => section.title);
     expect(titles).toContain("Rarity");
-    expect(titles).toContain("Special print");
-    expect(titles).toContain("Printing");
+    expect(titles).toContain("Variant");
+    expect(titles).toContain("Version");
     // Ordering matters: it is the same order the tile badges and the detail
     // rows read in.
-    expect(titles.indexOf("Rarity")).toBeLessThan(titles.indexOf("Special print"));
-    expect(titles.indexOf("Special print")).toBeLessThan(titles.indexOf("Printing"));
+    expect(titles.indexOf("Rarity")).toBeLessThan(titles.indexOf("Variant"));
+    expect(titles.indexOf("Variant")).toBeLessThan(titles.indexOf("Version"));
   });
 
   it("files SP Card and Treasure Rare under Special print, never under Rarity", () => {
     const rarity = LEGEND_SECTIONS.find((s) => s.title === "Rarity");
-    const special = LEGEND_SECTIONS.find((s) => s.title === "Special print");
+    const special = LEGEND_SECTIONS.find((s) => s.title === "Variant");
     expect(special?.terms.map((t) => t.label)).toEqual(["SP Card", "Treasure Rare"]);
     // The rarity section explains the ladder in prose and lists no special
     // print at all - that is what stops SP Card reading as a scarcity tier.
@@ -284,7 +284,7 @@ describe("legend", () => {
   it("states that Found in is not necessarily the card's origin set", () => {
     const foundIn = LEGEND_TERMS.find((term) => term.label === "Found in");
     expect(foundIn?.definition).toBe(
-      "The product this specific printing appeared in. It does not necessarily mean the card originated in that set.",
+      "The product this specific version appeared in. It does not necessarily mean the card originated in that set.",
     );
   });
 

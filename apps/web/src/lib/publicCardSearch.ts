@@ -56,7 +56,7 @@ export function printToPaletteResult(item: PrintCatalogueItem): PaletteCardResul
     title: model.displayName,
     subtitle: parts.join(" · "),
     url: `/prints/${model.cardPrintId}`,
-    preview: { imageUrl: model.imageUrl, cardCode: model.cardCode, context: parts.slice(1).join(" · ") || "Printing" },
+    preview: { imageUrl: model.imageUrl, cardCode: model.cardCode, context: parts.slice(1).join(" · ") || "Version" },
   };
 }
 
@@ -159,7 +159,7 @@ export function groupPrintsIntoFamilies(
 /** A family stays a family; artwork is explicitly a returned printing preview. */
 export function familyToPaletteResult(family: CanonicalFamilyResult): PaletteCardResult {
   const parts = [family.cardCode];
-  parts.push("Card family · Choose printing");
+  parts.push("Card family · Choose version");
 
   return {
     key: family.key,

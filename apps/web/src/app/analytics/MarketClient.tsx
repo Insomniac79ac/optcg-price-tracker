@@ -9,7 +9,7 @@ import { MarketValueMostValuableSection, MarketValueMoversSection } from "@/comp
 import { MarketValueComparison } from "@/components/ui/MarketValueComparison";
 import { MarketValueReleaseMarket } from "@/components/ui/MarketValueReleaseMarket";
 import { ApiError } from "@/lib/api";
-import { fetchMarketValue, fetchMarketValueReleases, marketScopeUrl, parseMarketRelease, type MarketValue, type MarketValueMode, type MarketValueRelease, type MarketValueWindow } from "@/lib/marketValue";
+import { fetchMarketValue, fetchMarketValueReleases, MARKET_VALUE_WINDOWS, marketScopeUrl, parseMarketRelease, type MarketValue, type MarketValueMode, type MarketValueRelease, type MarketValueWindow } from "@/lib/marketValue";
 
 export default function MarketPage({ initialData = null }: { initialData?: MarketValue | null }) {
   return (
@@ -29,11 +29,11 @@ function MarketLoading() {
 function MarketView({ initialData }: { initialData: MarketValue | null }) {
   const searchParams = useSearchParams();
   const releaseProductId = parseMarketRelease(searchParams.get("release_product_id"));
-  const [window, setWindow] = useState<MarketValueWindow>("7d");
+  const window: MarketValueWindow = MARKET_VALUE_WINDOWS.includes(searchParams.get("window") as MarketValueWindow) ? searchParams.get("window") as MarketValueWindow : "7d";
   const [mode, setMode] = useState<MarketValueMode>("performance");
   const [attempt, setAttempt] = useState(0);
   const [releases, setReleases] = useState<{ items: MarketValueRelease[]; failed: boolean; loading: boolean }>({ items: [], failed: false, loading: true });
-  const [settled, setSettled] = useState<{ key: string; data: MarketValue | null; error: string | null } | null>(initialData ? { key: `${initialData.release_product_id ?? "overall"}:7d:0`, data: initialData, error: null } : null);
+  const [settled, setSettled] = useState<{ key: string; data: MarketValue | null; error: string | null } | null>(initialData ? { key: `${initialData.release_product_id ?? "overall"}:${initialData.movement.window}:0`, data: initialData, error: null } : null);
   const key = `${releaseProductId ?? "overall"}:${window}:${attempt}`;
 
   // The catalogue request is independent: its failure must not block Overall
@@ -62,7 +62,7 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
   const invalid = releaseProductId === "invalid";
   const busy = !invalid && settled?.key !== key;
   function changeScope(id: number | null) {
-    globalThis.window.history.pushState(null, "", marketScopeUrl(id));
+    globalThis.window.history.pushState(null, "", `${marketScopeUrl(id)}${window === "7d" ? "" : `${id === null ? "?" : "&"}window=${window}`}`);
     globalThis.window.dispatchEvent(new PopStateEvent("popstate"));
   }
   // Keep the last settled scope, headline, dates and chart together while
@@ -77,7 +77,11 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
     window={window}
     mode={mode}
     onScopeChange={changeScope}
-    onWindowChange={setWindow}
+    onWindowChange={(next) => {
+      const base = marketScopeUrl(typeof releaseProductId === "number" ? releaseProductId : null);
+      globalThis.window.history.pushState(null, "", `${base}${next === "7d" ? "" : `${base.includes("?") ? "&" : "?"}window=${next}`}`);
+      globalThis.window.dispatchEvent(new PopStateEvent("popstate"));
+    }}
     onModeChange={setMode}
     onRetry={() => setAttempt((value) => value + 1)}
   />
@@ -90,6 +94,6 @@ function MarketView({ initialData }: { initialData: MarketValue | null }) {
       changeScope(id);
       globalThis.window.scrollTo({ top: 0, behavior: globalThis.window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     }} />
-    <section className="mt-10 max-w-3xl space-y-3 text-sm leading-7 text-text-secondary"><h2 className="text-lg font-semibold text-text-primary">Understanding Market Value</h2><p>Tracked Market Value is the value in JPY of one copy of each printing we can currently price in the selected market. It is a partial basket, not the value of every One Piece card. Adding or removing priced cards can change that total.</p><p>Price movement compares eligible cards across published periods. Missing or insufficient history is shown as unavailable, not zero. Check the coverage beside each figure before treating it as a wider market trend.</p><p>The published date describes the market series. It does not mean every source was checked then. Each card’s source observations have their own dates.</p></section>
+    <section className="mt-10 max-w-3xl space-y-3 text-sm leading-7 text-text-secondary"><h2 className="text-lg font-semibold text-text-primary">Understanding Market Value</h2><p>Tracked Market Value is the value in JPY of one copy of each version we can currently price in the selected market. It is a partial basket, not the value of every One Piece card. Adding or removing priced cards can change that total.</p><p>Price movement compares eligible cards across published periods. Missing or insufficient history is shown as unavailable, not zero. Check the coverage beside each figure before treating it as a wider market trend.</p><p>The published date describes the market series. It does not mean every source was checked then. Each card’s source observations have their own dates.</p></section>
   </>;
 }

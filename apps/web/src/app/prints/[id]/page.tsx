@@ -6,7 +6,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props) {
   const { id: printId } = await params;
   const print = await readPrint(printId);
-  if (!print) return pageMetadata("Card price unavailable", "This exact printing could not be loaded. Search by name or code to see prices.", `/prints/${encodeURIComponent(printId)}`, undefined, false);
+  if (!print) return pageMetadata("Card price unavailable", "This exact version could not be loaded. Search by name or code to see prices.", `/prints/${encodeURIComponent(printId)}`, undefined, false);
   const identity = printIdentity(print);
   return pageMetadata(printPriceTitle(print), `Card Pirate Market Value estimates and Japanese source prices for ${identity.name} ${print.card_code}, ${identity.detail}. See coverage and price history.`, `/prints/${print.card_print_id}`, `/share/print/${print.card_print_id}`);
 }

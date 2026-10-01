@@ -2,6 +2,75 @@
 
 This review repositions the existing staging frontend around the cards collectors own or want. It covers public pages, search and sharing, with no changes to pricing, source collection or backend contracts. Baseline: staging `9f9c1c6`. Collection and wishlist remain private; account availability depends on the existing sign-in configuration.
 
+## Approved product-review implementation (2026-10-01)
+
+This is the current implementation review. It supersedes the historical design-only scope and copy below. The six approved proof PNGs remain unchanged as references; the new screenshots exercise the actual production renderer. **Keep PR #33 open and unmerged.**
+
+### Public collector language
+
+- Exact-card pages: “About this card”, version-specific verification and valuation wording, “Variant” and “Version” fields. Removed the normal visible Print ID row. “Other versions” remains.
+- Catalogue, chooser, search, source/history explanations, error/loading states and metadata: contextual card/version/variant/artwork language replaces print/printing. Coverage uses **card variants**. Known base artwork is **Regular art**; alternate artwork is **Alternate art** (existing compact Alt Art badges remain).
+- Internal CardPrint types, API fields, canonical `/prints/:id` routes, stable `card-print-:id` Product SKUs, enum keys, DOM/test IDs and physical-card identity remain unchanged. No price aggregation across variants was introduced.
+- [Classified terminology audit](../ui/evidence/2026-10-01-pr33-implementation/terminology-audit.json): remaining literal matches are internal routes/imports/keys/IDs or test fixture names. No accidental standalone print/printing/printings appeared in the rendered pages checked. Intentional public exception: **Reprint**, when the authoritative asset variant identifies an actual reissue; it is a useful collector distinction. No standalone print/printing exception is retained.
+
+### Homepage and card selection
+
+Headline: **Know what your cards are worth.** Support: **Prices for the cards you own, want and watch.** Search CTA: **See prices**. Removed the redundant hero explanation. The fan uses at most three complete card images with containment at desktop, 390px and 320px.
+
+The existing homepage selection logic is unchanged. It reads a bounded newest-created SR cohort (16), then facet-supported SP-rarity and parallel/SP-treatment cohorts (up to 16 each), deduplicates physical IDs, and filters to those eligible categories. A deterministic UTC-day + physical-ID hash rotates eligible artwork. Verified owned exact artwork is preferred over canonical fallbacks; different card codes/artwork are preferred before relaxing variety for a small catalogue. It never pads with invented cards and can show fewer than three. This is artwork selection, not a price, popularity or movement ranking. No price eligibility was added.
+
+### Sets on the Move
+
+Section 03 replaces the large release directory. It uses the existing public **`/analytics/market-value/releases`** contract, seeded in server HTML and refreshed through the existing public-resource hook. The primary ranking is descending **absolute 7D comparable movement**, showing the largest gains or falls, with a deterministic release-ID tie break and a maximum of four sets. Only the latest publication date in the response is compared; each row must have an available, publishable, finite 7D percentage. No ranking by card count, highest price or release recency. Missing/withheld history is excluded, valid zero remains zero, and an empty section explicitly says insufficient comparable history. Fewer eligible rows remain fewer.
+
+Each row shows code/name, signed 7D movement, the existing tracked value in JPY, priced/total card-variant coverage, publication date, and a link to its scoped Market page. It does not recompute market returns or imply full-market coverage. A small Browse by release link remains. The support line is **See which One Piece sets are gaining or falling the most.**
+
+### Dynamic social images
+
+The existing `/share/[kind]/[id]` route now renders the approved direction at **1200×630** using public exact-card, market and catalogue reads. No production fixture imports, hardcoded sample prices or private account reads are used. Public metadata points to these dynamic URLs. The selected 7D/30D/ALL window travels in the Market URL and image URL; canonicals remain scope-specific. Browser history follows the URL window.
+
+- **Home:** approved fan, Card Pirate publisher masthead, ONE PIECE CARD PRICES / COLLECTION & MARKET and final homepage copy.
+- **Exact card:** full canonical or verified exact artwork, name, code, known artwork descriptor, current API Market Value estimate, contributing-source context and observation date. A narrow exact-code/name allowlist provides Luffy/Zoro Straw Hat Wanted frames and Sakazuki's Marine file. Other identities use a neutral One Piece card-file treatment; faction is never inferred from rarity, colors or a fuzzy name.
+- **Market:** current tracked value, partial coverage, publication date, eligible comparable movement and three restrained manga-gutter artwork panels. Missing, withheld, non-finite or wrong-window movement is omitted, never invented as 0%.
+- **Release:** set identity, eligible movement, tracked value and card-variant coverage, the approved three-card composition and **SEE SET PRICES**. Catalogue artwork is explicitly filtered by returned release membership. The footer distinguishes representative artwork from basket constituents.
+
+Social representative art is selected separately from the homepage UI's SR/SP cohort: up to 24 newest catalogue rows, optionally scoped to the release, use the same deterministic daily artwork selector to choose at most three eligible images. There is no hardcoded character trio and no claim that displayed artwork is necessarily a priced constituent. Failed/missing assets produce fewer images or an honest unavailable-art state.
+
+Only approved public artwork origins are fetched, with exact-origin matching, no redirects, bounded body size/decode size and a deadline. Artwork is fitted in full, never cropped; overlap follows the approved fan. Source watermarks are preserved. Card Pirate remains the independent publisher. Small renderer constraints: two nested outlines implement the approved double frame because the image engine does not support CSS double borders; licensed bundled Liberation fonts preserve the serif/sans treatment and are present in the production trace. No new pirate symbols or nautical clipart were introduced.
+
+### Validation and review screenshots
+
+**Evidence boundary:** these are screenshots of the production build against local public-response fixtures and saved canonical One Piece artwork, not current hosted prices. They verify dynamic field binding and layout without production access or live scraping. Exact-card fixtures use ¥12,670 / ¥1,450 / ¥870; release fixtures include gains and falls; 30D is unavailable. Renderer-added sample-data labels are absent in production. The original SAMPLE watermarks embedded in official artwork are deliberately retained.
+
+| Surface | Desktop | Mobile | Narrow mobile |
+| --- | --- | --- | --- |
+| Homepage | [1440px](../ui/evidence/2026-10-01-pr33-implementation/home-desktop.png) | [390px](../ui/evidence/2026-10-01-pr33-implementation/home-390.png) | [320px](../ui/evidence/2026-10-01-pr33-implementation/home-320.png) |
+| Exact card | [1440px](../ui/evidence/2026-10-01-pr33-implementation/exact-desktop.png) | [390px](../ui/evidence/2026-10-01-pr33-implementation/exact-mobile.png) | — |
+| Sets on the Move | [1440px](../ui/evidence/2026-10-01-pr33-implementation/sets-1440.png) | [390px](../ui/evidence/2026-10-01-pr33-implementation/sets-390.png) | [320px](../ui/evidence/2026-10-01-pr33-implementation/sets-320.png) |
+
+| Dynamic social card | Production-renderer screenshot |
+| --- | --- |
+| Homepage | [Home](../ui/evidence/2026-10-01-pr33-implementation/social-home.png) |
+| Exact Luffy | [Luffy](../ui/evidence/2026-10-01-pr33-implementation/social-luffy.png) |
+| Exact Zoro | [Zoro](../ui/evidence/2026-10-01-pr33-implementation/social-zoro.png) |
+| Exact Marine | [Sakazuki](../ui/evidence/2026-10-01-pr33-implementation/social-marine.png) |
+| Market | [Overall Market](../ui/evidence/2026-10-01-pr33-implementation/social-market.png) |
+| Set/release | [OP-01](../ui/evidence/2026-10-01-pr33-implementation/social-release.png) |
+| Neutral identity fallback | [Nami, conservatively unclassified](../ui/evidence/2026-10-01-pr33-implementation/social-neutral.png) |
+| Unavailable movement | [30D Market](../ui/evidence/2026-10-01-pr33-implementation/social-market-30d-unavailable.png) |
+
+- [Production frontend build](../ui/evidence/2026-10-01-pr33-implementation/build.txt): passed, including Next's TypeScript validation. Standalone [TypeScript](../ui/evidence/2026-10-01-pr33-implementation/typescript.txt): passed. The build exposed an existing invalid named export in the legacy Market movers page; making that constant local preserves the redirect and satisfies Next's page-export contract.
+- [Targeted tests](../ui/evidence/2026-10-01-pr33-implementation/targeted-tests.txt): **463 passed in 23 files**. Includes eligible set ranking, no-history/zero handling, exact asset/faction identity, bounded artwork fetching, actual ImageResponse PNG encoding, scoped representative art, window navigation, public copy, canonical SEO, bot policy, hero selection and chart export. An old chooser assertion now expects its already-rendered “No market price yet” text; no chooser behavior change was needed.
+- [Changed-file lint](../ui/evidence/2026-10-01-pr33-implementation/changed-file-lint.txt): one existing `react-hooks/set-state-in-effect` error at `app/cards/code/[cardCode]/page.tsx:56`; [baseline reproduction](../ui/evidence/2026-10-01-pr33-implementation/baseline-lint.txt) has the identical error before this tranche. No new lint findings. `git diff --check` passed. The full unrelated frontend test/lint baseline was not rerun.
+- [Browser and metadata results](../ui/evidence/2026-10-01-pr33-implementation/browser-checks.json): **8 social PNGs, 8 responsive page cases, 56 metadata/canonical checks** across browser, OAI-SearchBot, ChatGPT-User, Twitter, Facebook, Googlebot and GPTBot agents. One h1, no horizontal overflow, all main images loaded with object containment, no uncaught page errors, and no accidental rendered print/printing wording. Exact-card public price evidence and Sets on the Move remain readable with JavaScript disabled. Shared-window selection and browser back navigation pass.
+- Public sitemaps and robots respond; exact canonical URL/SKU identity and truthful Product schema remain, with no Offer/AggregateOffer. Existing OAI-SearchBot support, separate GPTBot policy and narrowed htmlLimitedBots behavior are unchanged. No llms.txt or model-training policy changes.
+
+No pricing methodology, backend/API implementation, schema, source collection, collector jobs, freshness activation or production configuration changed. Existing branch deployment suppression remains unchanged. No merge or deployment was performed.
+
+---
+
+The remaining sections record earlier review stages and validation at their named commits.
+
 ## Information audit before implementation
 
 | Route or surface | User question | Current answer | Information gap | Recommended change |

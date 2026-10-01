@@ -170,7 +170,7 @@ export function printExportFilename(
 ): string {
   return [
     "card-pirate",
-    safeFilenameToken(cardCode, "print"),
+    safeFilenameToken(cardCode, "card"),
     safeFilenameToken(String(printId), "id"),
     safeFilenameToken(windowToken, "window"),
     dayStamp(now),
