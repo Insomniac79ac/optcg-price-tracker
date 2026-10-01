@@ -24,14 +24,17 @@ This review repositions the existing staging frontend around the cards collector
 
 ## Data boundaries
 
-Current exact-print value is the existing `market_index.index_value_jpy`, presented as Market Value without changing its calculation. Market tracked value and coverage-neutral movement remain the existing, separate `market-value` contract. Neither is a guaranteed sale price. An archive/publication date never becomes a source observation or successful-check time.
+Current exact-print value is the existing `market_index.index_value_jpy`, presented as Market Value without changing its calculation. Market tracked value and coverage-neutral movement remain the existing, separate `market-value` contract. Neither is a guaranteed buying or selling price or a live marketplace offer. An archive/publication date never becomes a source observation or successful-check time.
 
 ## Missing information and backend follow-up
 
 | User need | Missing field or data | Likely backend dependency | Priority |
 | --- | --- | --- | --- |
-| Know whether every current-price category was checked recently | Per-source/category last successful check, capture time, availability and freshness verdict, unknown reasons | Expose shared freshness contract on public exact-print/current-price APIs, including auxiliary categories; freshness adapters alone do not establish a public contract | P0 |
-| Understand age of overall/release market inputs | Source freshness distribution for basket; oldest contributing observation and check coverage | Public market-value summary derived from source freshness contract; `as_of` remains publication context | P0 |
+| Know the age of the last valid price by source/category | `last_valid_price_observed_at` for every source/category, including auxiliary prices | Expose the shared observation contract on public exact-print/current-price APIs; existing observation fields are not a complete shared contract | P0 |
+| Know when each source/category was successfully checked | `last_successfully_checked_at`, separately from observation/capture/publication time | Expose the shared successful-check contract; freshness adapters alone do not establish a public contract | P0 |
+| Distinguish no listing from unknown availability | Shared `availability` with explicit `no_listing`, `listed` and `unknown` states | Public exact-print/current-price availability by source/category | P0 |
+| Understand the freshness decision | Shared freshness verdict and reason, including unknown reasons | Expose the backend verdict/reason; do not infer it from a false stale flag or frontend TTL | P0 |
+| Understand age of overall/release market inputs | Freshness and coverage of inputs contributing to overall/release Market Value; source freshness distribution, oldest contributing observation and successful-check coverage | Public market-value summary derived from source freshness contract; `as_of` remains publication context | P0 |
 | Track the exact printing owned or wanted | Canonical exact-print collection/watch membership and actions | Existing collector contracts use legacy card identity; canonical ownership migration/API required | P1 |
 | See reliable collection change and biggest contributors | Comparable historical collection values tied to exact-print holdings and quantity changes | Canonical holdings plus valuation snapshots and attribution; do not substitute market basket movement | P1 |
 | See more reliable release/card movement | Sufficient published comparable observations | Existing pipeline must accumulate eligible history; frontend must keep unavailable states | P1 |
@@ -45,8 +48,8 @@ Implementation inventory, crawlability findings and validation evidence follow b
 | Surface | Before | After |
 | --- | --- | --- |
 | Home headline | Find your next card. | Know what your cards are actually worth. |
-| Home support | No collector-value explanation | Follow the cards you own, watch the ones you want and see where the One Piece market is moving. |
-| Home actions | Search; Browse all cards | Find a card; See card prices; View the market; Track my collection (existing account gate) |
+| Home support | No collector-value explanation | See what your cards are worth, compare prices for the ones you want and see where the One Piece market is moving. |
+| Home actions | Search; Browse all cards | See prices; See card prices; View the market; My collection (existing account gate). Search guidance: name/code → choose exact printing → price context |
 | Home sections | Recent finds; Discover a different selection each day; Explore the Atlas | Recently added cards, explicitly catalogue activity rather than movement; Prices by release |
 | Navigation | Cards; inherited Discover vocabulary | Card Prices; Home; Market |
 | Cards | THE CARD ATLAS; print taxonomy first | Card Prices; find the exact printing you own or want and compare its prices |
@@ -66,10 +69,10 @@ Existing calculation names remain in technical contracts and some historical cha
 ## Search and crawlability
 
 - Public data is fetched on the server from the existing public API, with a five-minute cache and six-second timeout. No session, private data or authorization header is forwarded. Exact-print identity/current sources, the first catalogue page, release navigation and Market headline/coverage render into HTML. Client filters, pagination restoration, independent retries and chart controls remain.
-- Exact prints have canonical IDs in titles and URLs. Release catalogue and Market URLs retain the existing `release_product_id` query format. Refinements/search/pagination are noindex with a canonical base or release destination; their ordinary links remain followable.
+- Exact prints retain canonical IDs in URLs, descriptions, social-image identity and JSON-LD; titles use brief card/artwork labels. Release catalogue and Market URLs retain the existing `release_product_id` query format. Refinements/search/pagination are noindex with a canonical base or release destination; their ordinary links remain followable.
 - `robots.txt` retains the wildcard allow policy and all private exclusions. A specific allow for the existing artwork proxy lets crawlers fetch canonical card images without opening other API routes. Public exact prints remain allowed; compatibility/family card routes remain excluded and receive noindex metadata. Private collection/account pages receive noindex metadata too.
 - The stable sitemap includes both release destinations from the canonical release list. Exact-print sitemap shards each read at most 100 public catalogue records; robots advertises the shard URLs. Catalogue pagination emits ordinary links, so discovery does not depend on infinite scrolling. No ingestion, recalculation or arbitrary request timestamp is emitted as `lastmod`.
-- Metadata is delivered in the initial head for all readers through Next's `htmlLimitedBots` setting. This avoids relying on a maintained list of user agents or JavaScript metadata insertion. Public content and descriptions use semantic headings; exact-print artwork has identity alt text, while linked decorative art retains accessible link names.
+- Metadata is delivered in the initial head for Next’s built-in HTML-limited agents plus documented OAI-SearchBot and ChatGPT-User agents. Ordinary browser requests retain metadata streaming; see the refinement decision below. Public content and descriptions use semantic headings; exact-print artwork has identity alt text, while linked decorative art retains accessible link names.
 - OAI-SearchBot is allowed by the existing wildcard policy. GPTBot receives an explicit rule preserving its exact former wildcard allow/disallow behavior, including the API exclusion; the new artwork-proxy exception does not expand its access. No model-training opt-in decision was changed. OpenAI documents the two settings as independent: [official crawler documentation](https://developers.openai.com/api/docs/bots). No speculative bot tokens were added. Other browsing agents receive the same public HTML and wildcard policy.
 - No repository WAF rule was found that singles out search agents. Hosted Vercel protection, firewall rules, third-party image access and actual crawler ingestion cannot be established by local tests. They were not modified or verified against production. The configured `NEXT_PUBLIC_SITE_URL` is authoritative, retaining the existing staging fallback; deployment owners must set their intended public origin when they publish.
 - `llms.txt` was not added: there is no concrete use here beyond the canonical, server-rendered pages, plain-language definitions and standard sitemaps. It is not treated as a ranking mechanism.
@@ -125,3 +128,62 @@ Social routes accept only supported kinds and canonical identifiers, never a pri
 - [Browser and metadata results](../ui/evidence/2026-10-01-collector-public/browser-summary.json), [320px acceptance checks](../ui/evidence/2026-10-01-collector-public/acceptance-summary.json), [validation summary](../ui/evidence/2026-10-01-collector-public/validation-summary.json).
 - `apps/web/vercel.json` sets only `git.deploymentEnabled["feature/collector-public-context"] = false`, preserving all existing exclusions. This exclusion is committed before the first push. GitHub workflow inspection found build/test jobs, not a deployment job. No service configuration, database, worker, source, schedule, collector or pricing methodology changed.
 - Feature branch targets staging and remains open for product review. Do not merge or deploy as part of this tranche.
+
+
+## PR #33 focused refinement (2026-10-01)
+
+This section supersedes the initial screenshots and validation counts where the focused refinement changes copy or metadata. Backend, collectors, APIs, pricing methodology and deployment remain outside this pass.
+
+### Copy and value meaning
+
+- Homepage submit is **See prices**. Placeholder examples remain; nearby guidance explains entering a name/code and choosing the exact printing for price context. The existing search destination remains `/cards?q=…` rather than guessing a physical printing.
+- Homepage, brand metadata and home social copy now describe seeing values and comparing cards owned or wanted. “Follow the cards you own” and related tracking claims are removed. The collection link is **My collection**; it retains the existing destination and account gate.
+- Exact-print copy: “Card Pirate Market Value estimates this exact printing’s worth from tracked Japanese market data. Actual buying and selling prices may differ.” Source asking prices, buy quotes and completed sales stay separate below; auxiliary references still explicitly do not contribute to Market Value.
+- Exact-print social images label the figure **Market Value estimate**, with contributing-source count and observation context. The page's current/archive hierarchy and source calculations are unchanged.
+
+### Exact-print title audit
+
+| Case | Previous title | Refined title |
+| --- | --- | --- |
+| Zoro base, no sibling disambiguation needed | Roronoa Zoro OP01-001 Price · OP-01 — Romance Dawn · Original artwork · JP · Print 1 — Card Pirate | Roronoa Zoro OP01-001 Price — Card Pirate |
+| Zoro base with alternate siblings | Same full identity title | Roronoa Zoro OP01-001 Original Art Price — Card Pirate |
+| Zoro single alternate artwork | Roronoa Zoro OP01-001 Price · OP-01 — Romance Dawn · Alternate artwork · JP · Print 2 — Card Pirate | Roronoa Zoro OP01-001 Alt Art Price — Card Pirate |
+| Multiple alternate artworks | Same generic artwork label plus print ID | Roronoa Zoro OP01-001 Art 2 Price — Card Pirate / Roronoa Zoro OP01-001 Art 3 Price — Card Pirate |
+| Reprint in PRB-01 / PRB-02 | Full release, reprint, language and print ID in each title | Roronoa Zoro OP01-001 Reprint Price — Card Pirate |
+| Franky anniversary printing (uncoded product) | Franky ST01-010 Price · Premium Card Collection — 25th Anniversary Edition · Alternate artwork · JP · Print 6823 — Card Pirate | Franky ST01-010 Alt Art Price — Card Pirate |
+
+Mock cases cover duplicate card codes, original/alternate artwork, two alternate art ordinals, reprints from different releases, an unknown variant, a special print, and the existing Franky original/uncoded anniversary identity shape. Only authoritative asset variants and published special-print labels supply descriptors. Missing/unknown variants never become “Original Art.” The existing art ordinal is used only when sibling alternate-art labels collide. No extra API request or legacy-card lookup is introduced.
+
+Short titles are not identity keys and need not be globally unique: two reprints sharing the same known descriptor deliberately share a short title. Their release, language and stable print ID remain distinct in descriptions, the visible printing information, social image and Product JSON-LD; each retains its own canonical URL and SKU. We do not infer a treatment, invent a reprint ordinal, or merge prices to force title uniqueness. Full physical details remain available to search and readers.
+
+### htmlLimitedBots decision in Next.js 16.2.10
+
+Verified against installed `next/dist/server/lib/streaming-metadata.js`, `next/dist/shared/lib/router/utils/html-bots.js` and the [Next htmlLimitedBots documentation](https://nextjs.org/docs/app/api-reference/config/next-config-js/htmlLimitedBots). For requests with a nonempty User-Agent, Next tests the configured regex and returns `serveStreamingMetadata = false` on a match. Thus `/.*/` blocks metadata for ordinary desktop/mobile visitors too, not just crawlers. Missing/empty User-Agent is an implementation exception: this predicate still allows streaming. Static metadata resolved at build time is unaffected.
+
+Blocking awaits dynamic metadata before sending the initial render so metadata can be in the head. This can increase TTFB and delay visible content on routes where metadata awaits public API reads (currently up to the existing six-second timeout). Our page data can independently delay rendering too; this change is not a claim of a measured production speedup. See [Next's streaming metadata explanation](https://nextjs.org/docs/app/api-reference/functions/generate-metadata#streaming-metadata).
+
+Decision: replace the wildcard with the complete default regex exported by the pinned Next version, extended only with **OAI-SearchBot** and **ChatGPT-User**, both listed in the [official OpenAI crawler documentation](https://developers.openai.com/api/docs/bots). Search and user-initiated browsing metadata stays head-readable, as do Next's existing social/search defaults. Normal browsers and Google's JavaScript-capable main Googlebot retain streaming. An override replaces defaults rather than adding to them, so an AI-only regex would regress social previews. Importing the default prevents a copied list from drifting; the small internal-import dependency is covered by tests of the installed framework and should be reviewed on Next upgrades.
+
+This is rendering policy, not crawler authorization. OAI-SearchBot remains accessible under the existing wildcard robots policy; GPTBot's separate training-access rules are untouched. No speculative agent names or llms.txt were introduced. Server-rendered public evidence, semantic headings, sitemap discovery, exact-print canonicals and truthful structured data remain. No Offer/AggregateOffer schema was added.
+
+### Remaining product/data dependencies
+
+All five requested freshness/coverage items are explicitly P0 in the retained inventory above. Exact-print ownership/watch membership and reliable collection history remain P1. We added no backend placeholder, invented check time, availability state, or freshness value. Unknown source checks/availability stay unknown. Local validation cannot establish hosted firewall behavior or actual crawler ingestion.
+
+
+### Refinement validation and evidence
+
+- **Production build:** `npm run build` passed on Next.js **16.2.10**, including TypeScript. The local build used mock API/canonical origins, not hosted environments. [Build output](../ui/evidence/2026-10-01-collector-refinement/build.txt).
+- **Targeted tests:** **274 passed across 11 files**: Home, exact-print page and analytics, Cards, Market, public SEO/title/identity/social content, installed-framework metadata bot behavior, robots, metadata images, brand, and current-price freshness. [Test output](../ui/evidence/2026-10-01-collector-refinement/targeted-tests.txt). An existing exact-print analytics fixture omitted the required `auxiliary_values` array; the fixture now supplies an empty array. Visible identity assertions include the newly displayed Print ID. No runtime fallback was introduced.
+- **Changed-file ESLint:** passed without findings. `git diff --check` passed. The earlier full-suite/lint baseline above is historical; this focused pass did not rerun or fix unrelated baseline failures.
+- **Production-server metadata/canonicals:** **60 checks** (eight representative print cases × seven browser/crawler agents, plus Cards/Market and release destinations). All crawler cases expose title/canonical/description in the initial head; title, Open Graph and Twitter text agree. Distinct print URLs, SKUs, release descriptions and visible IDs remain; no Offer/seller assertion is emitted. The print sitemap contains all eight mock identities. [Detailed results](../ui/evidence/2026-10-01-collector-refinement/checks.json), [sitemap](../ui/evidence/2026-10-01-collector-refinement/prints-sitemap.xml).
+- **Browser:** Home and exact print at **1440, 390 and 320px**, one h1, no horizontal overflow, artwork loaded/contained, and no uncaught page errors. The search button reaches `/cards?q=OP01-001` with exact-print links at every width. No-JavaScript Franky identity and Market Value explanation remain readable. Browser account state is a mock signed-out session; no private behavior was changed or validated.
+- **Social cards:** Home, exact-print Zoro, long-identity Franky anniversary, overall Market and release, all **1200×630**. Checked full contained art, estimate/source count, unchanged observation/check distinction, partial market coverage and legible identity. Images and prices in this new evidence are entirely local mock fixtures, including a clearly marked neutral card image; they are not source artwork or current market reports.
+- **Scope:** no backend/API/collector/pricing/deployment changes. Existing Vercel branch deployment suppression is untouched. PR #33 remains for product review; do not merge.
+
+| Surface | Desktop | Mobile | Narrow mobile |
+| --- | --- | --- | --- |
+| Home | [1440px](../ui/evidence/2026-10-01-collector-refinement/home-1440.png) | [390px](../ui/evidence/2026-10-01-collector-refinement/home-390.png) | [320px](../ui/evidence/2026-10-01-collector-refinement/home-320.png) |
+| Exact print | [1440px](../ui/evidence/2026-10-01-collector-refinement/print-1440.png) | [390px](../ui/evidence/2026-10-01-collector-refinement/print-390.png) | [320px](../ui/evidence/2026-10-01-collector-refinement/print-320.png) |
+
+Social examples: [Home](../ui/evidence/2026-10-01-collector-refinement/social-home-site.png), [Zoro](../ui/evidence/2026-10-01-collector-refinement/social-print-1.png), [Franky anniversary](../ui/evidence/2026-10-01-collector-refinement/social-print-6823.png), [Market](../ui/evidence/2026-10-01-collector-refinement/social-market-overall.png), [release](../ui/evidence/2026-10-01-collector-refinement/social-release-181.png).

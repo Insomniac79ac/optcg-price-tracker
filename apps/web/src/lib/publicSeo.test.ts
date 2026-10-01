@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { printIdentity, printProduct, pageMetadata, serializeJsonLd } from "./publicSeo";
+import { printIdentity, printPriceTitle, printProduct, pageMetadata, serializeJsonLd } from "./publicSeo";
 import { marketShareContent, printShareContent } from "./shareContent";
 import type { PrintDetail } from "./prints";
 import type { MarketValue } from "./marketValue";
@@ -41,5 +41,44 @@ describe("public identity and sharing", () => {
     expect(marketShareContent(data).context).toContain("639 of 4,316 printings priced");
     data.movement.available = true;
     expect(marketShareContent(data).identity).toBe("0.00% over 7 days");
+  });
+});
+
+
+describe("concise exact-print titles", () => {
+  it("keeps an ordinary print title free of database identity", () => {
+    expect(printPriceTitle(print)).toBe("Roronoa Zoro OP01-001 Price");
+  });
+  it("distinguishes base and alternate artwork using authoritative variants", () => {
+    const alt = { ...print, card_print_id: 2, official_asset_variant: "p1", siblings: [print] };
+    expect(printPriceTitle({ ...print, siblings: [alt] })).toBe("Roronoa Zoro OP01-001 Original Art Price");
+    expect(printPriceTitle(alt)).toBe("Roronoa Zoro OP01-001 Alt Art Price");
+    expect(printPriceTitle({ ...alt, card_print_id: 3, official_asset_variant: "p2", siblings: [alt] })).toBe("Roronoa Zoro OP01-001 Art 3 Price");
+  });
+  it("identifies special prints without treating a reprint as original artwork", () => {
+    expect(printPriceTitle({ ...print, rarity: "SPカード", official_asset_variant: "p1" })).toBe("Roronoa Zoro OP01-001 SP Card Alt Art Price");
+    expect(printPriceTitle({ ...print, official_asset_variant: "r1" })).toBe("Roronoa Zoro OP01-001 Reprint Price");
+  });
+  it("preserves distinct canonical identities when reprints share a short title", () => {
+    const reprints = [
+      { ...print, card_print_id: 10, official_asset_variant: "r1", release_product_id: 190, release_code: "PRB-01" },
+      { ...print, card_print_id: 11, official_asset_variant: "r2", release_product_id: 191, release_code: "PRB-02" },
+    ];
+    expect(printPriceTitle(reprints[0])).toBe(printPriceTitle(reprints[1]));
+    expect(printIdentity(reprints[0]).detail).not.toBe(printIdentity(reprints[1]).detail);
+    expect(printProduct(reprints[0]).sku).not.toBe(printProduct(reprints[1]).sku);
+    expect(printProduct(reprints[0]).url).not.toBe(printProduct(reprints[1]).url);
+  });
+  it.each([null, "x1"])("does not invent original artwork for %s provenance", (variant) => {
+    expect(printPriceTitle({ ...print, official_asset_variant: variant, treatment: "normal", siblings: [print] })).toBe("Roronoa Zoro OP01-001 Price");
+  });
+  it("keeps the real uncoded Franky anniversary release in identity rather than the title", () => {
+    const franky = { ...print, card_print_id: 6823, card_code: "ST01-010", name_en: "Franky", official_asset_variant: "p1", release_product_id: 230, release_code: null, release_name: "プレミアムカードコレクション 25周年エディション" };
+    expect(printPriceTitle(franky)).toBe("Franky ST01-010 Alt Art Price");
+    expect(printIdentity(franky).detail).toContain("25th Anniversary");
+    expect(printIdentity(franky).detail).toContain("Print 6823");
+  });
+  it("labels social value as an estimate with its contributing evidence", () => {
+    expect(printShareContent(print).context).toBe("Market Value estimate · 0 contributing sources");
   });
 });

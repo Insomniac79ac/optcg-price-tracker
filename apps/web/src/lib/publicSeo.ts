@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { PrintDetail } from "./prints";
 import { publicSiteUrl } from "./publicRoutes";
-import { versionPrintingLabel } from "./terminology";
+import { artOrdinalLabel, classifyRarityToken, versionPrintingLabel } from "./terminology";
 import { releaseLabelEnglish } from "./releaseNames";
 
 export const absoluteUrl = (path: string) => new URL(path, publicSiteUrl()).toString();
@@ -18,6 +18,21 @@ export function printIdentity(print: PrintDetail) {
   const printing = versionPrintingLabel(print.official_asset_variant);
   // The stable physical-print ID also distinguishes different artwork with the same label.
   return { name, detail: [release, printing, print.language?.toUpperCase(), `Print ${print.card_print_id}`].filter(Boolean).join(" · ") };
+}
+// Titles describe the printing briefly; canonical IDs and full physical identity
+// stay in the URL, description, visible page, social image and Product JSON-LD.
+export function printPriceTitle(print: PrintDetail): string {
+  const siblings = (print.siblings ?? []).filter((sibling) => sibling.card_print_id !== print.card_print_id);
+  const label = versionPrintingLabel(print.official_asset_variant);
+  const special = classifyRarityToken(print.rarity).specialPrint?.label;
+  let variant: string | null = null;
+  if (label === "Original artwork" && siblings.length) variant = "Original Art";
+  if (label === "Alternate artwork") {
+    const sharedLabel = siblings.some((sibling) => versionPrintingLabel(sibling.official_asset_variant) === label);
+    variant = sharedLabel ? artOrdinalLabel(print.official_asset_variant) || "Alt Art" : "Alt Art";
+  }
+  if (label === "Reprint") variant = "Reprint";
+  return [...new Set([printIdentity(print).name, print.card_code]), special, variant, "Price"].filter(Boolean).join(" ");
 }
 export const breadcrumbs = (items: { name: string; path: string }[]) => ({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items.map((item, i) => ({ "@type": "ListItem", position: i + 1, name: item.name, item: absoluteUrl(item.path) })) });
 export function printProduct(print: PrintDetail) {

@@ -7,7 +7,7 @@ const jpy = (value: number | null) => value === null ? "Value unavailable" : `¥
 export function printShareContent(print: PrintDetail): ShareCardContent {
   const identity = printIdentity(print);
   const index = print.market_index;
-  return { kind: "print", title: `${identity.name} ${print.card_code}`, identity: identity.detail, value: jpy(index.index_value_jpy), context: `Market Value · ${index.source_count} contributing source${index.source_count === 1 ? "" : "s"}${index.stale_sources.length ? " · Stale sources" : ""}`, date: index.freshest_observation_at ? `Latest observation ${index.freshest_observation_at.slice(0, 10)} · Source checks not reported` : "Observation time unknown · Source checks not reported" };
+  return { kind: "print", title: `${identity.name} ${print.card_code}`, identity: identity.detail, value: jpy(index.index_value_jpy), context: `Market Value estimate · ${index.source_count} contributing source${index.source_count === 1 ? "" : "s"}${index.stale_sources.length ? " · Stale sources" : ""}`, date: index.freshest_observation_at ? `Latest observation ${index.freshest_observation_at.slice(0, 10)} · Source checks not reported` : "Observation time unknown · Source checks not reported" };
 }
 export function marketShareContent(data: MarketValue): ShareCardContent {
   const release = data.scope_kind === "release";

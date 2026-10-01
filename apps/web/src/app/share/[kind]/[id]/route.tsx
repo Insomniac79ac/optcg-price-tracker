@@ -24,7 +24,7 @@ async function artworkData(url: string | null | undefined): Promise<string | nul
 }
 export async function GET(_request: Request, { params }: { params: Promise<{ kind: string; id: string }> }) {
   const { kind, id } = await params;
-  let content: ShareCardContent = { kind: "home", title: "Know what your cards are actually worth.", identity: "Follow the cards you own. Watch the ones you want.", value: "", context: "Japanese card prices and One Piece market movement", date: "Card prices · Collection value · Market context" };
+  let content: ShareCardContent = { kind: "home", title: "Know what your cards are actually worth.", identity: "Price context for the cards you own or want.", value: "", context: "Japanese card prices and One Piece market movement", date: "Card prices · Collection value · Market context" };
   if (kind === "print" && /^\d+$/.test(id)) {
     const print = await readPrint(id);
     if (!print) return new Response("Card unavailable", { status: 404 });

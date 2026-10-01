@@ -86,7 +86,7 @@ describe('Home discovery',()=>{
 });
 describe('Home search',()=>{
   it.each(['Kaido','OP01-001','カイドウ','  Kaido  ','','   '])('submits %s without a search lookup',async term=>{
-    await ready();fireEvent.change(screen.getByRole('searchbox'),{target:{value:term}});fireEvent.submit(screen.getByRole('search'));expect(push).toHaveBeenCalledWith(buildCardsSearchHref(term));expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
+    await ready();expect(screen.getByText(/choose your exact printing to see its price context/)).toBeInTheDocument();fireEvent.change(screen.getByRole('searchbox'),{target:{value:term}});fireEvent.click(screen.getByRole('button', {name:'See prices'}));expect(push).toHaveBeenCalledWith(buildCardsSearchHref(term));expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
   });
   it('bounds the search length',()=>expect(buildCardsSearchHref('a'.repeat(200))).toBe(`/cards?q=${'a'.repeat(128)}`));
 });

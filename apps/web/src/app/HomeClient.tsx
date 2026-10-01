@@ -37,9 +37,10 @@ export default function HomePage() {
               <div className={styles.intro}>
                 <p className={styles.kicker}>One Piece card prices · JPY</p>
                 <h1 id="home-title">Know what your cards <span>are actually worth.</span></h1>
-                <p className={styles.supporting}>Follow the cards you own, watch the ones you want and see where the One Piece market is moving.</p>
+                <p className={styles.supporting}>See what your cards are worth, compare prices for the ones you want and see where the One Piece market is moving.</p>
                 <HomeCardSearch />
-                <div className={styles.intentLinks}><Link href="/cards">See card prices</Link><Link href="/analytics">View the market</Link><Link href="/collection">Track my collection</Link></div>
+                <p className="text-sm text-text-secondary">Search by name or code, then choose your exact printing to see its price context.</p>
+                <div className={styles.intentLinks}><Link href="/cards">See card prices</Link><Link href="/analytics">View the market</Link><Link href="/collection">My collection</Link></div>
               </div>
               {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured printings"><div /><div /><div /></div>}
               {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured printings are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured printings</button></p></div>}
@@ -149,7 +150,7 @@ function HomeCardSearch() {
         type="submit"
         className={styles.searchSubmit}
       >
-        Find a card
+        See prices
       </button>
     </form>
   );

@@ -105,6 +105,7 @@ function makeDetail(): PrintDetail {
       confidence: "high",
       source_price_range: null,
       source_values: [],
+      auxiliary_values: [],
       freshest_observation_at: "2026-09-08T20:00:00Z",
     },
     siblings: [],

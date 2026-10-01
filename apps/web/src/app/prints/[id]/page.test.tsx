@@ -519,6 +519,7 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "OP06-007"],
+      ["Print ID", "1"],
       ["Set", "OP-06"],
       ["Found in", "PRB-02"],
       ["Rarity", "Super Rare"],
@@ -554,6 +555,7 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "OP16-042"],
+      ["Print ID", "1"],
       ["Set", "OP-16"],
       ["Found in", "OP-16"],
       ["Special print", "Treasure Rare"],
@@ -587,6 +589,7 @@ describe("print detail page", () => {
 
     expect(aboutRows()).toEqual([
       ["Card code", "P-105"],
+      ["Print ID", "1"],
       ["Found in", "OP-15"],
       ["Special print", "SP Card"],
       ["Printing", "Alt Art"],
@@ -1003,6 +1006,7 @@ describe("print detail page", () => {
     // ...and it is LABELLED live, so it cannot be read as the archived figure
     // in the analytics band above.
     expect(within(live).getByText("Current Market Value")).toBeTruthy();
+    expect(within(live).getByText(/estimates this exact printing’s worth from tracked Japanese market data/)).toHaveTextContent("Actual buying and selling prices may differ.");
   });
 });
 

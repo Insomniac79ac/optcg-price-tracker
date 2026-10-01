@@ -29,7 +29,7 @@ export const brand = {
 
   /** One sentence, no jargon - the product's actual promise to a collector. */
   productDescription:
-    "Follow the cards you own, watch the ones you want and see where the One Piece market is moving.",
+    "See what your cards are worth, compare prices for the ones you want and see where the One Piece market is moving.",
 
   /** <title> default when a page doesn't set its own. */
   metadataTitleDefault: "Card Pirate — One Piece Card Prices & Collection Value",
@@ -37,11 +37,11 @@ export const brand = {
   metadataTitleTemplate: "%s — Card Pirate",
 
   metadataDescription:
-    "Track the value of your One Piece cards, watch prices before you buy and see how the overall market is moving.",
+    "See what your One Piece cards are worth, compare prices before you buy and see how the overall market is moving.",
 
   /** Shorter than metadataDescription - for OG/social cards and share sheets. */
   socialSharingDescription:
-    "Follow your cards, compare Japanese source prices and see where the One Piece market is moving.",
+    "See what your cards are worth, compare Japanese source prices and see where the One Piece market is moving.",
 
   /** Footer/legal disclaimer - must never imply official status. */
   legalDisclaimer:

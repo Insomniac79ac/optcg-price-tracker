@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants";
 
+import { metadataBlockingBots } from "./src/lib/metadataBots";
+
 import { generateBuildVersion } from "./scripts/generate-build-version";
 import { buildImageSrcHosts } from "./src/lib/cspImageOrigin";
 
@@ -88,9 +90,9 @@ const CONTENT_SECURITY_POLICY = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  // Serve metadata in the initial head for every reader, including search
-  // agents that parse HTML without running the streaming bootstrap.
-  htmlLimitedBots: /.*/,
+  // Preserve Next’s HTML-only search/social defaults and cover documented
+  // OpenAI search/browsing agents without blocking normal browser metadata.
+  htmlLimitedBots: metadataBlockingBots,
   async headers() {
     return [
       {

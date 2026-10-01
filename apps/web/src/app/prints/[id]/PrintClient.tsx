@@ -461,7 +461,7 @@ function LiveMarket({
         </p>
       )}
 
-      <p className="mt-3 text-sm text-text-secondary">Market Value is Card Pirate’s price reference for this exact printing, using eligible Japanese source prices. It is not a guaranteed sale price. Source prices below identify asking prices, buy quotes or completed sales where reported.</p>
+      <p className="mt-3 text-sm text-text-secondary">Card Pirate Market Value estimates this exact printing’s worth from tracked Japanese market data. Actual buying and selling prices may differ. Source asking prices, buy quotes and completed sales are shown separately below where reported.</p>
       <SourcePanels sources={print.marketIndex.source_values} />
       {print.marketIndex.auxiliary_values.some((value) => value.value_jpy !== null) && <section className="mt-5" aria-label="Other source prices"><h3 className="text-sm font-semibold">Other source prices</h3><p className="mt-1 text-xs text-text-secondary">For reference only. These prices are not used in Market Value.</p><SourcePanels sources={print.marketIndex.auxiliary_values} /></section>}
 
@@ -726,8 +726,11 @@ function AboutThisPrint({ print, detail }: { print: PrintUiModel; detail: PrintD
   // absent value is an absent row.
   const rows: { term: string; value: string; hint?: string }[] = [
     { term: "Card code", value: print.cardCode },
+    { term: "Print ID", value: String(detail.card_print_id) },
     ...termRow("Set", print.originalSetCode, getTerm("identity.set")),
-    ...termRow("Found in", print.releaseCode, getTerm("identity.found_in")),
+    ...termRow("Found in", detail.release_product_id != null
+      ? releaseLabelEnglish(detail.release_code, detail.release_name)
+      : print.releaseCode, getTerm("identity.found_in")),
     ...termRow(
       "Rarity",
       print.rarityTerm?.label ?? null,
