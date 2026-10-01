@@ -191,32 +191,64 @@ Social examples: [Home](../ui/evidence/2026-10-01-collector-refinement/social-ho
 
 ## One Piece social-card design proofs (2026-10-01)
 
-These six completed 1200 × 630 design proofs are added for product review only.
-They use canonical One Piece card artwork, Wanted-poster framing, and manga-panel
-treatments, with CardPirate identified separately as the independent data publisher.
-Exact-card prices are visibly labeled illustrative sample data, not live prices.
+Revised for product review: these six 1200 × 630 proofs supersede the first
+One Piece design-proof images committed at `50ae56e`. They are design artifacts,
+not screenshots of deployed social-image routes. Application behavior and public
+metadata remain unchanged.
 
-| Surface | Review proof | Visual treatment |
+| Surface | Revised proof | Copy and visual treatment |
 | --- | --- | --- |
-| Homepage | [Homepage](../ui/evidence/2026-10-01-one-piece-social-cards/homepage.png) | Gear 5 Luffy leads the Straw Hat crew artwork composition. |
-| Exact card | [Luffy exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-card.png) | Full OP05-119 alternate artwork in a Wanted frame; sample JPY index outside the poster. |
-| Market | [Market](../ui/evidence/2026-10-01-one-piece-social-cards/market.png) | Manga panels with representative Luffy, Zoro and Sakazuki artwork. |
-| Set/release | [Romance Dawn](../ui/evidence/2026-10-01-one-piece-social-cards/release.png) | OP-01 release identity with Luffy, Zoro and Nami cards from that release. |
-| Zoro variant | [Zoro exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-zoro.png) | Straw Hat Wanted frame and green ink; swords remain part of the actual artwork. |
-| Marine variant | [Sakazuki exact card](../ui/evidence/2026-10-01-one-piece-social-cards/exact-marine.png) | Blue Marine character-file framing with Sakazuki's canonical Navy artwork. |
+| Homepage | [Homepage](../ui/evidence/2026-10-01-one-piece-social-cards/homepage.png) | “Know what your cards are worth.” / “Prices for the cards you own, want and watch.” Gear 5 Luffy and Straw Hat artwork remain dominant. |
+| Exact Luffy | [Luffy](../ui/evidence/2026-10-01-one-piece-social-cards/exact-card.png) | Full OP05-119 alternate artwork in a Straw Hat Wanted frame, with the sample Market Value estimate outside the poster. |
+| Exact Zoro | [Zoro](../ui/evidence/2026-10-01-one-piece-social-cards/exact-zoro.png) | Green Straw Hat Wanted frame; his swords remain part of the canonical artwork. |
+| Exact Marine | [Sakazuki](../ui/evidence/2026-10-01-one-piece-social-cards/exact-marine.png) | Blue Marine-file frame and Sakazuki's actual Navy artwork; no pirate Wanted treatment. |
+| Market | [One Piece Market](../ui/evidence/2026-10-01-one-piece-social-cards/market.png) | Market Value, available 7-day movement, dated sample context and partial coverage replace editorial copy. |
+| Release/set | [OP-01 — Romance Dawn](../ui/evidence/2026-10-01-one-piece-social-cards/release.png) | Sets on the Move: OP-01 identity, 7-day movement, tracked value, coverage and representative OP-01 artwork. |
 
-The proofs preserve the full primary card artwork and its source markings.
-They introduce no generic nautical symbols, invented crew insignia, or imitation
-of the official One Piece logo. These are visual proposals, not approval of new
-product copy or price terminology and not screenshots of the current application.
+### Collector language and brand
 
-This tranche copies the six existing PNGs byte-for-byte and adds their review
-links to this report. Application behavior, metadata, production social-image
-rendering, data semantics and deployment configuration remain unchanged. No
-renderer source, contact sheet, validation JSON, or other design assets are added.
+All six proofs use **Card Pirate**, without Atlas. Visible print/printing wording
+has been removed: **Card version / Japan**, **Japanese sources · this version**,
+**View card →**, and **See every version →** are used instead. Internal CardPrint
+names, identifiers, schemas and data contracts are unchanged. Exact-card prices
+are labeled **Card Pirate Market Value · Estimate** and **Sample data**.
 
-Validation for this documentation-only commit: all six PNGs decode at 1200 × 630,
-match the completed local proof bytes, and resolve from the links above; the
-commit contains only these six images and this report. Application tests/build
-are not rerun because no application files change. The existing branch deployment
-suppression remains intact. PR #33 must remain open and unmerged for product review.
+### Market context and truth boundary
+
+The Market and release proofs use the existing local
+[`marketValue.json` fixture](../../apps/web/src/lib/__fixtures__/marketValue.json)
+(`overall` and `eligible`), not live production values:
+
+| Proof | Sample tracked value | Available sample 7D movement | Coverage |
+| --- | --- | --- | --- |
+| Market | ¥262,279 | −3.94% | 639 of 4,316 card versions priced; partial coverage |
+| OP-01 | ¥48,300 | +4.20% | 81 of 154 card versions priced; partial coverage |
+
+The source snapshot is dated **2026-09-26**, displayed alongside **Sample data**.
+The proofs do not present this dated fixture as today's current market value.
+Movement is displayed only when the fixture marks it available and publishable
+with a finite percentage. Unavailable 30-day movement is omitted, without a
+placeholder, zero, extrapolated return or invented editorial substitute. Movement
+comes directly from the supplied comparable-card series; it is not recomputed
+from the sum of tracked values. Coverage is expressed as card versions rather
+than implying a count of unique characters/cards. No release-count claim is
+inferred from a partial fixture list.
+
+All exact-card prices are also illustrative and visibly labeled. Canonical
+artwork, source markings, non-affiliation copy and independent publisher identity
+are preserved. No new generic nautical decoration or invented insignia is added.
+
+### Validation and scope
+
+All six revised PNGs render at 1200 × 630, with loaded, proportionate artwork and
+no browser exceptions. Browser checks verify the requested homepage text, exact
+Card Pirate mastheads, absence of visible print/printing/Atlas terminology,
+sample-value labels, dated partial coverage, omitted 30D movement and content
+clear of footers/frame edges. Each report link resolves to its corresponding PNG.
+
+This refinement changes only the six proof PNGs and this report. No renderer
+source, contact sheet, validation JSON or raw artwork is committed. Application
+behavior, metadata, production social-image rendering, internal CardPrint
+terminology and deployment configuration remain unchanged. Application builds
+and tests are not rerun for this documentation-only update. Branch deployment
+suppression remains intact; **PR #33 stays open and unmerged for product review**.
