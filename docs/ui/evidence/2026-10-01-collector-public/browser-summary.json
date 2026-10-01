@@ -1,0 +1,232 @@
+[
+  {
+    "phase": "before",
+    "route": "/",
+    "width": 1440,
+    "status": 200,
+    "title": "CardPirate Atlas \u2014 One Piece Card Collection & Market Index",
+    "h1": [
+      "Find your next card."
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "before",
+    "route": "/",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "before",
+    "route": "/prints/1",
+    "width": 1440,
+    "status": 200,
+    "title": "CardPirate Atlas \u2014 One Piece Card Collection & Market Index",
+    "h1": [
+      "Roronoa Zoro"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "before",
+    "route": "/prints/1",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "before",
+    "route": "/analytics",
+    "width": 1440,
+    "status": 200,
+    "title": "CardPirate Atlas \u2014 One Piece Card Collection & Market Index",
+    "h1": [
+      "One Piece Market"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "before",
+    "route": "/analytics",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "before",
+    "route": "/cards?release_product_id=181",
+    "width": 1440,
+    "status": 200,
+    "title": "CardPirate Atlas \u2014 One Piece Card Collection & Market Index",
+    "h1": [
+      "THE CARD ATLAS"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "before",
+    "route": "/cards?release_product_id=181",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "after",
+    "route": "/",
+    "width": 1440,
+    "status": 200,
+    "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+    "h1": [
+      "Know what your cards are actually worth."
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "after",
+    "route": "/",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "after",
+    "route": "/prints/1",
+    "width": 1440,
+    "status": 200,
+    "title": "Roronoa Zoro OP01-001 Price \u00b7 OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1 \u2014 Card Pirate",
+    "h1": [
+      "Roronoa Zoro"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "after",
+    "route": "/prints/1",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "after",
+    "route": "/analytics",
+    "width": 1440,
+    "status": 200,
+    "title": "One Piece Card Market \u2014 Card Pirate",
+    "h1": [
+      "How is the One Piece market doing?"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "after",
+    "route": "/analytics",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "phase": "after",
+    "route": "/cards?release_product_id=181",
+    "width": 1440,
+    "status": 200,
+    "title": "OP-01 \u2014 Romance Dawn Card Prices \u2014 Card Pirate",
+    "h1": [
+      "Card Prices"
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "phase": "after",
+    "route": "/cards?release_product_id=181",
+    "width": 390,
+    "overflow": false
+  },
+  {
+    "no_js_route": "/",
+    "status": 200,
+    "canonical": "https://optcg-price-tracker-staging.vercel.app",
+    "title": "Card Pirate \u2014 One Piece Card Prices & Collection Value",
+    "json_ld_types": [
+      "graph"
+    ],
+    "expected_text_present": true
+  },
+  {
+    "no_js_route": "/cards",
+    "status": 200,
+    "canonical": "https://optcg-price-tracker-staging.vercel.app/cards",
+    "title": "One Piece Card Prices \u2014 Card Pirate",
+    "json_ld_types": [
+      "graph",
+      "BreadcrumbList"
+    ],
+    "expected_text_present": true
+  },
+  {
+    "no_js_route": "/prints/1",
+    "status": 200,
+    "canonical": "https://optcg-price-tracker-staging.vercel.app/prints/1",
+    "title": "Roronoa Zoro OP01-001 Price \u00b7 OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1 \u2014 Card Pirate",
+    "json_ld_types": [
+      "graph",
+      "Product",
+      "BreadcrumbList"
+    ],
+    "expected_text_present": true
+  },
+  {
+    "no_js_route": "/analytics",
+    "status": 200,
+    "canonical": "https://optcg-price-tracker-staging.vercel.app/analytics",
+    "title": "One Piece Card Market \u2014 Card Pirate",
+    "json_ld_types": [
+      "graph"
+    ],
+    "expected_text_present": true
+  },
+  {
+    "no_js_route": "/cards?release_product_id=181",
+    "status": 200,
+    "canonical": "https://optcg-price-tracker-staging.vercel.app/cards?release_product_id=181",
+    "title": "OP-01 \u2014 Romance Dawn Card Prices \u2014 Card Pirate",
+    "json_ld_types": [
+      "graph",
+      "BreadcrumbList"
+    ],
+    "expected_text_present": true
+  },
+  {
+    "social": "home",
+    "width": 1200,
+    "height": 630
+  },
+  {
+    "social": "print",
+    "width": 1200,
+    "height": 630
+  },
+  {
+    "social": "market",
+    "width": 1200,
+    "height": 630
+  },
+  {
+    "social": "release",
+    "width": 1200,
+    "height": 630
+  },
+  {
+    "crawl_file": "/robots.txt",
+    "length": 875
+  },
+  {
+    "crawl_file": "/sitemap.xml",
+    "length": 544
+  },
+  {
+    "crawl_file": "/prints/sitemap/0.xml",
+    "length": 190
+  }
+]
