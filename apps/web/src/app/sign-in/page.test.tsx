@@ -52,7 +52,7 @@ describe("SignInPage (neutral sign-in-required route)", () => {
     const ui = await SignInPage({ searchParams: Promise.resolve({}) });
     render(ui);
     expect(
-      screen.getByText(/browsing the card catalogue and market index does not require one/i),
+      screen.getByText(/see card prices.*without an account/i),
     ).toBeInTheDocument();
   });
 
@@ -82,7 +82,7 @@ describe("SignInPage (neutral sign-in-required route)", () => {
   it("links back to Discover and Cards", async () => {
     const ui = await SignInPage({ searchParams: Promise.resolve({}) });
     render(ui);
-    expect(screen.getByRole("link", { name: /back to discover/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /back to home/i })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /browse cards/i })).toHaveAttribute("href", "/cards");
   });
 

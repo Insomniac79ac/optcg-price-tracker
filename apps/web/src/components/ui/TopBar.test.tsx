@@ -36,27 +36,27 @@ describe("TopBar", () => {
       expect(toggle).not.toHaveClass("hidden", "lg:hidden", "xl:hidden");
       const nav = screen.getByRole("navigation", { name: "Public sections" });
       expect(nav).toHaveClass("hidden", "md:flex");
-      expect(Array.from(nav.querySelectorAll("a")).map(a => a.textContent)).toEqual(["Home", "Cards", "Market"]);
+      expect(Array.from(nav.querySelectorAll("a")).map(a => a.textContent)).toEqual(["Home", "Card Prices", "Market"]);
       expect(screen.queryByRole("link", { name: "My Collection" })).not.toBeInTheDocument();
     });
   });
 
   it("uses the canonical public compass wordmark while retaining navigation and search", () => {
     render(<TopBar />);
-    const logo = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    const logo = screen.getByRole("link", { name: "Card Pirate — Home" });
     expect(logo.querySelector("svg")).not.toBeNull();
     expect(logo.querySelector("img")).toBeNull();
-    expect(logo).toHaveTextContent("CARDPIRATEATLAS");
+    expect(logo).toHaveTextContent("CARDPIRATE");
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Search cards" })).toBeInTheDocument();
   });
   it("shares the compact Atlas compass and wordmark on admin tools", () => {
     currentPathname = "/admin/catalog-ops";
     render(<AdminSurfaceProvider><TopBar /></AdminSurfaceProvider>);
-    const link = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    const link = screen.getByRole("link", { name: "Card Pirate — Home" });
     expect(link.querySelector("svg")).not.toBeNull();
     expect(link.querySelector("img")).toBeNull();
-    expect(link).toHaveTextContent("CARDPIRATEATLAS");
+    expect(link).toHaveTextContent("CARDPIRATE");
     expect(screen.queryByRole("navigation", { name: "Public sections" })).not.toBeInTheDocument();
     const toggle = screen.getByRole("button", { name: "Open admin navigation" });
     expect(toggle).toHaveClass("flex", "xl:hidden");
@@ -67,12 +67,12 @@ describe("TopBar", () => {
 
   it("links the product mark home with one accessible name, not a duplicated one", () => {
     render(<TopBar />);
-    const link = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    const link = screen.getByRole("link", { name: "Card Pirate — Home" });
     expect(link).toHaveAttribute("href", "/");
     // The brand images are decorative (alt=""), so nothing of theirs may leak
     // into the link's accessible name (this previously produced
-    // "CardPirate Atlas — HomeCardPirate Atlas").
-    expect(link).toHaveAccessibleName("CardPirate Atlas — Home");
+    // "Card Pirate — HomeCard Pirate").
+    expect(link).toHaveAccessibleName("Card Pirate — Home");
   });
 
   it("offers only public navigation destinations that already work", () => {
@@ -82,8 +82,8 @@ describe("TopBar", () => {
     // /analytics is the current market landscape (Analytics 1A-B) - public,
     // and backed by three deliberately unauthenticated endpoints.
     expect(hrefs).toEqual(["/", "/cards", "/analytics"]);
-    expect(Array.from(nav.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Home", "Cards", "Market"]);
-    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
+    expect(Array.from(nav.querySelectorAll("a")).map((a) => a.textContent)).toEqual(["Home", "Card Prices", "Market"]);
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(hrefs).not.toContain("/admin");
     // The seven legacy collector-data analytics pages gain no entry from it.
     for (const leaf of [

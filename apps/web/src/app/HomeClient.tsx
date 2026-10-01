@@ -1,0 +1,156 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { AppHeader } from "@/components/AppHeader";
+import { ErrorState } from "@/components/StateBlocks";
+import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
+import { PrintCardTile } from "@/components/ui/PrintCardTile";
+import { HomeMovers } from "@/components/ui/HomeMovers";
+import { AtlasVisualSystem, AtlasSectionIntro, AtlasReleaseDestination } from "@/components/ui/AtlasPrimitives";
+import styles from "./Home.module.css";
+import { CardImageFrame } from "@/components/ui/CardImageFrame";
+import { toPrintUiModel } from "@/lib/prints";
+import { fetchReleases } from "@/lib/releases";
+import { usePublicResource } from "@/hooks/usePublicResource";
+import { fetchHeroCatalogue, fetchRecentFinds, homeHeroPrints, rotateRecentFinds, utcDayKey } from "@/lib/homeDiscovery";
+
+const LINK_CLASS = "text-sm font-medium text-accent-teal hover:text-accent-teal-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-teal";
+// The time bucket is captured after hydration, alongside fetched data. Server
+// and first client render both show the same bounded skeleton.
+const loadHero = async () => homeHeroPrints(await fetchHeroCatalogue(), utcDayKey());
+const loadRecent = async () => rotateRecentFinds((await fetchRecentFinds()).items.map(toPrintUiModel), utcDayKey());
+
+export default function HomePage() {
+  const hero = usePublicResource(loadHero);
+  const recent = usePublicResource(loadRecent);
+  const releases = usePublicResource(fetchReleases);
+  const preview = hero.data ?? [];
+  return (
+    <div className={styles.root}>
+      <AppHeader />
+      <AtlasVisualSystem>
+        <main className={`mx-auto max-w-6xl px-4 ${styles.home}`}>
+          <section className={styles.hero} aria-labelledby="home-title">
+            <div className={styles.heroContent}>
+              <div className={styles.intro}>
+                <p className={styles.kicker}>One Piece card prices · JPY</p>
+                <h1 id="home-title">Know what your cards <span>are actually worth.</span></h1>
+                <p className={styles.supporting}>Follow the cards you own, watch the ones you want and see where the One Piece market is moving.</p>
+                <HomeCardSearch />
+                <div className={styles.intentLinks}><Link href="/cards">See card prices</Link><Link href="/analytics">View the market</Link><Link href="/collection">Track my collection</Link></div>
+              </div>
+              {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured printings"><div /><div /><div /></div>}
+              {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured printings are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured printings</button></p></div>}
+              {hero.status === "ready" && preview.length === 0 && <div className={styles.heroPlaceholder}><p>Featured artwork is not available yet. Search for a card by name or code.</p></div>}
+              {preview.length > 0 && <div className={styles.fan} data-count={preview.length} aria-label="Featured SR, SP and Parallel printings">
+                {preview.map((print) => <Link key={print.cardPrintId} href={`/prints/${print.cardPrintId}`} prefetch={false} aria-label={`Preview ${print.displayName}, ${print.cardCode}, ${print.printingType?.label ?? "printing"}`}>
+                  <CardImageFrame imageUrl={print.imageUrl} alt="" cardCode={print.cardCode} rarity={print.rarity} geometry={print.imageGeometry} size="full" />
+                </Link>)}
+              </div>}
+            </div>
+            <HomeWave />
+          </section>
+          <HomeMovers />
+
+          <section aria-labelledby="updated-printings">
+            <div data-atlas-chapter>
+              <AtlasSectionIntro id="updated-printings" number="02" title="Recently added cards" description="Newly added printings to price and compare. This is catalogue activity, not price movement." />
+            </div>
+            {recent.status === "loading" && <div className={styles.recentLoading}><CardGridSkeleton count={4} /></div>}
+            {recent.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={recent.retry}>Retry recently added cards</button>}>recently added cards couldn&rsquo;t be loaded right now.</ErrorState>}
+            {recent.status === "ready" && (recent.data?.length
+              ? <div className={styles.recentGrid}>{recent.data.map((print) => <PrintCardTile key={print.cardPrintId} print={print} />)}</div>
+              : <p className="text-sm text-text-secondary">No recently added printings are available right now.</p>)}
+          </section>
+
+          <section className={styles.explore} aria-labelledby="home-explore">
+            <div data-atlas-chapter><AtlasSectionIntro id="home-explore" number="03" title="Prices by release" /></div>
+            {releases.status === "loading" && <div className={styles.releaseGrid} aria-label="Loading releases">{Array.from({length: 8}, (_, i) => <div key={i} className="h-24 animate-pulse rounded-panel bg-bg-surface" />)}</div>}
+            {releases.status === "error" && <ErrorState tone="collector" action={<button type="button" className={LINK_CLASS} onClick={releases.retry}>Retry releases</button>}>Release prices could not be loaded right now.</ErrorState>}
+            {releases.status === "ready" && <div className={styles.releaseGrid}>
+              {releases.data?.items.slice(0, 8).map((release) => <AtlasReleaseDestination key={release.release_product_id} releaseCode={release.official_code} releasedOn={release.released_on} href={`/cards?release_product_id=${release.release_product_id}`} />)}
+              {releases.data?.items.length === 0 && <p>No releases are available right now.</p>}
+            </div>}
+            <Link href="/cards" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>See all card prices</Link>
+          </section>
+          <section aria-labelledby="home-market" className={styles.market}>
+            <div>
+              <h2 id="home-market">How is the One Piece market doing?</h2>
+              <p>Follow price movement across the Japanese printings we track, with coverage shown alongside the figures.</p>
+            </div>
+            <Link href="/analytics" prefetch={false} className={`${LINK_CLASS} ${styles.path}`}>View Market →</Link>
+          </section>
+        </main>
+      </AtlasVisualSystem>
+    </div>
+  );
+}
+
+/** Repeating current marks from the reference; decorative, never chart data. */
+function HomeWave() {
+  return <svg className={styles.wave} viewBox="0 0 1200 24" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <path d="M0 12 Q30 2 60 12 T120 12 T180 12 T240 12 T300 12 T360 12 T420 12 T480 12 T540 12 T600 12 T660 12 T720 12 T780 12 T840 12 T900 12 T960 12 T1020 12 T1080 12 T1140 12 T1200 12" />
+  </svg>;
+}
+
+const MAX_SEARCH_LENGTH = 128;
+
+/** The URL a Home search lands on. Always the public catalogue with a
+ * `q` filter - never a card/print id, and never a guess at which printing
+ * was meant: /cards resolves the term server-side against card code, English
+ * name and Japanese name, and every result it renders is one exact printing.
+ *
+ * A blank or whitespace-only term produces plain /cards, never `?q=` with
+ * nothing in it. */
+export function buildCardsSearchHref(term: string): string {
+  const q = term.trim().slice(0, MAX_SEARCH_LENGTH);
+  return q ? `/cards?q=${encodeURIComponent(q)}` : "/cards";
+}
+
+/** Home's card search - an entry point into /cards, not a search of its
+ * own.
+ *
+ * It deliberately queries nothing: no request, no suggestions, no dropdown
+ * of results. Submitting navigates to /cards with the term as `q` and the
+ * catalogue does what it already does. That keeps one public search
+ * implementation (the print catalogue's) rather than a second one here, and
+ * keeps this reachable for a signed-out visitor, which the authenticated
+ * /api/search is not.
+ *
+ * The Home banner supplies its visual treatment; submission retains the
+ * catalogue's existing public search contract. */
+function HomeCardSearch() {
+  const router = useRouter();
+  const [term, setTerm] = useState("");
+
+  return (
+    <form
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        router.push(buildCardsSearchHref(term));
+      }}
+      className={styles.search}
+    >
+      <input
+        type="search"
+        name="q"
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        // Examples rather than instructions: one English name, one card
+        // code, one Japanese name is the whole of what /cards matches on.
+        placeholder="Kaido, OP01-001, カイドウ…"
+        aria-label="Search cards by name or code"
+        className="min-w-0 flex-1 rounded-control border border-border-default bg-bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-faint focus:border-accent-teal focus:outline-none focus:ring-1 focus:ring-accent-teal"
+      />
+      <button
+        type="submit"
+        className={styles.searchSubmit}
+      >
+        Find a card
+      </button>
+    </form>
+  );
+}

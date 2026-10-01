@@ -1,112 +1,34 @@
-"use client";
-
-import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useMemo } from "react";
-import { AppHeader } from "@/components/AppHeader";
-import { ErrorState } from "@/components/StateBlocks";
-import { CardAtlasHeader } from "@/components/ui/CardAtlasHeader";
-import { CardGrid } from "@/components/ui/CardGrid";
-import { CardGridSkeleton } from "@/components/ui/CardGridSkeleton";
-import { CatalogueLegend } from "@/components/ui/CatalogueLegend";
-import { CollectorEmptyState } from "@/components/ui/CollectorEmptyState";
-import { PrintCardTile } from "@/components/ui/PrintCardTile";
-import { facetLabel, PrintCatalogueSortControl, PrintCatalogueToolbar } from "@/components/ui/PrintCatalogueToolbar";
-import { ReleaseNavigation } from "@/components/ui/ReleaseNavigation";
-import { usePublicResource } from "@/hooks/usePublicResource";
-import { useProgressiveCatalogue } from "@/hooks/useProgressiveCatalogue";
-import { buildCatalogueQuery, catalogueParams, EMPTY_PRINT_FILTERS, hasActivePrintFilters, parseCatalogueState, resolveLegacyRelease, type PrintCatalogueFilters } from "@/lib/catalogueState";
-import { toPrintUiModel, printsNeedingArtOrdinal } from "@/lib/prints";
-import { fetchReleases, releaseLabel, type ReleaseCatalogueItem } from "@/lib/releases";
-import styles from "./CardsAtlas.module.css";
-
-export default function PrintsCataloguePage() {
-  return <Suspense fallback={<CatalogueFallback />}><CatalogueRoute /></Suspense>;
+import Link from "next/link";
+import CardsClient from "./CardsClient";
+import { JsonLd } from "@/components/JsonLd";
+import { buildCatalogueQuery, catalogueParams, parseCatalogueState, resolveLegacyRelease } from "@/lib/catalogueState";
+import { readCatalogue, readReleases } from "@/lib/publicServer";
+import { breadcrumbs, pageMetadata, searchParamsUrl, type PublicSearchParams } from "@/lib/publicSeo";
+import { releaseLabelEnglish } from "@/lib/releaseNames";
+type Props = { searchParams: Promise<PublicSearchParams> };
+export async function generateMetadata({ searchParams }: Props) {
+  const query = searchParamsUrl(await searchParams);
+  const releases = await readReleases();
+  const { filters } = parseCatalogueState(query);
+  const selected = resolveLegacyRelease(filters, releases?.items ?? []);
+  const release = releases?.items.find((r) => r.release_product_id === selected.releaseProductId);
+  const path = release ? `/cards?release_product_id=${release.release_product_id}` : "/cards";
+  const name = release ? releaseLabelEnglish(release.official_code, release.display_name) : "One Piece";
+  const index = ![...query.keys()].some((k) => !["release_product_id", "set"].includes(k)) && (!query.has("release_product_id") || !!release);
+  return pageMetadata(`${name} Card Prices`, `Find ${name} cards and compare Japanese source prices for each exact printing. Unpriced cards are shown as unavailable.`, path, release ? `/share/release/${release.release_product_id}` : undefined, index);
 }
-function CatalogueFallback() {
-  return <><AppHeader /><main className={styles.main}><CardAtlasHeader query="" onSearch={() => {}} totalPrints={null} /><CardGridSkeleton count={24} /></main></>;
-}
-function CatalogueRoute() {
-  const searchParams = useSearchParams();
-  const releaseResource = usePublicResource(fetchReleases);
-  const { filters: rawFilters, offset } = parseCatalogueState(searchParams);
-  // Resolve old shared product codes before issuing a membership request.
-  if (rawFilters.legacySet && releaseResource.status === 'loading') return <CatalogueFallback />;
-  const releases = releaseResource.data?.items ?? [];
-  const filters = resolveLegacyRelease(rawFilters, releases);
-  const query = buildCatalogueQuery(filters, offset);
-  return <CatalogueView query={query} filters={filters} offset={offset} releases={releases} releaseStatus={releaseResource.status} retryReleases={releaseResource.retry} />;
-}
-const emptyFacets = { treatments: [], rarities: [], languages: [], verification_statuses: [] };
-function CatalogueView({ query, filters, offset, releases, releaseStatus, retryReleases }: {
-  query: string; filters: PrintCatalogueFilters; offset: number; releases: ReleaseCatalogueItem[];
-  releaseStatus: "loading" | "ready" | "error"; retryReleases: () => void;
-}) {
-  const pathname = usePathname();
-  const { data, facets, status, appending, appendError, hasMore, sentinel, loadMore, save, retry } = useProgressiveCatalogue(query, catalogueParams(filters), offset);
-  const prints = useMemo(() => (data?.items ?? []).map(toPrintUiModel), [data]);
-  const ordinalNeeded = useMemo(() => printsNeedingArtOrdinal(prints), [prints]);
-  const total = status === "ready" && data ? data.total : null;
-  const navigate = (next: PrintCatalogueFilters) => {
-    const href = `${pathname}${buildCatalogueQuery(next)}`;
-    if (href === `${pathname}${query}`) return;
-    save();
-    // A user changing filters after several batches should start at the new
-    // results, not leave the sentinel visible at the old, now-clamped depth.
-    // Back restoration is separate and never takes this navigation path.
-    const results = document.getElementById("catalogue-results");
-    if (results && results.getBoundingClientRect().top < 0) {
-      results.scrollIntoView({ block: "start", behavior: "instant" });
-    }
-    // Next App Router integrates native history with useSearchParams. Only
-    // committed user changes push; automatic appends never touch the URL.
-    window.history.pushState(null, "", href);
-  };
-  const chooseRelease = (id: number | null) => navigate({ ...filters, releaseProductId: id, legacySet: "" });
-  return <div className="min-h-screen">
-    <AppHeader />
-    <main className={styles.main}>
-      <CardAtlasHeader query={filters.q} onSearch={(q) => navigate({ ...filters, q })} totalPrints={total} />
-      <ReleaseNavigation releases={releases} status={releaseStatus} selected={filters.releaseProductId}
-        hrefFor={(id) => `${pathname}${buildCatalogueQuery({ ...filters, releaseProductId: id, legacySet: '' })}`}
-        onSelect={chooseRelease} onRetry={retryReleases} />
-      <div className={styles.catalogueLayout}>
-        <PrintCatalogueToolbar releases={releases} filters={filters} facets={facets ?? emptyFacets} onChange={navigate} legend={<CatalogueLegend />} />
-        <div id="catalogue-results" className={styles.catalogueContent}>
-          <div className={styles.catalogueBar}>
-            <div className={styles.catalogueMeta}><h2 className={styles.catalogueTitle}>Exact printings</h2>
-              {total !== null && <p className={styles.catalogueCount}>{total.toLocaleString()} {total === 1 ? 'entry' : 'entries'} in this view</p>}
-            </div>
-            <PrintCatalogueSortControl value={filters.sort} onChange={(sort) => navigate({ ...filters, sort })} />
-          </div>
-          {hasActivePrintFilters(filters) && <ActiveFilterChips filters={filters} releases={releases} onChange={navigate} />}
-          {status === 'loading' && <CardGridSkeleton count={24} />}
-          {status === 'error' && <ErrorState tone="collector" action={<button type="button" className={styles.retryLink} onClick={retry}>Retry catalogue</button>}>The Card Atlas could not be loaded.</ErrorState>}
-          {status === 'ready' && prints.length === 0 && <CollectorEmptyState title="No printings found" action={<button type="button" className={styles.retryLink} onClick={() => navigate(EMPTY_PRINT_FILTERS)}>Clear all</button>}>Adjust the release, rarity, treatment or search to continue browsing.</CollectorEmptyState>}
-          {status === 'ready' && prints.length > 0 && <>
-            <CardGrid>{prints.map((print) => <PrintCardTile key={print.cardPrintId} print={print} showArtOrdinal={ordinalNeeded.has(print.cardPrintId)} />)}</CardGrid>
-            <div className={styles.progress}>
-              <p role="status" aria-live="polite">{appending ? 'Loading more printings…' : appendError ? 'More printings could not be loaded. Your cards are still here.' : hasMore ? `${prints.length} printings loaded${offset ? ` from position ${offset + 1}` : ''}` : `All ${prints.length} printings${offset ? ' from this starting position' : ' in this view'} loaded.`}</p>
-              {hasMore && <button type="button" disabled={appending} onClick={() => void loadMore()}>{appendError ? 'Retry load more' : 'Load more'}</button>}
-              <div ref={sentinel} aria-hidden="true" data-catalogue-sentinel />
-            </div>
-          </>}
-        </div>
-      </div>
-    </main>
-  </div>;
-}
-function ActiveFilterChips({ filters, releases, onChange }: {
-  filters: PrintCatalogueFilters; releases: ReleaseCatalogueItem[]; onChange: (next: PrintCatalogueFilters) => void;
-}) {
-  const release = releases.find((r) => r.release_product_id === filters.releaseProductId);
-  const chips = [
-    ...(filters.releaseProductId || filters.legacySet ? [{ key: 'release', label: 'Release', value: release ? releaseLabel(release) : filters.legacySet || 'Selected release', remove: () => onChange({ ...filters, releaseProductId: null, legacySet: '' }) }] : []),
-    ...filters.rarities.map((value) => ({ key: `rarity:${value}`, label: 'Rarity', value: facetLabel(value), remove: () => onChange({ ...filters, rarities: filters.rarities.filter((v) => v !== value) }) })),
-    ...filters.treatments.map((value) => ({ key: `treatment:${value}`, label: 'Treatment', value, remove: () => onChange({ ...filters, treatments: filters.treatments.filter((v) => v !== value) }) })),
-    ...(filters.q ? [{ key: 'q', label: 'Search', value: filters.q, remove: () => onChange({ ...filters, q: '' }) }] : []),
-  ];
-  return <div className={styles.activeRow} aria-label="Active catalogue filters">
-    {chips.map((chip) => <button key={chip.key} type="button" onClick={chip.remove} aria-label={`Remove ${chip.label.toLowerCase()} filter ${chip.value}`} className={styles.activeChip}>{chip.label}: <strong>{chip.value}</strong><span aria-hidden="true">×</span></button>)}
-    <button type="button" className={styles.clearAll} onClick={() => onChange(EMPTY_PRINT_FILTERS)}>Clear all</button>
-  </div>;
+export default async function CardsPage({ searchParams }: Props) {
+  const query = searchParamsUrl(await searchParams);
+  const releases = await readReleases();
+  const parsed = parseCatalogueState(query);
+  const filters = resolveLegacyRelease(parsed.filters, releases?.items ?? []);
+  const apiQuery = new URLSearchParams({ limit: "24", offset: String(parsed.offset) });
+  for (const [key, value] of Object.entries(catalogueParams(filters))) for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) apiQuery.append(key, String(item));
+  const data = await readCatalogue(apiQuery.toString());
+  const seed = { query: buildCatalogueQuery(filters, parsed.offset), data };
+  const release = releases?.items.find((r) => r.release_product_id === filters.releaseProductId);
+  const name = release ? releaseLabelEnglish(release.official_code, release.display_name) : "Card Prices";
+  return <><JsonLd data={breadcrumbs([{ name: "Home", path: "/" }, { name, path: release ? `/cards?release_product_id=${release.release_product_id}` : "/cards" }])} /><CardsClient initialReleases={releases} seed={seed} />
+    {data?.pagination.has_next && <nav aria-label="More card prices" className="mx-auto max-w-6xl px-6 pb-8"><Link href={`/cards${buildCatalogueQuery(filters, data.pagination.next_offset ?? parsed.offset + 24)}`} prefetch={false}>Next page of card prices →</Link></nav>}
+  </>;
 }

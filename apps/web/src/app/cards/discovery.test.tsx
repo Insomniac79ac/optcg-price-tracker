@@ -3,7 +3,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchPrintCatalogue } from '@/lib/prints';
 import { fetchReleases } from '@/lib/releases';
 import { catalogueFixture, printFixture, releaseFixture } from '@/lib/publicDiscoveryFixtures';
-import Page from './page';
+import Page from './CardsClient';
 let search='';
 vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams(search),usePathname:()=>'/cards'}));
 vi.mock('@/components/AppHeader',()=>({AppHeader:()=>null}));

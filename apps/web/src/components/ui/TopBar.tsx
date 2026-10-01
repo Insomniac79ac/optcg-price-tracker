@@ -274,6 +274,6 @@ function PublicLogo() {
       <path d="M18 5 20.5 15.5 18 18 15.5 15.5Z" fill="#d6a84f" />
       <circle cx="18" cy="18" r="1.5" fill="#eef2f2" />
     </svg>
-    <span className={styles.wordmark}>CARD<span>PIRATE</span><small>ATLAS</small></span>
+    <span className={styles.wordmark}>CARD<span>PIRATE</span></span>
   </span>;
 }

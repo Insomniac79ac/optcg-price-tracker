@@ -4,7 +4,7 @@ import { fetchPrintCatalogue, fetchPrint } from '@/lib/prints';
 import { fetchReleases } from '@/lib/releases';
 import { fetchIndexMovers, type IndexMover } from '@/lib/cardPirateIndex';
 import { catalogueFixture, printFixture, releaseFixture } from '@/lib/publicDiscoveryFixtures';
-import Page, { buildCardsSearchHref } from './page';
+import Page, { buildCardsSearchHref } from './HomeClient';
 const push=vi.fn();
 vi.mock('next/navigation',()=>({useRouter:()=>({push})}));
 vi.mock('@/components/AppHeader',()=>({AppHeader:()=>null}));
@@ -22,29 +22,29 @@ beforeEach(async()=>{
   vi.mocked(fetchIndexMovers).mockReset().mockResolvedValue(moves());
 });
 const section=(name:string)=>within(screen.getByRole('region',{name}));
-async function ready(){render(<Page/>);await screen.findByText('Mover 100');await waitFor(()=>expect(section('Recent finds').getAllByRole('link')).toHaveLength(4));await waitFor(()=>expect(section('Find your next card.').getAllByRole('link')).toHaveLength(3));}
+async function ready(){render(<Page/>);await screen.findByText('Mover 100');await waitFor(()=>expect(section('Recently added cards').getAllByRole('link')).toHaveLength(4));await waitFor(()=>expect(section('Know what your cards are actually worth.').getAllByRole('link', { name: /^Preview/ })).toHaveLength(3));}
 describe('Home discovery',()=>{
   it('has three eligible unique hero print links separate from four unpriced recently added prints',async()=>{
-    await ready();const hero=section('Find your next card.').getAllByRole('link');
+    await ready();const hero=section('Know what your cards are actually worth.').getAllByRole('link', { name: /^Preview/ });
     expect(new Set(hero.map(a=>a.getAttribute('href'))).size).toBe(3);expect(hero.every(a=>a.getAttribute('href')?.startsWith('/prints/2'))).toBe(true);
-    expect(section('Recent finds').getAllByText('No market price yet')).toHaveLength(4);
-    expect(section('Recent finds').getByText(/Recently added to Atlas/)).toBeInTheDocument();
+    expect(section('Recently added cards').getAllByText('No market price yet')).toHaveLength(4);
+    expect(section('Recently added cards').getByText(/Newly added printings to price and compare/)).toBeInTheDocument();
     expect(fetchPrintCatalogue).toHaveBeenCalledWith({sort:'created_desc',limit:16});
     expect(vi.mocked(fetchPrintCatalogue).mock.calls.some(([p])=>p?.sort==='updated')).toBe(false);
   });
   it('uses releases in server chronology and authoritative release ID links',async()=>{
     const source = { ...releaseFixture, items: releaseFixture.items.map(r => ({ ...r, display_name: '世界最強の戦士' })) };
     vi.mocked(fetchReleases).mockResolvedValue(source);
-    await ready();const links=section('Explore the Atlas').getAllByRole('link').filter(a=>a.getAttribute('href')?.includes('release_product_id'));
+    await ready();const links=section('Prices by release').getAllByRole('link').filter(a=>a.getAttribute('href')?.includes('release_product_id'));
     expect(links).toHaveLength(8);expect(links.map(a=>a.getAttribute('href'))).toEqual(releaseFixture.items.slice(0,8).map(r=>`/cards?release_product_id=${r.release_product_id}`));
     expect(links[0]).toHaveTextContent("The World's Strongest Warriors");expect(links[0]).toHaveTextContent('2026-08-22');expect(fetchReleases).toHaveBeenCalledTimes(1);
-    expect(section('Explore the Atlas').queryByText(/世界最強の戦士/)).toBeNull();
+    expect(section('Prices by release').queryByText(/世界最強の戦士/)).toBeNull();
     expect(source.items[0].display_name).toBe('世界最強の戦士');
   });
   it('makes direction textual and signed, with current index and exact release enrichment',async()=>{
     await ready();const s=section('Cards on the move');expect(s.getAllByText('Up')).toHaveLength(2);expect(s.getAllByText('Down')).toHaveLength(2);
     expect(s.getAllByText('+30.77%')).toHaveLength(2);expect(s.getAllByText('−12.50%')).toHaveLength(2);
-    expect(s.getAllByText('Market Index ￥200')).toHaveLength(4);expect(await s.findAllByText('Found in OP-17')).toHaveLength(4);
+    expect(s.getAllByText('Market Value ￥200')).toHaveLength(4);expect(await s.findAllByText('Found in OP-17')).toHaveLength(4);
     const links=s.getAllByRole('listitem').map(li=>within(li).getByRole('link'));expect(links.map(a=>a.getAttribute('href'))).toEqual(['/prints/100','/prints/101','/prints/102','/prints/103']);
     expect(links.every(a=>a.querySelector('img')?.classList.contains('object-contain'))).toBe(true);
   });
@@ -69,19 +69,19 @@ describe('Home discovery',()=>{
   });
   it('retains every other section when Recent Finds fails, and retries independently',async()=>{
     vi.mocked(fetchPrintCatalogue).mockImplementation(async p=>{if(!p?.rarity&&!p?.treatment)throw new Error('offline');return catalogueFixture([printFixture(200),printFixture(201),printFixture(202)]);});
-    render(<Page/>);const retry=await screen.findByRole('button',{name:'Retry Recent Finds'});await screen.findByText('Mover 100');expect(await screen.findByText("The World's Strongest Warriors")).toBeInTheDocument();
+    render(<Page/>);const retry=await screen.findByRole('button',{name:'Retry recently added cards'});await screen.findByText('Mover 100');expect(await screen.findByText("The World's Strongest Warriors")).toBeInTheDocument();
     vi.mocked(fetchPrintCatalogue).mockResolvedValue(catalogueFixture([printFixture(1)]));fireEvent.click(retry);expect(await screen.findByText('Print 1')).toBeInTheDocument();expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
   });
   it.each(['hero','releases','movers'])('isolates %s failure',async(which)=>{
     if(which==='hero')vi.mocked(fetchPrintCatalogue).mockImplementation(async p=>{if(p?.rarity)throw new Error('offline');return catalogueFixture([printFixture(1)]);});
     if(which==='releases')vi.mocked(fetchReleases).mockRejectedValue(new Error('offline'));
     if(which==='movers')vi.mocked(fetchIndexMovers).mockRejectedValue(new Error('offline'));
-    render(<Page/>);await waitFor(()=>expect(section('Recent finds').getAllByRole('link').length).toBeGreaterThan(0));
+    render(<Page/>);await waitFor(()=>expect(section('Recently added cards').getAllByRole('link').length).toBeGreaterThan(0));
     expect(await screen.findByRole('button',{name:which==='hero'?'Retry featured printings':which==='releases'?'Retry releases':'Retry movers'})).toBeInTheDocument();
   });
   it('handles insufficient hero inventory and empty recent/movers without fabricated cards',async()=>{
     vi.mocked(fetchPrintCatalogue).mockResolvedValue(catalogueFixture([]));vi.mocked(fetchIndexMovers).mockResolvedValue(moves(0));render(<Page/>);
-    expect(await screen.findByText(/More SR, SP and Parallel artwork/)).toBeInTheDocument();expect(await screen.findByText('No recently added printings are available right now.')).toBeInTheDocument();expect(await screen.findByText('No cards moved on this published day.')).toBeInTheDocument();
+    expect(await screen.findByText(/Featured artwork is not available yet/)).toBeInTheDocument();expect(await screen.findByText('No recently added printings are available right now.')).toBeInTheDocument();expect(await screen.findByText('No cards moved on this published day.')).toBeInTheDocument();
   });
 });
 describe('Home search',()=>{

@@ -4,14 +4,14 @@ import { brand } from "./brand";
 
 describe("brand", () => {
   it("centralizes the current working product name and endorsement", () => {
-    expect(brand.productName).toBe("CardPirate Atlas");
-    expect(brand.shortName).toBe("Atlas");
+    expect(brand.productName).toBe("Card Pirate");
+    expect(brand.shortName).toBe("Card Pirate");
     expect(brand.parentBrand).toBe("CardPirateTCG");
     expect(brand.endorsementLine).toBe("by CardPirateTCG");
   });
 
   it("centralizes the tagline and supporting line", () => {
-    expect(brand.tagline).toBe("Map your collection. Find your next treasure.");
+    expect(brand.tagline).toBe("Know what your cards are worth.");
     expect(brand.supportingLine).toBe("Collect the story. Know the value.");
   });
 
@@ -22,8 +22,8 @@ describe("brand", () => {
 
   it("retains functional (non-novelty) public navigation labels", () => {
     expect(brand.nav).toMatchObject({
-      discover: "Discover",
-      cards: "Cards",
+      discover: "Home",
+      cards: "Card Prices",
       marketIndex: "Market Index",
       myCollection: "My Collection",
       wishlist: "Wishlist",
@@ -34,6 +34,6 @@ describe("brand", () => {
   });
 
   it("metadata title template applies the product name as a suffix", () => {
-    expect(brand.metadataTitleTemplate).toBe("%s — CardPirate Atlas");
+    expect(brand.metadataTitleTemplate).toBe("%s — Card Pirate");
   });
 });

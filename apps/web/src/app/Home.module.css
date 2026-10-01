@@ -56,7 +56,7 @@
 }
 
 .intro h1 {
-  max-width: 10ch;
+  max-width: 18ch;
   margin-top: 1rem;
   font: italic 800 clamp(2.25rem,4.2vw,3.5rem)/1.08 var(--font-sans);
   letter-spacing:-0.045em;
@@ -80,7 +80,7 @@
 .search input {
   background:transparent;
   border:0;
-  padding-right:4.5rem;
+  padding-right:6.5rem;
   min-height:48px;
 }
 
@@ -89,7 +89,7 @@
   right:0;
   top:0;
   height:100%;
-  min-width:64px;
+  min-width:96px;
   color:#a6d8d3;
   font-size:0.8125rem;
   border-left:1px solid #32464d;
@@ -362,3 +362,7 @@
   .heroPlaceholder { min-height: 220px; }
   .recentLoading > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+.supporting { max-width: 42ch; margin-top: 1.2rem; color: #b5c6cd; line-height: 1.7; }
+.intentLinks { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 20px; color: #d6b66f; font-size: 14px; }
+.intentLinks a { min-height: 44px; display: inline-flex; align-items: center; }

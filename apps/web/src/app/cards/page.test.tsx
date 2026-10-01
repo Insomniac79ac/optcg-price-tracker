@@ -62,7 +62,7 @@ import type {
   PrintMarketIndexSourceValue,
 } from "@/lib/prints";
 
-import PrintsCataloguePage from "./page";
+import PrintsCataloguePage from "./CardsClient";
 
 function sourceValue(
   source: string,
@@ -235,7 +235,7 @@ describe("print catalogue page", () => {
     const tile = await screen.findByRole("link", { name: /Sanji/ });
     // The Market Index, then the two sources that actually produced it - the
     // per-source rows are what state the coverage on the tile.
-    expect(within(tile).getByText("Market Index")).toBeTruthy();
+    expect(within(tile).getByText("Market Value")).toBeTruthy();
     expect(within(tile).getByText("￥1,740")).toBeTruthy();
     expect(within(tile).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(tile).getByText("￥1,980")).toBeTruthy();
@@ -422,8 +422,8 @@ describe("print catalogue page", () => {
     render(<PrintsCataloguePage />);
     await screen.findAllByRole("link", { name: /Sanji/ });
 
-    expect(screen.getByRole("heading", { level: 1, name: "THE CARD ATLAS" })).toBeInTheDocument();
-    expect(screen.getByText(/Base, parallel and alt-art printings remain distinct entries/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Card Prices" })).toBeInTheDocument();
+    expect(screen.getByText(/Find a One Piece card and compare prices/)).toBeInTheDocument();
     expect(screen.queryByText(/Every printing is an island/)).not.toBeInTheDocument();
     expect(document.querySelector("[data-hero-fan]")).toBeNull();
   });
@@ -466,7 +466,7 @@ describe("print catalogue page", () => {
       .mockResolvedValueOnce(catalogueResponse([SANJI_PARALLEL]));
     render(<PrintsCataloguePage />);
 
-    expect(await screen.findByText("The Card Atlas could not be loaded.")).toBeInTheDocument();
+    expect(await screen.findByText("Card prices could not be loaded.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry catalogue" }));
     expect(await screen.findByRole("link", { name: /Sanji/ })).toBeInTheDocument();
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(2);

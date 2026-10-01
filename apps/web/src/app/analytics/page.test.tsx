@@ -22,7 +22,7 @@ vi.mock("@/components/ui/MarketValueChart", () => ({
 const { apiGet } = vi.hoisted(() => ({ apiGet: vi.fn() }));
 vi.mock("@/lib/api", async () => ({ ...await vi.importActual("@/lib/api"), apiGet }));
 
-import MarketPage from "./page";
+import MarketPage from "./MarketClient";
 import { ApiError } from "@/lib/api";
 import fixtures from "@/lib/__fixtures__/marketValue.json";
 import rankings from "@/lib/__fixtures__/marketValueRankings.json";
@@ -62,15 +62,15 @@ beforeEach(() => {
 describe("Market Value hero", () => {
   it("leads with Overall 7D movement, and attaches partial coverage to the secondary JPY value", async () => {
     await ready();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("One Piece Market");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("How is the One Piece market doing?");
     expect(screen.getByTestId("market-movement")).toHaveTextContent("−3.94%7D");
     const tracked = screen.getByTestId("market-tracked-value");
     expect(tracked).toHaveTextContent("¥262,279");
     expect(tracked).toHaveTextContent("639 of 4,316 printings priced");
     expect(tracked).toHaveTextContent("14.8% coverage");
-    expect(screen.getByText(/Data through/)).toHaveTextContent("Sep 26, 2026");
-    expect(screen.getByRole("combobox", { name: "Explore a market" })).toHaveValue("");
-    expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARDPIRATE ATLAScardpirateatlas.com");
+    expect(screen.getByText(/Published/)).toHaveTextContent("Sep 26, 2026");
+    expect(screen.getByRole("combobox", { name: "Choose a release" })).toHaveValue("");
+    expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARD PIRATEJapanese card prices · JPY");
   });
 
   it("offers only 7D, 30D and ALL; 30D shows an honest unavailable state instead of a chart", async () => {
@@ -97,7 +97,7 @@ describe("Market Value hero", () => {
     expect(screen.getByRole("note")).toHaveTextContent("Coverage additions and removals");
     expect(apiGet.mock.calls.filter(([path]) => path === BASE)).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "About tracked value" }));
-    expect(screen.getByText("Value of one copy of every physical printing Atlas currently prices in this scope.")).toBeInTheDocument();
+    expect(screen.getByText("Value of one copy of every physical printing Card Pirate currently prices in this scope.")).toBeInTheDocument();
   });
 
   it("withholds an ALL performance chart when the full archive crosses a break", async () => {
@@ -126,7 +126,7 @@ describe("Market Value hero", () => {
       expect(screen.queryByText(text)).not.toBeInTheDocument();
     }
     expect(apiGet.mock.calls.map(([path]) => path).sort()).toEqual([BASE, `${BASE}/most-valuable`, `${BASE}/movers`, `${BASE}/releases`]);
-    expect(Array.from(document.querySelectorAll("main section")).map((section) => section.getAttribute("data-testid"))).toEqual(["market-value-hero", "market-value-movers", "market-value-most-valuable", "market-value-comparison", "release-market"]);
+    expect(Array.from(document.querySelectorAll("main section[data-testid]")).map((section) => section.getAttribute("data-testid"))).toEqual(["market-value-hero", "market-value-movers", "market-value-most-valuable", "market-value-comparison", "release-market"]);
     expect(screen.queryByText(/\bLive\b|\bToday\b/)).not.toBeInTheDocument();
   });
 });
@@ -266,7 +266,7 @@ describe("B2 independent discovery requests", () => {
     await ready();
     apiGet.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Tracked value" }));
-    fireEvent.click(screen.getByRole("button", { name: "Performance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Price movement" }));
     expect(apiGet).not.toHaveBeenCalled();
     for (const [label, token] of [["30D", "30d"], ["ALL", "all"], ["7D", "7d"]]) {
       fireEvent.click(screen.getByRole("button", { name: label }));

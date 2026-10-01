@@ -109,8 +109,8 @@ export function PrintMarketIndexHeadline({ analytics }: { analytics: PrintAnalyt
   const headline = analytics?.headline ?? null;
   return (
     <section className={styles.index} data-testid="print-analytics-headline">
-      <h2>Market Index</h2>
-      <p className={styles.archiveLabel}>Archived index · recorded daily</p>
+      <h2>Recorded Market Value</h2>
+      <p className={styles.archiveLabel}>Historical reference · recorded daily</p>
       {headline ? (
         <AnalyticsHeadline headline={headline} />
       ) : (
@@ -229,7 +229,7 @@ function AnalyticsHeadline({ headline }: { headline: PrintAnalyticsHeadline }) {
       <div className="mt-2">
         <p className="text-base font-medium price-muted">Index unavailable</p>
         <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
-          Atlas has not archived a Market Index for this print yet.
+          No daily Market Value has been recorded for this printing yet.
         </p>
       </div>
     );

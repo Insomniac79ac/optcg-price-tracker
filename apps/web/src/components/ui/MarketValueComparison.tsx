@@ -99,7 +99,7 @@ export function MarketValueComparison({ releases, loading, failed }: {
         : lines.length > 0 ? <div className={styles.visual}>
           <MarketValueComparisonChart lines={lines} />
           <div className={heroStyles.chartFooter}>
-            <div className={heroStyles.watermark} data-testid="comparison-watermark"><AtlasMark title={null} /><div><strong>CARDPIRATE ATLAS</strong><span>cardpirateatlas.com</span></div></div>
+            <div className={heroStyles.watermark} data-testid="comparison-watermark"><AtlasMark title={null} /><div><strong>CARD PIRATE</strong><span>Japanese card prices · JPY</span></div></div>
             <span className={heroStyles.chartCaption}>7D price performance · %</span>
           </div>
         </div>

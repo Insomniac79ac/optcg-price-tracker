@@ -16,42 +16,42 @@
 
 export const brand = {
   /** Full product name - use for first mention, metadata, legal copy. */
-  productName: "CardPirate Atlas",
+  productName: "Card Pirate",
   /** Short form - use in tight UI chrome (topbar, mobile nav, favicon alt). */
-  shortName: "Atlas",
+  shortName: "Card Pirate",
   /** The endorsing/parent brand shown in the full lockup and footer. */
   parentBrand: "CardPirateTCG",
   /** `by {parentBrand}`, precomputed since every lockup needs this exact string. */
   endorsementLine: "by CardPirateTCG",
 
-  tagline: "Map your collection. Find your next treasure.",
+  tagline: "Know what your cards are worth.",
   supportingLine: "Collect the story. Know the value.",
 
   /** One sentence, no jargon - the product's actual promise to a collector. */
   productDescription:
-    "A place to remember what you own, discover what to chase, and understand value without turning collecting into trading.",
+    "Follow the cards you own, watch the ones you want and see where the One Piece market is moving.",
 
   /** <title> default when a page doesn't set its own. */
-  metadataTitleDefault: "CardPirate Atlas — One Piece Card Collection & Market Index",
+  metadataTitleDefault: "Card Pirate — One Piece Card Prices & Collection Value",
   /** Applied by Next.js metadata to any page that sets `title: "X"` -> "X — CardPirate Atlas". */
-  metadataTitleTemplate: "%s — CardPirate Atlas",
+  metadataTitleTemplate: "%s — Card Pirate",
 
   metadataDescription:
-    "Explore One Piece cards, map your collection, follow the cards you're chasing, and view a transparent Market Index based on Japanese market sources.",
+    "Track the value of your One Piece cards, watch prices before you buy and see how the overall market is moving.",
 
   /** Shorter than metadataDescription - for OG/social cards and share sheets. */
   socialSharingDescription:
-    "Map your collection, chase what you're missing, and read the market without the noise.",
+    "Follow your cards, compare Japanese source prices and see where the One Piece market is moving.",
 
   /** Footer/legal disclaimer - must never imply official status. */
   legalDisclaimer:
-    "CardPirate Atlas is an independent collector tool. It is not affiliated with, endorsed by, or sponsored by Bandai, Shueisha, Toei Animation, or any other rights holder connected to One Piece.",
+    "Card Pirate is an independent collector tool. It is not affiliated with, endorsed by, or sponsored by Bandai, Shueisha, Toei Animation, or any other rights holder connected to One Piece.",
 
   /** Canonical public navigation labels - functional, not novelty-themed
    * (docs/brand.md "Copy principles" - retained regardless of tone pass). */
   nav: {
-    discover: "Discover",
-    cards: "Cards",
+    discover: "Home",
+    cards: "Card Prices",
     marketIndex: "Market Index",
     myCollection: "My Collection",
     vaultView: "Vault View",

@@ -38,12 +38,12 @@ export function MarketValueHero(props: MarketValueHeroProps) {
     <section className={styles.hero} aria-labelledby="market-title" data-testid="market-value-hero">
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>The collector’s perspective</p>
-          <h1 id="market-title">One Piece Market</h1>
-          <p className={styles.subtitle}>Price movement across Japanese physical printings.</p>
+          <p className={styles.eyebrow}>One Piece card prices</p>
+          <h1 id="market-title">How is the One Piece market doing?</h1>
+          <p className={styles.subtitle}>See what is rising or falling across the Japanese printings we track. Coverage is partial.</p>
         </div>
         <div className={styles.scopeControl}>
-          <label htmlFor="market-scope">Explore a market</label>
+          <label htmlFor="market-scope">Choose a release</label>
           <select id="market-scope" value={releaseProductId ?? ""} onChange={(event) => onScopeChange(event.target.value === "" ? null : Number(event.target.value))}>
             <option value="">All One Piece</option>
             {!hasSelectedOption && <option value={releaseProductId ?? ""}>{data?.release_product_id === releaseProductId ? scopeLabel : releaseProductId === "invalid" ? "Invalid release selection" : "Selected release"}</option>}
@@ -56,10 +56,10 @@ export function MarketValueHero(props: MarketValueHeroProps) {
       <div className={styles.controls}>
         <div className={styles.modeControls}>
           <div className={styles.modeSwitch} role="group" aria-label="Chart mode">
-            <button type="button" aria-pressed={mode === "performance"} onClick={() => onModeChange("performance")}>Performance</button>
+            <button type="button" aria-pressed={mode === "performance"} onClick={() => onModeChange("performance")}>Price movement</button>
             <button type="button" aria-pressed={mode === "value"} onClick={() => onModeChange("value")}>Tracked value</button>
           </div>
-          <InfoTip className={styles.modeHelp} label="About chart modes" text={mode === "performance" ? "Coverage-neutral price movement across comparable cards." : "Partial JPY value of the cards Atlas currently prices. Coverage additions and removals can change this line independently of prices."} />
+          <InfoTip className={styles.modeHelp} label="About chart modes" text={mode === "performance" ? "Coverage-neutral price movement across comparable cards." : "Partial JPY value of the cards Card Pirate currently prices. Coverage additions and removals can change this line independently of prices."} />
         </div>
         <div className={styles.windows} role="group" aria-label="Market window">
           {MARKET_VALUE_WINDOWS.map((token) => <button type="button" key={token} aria-pressed={window === token} onClick={() => onWindowChange(token)}>{marketWindowLabel(token)}</button>)}
@@ -87,7 +87,7 @@ export function MarketValueHero(props: MarketValueHeroProps) {
                 ) : <p className={styles.unavailableHeadline}>{unavailable?.title}</p>}
                 {data.scope_kind === "release" && !available && tracked && <p className={styles.sparseCoverage}>{tracked.priced_print_count.toLocaleString("en-US")} / {tracked.total_physical_print_count.toLocaleString("en-US")} printings priced</p>}
               </div>
-              <p className={styles.asOf}>Data through <time dateTime={data.as_of}>{marketDate(data.as_of, true)}</time></p>
+              <p className={styles.asOf}>Published <time dateTime={data.as_of}>{marketDate(data.as_of, true)}</time></p>
             </div>
 
             <div className={styles.chartFrame}>
@@ -95,21 +95,21 @@ export function MarketValueHero(props: MarketValueHeroProps) {
                 <div className={styles.chartEmpty} data-testid="market-coverage-state">
                   <AtlasMark title={null} className={styles.emptyMark} />
                   <p>{unavailable?.detail}</p>
-                  <span>Tracked value shows only the printings Atlas can price.</span>
+                  <span>Tracked value shows only the printings Card Pirate can price.</span>
                 </div>
               ) : <MarketValueChart series={data.series} mode={mode} />}
               <div className={styles.chartFooter}>
                 <div className={styles.watermark} data-testid="market-watermark">
                   <AtlasMark title={null} />
-                  <div><strong>CARDPIRATE ATLAS</strong><span>cardpirateatlas.com</span></div>
+                  <div><strong>CARD PIRATE</strong><span>Japanese card prices · JPY</span></div>
                 </div>
-                <span className={styles.chartCaption}>{mode === "performance" ? "Price performance · %" : "Partial tracked value · JPY"}</span>
+                <span className={styles.chartCaption}>{mode === "performance" ? "Price movement · %" : "Partial tracked value · JPY"}</span>
               </div>
             </div>
 
             {tracked && <div className={styles.tracked} data-testid="market-tracked-value">
               <div>
-                <p className={styles.trackedLabel}>{data.scope_kind === "release" && !available ? "Tracked so far" : "Tracked value"}<InfoTip label="About tracked value" text="Value of one copy of every physical printing Atlas currently prices in this scope." /></p>
+                <p className={styles.trackedLabel}>{data.scope_kind === "release" && !available ? "Tracked so far" : "Tracked value"}<InfoTip label="About tracked value" text="Value of one copy of every physical printing Card Pirate currently prices in this scope." /></p>
                 <p className={styles.trackedNumber}>{marketJpy(tracked.value_jpy)}</p>
               </div>
               <div className={styles.coverage}>

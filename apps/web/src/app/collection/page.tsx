@@ -542,10 +542,10 @@ export default function CollectionPage() {
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <PageHeader
-          title="Collection"
+          title="What is your collection worth today?"
           description={
             <span className="flex flex-wrap gap-3">
-              <span className="w-full text-text-secondary">Your trove, kept together.</span>
+              <span className="w-full text-text-secondary">See the cards you own, their estimated value and what you paid.</span>
               <Link href="/analytics/collection" className="text-sky-400 hover:text-sky-300">
                 Analytics →
               </Link>

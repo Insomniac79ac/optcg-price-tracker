@@ -37,7 +37,7 @@ import type {
   PrintMarketIndexSourceValue,
 } from "@/lib/prints";
 
-import PrintDetailPage from "./page";
+import PrintDetailPage from "./PrintClient";
 
 function sourceValue(
   overrides: Partial<PrintMarketIndexSourceValue> & { source: string },
@@ -370,7 +370,7 @@ describe("print detail page", () => {
     const { container } = render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(screen.getByRole("heading", { name: "Market Index" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Recorded Market Value" })).toBeTruthy();
     expect(screen.getByText("￥26,900").className).toContain("text-accent-gold");
     // The payload carries no history, so nothing may imply any.
     expect(container.textContent).not.toMatch(/[+-]\d+(\.\d+)?%/);
@@ -412,14 +412,14 @@ describe("print detail page", () => {
     const sources = screen.getByTestId("live-market");
     expect(within(sources).getByText("Yuyu-Tei")).toBeTruthy();
     expect(within(sources).getByText("￥29,800")).toBeTruthy();
-    expect(within(sources).getByText(/Retail price/)).toBeTruthy();
+    expect(within(sources).getByText(/Current listing/).closest("[data-source-row]")?.textContent).not.toMatch(/sold|sale/i);
 
     expect(within(sources).getByText("SNKRDUNK")).toBeTruthy();
     expect(within(sources).getByText("￥24,000")).toBeTruthy();
     // A floor listing is never described as a completed sale - the label says
     // "Current listing", which is what it is.
     expect(within(sources).getByText(/Current listing/)).toBeTruthy();
-    expect(sources.textContent).not.toMatch(/sold|sale/i);
+    expect(within(sources).getByText(/Current listing/).closest("[data-source-row]")?.textContent).not.toMatch(/sold|sale/i);
   });
 
   it("names the source that reported nothing beside the one that did, with no invented price", async () => {
@@ -471,7 +471,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const about = screen
-      .getByRole("heading", { name: "Atlas entry" })
+      .getByRole("heading", { name: "About this printing" })
       .closest("section")!;
     for (const term of ["Card code", "Set", "Found in", "Rarity", "Card type", "Colour", "Language"]) {
       expect(within(about).getByText(term)).toBeTruthy();
@@ -485,12 +485,12 @@ describe("print detail page", () => {
     expect(about.textContent).not.toMatch(/\b(Cost|Power|Attribute|Effect|Counter)\b/);
   });
 
-  /** The rows of "Atlas entry", as term -> value, in document order.
+  /** The rows of "About this printing", as term -> value, in document order.
    * The whole point of this tranche is which rows exist and what each one
    * says, so the tests read them off the page rather than probing for text. */
   function aboutRows(): [string, string][] {
     const about = screen
-      .getByRole("heading", { name: "Atlas entry" })
+      .getByRole("heading", { name: "About this printing" })
       .closest("section")!;
     return Array.from(about.querySelectorAll("dl > div")).map((row) => [
       row.querySelector("dt")!.textContent!,
@@ -655,15 +655,15 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    const index = screen.getByRole("heading", { name: "Market Index" });
+    const index = screen.getByRole("heading", { name: "Recorded Market Value" });
     const live = screen.getByRole("heading", { name: "Current prices" });
-    const about = screen.getByRole("heading", { name: "Atlas entry" });
+    const about = screen.getByRole("heading", { name: "About this printing" });
     const others = screen.getByRole("heading", { name: "Other versions" });
 
     expect(index.closest("section")).not.toContainElement(live);
     expect(live.closest("section")).not.toContainElement(about);
     expect(others.closest("section")).not.toContainElement(about);
-    expect(screen.getByText("Archived index · recorded daily")).toBeInTheDocument();
+    expect(screen.getByText("Historical reference · recorded daily")).toBeInTheDocument();
   });
 
   it("dates the index with its real freshest observation", async () => {
@@ -672,7 +672,7 @@ describe("print detail page", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     // Copy changed; the timestamp behind it did not.
-    expect(screen.getByText("Updated Aug 16, 2026")).toBeTruthy();
+    expect(screen.getByText("Latest price observation 2026-08-16 (UTC)")).toBeTruthy();
   });
 
   it("shows the Japanese name when the payload has one", async () => {
@@ -688,7 +688,7 @@ describe("print detail page", () => {
     render(<PrintDetailPage />);
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
-    expect(screen.getByRole("link", { name: /Catalogue/ }).getAttribute("href")).toBe("/cards");
+    expect(screen.getAllByRole("link", { name: /Card Prices/ }).find((link) => link.closest("main"))!.getAttribute("href")).toBe("/cards");
   });
 
   it("lists other printings only when the API sends them", async () => {
@@ -740,7 +740,7 @@ describe("print detail page", () => {
     fetchPrint.mockRejectedValue(new ApiError("Not Found", 404));
     render(<PrintDetailPage />);
 
-    expect(await screen.findByText("This print isn’t in the Atlas.")).toBeTruthy();
+    expect(await screen.findByText("This printing could not be found.")).toBeTruthy();
     expect(screen.queryByText("This print couldn’t be loaded right now.")).toBeNull();
     expect(screen.getByRole("link", { name: /Browse the catalogue/ })).toBeTruthy();
   });
@@ -997,12 +997,12 @@ describe("print detail page", () => {
     // together, in the section that now names them as live.
     const live = screen.getByTestId("live-market");
     expect(within(live).getByText("￥810")).toBeTruthy();
-    expect(within(live).getByText(/Updated/)).toBeTruthy();
+    expect(within(live).getByText(/Latest price observation/)).toBeTruthy();
     expect(within(live).getByText("￥1,500")).toBeTruthy();
     expect(within(live).getByText(/Current listing/)).toBeTruthy();
     // ...and it is LABELLED live, so it cannot be read as the archived figure
     // in the analytics band above.
-    expect(within(live).getByText("Current Market Index")).toBeTruthy();
+    expect(within(live).getByText("Current Market Value")).toBeTruthy();
   });
 });
 
@@ -1118,7 +1118,7 @@ describe("print detail page - evidence types", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const sources = screen.getByTestId("live-market");
-    expect(within(sources).getByText(/Retail price/)).toBeTruthy();
+    expect(within(sources).getByText(/Current listing/).closest("[data-source-row]")?.textContent).not.toMatch(/sold|sale/i);
     expect(within(sources).getByText(/Current listing/)).toBeTruthy();
   });
 
@@ -1760,7 +1760,7 @@ describe("print detail page - a source with no price", () => {
     await screen.findByRole("heading", { name: "Roronoa Zoro", level: 1 });
 
     const snkrdunk = panelFor("SNKRDUNK");
-    expect(snkrdunk.textContent).toBe(`SNKRDUNK${UNAVAILABLE}`);
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${UNAVAILABLE}Price observation time unknownSuccessful check time not reportedFreshness not confirmed`);
     // Nothing number-shaped at all: no ￥, no digit, no dash standing in for
     // one, and no "Seen <date>" for an observation that never happened.
     expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A/);
@@ -2000,7 +2000,7 @@ describe("print detail page - no current listing on SNKRDUNK", () => {
 
     const snkrdunk = panelFor("SNKRDUNK");
     // The label, plus the disclosure trigger's own "?" glyph. Nothing else.
-    expect(snkrdunk.textContent).toBe(`SNKRDUNK${NO_LISTING}?`);
+    expect(snkrdunk.textContent).toBe(`SNKRDUNK${NO_LISTING}?Price observation time unknownSuccessful check time not reportedFreshness not confirmed`);
     expect(snkrdunk.textContent).not.toMatch(/￥|\d|—|–|--|N\/A|Seen/);
   });
 
@@ -2016,4 +2016,17 @@ describe("print detail page - no current listing on SNKRDUNK", () => {
     expect(line.className).toMatch(/flex-wrap/);
     expect(line.className).not.toMatch(/truncate|overflow-hidden|whitespace-nowrap/);
   });
+});
+
+
+it("shows auxiliary prices as reference evidence with independent freshness, without changing Market Value", async () => {
+  const detail = makeDetail();
+  detail.market_index.auxiliary_values = [sourceValue({ source: "yuyutei", reference_type: "dealer_buy", value_jpy: 12000, eligible: false, contributes_to_index: false })];
+  fetchPrint.mockResolvedValue(detail);
+  render(<PrintDetailPage />);
+  const section = await screen.findByRole("region", { name: "Other source prices" });
+  expect(section).toHaveTextContent("￥12,000");
+  expect(section).toHaveTextContent("not used in Market Value");
+  expect(section).toHaveTextContent("Successful check time not reported");
+  expect(screen.getByText("￥26,900")).toBeInTheDocument();
 });

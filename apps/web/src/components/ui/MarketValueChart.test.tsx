@@ -47,7 +47,7 @@ it("keeps readable branding inside the hero for either chart mode", () => {
   const view = render(<MarketValueHero {...props} />);
   const brand = screen.getByTestId("market-watermark");
   expect(screen.getByTestId("market-value-hero")).toContainElement(brand);
-  expect(brand).toHaveTextContent("CARDPIRATE ATLAScardpirateatlas.com");
+  expect(brand).toHaveTextContent("CARD PIRATEJapanese card prices · JPY");
   view.rerender(<MarketValueHero {...props} mode="value" />);
-  expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARDPIRATE ATLAS");
+  expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARD PIRATE");
 });

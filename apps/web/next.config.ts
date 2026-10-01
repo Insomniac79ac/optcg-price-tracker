@@ -88,6 +88,9 @@ const CONTENT_SECURITY_POLICY = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Serve metadata in the initial head for every reader, including search
+  // agents that parse HTML without running the streaming bootstrap.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [
       {
