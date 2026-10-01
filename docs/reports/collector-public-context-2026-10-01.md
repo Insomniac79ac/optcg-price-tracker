@@ -40,7 +40,7 @@ Only approved public artwork origins are fetched, with exact-origin matching, no
 
 ### Validation and review screenshots
 
-**Evidence boundary:** these are screenshots of the production build against local public-response fixtures and saved canonical One Piece artwork, not current hosted prices. They verify dynamic field binding and layout without production access or live scraping. Exact-card fixtures use ¥12,670 / ¥1,450 / ¥870; release fixtures include gains and falls; 30D is unavailable. Renderer-added sample-data labels are absent in production. The original SAMPLE watermarks embedded in official artwork are deliberately retained.
+**Evidence boundary:** these are screenshots of the production build against local public-response fixtures and saved canonical One Piece artwork, not current hosted prices. They verify dynamic field binding and layout without production access or live scraping. Exact-card fixtures use ¥12,670 / ¥1,450 / ¥870; release fixtures include gains and falls; 30D is unavailable. Renderer-added sample-data labels are absent in production. The original SAMPLE watermarks embedded in official artwork are deliberately retained. Focused Sets screenshots hide fixed page navigation only during capture so it does not obscure the section; full-page screenshots retain the normal navigation.
 
 | Surface | Desktop | Mobile | Narrow mobile |
 | --- | --- | --- | --- |
