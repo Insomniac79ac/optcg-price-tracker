@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
+from app.services.public_price_payload import public_price_payload
 from app.models import Card, CollectionItem, CollectorGroup, CollectorTag, GradingSubmission, MarketSignalEvent, WishlistItem
 from app.schemas import OpportunitiesResponseOut, OpportunitiesSummaryOut, OpportunityOut
 from app.services.collector import get_groups_for_cards, get_groups_for_collection_items, get_tags_for_cards
@@ -210,6 +211,7 @@ def _score_event(
 
 
 def _to_out(
+    db: Session,
     scored: _ScoredEvent,
     tags_by_card: dict[int, list[CollectorTag]],
     groups_by_card: dict[int, list[CollectorGroup]],
@@ -228,6 +230,10 @@ def _to_out(
         if owned and event.card_id is not None
         else build_grading_info(None)
     )
+    payload = public_price_payload(
+        db, {"message": event.message, "last_payload": event.last_payload_json},
+        captured_at=event.last_seen_at, card_id=event.card_id,
+    )
     return OpportunityOut(
         score=scored.score,
         category=scored.category,
@@ -245,12 +251,12 @@ def _to_out(
         variant=card.variant if card is not None else None,
         language=card.language if card is not None else None,
         owned_quantity=scored.owned_quantity,
-        message=event.message,
+        message=payload["message"],
         first_seen_at=event.first_seen_at,
         last_seen_at=event.last_seen_at,
         seen_count=event.seen_count,
         score_reasons=scored.reasons,
-        last_payload=event.last_payload_json,
+        last_payload=payload["last_payload"],
         tags=tags,
         groups=groups,
         grading=grading,
@@ -362,6 +368,7 @@ def get_opportunities(
     grading_by_card = get_submissions_for_cards(db, owned_card_ids)
 
     return _rank_opportunities(
+        db,
         events, cards_by_id, owned_quantities, wishlist_by_card,
         tags_by_card, groups_by_card, grading_by_card,
         category=category, owned=owned, min_score=min_score, limit=limit, offset=offset,
@@ -417,6 +424,7 @@ def get_personal_opportunities(
     for card_id, submission in submissions:
         grading.setdefault(card_id, []).append(submission)
     return _rank_opportunities(
+        db,
         events, cards, quantities, wishes,
         get_tags_for_cards(db, card_ids, user_id=user_id), groups, grading,
         category=None, owned=None, min_score=None, limit=limit, offset=offset,
@@ -424,6 +432,7 @@ def get_personal_opportunities(
 
 
 def _rank_opportunities(
+    db: Session,
     events: list[MarketSignalEvent],
     cards_by_id: dict[int, Card],
     owned_quantities: dict[int, int],
@@ -483,7 +492,7 @@ def _rank_opportunities(
     )
 
     page = scored[offset : offset + limit]
-    page_out = [_to_out(s, tags_by_card, groups_by_card, grading_by_card) for s in page]
+    page_out = [_to_out(db, s, tags_by_card, groups_by_card, grading_by_card) for s in page]
     return OpportunitiesResponseOut(
         summary=summary,
         opportunities=page_out,

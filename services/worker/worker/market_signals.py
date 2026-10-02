@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from worker.customer_prices import customer_price_series
 from worker.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping
 
 SIGNAL_TYPES = (
@@ -497,7 +498,7 @@ def compute_all_signals(db: Session) -> list[CandidateSignal]:
     observations = db.scalars(
         select(PriceObservation)
         .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
+        .order_by(PriceObservation.observed_at, PriceObservation.id)
     ).all()
     observations_by_card: dict[int, list[PriceObservation]] = defaultdict(list)
     for obs in observations:
@@ -522,6 +523,10 @@ def compute_all_signals(db: Session) -> list[CandidateSignal]:
                 continue
             by_source_type[(source_name, obs.price_type)].append(obs)
 
+        by_source_type = {
+            key: customer_price_series(series, key[0])
+            for key, series in by_source_type.items()
+        }
         latest_trio = _latest_price_trio(by_source_type)
 
         all_signals.extend(_price_movement_signals(card, by_source_type, latest_trio, owned_quantity))

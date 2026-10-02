@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.services.source_semantics import customer_price_series, is_customer_price
 from app.models import Card, PriceObservation, Source
 from app.schemas import MarketMoverOut, MarketPriceOut, MarketSignalsOut
 
@@ -109,7 +110,7 @@ def get_market_movers(
     observations = db.scalars(
         select(PriceObservation)
         .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
+        .order_by(PriceObservation.observed_at, PriceObservation.id)
     ).all()
 
     observations_by_card: dict[int, list[PriceObservation]] = defaultdict(list)
@@ -133,6 +134,11 @@ def get_market_movers(
 
             by_source_type[(source_name, obs.price_type)].append(obs)
 
+        by_source_type = {
+            key: customer_price_series(series, key[0])
+            for key, series in by_source_type.items()
+        }
+
         latest_prices = [
             MarketPriceOut(
                 source=group_key[0],
@@ -144,7 +150,8 @@ def get_market_movers(
                 listing_count=obs.listing_count,
             )
             for group_key, obs in latest_by_group.items()
-            if (source is None or group_key[0] == source)
+            if is_customer_price(group_key[0], obs)
+            and (source is None or group_key[0] == source)
             and (price_type is None or group_key[1] == price_type)
         ]
         latest_prices.sort(key=lambda p: (p.source, p.price_type))

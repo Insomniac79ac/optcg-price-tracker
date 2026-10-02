@@ -204,6 +204,7 @@ class PriceObservation(Base):
     price_type: Mapped[str] = mapped_column(String(32))
     price_jpy: Mapped[int] = mapped_column(Integer)
     condition_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    promotion_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
     stock_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     listing_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_snapshot_id: Mapped[int | None] = mapped_column(

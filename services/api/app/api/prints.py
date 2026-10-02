@@ -43,6 +43,7 @@ from app.services.print_market_index import get_market_index_for_print
 from app.services.print_pricing import (
     compute_print_price_series_trends,
     get_price_history_for_print,
+    get_latest_price_map_for_prints,
 )
 from app.services.print_series import (
     DEFAULT_WINDOW,
@@ -209,7 +210,7 @@ def _to_price_observation_out(
     source name and no price_type literal appears in this module - an
     unconfigured pair yields None for both rather than a guess.
     """
-    semantics = classify_observation(source_name, obs.price_type, obs.price_jpy)
+    semantics = classify_observation(source_name, obs.price_type, obs.price_jpy, obs.promotion_state)
     instrument = describe_instrument(source_name, obs.price_type)
     return PrintPriceObservationOut(
         id=obs.id,
@@ -235,14 +236,16 @@ def get_print_prices(print_id: int, db: Session = Depends(get_db)):
     _get_print_or_404(db, print_id)
 
     rows = get_price_history_for_print(db, print_id)
-    # Same rows, same order, one-to-one - get_price_history_for_print already
-    # orders oldest-first and this endpoint deliberately applies no freshness
-    # or eligibility filter of its own: history keeps every observation it
-    # ever recorded, annotated rather than pruned.
+    # Customer history excludes promotional evidence; raw rows remain stored.
     observations = [
         _to_price_observation_out(print_id, obs, source_name) for obs, source_name in rows
     ]
-    series = [PrintPriceSeriesTrendOut(**trend) for trend in compute_print_price_series_trends(rows)]
+    current = get_latest_price_map_for_prints(db, [print_id]).get(print_id, {})
+    series = [
+        PrintPriceSeriesTrendOut(**trend)
+        for trend in compute_print_price_series_trends(rows)
+        if (trend["source"], trend["price_type"]) in current
+    ]
     return PrintPriceHistoryOut(card_print_id=print_id, observations=observations, series=series)
 
 

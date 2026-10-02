@@ -261,6 +261,18 @@ class StrikethroughPriceExclusionTests(unittest.TestCase):
     """Source-wide generalization: a struck-through former/list price must
     never compete with the current sale price as a DOM candidate."""
 
+    def test_op04_099_sale_80_is_internal_evidence_not_struck_120(self):
+        html = sale_html().replace("120", "SALE_AMOUNT").replace("220", "120")
+        html = html.replace("SALE_AMOUNT", "80").replace("OP01-013", "OP04-099")
+        result = extract_with_agreement(
+            html, "https://yuyu-tei.jp/sell/opc/card/op04/10115", "OP04-099",
+            expected_treatment="normal",
+        )
+        self.assertEqual(result["extraction_status"], "extracted")
+        self.assertEqual(result["extracted"]["sell_price_jpy"], 80)
+        self.assertEqual(result["extracted"]["promotion_state"], "sale")
+        self.assertNotEqual(result["extracted"]["sell_price_jpy"], 120)
+
     def test_struck_through_list_price_is_excluded_from_candidates(self):
         html = _discounted_price_html()
         result = extract_with_agreement(html, PRODUCT_URL, "OP01-013", expected_treatment="normal")

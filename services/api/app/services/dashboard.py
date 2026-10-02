@@ -269,7 +269,7 @@ def _build_recent_signal_events(db: Session) -> RecentSignalEventsWidgetOut:
         cards_by_id = {c.id: c for c in db.scalars(select(Card).where(Card.id.in_(card_ids))).all()}
 
     out_events = [
-        event_to_out(e, cards_by_id.get(e.card_id), owned_quantity_for_card(db, e.card_id))
+        event_to_out(db, e, cards_by_id.get(e.card_id), owned_quantity_for_card(db, e.card_id))
         for e in events
     ]
     return RecentSignalEventsWidgetOut(events=out_events)

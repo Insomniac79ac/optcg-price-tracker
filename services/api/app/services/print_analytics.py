@@ -49,6 +49,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import MarketIndexSnapshot, PriceObservation
+from app.services.customer_prices import customer_price_clause
 from app.services.card_pirate_index_read import (
     WINDOW_DAYS,
     build_windows,
@@ -175,7 +176,7 @@ def _chart_extent(
         select(
             func.min(PriceObservation.observed_at),
             func.max(PriceObservation.observed_at),
-        ).where(PriceObservation.card_print_id == print_id)
+        ).where(PriceObservation.card_print_id == print_id, customer_price_clause())
     ).one()
 
     snapshot_span = _snapshot_extent(snapshots, usable_only=False)

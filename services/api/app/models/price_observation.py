@@ -165,8 +165,8 @@ class PriceObservation(Base):
     # raw_snapshots.raw_content, which is where that evidence belongs.
     #
     # Read by app.services.source_semantics.classify_observation, which turns
-    # "sale" into the "sale_price" constraint. That constraint describes the
-    # value; it never makes the observation ineligible.
+    # "sale" into the "sale_price" exclusion. Source semantics v3 makes this
+    # internal evidence unavailable to customer pricing and normalized values.
     promotion_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     # Read-only convenience accessor for the composite lineage FK above -

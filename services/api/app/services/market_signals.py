@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
+from app.services.source_semantics import customer_price_series
 from app.models import Card, CollectionItem, PriceObservation, Source, SourceCardMapping, WishlistItem
 from app.schemas import (
     MarketSignalLatestPricesOut,
@@ -584,7 +585,7 @@ def get_market_signals(
     observations = db.scalars(
         select(PriceObservation)
         .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
+        .order_by(PriceObservation.observed_at, PriceObservation.id)
     ).all()
     observations_by_card: dict[int, list[PriceObservation]] = defaultdict(list)
     for obs in observations:
@@ -615,6 +616,11 @@ def get_market_signals(
             if source_name is None:
                 continue
             by_source_type[(source_name, obs.price_type)].append(obs)
+
+        by_source_type = {
+            key: customer_price_series(series, key[0])
+            for key, series in by_source_type.items()
+        }
 
         latest_trio = _latest_price_trio(by_source_type)
 

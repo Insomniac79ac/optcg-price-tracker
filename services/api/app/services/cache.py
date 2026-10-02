@@ -33,10 +33,11 @@ from typing import Any
 from app.env import is_development_environment
 from app.services.app_logging import record_app_log
 from app.settings import settings
+from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
 logger = logging.getLogger(__name__)
 
-KEY_PREFIX = "occache"
+KEY_PREFIX = f"occache:source-semantics-{SOURCE_SEMANTICS_VERSION}"
 
 BACKEND_VALUES = ("redis", "memory", "none")
 

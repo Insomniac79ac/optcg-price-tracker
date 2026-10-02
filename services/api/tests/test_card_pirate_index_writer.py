@@ -769,7 +769,7 @@ def test_l_index_and_source_semantics_versions_are_untouched():
     from app.services.source_semantics import SOURCE_SEMANTICS_VERSION
 
     assert INDEX_VERSION == 3
-    assert SOURCE_SEMANTICS_VERSION == 2
+    assert SOURCE_SEMANTICS_VERSION == 3
     assert "INDEX_VERSION" not in WRITER_SOURCE.split('"""', 2)[2]
     assert "SOURCE_SEMANTICS_VERSION" not in WRITER_SOURCE.split('"""', 2)[2]
 

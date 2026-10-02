@@ -12,6 +12,7 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from worker.customer_prices import customer_latest_prices
 from worker.models import CollectionItem, PortfolioValuationSnapshot, PriceObservation, Source
 
 YUYUTEI_SELL = ("yuyutei", "sell")
@@ -50,7 +51,7 @@ def create_portfolio_valuation_snapshot(db: Session) -> PortfolioValuationSnapsh
     observations = db.scalars(
         select(PriceObservation)
         .where(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
+        .order_by(PriceObservation.observed_at, PriceObservation.id)
     ).all()
 
     latest_by_card: dict[int, dict[tuple[str, str], PriceObservation]] = defaultdict(dict)
@@ -60,8 +61,10 @@ def create_portfolio_valuation_snapshot(db: Session) -> PortfolioValuationSnapsh
             continue
         key = (source_name, obs.price_type)
         current = latest_by_card[obs.card_id].get(key)
-        if current is None or obs.observed_at > current.observed_at:
+        if current is None or (obs.observed_at, obs.id) > (current.observed_at, current.id):
             latest_by_card[obs.card_id][key] = obs
+
+    latest_by_card = customer_latest_prices(latest_by_card)
 
     total_cost_basis_jpy = 0
     total_quantity = 0

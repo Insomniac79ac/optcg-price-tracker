@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.pagination import pagination_response
 from app.db import get_db
+from app.services.public_price_payload import public_price_payload
 from app.models import Card, CollectionItem, MarketIntelligenceReport, MarketSignalEvent
 from app.models.market_signal_event import STATUSES as EVENT_STATUSES
 from app.schemas import (
@@ -130,7 +131,7 @@ def _get_event_or_404(db: Session, event_id: int) -> MarketSignalEvent:
 def _build_event_out(db: Session, event: MarketSignalEvent) -> MarketSignalEventOut:
     card = db.get(Card, event.card_id) if event.card_id is not None else None
     owned_quantity = owned_quantity_for_card(db, event.card_id)
-    return event_to_out(event, card, owned_quantity)
+    return event_to_out(db, event, card, owned_quantity)
 
 
 @router.get("/signal-events", response_model=MarketSignalEventListOut)
@@ -246,7 +247,7 @@ def _load_market_signal_events(
     )
 
     page = enriched[offset : offset + limit]
-    page_out = [event_to_out(event, card, qty) for event, card, qty in page]
+    page_out = [event_to_out(db, event, card, qty) for event, card, qty in page]
     return MarketSignalEventListOut(
         summary=summary,
         events=page_out,
@@ -374,8 +375,8 @@ def market_opportunities(
     return value
 
 
-def _report_to_out(report: MarketIntelligenceReport) -> MarketIntelligenceReportOut:
-    payload = report.report_payload_json
+def _report_to_out(db: Session, report: MarketIntelligenceReport) -> MarketIntelligenceReportOut:
+    payload = public_price_payload(db, report.report_payload_json, captured_at=report.created_at)
     return MarketIntelligenceReportOut(
         id=report.id,
         created_at=report.created_at,
@@ -422,7 +423,7 @@ def get_latest_market_report(response: Response, db: Session = Depends(get_db)):
         )
         if report is None:
             raise HTTPException(status_code=404, detail="No market intelligence reports found")
-        return _report_to_out(report).model_dump(mode="json")
+        return _report_to_out(db, report).model_dump(mode="json")
 
     cache_key = "market_report:latest"
     ttl = settings.CACHE_MARKET_TTL_SECONDS
@@ -467,4 +468,4 @@ def get_market_report(report_id: int, db: Session = Depends(get_db)):
     report = db.get(MarketIntelligenceReport, report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="Market intelligence report not found")
-    return _report_to_out(report)
+    return _report_to_out(db, report)

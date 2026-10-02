@@ -24,10 +24,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import PriceObservation, Source
+from app.services.customer_prices import customer_price_clause
 
 
 def get_latest_prices_for_cards(
-    db: Session, card_ids: set[int] | list[int]
+    db: Session, card_ids: set[int] | list[int], *, include_internal: bool = False
 ) -> dict[int, list[PriceObservation]]:
     """Returns, for each given card_id, the latest PriceObservation per
     distinct (source_id, price_type) series - one row per series, at its
@@ -63,9 +64,11 @@ def get_latest_prices_for_cards(
     )
     latest_ids = select(ranked.c.id).where(ranked.c.rn == 1)
 
-    observations = db.scalars(
-        select(PriceObservation).where(PriceObservation.id.in_(latest_ids))
-    ).all()
+    stmt = select(PriceObservation).where(PriceObservation.id.in_(latest_ids))
+    # Filter AFTER ranking: a latest sale must not reveal an older regular price.
+    if not include_internal:
+        stmt = stmt.where(customer_price_clause())
+    observations = db.scalars(stmt).all()
 
     by_card: dict[int, list[PriceObservation]] = defaultdict(list)
     for obs in observations:
@@ -78,6 +81,8 @@ def get_latest_price_map(
     card_ids: set[int] | list[int],
     source_names: tuple[str, ...] | None = None,
     price_types: tuple[str, ...] | None = None,
+    *,
+    include_internal: bool = False,
 ) -> dict[int, dict[tuple[str, str], PriceObservation]]:
     """Same lookup as get_latest_prices_for_cards, reshaped into the form
     every caller actually wants: card_id -> {(source_name, price_type):
@@ -86,7 +91,9 @@ def get_latest_price_map(
     ("yuyutei", "sell")/("yuyutei", "buy")/("snkrdunk", "floor")) - the
     underlying query already fetched only latest rows, so this is a plain
     in-memory filter, not an extra round trip."""
-    by_card_raw = get_latest_prices_for_cards(db, card_ids)
+    by_card_raw = get_latest_prices_for_cards(
+        db, card_ids, include_internal=include_internal
+    )
     if not by_card_raw:
         return {}
 

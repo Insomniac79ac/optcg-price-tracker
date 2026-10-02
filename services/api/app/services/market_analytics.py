@@ -367,20 +367,8 @@ def _basis_values(
         for source_value in index.source_values:
             if source_value.source != basis.source_name:
                 continue
-            # EXCLUDED-because-constrained, which is narrower than
-            # "carries a constraint". source_semantics ships four verdicts and
-            # only two of them disqualify: platform_floor and
-            # below_platform_minimum are ineligible, sale_price is a fully
-            # valid market price that merely has a name. Reading `constraint`
-            # alone would have reported Yuyu-Tei's 36 sale-priced prints as
-            # impaired coverage when every one of them is a real price a
-            # collector can pay today - see source_semantics, "Anything
-            # reading `constraint` as a synonym for 'excluded' is reading it
-            # wrong; `eligible` is the field that answers that."
-            #
-            # Both conditions, and no constraint NAME: a future ineligible
-            # constraint is counted here the day the classifier ships it, and
-            # a future eligible one is correctly ignored, with no edit.
+            # Count exclusions from the resolver's verdict, without duplicating
+            # source-specific rules or using a constraint name as eligibility.
             if source_value.constraint is not None and not source_value.eligible:
                 excluded_constrained += 1
 

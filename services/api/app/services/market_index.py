@@ -73,7 +73,11 @@ from sqlalchemy.orm import Session
 from app.models import PriceObservation
 from app.schemas import MarketIndexOut, MarketIndexSourceValueOut, SourcePriceRangeOut
 from app.services.latest_prices import get_latest_price_map
-from app.services.source_semantics import SOURCE_SEMANTICS_VERSION, classify_observation
+from app.services.source_semantics import (
+    SOURCE_SEMANTICS_VERSION,
+    classify_observation,
+    is_customer_price,
+)
 
 # Version 3 (was 2, was 1): the COMBINATION step changed again, and in the
 # opposite direction to v2.
@@ -241,22 +245,10 @@ def _resolve_yuyutei_sell(
     stock, so an out-of-stock observation is exactly as eligible as an
     in-stock one of the same age.
 
-    A PROMOTIONAL PRICE IS STILL A RETAIL SELL PRICE, and this function's
-    arithmetic says so: when the stored promotion_state is "sale" the only
-    thing that changes is `constraint`. The value, the staleness rule, the
-    eligibility verdict and therefore the index number, source_count,
-    coverage, confidence and source_price_range are all identical to what they
-    would have been without the label. The reason is simple - a discounted
-    asking price is the price the card can actually be bought at, so treating
-    it as anything less than ordinary evidence would make Atlas publish
-    nothing for a card whose current price it knows exactly.
-
-    `eligible` is combined with the semantic verdict the same way
-    _resolve_snkrdunk does it, rather than ignoring it: today Yuyu-Tei's only
-    two possible verdicts are both eligible, so the `and` cannot change any
-    current outcome, but writing it this way means a future Yuyu-Tei rule that
-    genuinely disqualifies an observation is honoured automatically instead of
-    being silently dropped here."""
+    Sale amounts remain internal evidence. The latest sale suppresses the
+    customer-facing value, and source semantics excludes it from the index.
+    No older observation or struck former price is substituted.
+    """
     if observation is None:
         return _SourceValue(
             source=YUYUTEI,
@@ -291,17 +283,15 @@ def _resolve_yuyutei_sell(
         source=YUYUTEI,
         reference_type="retail_sell",
         evidence_type="listing",
-        value_jpy=observation.price_jpy,
+        value_jpy=(
+            observation.price_jpy if is_customer_price(YUYUTEI, observation) else None
+        ),
         observed_at=observation.observed_at,
         sample_size=None,
         stale=stale,
         eligible=not stale and semantics.eligible,
         fallback_used=False,
-        # Staleness keeps the reason string when both apply, matching
-        # _resolve_snkrdunk. `sale_price` never supplies one at all - it is
-        # not a reason for exclusion - so a fresh sale observation reports
-        # ineligible_reason=None exactly as an ordinary one does.
-        ineligible_reason="stale" if stale else semantics.ineligible_reason,
+        ineligible_reason=semantics.ineligible_reason or ("stale" if stale else None),
         constraint=semantics.constraint,
     )
 
@@ -317,7 +307,9 @@ def _resolve_yuyutei_buy(observation: PriceObservation | None) -> _SourceValue |
         source=YUYUTEI,
         reference_type="dealer_buy",
         evidence_type="listing",
-        value_jpy=observation.price_jpy,
+        value_jpy=(
+            observation.price_jpy if is_customer_price(YUYUTEI, observation) else None
+        ),
         observed_at=observation.observed_at,
         sample_size=None,
         stale=False,
@@ -434,7 +426,9 @@ def _compute_index_fields(
     # ADMISSIBLE - is this value usable evidence at all? Unchanged since v1, and
     # `eligible` still means exactly what it always meant. Constrained, stale
     # and absent values are out, and they stay out of everything below.
-    admissible = [sv for sv in source_values if sv.eligible and sv.value_jpy is not None]
+    admissible = [
+        sv for sv in source_values if sv.eligible and sv.value_jpy is not None
+    ]
 
     # CONTRIBUTORS - which admissible values go into the number? In v3, all of
     # them. This is the whole of the v3 change (see INDEX_VERSION above for why
@@ -538,14 +532,18 @@ def _compute_index_fields(
         coverage_status = "none"
         confidence = "low"
 
-    all_observed_ats = [sv.observed_at for sv in source_values if sv.observed_at is not None]
+    all_observed_ats = [
+        sv.observed_at for sv in source_values if sv.observed_at is not None
+    ]
     freshest = max(all_observed_ats) if all_observed_ats else None
     # Still keyed on ADMISSIBLE, matching this field's name and `eligible`'s
     # unchanged meaning: it bounds the freshness of the evidence on display, not
     # of the aggregate alone. Moving it to contributors would silently change
     # what every already-written market_index_snapshots row's
     # stalest_eligible_source_at column means.
-    eligible_observed_ats = [sv.observed_at for sv in admissible if sv.observed_at is not None]
+    eligible_observed_ats = [
+        sv.observed_at for sv in admissible if sv.observed_at is not None
+    ]
     stalest_eligible = min(eligible_observed_ats) if eligible_observed_ats else None
     stale_sources = [sv.source for sv in source_values if sv.stale]
 
@@ -634,7 +632,9 @@ def _fetch_recent_snkrdunk_sold(
     return by_card
 
 
-def get_market_index_for_cards(db: Session, card_ids: list[int]) -> dict[int, MarketIndexOut]:
+def get_market_index_for_cards(
+    db: Session, card_ids: list[int]
+) -> dict[int, MarketIndexOut]:
     """The one entry point both GET /cards/{id}/market-index and the
     catalogue batch endpoint call - same code path, so a single card's
     index can never disagree with what the catalogue shows for it. Issues a
@@ -647,7 +647,11 @@ def get_market_index_for_cards(db: Session, card_ids: list[int]) -> dict[int, Ma
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     yuyutei_latest = get_latest_price_map(
-        db, card_ids, source_names=(YUYUTEI,), price_types=("sell", "buy")
+        db,
+        card_ids,
+        source_names=(YUYUTEI,),
+        price_types=("sell", "buy"),
+        include_internal=True,
     )
     snkrdunk_floor_latest = get_latest_price_map(
         db, card_ids, source_names=(SNKRDUNK,), price_types=("floor",)
@@ -668,7 +672,9 @@ def get_market_index_for_cards(db: Session, card_ids: list[int]) -> dict[int, Ma
         )
 
         auxiliary_values = [buy_value] if buy_value is not None else []
-        results[card_id] = _combine(card_id, [sell_value, snkrdunk_value], auxiliary_values, now)
+        results[card_id] = _combine(
+            card_id, [sell_value, snkrdunk_value], auxiliary_values, now
+        )
 
     return results
 

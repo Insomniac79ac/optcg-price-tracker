@@ -32,14 +32,17 @@ and `docs/print_centric_pricing.md`).
 **Yuyu-Tei retail sell** (product decision - see
 `docs/yuyutei_collector_operations.md` "Stock is not required"):
 
-> latest verified Yuyu-Tei sell observation <= 7 days old
+> latest verified, non-promotional Yuyu-Tei sell observation <= 7 days old
 
 Stock/availability has no effect on eligibility. A Yuyu-Tei displayed sell
 price is useful market evidence whether or not the retailer currently
 reports the item in stock - an out-of-stock observation is exactly as
-eligible as an in-stock one of the same age. Only freshness (and the
-collector's own identity/price validation - see the collector doc) govern
-whether a sell observation counts. Yuyu-Tei dealer buy remains auxiliary-only
+eligible as an in-stock one of the same age. Source semantics v3 excludes observations with `promotion_state=sale`.
+The sale amount remains internal source evidence, but public current prices
+return unavailable/null and public source history omits those observations.
+Neither an older regular observation nor the struck former price replaces a
+latest sale. Market Index snapshots and Market Value publications use the
+corrected rule going forward; published Market Value history is unchanged. Yuyu-Tei dealer buy remains auxiliary-only
 (never eligible for the index itself, unchanged).
 
 **SNKRDUNK** - unchanged by this task: >=3 sold observations in the trailing

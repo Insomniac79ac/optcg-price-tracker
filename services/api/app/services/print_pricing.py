@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import PriceObservation, Source
+from app.services.customer_prices import customer_price_clause
 
 # Mirrors app.services.market's CHANGE_WINDOWS - same 24h/7d/30d convention,
 # applied per print instead of per legacy card.
@@ -38,7 +39,7 @@ def _pct_change(latest_price: int, baseline_price: int) -> float | None:
 
 
 def get_latest_prices_for_prints(
-    db: Session, print_ids: set[int] | list[int]
+    db: Session, print_ids: set[int] | list[int], *, include_internal: bool = False
 ) -> dict[int, list[PriceObservation]]:
     """Print-scoped counterpart to
     app.services.latest_prices.get_latest_prices_for_cards - identical
@@ -67,9 +68,11 @@ def get_latest_prices_for_prints(
     )
     latest_ids = select(ranked.c.id).where(ranked.c.rn == 1)
 
-    observations = db.scalars(
-        select(PriceObservation).where(PriceObservation.id.in_(latest_ids))
-    ).all()
+    stmt = select(PriceObservation).where(PriceObservation.id.in_(latest_ids))
+    # Filter AFTER ranking: a latest sale must not reveal an older regular price.
+    if not include_internal:
+        stmt = stmt.where(customer_price_clause())
+    observations = db.scalars(stmt).all()
 
     by_print: dict[int, list[PriceObservation]] = defaultdict(list)
     for obs in observations:
@@ -82,11 +85,15 @@ def get_latest_price_map_for_prints(
     print_ids: set[int] | list[int],
     source_names: tuple[str, ...] | None = None,
     price_types: tuple[str, ...] | None = None,
+    *,
+    include_internal: bool = False,
 ) -> dict[int, dict[tuple[str, str], PriceObservation]]:
     """Print-scoped counterpart to
     app.services.latest_prices.get_latest_price_map - reshaped into
     print_id -> {(source_name, price_type): PriceObservation}."""
-    by_print_raw = get_latest_prices_for_prints(db, print_ids)
+    by_print_raw = get_latest_prices_for_prints(
+        db, print_ids, include_internal=include_internal
+    )
     if not by_print_raw:
         return {}
 
@@ -115,7 +122,7 @@ def get_price_history_for_print(
     stmt = (
         select(PriceObservation, Source.name)
         .join(Source, Source.id == PriceObservation.source_id)
-        .where(PriceObservation.card_print_id == print_id)
+        .where(PriceObservation.card_print_id == print_id, customer_price_clause())
         .order_by(PriceObservation.observed_at.asc(), PriceObservation.id.asc())
     )
     return list(db.execute(stmt).all())
@@ -129,7 +136,11 @@ def compute_print_price_series_trends(
     and every change_*_pct stays null - this module never fabricates a
     24h/7d/30d change from less than two real observations, and never
     borrows a baseline from another series or another print."""
-    now = _naive(now) if now is not None else datetime.now(timezone.utc).replace(tzinfo=None)
+    now = (
+        _naive(now)
+        if now is not None
+        else datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     by_series: dict[tuple[str, str], list[PriceObservation]] = defaultdict(list)
     for obs, source_name in rows:
@@ -145,11 +156,17 @@ def compute_print_price_series_trends(
             for field_name, days in CHANGE_WINDOWS:
                 cutoff = now - timedelta(days=days)
                 baseline = next(
-                    (obs for obs in reversed(series[:-1]) if _naive(obs.observed_at) <= cutoff),
+                    (
+                        obs
+                        for obs in reversed(series[:-1])
+                        if _naive(obs.observed_at) <= cutoff
+                    ),
                     None,
                 )
                 if baseline is not None:
-                    changes[field_name] = _pct_change(latest.price_jpy, baseline.price_jpy)
+                    changes[field_name] = _pct_change(
+                        latest.price_jpy, baseline.price_jpy
+                    )
         trends.append(
             {
                 "source": source_name,

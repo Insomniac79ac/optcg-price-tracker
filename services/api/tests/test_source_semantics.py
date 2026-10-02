@@ -253,16 +253,6 @@ def test_snkrdunk_configures_only_the_stored_floor_price_type():
 # --- Version --------------------------------------------------------------
 
 
-def test_source_semantics_version_is_2():
-    """Bumped 1 -> 2 by the sale_price classification.
-
-    This is the first bump, and it is the case the counter was built for. The
-    Task 1C-2D three-way correction deliberately did NOT bump, because version
-    1 had never been deployed and no stored index anywhere had been derived
-    under the old `<=` rule - there was no released ruleset to distinguish
-    from. That is no longer true: market_index_snapshots holds rows written
-    under version 1, at a time when a promotional Yuyu-Tei price was
-    indistinguishable from an ordinary one. Without this bump those rows and
-    every future row would claim the same ruleset while meaning different
-    things."""
-    assert SOURCE_SEMANTICS_VERSION == 2
+def test_source_semantics_version_is_3():
+    """v3 excludes promotional Yuyu evidence; existing archives retain v1/v2."""
+    assert SOURCE_SEMANTICS_VERSION == 3

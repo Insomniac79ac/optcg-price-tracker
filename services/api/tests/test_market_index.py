@@ -1304,7 +1304,7 @@ def test_adding_the_range_did_not_move_any_index_field(client, db_session):
     assert body["confidence"] == "high"
     assert body["calculation_method"] == "median_of_sources"
     assert body["index_version"] == 3
-    assert body["source_semantics_version"] == 2
+    assert body["source_semantics_version"] == 3
 
 
 # --- Market Index v3: multi-source market consensus --------------------------
@@ -1872,23 +1872,10 @@ def test_confidence_is_contributor_count_metadata_and_range_is_independent(db_se
     assert evidence == {"transaction", "listing"}
 
 
-def test_index_version_is_three_and_source_semantics_version_is_two(db_session):
-    """The two version fields move independently, and v3 is the clearest
-    demonstration yet: the combination step changed completely while per-source
-    interpretation did not change at all.
-
-    Nothing about how a Yuyu-Tei sell price or a SNKRDUNK floor is READ moved
-    in v3 - the same thresholds, the same platform-minimum rule, the same
-    staleness windows, the same promotion handling. What moved is what happens
-    to those readings afterwards. So INDEX_VERSION goes to 3 and
-    SOURCE_SEMANTICS_VERSION stays at 2, and the numbers no longer coincide.
-
-    The INDEX_VERSION bump is also what keeps app.services.market_index_change
-    honest: it refuses to compare a v2 snapshot against a v3 live value, so the
-    7d movement figure goes null for a week rather than reporting a
-    methodology change as a price change."""
+def test_index_and_source_semantics_versions_are_three(db_session):
+    """Sale exclusion changes source semantics; the combination rule stays v3."""
     assert INDEX_VERSION == 3
-    assert SOURCE_SEMANTICS_VERSION == 2
+    assert SOURCE_SEMANTICS_VERSION == 3
 
     card = make_card(db_session)
     yuyutei = make_source(db_session, "yuyutei")
@@ -1897,4 +1884,4 @@ def test_index_version_is_three_and_source_semantics_version_is_two(db_session):
     index = get_market_index_for_card(db_session, card.id)
 
     assert index.index_version == 3
-    assert index.source_semantics_version == 2
+    assert index.source_semantics_version == 3

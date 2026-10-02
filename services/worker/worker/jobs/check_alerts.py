@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from worker.alerts.telegram import TelegramSendError, send_telegram_message
 from worker.db import SessionLocal
+from worker.customer_prices import customer_latest_prices, is_customer_price
 from worker.models import (
     AlertEvent,
     AlertRule,
@@ -149,7 +150,9 @@ def _latest_price_pairs(
         )
         if len(rows) < 2:
             continue
-        yield card_id, source_id, price_type, rows[0], rows[1]
+        source = db.get(Source, source_id)
+        if source is not None and all(is_customer_price(source.name, row) for row in rows):
+            yield card_id, source_id, price_type, rows[0], rows[1]
 
 
 def _stock_status_pairs(
@@ -411,7 +414,7 @@ def _latest_prices_by_card(
     observations = (
         db.query(PriceObservation)
         .filter(PriceObservation.card_id.in_(card_ids))
-        .order_by(PriceObservation.observed_at)
+        .order_by(PriceObservation.observed_at, PriceObservation.id)
         .all()
     )
 
@@ -422,9 +425,9 @@ def _latest_prices_by_card(
             continue
         key = (source_name, obs.price_type)
         current = latest_by_card[obs.card_id].get(key)
-        if current is None or obs.observed_at > current.observed_at:
+        if current is None or (obs.observed_at, obs.id) > (current.observed_at, current.id):
             latest_by_card[obs.card_id][key] = obs
-    return latest_by_card
+    return customer_latest_prices(latest_by_card)
 
 
 def _resolve_current_value(

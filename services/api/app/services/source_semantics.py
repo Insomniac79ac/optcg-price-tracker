@@ -53,20 +53,12 @@ staleness (YUYUTEI_SELL_MAX_AGE_DAYS, SNKRDUNK_FLOOR_MAX_AGE_DAYS) and the
 sold-sample minimum still live in market_index's resolvers. A caller wiring
 this in must combine the two, never substitute one for the other.
 
-Not every constraint disqualifies
-----------------------------------
-``constraint`` and ``eligible`` are separate fields because they answer
-separate questions, and ``sale_price`` is the case that proves it. A
-promotional price is a fully valid market observation - it is the price the
-card can actually be bought at today, and on the evidence it is not even
-transient (the four sale-priced prints on staging held one unchanged price,
-beside one unchanged struck price, on every captured page across 25
-consecutive days). So it is *described*, never *excluded*: ``eligible`` stays
-True, ``ineligible_reason`` stays None, and the Market Index number it feeds
-is byte-identical to what it would have been without the label.
-
-The struck former price is not represented here at all, under any name. It is
-not an offer, so it is not stored as one and cannot be classified as one.
+Promotional evidence is internal only
+--------------------------------------
+Yuyu-Tei sale observations remain immutable source evidence, but are not
+customer-facing prices and cannot contribute to normalized pricing. Neither
+that amount nor the struck former price is a substitute for an unavailable
+regular price.
 
 Why below-minimum fails closed (Task 1C-2D)
 ---------------------------------------------
@@ -94,21 +86,9 @@ from dataclasses import dataclass
 # under, so a stored index value can later be traced back to the rules that
 # produced it.
 #
-# Version 2 (was 1): a new classification exists. A Yuyu-Tei retail sell
-# observation whose stored promotion_state is "sale" is now described as
-# ``sale_price`` instead of unconstrained. No observation's ELIGIBILITY moved
-# and no index value changes because of it - but the ruleset that interprets
-# an observation did, which is exactly the event this counter exists to
-# record. 310 snapshots are already stored under version 1, written when the
-# distinction was not knowable; the bump is what keeps "Atlas could not tell"
-# and "Atlas could tell, and it was ordinary" from collapsing into the same
-# unlabelled row forever.
-#
-# INDEX_VERSION is deliberately NOT bumped alongside it. The combination
-# algorithm in market_index did not move, and a spurious bump there would make
-# market_index_change refuse every cross-version comparison - blanking the
-# 7-day change across the whole catalogue for a week to report a methodology
-# change that did not happen.
+# Version 3: Yuyu-Tei sale prices are internal evidence only and ineligible.
+# Historical snapshots retain the version that actually produced them.
+# INDEX_VERSION is unchanged: the combination algorithm is unchanged.
 #
 # The binding contract, from the first persisted snapshot onward
 # ---------------------------------------------------------------
@@ -133,7 +113,7 @@ from dataclasses import dataclass
 # Deliberately separate from market_index.INDEX_VERSION: the combination
 # algorithm and the per-source rules change on different cadences, and a
 # snapshot records both independently. Not exposed through any API schema yet.
-SOURCE_SEMANTICS_VERSION = 2
+SOURCE_SEMANTICS_VERSION = 3
 
 # Stored source names, as they appear in sources.name.
 SNKRDUNK = "snkrdunk"
@@ -164,15 +144,7 @@ PLATFORM_FLOOR = "platform_floor"
 # described as that floor. See "Why below-minimum fails closed" above.
 BELOW_PLATFORM_MINIMUM = "below_platform_minimum"
 
-# The observed number is what the source is asking for the card RIGHT NOW,
-# while the source itself displays that price as a discount off its own
-# regular price. It is a real, current, executable offer - the only price the
-# card can actually be bought at - so unlike the two constraints above this
-# one is purely descriptive and never disqualifies. See "Not every constraint
-# disqualifies" in the module docstring.
-#
-# It describes the CURRENT price. The struck former price is a different
-# quantity, is never stored, and has no vocabulary here.
+# Promotional Yuyu-Tei evidence: never a customer-facing or normalized price.
 SALE_PRICE = "sale_price"
 
 
@@ -236,20 +208,7 @@ SOURCE_SEMANTICS: dict[str, dict[str, _PriceTypeRule]] = {
     },
 }
 
-# The four possible results. Frozen dataclasses, so one shared instance of
-# each is safe to return repeatedly - a caller can never mutate the verdict
-# another caller then observes.
-#
-# _UNCONSTRAINED is handed out for every unconfigured source, price_type, or
-# missing value. The two DISQUALIFYING results carry their constraint as the
-# ineligible_reason too: the reason a disqualified observation is unusable is
-# exactly the constraint, and giving them separate vocabularies would invite
-# them to disagree.
-#
-# _SALE_PRICE is the one constrained-but-usable verdict, and its
-# ineligible_reason is None precisely because there is no reason - it is not
-# ineligible. Anything reading `constraint` as a synonym for "excluded" is
-# reading it wrong; `eligible` is the field that answers that.
+# Immutable shared classification results.
 _UNCONSTRAINED = SourceSemantics()
 _AT_PLATFORM_FLOOR = SourceSemantics(
     constraint=PLATFORM_FLOOR, eligible=False, ineligible_reason=PLATFORM_FLOOR
@@ -260,7 +219,7 @@ _BELOW_PLATFORM_MINIMUM = SourceSemantics(
     ineligible_reason=BELOW_PLATFORM_MINIMUM,
 )
 _SALE_PRICE = SourceSemantics(
-    constraint=SALE_PRICE, eligible=True, ineligible_reason=None
+    constraint=SALE_PRICE, eligible=False, ineligible_reason=SALE_PRICE
 )
 
 
@@ -301,15 +260,6 @@ def classify_observation(
     the documented floor, and below it contradicts the source contract (see
     the module docstring). The raw value is only ever read, never rewritten.
 
-    A disqualifying verdict wins over the descriptive one. If a source ever
-    had both a platform minimum and promotions, an observation at that minimum
-    is reported as ``platform_floor`` rather than ``sale_price``: "this number
-    is not a market price" is a stronger statement than "this number is
-    discounted", and letting a descriptive label mask an exclusion would put
-    an inadmissible value back into the index. No source is configured both
-    ways today; the ordering is stated so it cannot be decided by accident
-    later.
-
     Nothing here branches on the magnitude of a promotional price. There is no
     discount threshold, and there is no rule that a "sale" price must be lower
     than anything - the source's own displayed state is the entire input.
@@ -329,3 +279,19 @@ def classify_observation(
         return _SALE_PRICE
 
     return _UNCONSTRAINED
+
+
+def is_customer_price(source: str, observation) -> bool:
+    """Visibility differs from index eligibility (e.g. platform floors stay visible)."""
+    return not (source == YUYUTEI and observation.promotion_state == PROMOTION_SALE)
+
+
+def customer_price_series(series, source: str):
+    """Remove promotional baselines; a latest sale makes current price unavailable.
+
+    Call on ordered raw history, before removing any observations, so an older
+    regular observation can never become an implicit current-price fallback.
+    """
+    if not series or not is_customer_price(source, series[-1]):
+        return []
+    return [obs for obs in series if is_customer_price(source, obs)]

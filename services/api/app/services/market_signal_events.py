@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.services.public_price_payload import public_price_payload
 from app.models import Card, CollectionItem, MarketSignalEvent
 from app.schemas import MarketSignalEventOut
 from app.services.cache import delete_cache_prefix
@@ -43,7 +44,11 @@ def owned_quantity_for_card(db: Session, card_id: int | None) -> int:
     return int(total or 0)
 
 
-def event_to_out(event: MarketSignalEvent, card: Card | None, owned_quantity: int) -> MarketSignalEventOut:
+def event_to_out(db: Session, event: MarketSignalEvent, card: Card | None, owned_quantity: int) -> MarketSignalEventOut:
+    payload = public_price_payload(
+        db, {"message": event.message, "last_payload": event.last_payload_json},
+        captured_at=event.last_seen_at, card_id=event.card_id,
+    )
     return MarketSignalEventOut(
         id=event.id,
         signal_type=event.signal_type,
@@ -60,12 +65,12 @@ def event_to_out(event: MarketSignalEvent, card: Card | None, owned_quantity: in
         language=card.language if card is not None else None,
         collection_item_id=event.collection_item_id,
         owned_quantity=owned_quantity,
-        message=event.message,
+        message=payload["message"],
         notes=event.notes,
         first_seen_at=event.first_seen_at,
         last_seen_at=event.last_seen_at,
         seen_count=event.seen_count,
-        last_payload=event.last_payload_json,
+        last_payload=payload["last_payload"],
         dismissed_at=event.dismissed_at,
         resolved_at=event.resolved_at,
         created_at=event.created_at,

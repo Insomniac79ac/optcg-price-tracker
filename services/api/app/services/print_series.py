@@ -137,7 +137,7 @@ from app.services.source_instruments import (
     describe_instrument,
     primary_price_types,
 )
-from app.services.source_semantics import classify_observation
+from app.services.source_semantics import classify_observation, is_customer_price
 
 # The windows this endpoint offers. 90d is deliberately ABSENT rather than
 # present-and-empty: the deepest history in the system is 27 days old, so a
@@ -311,6 +311,8 @@ def _source_points(
 ) -> list[_Point]:
     points: list[_Point] = []
     for obs, in_day in _daily_latest(observations):
+        if not is_customer_price(source_name, obs):
+            continue
         instrument: SourceInstrument = describe_instrument(source_name, obs.price_type)
         # The shipped classifier, asked exactly as every other read path asks
         # it. Nothing below re-derives a threshold, and the verdict is attached

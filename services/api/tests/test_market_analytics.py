@@ -164,15 +164,8 @@ def test_constrained_value_never_reaches_the_market_index_either(client, db_sess
     assert index_body["coverage"]["usable_priced_prints"] == 5
 
 
-def test_an_eligible_constraint_is_never_counted_as_excluded(client, db_session, five_prints):
-    """A `sale_price` observation is constrained AND usable.
-
-    This is the distinction the field name exists for. A promotional price is
-    a real price a collector can pay today - source_semantics keeps it
-    eligible on purpose - so it must count as usable and must NOT appear as
-    impaired coverage. Reading `constraint` alone would have reported the
-    opposite.
-    """
+def test_promotional_price_is_excluded_from_coverage_and_distribution(client, db_session, five_prints):
+    """Internal sale evidence never contributes to customer price statistics."""
     before = overview(client, price_basis="source:yuyutei")
     band_before = next(b for b in before["distribution"] if b["lower_jpy"] == 300)["count"]
     usable_before = before["coverage"]["usable_priced_prints"]
@@ -187,20 +180,16 @@ def test_an_eligible_constraint_is_never_counted_as_excluded(client, db_session,
         price_jpy=450, stock_status="in_stock", observed_at=NOW, promotion_state="sale",
     )
 
-    # First prove the fixture really produced the constrained-BUT-ELIGIBLE
-    # verdict, so this test cannot pass vacuously on an unconstrained row.
     semantics = classify_observation("yuyutei", "sell", 450, promotion_state="sale")
     assert semantics.constraint == "sale_price"
-    assert semantics.eligible is True
+    assert semantics.eligible is False
 
     body = overview(client, price_basis="source:yuyutei")
     coverage = body["coverage"]
-    # It is observed, it is usable, and it is NOT excluded.
-    assert coverage["excluded_constrained_prints"] == 0
-    assert coverage["usable_priced_prints"] == usable_before + 1
-    # And its price really did enter the statistics: ¥450 lands in ¥300-999.
+    assert coverage["excluded_constrained_prints"] == 1
+    assert coverage["usable_priced_prints"] == usable_before
     band = next(b for b in body["distribution"] if b["lower_jpy"] == 300)
-    assert band["count"] == band_before + 1
+    assert band["count"] == band_before
 
 
 def test_excluded_and_usable_are_disjoint(client, db_session, five_prints):

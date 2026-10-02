@@ -585,14 +585,9 @@ class MarketAnalyticsCoverageOut(BaseModel):
     `usable_priced_prints`, and a client may safely present it as impaired
     coverage.
 
-    It is deliberately narrower than "carries a constraint". Of the four
-    verdicts app.services.source_semantics ships, `platform_floor` and
-    `below_platform_minimum` disqualify while `sale_price` does not: a sale
-    price is a real price a collector can pay today. Counting the wider notion
-    would have reported Yuyu-Tei's 36 sale-priced prints as excluded when
-    every one of them is usable. The distinction is derived from the
-    classifier's own `eligible` flag, never from a constraint name, so a
-    future constraint lands on the correct side of it with no edit."""
+    Exclusion is derived from the classifier's eligible flag, never from a
+    constraint name. Promotional Yuyu evidence is excluded under source
+    semantics v3, as are SNKRDUNK platform-floor constraints."""
 
     observed_prints: int | None
     usable_priced_prints: int

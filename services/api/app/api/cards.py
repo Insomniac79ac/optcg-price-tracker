@@ -6,6 +6,7 @@ from app.auth import require_current_user, require_current_user_optional
 from app.core.pagination import pagination_response
 from app.db import get_db
 from app.models import Card, CardTag, CollectorTag, PriceObservation, Source, User
+from app.services.customer_prices import customer_price_clause
 from app.schemas import CardCatalogueListOut, CardOut, MarketIndexOut, PriceObservationOut
 from app.services.card_catalogue import SORT_KEYS, SortKey, get_catalogue_facets, list_catalogue
 from app.services.collector import get_tags_for_cards
@@ -154,7 +155,7 @@ def get_card_prices(card_id: int, db: Session = Depends(get_db)):
     stmt = (
         select(PriceObservation, Source.name)
         .join(Source, Source.id == PriceObservation.source_id)
-        .where(PriceObservation.card_id == card_id)
+        .where(PriceObservation.card_id == card_id, customer_price_clause())
         .order_by(PriceObservation.observed_at.asc())
     )
     rows = db.execute(stmt).all()

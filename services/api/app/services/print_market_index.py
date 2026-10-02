@@ -135,10 +135,17 @@ def get_market_index_for_prints(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     yuyutei_latest = get_latest_price_map_for_prints(
-        db, print_ids, source_names=(YUYUTEI,), price_types=INDEX_INPUT_PRICE_TYPES[YUYUTEI]
+        db,
+        print_ids,
+        source_names=(YUYUTEI,),
+        price_types=INDEX_INPUT_PRICE_TYPES[YUYUTEI],
+        include_internal=True,
     )
     snkrdunk_floor_latest = get_latest_price_map_for_prints(
-        db, print_ids, source_names=(SNKRDUNK,), price_types=(SNKRDUNK_FLOOR_PRICE_TYPE,)
+        db,
+        print_ids,
+        source_names=(SNKRDUNK,),
+        price_types=(SNKRDUNK_FLOOR_PRICE_TYPE,),
     )
     snkrdunk_sold_by_print = _fetch_recent_snkrdunk_sold_for_prints(db, print_ids, now)
 
@@ -160,7 +167,9 @@ def get_market_index_for_prints(
         )
 
         auxiliary_values = [buy_value] if buy_value is not None else []
-        fields = _compute_index_fields([sell_value, snkrdunk_value], auxiliary_values, now)
+        fields = _compute_index_fields(
+            [sell_value, snkrdunk_value], auxiliary_values, now
+        )
         results[print_id] = PrintMarketIndexOut(card_print_id=print_id, **fields)
 
     return results
