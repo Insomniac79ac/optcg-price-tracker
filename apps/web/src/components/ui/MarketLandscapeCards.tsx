@@ -176,7 +176,7 @@ export function MarketLandscapeCards({
         Cards in this view
       </h2>
       <p className="mt-1 text-[13px] text-text-secondary">
-        {scopeLabel ? `A few of the priced prints in ${scopeLabel}.` : "A few of the priced prints counted above."}
+        {scopeLabel ? `A few of the priced cards in ${scopeLabel}.` : "A few of the priced cards counted above."}
         {priceCaption ? ` ${priceCaption}` : ""}
       </p>
 

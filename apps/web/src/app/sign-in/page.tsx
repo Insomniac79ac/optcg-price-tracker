@@ -41,7 +41,7 @@ export default async function SignInPage({
       <main className="mx-auto max-w-lg px-4 py-10">
         <PageHeader
           title="Account required"
-          description="Collection, wishlist and grading features are tied to your own collector account. Browsing the card catalogue and Market Index does not require one."
+          description="Collection, wishlist and grading features are tied to your own collector account. You can see card prices and follow the Market without an account."
         />
 
         <div className="panel space-y-4 p-6 text-sm text-text-secondary">
@@ -62,7 +62,7 @@ export default async function SignInPage({
               href="/"
               className="font-medium text-accent-teal hover:text-accent-teal-hover"
             >
-              ← Back to Discover
+              ← Back to Home
             </Link>
             <Link
               href="/cards"

@@ -4,9 +4,8 @@
 
 /** Every route a signed-out visitor is meant to reach and a crawler is meant
  * to index. Deliberately only stable, canonical, parameter-free routes:
- * /prints/:id detail pages are real public pages but enumerating them would
- * mean querying the catalogue at build or request time, which is more
- * machinery than an MVP sitemap needs. They stay crawlable via /cards.
+ * Dynamic release entries and bounded exact-print sitemap shards are added
+ * from the existing public API; /cards also emits ordinary pagination links.
  *
  * /market/movers left this list on 2026-08-19 (tranche 1A): it is a temporary
  * redirect into /cards?sort=index_desc, not a destination of its own, and a

@@ -1,0 +1,12 @@
+
+> web@0.1.0 test
+> NODE_ENV=test vitest run --maxWorkers=2 src/lib/homeSetMovers.test.ts src/lib/shareContent.test.tsx src/app/share/[kind]/[id]/route.test.tsx src/lib/socialArtwork.test.ts src/lib/publicSeo.test.ts src/lib/terminology.test.ts src/lib/heroFan.test.ts src/lib/homeDiscovery.test.ts src/app/page.test.tsx src/app/prints/[id]/page.test.tsx src/app/prints/[id]/analytics.test.tsx src/app/analytics/page.test.tsx src/app/market/movers/page.test.tsx src/app/robots.test.ts src/app/layout.metadata.test.ts src/app/metadata-images.test.ts src/lib/metadataBots.test.ts src/app/cards/page.test.tsx src/components/ui/CatalogueLegend.test.tsx src/lib/printChartExport.test.ts src/lib/prints.test.ts src/lib/publicCardSearch.test.ts src/components/ui/CardPrintingChooser.test.tsx
+
+
+ RUN  v4.1.10 /tmp/pr33-social-proof-review/apps/web
+
+
+ Test Files  23 passed (23)
+      Tests  463 passed (463)
+   Start at  13:12:34
+   Duration  36.23s (transform 3.32s, setup 2.23s, import 7.42s, tests 33.33s, environment 23.79s)

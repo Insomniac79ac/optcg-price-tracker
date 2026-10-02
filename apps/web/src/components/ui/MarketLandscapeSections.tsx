@@ -49,7 +49,7 @@ export function MarketLandscapeStats({ overview }: { overview: MarketOverview })
   return (
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
       <Stat
-        label="Priced prints"
+        label="Priced cards"
         value={coverage.usable_priced_prints.toLocaleString()}
         hint={pricedPrintsHint(overview)}
       />
@@ -60,7 +60,7 @@ export function MarketLandscapeStats({ overview }: { overview: MarketOverview })
         // denominator.
         value={hasValue(coverage.coverage_pct) ? `${coverage.coverage_pct}%` : UNAVAILABLE}
         hint={`of ${scope.active_prints.toLocaleString()} active ${
-          scope.active_prints === 1 ? "print" : "prints"
+          scope.active_prints === 1 ? "card variant" : "card variants"
         } in scope`}
       />
       <Stat label="Median price" value={formatOrUnavailable(price.median_jpy)} />
@@ -105,7 +105,7 @@ function formatOrUnavailable(value: number | null): string {
  * produces no sentence rather than a guessed one. */
 const BAND_REASON_COPY: Record<string, string> = {
   no_usable_prices: "nothing in this scope is priced yet",
-  insufficient_constituents: "too few priced prints to describe a spread",
+  insufficient_constituents: "too few priced cards to describe a spread",
 };
 
 function bandReason(reason: string | null): string | null {
@@ -171,7 +171,7 @@ export function MarketPriceDistribution({ overview }: { overview: MarketOverview
   return (
     <SectionShell
       title="Price distribution"
-      caption="How many prints fall in each price band."
+      caption="How many cards fall in each price band."
     >
       <ul className="space-y-1.5">
         {distribution.map((bucket) => {
@@ -274,7 +274,7 @@ export function MarketCoverageComposition({ overview }: { overview: MarketOvervi
           },
         ]}
         total={coverage.observed_prints}
-        totalLabel={`${coverage.observed_prints.toLocaleString()} prints observed on this source`}
+        totalLabel={`${coverage.observed_prints.toLocaleString()} cards observed on this source`}
       />
       {excluded > 0 && (
         // Stated plainly and without alarm. These prints are listed and have
@@ -283,7 +283,7 @@ export function MarketCoverageComposition({ overview }: { overview: MarketOvervi
         // the card is worth. The wording avoids implying either that the
         // cards are untracked or that the constrained figure is a price.
         <p className="mt-2.5 text-[11px] leading-relaxed text-text-muted">
-          These prints are tracked and observed on this source. Their current reading is a
+          These cards are tracked and observed on this source. Their current reading is a
           platform constraint rather than a market price, so it is counted separately and
           never enters the median, the price band or the distribution above.
         </p>
@@ -367,7 +367,7 @@ export function MarketMovementUnavailable() {
     <SectionShell title="Price movement" tone="supporting">
       <p className="text-sm text-text-secondary">Not enough comparable price history yet.</p>
       <p className="mt-1.5 max-w-prose text-[13px] leading-relaxed text-text-muted">
-        Atlas records one price point per print per day. Movement analytics arrive once that
+        Atlas records one price point per card per day. Movement analytics arrive once that
         archive is long enough to compare a card against its own past honestly — until then this
         page reports what prices are, not how they have changed.
       </p>

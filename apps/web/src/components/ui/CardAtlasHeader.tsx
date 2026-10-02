@@ -19,19 +19,19 @@ export function CardAtlasHeader({
       <p className={styles.kicker}>Japanese One Piece singles</p>
       <div className={styles.identityBody}>
         <div>
-          <h1 id="card-atlas-title" className={styles.heading}>THE CARD ATLAS</h1>
+          <h1 id="card-atlas-title" className={styles.heading}>Card Prices</h1>
           <p className={styles.description}>
-            <strong>Base, parallel and alt-art printings remain distinct entries.</strong>
+            Find a One Piece card and compare prices for the exact version you own or want.
           </p>
         </div>
 
         <div className={styles.searchArea}>
           {query ? (
             <p className={styles.queryContext}>
-              <strong>&ldquo;{query}&rdquo;</strong> in the Atlas
+              <strong>&ldquo;{query}&rdquo;</strong> in card prices
               {totalPrints !== null && (
                 <span className={styles.resultCount}>
-                  {totalPrints.toLocaleString()} {totalPrints === 1 ? "printing" : "printings"}
+                  {totalPrints.toLocaleString()} {totalPrints === 1 ? "card variant" : "card variants"}
                 </span>
               )}
             </p>
@@ -83,7 +83,7 @@ function CardAtlasSearch({ query, onSearch }: { query: string; onSearch: (next: 
             commitIfCleared(event.target.value);
           }}
           placeholder="Search by card code or name…"
-          aria-label="Search prints by card code, English name, or Japanese name"
+          aria-label="Search cards by card code, English name, or Japanese name"
           className={styles.searchInput}
         />
         {value !== "" && (

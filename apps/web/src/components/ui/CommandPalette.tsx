@@ -415,7 +415,7 @@ function PaletteRow({
       {item.result.preview && (
         <span className="w-14 shrink-0">
           <CardImageFrame imageUrl={item.result.preview.imageUrl} cardCode={item.result.preview.cardCode}
-            alt={`${item.result.preview.cardCode} printing preview — ${item.result.preview.context}`} size="full" padded />
+            alt={`${item.result.preview.cardCode} version preview — ${item.result.preview.context}`} size="full" padded />
         </span>
       )}
       <span className="min-w-0 flex-1">

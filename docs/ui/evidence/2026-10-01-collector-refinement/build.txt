@@ -1,0 +1,200 @@
+> web@0.1.0 build
+> next build
+
+▲ Next.js 16.2.10 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.9s
+  Running TypeScript ...
+  Finished TypeScript in 17.6s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/139) ...
+  Generating static pages using 3 workers (34/139)
+  Generating static pages using 3 workers (69/139)
+  Generating static pages using 3 workers (104/139)
+✓ Generating static pages using 3 workers (139/139) in 2.1s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /activity
+├ ƒ /admin
+├ ƒ /admin/actions
+├ ƒ /admin/alerts
+├ ƒ /admin/backup
+├ ƒ /admin/cache
+├ ƒ /admin/card-audit
+├ ƒ /admin/card-duplicates
+├ ƒ /admin/cards
+├ ƒ /admin/catalog-coverage
+├ ƒ /admin/catalog-ops
+├ ƒ /admin/collection-attempts
+├ ƒ /admin/data-retention
+├ ƒ /admin/file-jobs
+├ ƒ /admin/import-validation
+├ ƒ /admin/job-locks
+├ ƒ /admin/login
+├ ƒ /admin/logs
+├ ƒ /admin/market-workflow-runs
+├ ƒ /admin/performance
+├ ƒ /admin/price-source-health
+├ ƒ /admin/refresh-runs
+├ ƒ /admin/release-status
+├ ƒ /admin/snkrdunk-candidates
+├ ƒ /admin/source-mapping-proposals
+├ ƒ /admin/source-mapping-proposals/[id]
+├ ƒ /admin/source-mapping-quality
+├ ƒ /admin/system-check
+├ ƒ /analytics
+├ ○ /analytics/buy-decisions
+├ ○ /analytics/collection
+├ ○ /analytics/digest
+├ ○ /analytics/grading
+├ ○ /analytics/portfolio-risk
+├ ○ /analytics/sell-decisions
+├ ○ /analytics/wishlist
+├ ƒ /api/admin/actions/full-market-refresh
+├ ƒ /api/admin/actions/generate-analytics-digest
+├ ƒ /api/admin/actions/generate-market-report
+├ ƒ /api/admin/actions/refresh-prices
+├ ƒ /api/admin/actions/run-market-workflow
+├ ƒ /api/admin/actions/send-market-report-digest
+├ ƒ /api/admin/actions/snapshot-market-signals
+├ ƒ /api/admin/actions/snapshot-portfolio
+├ ƒ /api/admin/alert-events
+├ ƒ /api/admin/alert-events/[id]
+├ ƒ /api/admin/alert-rules
+├ ƒ /api/admin/alert-rules/[id]
+├ ƒ /api/admin/backup/export
+├ ƒ /api/admin/backup/export/job
+├ ƒ /api/admin/backup/restore
+├ ƒ /api/admin/backup/validate
+├ ƒ /api/admin/cache/clear
+├ ƒ /api/admin/cache/status
+├ ƒ /api/admin/card-audit
+├ ƒ /api/admin/cards
+├ ƒ /api/admin/cards/[id]/merge-preview
+├ ƒ /api/admin/cards/duplicates
+├ ƒ /api/admin/cards/duplicates/bulk-preview
+├ ƒ /api/admin/cards/export
+├ ƒ /api/admin/cards/import
+├ ƒ /api/admin/cards/merge
+├ ƒ /api/admin/catalog-coverage
+├ ƒ /api/admin/catalog-coverage/gaps
+├ ƒ /api/admin/collection-attempts
+├ ƒ /api/admin/data-retention/policy
+├ ƒ /api/admin/data-retention/prune
+├ ƒ /api/admin/db-index-audit
+├ ƒ /api/admin/file-jobs/cleanup
+├ ƒ /api/admin/import-templates
+├ ƒ /api/admin/import-templates/[type]
+├ ƒ /api/admin/import-validation/[type]
+├ ƒ /api/admin/import-validation/reports
+├ ƒ /api/admin/import-validation/reports/[id]
+├ ƒ /api/admin/job-locks
+├ ƒ /api/admin/job-locks/[lockName]/force-release
+├ ƒ /api/admin/job-locks/cleanup-expired
+├ ƒ /api/admin/logs
+├ ƒ /api/admin/logs/[id]
+├ ƒ /api/admin/logs/prune
+├ ƒ /api/admin/market-workflow-runs
+├ ƒ /api/admin/market-workflow-runs/[id]
+├ ƒ /api/admin/observability/summary
+├ ƒ /api/admin/performance/summary
+├ ƒ /api/admin/price-source-health
+├ ƒ /api/admin/price-source-health/gaps
+├ ƒ /api/admin/refresh-runs
+├ ƒ /api/admin/refresh-runs/[id]
+├ ƒ /api/admin/release-status
+├ ƒ /api/admin/snkrdunk-candidates
+├ ƒ /api/admin/snkrdunk-candidates/[id]/approve-match
+├ ƒ /api/admin/snkrdunk-candidates/[id]/matches
+├ ƒ /api/admin/snkrdunk-candidates/[id]/reject-match
+├ ƒ /api/admin/snkrdunk-candidates/[id]/rematch
+├ ƒ /api/admin/snkrdunk-candidates/rematch-all
+├ ƒ /api/admin/source-mapping-proposals/review/groups
+├ ƒ /api/admin/source-mapping-proposals/review/groups/[id]
+├ ƒ /api/admin/source-mapping-proposals/review/groups/[id]/approve-exact
+├ ƒ /api/admin/source-mapping-proposals/review/releases
+├ ƒ /api/admin/source-mapping-proposals/review/summary
+├ ƒ /api/admin/source-mappings
+├ ƒ /api/admin/source-mappings/[id]/replace-card
+├ ƒ /api/admin/source-mappings/[id]/suggested-cards
+├ ƒ /api/admin/source-mappings/bulk-update
+├ ƒ /api/admin/source-mappings/quality
+├ ƒ /api/admin/source-mappings/recheck-quality
+├ ƒ /api/admin/system-check
+├ ƒ /api/analytics/buy-decisions
+├ ƒ /api/analytics/collection
+├ ƒ /api/analytics/digest
+├ ƒ /api/analytics/digest/latest
+├ ƒ /api/analytics/digest/reports
+├ ƒ /api/analytics/digest/reports/[id]
+├ ƒ /api/analytics/grading
+├ ƒ /api/analytics/portfolio-risk
+├ ƒ /api/analytics/sell-decisions
+├ ƒ /api/analytics/wishlist
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/backend-health
+├ ƒ /api/card-image
+├ ƒ /api/collection/export
+├ ƒ /api/collection/export/job
+├ ƒ /api/collection/import
+├ ƒ /api/dashboard/overview
+├ ƒ /api/dashboard/preferences
+├ ƒ /api/file-jobs
+├ ƒ /api/file-jobs/[id]
+├ ƒ /api/file-jobs/[id]/cancel
+├ ƒ /api/file-jobs/[id]/download
+├ ƒ /api/health
+├ ƒ /api/market/opportunities
+├ ƒ /api/market/report/latest
+├ ƒ /api/market/reports
+├ ƒ /api/market/reports/[id]
+├ ƒ /api/market/signal-events
+├ ƒ /api/market/signal-events/[id]
+├ ƒ /api/market/signal-events/[id]/dismiss
+├ ƒ /api/market/signal-events/[id]/resolve
+├ ƒ /api/market/signal-events/[id]/watch
+├ ƒ /api/market/signals
+├ ƒ /api/saved-views
+├ ƒ /api/saved-views/[id]
+├ ƒ /api/saved-views/[id]/set-default
+├ ƒ /api/saved-views/[id]/use
+├ ƒ /api/saved-views/clear-default
+├ ƒ /api/search
+├ ƒ /api/search/suggestions
+├ ƒ /api/version
+├ ƒ /api/wishlist/export
+├ ƒ /api/wishlist/export/job
+├ ƒ /api/wishlist/import
+├ ○ /apple-icon.png
+├ ƒ /cards
+├ ƒ /cards/[id]
+├ ƒ /cards/code/[cardCode]
+├ ○ /collection
+├ ○ /collection/vault
+├ ○ /dashboard
+├ ○ /grading
+├ ○ /icon.svg
+├ ○ /manifest.webmanifest
+├ ○ /market/movers
+├ ○ /market/opportunities
+├ ○ /market/report
+├ ○ /market/signal-events
+├ ○ /market/signals
+├ ƒ /prints/[id]
+├ ƒ /prints/sitemap/[__metadata_id__]
+├ ƒ /robots.txt
+├ ○ /search
+├ ƒ /share/[kind]/[id]
+├ ƒ /sign-in
+├ ƒ /sitemap.xml
+└ ○ /wishlist
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

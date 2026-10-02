@@ -73,7 +73,7 @@ describe("AppShell navigation rail", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Public sections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Sign in" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "CardPirate Atlas — Home" }).querySelector("img")).toBeNull();
+    expect(screen.getByRole("link", { name: "Card Pirate — Home" }).querySelector("img")).toBeNull();
     for (const group of ["Catalogue", "Sources & Pricing", "Operations", "System"]) {
       expect(screen.getByText(group)).toBeInTheDocument();
     }
@@ -98,7 +98,7 @@ describe("AppShell navigation rail", () => {
     expect(container.querySelector("[data-app-rail]")).toBeNull();
     expect(screen.queryByText("ADMIN WORKSPACE")).not.toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Public sections" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "CardPirate Atlas — Home" }).querySelector("img")).toBeNull();
+    expect(screen.getByRole("link", { name: "Card Pirate — Home" }).querySelector("img")).toBeNull();
   });
 
   it("renders one header and one rail when a protected admin page owns its shell", () => {
@@ -171,7 +171,7 @@ describe("shared public shell", () => {
       const drawer = backdrop.parentElement!;
       expect(drawer).toHaveClass("md:hidden");
       expect(drawer).not.toHaveClass("lg:hidden", "xl:hidden");
-      for (const name of ["Home", "Cards", "Market"]) {
+      for (const name of ["Home", "Card Prices", "Market"]) {
         expect(within(drawer).getByRole("link", { name })).toBeInTheDocument();
       }
       for (const name of ["My Collection", "Wishlist", "Grading", "Activity"]) {
@@ -201,14 +201,14 @@ describe("shared public shell", () => {
     });
   });
 
-  it.each([["/", "Home"], ["/cards", "Cards"], ["/cards/code/OP01-001", "Cards"], ["/analytics", "Market"], ["/prints/1", "Cards"]])("shares branding and both navigation states on %s", (pathname, active) => {
+  it.each([["/", "Home"], ["/cards", "Card Prices"], ["/cards/code/OP01-001", "Card Prices"], ["/analytics", "Market"], ["/prints/1", "Card Prices"]])("shares branding and both navigation states on %s", (pathname, active) => {
     currentPathname = pathname;
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).not.toBeNull();
-    const logo = screen.getByRole("link", { name: "CardPirate Atlas — Home" });
+    const logo = screen.getByRole("link", { name: "Card Pirate — Home" });
     expect(logo.querySelector("svg")).not.toBeNull();
     expect(logo.querySelector("img")).toBeNull();
-    expect(logo).toHaveTextContent("CARDPIRATEATLAS");
+    expect(logo).toHaveTextContent("CARDPIRATE");
     for (const name of ["Public sections", "Mobile public sections"]) {
       const nav = screen.getByRole("navigation", { name });
       expect(within(nav).getAllByRole("link").map(a => a.getAttribute("href"))).toEqual(["/", "/cards", "/analytics"]);
@@ -223,7 +223,7 @@ describe("shared public shell", () => {
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-public-shell]")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Mobile public sections" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "CardPirate Atlas — Home" }).querySelector("img")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Card Pirate — Home" }).querySelector("img")).not.toBeNull();
   });
 
   it("updates the shared navigation and removes public scope when leaving browsing", () => {

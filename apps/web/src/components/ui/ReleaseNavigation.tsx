@@ -56,12 +56,12 @@ export function ReleaseNavigation({ releases, status, selected, hrefFor, onSelec
         <nav id={trackId} ref={scroller} className={styles.releaseScroller} aria-label="Browse releases">
           <div className={styles.releaseList}>
             <a ref={!selected ? selectedRef : undefined} href={hrefFor(null)} aria-current={!selected ? 'page' : undefined} onClick={(e) => select(e, null)} className={`${styles.releaseCard} ${!selected ? styles.releaseCardSelected : ''}`}>
-              <span className={styles.releaseCode}>All releases</span><span className={styles.releaseName}>Complete exact-print catalogue</span>
+              <span className={styles.releaseCode}>All releases</span><span className={styles.releaseName}>Complete exact-card catalogue</span>
             </a>
             {releases.map((r) => <a key={r.release_product_id} ref={selected === r.release_product_id ? selectedRef : undefined} href={hrefFor(r.release_product_id)} onClick={(e) => select(e, r.release_product_id)} aria-label={releaseLabel(r)} aria-current={selected === r.release_product_id ? 'page' : undefined} className={`${styles.releaseCard} ${selected === r.release_product_id ? styles.releaseCardSelected : ''}`}>
               <span className={styles.releaseCode}>{r.official_code ?? 'Special product'}</span>
               {releaseDisplayNameEnglish(r.official_code) !== (r.official_code ?? "Special product") && <span className={styles.releaseName}>{releaseDisplayNameEnglish(r.official_code)}</span>}
-              <span className={styles.releaseName}>{r.print_count} printings{r.released_on ? ` · ${r.released_on}` : ' · Date unavailable'}</span>
+              <span className={styles.releaseName}>{r.print_count} card variants{r.released_on ? ` · ${r.released_on}` : ' · Date unavailable'}</span>
             </a>)}
           </div>
         </nav>

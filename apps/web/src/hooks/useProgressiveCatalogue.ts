@@ -30,8 +30,13 @@ const initialState = (query: string, offset: number): CatalogueState => ({ query
 
 /** Reset the data lifecycle by query without remounting filter controls: an
  * open multi-select must keep focus while desktop selections refresh results. */
-export function useProgressiveCatalogue(query: string, params: PrintCatalogueParams, startOffset: number) {
-  const [state, setState] = useState(() => initialState(query, startOffset));
+export function useProgressiveCatalogue(query: string, params: PrintCatalogueParams, startOffset: number, seed?: { query: string; data: PrintCatalogueList | null }) {
+  const seedRef = useRef(seed);
+  const seeded = (key: string): CatalogueState | null => {
+    const data = seed?.query === key ? seed.data : null;
+    return data ? { query: key, data, facets: data.facets, status: "ready", nextOffset: data.offset + data.items.length, appending: false, appendError: false } : null;
+  };
+  const [state, setState] = useState(() => seeded(query) ?? initialState(query, startOffset));
   const [retryRequest, setRetryRequest] = useState({ query, attempt: 0 });
   const attempt = retryRequest.query === query ? retryRequest.attempt : 0;
   if (retryRequest.query !== query) setRetryRequest({ query, attempt: 0 });
@@ -52,7 +57,9 @@ export function useProgressiveCatalogue(query: string, params: PrintCataloguePar
     // in the data hook leaves the controls and their current focus intact.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setState((previous) => saved ? { query, data: saved.data, facets: saved.data.facets, nextOffset: saved.nextOffset, status: "ready", appending: false, appendError: false } : { ...initialState(query, startOffset), facets: previous.facets });
-    if (!saved) {
+    const initial = attempt === 0 && seedRef.current?.query === query ? seedRef.current.data : null;
+    if (!saved && initial) setState({ query, data: initial, facets: initial.facets, nextOffset: initial.offset + initial.items.length, status: "ready", appending: false, appendError: false });
+    if (!saved && !initial) {
       requestBatch({ ...requestParams, limit: CATALOGUE_BATCH_SIZE, offset: startOffset }).then((result) => {
         if (!session.alive) return;
         setState({ query, facets: result.facets, data: { ...result, items: dedupe(result.items) }, nextOffset: result.items.length ? result.offset + result.items.length : result.total, status: "ready", appending: false, appendError: false });

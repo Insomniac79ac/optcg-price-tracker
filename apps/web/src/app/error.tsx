@@ -26,11 +26,11 @@ export default function GlobalError({
       <div className="max-w-md text-center">
         <AtlasLogo className="mx-auto mb-8 justify-center" />
         <h1 className="font-display text-2xl font-semibold text-text-primary">
-          Something went wrong charting that.
+          This page couldn’t be loaded.
         </h1>
         <p className="mt-2 text-sm text-text-secondary">
-          This didn&rsquo;t affect your collection or wishlist - try again, or head back to
-          Discover.
+          Try again, or head back to
+          Home.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
@@ -44,7 +44,7 @@ export default function GlobalError({
             href="/"
             className="rounded-control border border-border-default px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
           >
-            Back to Discover
+            Back to Home
           </a>
         </div>
       </div>

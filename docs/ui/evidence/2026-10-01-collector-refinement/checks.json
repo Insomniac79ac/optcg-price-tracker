@@ -1,0 +1,782 @@
+{
+  "fixture": "Local mock API only; neutral mock card artwork; no hosted access",
+  "metadata": [
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Mozilla/5.0 Chrome/140.0 Safari/537.36",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "OAI-SearchBot/1.3",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "ChatGPT-User/1.0",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Twitterbot/1.0",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "facebookexternalhit/1.1",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Slackbot-LinkExpanding 1.0",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 1,
+      "title": "Roronoa Zoro OP01-001 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/1",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Original artwork \u00b7 JP \u00b7 Print 1. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 2,
+      "title": "Roronoa Zoro OP01-001 Art 2 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/2",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 2. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 3,
+      "title": "Roronoa Zoro OP01-001 Art 3 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/3",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 3. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 4,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/4",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-01 \u2014 ONE PIECE CARD THE BEST \u00b7 Reprint \u00b7 JP \u00b7 Print 4. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 5,
+      "title": "Roronoa Zoro OP01-001 Reprint Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/5",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, PRB-02 \u2014 ONE PIECE CARD THE BEST vol.2 \u00b7 Reprint \u00b7 JP \u00b7 Print 5. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 6785,
+      "title": "Franky ST01-010 Original Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6785",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, ST-01 \u2014 Straw Hat Crew \u00b7 Original artwork \u00b7 JP \u00b7 Print 6785. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 6823,
+      "title": "Franky ST01-010 Alt Art Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/6823",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Franky ST01-010, Premium Card Collection \u2014 25th Anniversary Edition \u00b7 Alternate artwork \u00b7 JP \u00b7 Print 6823. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "ua": "Bingbot/2.0",
+      "id": 99,
+      "title": "Roronoa Zoro OP01-001 Price \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/prints/99",
+      "description": "Card Pirate Market Value estimates and Japanese source prices for Roronoa Zoro OP01-001, OP-01 \u2014 Romance Dawn \u00b7 JP \u00b7 Print 99. See coverage and price history.",
+      "title_in_head": true
+    },
+    {
+      "path": "/cards",
+      "title": "One Piece Card Prices \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/cards"
+    },
+    {
+      "path": "/cards?release_product_id=181",
+      "title": "OP-01 \u2014 Romance Dawn Card Prices \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/cards?release_product_id=181"
+    },
+    {
+      "path": "/analytics",
+      "title": "One Piece Card Market \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/analytics"
+    },
+    {
+      "path": "/analytics?release_product_id=181",
+      "title": "OP-01 \u2014 Romance Dawn Card Market \u2014 Card Pirate",
+      "canonical": "http://127.0.0.1:3033/analytics?release_product_id=181"
+    }
+  ],
+  "browser": [
+    {
+      "path": "/",
+      "width": 1440,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "/prints/1",
+      "width": 1440,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "/prints/1",
+      "width": 390,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "/",
+      "width": 320,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "/prints/1",
+      "width": 320,
+      "overflow": false,
+      "h1": 1,
+      "images": [
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        },
+        {
+          "src": "https://localhost:8433/art.png",
+          "loaded": true,
+          "fit": "contain"
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "social": [
+    {
+      "path": "/share/home/site",
+      "file": "social-home-site.png",
+      "size": [
+        1200,
+        630
+      ]
+    },
+    {
+      "path": "/share/print/1",
+      "file": "social-print-1.png",
+      "size": [
+        1200,
+        630
+      ]
+    },
+    {
+      "path": "/share/print/6823",
+      "file": "social-print-6823.png",
+      "size": [
+        1200,
+        630
+      ]
+    },
+    {
+      "path": "/share/market/overall",
+      "file": "social-market-overall.png",
+      "size": [
+        1200,
+        630
+      ]
+    },
+    {
+      "path": "/share/release/181",
+      "file": "social-release-181.png",
+      "size": [
+        1200,
+        630
+      ]
+    }
+  ],
+  "no_javascript_exact_print": true
+}

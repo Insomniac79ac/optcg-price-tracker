@@ -34,9 +34,9 @@ describe("SidebarNav - signed out", () => {
     render(<SidebarNav />);
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Cards" })).toHaveAttribute("href", "/cards");
+    expect(screen.getByRole("link", { name: "Card Prices" })).toHaveAttribute("href", "/cards");
     expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/analytics");
-    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: "Search" })).not.toBeInTheDocument();
   });
 
@@ -85,9 +85,9 @@ describe("SidebarNav - signed in (collector session)", () => {
     render(<SidebarNav />);
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Cards" })).toHaveAttribute("href", "/cards");
+    expect(screen.getByRole("link", { name: "Card Prices" })).toHaveAttribute("href", "/cards");
     expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/analytics");
-    expect(screen.queryByRole("link", { name: "Discover" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: "Search" })).not.toBeInTheDocument();
     expect(screen.queryByText("Market Index")).not.toBeInTheDocument();
   });

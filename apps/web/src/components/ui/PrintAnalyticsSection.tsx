@@ -87,7 +87,7 @@ export function PrintAnalyticsSection({
             Atlas being broken or the button being unimplemented. */}
         {analytics?.windows.some((row) => !row.available) && (
           <p className="text-[10px] leading-snug text-text-faint">
-            Dimmed spans reach further back than this print&rsquo;s recorded history.
+            Dimmed spans reach further back than this card&rsquo;s recorded history.
           </p>
         )}
       </div>
@@ -109,8 +109,8 @@ export function PrintMarketIndexHeadline({ analytics }: { analytics: PrintAnalyt
   const headline = analytics?.headline ?? null;
   return (
     <section className={styles.index} data-testid="print-analytics-headline">
-      <h2>Market Index</h2>
-      <p className={styles.archiveLabel}>Archived index · recorded daily</p>
+      <h2>Recorded Market Value</h2>
+      <p className={styles.archiveLabel}>Historical reference · recorded daily</p>
       {headline ? (
         <AnalyticsHeadline headline={headline} />
       ) : (
@@ -172,12 +172,12 @@ function PrintChartExportAction({
         data-testid="print-export"
         aria-label={
           unavailable
-            ? "Download chart — there is no recorded price history to save for this print yet"
+            ? "Download chart — there is no recorded price history to save for this card yet"
             : `Download the ${identity.displayName} (${identity.cardCode}) price chart for ${label} as a PNG image`
         }
         title={
           unavailable
-            ? "There is no recorded price history to save for this print yet."
+            ? "There is no recorded price history to save for this card yet."
             : undefined
         }
         aria-disabled={unavailable || undefined}
@@ -229,7 +229,7 @@ function AnalyticsHeadline({ headline }: { headline: PrintAnalyticsHeadline }) {
       <div className="mt-2">
         <p className="text-base font-medium price-muted">Index unavailable</p>
         <p className="mt-1.5 text-[11px] leading-snug text-text-secondary">
-          Atlas has not archived a Market Index for this print yet.
+          No daily Market Value has been recorded for this version yet.
         </p>
       </div>
     );

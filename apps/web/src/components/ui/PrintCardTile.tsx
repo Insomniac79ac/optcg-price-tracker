@@ -187,7 +187,7 @@ export function PrintCardTile({
               <p className="mt-1 text-xs leading-relaxed text-text-muted">Price coverage is still being added.</p>
             </div>
           ) : <>
-            <span className="mono block text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">Market Index</span>
+            <span className="mono block text-[10px] font-medium uppercase tracking-[0.14em] text-text-muted">Market Value</span>
             <div className="mt-1.5"><MarketIndexValue index={print.marketIndex} size="base" tone="gold" showCoverage={false} /></div>
             <SourcePrices print={print} />
           </>}

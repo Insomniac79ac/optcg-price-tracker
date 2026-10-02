@@ -1,0 +1,11 @@
+> web@0.1.0 test
+> NODE_ENV=test vitest run src/lib/publicSeo.test.ts src/lib/metadataBots.test.ts src/app/page.test.tsx src/app/prints/[id]/page.test.tsx src/app/prints/[id]/analytics.test.tsx src/app/robots.test.ts src/app/metadata-images.test.ts src/lib/brand.test.ts src/app/cards/page.test.tsx src/app/analytics/page.test.tsx src/components/ui/CurrentPriceFreshness.test.tsx
+
+
+ RUN  v4.1.10 /tmp/pr33-refine/apps/web
+
+
+ Test Files  11 passed (11)
+      Tests  274 passed (274)
+   Start at  09:15:28
+   Duration  16.67s (transform 2.43s, setup 967ms, import 5.28s, tests 27.73s, environment 12.18s)

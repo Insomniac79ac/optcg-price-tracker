@@ -4,6 +4,9 @@ import "./globals.css";
 
 import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import { Footer } from "@/components/Footer";
+import { JsonLd } from "@/components/JsonLd";
+import { publicSiteUrl } from "@/lib/publicRoutes";
+import { absoluteUrl } from "@/lib/publicSeo";
 import { brand } from "@/lib/brand";
 
 // Self-hosted at build time by next/font (no runtime request to Google
@@ -33,6 +36,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(publicSiteUrl()),
   title: {
     default: brand.metadataTitleDefault,
     template: brand.metadataTitleTemplate,
@@ -59,6 +63,7 @@ export default function RootLayout({
           keyed off its `data-app-rail` attribute - so the public collector
           pages get the full viewport width at every breakpoint. */}
       <body className="flex min-h-screen flex-col bg-bg-page font-sans text-text-primary antialiased">
+        <JsonLd data={{ "@context": "https://schema.org", "@graph": [{ "@type": "WebSite", "@id": absoluteUrl("/#website"), url: absoluteUrl("/"), name: brand.productName, description: brand.metadataDescription }, { "@type": "Organization", "@id": absoluteUrl("/#organization"), name: brand.productName, url: absoluteUrl("/"), description: "Independent One Piece card price tracking tool." }] }} />
         <AuthSessionProvider>
           <div className="flex-1">{children}</div>
           <Footer />

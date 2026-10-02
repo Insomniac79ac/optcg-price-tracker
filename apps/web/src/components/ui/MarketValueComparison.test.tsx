@@ -66,7 +66,7 @@ it("keeps existing plots during an addition and provides the hero-strength water
   select("OP-04");
   expect(screen.getByTestId("comparison-settled")).toHaveAttribute("aria-busy", "true");
   expect(screen.getByTestId("comparison-chart")).toHaveTextContent("OP-01: 4.20");
-  expect(screen.getByTestId("comparison-watermark")).toHaveTextContent("CARDPIRATE ATLAScardpirateatlas.com");
+  expect(screen.getByTestId("comparison-watermark")).toHaveTextContent("CARD PIRATEJapanese card prices · JPY");
   await act(async () => slow.resolve(series[id("OP-04")]));
   expect(screen.getByTestId("comparison-chart")).toHaveTextContent("OP-04: -3.10");
 });

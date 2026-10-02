@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 // stale responses. Retrying or revisiting still asks the public API afresh.
 const subscribers = new Map<() => Promise<unknown>, number>();
 const inFlight = new Map<() => Promise<unknown>, Promise<unknown>>();
-export function usePublicResource<T>(loader: () => Promise<T>) {
-  const [state, setState] = useState<{ status: "loading" | "ready" | "error"; data: T | null }>({ status: "loading", data: null });
+export function usePublicResource<T>(loader: () => Promise<T>, initialData: T | null = null) {
+  const [state, setState] = useState<{ status: "loading" | "ready" | "error"; data: T | null }>({ status: initialData ? "ready" : "loading", data: initialData });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;

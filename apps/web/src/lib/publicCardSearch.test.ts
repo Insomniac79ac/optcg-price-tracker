@@ -161,11 +161,11 @@ describe("A/H. canonical family grouping", () => {
 
   it("labels families without claiming a complete printing count", () => {
     expect(familyToPaletteResult(groupPrintsIntoFamilies(KAIDO)[0]).subtitle).toBe(
-      "OP04-044 · Card family · Choose printing",
+      "OP04-044 · Card family · Choose version",
     );
     // A single returned printing still does not establish a complete family.
     expect(familyToPaletteResult(groupPrintsIntoFamilies([VIVI_SINGLE])[0]).subtitle).toBe(
-      "OP04-118 · Card family · Choose printing",
+      "OP04-118 · Card family · Choose version",
     );
   });
 

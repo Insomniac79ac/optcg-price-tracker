@@ -137,7 +137,7 @@ function IndexImpact({ mover }: { mover: IndexMover }) {
  * only reliable disambiguator between parallel printings, `treatment` being
  * frequently null even on one. */
 function MoverIdentity({ mover }: { mover: IndexMover }) {
-  const name = mover.name ?? mover.card_code ?? "Unknown print";
+  const name = mover.name ?? mover.card_code ?? "Unknown card";
   const code = mover.card_code ?? "—";
   return (
     <div className="min-w-0">
@@ -194,7 +194,7 @@ function MoverRow({ mover }: { mover: IndexMover }) {
         <div className="row-span-2 w-[56px] sm:row-span-1 sm:w-[64px]">
           <CardImageFrame
             imageUrl={resolveCardImageUrl(mover.display_image_url)}
-            alt={`${mover.name ?? mover.card_code ?? "Card"} (${mover.card_code ?? "unknown print"})`}
+            alt={`${mover.name ?? mover.card_code ?? "Card"} (${mover.card_code ?? "unknown card"})`}
             cardCode={mover.card_code ?? "—"}
             rarity={mover.rarity}
             size="full"

@@ -55,7 +55,7 @@ import type {
 } from "@/lib/printAnalytics";
 import type { PrintSeries, PrintSeriesPoint } from "@/lib/printSeries";
 
-import PrintDetailPage from "./page";
+import PrintDetailPage from "./PrintClient";
 
 const { downloadPrintChartExport } = vi.hoisted(() => ({
   downloadPrintChartExport:
@@ -105,6 +105,7 @@ function makeDetail(): PrintDetail {
       confidence: "high",
       source_price_range: null,
       source_values: [],
+      auxiliary_values: [],
       freshest_observation_at: "2026-09-08T20:00:00Z",
     },
     siblings: [],
@@ -801,9 +802,9 @@ describe("archived versus live", () => {
 
     // One heading, on the archived band. The live figure below it sits on a
     // row that names itself, inside a section that names itself "Current prices".
-    expect(screen.getAllByRole("heading", { name: "Market Index" })).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { name: "Recorded Market Value" })).toHaveLength(1);
     const live = screen.getByTestId("live-market");
-    expect(within(live).getByText("Current Market Index")).toBeInTheDocument();
+    expect(within(live).getByText("Current Market Value")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Current prices" })).toBeInTheDocument();
   });
 
@@ -1348,7 +1349,7 @@ describe("window performance", () => {
     await renderPage();
 
     const order = [...document.querySelectorAll("h1, h2")];
-    const index = order.indexOf(screen.getByRole("heading", { name: "Market Index" }));
+    const index = order.indexOf(screen.getByRole("heading", { name: "Recorded Market Value" }));
     const perf = order.indexOf(screen.getByRole("heading", { name: "Price changes" }));
     const live = order.indexOf(screen.getByRole("heading", { name: "Current prices" }));
     expect(index).toBeLessThan(perf);

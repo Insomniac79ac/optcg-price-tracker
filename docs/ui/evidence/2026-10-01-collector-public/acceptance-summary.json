@@ -1,0 +1,69 @@
+[
+  {
+    "route": "/",
+    "width": 320,
+    "one_h1": true,
+    "no_overflow": true,
+    "contained_loaded_art": [
+      {
+        "fit": "contain",
+        "loaded": true
+      },
+      {
+        "fit": "contain",
+        "loaded": true
+      }
+    ],
+    "title_and_canonical_in_head": true
+  },
+  {
+    "route": "/cards",
+    "width": 320,
+    "one_h1": true,
+    "no_overflow": true,
+    "contained_loaded_art": [
+      {
+        "fit": "contain",
+        "loaded": true
+      }
+    ],
+    "title_and_canonical_in_head": true
+  },
+  {
+    "route": "/prints/1",
+    "width": 320,
+    "one_h1": true,
+    "no_overflow": true,
+    "contained_loaded_art": [
+      {
+        "fit": "contain",
+        "loaded": true
+      }
+    ],
+    "title_and_canonical_in_head": true
+  },
+  {
+    "route": "/analytics",
+    "width": 320,
+    "one_h1": true,
+    "no_overflow": true,
+    "contained_loaded_art": [],
+    "title_and_canonical_in_head": true
+  },
+  {
+    "route": "/cards?release_product_id=181",
+    "width": 320,
+    "one_h1": true,
+    "no_overflow": true,
+    "contained_loaded_art": [
+      {
+        "fit": "contain",
+        "loaded": true
+      }
+    ],
+    "title_and_canonical_in_head": true
+  },
+  {
+    "invalid_release": "noindex"
+  }
+]

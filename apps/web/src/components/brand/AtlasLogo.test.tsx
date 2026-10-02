@@ -6,7 +6,7 @@ import { AtlasCompactMark, AtlasLogo } from "./AtlasLogo";
 describe("AtlasLogo", () => {
   it("renders the full product name and endorsement line", () => {
     render(<AtlasLogo />);
-    expect(screen.getByText("CardPirate Atlas")).toBeInTheDocument();
+    expect(screen.getByText("Card Pirate")).toBeInTheDocument();
     expect(screen.getByText("by CardPirateTCG")).toBeInTheDocument();
   });
 
@@ -21,22 +21,22 @@ describe("AtlasCompactMark", () => {
   it("always carries the full product name for assistive tech", () => {
     render(<AtlasCompactMark />);
     // sr-only span - present in the DOM even though visually hidden.
-    expect(screen.getByText("CardPirate Atlas")).toBeInTheDocument();
+    expect(document.querySelector(".sr-only")).toHaveTextContent("Card Pirate");
   });
 
   it("shows the short wordmark by default", () => {
     render(<AtlasCompactMark />);
-    expect(screen.getByText("Atlas")).toBeInTheDocument();
+    expect(screen.getAllByText("Card Pirate").find((node) => node.getAttribute("aria-hidden") === "true")).toBeInTheDocument();
   });
 
   it("can hide the short wordmark for icon-only contexts", () => {
     render(<AtlasCompactMark showShortName={false} />);
-    expect(screen.queryByText("Atlas")).not.toBeInTheDocument();
-    expect(screen.getByText("CardPirate Atlas")).toBeInTheDocument();
+    expect(document.querySelector("span[aria-hidden] .font-display")).not.toBeInTheDocument();
+    expect(screen.getByText("Card Pirate")).toBeInTheDocument();
   });
 
   it("suppresses its own sr-only name when aria-hidden (ancestor supplies the accessible name)", () => {
     render(<AtlasCompactMark aria-hidden />);
-    expect(screen.queryByText("CardPirate Atlas")).not.toBeInTheDocument();
+    expect(document.querySelector(".sr-only")).not.toBeInTheDocument();
   });
 });

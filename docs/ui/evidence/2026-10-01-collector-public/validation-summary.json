@@ -1,0 +1,33 @@
+{
+  "baseline_sha": "9f9c1c6f3f8ca2f857e66ec5be940331c8ab20db",
+  "production_build": "passed including TypeScript",
+  "full_suite": {
+    "passed": 1590,
+    "failed": 4,
+    "files_passed": 122,
+    "files_failed": 3,
+    "baseline_passed": 1583,
+    "baseline_failed": 4
+  },
+  "final_targeted_suite": {
+    "passed": 90,
+    "failed": 0,
+    "files": 4
+  },
+  "lint": {
+    "errors": 52,
+    "warnings": 20,
+    "baseline_errors": 52,
+    "baseline_warnings": 20,
+    "new_findings": []
+  },
+  "baseline_test_failures": [
+    "cards/code/[cardCode]/page.test.tsx: unavailable-price wording",
+    "CardPrintingChooser.test.tsx: unavailable-price wording",
+    "AdminNavigation.test.tsx: mobile drawer opener",
+    "AdminNavigation.test.tsx: role expiry reauthentication"
+  ],
+  "scope": "frontend, frontend Vercel exact-branch exclusion, and documentation only",
+  "production_access": false,
+  "deployment_requested": false
+}

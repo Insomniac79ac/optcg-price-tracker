@@ -81,7 +81,7 @@ export function printingTypeTerm(officialAssetVariant: string | null | undefined
     return {
       key: "printing.reprint",
       label: "Reprint",
-      definition: "A printing released again in another product.",
+      definition: "A version released again in another product.",
       category: "printing",
     };
   }
@@ -94,8 +94,8 @@ export function printingTypeTerm(officialAssetVariant: string | null | undefined
  * artwork they reuse. Release order and treatment are not evidence here. */
 export function versionPrintingLabel(officialAssetVariant: string | null | undefined): string | null {
   const printing = printingTypeTerm(officialAssetVariant);
-  if (printing?.key === "printing.alt_art") return "Alternate artwork";
-  if (officialAssetVariant?.trim().toLowerCase() === "base") return "Original artwork";
+  if (printing?.key === "printing.alt_art") return "Alternate art";
+  if (officialAssetVariant?.trim().toLowerCase() === "base") return "Regular art";
   return printing?.label ?? null;
 }
 
@@ -151,7 +151,7 @@ const RARITY_TERMS: Record<string, Term> = {
 export const SP_CARD_FILTER_VALUE = "SP CARD";
 
 const SP_CARD_DEFINITION =
-  "A special-art printing category, not a scarcity tier - it sits alongside " +
+  "A special-art version category, not a scarcity tier - it sits alongside " +
   "the card's rarity rather than replacing it, so an SP Card can also be a " +
   "Super Rare.";
 
@@ -163,7 +163,7 @@ const SP_CARD_LEGEND_DEFINITION =
   `${SP_CARD_DEFINITION} Published in the Japanese catalogue as SPカード or SP P.`;
 
 const TREASURE_RARE_DEFINITION =
-  "Treasure Rare. A language-specific special-art printing. Artwork may " +
+  "Treasure Rare. A language-specific special-art version. Artwork may " +
   "differ between English, Japanese, Chinese and other editions.";
 
 /** Special print categories, keyed by every raw token that names one.
@@ -260,7 +260,7 @@ const STATIC_TERMS: Record<string, Term> = {
     key: "identity.found_in",
     label: "Found in",
     definition:
-      "The product this specific printing appeared in. It does not necessarily mean the card originated in that set.",
+      "The product this specific version appeared in. It does not necessarily mean the card originated in that set.",
     category: "identity",
   },
   "identity.set": {
@@ -303,7 +303,7 @@ export function getTerm(key: string): Term | null {
  * Art is not a contradiction. Lives here rather than in the component so the
  * copy sits beside the terms it describes. */
 export const LEGEND_INTRO =
-  "Rarity, special print and printing describe three different things, so one " +
+  "Rarity, variant and artwork describe three different things, so one " +
   "card can be all three at once - a Super Rare that is also an SP Card and an " +
   "Alt Art.";
 
@@ -337,14 +337,14 @@ export const LEGEND_SECTIONS: LegendSection[] = [
   },
   {
     id: "special_print",
-    title: "Special print",
-    blurb: "A special printing category. It sits alongside the card's rarity, not instead of it.",
+    title: "Variant",
+    blurb: "A special-art variant. It sits alongside the card's rarity, not instead of it.",
     terms: [SPECIAL_PRINT_TERMS[SP_CARD_FILTER_VALUE], SPECIAL_PRINT_TERMS.TR],
   },
   {
     id: "printing",
-    title: "Printing",
-    blurb: "Which printing of the card this particular item is.",
+    title: "Version",
+    blurb: "Which version of the card this particular item is.",
     terms: [printingTypeTerm("p1")!, printingTypeTerm("r1")!],
   },
   {

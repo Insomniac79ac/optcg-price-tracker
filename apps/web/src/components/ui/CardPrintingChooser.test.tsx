@@ -113,7 +113,7 @@ describe("CardPrintingChooser", () => {
     // The section still states itself - a single printing is information,
     // not a reason to redirect.
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Printings of Nefeltari Vivi OP04-001",
+      "Card variants of Nefeltari Vivi OP04-001",
     );
   });
 
@@ -138,7 +138,7 @@ describe("CardPrintingChooser", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
     // The catalogue's own honest wording, not ¥0 and not a borrowed sibling
     // price.
-    expect(screen.getByText(/Index unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/No market price yet/i)).toBeInTheDocument();
     expect(screen.queryByText("￥0")).not.toBeInTheDocument();
   });
 
@@ -182,8 +182,8 @@ describe("CardPrintingChooser", () => {
   it("shows a skeleton while loading and never an empty claim", () => {
     const { container } = renderChooser([], "loading");
 
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Printings of");
-    expect(screen.queryByText(/No printings/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Card variants of");
+    expect(screen.queryByText(/No card variants/)).not.toBeInTheDocument();
     expect(container.querySelectorAll("a")).toHaveLength(0);
   });
 
@@ -194,7 +194,7 @@ describe("CardPrintingChooser", () => {
 
   it("says so plainly when the card has no catalogued printings", () => {
     renderChooser([], "ready");
-    expect(screen.getByText(/No printings of this card have been catalogued yet/))
+    expect(screen.getByText(/No card variants of this card have been catalogued yet/))
       .toBeInTheDocument();
   });
 
@@ -212,7 +212,7 @@ describe("CardPrintingChooser identity", () => {
     renderChooser([BASE, PARALLEL]);
 
     expect(
-      screen.getByRole("heading", { name: /Printings of Nefeltari Vivi OP04-001/ }),
+      screen.getByRole("heading", { name: /Card variants of Nefeltari Vivi OP04-001/ }),
     ).toBeInTheDocument();
   });
 
@@ -222,7 +222,7 @@ describe("CardPrintingChooser identity", () => {
     renderChooser([BASE, other]);
 
     const heading = screen.getByRole("heading", { level: 2 });
-    expect(heading).toHaveTextContent("Printings of OP04-001");
+    expect(heading).toHaveTextContent("Card variants of OP04-001");
     expect(heading).not.toHaveTextContent("Nefeltari Vivi");
     expect(heading).not.toHaveTextContent("Nefertari Vivi");
     // The printings themselves still render - only the name is withheld.
@@ -234,7 +234,7 @@ describe("CardPrintingChooser identity", () => {
     renderChooser([BASE, foreign]);
 
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Printings of OP04-001",
+      "Card variants of OP04-001",
     );
   });
 
@@ -243,7 +243,7 @@ describe("CardPrintingChooser identity", () => {
       <CardPrintingChooser status="loading" prints={[]} cardCode="OP04-001" canonicalName={null} />,
     );
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Printings of OP04-001",
+      "Card variants of OP04-001",
     );
   });
 });

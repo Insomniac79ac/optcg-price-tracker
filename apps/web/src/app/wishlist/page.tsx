@@ -335,7 +335,7 @@ export default function WishlistPage() {
           title="Wishlist"
           description={
             <span className="flex flex-wrap items-baseline gap-3">
-              <span className="w-full text-text-secondary">On your radar - the cards you&rsquo;re still chasing.</span>
+              <span className="w-full text-text-secondary">Not ready to buy yet? Watch the cards you want and keep your target prices in view.</span>
               <Link href="/collection" className="text-xs text-accent-teal underline decoration-accent-teal/40 underline-offset-2 hover:text-accent-teal-hover">
                 Collection →
               </Link>

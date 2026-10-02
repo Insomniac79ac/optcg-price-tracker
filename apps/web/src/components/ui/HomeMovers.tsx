@@ -66,7 +66,7 @@ export function HomeMovers() {
                         <span>{mover.raw_pct === 0 ? "Unchanged" : mover.direction === "up" ? "Up" : "Down"}</span>{" "}
                         <span>{formatRawPct(mover.raw_pct)}</span>
                       </p>
-                      <p className={styles.prices}>Market Index {formatJpy(mover.current_value_jpy)}</p>
+                      <p className={styles.prices}>Market Value {formatJpy(mover.current_value_jpy)}</p>
                     </div>
                   </Link>
                 </li>

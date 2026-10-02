@@ -53,7 +53,7 @@ interface NavGroup {
 // replacement (it reports what prices ARE, not how they moved).
 export const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/cards", label: "Cards" },
+  { href: "/cards", label: "Card Prices" },
   { href: "/analytics", label: "Market" },
 ];
 

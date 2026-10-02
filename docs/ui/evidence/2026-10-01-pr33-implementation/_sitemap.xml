@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>http://127.0.0.1:3000/</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/analytics</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/cards</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/cards?release_product_id=181</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/analytics?release_product_id=181</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/cards?release_product_id=182</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/analytics?release_product_id=182</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/cards?release_product_id=186</loc>
+</url>
+<url>
+<loc>http://127.0.0.1:3000/analytics?release_product_id=186</loc>
+</url>
+</urlset>
