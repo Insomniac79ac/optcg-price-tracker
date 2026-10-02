@@ -264,3 +264,17 @@ def test_archived_signal_quotes_are_hidden_without_mutating_archive(db_session, 
     assert report["top_5"][0]["last_payload"] == original
     regular = public_price_payload(db_session, payload, captured_at=stamp + timedelta(days=1))
     assert regular == original
+
+
+def test_mover_uses_latest_id_when_sale_and_regular_timestamps_tie(db_session, client, sale_world):
+    card, printing, source, mapping, original = sale_world
+    regular = make_observation(db_session, card, source, mapping, printing,
+                               price_jpy=120, promotion_state="none",
+                               observed_at=original.observed_at)
+    sale = make_observation(db_session, card, source, mapping, printing,
+                            price_jpy=80, promotion_state="sale",
+                            observed_at=original.observed_at)
+    assert sale.id > regular.id
+    body = client.get("/market/movers").json()
+    assert body[0]["latest_prices"] == []
+    assert not get_latest_price_map(db_session, [card.id])

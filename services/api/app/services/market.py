@@ -129,7 +129,7 @@ def get_market_movers(
 
             group_key = (source_name, obs.price_type, obs.condition_label)
             current = latest_by_group.get(group_key)
-            if current is None or obs.observed_at > current.observed_at:
+            if current is None or (obs.observed_at, obs.id) > (current.observed_at, current.id):
                 latest_by_group[group_key] = obs
 
             by_source_type[(source_name, obs.price_type)].append(obs)
