@@ -97,3 +97,6 @@
 @media (prefers-reduced-motion: reduce) {
   .settled, .modeSwitch button, .windows button { transition: none; }
 }
+
+.chartTitle { margin-bottom: 8px; font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.unavailableHeadline .selectorNote { display: block; font-family: var(--font-sans); font-size: 12px; line-height: 1.5; letter-spacing: normal; }

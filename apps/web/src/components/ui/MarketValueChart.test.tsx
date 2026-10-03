@@ -36,11 +36,12 @@ it("keeps compact tooltip contents specific to the mode", () => {
   expect(screen.queryByText(/printings priced/)).not.toBeInTheDocument();
   view.rerender(<MarketValueChartTooltip active payload={[{ payload: { ...row, value: 262279 } }]} mode="value" />);
   expect(screen.getByText("¥262,279")).toBeInTheDocument();
-  expect(screen.getByText("639 / 4,316 printings priced")).toBeInTheDocument();
+  expect(screen.getByText("639 / 4,316 card variants priced")).toBeInTheDocument();
 });
 it("never gives a missing point a tooltip value", () => {
   const { container } = render(<MarketValueChartTooltip active payload={[{ payload: { date: "2026-09-26", timestamp: 0, value: null, priced: 0, physical: 0 } }]} mode="value" />);
-  expect(container).toBeEmptyDOMElement();
+  expect(container).toHaveTextContent("Market data unavailable");
+  expect(container).not.toHaveTextContent("¥0");
 });
 it("keeps readable branding inside the hero for either chart mode", () => {
   const props: MarketValueHeroProps = { data: fixtures.overall as MarketValue, busy: false, error: null, releases: [], releasesFailed: false, releaseProductId: null, window: "7d", mode: "performance", onScopeChange: vi.fn(), onWindowChange: vi.fn(), onModeChange: vi.fn(), onRetry: vi.fn() };
@@ -50,4 +51,29 @@ it("keeps readable branding inside the hero for either chart mode", () => {
   expect(brand).toHaveTextContent("CARD PIRATEJapanese card prices · JPY");
   view.rerender(<MarketValueHero {...props} mode="value" />);
   expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARD PIRATE");
+});
+
+it.each([null, 1])("renders persisted JPY history independently of an unavailable comparison (scope %s)", (releaseId) => {
+  const data = { ...fixtures.overall, scope_kind: releaseId ? "release" : "overall", release_product_id: releaseId,
+    movement: { ...fixtures.overall.movement, available: false, pct: null, reason: "insufficient_window_continuity" },
+    series: [
+      { ...fixtures.overall.series[0], date: "2026-09-26", tracked_value_jpy: 100 },
+      { ...fixtures.overall.series[1], date: "2026-09-29", tracked_value_jpy: 200, performance_pct: null },
+    ],
+  } as MarketValue;
+  render(<MarketValueHero data={data} busy={false} error={null} releases={[]} releasesFailed={false} releaseProductId={releaseId}
+    window="7d" mode="value" onScopeChange={vi.fn()} onWindowChange={vi.fn()} onModeChange={vi.fn()} onRetry={vi.fn()} />);
+  const rows = JSON.parse(screen.getByTestId("chart-data").getAttribute("data-rows")!);
+  expect(rows.map((r: { value: number | null }) => r.value)).toEqual([100, null, null, 200]);
+  expect(screen.getByTestId("market-movement-unavailable")).toHaveTextContent("7D Unavailable");
+  expect(screen.queryByTestId("market-movement")).not.toBeInTheDocument();
+  expect(screen.getByTestId("line")).toHaveAttribute("data-connect-nulls", "false");
+});
+it("renders one real point, and no line for an empty or unpriced history", () => {
+  const view = render(<MarketValueChart series={fixtures.overall.series.slice(0, 1)} mode="value" />);
+  expect(screen.getByTestId("line")).toBeInTheDocument();
+  view.rerender(<MarketValueChart series={[]} mode="value" />);
+  expect(screen.queryByTestId("line")).not.toBeInTheDocument();
+  view.rerender(<MarketValueChart series={[{ ...fixtures.overall.series[0], tracked_value_jpy: null }]} mode="value" />);
+  expect(screen.queryByTestId("line")).not.toBeInTheDocument();
 });
