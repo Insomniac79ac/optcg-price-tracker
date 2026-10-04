@@ -264,6 +264,19 @@ def test_artwork_redirect_is_not_followed_or_confirmed(db, monkeypatch):
         assert session.scalar(select(FreshnessAttempt.outcome)) == "captured"
 
 
+def test_due_price_does_not_fetch_optional_sold_history(db, monkeypatch):
+    factory, source, mid, _ = db
+    # Only homepage, product, official artwork and candidate artwork fit.
+    seed(factory, mid, bound=4)
+    transport = Transport(monkeypatch)
+    run(factory, source)
+    assert not any("sales-histories" in url for url in transport.sent)
+    assert len(transport.sent) == 4
+    with factory() as session:
+        assert session.scalar(select(FreshnessAttempt.outcome)) == "captured"
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+
+
 @pytest.mark.parametrize("placeholder", [False, True])
 def test_quarantine_review_retains_block_and_writes_only_evidence(db, monkeypatch, placeholder):
     from app.services.freshness_queue import plan_validation

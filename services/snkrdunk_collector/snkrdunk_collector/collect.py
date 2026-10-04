@@ -350,7 +350,12 @@ def run_one_mapping_detailed(
                         # gates the write (see sales_history.py).
                         soup_for_link = BeautifulSoup(html, "html.parser")
                         history_href, history_link_diag = find_sales_history_link(soup_for_link)
-                        if history_href:
+                        # The current-price queue coalesces RAW/PSA10 asking
+                        # evidence from this product page. Optional sold
+                        # history is a separate evidence workload; navigating
+                        # it here can exhaust the price reservation after all
+                        # required price/identity evidence has already arrived.
+                        if history_href and freshness is None:
                             history_url = urljoin(product_step["final_url"], history_href)
                             with deadline(settings.SALES_HISTORY_NAV_TIMEOUT_S, "sales_history_navigation"):
                                 history_step = capture_page(page, history_url)
@@ -381,7 +386,10 @@ def run_one_mapping_detailed(
                                 )
                         else:
                             holder["sold_history"] = {
-                                "availability_status": "not_exposed_on_current_product",
+                                "availability_status": (
+                                    "not_requested_by_current_price_work" if freshness
+                                    else "not_exposed_on_current_product"
+                                ),
                                 "raw_sales": [],
                                 "stable_identifier_available": False,
                                 "link_diagnostics": history_link_diag,
