@@ -191,6 +191,27 @@ def validate_identity(
     """
     reasons: list[str] = []
     extracted = extraction.get("extracted") or {}
+    from opcg_source_identity import snkrdunk_listing_id
+
+    mapped_product = snkrdunk_listing_id(mapping.source_url)
+    observed_product = snkrdunk_listing_id(extracted.get("final_url"))
+    # This exception is only for already approved exact collection, never
+    # candidate validation or an actual artwork mismatch. Existing queue
+    # quarantines remain blocked and cannot reach this collector path.
+    optional_artwork_absent = bool(
+        artwork_comparison
+        and artwork_comparison.get("available") is False
+        and artwork_comparison.get("error") in {"missing_image_url", "placeholder_image_url", "image_fetch_failed"}
+        and mapping.review_status == "approved"
+        and mapping.manual_verified
+        and mapping.is_active
+        and mapping.superseded_at is None
+        and mapping.card_print_id is not None
+        and mapped_product
+        and mapped_product == observed_product
+    )
+    if extracted.get("final_url") and (not mapped_product or mapped_product != observed_product):
+        reasons.append("mapped_product_identity_mismatch")
 
     if classification != "normal_page":
         reasons.append(f"page_classification_not_normal_page:{classification}")
@@ -198,6 +219,8 @@ def validate_identity(
     # extractor.py's own fail-closed reasons, minus the purely price-related
     # ones (a missing floor never invalidates identity).
     for reason in extraction.get("fail_reasons") or []:
+        if optional_artwork_absent and reason.startswith("main_image_not_found:"):
+            continue
         if reason.split(":", 1)[0] not in PRICE_ONLY_FAIL_REASONS:
             reasons.append(reason)
 
@@ -354,7 +377,7 @@ def validate_identity(
             f"evidence={rarity_evidence}"
         )
 
-    if artwork_comparison is None or not artwork_comparison.get("match"):
+    if not optional_artwork_absent and (artwork_comparison is None or not artwork_comparison.get("match")):
         reasons.append(
             "artwork_not_confirmed_match:" + str((artwork_comparison or {}).get("error") or "no_match")
         )

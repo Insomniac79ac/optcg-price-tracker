@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from snkrdunk_collector.artwork import compare_artwork
+from snkrdunk_collector.artwork_url import artwork_url
 from snkrdunk_collector.browser import (
     DESKTOP_ACCEPT_LANGUAGE,
     DESKTOP_CHROME_UA,
@@ -305,24 +306,37 @@ def run_one_mapping_detailed(
                             batch_run_id=batch_run_id,
                         )
 
-                        candidate_image_url = extraction["extracted"].get("product_image_url")
+                        candidate_image_url, artwork_error = artwork_url(
+                            extraction["extracted"].get("product_image_url"),
+                            product_step["final_url"],
+                        )
                         official_image_url = card_print.image_url if card_print else None
                         if candidate_image_url and official_image_url:
-                            with deadline(settings.IMAGE_FETCH_TIMEOUT_S, "image_fetch"):
-                                image_fetch = freshness.request_bytes if freshness else fetch_bytes
-                                official_bytes = image_fetch(page, official_image_url)
-                                candidate_bytes = image_fetch(page, candidate_image_url)
+                            official_bytes = candidate_bytes = None
+                            try:
+                                with deadline(settings.IMAGE_FETCH_TIMEOUT_S, "image_fetch"):
+                                    image_fetch = freshness.request_bytes if freshness else fetch_bytes
+                                    official_bytes = image_fetch(page, official_image_url)
+                                    candidate_bytes = image_fetch(page, candidate_image_url)
+                            except Exception:
+                                if freshness:
+                                    freshness.check()  # budget/lease/source denial still fail closed
                             if official_bytes and candidate_bytes:
                                 holder["artwork_comparison"] = compare_artwork(official_bytes, candidate_bytes)
                             else:
                                 holder["artwork_comparison"] = {
                                     "match": False,
+                                    "available": False,
                                     "error": "image_fetch_failed",
                                     "official_fetched": bool(official_bytes),
                                     "candidate_fetched": bool(candidate_bytes),
                                 }
                         else:
-                            holder["artwork_comparison"] = {"match": False, "error": "missing_image_url"}
+                            holder["artwork_comparison"] = {
+                                "match": False,
+                                "available": False,
+                                "error": artwork_error or "missing_official_image_url",
+                            }
                         log_event(
                             "artwork_comparison_complete",
                             mapping_id=mapping.id,

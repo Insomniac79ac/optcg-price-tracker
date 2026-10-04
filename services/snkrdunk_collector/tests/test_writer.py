@@ -146,6 +146,26 @@ class WriterTestCase(unittest.TestCase):
 
 
 class SuccessfulWriteTests(WriterTestCase):
+    def test_approved_exact_mapping_can_collect_without_optional_artwork(self):
+        self.approved_mapping.manual_verified = True
+        extraction = {**GOOD_EXTRACTION, "extracted": {**GOOD_EXTRACTED, "final_url": PRODUCT_URL}}
+        result = self._write(self.approved_mapping, extraction, artwork={"match": False, "available": False, "error": "placeholder_image_url"})
+        self.assertTrue(result.written)
+
+    def test_missing_artwork_does_not_override_other_identity_evidence(self):
+        self.approved_mapping.manual_verified = True
+        for key, value in [("card_code", "OP01-002"), ("card_name", "別の名前"), ("rarity", "SR"), ("final_url", "https://snkrdunk.com/apparels/999")]:
+            extraction = {**GOOD_EXTRACTION, "extracted": {**GOOD_EXTRACTED, "final_url": PRODUCT_URL, key: value}}
+            result = self._write(self.approved_mapping, extraction, artwork={"match": False, "available": False, "error": "placeholder_image_url"})
+            self.assertFalse(result.written, key)
+            self.assertFalse(result.identity_verified, key)
+
+    def test_unapproved_mapping_needs_positive_artwork(self):
+        self.approved_mapping.review_status = "pending"
+        extraction = {**GOOD_EXTRACTION, "extracted": {**GOOD_EXTRACTED, "final_url": PRODUCT_URL}}
+        result = self._write(self.approved_mapping, extraction, artwork={"match": False, "available": False, "error": "placeholder_image_url"})
+        self.assertFalse(result.identity_verified)
+
     def test_one_successful_run_writes_exactly_one_floor_observation(self):
         result = self._write(self.approved_mapping, GOOD_EXTRACTION)
         self.assertTrue(result.written)

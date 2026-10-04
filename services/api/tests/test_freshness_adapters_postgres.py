@@ -228,6 +228,42 @@ def test_multiple_chunks_real_collector_one_capture_per_product(db, monkeypatch)
     assert run(factory, source) == []
 
 
+@pytest.mark.parametrize("asset", [None, "/_next/static/media/no-image.a123.webp", "/images/products/123.jpg"])
+def test_approved_snkr_optional_artwork_real_collection(db, monkeypatch, asset):
+    from bs4 import BeautifulSoup
+    factory, source, mid, _ = db
+    seed(factory, mid)
+    soup = BeautifulSoup(HTML, "html.parser")
+    for img in soup.find_all("img"):
+        if asset is None:
+            img.decompose()
+        else:
+            img["src"] = asset
+    transport = Transport(monkeypatch, str(soup))
+    run(factory, source)
+    assert all(url.startswith("https://") for url in transport.sent)
+    assert not any("no-image" in url for url in transport.sent)
+    with factory() as session:
+        assert session.scalar(select(FreshnessAttempt.outcome)) == "captured"
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 2
+
+
+def test_artwork_redirect_is_not_followed_or_confirmed(db, monkeypatch):
+    factory, source, mid, _ = db
+    seed(factory, mid)
+    transport = Transport(monkeypatch)
+    original = transport.response
+    transport.response = lambda url: (
+        SimpleNamespace(status=302, ok=False, headers={"location": "https://other.test/image"})
+        if "images" in url else original(url)
+    )
+    monkeypatch.setattr(collect, "compare_artwork", lambda *args: pytest.fail("unavailable artwork compared"))
+    run(factory, source)
+    assert not any("other.test" in url for url in transport.sent)
+    with factory() as session:
+        assert session.scalar(select(FreshnessAttempt.outcome)) == "captured"
+
+
 @pytest.mark.parametrize("missing", ["raw", "psa10"])
 def test_independent_categories_and_high_interest(db, monkeypatch, missing):
     from bs4 import BeautifulSoup
