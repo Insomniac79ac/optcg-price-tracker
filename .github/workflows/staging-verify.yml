@@ -49,9 +49,10 @@ jobs:
           import json, os, subprocess
           v = json.load(open('docs/agent/STAGING_MISSION.json'))['deployment_verification']
           expected = os.environ['EXPECTED']
+          extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', expected,
                           '--api-sha', expected if v['api_sha'] == 'merge' else v['api_sha'],
-                          '--revision', v['revision'], '--output', 'docs/agent/evidence/latest-staging-delivery.json'], check=True)
+                          '--revision', v['revision'], '--output', 'docs/agent/evidence/latest-staging-delivery.json', *extra], check=True)
           PY
       - uses: actions/upload-artifact@v4
         if: always()

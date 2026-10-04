@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 
@@ -47,6 +48,11 @@ def evaluate(mission, files, digest):
         errors.append("Every RED impact must be explicitly assessed with a boolean")
     if mission.get("diff_sha256") != digest:
         errors.append("Impact evidence is stale: diff SHA-256 does not match this PR")
+    deployment = mission.get("deployment_verification", {})
+    if not re.fullmatch(r"merge|[0-9a-f]{40}", str(deployment.get("api_sha", ""))):
+        errors.append("Expected API revision must be a full SHA or merge")
+    if not re.fullmatch(r"[0-9a-f]{12}", str(deployment.get("revision", ""))):
+        errors.append("Expected migration revision is required")
     covered = [path for item in impacts for path in item.get("files", [])]
     if len(covered) != len(set(covered)) or set(covered) != set(files):
         errors.append("Impact entries must cover each changed file exactly once")

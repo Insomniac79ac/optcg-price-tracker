@@ -10,7 +10,13 @@ test("staging build identity is pinned and missing or invalid Vercel identity fa
   const sha = "a".repeat(40);
   assert.equal(sourceCommit(os.tmpdir(), { VERCEL: "1", VERCEL_GIT_COMMIT_SHA: sha }), sha);
   assert.throws(() => sourceCommit(os.tmpdir(), { VERCEL: "1" }), /requires/);
-  assert.throws(() => sourceCommit(os.tmpdir(), { GIT_COMMIT: "main" }), /full Git commit/);
+  assert.throws(() => sourceCommit(os.tmpdir(), { GIT_COMMIT: "main" }), /Git commit/);
+  assert.throws(() => sourceCommit(os.tmpdir(), { VERCEL: "1", VERCEL_GIT_COMMIT_SHA: "abc1234" }), /full/);
+});
+
+test("existing local compose builds retain unknown and short commit support", () => {
+  assert.equal(sourceCommit(os.tmpdir(), { GIT_COMMIT: "unknown" }), "unknown");
+  assert.equal(sourceCommit(os.tmpdir(), { GIT_COMMIT: "abc1234" }), "abc1234");
 });
 
 function fixture(t, version = "4.5.6\n") {

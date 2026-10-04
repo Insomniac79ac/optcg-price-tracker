@@ -12,6 +12,7 @@ class PolicyTests(unittest.TestCase):
         self.m = {"schema_version": 1, "mission": "fixture", "target": "staging",
                   "classification": "GREEN", "diff_sha256": "digest",
                   "red_decisions": {key: False for key in RED},
+                  "deployment_verification": {"api_sha": "a" * 40, "revision": "c4e8a1d7b902"},
                   "impacts": [{"files": ["app.py"], "effects": ["application"],
                                "reason": "Fix bounded rendering bug"}]}
 

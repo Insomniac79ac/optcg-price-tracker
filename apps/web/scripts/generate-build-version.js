@@ -3,12 +3,19 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 function sourceCommit(repoRoot, env = process.env) {
+  if (env.VERCEL === "1") {
+    if (!/^[0-9a-f]{40}$/.test(env.VERCEL_GIT_COMMIT_SHA || "")) {
+      throw new Error("Vercel build requires a full VERCEL_GIT_COMMIT_SHA");
+    }
+    return env.VERCEL_GIT_COMMIT_SHA;
+  }
   const supplied = env.VERCEL_GIT_COMMIT_SHA || env.GIT_COMMIT;
-  if (supplied) {
-    if (!/^[0-9a-f]{40}$/.test(supplied)) throw new Error("Build source SHA must be a full Git commit");
+  // Existing local/compose builds accept short Git IDs or the documented
+  // unknown sentinel. Canonical staging verification still requires 40 hex.
+  if (supplied && supplied !== "unknown") {
+    if (!/^[0-9a-f]{7,40}$/.test(supplied)) throw new Error("Build source SHA must identify a Git commit");
     return supplied;
   }
-  if (env.VERCEL === "1") throw new Error("Vercel build requires VERCEL_GIT_COMMIT_SHA");
   try {
     return execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   } catch {

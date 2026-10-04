@@ -67,7 +67,7 @@
       "reason": "Preserve exact serving frontend source, make provenance observable, add policy and serialized staging-only delivery tooling; activation remains blocked by GitHub administration and isolated credential prerequisites. No policy weakening or economic changes."
     }
   ],
-  "diff_sha256": "53c26a39d920e74b9dd9709f35baeee0e442834fc3435fa64841b1f106da9ddb",
+  "diff_sha256": "42ae6a132c2c124286a8f98d069c523c8aaefc6122ce2816361c267b8ff5ba2f",
   "safeguards": {
     "impact": {
       "resources": [

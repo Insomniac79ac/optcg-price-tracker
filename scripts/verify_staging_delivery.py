@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import urllib.error
 import urllib.request
 
 import generate_staging_state as state
@@ -26,7 +27,21 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def get(url):
     require(url.startswith((WEB + "/", API + "/")), "Non-staging URL refused")
-    with urllib.request.build_opener(NoRedirect).open(url, timeout=30) as response:
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        response = opener.open(url, timeout=30)
+    except urllib.error.HTTPError as error:
+        if error.code != 429:
+            raise
+        delay = int(error.headers.get("Retry-After", "0"))
+        require(0 < delay <= 300, "API rate limit has no bounded retry window")
+        # One retry at the server's own reset boundary, never an evasion/bypass.
+        while delay > 0:
+            interval = min(delay, 30)
+            time.sleep(interval)
+            delay -= interval
+        response = opener.open(url, timeout=30)
+    with response:
         data = json.load(response)
         if url.startswith(API):
             # Stay below the public read budget; never fan out against the API.
@@ -97,6 +112,7 @@ def sale_audit():
         require(invalid == 0, "Sale evidence eligible for Market Index / Market Value")
         require(receipts == 0, "Unexpected receipts for intentional historical gaps")
         require(bool(sales), "Sale audit has no representative evidence")
+        print(f"Checking public sale exclusion for {len(sales)} active prints", flush=True)
         def verify_sale(row):
             printing = row["card_print_id"]
             history = get(f"{API}/prints/{printing}/prices")

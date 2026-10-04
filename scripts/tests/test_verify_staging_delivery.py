@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch, Mock
+from urllib.error import HTTPError
+from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from verify_staging_delivery import validate_state, get, state
@@ -41,6 +44,25 @@ class VerificationTests(unittest.TestCase):
         for url in ('https://example.com/health', 'https://optcg-price-tracker-staging.vercel.app.evil.test/'):
             with self.assertRaises(state.VerificationError):
                 get(url)
+
+    def test_rate_limit_obeys_one_bounded_server_retry(self):
+        body = StringIO('{}')
+        body.headers = {}
+        opener = Mock()
+        opener.open.side_effect = [HTTPError('staging', 429, 'limited', {'Retry-After': '2'}, None), body]
+        with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
+            self.assertEqual(get('https://optcg-price-tracker-staging.vercel.app/api/version'), {})
+            sleep.assert_called_once_with(2)
+            self.assertEqual(opener.open.call_count, 2)
+
+    def test_unbounded_or_repeated_rate_limit_fails(self):
+        for retry in ('0', '301'):
+            opener = Mock()
+            opener.open.side_effect = HTTPError('staging', 429, 'limited', {'Retry-After': retry}, None)
+            with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener):
+                with self.assertRaises(state.VerificationError):
+                    get('https://optcg-price-tracker-staging.vercel.app/api/version')
+                self.assertEqual(opener.open.call_count, 1)
 
 
 if __name__ == '__main__':
