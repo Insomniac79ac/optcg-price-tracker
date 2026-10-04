@@ -176,6 +176,9 @@ def main():
     get(WEB + "/api/auth/session")
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
+    # Warm the route cache before the paced invariant audit. A single cold
+    # render previously missed a homepage shell mismatch after ISR regeneration.
+    browser_check()
     sale = sale_audit()
     routes = browser_check()
     for check in args.check:
@@ -185,6 +188,9 @@ def main():
     # Re-read after browser/data checks, so a competing deployment cannot be called success.
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
+    # The preceding provider reads also allow background regeneration from
+    # the warm browser pass to settle before the final browser assertion.
+    browser_check()
     require(get(WEB + "/api/version")["web"].get("source_commit") == args.expected, "Frontend changed during verification")
     snapshot = state.write_snapshot(evidence, state.CANONICAL_OUTPUT)
     result = {"verified_at": state.timestamp(), "expected_commit": args.expected,

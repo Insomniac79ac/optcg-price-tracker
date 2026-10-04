@@ -42,13 +42,16 @@ export function TopBar({
   onOpenPalette,
   onOpenShortcuts,
   mobileNavOpen = false,
+  pathnameHint,
 }: {
   onToggleMobileNav?: () => void;
   onOpenPalette?: () => void;
   onOpenShortcuts?: () => void;
   mobileNavOpen?: boolean;
+  pathnameHint?: string;
 }) {
-  const pathname = usePathname() ?? "";
+  const routerPathname = usePathname();
+  const pathname = pathnameHint ?? routerPathname ?? "";
   const publicShell = isPublicShellRoute(pathname);
   const { status } = useSession();
   const adminSurface = useAdminSurface();
@@ -99,7 +102,7 @@ export function TopBar({
           </>}
         </Link>
 
-        {adminNavigation ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : adminShell ? null : <PublicNav />}
+        {adminNavigation ? <span className="hidden border-l border-border-default pl-5 text-xs font-medium tracking-wide text-text-muted xl:block">ADMIN WORKSPACE</span> : adminShell ? null : <PublicNav pathname={pathname} />}
 
         <div className="flex-1" />
 
@@ -149,14 +152,13 @@ export function TopBar({
           ?
         </button>
 
-        <AuthControl adminShell={adminShell} adminDisplayName={adminNavigation ? adminSurface.displayName : null} />
+        <AuthControl pathname={pathname || "/"} adminShell={adminShell} adminDisplayName={adminNavigation ? adminSurface.displayName : null} />
       </div>
     </header>
   );
 }
 
-function PublicNav() {
-  const pathname = usePathname() ?? "";
+function PublicNav({ pathname }: { pathname: string }) {
 
   return (
     <nav aria-label="Public sections" className="hidden items-center gap-1 md:flex">
@@ -183,7 +185,7 @@ function PublicNav() {
   );
 }
 
-function AuthControl({ adminShell, adminDisplayName }: { adminShell: boolean; adminDisplayName: string | null }) {
+function AuthControl({ adminShell, adminDisplayName, pathname }: { adminShell: boolean; adminDisplayName: string | null; pathname: string }) {
   const { data: session, status } = useSession();
   // Deliberately pathname-only (no query string) - useSearchParams() would
   // require every page that renders <AppHeader /> (nearly all of them) to
@@ -191,7 +193,6 @@ function AuthControl({ adminShell, adminDisplayName }: { adminShell: boolean; ad
   // out of scope for this task. The redirect flow that actually needs full
   // pathname+query preservation (proxy.ts -> /sign-in for a protected
   // route) already has it - see src/lib/proxyGuard.ts.
-  const pathname = usePathname() ?? "/";
   const currentPath = pathname;
 
   if (adminDisplayName) {

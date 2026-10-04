@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Canonical autonomous staging delivery",
+  "mission": "Fix cached homepage shell hydration within canonical staging delivery",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,93 +20,21 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        ".github/workflows/staging-verify.yml",
-        "apps/web/scripts/generate-build-version.js",
-        "apps/web/scripts/generate-build-version.test.js",
         "apps/web/src/app/HomeClient.tsx",
-        "apps/web/src/app/analytics/MarketClient.tsx",
-        "apps/web/src/app/analytics/page.test.tsx",
-        "apps/web/src/app/api/version/route.test.ts",
-        "apps/web/src/app/api/version/route.ts",
-        "apps/web/src/app/cards/[id]/page.test.tsx",
-        "apps/web/src/app/cards/code/[cardCode]/page.test.tsx",
-        "apps/web/src/app/cards/discovery.test.tsx",
-        "apps/web/src/app/page.test.tsx",
-        "apps/web/src/app/share/[kind]/[id]/route.tsx",
-        "apps/web/src/components/admin/AdminNavigation.test.tsx",
-        "apps/web/src/components/ui/CommandPalette.test.tsx",
-        "apps/web/src/components/ui/MarketValueChart.test.tsx",
-        "apps/web/src/components/ui/MarketValueChart.tsx",
-        "apps/web/src/components/ui/MarketValueHero.module.css",
-        "apps/web/src/components/ui/MarketValueHero.tsx",
-        "apps/web/src/generated/buildVersion.ts",
-        "apps/web/src/lib/brand.test.ts",
-        "apps/web/src/lib/brand.ts",
-        "apps/web/src/lib/marketValue.test.ts",
-        "apps/web/src/lib/marketValue.ts",
-        "apps/web/src/lib/shareCard.tsx",
-        "docs/agent/CURRENT_STATE.yaml",
-        "docs/agent/STAGING_DELIVERY.md",
-        "docs/agent/evidence/staging-source-comparison-2026-10-04.json",
-        "docs/agent/evidence/staging-state-283aa82e7283f0d3.json",
-        "scripts/generate_staging_state.py",
-        "scripts/staging_policy.py",
-        "scripts/tests/test_staging_policy.py",
-        "scripts/tests/test_verify_staging_delivery.py",
+        "apps/web/src/components/ui/AppShell.test.tsx",
+        "apps/web/src/components/ui/AppShell.tsx",
+        "apps/web/src/components/ui/PublicBottomNav.tsx",
+        "apps/web/src/components/ui/TopBar.tsx",
         "scripts/verify_staging_delivery.py"
       ],
       "effects": [
         "application",
-        "tests",
-        "documentation",
-        "state_observation",
-        "infrastructure"
+        "tests"
       ],
-      "reason": "Preserve exact serving frontend source, make provenance observable, add policy and serialized staging-only delivery tooling; activation remains blocked by GitHub administration and isolated credential prerequisites. No policy weakening or economic changes."
+      "reason": "Preserve the public homepage shell when the server router context is unavailable during cached rendering; seed the same known route through header, navigation and sign-in link presentation. Authentication guards, branding and data semantics are unchanged. Exercise cold and warm browser passes around the paced data audit."
     }
   ],
-  "diff_sha256": "42ae6a132c2c124286a8f98d069c523c8aaefc6122ce2816361c267b8ff5ba2f",
-  "safeguards": {
-    "impact": {
-      "resources": [
-        "Vercel prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
-        "GitHub staging branch only"
-      ],
-      "routes": [
-        "/",
-        "/analytics",
-        "/share/home",
-        "/api/version"
-      ],
-      "dependencies": [
-        "Existing staging Railway API e018d903f57b89ab1f0f9dc20641bbe43feed868"
-      ],
-      "deployment_impact": "Rebuild native staging Git frontend; preserve all 577 artifact source files except reviewed build identity instrumentation. Delivery automation stays disabled pending repository administration and isolated read credentials.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 30
-    },
-    "recovery": {
-      "artifact": "0211aa6715036f2457bbc130efe3bbeccb4af5d9",
-      "procedure": "Restore staging deployment dpl_BeBb7N2wXSMw68Ak45PUcn8qu92J in the pinned staging project, then repair via a new staging PR. Do not reset Git or remove the preserved source commits.",
-      "trigger": "Missing intended homepage/chart behavior, wrong build SHA, HTTP failure, auth/session 500, invariant or browser failure.",
-      "backup": "No database writes. Existing READY staging artifact and byte-verified Git source are retained; no production operation.",
-      "validation": [
-        "docs/agent/evidence/staging-source-comparison-2026-10-04.json"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py"
-      ],
-      "observation_window": "One native Git build plus two independent live metadata/DB observations bracketing browser and public sale checks; no source jobs are triggered."
-    }
-  },
+  "diff_sha256": "d4fe32ef9a39e5d85f4da712e1af0361c9452cfa22e8368636b3121c5d5376b5",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"

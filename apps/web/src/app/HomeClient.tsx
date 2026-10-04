@@ -29,7 +29,7 @@ export default function HomePage({ initialSets = null }: { initialSets?: MarketV
   const preview = hero.data ?? [];
   return (
     <div className={styles.root}>
-      <AppHeader />
+      <AppHeader pathnameHint="/" />
       <AtlasVisualSystem>
         <main className={`mx-auto max-w-6xl px-4 ${styles.home}`}>
           <section className={styles.hero} aria-labelledby="home-title">
