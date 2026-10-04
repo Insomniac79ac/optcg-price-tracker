@@ -1,0 +1,178 @@
+# Verified staging observation; refresh before operational decisions.
+schema_version: 1
+verified_at: '2026-10-04T08:42:38.564303+00:00'
+target: staging
+snapshot_semantics: point-in-time observation, not desired state or authorization; unknown means not verified
+evidence:
+  artifact: evidence/2026-10-04-staging.json
+  verification: STATE_VERIFICATION.md
+  database_read_only: true
+  database_fingerprint: passed
+  platform_metadata_observed_at: '2026-10-04T08:26:21.401925+00:00'
+repository:
+  name: Insomniac79ac/optcg-price-tracker
+  branch: staging
+  sha: e018d903f57b89ab1f0f9dc20641bbe43feed868
+  meaning: remote staging branch at verification; not the documentation PR head or the whole deployed
+    fleet
+staging:
+  frontend_url: https://optcg-price-tracker-staging.vercel.app
+  api_url: https://optcg-price-tracker-staging.up.railway.app
+  database_revision: c4e8a1d7b902
+  railway_project_id: c613898d-bf03-43a6-8813-761f72e1c00a
+  railway_environment_id: 05d1eac2-510d-4bd3-999e-fea9ead766b7
+  frontend_sha: 0211aa6715036f2457bbc130efe3bbeccb4af5d9
+  api_sha: e018d903f57b89ab1f0f9dc20641bbe43feed868
+  collector_reported_sha: 41966076ea6988f38436a3aab953d8bba896c7d8
+  collector_runtime_sha: unknown
+  collector_provenance: CLI deployment message reports SHA; runtime source hash was not independently
+    verified
+  api_health: ok
+coverage:
+  canonical_variants: 4316
+  one_or_more_sources: 2254
+  one_or_more_sources_pct: 52.2243
+  both_sources: 199
+  zero_sources: 2062
+  denominator: active, verified CardPrint rows; not CanonicalCard count
+  eligibility: active, approved, nonsuperseded mapping to active verified CardPrint; Yuyu/SNKRDUNK only;
+    SNKRDUNK manual_verified required
+  meaning: mapping eligibility only; includes identity-blocked due-work, not healthy operational coverage
+  duplicate_active_exact_print_source_groups: 0
+  legacy_null_print_groups: 2
+yuyu:
+  eligible_mappings: 2100
+  shards: 9
+  shard_routing: mapping_id modulo 9; shard 4 uses yuyutei-collector-shard-4-v2
+  schedules_utc:
+    yuyutei-collector-shard-8: 24,54 * * * *
+    yuyutei-collector-shard-5: 15,45 * * * *
+    yuyutei-collector-shard-3: 9,39 * * * *
+    yuyutei-collector-shard-1: 3,33 * * * *
+    yuyutei-collector-shard-0: 0,30 * * * *
+    yuyutei-collector-shard-4-v2: 12,42 * * * *
+    yuyutei-collector-shard-6: 18,48 * * * *
+    yuyutei-collector-shard-2: 6,36 * * * *
+    yuyutei-collector-shard-7: 21,51 * * * *
+  admission_versions: unknown
+  admission_versions_reason: bounded current-deployment log reads returned no due_run_start records; deployment
+    provenance alone does not prove runtime version
+  promotion_semantics:
+    required_policy: internal provenance only; excluded from public prices/history, Market Index and Market
+      Value; never substitute struck prices
+    api_code_reference: e018d903f57b89ab1f0f9dc20641bbe43feed868
+    live_end_to_end_revalidation: unknown
+  due_work:
+    configured: true
+    observed_refresh_attempts_24h: 2169
+    latest_capture_at: '2026-10-04 08:40:10.069323+00:00'
+  discovery:
+    pending_scopes: 59
+    completed_attempts_24h: 66
+    latest_completion_at: '2026-10-04 01:04:07.760185+00:00'
+    continuous_consumer_health: unknown
+snkrdunk:
+  eligible_mappings: 353
+  batch_max: unknown
+  batch_max_evidence: No BATCH_MAX_MAPPINGS_PER_RUN service override; reported source revision defaults
+    to 70. Effective runtime limit not independently verified.
+  schedule: 27,57 * * * *
+  schedule_timezone: UTC
+  quarantined_identity: 22
+  quarantine_meaning: blocked refresh work with confirmed identity-validation refusal; these mappings
+    still count in eligibility
+  due_work:
+    configured: true
+    pending_refresh: 331
+    blocked_refresh: 22
+    pending_validation: 22
+    latest_capture_at: '2026-10-04 08:30:53.671904+00:00'
+freshness:
+  standard_target_hours: 24
+  dispatch_due_hours: 23
+  policy_versions:
+  - current-price-v1
+  deadline_compliance_status: not_met
+  measurement_scope: raw freshness_price_states attached to refresh work, including blocked work; null
+    successful checks reported separately
+  by_source:
+    yuyutei:
+      total: 2100
+      never_successfully_checked: 209
+      check_older_than_24h: 63
+      price_older_than_24h: 63
+      no_listing: 0
+    snkrdunk:
+      total: 353
+      never_successfully_checked: 193
+      check_older_than_24h: 0
+      price_older_than_24h: 1
+      no_listing: 116
+  sustained_natural_cycle_compliance: unknown
+source_budgets:
+  yuyutei:
+    enabled: true
+    request_limit: 9000
+    window_seconds: 1800
+    used_requests: 822
+    reserved_requests: 0
+    paused_until: null
+    pause_reason: null
+  snkrdunk:
+    enabled: true
+    request_limit: 3100
+    window_seconds: 1800
+    used_requests: 2946
+    reserved_requests: 0
+    paused_until: null
+    pause_reason: null
+market_value:
+  latest_published_date: '2026-10-03'
+  historical_gaps:
+  - '2026-09-27'
+  - '2026-09-28'
+  historical_gap_rows: 0
+  latest_atomic_receipt:
+    snapshot_date: '2026-10-03'
+    receipt_kind: atomic
+    expected_print_count: 962
+    snapshot_row_count: 962
+  receipt_gate: required; configured coordinator is app.market_index_daily_pipeline
+  schedule_utc: 0 20 * * *
+features:
+  raw_due_work:
+    configured: true
+    recent_attempts_observed: true
+    full_freshness_compliance: false
+  discovery:
+    yuyu_queue_and_recent_completions_observed: true
+    continuous_consumer_health: unknown
+    snkrdunk_discovery: unknown
+    snkrdunk_validation_completions_24h: 22
+  psa10:
+    source_implementation: present at collector reported revision
+    freshness_categories_in_live_database:
+    - raw
+    live_psa10_observations: 0
+    live_activation: unknown
+    public_exposure: unknown
+blockers:
+- id: freshness-deadline-deficit
+  scope: full operational freshness claim
+  detail: Yuyu has 63 successful checks older than 24h and 209 never checked; SNKRDUNK has 193 never checked.
+    No capacity expansion authorized by this docs task.
+- id: snkrdunk-identity-quarantine
+  scope: 22 refresh items only
+  detail: Confirmed identity-validation refusals remain blocked; no mapping mutation performed.
+- id: deployment-provenance-divergence
+  scope: future staging deployments
+  detail: Remote staging, frontend and CLI collectors use different revisions; reconcile intended code
+    before any future redeployment.
+hard_invariants:
+  production_change_authorized: false
+  ambiguous_auto_approval: false
+  yuyu_sale_public: false
+  yuyu_sale_index_eligible: false
+  yuyu_sale_market_value_input: false
+hard_invariants_meaning: binding policy, not a claim that every public path was live-retested in this
+  read-only snapshot

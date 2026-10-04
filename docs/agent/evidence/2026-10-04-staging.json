@@ -1,0 +1,525 @@
+{
+  "database": {
+    "verified_at": "2026-10-04T08:42:34.475555+00:00",
+    "fingerprint": [
+      {
+        "name": "session is read-only",
+        "ok": true,
+        "detail": "transaction_read_only='on' (want 'on')"
+      },
+      {
+        "name": "fingerprint A - required tables",
+        "ok": true,
+        "detail": "all present"
+      },
+      {
+        "name": "fingerprint B - named indexes/constraints",
+        "ok": true,
+        "detail": "all present"
+      },
+      {
+        "name": "fingerprint C - print-lineage columns",
+        "ok": true,
+        "detail": "all present"
+      },
+      {
+        "name": "fingerprint D - alembic revision",
+        "ok": true,
+        "detail": "found=['c4e8a1d7b902'] expected=['c4e8a1d7b902']"
+      },
+      {
+        "name": "fingerprint E - non-empty invariants",
+        "ok": true,
+        "detail": "canonical_cards=2710, card_prints=4316, sources=3"
+      }
+    ],
+    "as_of": [
+      {
+        "at": "2026-10-04 08:42:38.564303+00:00",
+        "read_only": "on"
+      }
+    ],
+    "revision": [
+      {
+        "version_num": "c4e8a1d7b902"
+      }
+    ],
+    "coverage": [
+      {
+        "canonical_variants": 4316,
+        "one_or_more_sources": 2254,
+        "one_or_more_sources_pct": "52.2243",
+        "both_sources": 199,
+        "zero_sources": 2062
+      }
+    ],
+    "eligible": [
+      {
+        "name": "snkrdunk",
+        "count": 353
+      },
+      {
+        "name": "yuyutei",
+        "count": 2100
+      }
+    ],
+    "duplicates": [
+      {
+        "groups": 2
+      }
+    ],
+    "budgets": [
+      {
+        "name": "yuyutei",
+        "enabled": true,
+        "request_limit": 9000,
+        "window_seconds": 1800,
+        "used_requests": 822,
+        "reserved_requests": 0,
+        "paused_until": null,
+        "pause_reason": null
+      },
+      {
+        "name": "snkrdunk",
+        "enabled": true,
+        "request_limit": 3100,
+        "window_seconds": 1800,
+        "used_requests": 2946,
+        "reserved_requests": 0,
+        "paused_until": null,
+        "pause_reason": null
+      }
+    ],
+    "work": [
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "state": "blocked",
+        "policy_version": "current-price-v1",
+        "count": 22
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "state": "pending",
+        "policy_version": "current-price-v1",
+        "count": 331
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "validation",
+        "state": "pending",
+        "policy_version": "current-price-v1",
+        "count": 22
+      },
+      {
+        "name": "yuyutei",
+        "kind": "discovery",
+        "state": "pending",
+        "policy_version": "current-price-v1",
+        "count": 59
+      },
+      {
+        "name": "yuyutei",
+        "kind": "refresh",
+        "state": "pending",
+        "policy_version": "current-price-v1",
+        "count": 2100
+      }
+    ],
+    "freshness": [
+      {
+        "name": "yuyutei",
+        "total": 2100,
+        "never_successfully_checked": 209,
+        "check_older_than_24h": 63,
+        "price_older_than_24h": 63,
+        "no_listing": 0
+      },
+      {
+        "name": "snkrdunk",
+        "total": 353,
+        "never_successfully_checked": 193,
+        "check_older_than_24h": 0,
+        "price_older_than_24h": 1,
+        "no_listing": 116
+      }
+    ],
+    "attempts_24h": [
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "outcome": "captured",
+        "attempts": 44,
+        "latest": "2026-10-04 08:30:53.671904+00:00"
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "outcome": "no_listing",
+        "attempts": 116,
+        "latest": "2026-10-04 08:31:54.490226+00:00"
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "outcome": "transient_failure",
+        "attempts": 288,
+        "latest": "2026-10-04 01:01:14.907514+00:00"
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "validation",
+        "outcome": "completed",
+        "attempts": 22,
+        "latest": "2026-10-04 08:29:43.439522+00:00"
+      },
+      {
+        "name": "yuyutei",
+        "kind": "discovery",
+        "outcome": "completed",
+        "attempts": 66,
+        "latest": "2026-10-04 01:04:07.760185+00:00"
+      },
+      {
+        "name": "yuyutei",
+        "kind": "refresh",
+        "outcome": "captured",
+        "attempts": 1828,
+        "latest": "2026-10-04 08:40:10.069323+00:00"
+      },
+      {
+        "name": "yuyutei",
+        "kind": "refresh",
+        "outcome": "expired",
+        "attempts": 1,
+        "latest": "2026-10-04 02:04:35.959582+00:00"
+      },
+      {
+        "name": "yuyutei",
+        "kind": "refresh",
+        "outcome": "transient_failure",
+        "attempts": 340,
+        "latest": "2026-10-04 01:08:34.427519+00:00"
+      }
+    ],
+    "market_value": [
+      {
+        "scope_kind": "overall",
+        "latest_published_date": "2026-10-03",
+        "intentional_gap_rows": 0
+      },
+      {
+        "scope_kind": "release",
+        "latest_published_date": "2026-10-03",
+        "intentional_gap_rows": 0
+      }
+    ],
+    "receipts": [
+      {
+        "snapshot_date": "2026-10-03",
+        "receipt_kind": "atomic",
+        "expected_print_count": 962,
+        "snapshot_row_count": 962
+      },
+      {
+        "snapshot_date": "2026-10-02",
+        "receipt_kind": "atomic",
+        "expected_print_count": 653,
+        "snapshot_row_count": 653
+      },
+      {
+        "snapshot_date": "2026-10-01",
+        "receipt_kind": "atomic",
+        "expected_print_count": 647,
+        "snapshot_row_count": 647
+      }
+    ],
+    "categories": [
+      {
+        "price_category": "raw",
+        "price_type": "sell",
+        "count": 2100
+      },
+      {
+        "price_category": "raw",
+        "price_type": "floor",
+        "count": 353
+      }
+    ],
+    "psa10": [
+      {
+        "count": 0,
+        "latest": null
+      }
+    ],
+    "duplicate_detail": [
+      {
+        "name": "snkrdunk",
+        "card_print_id": null,
+        "mapping_ids": [
+          2,
+          4,
+          6,
+          8,
+          10,
+          14
+        ],
+        "review_statuses": [
+          "rejected",
+          "rejected",
+          "rejected",
+          "rejected",
+          "rejected",
+          "rejected"
+        ]
+      },
+      {
+        "name": "yuyutei",
+        "card_print_id": null,
+        "mapping_ids": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          13
+        ],
+        "review_statuses": [
+          "approved",
+          "approved",
+          "approved",
+          "approved",
+          "approved",
+          "approved"
+        ]
+      }
+    ],
+    "blocked_reasons": [
+      {
+        "name": "snkrdunk",
+        "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+        "last_outcome": null,
+        "count": 22
+      }
+    ],
+    "mapping_status": [
+      {
+        "name": "bandai",
+        "review_status": "approved",
+        "is_active": true,
+        "manual_verified": true,
+        "count": 20
+      },
+      {
+        "name": "snkrdunk",
+        "review_status": "approved",
+        "is_active": true,
+        "manual_verified": true,
+        "count": 353
+      },
+      {
+        "name": "snkrdunk",
+        "review_status": "rejected",
+        "is_active": true,
+        "manual_verified": false,
+        "count": 6
+      },
+      {
+        "name": "yuyutei",
+        "review_status": "approved",
+        "is_active": true,
+        "manual_verified": false,
+        "count": 17
+      },
+      {
+        "name": "yuyutei",
+        "review_status": "approved",
+        "is_active": true,
+        "manual_verified": true,
+        "count": 2089
+      }
+    ],
+    "variables": {
+      "snkrdunk-collector": {
+        "BATCH_TOTAL_TIMEOUT_S": "1200"
+      },
+      "yuyutei-collector-shard-0": {
+        "BATCH_TOTAL_TIMEOUT_S": "1200"
+      },
+      "yuyutei-collector-shard-4-v2": {
+        "BATCH_TOTAL_TIMEOUT_S": "1200"
+      },
+      "worker": {},
+      "beat": {
+        "MARKET_WORKFLOW_ENABLED": "false"
+      }
+    }
+  },
+  "railway_staging_services": [
+    {
+      "name": "market-index-snapshot",
+      "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2",
+      "command": "python -m app.market_index_daily_pipeline",
+      "schedule_utc": "0 20 * * *",
+      "deployment_id": "0e391ced-1628-4daa-975a-0cdc5c161e50",
+      "status": "SUCCESS",
+      "git_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+      "cli_provenance_message": null
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 8",
+      "schedule_utc": "24,54 * * * *",
+      "deployment_id": "28ecb5e3-c5ac-4023-8c1a-ad578ef75c51",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 5",
+      "schedule_utc": "15,45 * * * *",
+      "deployment_id": "65940e64-cd2b-4408-b8df-13377daa3192",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "beat",
+      "service_id": "fd28246d-50d2-40da-81dd-c6779e0d3faa",
+      "schedule_utc": null,
+      "deployment_id": "6667b1dc-de1f-4e7a-a9dc-bca88d6e4ea3",
+      "status": "SUCCESS",
+      "git_sha": "133f0d9db47c8d729d5b41983921b6282d6d4189",
+      "cli_provenance_message": null
+    },
+    {
+      "name": "optcg-price-tracker",
+      "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+      "command": null,
+      "schedule_utc": null,
+      "deployment_id": "24b03bfd-31a5-420c-baa9-0d600cda34c4",
+      "status": "SUCCESS",
+      "git_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+      "cli_provenance_message": null
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 3",
+      "schedule_utc": "9,39 * * * *",
+      "deployment_id": "79d748e9-a20e-404d-9c38-f72ef02f1722",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "snkrdunk-collector",
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "command": "python -m snkrdunk_collector.collect --due-work",
+      "schedule_utc": "27,57 * * * *",
+      "deployment_id": "4e3aacb2-4058-4206-8669-fb3a1fdd3e0f",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 1",
+      "schedule_utc": "3,33 * * * *",
+      "deployment_id": "344afe97-cab9-4a82-904a-0823e5cf2129",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 0",
+      "schedule_utc": "0,30 * * * *",
+      "deployment_id": "3fdd75fc-bb90-49b1-8fd5-448ac75c25c3",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 4",
+      "schedule_utc": "12,42 * * * *",
+      "deployment_id": "9d66cc5f-7a08-41d2-a742-d440c65575fa",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 6",
+      "schedule_utc": "18,48 * * * *",
+      "deployment_id": "3a501c8f-1474-4630-81ce-8981a516d96e",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 2",
+      "schedule_utc": "6,36 * * * *",
+      "deployment_id": "e2e27f6c-8f3a-418c-9585-bc96df6e6757",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    },
+    {
+      "name": "worker",
+      "service_id": "0042350a-ee15-4bac-a210-3efa20a3fa8c",
+      "schedule_utc": null,
+      "deployment_id": "22948c08-7487-48fb-a166-e12380fa361c",
+      "status": "SUCCESS",
+      "git_sha": "133f0d9db47c8d729d5b41983921b6282d6d4189",
+      "cli_provenance_message": null
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 7",
+      "schedule_utc": "21,51 * * * *",
+      "deployment_id": "19fdf2c4-14a0-43cf-9c5a-f1db668f6db4",
+      "status": "SUCCESS",
+      "git_sha": "unknown",
+      "cli_provenance_message": "RAW stabilization exact commit 41966076ea6988f38436a3aab953d8bba896c7d8"
+    }
+  ],
+  "railway_pr_deploys": false,
+  "railway_bot_pr_environments": false,
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "project_name": "optcg-price-tracker-staging",
+    "root_directory": "apps/web",
+    "git_branch": "staging",
+    "deployment_id": "dpl_BeBb7N2wXSMw68Ak45PUcn8qu92J",
+    "git_sha": "0211aa6715036f2457bbc130efe3bbeccb4af5d9",
+    "aliases": [
+      "optcg-price-tracker-staging.vercel.app",
+      "optcg-price-tracker-staging-insomniac79acs-projects.vercel.app"
+    ]
+  },
+  "api_health": {
+    "status": "ok",
+    "app_env": "staging",
+    "database_connected": true,
+    "redis_connected": true,
+    "version": "0.1.0",
+    "git_commit": "unknown"
+  },
+  "public_market_value": {
+    "as_of": "2026-10-03",
+    "historical_gap_rows": []
+  }
+}

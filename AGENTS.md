@@ -16,29 +16,24 @@ Rules to follow when working on this repository.
 
 ## Agent autonomy
 
-Proceed without asking for confirmation for:
+Follow the [Card Pirate operating contract](docs/agent/AUTONOMY_POLICY.md) and
+[hard invariants](docs/agent/INVARIANTS.md). Define missions with
+[MISSION_TEMPLATE.md](docs/agent/MISSION_TEMPLATE.md), consult
+[DECISIONS.md](docs/agent/DECISIONS.md), and reverify
+[CURRENT_STATE.yaml](docs/agent/CURRENT_STATE.yaml) before external operations.
 
-- reading or searching files in this repository;
-- editing files inside this repository when the current task authorizes code changes;
-- running tests, type checks, linters, builds, and local validation;
-- git diff, git status, git log, and other read-only Git inspection;
-- read-only database queries when the task authorizes database inspection;
-- read-only Railway, GitHub, and Vercel inspection;
-- creating disposable local test artifacts outside tracked repository paths.
+An authorized staging mission grants GREEN actions and AMBER actions after their
+preflight/rollback safeguards pass. Agents decompose, implement, test, deploy,
+observe natural operation and fix bounded defects forward without step approvals.
+Apply the highest applicable authority level. RED decisions require a human.
+Explicit user scope limits prevail; production access and changes remain gated.
 
-Ask before:
+Read-only repository/platform inspection, authorized read-only database queries,
+local tests and disposable artifacts do not require additional confirmation.
+Preserve unrelated working changes. Destructive Git/filesystem operations or
+resource deletion outside bounded mission authority still require explicit
+permission; a staging mission does not authorize broad deletion or force pushes.
 
-- accessing or mutating production;
-- database writes or migrations against staging or production;
-- approving, rejecting, deleting, or changing card/source mappings or candidates;
-- changing Railway or Vercel service configuration;
-- changing cron schedules or deployment triggers;
-- manually triggering collectors, discovery jobs, backfills, or other external jobs;
-- committing or pushing unless the current task explicitly authorizes it;
-- destructive Git or filesystem operations such as reset, clean, force push, or broad deletion;
-- deleting services, databases, volumes, environments, deployments, or other external resources;
-- actions that create material external cost or irreversible external state.
-
-If the current task explicitly authorizes one of the actions above, carry it out without asking again unless the live state materially differs from the task's assumptions, a new safety risk is discovered, or the action would affect a broader scope than the user authorized.
-
-Do not ask for confirmation merely to continue ordinary implementation, investigation, testing, or read-only verification already within the stated task scope. Stop and ask only when a decision would materially change product behavior, data semantics, infrastructure state, or the authorized scope.
+For the initial contract PR, leave it open for review and do not deploy application
+changes or access production. No permission in the proposed contract expands
+that documentation-only task.
