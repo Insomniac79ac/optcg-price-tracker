@@ -53,6 +53,7 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
             runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
             mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
             chunk_size=chunk_size,
+            max_products=settings.DUE_MAX_PRODUCTS_PER_RUN,
             discovery_runner=run_discovery,
             after_capture=lambda db: activate_ready_scopes(db, source_id),
             shard_index=shard_index,

@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # sized generously so a batch is never cut off by this watchdog under
     # normal conditions, only as a true worst-case backstop.
     BATCH_TOTAL_TIMEOUT_S: int = 1200
+    # Small turns keep early cron shards from draining the shared source
+    # budget before later shards run. Applies only to the due-work consumer.
+    DUE_MAX_PRODUCTS_PER_RUN: int = Field(default=8, ge=1, le=70)
 
     @field_validator("DATABASE_URL")
     @classmethod

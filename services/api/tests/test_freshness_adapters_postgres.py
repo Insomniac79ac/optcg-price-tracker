@@ -1347,3 +1347,47 @@ def test_refused_optional_redirect_does_not_poison_product(db, failure):
         product.fulfill.assert_called_once()
         assert attempt.charged_cost == expected_cost + 1
         assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
+
+
+def test_yuyu_small_turns_leave_budget_for_all_nine_shards(db, monkeypatch):
+    from opcg_source_identity import canonical_source_listing_identity
+    from app.services.freshness_queue import PriceCategory
+    from yuyutei_collector.due import run_due
+    from yuyutei_collector.config import settings as yuyu_settings
+
+    factory, source, mid, print_id = db
+    mids = [mid] + [mapping(factory, source, print_id, n) for n in range(124, 150)]
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        budget = session.scalar(select(SourceDispatchBudget))
+        budget.request_limit = 2300
+        for mapping_id in mids:
+            row = session.get(SourceCardMapping, mapping_id)
+            row.source_url = f"https://yuyu-tei.jp/sell/opc/card/op01/{10000 + mapping_id}"
+            row.canonical_source_listing_identity = canonical_source_listing_identity("yuyutei", row.source_url)
+            session.flush()
+            plan_refresh(session, mapping_id, {"raw": PriceCategory("sell")},
+                         high_interest=False, estimated_request_cost=300, clock=lambda: T0)
+    monkeypatch.setattr(yuyu_settings, "DUE_MAX_PRODUCTS_PER_RUN", 2)
+    monkeypatch.setattr(yuyu_settings, "YUYUTEI_REQUEST_DELAY_MS", 0)
+    visited = []
+
+    def runner(session, mapping_id, *, freshness):
+        freshness.admit(cost=110)  # Mock transport charge, no source network.
+        visited.append(mapping_id)
+        freshness.result = CaptureResult("identity_refusal", failure="fixture refusal")
+        return SimpleNamespace(source_denied=False, stage="validation_failed", reasons=[])
+
+    for shard in range(9):
+        previous = len(visited)
+        result = run_due(shard_index=shard, chunk_size=1, session_factory=factory, runner=runner)
+        assert len(result) == 2
+        assert all(mapping_id % 9 == shard for mapping_id in visited[previous:])
+    assert len(visited) == len(set(visited)) == 18
+    with factory() as session:
+        budget = session.scalar(select(SourceDispatchBudget))
+        assert budget.used_requests == 1980
+        assert budget.reserved_requests == 0
+        pending = list(session.scalars(select(FreshnessWork).where(FreshnessWork.state == "pending")))
+        assert len(pending) == 9
+        assert all(w.attempt_count == 0 and w.claim_token is None for w in pending)
