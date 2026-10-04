@@ -2,9 +2,13 @@
 
 Rules to follow when working on this repository.
 
-- **Small, reviewable changes.** Prefer many small PRs/commits over large ones.
-- **Mock data before live scraping.** New features are built and validated against mock data
-  first; live scraping is added only once the pipeline works end-to-end.
+- **Coherent mission-scoped changes.** Keep commits and diffs reviewable, but do not split
+  one mission into artificial micro-PRs or approval gates. Do not split changes merely
+  to avoid AMBER safeguards.
+- **Fixture-first source development.** New parser, collector and source-handling behavior
+  must first be reproduced and regression-tested with mocks/fixtures. Once deterministic
+  tests pass, natural staging validation may proceed autonomously under the operating
+  contract. Live staging evidence is required for operational-health claims.
 - **Store raw snapshots before parsing.** Always persist the raw scraped/fetched payload before
   extracting or transforming data from it, so parsing bugs don't destroy source data.
 - **Never commit secrets.** No API keys, tokens, or credentials in code or config. Use
