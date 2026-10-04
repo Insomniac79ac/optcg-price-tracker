@@ -37,11 +37,14 @@ def write_capture(session, mapping, holder):
 
 def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=None):
     from yuyutei_collector.collect import run_one_mapping_detailed
+    from yuyutei_collector.due_discovery import run_discovery, activate_ready_scopes
 
     if type(shard_index) is not int or not 0 <= shard_index < 9:
         raise ValueError("due collection requires one of the existing nine shards")
     with session_factory() as session:
         source_id = session.scalar(select(Source.id).where(Source.name == "yuyutei"))
+        activate_ready_scopes(session, source_id)
+        session.commit()
         return drain(
             session,
             source_id,
@@ -50,6 +53,8 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
             runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
             mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
             chunk_size=chunk_size,
+            discovery_runner=run_discovery,
+            after_capture=lambda db: activate_ready_scopes(db, source_id),
             shard_index=shard_index,
             delay_seconds=max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000,
         )

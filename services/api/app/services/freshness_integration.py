@@ -9,7 +9,9 @@ and completion share one transaction. Importing this module enables nothing.
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import hashlib
+import json
 import time
+from urllib.parse import urljoin, urlsplit
 
 from sqlalchemy import select
 
@@ -40,6 +42,29 @@ CATEGORIES = {
         "psa10": PriceCategory("psa10_asking", "PSA10"),
     },
 }
+MAX_BROWSER_ASSET_REDIRECTS = 8
+BROWSER_ADMISSION_VERSION = 2
+
+
+def unnecessary_browser_resource(request):
+    """Exclude presentation/account widgets, never price or identity evidence.
+
+    Collectors parse HTML, including image URLs; artwork bytes are fetched by
+    request_bytes under their own admission/denial checks. Browser-rendered
+    images, fonts and media do not participate in either collector's evidence.
+    SNKRDUNK's logged-out profile endpoint normally returns 403. The Bibian
+    shopping widget is external to both sources and also refuses this session.
+    """
+    if request.is_navigation_request():
+        return False  # physical page routing and redirect guards stay intact
+    if request.resource_type in {"image", "font", "media"}:
+        return True
+    parsed = urlsplit(request.url)
+    return parsed.hostname == "bbc.bibian.co.jp" or (
+        parsed.hostname == "snkrdunk.com"
+        and parsed.path == "/v1/accounts/me"
+        and request.method == "GET"
+    )
 
 
 class AdmissionStopped(RuntimeError):
@@ -127,27 +152,115 @@ class Attempt:
     def install_browser(self, context):
         """Meter ALL browser traffic, including subresources and redirects.
 
-        fetch does not follow redirects/retry. Redirects are refused: browser
-        routing does not guarantee interception of redirect chains. Service
+        fetch never follows redirects implicitly. Asset GET/HEAD redirects are
+        followed explicitly with a grant for each hop. Main-frame redirects
+        remain refused so a fulfilled response cannot hide a changed physical
+        product URL. Service
         workers must be blocked when the context is created. APIRequestContext is separate; use
         request_bytes for artwork. Even third-party resources are charged to the
         source, conservatively. WebSockets are blocked (not a collection input).
         """
 
         def route_request(route):
+            response = None
+            request = route.request
+            if unnecessary_browser_resource(request):
+                try:
+                    route.abort()
+                except Exception:
+                    pass  # context may already be closing; nothing was sent
+                return  # no network dispatch, so no budget grant is consumed
+            # Iframes (advertising, embedded widgets) also report navigation.
+            # Only the main frame carries the physical product URL identity.
+            main_navigation = request.is_navigation_request() and (
+                request.frame == request.frame.page.main_frame
+            )
+            url = request.url
+
+            def diagnostic(event, **fields):
+                parsed = urlsplit(url)
+                print(
+                    json.dumps(
+                        {
+                            "event": event,
+                            "work_id": self.claim.work_id,
+                            "request_host": parsed.hostname,
+                            "request_path": parsed.path,
+                            "resource_type": request.resource_type,
+                            "main_navigation": bool(main_navigation),
+                            "http_status": response.status if response else None,
+                            **fields,
+                        }
+                    ),
+                    flush=True,
+                )
+
             try:
                 self.admit()
                 response = route.fetch(max_redirects=0, max_retries=0, timeout=30000)
-                if 300 <= response.status < 400:
-                    raise AdmissionStopped(
-                        "browser redirect requires explicit admitted navigation"
+                redirects = 0
+                headers = dict(route.request.headers)
+                while 300 <= response.status < 400:
+                    if (
+                        main_navigation
+                        or route.request.method not in {"GET", "HEAD"}
+                        or redirects >= MAX_BROWSER_ASSET_REDIRECTS
+                    ):
+                        raise AdmissionStopped("unsupported browser redirect")
+                    location = response.headers.get("location")
+                    target = urljoin(url, location or "")
+                    parsed = urlsplit(target)
+                    if (
+                        not location
+                        or parsed.scheme not in {"http", "https"}
+                        or not parsed.hostname
+                        or parsed.username
+                        or parsed.password
+                    ):
+                        raise AdmissionStopped("invalid asset redirect location")
+                    if (urlsplit(url).scheme, urlsplit(url).netloc) != (
+                        parsed.scheme,
+                        parsed.netloc,
+                    ):
+                        headers = {
+                            k: v
+                            for k, v in headers.items()
+                            if k.lower()
+                            not in {"cookie", "authorization", "proxy-authorization"}
+                        }
+                    self.admit()
+                    response = route.fetch(
+                        url=target,
+                        headers=headers,
+                        max_redirects=0,
+                        max_retries=0,
+                        timeout=30000,
                     )
+                    url = target
+                    redirects += 1
                 if response.status in {403, 429}:
+                    diagnostic("browser_response_denied")
                     self.deny()
                 route.fulfill(response=response)
             except Exception as exc:
-                self.stopped = self.stopped or str(exc)
-                route.abort()
+                # A failed optional asset is a normal browser failure. It must
+                # not poison later product navigation. Admission refusal,
+                # denial and document failures still fence this attempt.
+                # admit()/deny() already set self.stopped for budget, lease,
+                # ownership and source-health refusals. A locally refused
+                # optional redirect (POST, invalid location, or hop limit)
+                # must abort that resource without poisoning the product.
+                if self.stopped or main_navigation:
+                    self.stopped = self.stopped or str(exc)
+                diagnostic(
+                    "browser_request_stopped",
+                    reason=str(exc).splitlines()[0][:300],
+                    attempt_stopped=bool(self.stopped),
+                )
+                try:
+                    route.abort()
+                except Exception:
+                    pass  # teardown cannot revive a refused request
 
         context.route("**/*", route_request)
         context.route_web_socket("**/*", lambda socket: socket.close())
@@ -288,6 +401,9 @@ def drain(
     runtime_seconds,
     mapping_seconds,
     chunk_size=70,
+    max_products=None,
+    discovery_runner=None,
+    after_capture=None,
     shard_index=None,
     delay_seconds=1,
     ownership_check=lambda session: None,
@@ -305,6 +421,10 @@ def drain(
         or runtime_seconds <= 0
         or mapping_seconds <= 0
         or delay_seconds < 0
+        or (
+            max_products is not None
+            and (type(max_products) is not int or max_products < 1)
+        )
     ):
         raise ValueError(
             "positive bounded runtime/chunk and nonnegative pacing required"
@@ -321,8 +441,24 @@ def drain(
         return []  # unconfigured admission is closed, never unlimited
     deadline = monotonic() + runtime_seconds
     results = []
+    print(
+        json.dumps(
+            {
+                "event": "due_run_start",
+                "browser_admission_version": BROWSER_ADMISSION_VERSION,
+                "owner": owner,
+                "source_id": source_id,
+                "started_at": clock().isoformat(),
+                "runtime_seconds": runtime_seconds,
+                "max_products": max_products,
+            }
+        ),
+        flush=True,
+    )
     while monotonic() + mapping_seconds <= deadline:
         for _ in range(chunk_size):
+            if max_products is not None and len(results) >= max_products:
+                return results
             if monotonic() + mapping_seconds > deadline:
                 return results
             ownership_check(session)
@@ -334,7 +470,9 @@ def drain(
                 lease=timedelta(seconds=mapping_seconds + 60),
                 clock=clock,
                 yuyutei_shard_index=shard_index,
-                supported_kinds={"refresh"},
+                supported_kinds=(
+                    {"refresh", "discovery"} if discovery_runner else {"refresh"}
+                ),
             )
             session.commit()
             if not claims:
@@ -343,9 +481,12 @@ def drain(
                 session, claims[0], ownership_check=ownership_check, clock=clock
             )
             try:
-                outcome = runner(
-                    session, claims[0].source_card_mapping_id, freshness=attempt
-                )
+                if discovery_runner and claims[0].kind == "discovery":
+                    outcome = discovery_runner(session, claims[0], freshness=attempt)
+                else:
+                    outcome = runner(
+                        session, claims[0].source_card_mapping_id, freshness=attempt
+                    )
                 if attempt.result is None:
                     session.rollback()
                     attempt.result = CaptureResult(
@@ -359,7 +500,9 @@ def drain(
                                 else "transient_failure"
                             )
                         ),
-                        failure=";".join(outcome.reasons),
+                        failure=";".join(
+                            filter(None, [attempt.stopped, *outcome.reasons])
+                        ),
                     )
                 attempt.finish(attempt.result)
             except AdmissionStopped as exc:
@@ -375,8 +518,25 @@ def drain(
                 # recovered conservatively. Never reacquire a singleton here.
                 raise
             results.append(price_facts(session, claims[0].work_id, clock=clock))
+            if after_capture and attempt.result.outcome == "captured":
+                after_capture(session)
             session.commit()
-            if attempt.stopped or attempt.result.outcome == "source_denial":
+            print(
+                json.dumps(
+                    {
+                        "event": "due_attempt_complete",
+                        "owner": owner,
+                        "work_id": claims[0].work_id,
+                        "mapping_id": claims[0].source_card_mapping_id,
+                        "kind": claims[0].kind,
+                        "outcome": attempt.result.outcome,
+                        "request_cost": attempt.charged_cost,
+                        "finished_at": clock().isoformat(),
+                    }
+                ),
+                flush=True,
+            )
+            if attempt.result.outcome == "source_denial":
                 return results
             sleep(delay_seconds)
     return results

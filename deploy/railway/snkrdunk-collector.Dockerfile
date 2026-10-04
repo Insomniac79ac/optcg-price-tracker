@@ -32,7 +32,7 @@ COPY services/api /tmp/opcg_collection_services
 RUN pip install --no-cache-dir /tmp/opcg_source_identity /tmp/opcg_collection_services
 
 COPY services/snkrdunk_collector/. .
-RUN python -c "from snkrdunk_collector.due import run_due"
+RUN python -c "from snkrdunk_collector.due import run_due; from app.services.freshness_integration import MAX_BROWSER_ASSET_REDIRECTS, BROWSER_ADMISSION_VERSION; assert MAX_BROWSER_ASSET_REDIRECTS == 8 and BROWSER_ADMISSION_VERSION == 2"
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}

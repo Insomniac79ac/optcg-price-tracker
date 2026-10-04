@@ -924,3 +924,40 @@ def test_unknown_policy_version_cannot_be_replanned_or_dispatched(db):
         claim(factory, source)
     with factory() as session:
         assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+
+
+def test_other_shard_ordinary_work_cannot_strand_own_coverage(db):
+    factory, source, mid, print_id = db
+    other_id = mapping(factory, source, print_id, 98765)
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        session.get(SourceCardMapping, mid).source_url = (
+            "https://yuyu-tei.jp/sell/opc/card/op01/123"
+        )
+        session.get(SourceCardMapping, other_id).source_url = (
+            "https://yuyu-tei.jp/sell/opc/card/op01/98765"
+        )
+    assert other_id % 9 != mid % 9
+    plan(factory, mid)
+    plan(factory, other_id)
+    with factory.begin() as session:
+        foreign = session.scalar(
+            select(FreshnessWork).where(
+                FreshnessWork.source_card_mapping_id == other_id
+            )
+        )
+        foreign.lane = "ordinary"
+        foreign.next_due_at = T0 - timedelta(days=1)
+        session.scalar(select(SourceDispatchBudget)).claim_sequence = 1
+    with factory.begin() as session:
+        selected = claim_due(
+            session,
+            source,
+            "own-shard",
+            limit=1,
+            lease=timedelta(minutes=10),
+            yuyutei_shard_index=mid % 9,
+            supported_kinds={"refresh", "discovery"},
+            clock=lambda: T0,
+        )
+        assert [c.source_card_mapping_id for c in selected] == [mid]

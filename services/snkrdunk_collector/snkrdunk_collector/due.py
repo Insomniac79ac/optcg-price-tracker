@@ -112,6 +112,8 @@ def run_due(
                 runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
                 mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
                 chunk_size=chunk_size,
+                # Repeated chunks must share the existing per-execution ceiling.
+                max_products=settings.BATCH_MAX_MAPPINGS_PER_RUN,
                 delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
                 ownership_check=assert_lock_owned,
             )

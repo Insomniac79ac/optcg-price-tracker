@@ -98,6 +98,7 @@ def enumerate_slug(
     max_products: int = MAX_PRODUCTS_PER_SLUG,
     max_pages: int = DEFAULT_MAX_PAGES_PER_SLUG,
     timeout_s: int = 90,
+    evidence_sink=None,
 ) -> SlugEnumeration:
     """Listing pages for one slug, deduplicated and filtered to that slug.
 
@@ -135,7 +136,8 @@ def enumerate_slug(
             # and never skipped to go faster.
             time.sleep(settings.YUYUTEI_REQUEST_DELAY_MS / 1000)
 
-        scraped = _scrape_listing(page, url, timeout_s)
+        scraped = (_scrape_listing(page, url, timeout_s, evidence_sink=evidence_sink)
+                   if evidence_sink is not None else _scrape_listing(page, url, timeout_s))
         result.pages_fetched.append(
             {
                 "url": url,

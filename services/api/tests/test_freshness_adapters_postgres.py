@@ -72,6 +72,21 @@ HISTORY = (
 ).read_text()
 
 
+def browser_request(
+    url="https://snkrdunk.com/apparels/123", *, main=True, iframe=False
+):
+    frame = SimpleNamespace()
+    frame.page = SimpleNamespace(main_frame=frame if main else object())
+    return SimpleNamespace(
+        url=url,
+        method="GET",
+        headers={},
+        frame=frame,
+        resource_type="document" if main or iframe else "script",
+        is_navigation_request=lambda: main or iframe,
+    )
+
+
 @pytest.fixture(autouse=True)
 def forbid_unmocked_browser(monkeypatch):
     def refused(*args, **kwargs):
@@ -148,6 +163,7 @@ class Transport:
             else self.html if "/apparels/" in url else "<html>Home</html>"
         )
         route = MagicMock()
+        route.request = browser_request(url)
         route.fetch.side_effect = lambda **kwargs: self.get(url, **kwargs)
         self.handler(route)
         if route.abort.called:
@@ -363,6 +379,69 @@ def test_singleton_contention_and_loss(db):
                     ownership_check=assert_lock_owned,
                 )
     with factory() as session:
+        assert session.scalar(select(func.count()).select_from(FreshnessAttempt)) == 0
+
+
+def test_product_cap_leaves_unstarted_work_pending_across_chunks(db):
+    factory, source, mid, print_id = db
+    mids = [mid] + [mapping(factory, source, print_id, n) for n in (124, 125, 126)]
+    for mapping_id in mids:
+        seed(factory, mapping_id)
+    visited = []
+
+    def runner(session, mapping_id, *, freshness):
+        visited.append(mapping_id)
+        freshness.result = CaptureResult("identity_refusal", failure="fixture refusal")
+        return SimpleNamespace(
+            source_denied=False, stage="validation_failed", reasons=[]
+        )
+
+    with factory() as session:
+        result = drain(
+            session,
+            source,
+            "bounded",
+            runner,
+            runtime_seconds=1200,
+            mapping_seconds=180,
+            chunk_size=1,
+            max_products=2,
+            delay_seconds=0,
+            clock=lambda: T0,
+        )
+    assert len(result) == len(visited) == 2
+    with factory() as session:
+        assert session.scalar(select(func.count()).select_from(FreshnessAttempt)) == 2
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(FreshnessWork)
+                .where(
+                    FreshnessWork.state == "pending", FreshnessWork.attempt_count == 0
+                )
+            )
+            == 2
+        )
+
+
+def test_raw_rollout_preserves_quarantine_and_never_adds_psa10(db):
+    from app.services.raw_freshness_rollout import seed_raw_work
+
+    factory, source, mid, _ = db
+    bounds = {"snkrdunk": 30, "yuyutei": 30}
+    with factory.begin() as session:
+        first = seed_raw_work(
+            session, request_bounds=bounds, quarantine_mapping_ids={mid}
+        )
+    with factory.begin() as session:
+        second = seed_raw_work(session, request_bounds=bounds)
+    assert first["created"] == first["blocked"] == 1
+    assert second["created"] == 0
+    with factory() as session:
+        assert session.scalar(select(FreshnessWork.state)) == "blocked"
+        assert list(session.scalars(select(FreshnessPriceState.price_category))) == [
+            "raw"
+        ]
         assert session.scalar(select(func.count()).select_from(FreshnessAttempt)) == 0
 
 
@@ -597,15 +676,18 @@ def test_browser_subresources_redirects_and_denials_are_admitted(db):
         attempt.install_browser(context)
         handler = context.route.call_args.args[1]
         first = MagicMock()
+        first.request = browser_request()
         first.fetch.return_value.status = 200
         handler(first)  # helper page or image subresource
         first.fulfill.assert_called_once()
         redirect = MagicMock()
+        redirect.request = browser_request()
         redirect.fetch.return_value.status = 302
         handler(redirect)
         redirect.abort.assert_called_once()
         redirect.fulfill.assert_not_called()  # browser cannot follow unmetered
         later = MagicMock()
+        later.request = browser_request()
         handler(later)
         later.fetch.assert_not_called()
         assert attempt.charged_cost == 2
@@ -753,3 +835,439 @@ def test_missing_picker_is_parsing_failure_for_both_categories(db, monkeypatch):
         assert {r["availability"] for r in facts} == {"unknown"}
         assert {r["captured_at"] for r in facts} == {None}
         assert {r["consecutive_failures"] for r in facts} == {1}
+
+
+def test_recurring_yuyu_discovery_consumes_shared_lane_atomically(db):
+    from yuyutei_collector.due_discovery import persist_enumeration
+    from yuyutei_collector.discovery import SlugEnumeration
+    from app.models import YuyuteiDiscoveryRun
+
+    factory, source, _, _ = db
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        work = plan_discovery_scope(
+            session, source, "yuyu-category:op01", due_at=T0, estimated_request_cost=10
+        )
+        wid = work.id
+        session.scalar(select(SourceDispatchBudget)).claim_sequence = 3
+
+    def discovery(session, claim, *, freshness):
+        freshness.admit()
+        rid = freshness.snapshot(
+            source,
+            "https://yuyu-tei.jp/sell/opc/s/op01",
+            {"http_status": 200, "html": "<html>mock listing</html>"},
+            "fixture",
+        )
+        enumeration = SlugEnumeration(slug="op01")
+        return persist_enumeration(session, claim, freshness, enumeration, rid)
+
+    with factory() as session:
+        result = drain(
+            session,
+            source,
+            "yuyu-test-8",
+            lambda *a, **k: pytest.fail("refresh called"),
+            discovery_runner=discovery,
+            shard_index=8,
+            runtime_seconds=60,
+            mapping_seconds=10,
+            max_products=1,
+            clock=lambda: T0,
+            sleep=lambda _: None,
+        )
+        assert len(result) == 1
+    with factory() as session:
+        work = session.get(FreshnessWork, wid)
+        assert work.next_due_at == T0 + timedelta(hours=24)
+        assert work.state == "pending"
+        assert work.resume_cursor["discovery_run_id"] == session.scalar(
+            select(YuyuteiDiscoveryRun.id)
+        )
+        assert session.scalar(select(FreshnessAttempt.outcome)) == "completed"
+        assert (
+            session.scalar(select(func.count()).select_from(FreshnessPriceState)) == 0
+        )
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+
+
+def test_listing_snapshot_precedes_parse_and_denial(monkeypatch):
+    from yuyutei_collector.discovery_probe import _scrape_listing, SourceDenied
+
+    events = []
+    page = MagicMock()
+    page.goto.return_value.status = 200
+    page.content.return_value = "<html>source evidence</html>"
+    page.eval_on_selector_all.side_effect = lambda *args: events.append("parse") or []
+    sink = lambda url, step: events.append(
+        ("snapshot", step["http_status"], step["html"])
+    )
+    _scrape_listing(page, "https://yuyu-tei.jp/sell/opc/s/op01", 10, evidence_sink=sink)
+    assert events[0] == ("snapshot", 200, "<html>source evidence</html>")
+    assert events[1] == "parse"
+    events.clear()
+    page.goto.return_value.status = 403
+    with pytest.raises(SourceDenied):
+        _scrape_listing(
+            page, "https://yuyu-tei.jp/sell/opc/s/op01", 10, evidence_sink=sink
+        )
+    assert events == [("snapshot", 403, "<html>source evidence</html>")]
+
+
+def test_disappeared_discovery_category_is_bounded_failure(monkeypatch):
+    from yuyutei_collector import due_discovery as discovery
+
+    session = MagicMock()
+    session.get.return_value = SimpleNamespace(
+        scope_key="yuyu-category:st16", source_id=1
+    )
+    browser = MagicMock()
+    monkeypatch.setattr(discovery, "sync_playwright", MagicMock(return_value=browser))
+    monkeypatch.setattr(
+        discovery,
+        "goto_and_capture_raw",
+        lambda *a: {"http_status": 200, "html": "warmup"},
+    )
+    monkeypatch.setattr(discovery, "homepage_session_ok", lambda step: True)
+    monkeypatch.setattr(discovery.time, "sleep", lambda _: None)
+    parsed = []
+
+    def gone(page, slug, **kwargs):
+        kwargs["evidence_sink"](
+            "https://yuyu-tei.jp/sell/opc/s/st16", {"http_status": 404, "html": "gone"}
+        )
+        parsed.append(True)
+
+    monkeypatch.setattr(discovery, "enumerate_slug", gone)
+    attempt = MagicMock()
+    attempt.snapshot.side_effect = [101, 102]
+    discovery.run_discovery(session, SimpleNamespace(work_id=1), freshness=attempt)
+    assert parsed == []
+    assert attempt.result.outcome == "transient_failure"
+    assert attempt.result.raw_snapshot_id == 102
+    assert "404" in attempt.result.failure
+    session.add.assert_not_called()
+
+
+@pytest.mark.parametrize("status", [200, 429])
+def test_asset_redirect_hops_are_metered_and_cross_origin_secrets_removed(db, status):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        route = MagicMock()
+        route.request = SimpleNamespace(
+            url="https://snkrdunk.com/asset",
+            method="GET",
+            headers={
+                "cookie": "source-only",
+                "authorization": "source-only",
+                "accept": "image/*",
+            },
+            is_navigation_request=lambda: False,
+            resource_type="script",
+        )
+        route.fetch.side_effect = [
+            SimpleNamespace(
+                status=302, headers={"location": "https://cdn.example.test/asset"}
+            ),
+            SimpleNamespace(status=status),
+        ]
+        handler(route)
+        assert attempt.charged_cost == 2
+        assert route.fetch.call_args.kwargs["url"] == "https://cdn.example.test/asset"
+        assert route.fetch.call_args.kwargs["headers"] == {"accept": "image/*"}
+        assert route.fetch.call_args.kwargs["max_redirects"] == 0
+        assert attempt.denied == (status == 429)
+        if status == 429:
+            assert (
+                session.scalar(select(SourceDispatchBudget.pause_reason))
+                == "source_denial"
+            )
+
+
+def test_optional_asset_transport_failure_does_not_poison_product(db):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        asset = MagicMock()
+        asset.request = browser_request(main=False)
+        asset.fetch.side_effect = RuntimeError("connection reset")
+        handler(asset)
+        assert attempt.stopped is None
+        product = MagicMock()
+        product.request = browser_request()
+        product.fetch.return_value.status = 200
+        handler(product)
+        product.fulfill.assert_called_once()
+        assert attempt.charged_cost == 2
+
+
+def test_isolated_admission_failure_continues_with_other_products(db):
+    from app.services.freshness_integration import AdmissionStopped
+
+    factory, source, mid, pid = db
+    seed(factory, mid)
+    second = mapping(factory, source, pid, 200)
+    seed(factory, second)
+
+    def runner(session, mapping_id, *, freshness):
+        freshness.admit()
+        if mapping_id == mid:
+            freshness.stopped = "unsupported browser redirect"
+            raise AdmissionStopped(freshness.stopped)
+        rid = freshness.snapshot(
+            source,
+            "https://snkrdunk.com/apparels/200",
+            {"http_status": 200, "html": "mock verified no listing"},
+            "fixture",
+        )
+        freshness.result = CaptureResult(
+            "no_listing", raw_snapshot_id=rid, no_listing_categories={"raw", "psa10"}
+        )
+        return SimpleNamespace(
+            source_denied=False, stage="floor_unavailable", reasons=[]
+        )
+
+    with factory() as session:
+        assert (
+            len(
+                drain(
+                    session,
+                    source,
+                    "fixture",
+                    runner,
+                    runtime_seconds=60,
+                    mapping_seconds=10,
+                    max_products=2,
+                    clock=lambda: T0,
+                    sleep=lambda _: None,
+                )
+            )
+            == 2
+        )
+        assert session.scalars(
+            select(FreshnessAttempt.outcome).order_by(FreshnessAttempt.id)
+        ).all() == ["transient_failure", "no_listing"]
+
+
+def test_discovery_gate_opens_after_five_durable_raw_captures_only(db):
+    from yuyutei_collector.due_discovery import activate_ready_scopes, ACTIVATION_GATE
+    from app.services.freshness_queue import PriceCategory
+
+    factory, source, first, pid = db
+    mids = [first] + [mapping(factory, source, pid, 300 + i) for i in range(4)]
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        gate = plan_discovery_scope(session, source, "yuyu-category:st16", due_at=T0)
+        gate.state = "blocked"
+        gate.last_failure = ACTIVATION_GATE
+        gate_id = gate.id
+        for mid in mids:
+            session.get(SourceCardMapping, mid).source_url = (
+                f"https://yuyu-tei.jp/sell/opc/card/st16/{mid}"
+            )
+            session.get(SourceCardMapping, mid).canonical_source_listing_identity = (
+                f"st16:{mid}"
+            )
+            session.flush()
+            plan_refresh(
+                session,
+                mid,
+                {"raw": PriceCategory("sell")},
+                high_interest=False,
+                estimated_request_cost=3,
+                clock=lambda: T0,
+            )
+        session.flush()
+        assert activate_ready_scopes(session, source) == 0
+    for index in range(5):
+        picked = claim(factory, source, owner=f"yuyutei-due-{mids[index]%9}")[0]
+        with factory() as session:
+            attempt = Attempt(session, picked, clock=lambda: T0)
+            attempt.admit()
+            row = session.get(SourceCardMapping, picked.source_card_mapping_id)
+            rid = attempt.snapshot(
+                source,
+                row.source_url,
+                {"http_status": 200, "html": "mock exact product"},
+                "fixture",
+            )
+            attempt.begin_result()
+            obs = PriceObservation(
+                source_id=source,
+                source_card_mapping_id=row.id,
+                card_print_id=pid,
+                raw_snapshot_id=rid,
+                observed_at=T0,
+                price_type="sell",
+                price_jpy=100,
+            )
+            session.add(obs)
+            session.flush()
+            attempt.finish(
+                CaptureResult(
+                    "captured", raw_snapshot_id=rid, observation_ids={"raw": obs.id}
+                )
+            )
+            assert activate_ready_scopes(session, source) == (1 if index == 4 else 0)
+            session.commit()
+    with factory() as session:
+        assert session.get(FreshnessWork, gate_id).state == "pending"
+        assert activate_ready_scopes(session, source) == 0
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(FreshnessPriceState)
+                .where(FreshnessPriceState.price_category != "raw")
+            )
+            == 0
+        )
+
+
+@pytest.mark.parametrize("transport_failure", [False, True])
+def test_iframe_navigation_does_not_poison_main_product(db, transport_failure):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        iframe = MagicMock()
+        iframe.request = browser_request(
+            "https://widget.example.test/frame", main=False, iframe=True
+        )
+        iframe.fetch.side_effect = (
+            RuntimeError("optional iframe disconnected")
+            if transport_failure
+            else [
+                SimpleNamespace(status=302, headers={"location": "/redirected"}),
+                SimpleNamespace(status=200),
+            ]
+        )
+        handler(iframe)
+        assert attempt.stopped is None
+        if transport_failure:
+            iframe.abort.assert_called_once()
+        else:
+            iframe.fulfill.assert_called_once()
+            assert iframe.fetch.call_count == 2
+        product = MagicMock()
+        product.request = browser_request()
+        product.fetch.return_value.status = 200
+        handler(product)
+        product.fulfill.assert_called_once()
+        assert attempt.charged_cost == (2 if transport_failure else 3)
+
+
+@pytest.mark.parametrize(
+    "url,kind",
+    [
+        ("https://snkrdunk.com/v1/accounts/me", "fetch"),
+        ("https://bbc.bibian.co.jp/js/bbc_v1.js", "script"),
+        ("https://cdn.snkrdunk.com/large-presentation-image.png", "image"),
+        ("https://yuyu-tei.jp/presentation.woff2", "font"),
+        ("https://yuyu-tei.jp/presentation.mp4", "media"),
+    ],
+)
+def test_non_evidence_browser_requests_are_not_dispatched_or_charged(db, url, kind):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        route = MagicMock()
+        route.request = browser_request(url, main=False)
+        route.request.resource_type = kind
+        context.route.call_args.args[1](route)
+        route.abort.assert_called_once()
+        route.fetch.assert_not_called()
+        assert attempt.charged_cost == 0
+        assert attempt.stopped is None
+        assert not attempt.denied
+        assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
+
+
+@pytest.mark.parametrize(
+    "url,kind,main",
+    [
+        ("https://snkrdunk.com/apparels/123", "document", True),
+        ("https://snkrdunk.com/v1/products/123", "fetch", False),
+        ("https://snkrdunk.com/v1/accounts/me", "document", True),
+        ("https://yuyu-tei.jp/sell/opc/card/op01/10001", "document", True),
+    ],
+)
+def test_required_source_denials_still_pause(db, url, kind, main):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        route = MagicMock()
+        route.request = browser_request(url, main=main)
+        route.request.resource_type = kind
+        route.fetch.return_value.status = 403
+        context.route.call_args.args[1](route)
+        assert attempt.charged_cost == 1
+        assert attempt.denied
+        assert (
+            session.scalar(select(SourceDispatchBudget.pause_reason)) == "source_denial"
+        )
+
+
+@pytest.mark.parametrize("failure", ["post_redirect", "invalid_location", "hop_limit"])
+def test_refused_optional_redirect_does_not_poison_product(db, failure):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=15)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        tracker = MagicMock()
+        tracker.request = browser_request(
+            "https://www.google.com/measurement/conversion", main=False
+        )
+        tracker.request.resource_type = "fetch"
+        if failure == "post_redirect":
+            tracker.request.method = "POST"
+        tracker.fetch.return_value = SimpleNamespace(
+            status=302,
+            headers={
+                "location": (
+                    "file:///not-network"
+                    if failure == "invalid_location"
+                    else "/redirect"
+                )
+            },
+        )
+        handler(tracker)
+        tracker.abort.assert_called_once()
+        tracker.fulfill.assert_not_called()
+        assert attempt.stopped is None
+        assert not attempt.denied
+        expected_cost = 9 if failure == "hop_limit" else 1
+        assert attempt.charged_cost == expected_cost
+        product = MagicMock()
+        product.request = browser_request()
+        product.fetch.return_value.status = 200
+        handler(product)
+        product.fulfill.assert_called_once()
+        assert attempt.charged_cost == expected_cost + 1
+        assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
