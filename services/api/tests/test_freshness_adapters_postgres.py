@@ -264,6 +264,33 @@ def test_artwork_redirect_is_not_followed_or_confirmed(db, monkeypatch):
         assert session.scalar(select(FreshnessAttempt.outcome)) == "captured"
 
 
+@pytest.mark.parametrize("placeholder", [False, True])
+def test_quarantine_review_retains_block_and_writes_only_evidence(db, monkeypatch, placeholder):
+    from app.services.freshness_queue import plan_validation
+    from snkrdunk_collector.due import run_identity_review
+    from bs4 import BeautifulSoup
+    factory, source, mid, _ = db
+    original = seed(factory, mid)
+    with factory.begin() as session:
+        session.get(FreshnessWork, original).state = "blocked"
+        review = plan_validation(session, source, f"quarantine-review:{mid}", due_at=T0, estimated_request_cost=30)
+        rid = review.id
+    soup = BeautifulSoup(HTML, "html.parser")
+    if placeholder:
+        for img in soup.find_all("img"):
+            img["src"] = "/_next/static/media/no-image.a123.webp"
+    Transport(monkeypatch, str(soup))
+    assert len(run(factory, source, validation_runner=run_identity_review)) == 1
+    with factory() as session:
+        assert session.get(FreshnessWork, original).state == "blocked"
+        review = session.get(FreshnessWork, rid)
+        assert review.resume_cursor["identity_confirmed"] is (not placeholder)
+        assert review.resume_cursor["mapping_id"] == mid
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert session.scalar(select(FreshnessAttempt.raw_snapshot_id)) is not None
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+
+
 @pytest.mark.parametrize("missing", ["raw", "psa10"])
 def test_independent_categories_and_high_interest(db, monkeypatch, missing):
     from bs4 import BeautifulSoup

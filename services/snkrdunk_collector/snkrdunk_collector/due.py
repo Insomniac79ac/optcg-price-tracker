@@ -85,6 +85,56 @@ def write_capture(session, mapping, holder, attempt):
     )
 
 
+def review_capture(session, mapping, holder, attempt):
+    """Fresh identity evidence only. Never writes a price or clears quarantine."""
+    from datetime import timedelta
+    from app.models import CardPrint, CanonicalCard
+    from snkrdunk_collector.card_code_authority import resolve_expected_card_code
+    from snkrdunk_collector.release_identity import resolve_release_identity
+    from snkrdunk_collector.writer import validate_identity
+
+    card_print = session.get(CardPrint, mapping.card_print_id)
+    canonical = session.get(CanonicalCard, card_print.canonical_card_id) if card_print else None
+    reasons = validate_identity(
+        mapping, card_print, canonical, holder["product_classification"],
+        holder["extraction"], holder["artwork_comparison"],
+        card_code_authority=resolve_expected_card_code(session, card_print),
+        release=resolve_release_identity(session, card_print),
+        allow_approved_missing_artwork=False,
+    )
+    return CaptureResult(
+        "completed", raw_snapshot_id=attempt.raw_snapshot_id,
+        resume_cursor={"version": 1, "mapping_id": mapping.id,
+                       "identity_confirmed": not reasons, "reasons": reasons,
+                       "artwork": holder["artwork_comparison"]},
+        next_due_at=attempt.clock() + timedelta(hours=24),
+    )
+
+
+def run_identity_review(session, claim, *, freshness):
+    from types import SimpleNamespace
+    from app.models import FreshnessWork
+    from snkrdunk_collector.collect import run_one_mapping_detailed
+    work = session.get(FreshnessWork, claim.work_id)
+    prefix = "quarantine-review:"
+    scope = work.scope_key or ""
+    def refused(reason):
+        freshness.result = CaptureResult("identity_refusal", failure=reason)
+        return SimpleNamespace(source_denied=False, stage="validation_failed", reasons=[reason])
+    if not scope.startswith(prefix) or not scope[len(prefix):].isdigit():
+        return refused("unsupported identity validation scope")
+    mapping_id = int(scope[len(prefix):])
+    quarantined = session.scalar(select(FreshnessWork).where(
+        FreshnessWork.kind == "refresh",
+        FreshnessWork.source_card_mapping_id == mapping_id,
+        FreshnessWork.source_id == work.source_id,
+        FreshnessWork.state == "blocked",
+    ))
+    if quarantined is None:
+        return refused("identity review requires an existing quarantined mapping")
+    return run_one_mapping_detailed(session, mapping_id, freshness=freshness)
+
+
 def run_due(
     *,
     chunk_size=70,
@@ -114,6 +164,7 @@ def run_due(
                 chunk_size=chunk_size,
                 # Repeated chunks must share the existing per-execution ceiling.
                 max_products=settings.BATCH_MAX_MAPPINGS_PER_RUN,
+                validation_runner=run_identity_review,
                 delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
                 ownership_check=assert_lock_owned,
             )

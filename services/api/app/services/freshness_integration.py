@@ -44,6 +44,7 @@ CATEGORIES = {
 }
 MAX_BROWSER_ASSET_REDIRECTS = 8
 BROWSER_ADMISSION_VERSION = 2
+VALIDATION_ADMISSION_VERSION = 1
 
 
 def unnecessary_browser_resource(request):
@@ -403,6 +404,7 @@ def drain(
     chunk_size=70,
     max_products=None,
     discovery_runner=None,
+    validation_runner=None,
     after_capture=None,
     shard_index=None,
     delay_seconds=1,
@@ -470,9 +472,9 @@ def drain(
                 lease=timedelta(seconds=mapping_seconds + 60),
                 clock=clock,
                 yuyutei_shard_index=shard_index,
-                supported_kinds=(
-                    {"refresh", "discovery"} if discovery_runner else {"refresh"}
-                ),
+                supported_kinds=({"refresh"}
+                    | ({"discovery"} if discovery_runner else set())
+                    | ({"validation"} if validation_runner else set())),
             )
             session.commit()
             if not claims:
@@ -483,6 +485,8 @@ def drain(
             try:
                 if discovery_runner and claims[0].kind == "discovery":
                     outcome = discovery_runner(session, claims[0], freshness=attempt)
+                elif validation_runner and claims[0].kind == "validation":
+                    outcome = validation_runner(session, claims[0], freshness=attempt)
                 else:
                     outcome = runner(
                         session, claims[0].source_card_mapping_id, freshness=attempt

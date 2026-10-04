@@ -424,9 +424,13 @@ def run_one_mapping_detailed(
         )
 
     if freshness:
-        from snkrdunk_collector.due import write_capture
+        from snkrdunk_collector.due import write_capture, review_capture
         freshness.begin_result()
-        freshness.result = write_capture(session, mapping, holder, freshness)
+        freshness.result = (
+            review_capture(session, mapping, holder, freshness)
+            if freshness.claim.kind == "validation"
+            else write_capture(session, mapping, holder, freshness)
+        )
         return MappingOutcome(mapping_id=mapping_id, stage=freshness.result.outcome,
                               written=bool(freshness.result.observation_ids))
 

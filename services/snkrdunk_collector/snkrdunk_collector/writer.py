@@ -180,6 +180,7 @@ def validate_identity(
     artwork_comparison: dict | None,
     card_code_authority: CardCodeAuthority | None = None,
     release: ReleaseIdentityResult | None = None,
+    allow_approved_missing_artwork: bool = True,
 ) -> list[str]:
     """Every check that answers "is the stored product actually the intended
     verified print?" - and nothing that answers "is there a price on it?".
@@ -199,7 +200,8 @@ def validate_identity(
     # candidate validation or an actual artwork mismatch. Existing queue
     # quarantines remain blocked and cannot reach this collector path.
     optional_artwork_absent = bool(
-        artwork_comparison
+        allow_approved_missing_artwork
+        and artwork_comparison
         and artwork_comparison.get("available") is False
         and artwork_comparison.get("error") in {"missing_image_url", "placeholder_image_url", "image_fetch_failed"}
         and mapping.review_status == "approved"
