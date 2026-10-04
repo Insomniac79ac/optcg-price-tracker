@@ -91,6 +91,8 @@ def persist_enumeration(session, claim, attempt, enumeration, raw_snapshot_id):
     session.flush()
     counts = own_series_code_counts(enumeration)
     statuses = []
+    candidate_ids = []
+    new_candidates = 0
     for product in enumeration.products:
         classification = classify_card_code(
             session,
@@ -98,7 +100,9 @@ def persist_enumeration(session, claim, attempt, enumeration, raw_snapshot_id):
             source_product_count=counts.get(product.detected_card_code, 1),
             source_listing_complete=enumeration.enumeration_complete,
         )
-        upsert_candidate(session, run.id, product, classification)
+        candidate, is_new = upsert_candidate(session, run.id, product, classification)
+        candidate_ids.append(candidate.id)
+        new_candidates += int(is_new)
         statuses.append(classification.match_status)
     metrics = _slug_metrics(enumeration, statuses, len(statuses))
     run.finished_at = attempt.clock()
@@ -115,6 +119,15 @@ def persist_enumeration(session, claim, attempt, enumeration, raw_snapshot_id):
     if not enumeration.enumeration_complete:
         run.stopped_reason = "bounded_incomplete_enumeration_no_exact_inference"
     session.flush()
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+    proposals = refresh_discovery_proposals(session, "yuyutei", candidate_ids)
+    # Keep metrics immutable to SQLAlchemy's JSON tracking and preserve the
+    # completed enumeration evidence used by the resolver before refreshing.
+    run.per_slug_metrics_json = {enumeration.slug: {
+        **metrics, "new_candidates": new_candidates,
+        "refreshed_candidates": len(candidate_ids) - new_candidates,
+        "proposal_refresh": proposals,
+    }}
     attempt.result = CaptureResult(
         "completed",
         raw_snapshot_id=raw_snapshot_id,
@@ -122,6 +135,7 @@ def persist_enumeration(session, claim, attempt, enumeration, raw_snapshot_id):
             "version": 1,
             "discovery_run_id": run.id,
             "enumeration_complete": enumeration.enumeration_complete,
+            "proposal_refresh": proposals,
         },
         next_due_at=attempt.clock() + timedelta(hours=24),
     )
