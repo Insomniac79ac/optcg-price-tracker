@@ -38,8 +38,11 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * Admin pages have a grouped operational rail and native modal drawer.
  * Collector pages keep their existing header, drawer and public bottom nav.
  */
-export function AppShell() {
-  const pathname = usePathname();
+export function AppShell({ pathnameHint }: { pathnameHint?: string } = {}) {
+  const routerPathname = usePathname();
+  // A page can provide its known path for background/ISR renders where the
+  // router context is unavailable. The same hint reaches every shell child.
+  const pathname = pathnameHint ?? routerPathname;
   const router = useRouter();
   // Route-based, not role-based, on purpose: the rail belongs to the admin
   // *surface*, not to the person. An admin browsing /cards is a collector at
@@ -123,13 +126,14 @@ export function AppShell() {
   return (
     <>
       <TopBar
+        pathnameHint={pathname ?? undefined}
         onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         mobileNavOpen={mobileNavOpen}
       />
 
-      {isPublicShellRoute(pathname ?? "") && <PublicBottomNav />}
+      {isPublicShellRoute(pathname ?? "") && <PublicBottomNav pathnameHint={pathname ?? undefined} />}
 
       {/* Fixed admin rail; body clearance follows data-app-rail in globals.css. */}
       {showAdminNavigation && (

@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let clientSession: { data: { user: { role?: string; email?: string } } | null; status: string } = { data: null, status: "unauthenticated" };
-let currentPathname = "/cards";
+let currentPathname: string | null = "/cards";
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => clientSession),
@@ -47,6 +47,33 @@ describe("AppShell navigation rail", () => {
     currentPathname = "/";
     const { container } = render(<AppShell />);
     expect(container.querySelector("[data-app-rail]")).toBeNull();
+  });
+
+  it("hydrates the cached homepage public shell when the server pathname is unavailable", async () => {
+    currentPathname = null;
+    const element = <AppShell pathnameHint="/" />;
+    const html = renderToString(element);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const recoverable = vi.fn();
+    currentPathname = "/";
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      expect(container.querySelector("[data-public-shell]")).not.toBeNull();
+      expect(container.querySelector("[data-public-bottom-nav]")).not.toBeNull();
+      expect(container.querySelector('[aria-label="Card Pirate — Home"] img')).toBeNull();
+      await act(async () => { root = hydrateRoot(container, element, { onRecoverableError: recoverable }); });
+      expect(recoverable).not.toHaveBeenCalled();
+      expect(container.innerHTML).toBe(html);
+      expect(within(container).getAllByRole("link", { name: "Home", exact: true })).toHaveLength(2);
+      for (const link of within(container).getAllByRole("link", { name: "Home", exact: true })) {
+        expect(link).toHaveAttribute("aria-current", "page");
+      }
+    } finally {
+      if (root) await act(async () => root?.unmount());
+      container.remove();
+    }
   });
 
   it("keeps the rail on the server-authorized admin surface", () => {

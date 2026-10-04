@@ -12,8 +12,9 @@ const ICON_PATHS: Record<string, string> = {
   "/analytics": "M3 19 10 12 14 16 21 6 M15 6h6v6",
 };
 
-export function PublicBottomNav() {
-  const pathname = usePathname() ?? "";
+export function PublicBottomNav({ pathnameHint }: { pathnameHint?: string } = {}) {
+  const routerPathname = usePathname();
+  const pathname = pathnameHint ?? routerPathname ?? "";
   return (
     <nav aria-label="Mobile public sections" data-public-bottom-nav="" className={styles.bottomNav}>
       {PUBLIC_NAV_ITEMS.map(({ href, label }) => (
