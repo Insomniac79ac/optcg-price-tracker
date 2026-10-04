@@ -1,0 +1,64 @@
+name: Verify staging merge
+
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: card-pirate-staging-delivery
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging-delivery
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: |
+          pip install -r scripts/agent-state-requirements.txt playwright==1.58.0
+          python -m playwright install --with-deps chromium
+          npm install -g @railway/cli@5.62.1 vercel@60.1.3
+      - name: Verify current staging head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+          STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+          EXPECTED: ${{ github.sha }}
+        run: |
+          test -n "$RAILWAY_TOKEN"
+          test -n "$STAGING_VERCEL_READ_TOKEN"
+          current=$(gh api repos/Insomniac79ac/optcg-price-tracker/branches/staging --jq '.commit.sha')
+          if [ "$current" != "$EXPECTED" ]; then
+            echo 'Obsolete queued verification; newer staging commit owns verification.'
+            exit 0
+          fi
+          python - <<'PY'
+          import json, os, subprocess
+          v = json.load(open('docs/agent/STAGING_MISSION.json'))['deployment_verification']
+          expected = os.environ['EXPECTED']
+          extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
+          subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', expected,
+                          '--api-sha', expected if v['api_sha'] == 'merge' else v['api_sha'],
+                          '--revision', v['revision'], '--output', 'docs/agent/evidence/latest-staging-delivery.json', *extra], check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-verification-${{ github.sha }}
+          path: |
+            docs/agent/CURRENT_STATE.yaml
+            docs/agent/evidence/latest-staging-delivery.json
+            docs/agent/evidence/staging-state-*.json

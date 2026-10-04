@@ -11,7 +11,7 @@ describe("brand", () => {
   });
 
   it("centralizes the tagline and supporting line", () => {
-    expect(brand.tagline).toBe("Know what your cards are worth.");
+    expect(brand.tagline).toBe("Know your cards. Know the market.");
     expect(brand.supportingLine).toBe("Collect the story. Know the value.");
   });
 

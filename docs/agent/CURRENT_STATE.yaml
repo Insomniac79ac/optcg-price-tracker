@@ -1,13 +1,13 @@
 # Generated staging observation; reverify before operational decisions.
 schema_version: 2
-verified_at: '2026-10-04T09:26:03.137208+00:00'
+verified_at: '2026-10-04T12:56:11.558332+00:00'
 target: staging
 collection_mode: live
 snapshot_semantics: observation only; not authorization, desired state or a capacity guarantee
 repository:
   name: Insomniac79ac/optcg-price-tracker
   branch: staging
-  sha: 95f234b62c630a4daca0e27805edd7a0d833e17c
+  sha: cabe07f7f3411e28d9d2bcb5629a57fb1b05e742
 staging:
   frontend_url: https://optcg-price-tracker-staging.vercel.app
   api_url: https://optcg-price-tracker-staging.up.railway.app
@@ -143,13 +143,13 @@ yuyu:
     live_end_to_end_revalidation: unknown
   due_work:
     pending: 2100
-    attempts_24h: 1969
+    attempts_24h: 2095
     outcomes:
     - name: yuyutei
       kind: refresh
       outcome: captured
-      attempts: 1884
-      latest: '2026-10-04T09:17:58.282145+00:00'
+      attempts: 2090
+      latest: '2026-10-04T12:49:47.839842+00:00'
     - name: yuyutei
       kind: refresh
       outcome: expired
@@ -158,8 +158,8 @@ yuyu:
     - name: yuyutei
       kind: refresh
       outcome: transient_failure
-      attempts: 84
-      latest: '2026-10-04T01:08:34.427519+00:00'
+      attempts: 4
+      latest: '2026-10-04T10:16:04.780473+00:00'
   discovery:
     pending: 59
     attempts_24h: 66
@@ -179,22 +179,22 @@ snkrdunk:
   due_work:
     blocked: 22
     pending: 331
-    attempts_24h: 461
+    attempts_24h: 482
     outcomes:
     - name: snkrdunk
       kind: refresh
       outcome: captured
-      attempts: 44
-      latest: '2026-10-04T08:30:53.671904+00:00'
+      attempts: 51
+      latest: '2026-10-04T11:29:43.724152+00:00'
     - name: snkrdunk
       kind: refresh
       outcome: no_listing
-      attempts: 129
-      latest: '2026-10-04T09:01:41.285289+00:00'
+      attempts: 213
+      latest: '2026-10-04T12:30:06.342312+00:00'
     - name: snkrdunk
       kind: refresh
       outcome: transient_failure
-      attempts: 288
+      attempts: 218
       latest: '2026-10-04T01:01:14.907514+00:00'
 freshness:
   standard_target_hours: 24
@@ -203,16 +203,16 @@ freshness:
   by_source:
     yuyutei:
       total: 2100
-      never_successfully_checked: 192
-      check_older_than_24h: 24
-      price_older_than_24h: 24
+      never_successfully_checked: 26
+      check_older_than_24h: 0
+      price_older_than_24h: 0
       no_listing: 0
     snkrdunk:
       total: 353
-      never_successfully_checked: 180
+      never_successfully_checked: 89
       check_older_than_24h: 0
       price_older_than_24h: 1
-      no_listing: 129
+      no_listing: 213
   sustained_natural_cycle_compliance: unknown
 source_budgets:
   yuyutei:
@@ -226,7 +226,7 @@ source_budgets:
     enabled: true
     request_limit: 3100
     window_seconds: 1800
-    used_requests: 2932
+    used_requests: 2967
     reserved_requests: 0
     paused_until: null
 market_value:
@@ -287,8 +287,8 @@ unknown_reasons:
     runtime bytes
   feature_health: queue/configuration and recent attempts do not prove sustained health or public activation
 evidence:
-  artifact: evidence/staging-state-3391abad5c997c5a.json
-  sha256: 3391abad5c997c5a6e87fd6053e407482be2e59fe1dd7a5b65d14a3a1ac79b73
-  collected_at: '2026-10-04T09:25:57.872145+00:00'
+  artifact: evidence/staging-state-283aa82e7283f0d3.json
+  sha256: 283aa82e7283f0d39c656ca9f77e5762ce421092c6fcb0eb3bf0bb9a1b385323
+  collected_at: '2026-10-04T12:56:03.823363+00:00'
   database_read_only: true
   database_fingerprint: passed

@@ -4,12 +4,74 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
 
 # All jobs below are secret-free by design - they check structure/config/
 # build success, never a real .env.production or real ADMIN_TOKEN/DATABASE_URL/
 # etc. See scripts/prod_verify.sh (the local equivalent of the prod-compose
 # job) and docs/deployment.md.
 jobs:
+  staging-automerge:
+    needs: engineering-gate
+    if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    uses: ./.github/workflows/staging-delivery.yml
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      pr: ${{ format('{0}', github.event.pull_request.number) }}
+      head: ${{ github.event.pull_request.head.sha }}
+
+  policy-gate:
+    if: github.event_name == 'pull_request' && github.base_ref == 'staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Evaluate mission against exact PR diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Candidate code is secret-free. After bootstrap, run the base policy
+          # so a PR cannot relax the evaluator used to assess itself.
+          if git cat-file -e "$BASE:scripts/staging_policy.py" 2>/dev/null; then
+            git show "$BASE:scripts/staging_policy.py" > /tmp/staging_policy.py
+          else
+            cp scripts/staging_policy.py /tmp/staging_policy.py
+          fi
+          git show "$HEAD:docs/agent/STAGING_MISSION.json" > /tmp/mission.json
+          python /tmp/staging_policy.py --base "$BASE" --head "$HEAD" --manifest /tmp/mission.json
+
+  engineering-gate:
+    if: always()
+    needs: [policy-gate, agent-state-tests, check-secrets, prod-compose, release-check, backend-tests, worker-tests, collector-tests, railway-python-images, frontend-build, deploy-scripts-sanity]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every applicable job to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          STAGING_PR: ${{ github.event_name == 'pull_request' && github.base_ref == 'staging' }}
+        run: |
+          python - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          failures = [name for name, result in results.items()
+                      if result['result'] != 'success'
+                      and not (name == 'policy-gate' and os.environ['STAGING_PR'] == 'false'
+                               and result['result'] == 'skipped')]
+          if failures:
+              raise SystemExit('Required checks failed or were skipped: ' + ', '.join(failures))
+          PY
+
   agent-state-tests:
     runs-on: ubuntu-latest
     steps:
@@ -19,6 +81,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -r scripts/agent-state-requirements.txt
       - run: python -m unittest discover -s scripts/tests -p test_generate_staging_state.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_staging_policy.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_verify_staging_delivery.py -v
 
   check-secrets:
     runs-on: ubuntu-latest
@@ -133,6 +197,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: cd apps/web && npm ci
       - run: cd apps/web && npm run build
+      - run: cd apps/web && npm test -- --maxWorkers=2
       - name: check-env.js unit tests
         run: cd apps/web && node --test scripts/*.test.js
 

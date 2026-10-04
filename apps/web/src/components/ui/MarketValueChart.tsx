@@ -12,7 +12,7 @@ export function MarketValueChart({ series, mode }: { series: MarketValuePoint[];
   const color = mode === "performance" ? "var(--accent-gold)" : "var(--accent-teal-hover)";
   const valid = rows.filter((row) => row.value !== null);
   if (!valid.length) {
-    return <div className={styles.chartEmpty}><p>No priced history in this window yet.</p></div>;
+    return <div className={styles.chartEmpty}><p>{mode === "value" ? "No priced history in this window yet." : "No comparable performance history in this window yet."}</p></div>;
   }
   return (
     <div className={styles.plot} role="region" aria-label={`${mode === "performance" ? "Performance" : "Tracked value"} chart`} data-testid="market-value-chart">
@@ -28,8 +28,8 @@ export function MarketValueChart({ series, mode }: { series: MarketValuePoint[];
           <XAxis dataKey="timestamp" type="number" domain={["dataMin", "dataMax"]} scale="time" tickLine={false} axisLine={false} minTickGap={40} tickMargin={12} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickFormatter={(value: number) => marketDate(new Date(value).toISOString().slice(0, 10))} />
           <YAxis width={60} tickLine={false} axisLine={false} tickCount={5} tickMargin={12} tick={{ fill: "var(--text-muted)", fontSize: 11 }} domain={mode === "performance" ? ["auto", "auto"] : [0, "auto"]} tickFormatter={(value: number) => mode === "performance" ? `${value}%` : `¥${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value)}`} />
           {mode === "performance" && <ReferenceLine y={0} stroke="var(--text-faint)" strokeDasharray="3 6" />}
-          <Tooltip content={<MarketValueChartTooltip mode={mode} />} cursor={{ stroke: "var(--text-muted)", strokeDasharray: "3 4" }} />
-          <Area type="linear" dataKey="value" name={mode === "performance" ? "Performance" : "Tracked value"} stroke={color} strokeWidth={2.5} fill={`url(#${gradient})`} connectNulls={false} isAnimationActive={false} dot={valid.length === 1 ? { r: 3 } : false} activeDot={{ r: 4, stroke: "var(--bg-page)", strokeWidth: 2 }} />
+          <Tooltip filterNull={false} content={<MarketValueChartTooltip mode={mode} />} cursor={{ stroke: "var(--text-muted)", strokeDasharray: "3 4" }} />
+          <Area type="linear" dataKey="value" name={mode === "performance" ? "Performance" : "Tracked value"} stroke={color} strokeWidth={2.5} fill={`url(#${gradient})`} connectNulls={false} isAnimationActive={false} dot={{ r: valid.length === 1 ? 3 : 2 }} activeDot={{ r: 4, stroke: "var(--bg-page)", strokeWidth: 2 }} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -42,7 +42,13 @@ export function MarketValueChartTooltip({ active, payload, mode }: {
   mode: MarketValueMode;
 }) {
   const row = payload?.[0]?.payload;
-  if (!active || !row?.date || row.value === null) return null;
+  if (!active || !row?.date) return null;
+  if (row.value === null) return (
+    <div className={styles.tooltip}>
+      <p>{marketDate(row.date, true)}</p>
+      <strong>{mode === "performance" && row.priced !== null ? "Comparable performance unavailable" : "Market data unavailable"}</strong>
+    </div>
+  );
   return (
     <div className={styles.tooltip}>
       <p>{marketDate(row.date, true)}</p>

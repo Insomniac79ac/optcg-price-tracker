@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
   if (!MARKET_VALUE_WINDOWS.includes(rawWindow as MarketValueWindow)) return new Response("Unsupported window", { status: 400 });
   const window = rawWindow as MarketValueWindow;
   const validId = /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
-  let content: ShareCardContent = { kind: "home", title: "Know what your cards are worth.", identity: "Prices for the cards you own, want and watch.", value: "", context: "", date: "Japanese cards · Prices in JPY" };
+  let content: ShareCardContent = { kind: "home", title: "Know your cards. Know the market.", identity: "Track card prices, collection value and the One Piece market.", value: "", context: "", date: "Japanese cards · Prices in JPY" };
   if (kind === "print" && validId) {
     const print = await readPrint(id);
     if (!print || print.card_print_id !== Number(id)) return new Response("Card unavailable", { status: 404 });

@@ -58,8 +58,8 @@ export function ShareCard({ content: c }: { content: ShareCardContent }) {
       <div style={{ ...col, width: 506, flexShrink: 0, paddingTop: 12 }}>
         <Text style={{ fontSize: 11, color: "#b9503e", letterSpacing: 2 }}>{home ? "YOUR ONE PIECE COLLECTION" : "SETS ON THE MOVE / JAPANESE EDITION"}</Text>
         {release && <Text style={{ fontSize: 16, marginTop: 18, fontWeight: 700 }}>{c.code}</Text>}
-        <Text style={{ ...serif, fontSize: home ? 66 : c.title.length > 30 ? 39 : 51, lineHeight: 1.05, marginTop: 20, maxWidth: 465 }}>{home ? "Know what your cards are worth." : c.title}</Text>
-        {home ? <div style={col}><Text style={{ fontSize: 21, lineHeight: 1.5, width: 430, marginTop: 24 }}>Prices for the cards you own, want and watch.</Text><Text style={{ fontSize: 11, borderTop: `2px solid ${ink}`, marginTop: 25, paddingTop: 17, letterSpacing: 1 }}>ONE PIECE CARDS · JAPANESE MARKET PRICES</Text></div> : <div style={col}>
+        <Text style={{ ...serif, fontSize: home ? 66 : c.title.length > 30 ? 39 : 51, lineHeight: 1.05, marginTop: 20, maxWidth: 465 }}>{home ? "Know your cards. Know the market." : c.title}</Text>
+        {home ? <div style={col}><Text style={{ fontSize: 21, lineHeight: 1.5, width: 430, marginTop: 24 }}>Track card prices, collection value and the One Piece market.</Text><Text style={{ fontSize: 11, borderTop: `2px solid ${ink}`, marginTop: 25, paddingTop: 17, letterSpacing: 1 }}>ONE PIECE CARDS · JAPANESE MARKET PRICES</Text></div> : <div style={col}>
           {c.movement && <div style={{ display: "flex", borderTop: `2px solid ${ink}`, borderBottom: "1px solid #999589", marginTop: 17, padding: "9px 0" }}><Movement content={c} /></div>}
           <Text style={{ fontSize: 11, letterSpacing: 1, marginTop: 18 }}>TRACKED CARD PIRATE MARKET VALUE</Text>
           <Text style={{ ...serif, fontSize: c.value.length > 15 ? 35 : 51, marginTop: 5 }}>{c.value}</Text>

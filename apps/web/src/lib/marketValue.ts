@@ -233,8 +233,10 @@ export function marketChartPoints(series: MarketValuePoint[], mode: MarketValueM
   for (const point of series) {
     const timestamp = Date.parse(`${point.date}T00:00:00Z`);
     const previous = rows.at(-1);
-    if (previous && timestamp - previous.timestamp > 86_400_000) {
-      rows.push({ date: "", timestamp: previous.timestamp + 86_400_000, value: null, priced: null, physical: null });
+    // Calendar placeholders are presentation only, never observed values.
+    for (let missing = previous ? previous.timestamp + 86_400_000 : timestamp;
+      missing < timestamp; missing += 86_400_000) {
+      rows.push({ date: new Date(missing).toISOString().slice(0, 10), timestamp: missing, value: null, priced: null, physical: null });
     }
     rows.push({
       date: point.date,

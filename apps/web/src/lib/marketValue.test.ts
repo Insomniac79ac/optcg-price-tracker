@@ -28,9 +28,10 @@ it("keeps explicit nulls and inserts a non-valued break for missing UTC days", (
     { ...fixtures.overall.series[1], date: "2026-09-21", performance_pct: null },
     { ...fixtures.overall.series[2], date: "2026-09-24", performance_pct: "2" },
   ], "performance");
-  expect(rows.map((r) => r.value)).toEqual([0, null, null, 2]);
+  expect(rows.map((r) => r.value)).toEqual([0, null, null, null, 2]);
   expect(rows[2].priced).toBeNull();
-  expect(rows[2].date).toBe("");
+  expect(rows[2].date).toBe("2026-09-22");
+  expect(rows[3].date).toBe("2026-09-23");
 });
 it("never forward fills a missing tracked JPY value", () => {
   expect(marketChartPoints([{ ...fixtures.overall.series[0], tracked_value_jpy: null }], "value")[0].value).toBeNull();
@@ -79,4 +80,21 @@ it("formats signed JPY and Decimal contribution without computing attribution", 
   expect(marketSignedJpy(460)).toBe("+¥460");
   expect(marketSignedJpy(0)).toBe("¥0");
   expect(marketPercentagePoints("-1.2100001")).toBe("−1.21 percentage points");
+});
+
+it.each([1, 2])("shows every missing calendar day as a null marker (%i days)", (missing) => {
+  const original = [
+    { ...fixtures.overall.series[0], date: "2026-09-26", tracked_value_jpy: 100 },
+    { ...fixtures.overall.series[1], date: `2026-09-${27 + missing}`, tracked_value_jpy: 200 },
+  ];
+  const rows = marketChartPoints(original, "value");
+  expect(rows.map((r) => r.value)).toEqual([100, ...Array(missing).fill(null), 200]);
+  expect(rows.slice(1, -1).every((r) => r.priced === null && r.physical === null)).toBe(true);
+  expect(original).toHaveLength(2);
+});
+it("keeps continuous history continuous and preserves single/empty histories", () => {
+  const points = fixtures.overall.series;
+  expect(marketChartPoints(points, "value").map((r) => r.value)).toEqual(points.map((p) => p.tracked_value_jpy));
+  expect(marketChartPoints(points.slice(0, 1), "value")).toHaveLength(1);
+  expect(marketChartPoints([], "value")).toEqual([]);
 });

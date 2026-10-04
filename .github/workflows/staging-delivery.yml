@@ -1,0 +1,121 @@
+name: Serialized staging delivery
+
+on:
+  workflow_call:
+    inputs:
+      pr:
+        type: string
+        required: true
+      head:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    # Activation is fail-closed until owner settings and staging-only read
+    # credentials are verified. This environment must contain no production secrets.
+    if: github.repository == 'Insomniac79ac/optcg-price-tracker' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging-delivery
+    concurrency:
+      group: card-pirate-staging-delivery
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Refuse missing safeguards before native auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+          HEAD: ${{ inputs.head }}
+          STAGING_RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+          STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+        run: |
+          test -n "$STAGING_RAILWAY_TOKEN"
+          test -n "$STAGING_VERCEL_READ_TOKEN"
+          gh api "repos/$REPO" --jq '.allow_auto_merge' | grep -qx true
+          gh api "repos/$REPO/branches/staging" > /tmp/branch.json
+          gh api "repos/$REPO/pulls/$PR" > /tmp/pr.json
+          python - <<'PY'
+          import json, os
+          b, p = (json.load(open('/tmp/' + n + '.json')) for n in ('branch', 'pr'))
+          assert b['protected'], 'Staging must have enforced protection'
+          assert 'engineering-gate' in b['protection']['required_status_checks']['contexts'], 'engineering-gate must be required'
+          assert p['base']['ref'] == 'staging' and p['head']['repo']['full_name'] == os.environ['REPO']
+          assert p['head']['sha'] == os.environ['HEAD'] and not p['draft']
+          PY
+          # Native mechanism; no PAT, pull_request_target or REST merge bypass.
+          gh pr merge "$PR" --repo "$REPO" --auto --merge --match-head-commit "$HEAD"
+      - name: Wait for native merge while owning staging
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+        run: |
+          for attempt in $(seq 1 120); do
+            gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json
+            merged=$(jq -r '.merged' /tmp/merged.json)
+            if [ "$merged" = true ]; then
+              echo "sha=$(jq -r '.merge_commit_sha' /tmp/merged.json)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            test "$(jq -r '.state' /tmp/merged.json)" = open
+            sleep 15
+          done
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.merge.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: |
+          pip install -r scripts/agent-state-requirements.txt playwright==1.58.0
+          python -m playwright install --with-deps chromium
+          npm install -g @railway/cli@5.62.1 vercel@60.1.3
+      - name: Verify native Git deployment and regenerate state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+          STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+          EXPECTED: ${{ steps.merge.outputs.sha }}
+        run: |
+          # Dedicated staging environment only. API expectations are mission data.
+          python - <<'PY'
+          import json, os, subprocess
+          m = json.load(open('docs/agent/STAGING_MISSION.json'))
+          v = m['deployment_verification']
+          extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
+          subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],
+                          '--api-sha', os.environ['EXPECTED'] if v['api_sha'] == 'merge' else v['api_sha'], '--revision', v['revision'],
+                          '--output', 'docs/agent/evidence/latest-staging-delivery.json', *extra], check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-delivery-${{ steps.merge.outputs.sha }}
+          path: |
+            docs/agent/CURRENT_STATE.yaml
+            docs/agent/evidence/latest-staging-delivery.json
+            docs/agent/evidence/staging-state-*.json
+      - name: Disarm an unmerged request if delivery stops
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+        run: |
+          if [ "$(gh api "repos/$REPO/pulls/$PR" --jq '.merged')" = false ]; then
+            gh pr merge "$PR" --repo "$REPO" --disable-auto
+          fi

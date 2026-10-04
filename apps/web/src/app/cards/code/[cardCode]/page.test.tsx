@@ -107,7 +107,7 @@ describe("A. multi-print family", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Kaido" })).toBeInTheDocument();
     expect(screen.getAllByText("OP04-044").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("heading", { name: /Printings of Kaido OP04-044/ }),
+      screen.getByRole("heading", { name: /Card variants of Kaido OP04-044/ }),
     ).toBeInTheDocument();
     expect(printLinks().map((l) => l.getAttribute("href")).sort()).toEqual([
       "/prints/14",
@@ -132,7 +132,7 @@ describe("A. multi-print family", () => {
     render(<CardFamilyPage />);
     await waitFor(() => expect(printLinks()).toHaveLength(2));
 
-    expect(screen.getByText(/Index unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/No market price yet/i)).toBeInTheDocument();
     expect(screen.queryByText("￥0")).not.toBeInTheDocument();
   });
 
@@ -175,7 +175,7 @@ describe("B. single-print family", () => {
     await waitFor(() => expect(printLinks()).toHaveLength(1));
 
     expect(printLinks()[0]).toHaveAttribute("href", "/prints/14");
-    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Card variants of/ })).toBeInTheDocument();
   });
 });
 
@@ -201,7 +201,7 @@ describe("exact-code filtering", () => {
       expect(screen.getByText(/isn’t in the Atlas/)).toBeInTheDocument(),
     );
     expect(printLinks()).toHaveLength(0);
-    expect(screen.queryByRole("heading", { name: /Printings of/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Card variants of/ })).not.toBeInTheDocument();
   });
 });
 

@@ -23,14 +23,14 @@ export default function MarketPage({ initialData = null }: { initialData?: Marke
 }
 
 function MarketLoading() {
-  return <MarketValueHero data={null} busy error={null} releases={[]} releasesFailed={false} releaseProductId={null} window="7d" mode="performance" onScopeChange={() => {}} onWindowChange={() => {}} onModeChange={() => {}} onRetry={() => {}} />;
+  return <MarketValueHero data={null} busy error={null} releases={[]} releasesFailed={false} releaseProductId={null} window="7d" mode="value" onScopeChange={() => {}} onWindowChange={() => {}} onModeChange={() => {}} onRetry={() => {}} />;
 }
 
 function MarketView({ initialData }: { initialData: MarketValue | null }) {
   const searchParams = useSearchParams();
   const releaseProductId = parseMarketRelease(searchParams.get("release_product_id"));
   const window: MarketValueWindow = MARKET_VALUE_WINDOWS.includes(searchParams.get("window") as MarketValueWindow) ? searchParams.get("window") as MarketValueWindow : "7d";
-  const [mode, setMode] = useState<MarketValueMode>("performance");
+  const [mode, setMode] = useState<MarketValueMode>("value");
   const [attempt, setAttempt] = useState(0);
   const [releases, setReleases] = useState<{ items: MarketValueRelease[]; failed: boolean; loading: boolean }>({ items: [], failed: false, loading: true });
   const [settled, setSettled] = useState<{ key: string; data: MarketValue | null; error: string | null } | null>(initialData ? { key: `${initialData.release_product_id ?? "overall"}:${initialData.movement.window}:0`, data: initialData, error: null } : null);

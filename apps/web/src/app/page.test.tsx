@@ -23,10 +23,10 @@ beforeEach(async()=>{
   vi.mocked(fetchIndexMovers).mockReset().mockResolvedValue(moves());
 });
 const section=(name:string)=>within(screen.getByRole('region',{name}));
-async function ready(){render(<Page/>);await screen.findByText('Mover 100');await waitFor(()=>expect(section('Recently added cards').getAllByRole('link')).toHaveLength(4));await waitFor(()=>expect(section('Know what your cards are worth.').getAllByRole('link', { name: /^Preview/ })).toHaveLength(3));}
+async function ready(){render(<Page/>);await screen.findByText('Mover 100');await waitFor(()=>expect(section('Recently added cards').getAllByRole('link')).toHaveLength(4));await waitFor(()=>expect(section('Know your cards. Know the market.').getAllByRole('link', { name: /^Preview/ })).toHaveLength(3));}
 describe('Home discovery',()=>{
   it('has three eligible unique hero print links separate from four unpriced recently added prints',async()=>{
-    await ready();const hero=section('Know what your cards are worth.').getAllByRole('link', { name: /^Preview/ });
+    await ready();const hero=section('Know your cards. Know the market.').getAllByRole('link', { name: /^Preview/ });
     expect(new Set(hero.map(a=>a.getAttribute('href'))).size).toBe(3);expect(hero.every(a=>a.getAttribute('href')?.startsWith('/prints/2'))).toBe(true);
     expect(section('Recently added cards').getAllByText('No market price yet')).toHaveLength(4);
     expect(section('Recently added cards').getByText(/Newly added card variants to price and compare/)).toBeInTheDocument();
@@ -84,7 +84,7 @@ describe('Home discovery',()=>{
 });
 describe('Home search',()=>{
   it.each(['Kaido','OP01-001','カイドウ','  Kaido  ','','   '])('submits %s without a search lookup',async term=>{
-    await ready();expect(screen.getByText("Prices for the cards you own, want and watch.")).toBeInTheDocument();fireEvent.change(screen.getByRole('searchbox'),{target:{value:term}});fireEvent.click(screen.getByRole('button', {name:'See prices'}));expect(push).toHaveBeenCalledWith(buildCardsSearchHref(term));expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
+    await ready();expect(screen.getByText("Track card prices, collection value and the One Piece market.")).toBeInTheDocument();fireEvent.change(screen.getByRole('searchbox'),{target:{value:term}});fireEvent.click(screen.getByRole('button', {name:'See prices'}));expect(push).toHaveBeenCalledWith(buildCardsSearchHref(term));expect(fetchIndexMovers).toHaveBeenCalledTimes(1);
   });
   it('bounds the search length',()=>expect(buildCardsSearchHref('a'.repeat(200))).toBe(`/cards?q=${'a'.repeat(128)}`));
 });

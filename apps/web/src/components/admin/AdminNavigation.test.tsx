@@ -8,6 +8,7 @@ let pathname = "/admin/source-mapping-proposals/1128";
 let session: Session | null = null;
 vi.mock("next/navigation", () => ({ usePathname: () => pathname, useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams("page=4") }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: session, status: session ? "authenticated" : "unauthenticated" }), signOut: vi.fn() }));
+import { AdminSurfaceProvider } from "./AdminSurfaceProvider";
 import { AdminNavigation } from "./AdminNavigation";
 import { ADMIN_NAVIGATION } from "./adminNavigation";
 import { AppShell } from "@/components/ui/AppShell";
@@ -47,7 +48,7 @@ describe("Atlas admin shell", () => {
       showModal: { configurable: true, value: show }, close: { configurable: true, value: close },
     });
     try {
-      render(<AppShell />);
+      render(<AdminSurfaceProvider><AppShell /></AdminSurfaceProvider>);
       fireEvent.click(screen.getByRole("button", { name: "Open admin navigation" }));
       const drawer = screen.getByRole("dialog", { name: "Admin navigation drawer" });
       expect(show).toHaveBeenCalledOnce();
@@ -59,8 +60,8 @@ describe("Atlas admin shell", () => {
       expect(screen.queryByRole("navigation", { name: "Mobile public sections" })).not.toBeInTheDocument();
     } finally { Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); }
   });
-  it("replaces admin access with reauthentication when the role expires", () => {
-    const { container, rerender } = render(<AppShell />);
+  it("replaces admin access with reauthentication when server authorization is absent", () => {
+    const { container, rerender } = render(<AdminSurfaceProvider><AppShell /></AdminSurfaceProvider>);
     expect(container.querySelector("[data-app-rail]")).not.toBeNull();
     session = { ...session!, user: { email: "admin@example.com" }, adminSessionExpired: true };
     rerender(<AppShell />);

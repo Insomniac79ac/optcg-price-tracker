@@ -63,7 +63,7 @@ describe("Market Value hero", () => {
   it("keeps the selected window in the shareable URL and follows history navigation", async () => {
     navigate("/analytics?window=30d");
     await ready();
-    expect(screen.getByTestId("market-coverage-state")).toHaveTextContent("this 30D window");
+    expect(screen.getByTestId("market-movement-unavailable")).toHaveTextContent("this 30D window");
     fireEvent.click(within(screen.getByRole("group", { name: "Market window" })).getByRole("button", { name: "ALL" }));
     await waitFor(() => expect(screen.getByTestId("market-movement")).toHaveTextContent("ALL"));
     expect(window.location.search).toBe("?window=all");
@@ -83,42 +83,43 @@ describe("Market Value hero", () => {
     expect(screen.getByTestId("market-watermark")).toHaveTextContent("CARD PIRATEJapanese card prices · JPY");
   });
 
-  it("offers only 7D, 30D and ALL; 30D shows an honest unavailable state instead of a chart", async () => {
+  it("offers only 7D, 30D and ALL; 30D keeps published history while comparison is unavailable", async () => {
     await ready();
     const windows = within(screen.getByRole("group", { name: "Market window" }));
     expect(windows.getAllByRole("button").map((b) => b.textContent)).toEqual(["7D", "30D", "ALL"]);
     fireEvent.click(windows.getByRole("button", { name: "30D" }));
-    await screen.findByText("Price movement unavailable");
+    await screen.findByTestId("market-movement-unavailable");
     expect(screen.queryByTestId("market-movement")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("market-value-chart")).not.toBeInTheDocument();
-    expect(screen.getByTestId("market-coverage-state")).toHaveTextContent("this 30D window");
+    expect(screen.getByTestId("market-value-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("market-movement-unavailable")).toHaveTextContent("this 30D window");
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("¥262,279");
     fireEvent.click(windows.getByRole("button", { name: "ALL" }));
     await waitFor(() => expect(screen.getByTestId("market-movement")).toHaveTextContent("ALL"));
     expect(apiGet).toHaveBeenCalledWith(BASE, { params: { release_product_id: null, window: "all" } });
   });
 
-  it("switches to literal tracked value without another API call, and explains both modes", async () => {
+  it("defaults to literal tracked value and switches to server performance without another request", async () => {
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "About chart modes" }));
-    expect(screen.getByRole("note")).toHaveTextContent("Coverage-neutral price movement across comparable cards.");
-    fireEvent.click(screen.getByRole("button", { name: "Tracked value" }));
     expect(screen.getByTestId("market-value-chart")).toHaveAttribute("data-mode", "value");
     expect(screen.getByRole("note")).toHaveTextContent("Coverage additions and removals");
+    fireEvent.click(screen.getByRole("button", { name: "Comparable performance" }));
+    expect(screen.getByTestId("market-value-chart")).toHaveAttribute("data-mode", "performance");
+    expect(screen.getByRole("note")).toHaveTextContent("Coverage-neutral price movement across comparable cards.");
     expect(apiGet.mock.calls.filter(([path]) => path === BASE)).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "About tracked value" }));
     expect(screen.getByText("Value of one copy of every physical version Card Pirate currently prices in this scope.")).toBeInTheDocument();
   });
 
-  it("withholds an ALL performance chart when the full archive crosses a break", async () => {
+  it("keeps an ALL history chart when the comparison crosses a break", async () => {
     apiGet.mockImplementation((path, options) => options?.params?.window === "all"
       ? Promise.resolve({ ...fixtures.all, movement: { ...fixtures.all.movement, available: false, pct: null, reason: "segment_break" } })
       : stub(path, options));
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "ALL" }));
-    await screen.findByText("Price movement unavailable");
-    expect(screen.queryByTestId("market-value-chart")).not.toBeInTheDocument();
-    expect(screen.getByTestId("market-coverage-state")).toHaveTextContent("the full archive");
+    await screen.findByTestId("market-movement-unavailable");
+    expect(screen.getByTestId("market-value-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("market-movement-unavailable")).toHaveTextContent("the full archive");
     expect(document.body.textContent).not.toContain("segment_break");
   });
 
@@ -146,14 +147,14 @@ describe("authoritative release scope", () => {
     navigate("/analytics?release_product_id=186");
     await ready();
     expect(screen.getByRole("heading", { name: "OP-05 — Awakening of the New Era" })).toBeInTheDocument();
-    expect(screen.getByText("Price coverage in progress")).toBeInTheDocument();
+    expect(screen.getByTestId("market-movement-unavailable")).toHaveTextContent("More comparable card variants");
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent(/Tracked so far.*¥480/);
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("4 of 154 card variants priced");
     expect(screen.getByTestId("market-tracked-value")).toHaveTextContent("2.6% coverage");
-    expect(screen.queryByTestId("market-value-chart")).not.toBeInTheDocument();
+    expect(screen.getByTestId("market-value-chart")).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("新時代");
     expect(apiGet).toHaveBeenCalledWith(BASE, { params: { release_product_id: 186, window: "7d" } });
-    fireEvent.click(screen.getByRole("button", { name: "Tracked value" }));
+    fireEvent.click(screen.getByRole("button", { name: "Market Value" }));
     expect(screen.getByTestId("market-value-chart")).toHaveAttribute("data-mode", "value");
   });
 
@@ -211,7 +212,7 @@ describe("loading and failures", () => {
     apiGet.mockImplementation((path, options) => path === BASE && options?.params?.release_product_id === 181 ? slow.promise : stub(path, options));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "181" } });
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "186" } });
-    await screen.findByText("Price coverage in progress");
+    await screen.findByTestId("market-movement-unavailable");
     await act(async () => slow.resolve(fixtures.eligible));
     expect(screen.getByRole("heading", { name: "OP-05 — Awakening of the New Era" })).toBeInTheDocument();
     expect(screen.queryByTestId("market-movement")).not.toBeInTheDocument();
@@ -225,7 +226,7 @@ describe("loading and failures", () => {
     expect(screen.getByTestId("market-movement")).toHaveTextContent("7D");
     expect(screen.getByTestId("market-settled")).toHaveAttribute("aria-busy", "true");
     await act(async () => slow.resolve(fixtures.thirtyDay));
-    expect(screen.queryByTestId("market-value-chart")).not.toBeInTheDocument();
+    expect(screen.getByTestId("market-value-chart")).toBeInTheDocument();
   });
 
   it("release-list failure leaves Overall and direct release navigation usable", async () => {
@@ -275,8 +276,8 @@ describe("B2 independent discovery requests", () => {
   it("isolates chart modes/windows and mover modes from each other's requests", async () => {
     await ready();
     apiGet.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Tracked value" }));
-    fireEvent.click(screen.getByRole("button", { name: "Price movement" }));
+    fireEvent.click(screen.getByRole("button", { name: "Market Value" }));
+    fireEvent.click(screen.getByRole("button", { name: "Comparable performance" }));
     expect(apiGet).not.toHaveBeenCalled();
     for (const [label, token] of [["30D", "30d"], ["ALL", "all"], ["7D", "7d"]]) {
       fireEvent.click(screen.getByRole("button", { name: label }));
