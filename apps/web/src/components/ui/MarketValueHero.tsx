@@ -56,8 +56,8 @@ export function MarketValueHero(props: MarketValueHeroProps) {
       <div className={styles.controls}>
         <div className={styles.modeControls}>
           <div className={styles.modeSwitch} role="group" aria-label="Chart mode">
-            <button type="button" aria-pressed={mode === "performance"} onClick={() => onModeChange("performance")}>Price movement</button>
-            <button type="button" aria-pressed={mode === "value"} onClick={() => onModeChange("value")}>Tracked value</button>
+            <button type="button" aria-pressed={mode === "performance"} onClick={() => onModeChange("performance")}>Comparable performance</button>
+            <button type="button" aria-pressed={mode === "value"} onClick={() => onModeChange("value")}>Market Value</button>
           </div>
           <InfoTip className={styles.modeHelp} label="About chart modes" text={mode === "performance" ? "Coverage-neutral price movement across comparable cards." : "Partial JPY value of the cards Card Pirate currently prices. Coverage additions and removals can change this line independently of prices."} />
         </div>
@@ -84,26 +84,21 @@ export function MarketValueHero(props: MarketValueHeroProps) {
                 <h2>{data.scope_kind === "overall" ? "One Piece price movement" : scopeLabel}</h2>
                 {available ? (
                   <p className={styles.movement} data-testid="market-movement"><span>{marketPercent(data.movement.pct)}</span><span className={styles.period}>{marketWindowLabel(displayWindow)}</span></p>
-                ) : <p className={styles.unavailableHeadline}>{unavailable?.title}</p>}
+                ) : <p className={styles.unavailableHeadline} data-testid="market-movement-unavailable"><span className={styles.period}>{marketWindowLabel(displayWindow)}</span> Unavailable<span className={styles.selectorNote}>{unavailable?.detail}</span></p>}
                 {data.scope_kind === "release" && !available && tracked && <p className={styles.sparseCoverage}>{tracked.priced_print_count.toLocaleString("en-US")} / {tracked.total_physical_print_count.toLocaleString("en-US")} card variants priced</p>}
               </div>
               <p className={styles.asOf}>Published <time dateTime={data.as_of}>{marketDate(data.as_of, true)}</time></p>
             </div>
 
             <div className={styles.chartFrame}>
-              {mode === "performance" && !available ? (
-                <div className={styles.chartEmpty} data-testid="market-coverage-state">
-                  <AtlasMark title={null} className={styles.emptyMark} />
-                  <p>{unavailable?.detail}</p>
-                  <span>Tracked value shows only the card variants Card Pirate can price.</span>
-                </div>
-              ) : <MarketValueChart series={data.series} mode={mode} />}
+              <h3 className={styles.chartTitle}>Price Movement</h3>
+              <MarketValueChart series={data.series} mode={mode} />
               <div className={styles.chartFooter}>
                 <div className={styles.watermark} data-testid="market-watermark">
                   <AtlasMark title={null} />
                   <div><strong>CARD PIRATE</strong><span>Japanese card prices · JPY</span></div>
                 </div>
-                <span className={styles.chartCaption}>{mode === "performance" ? "Price movement · %" : "Partial tracked value · JPY"}</span>
+                <span className={styles.chartCaption}>{mode === "performance" ? "Comparable performance · %" : "Market Value · JPY"}</span>
               </div>
             </div>
 

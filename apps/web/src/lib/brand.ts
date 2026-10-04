@@ -24,12 +24,12 @@ export const brand = {
   /** `by {parentBrand}`, precomputed since every lockup needs this exact string. */
   endorsementLine: "by CardPirateTCG",
 
-  tagline: "Know what your cards are worth.",
+  tagline: "Know your cards. Know the market.",
   supportingLine: "Collect the story. Know the value.",
 
   /** One sentence, no jargon - the product's actual promise to a collector. */
   productDescription:
-    "See what your cards are worth, compare prices for the ones you want and see where the One Piece market is moving.",
+    "Track card prices, collection value and the One Piece market.",
 
   /** <title> default when a page doesn't set its own. */
   metadataTitleDefault: "Card Pirate — One Piece Card Prices & Collection Value",
@@ -37,11 +37,11 @@ export const brand = {
   metadataTitleTemplate: "%s — Card Pirate",
 
   metadataDescription:
-    "See what your One Piece cards are worth, compare prices before you buy and see how the overall market is moving.",
+    "Track card prices, collection value and the One Piece market.",
 
   /** Shorter than metadataDescription - for OG/social cards and share sheets. */
   socialSharingDescription:
-    "See what your cards are worth, compare Japanese source prices and see where the One Piece market is moving.",
+    "Track card prices, collection value and the One Piece market.",
 
   /** Footer/legal disclaimer - must never imply official status. */
   legalDisclaimer:

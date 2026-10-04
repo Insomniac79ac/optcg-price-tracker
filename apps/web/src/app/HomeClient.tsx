@@ -36,10 +36,10 @@ export default function HomePage({ initialSets = null }: { initialSets?: MarketV
             <div className={styles.heroContent}>
               <div className={styles.intro}>
                 <p className={styles.kicker}>One Piece card prices · JPY</p>
-                <h1 id="home-title">Know what your cards <span>are worth.</span></h1>
-                <p className={styles.supporting}>Prices for the cards you own, want and watch.</p>
+                <h1 id="home-title">Know your cards. <span>Know the market.</span></h1>
+                <p className={styles.supporting}>Track card prices, collection value and the One Piece market.</p>
                 <HomeCardSearch />
-                <div className={styles.intentLinks}><Link href="/cards">See card prices</Link><Link href="/analytics">View the market</Link><Link href="/collection">My collection</Link></div>
+                <div className={styles.intentLinks}><Link href="/cards">See prices</Link><Link href="/analytics">View market</Link><Link href="/collection">My collection</Link></div>
               </div>
               {hero.status === "loading" && <div className={styles.heroPlaceholder} role="status" aria-label="Loading featured card variants"><div /><div /><div /></div>}
               {hero.status === "error" && <div className={styles.heroPlaceholder}><p>Featured card variants are unavailable. <button type="button" className={LINK_CLASS} onClick={hero.retry}>Retry featured card variants</button></p></div>}
