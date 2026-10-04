@@ -24,7 +24,8 @@ No application code, mapping, database row, schedule or hosted service was chang
   fingerprints and nonempty identity tables. Queries then ran in a read-only,
   repeatable-read transaction. The checker was loaded from collector source
   revision `41966076ea6988f38436a3aab953d8bba896c7d8`, whose migration head matches
-  this live database; the remote staging branch has older migration knowledge.
+  this live database. The adopted staging checkout also contains that migration
+  head; deployment divergence does not imply a different database revision.
 - The [aggregate SQL](evidence/staging-state-read.sql) documents the actual read
   definitions. For a refresh, first independently establish the staging project,
   environment and current endpoint, verify fingerprints against the relevant

@@ -10,6 +10,16 @@ on:
 # etc. See scripts/prod_verify.sh (the local equivalent of the prod-compose
 # job) and docs/deployment.md.
 jobs:
+  agent-state-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r scripts/agent-state-requirements.txt
+      - run: python -m unittest discover -s scripts/tests -p test_generate_staging_state.py -v
+
   check-secrets:
     runs-on: ubuntu-latest
     steps:
