@@ -1,0 +1,3 @@
+# Local read-only staging state tooling; not an application/runtime dependency.
+psycopg[binary]
+PyYAML>=6,<7
