@@ -236,7 +236,7 @@ describe("CardDetailPage", () => {
 
     // Anchored on public content: "Card tags" is signed-in-only now.
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: /Card variants of/ })).toBeInTheDocument(),
     );
     expect(screen.queryByText(/Yuyu-Tei sell/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Yuyu-Tei buy/)).not.toBeInTheDocument();
@@ -409,7 +409,7 @@ describe("CardDetailPage printings", () => {
     await waitFor(() => expect(screen.getByText("Not on wishlist.")).toBeInTheDocument());
 
     // The page's collector functionality is untouched by this tranche.
-    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Card variants of/ })).toBeInTheDocument();
     expect(screen.getByText("Not in collection yet.")).toBeInTheDocument();
     expect(screen.getByText("No grading submissions.")).toBeInTheDocument();
     expect(screen.getByText("Card tags")).toBeInTheDocument();
@@ -464,7 +464,7 @@ describe("CardDetailPage canonical identity", () => {
     // The canonical name is the page's identity...
     expect(screen.getAllByText(/Roronoa Zoro/).length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("heading", { name: /Printings of Roronoa Zoro OP01-001/ }),
+      screen.getByRole("heading", { name: /Card variants of Roronoa Zoro OP01-001/ }),
     ).toBeInTheDocument();
     // ...and the legacy name appears nowhere, heading included.
     expect(screen.queryByText(/Monkey D\. Luffy/)).not.toBeInTheDocument();
@@ -488,8 +488,8 @@ describe("CardDetailPage canonical identity", () => {
       ).toHaveLength(2),
     );
 
-    const heading = screen.getByRole("heading", { name: /Printings of/ });
-    expect(heading).toHaveTextContent("Printings of OP01-001");
+    const heading = screen.getByRole("heading", { name: /Card variants of/ });
+    expect(heading).toHaveTextContent("Card variants of OP01-001");
     // No arbitrary winner, and still never the legacy name.
     expect(heading).not.toHaveTextContent("Roronoa Zoro");
     expect(heading).not.toHaveTextContent("Roronoa Zolo");
@@ -703,7 +703,7 @@ describe("CardDetailPage anonymous access", () => {
 
     expect(screen.getByRole("heading", { name: "Roronoa Zoro" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /Printings of Roronoa Zoro OP01-001/ }),
+      screen.getByRole("heading", { name: /Card variants of Roronoa Zoro OP01-001/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Monkey D\. Luffy/)).not.toBeInTheDocument();
   });
@@ -725,7 +725,7 @@ describe("CardDetailPage anonymous access", () => {
     render(<CardDetailPage />);
     await waitForPrintLinks(1);
 
-    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Card variants of/ })).toBeInTheDocument();
     const link = screen
       .getAllByRole("link")
       .find((l) => l.getAttribute("href")?.startsWith("/prints/"));
@@ -780,7 +780,7 @@ describe("CardDetailPage anonymous access", () => {
     expect(fetchCollectionItems).toHaveBeenCalled();
     expect(fetchWishlistItems).toHaveBeenCalled();
     // ...and the chooser is still there for them too.
-    expect(screen.getByRole("heading", { name: /Printings of/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Card variants of/ })).toBeInTheDocument();
   });
 
   it("F. admin content stays admin-only, anonymous included", async () => {

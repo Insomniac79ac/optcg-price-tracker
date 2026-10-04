@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildVersion } from "@/generated/buildVersion";
+import { buildVersion, buildCommit } from "@/generated/buildVersion";
 
 beforeEach(() => {
   vi.resetModules();
@@ -25,13 +25,13 @@ async function get() {
 }
 
 describe("GET /api/version", () => {
-  it("uses the generated authoritative root VERSION and preserves the exact schema", async () => {
+  it("uses the generated authoritative root VERSION and adds immutable build identity", async () => {
     expect(buildVersion).toBe(readFileSync(path.resolve(__dirname, "../../../../../../VERSION"), "utf8").trim());
     const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ version: "backend-version", git_commit: "backend-sha", extra: "ignored" }));
     const response = await get();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      web: { version: buildVersion, git_commit: "unknown", build_time: "unknown" },
+      web: { version: buildVersion, git_commit: "unknown", build_time: "unknown", source_commit: buildCommit },
       api: { version: "backend-version", git_commit: "backend-sha" },
     });
     expect(fetch).toHaveBeenCalledExactlyOnceWith("http://backend.invalid/version", { cache: "no-store", signal: expect.any(AbortSignal) });
@@ -43,7 +43,7 @@ describe("GET /api/version", () => {
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "vercel-sha");
     vi.stubEnv("BUILD_TIME", "2026-09-28T12:00:00Z");
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 503 }));
-    expect(await (await get()).json()).toEqual({ web: { version: "7.8.9", git_commit: "explicit-sha", build_time: "2026-09-28T12:00:00Z" }, api: null });
+    expect(await (await get()).json()).toEqual({ web: { version: "7.8.9", git_commit: "explicit-sha", build_time: "2026-09-28T12:00:00Z", source_commit: buildCommit }, api: null });
   });
 
   it("uses the Vercel commit only when GIT_COMMIT is absent", async () => {
@@ -63,7 +63,7 @@ describe("GET /api/version", () => {
     const fetch = vi.spyOn(globalThis, "fetch");
     if (kind === "network") fetch.mockRejectedValue(new Error("unavailable"));
     else fetch.mockResolvedValue(new Response("invalid JSON", { status: kind === "non-success" ? 503 : 200 }));
-    expect(await (await get()).json()).toEqual({ web: { version: buildVersion, git_commit: "unknown", build_time: "unknown" }, api: null });
+    expect(await (await get()).json()).toEqual({ web: { version: buildVersion, git_commit: "unknown", build_time: "unknown", source_commit: buildCommit }, api: null });
   });
 
   it("aborts a stalled backend after exactly five seconds and clears the timer", async () => {

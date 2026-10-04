@@ -45,6 +45,8 @@ def json_default(value):
 
 
 def command_json(args):
+    if args[0] == "vercel" and os.environ.get("STAGING_VERCEL_READ_TOKEN"):
+        args = [*args, "--token", os.environ["STAGING_VERCEL_READ_TOKEN"]]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=60)
         if result.returncode:

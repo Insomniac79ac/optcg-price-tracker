@@ -189,7 +189,7 @@ describe('release-first collector discovery',()=>{
     act(()=>intersect([{isIntersecting:true}] as IntersectionObserverEntry[],{} as IntersectionObserver));
     await waitFor(()=>expect(tiles()).toHaveLength(48));expect(push).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button',{name:'Load more'}));await waitFor(()=>expect(tiles()).toHaveLength(72));
-    expect(screen.getByText('All 72 printings in this view loaded.')).toBeInTheDocument();expect(screen.queryByRole('button',{name:'Load more'})).toBeNull();
+    expect(screen.getByText('All 72 card variants in this view loaded.')).toBeInTheDocument();expect(screen.queryByRole('button',{name:'Load more'})).toBeNull();
     expect(screen.queryByRole('navigation',{name:'Catalogue pagination'})).toBeNull();expect(fetchPrintCatalogue).toHaveBeenCalledTimes(3);
   });
   it.each(['q=Zoro','release_product_id=186','sort=created_desc','rarity=SEC'])('resets loaded rows for %s',async(query)=>{

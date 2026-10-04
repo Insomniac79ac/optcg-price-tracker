@@ -352,7 +352,7 @@ describe("CommandPalette - public card search (signed out)", () => {
     const buttons = screen.getAllByRole("button");
     expect(buttons[0]).toBe(card);
     expect(screen.getByRole("img")).toHaveClass("object-contain");
-    expect(screen.getByRole("img").getAttribute("alt")).toContain("printing preview");
+    expect(screen.getByRole("img").getAttribute("alt")).toContain("version preview");
     expect(fetchPrintCatalogue).toHaveBeenCalledTimes(1);
     expect(fetchSearch).not.toHaveBeenCalled();
     if (signedIn) expect(screen.getByText("My Collection (Table)")).toBeInTheDocument();
@@ -503,7 +503,7 @@ describe("CommandPalette - public card search (signed out)", () => {
     const rows = await screen.findAllByText("Kaido");
     expect(rows).toHaveLength(1);
     // The count is what tells the collector a choice is waiting.
-    expect(screen.getByText("OP04-044 · Card family · Choose printing")).toBeInTheDocument();
+    expect(screen.getByText("OP04-044 · Card family · Choose version")).toBeInTheDocument();
   });
 
   it("shows the truthful empty state when the catalogue genuinely has no match", async () => {

@@ -4,7 +4,14 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
-const { generateBuildVersion } = require("./generate-build-version");
+const { generateBuildVersion, sourceCommit } = require("./generate-build-version");
+
+test("staging build identity is pinned and missing or invalid Vercel identity fails", () => {
+  const sha = "a".repeat(40);
+  assert.equal(sourceCommit(os.tmpdir(), { VERCEL: "1", VERCEL_GIT_COMMIT_SHA: sha }), sha);
+  assert.throws(() => sourceCommit(os.tmpdir(), { VERCEL: "1" }), /requires/);
+  assert.throws(() => sourceCommit(os.tmpdir(), { GIT_COMMIT: "main" }), /full Git commit/);
+});
 
 function fixture(t, version = "4.5.6\n") {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "atlas-build-version-"));
