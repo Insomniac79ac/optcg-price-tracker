@@ -384,3 +384,69 @@ class CollectorRolloutTests(unittest.TestCase):
                 (root / "services/api/app/services/collector_build.py").exists()
             )
             self.assertFalse((root / "result.json").exists())
+
+    def test_successful_rollout_receipt_hashes_provider_commands(self):
+        import deploy_staging_collectors as deploy
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "services/api/app/services").mkdir(parents=True)
+            row = {
+                "name": "snkrdunk-collector",
+                "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+                "recovery_deployment_id": "retained",
+            }
+            manifest = root / "mission.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "target": "staging",
+                        "classification": "AMBER",
+                        "deployment_verification": {"collector_services": [row]},
+                    }
+                )
+            )
+            before = {
+                row["name"]: {
+                    "serviceId": row["service_id"],
+                    "startCommand": "python --due-work provider-free-text",
+                    "cronSchedule": "27,57 * * * *",
+                    "latestDeployment": {"id": "retained"},
+                }
+            }
+            after = copy.deepcopy(before)
+            after[row["name"]]["latestDeployment"] = {
+                "id": "new-deployment",
+                "status": "SUCCESS",
+                "meta": {
+                    "cliMessage": "Structured RAW health exact commit " + "a" * 40
+                },
+            }
+            with patch.object(deploy.state, "ROOT", root), patch.object(
+                deploy, "inspect", side_effect=[before, after]
+            ), patch.object(
+                deploy.subprocess, "check_output", return_value="a" * 40
+            ), patch.object(
+                deploy.state, "command_json", return_value={"commit": {"sha": "a" * 40}}
+            ), patch.object(
+                deploy.subprocess, "run", return_value=Mock(returncode=0)
+            ):
+                self.assertEqual(
+                    deploy.main(
+                        [
+                            "--manifest",
+                            str(manifest),
+                            "--expected",
+                            "a" * 40,
+                            "--output",
+                            str(root / "result.json"),
+                        ]
+                    ),
+                    0,
+                )
+            receipt = (root / "result.json").read_text()
+            self.assertNotIn("provider-free-text", receipt)
+            self.assertIn("start_command_sha256", receipt)
+            self.assertFalse(
+                (root / "services/api/app/services/collector_build.py").exists()
+            )

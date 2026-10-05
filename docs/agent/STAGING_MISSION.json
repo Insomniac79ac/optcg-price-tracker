@@ -152,9 +152,18 @@
         "tests"
       ],
       "reason": "Reproduce deferred release options and await the selectable option before changing the filter, repairing an unrelated required CI race without changing application behavior."
+    },
+    {
+      "files": [
+        "apps/web/src/app/admin/(protected)/catalog-coverage/page.test.tsx"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Reproduce delayed catalog report loading and await the rendered mapping-gap tab, fixing a second required CI readiness race without application behavior changes."
     }
   ],
-  "diff_sha256": "111f5f72a341f3e6f0808f6ba17431616d78f97794a624497ea0c8dc23ee82ea",
+  "diff_sha256": "bd51a99698325e0ecdf98688d2e96d6e29cb795b643f4c7a27a5f0761aa6e04e",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902",

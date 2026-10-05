@@ -6,6 +6,7 @@ Only existing destination-pinned services may receive the exact merged checkout.
 """
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -184,7 +185,17 @@ def main(argv=None):
         "started_at": started,
         "completed_at": state.timestamp(),
         "source_sha": args.expected,
-        "before": before,
+        "before": {
+            name: {
+                "service_id": row["service_id"],
+                "deployment_id": row["deployment_id"],
+                "schedule_utc": row["schedule_utc"],
+                "start_command_sha256": hashlib.sha256(
+                    row["start_command"].encode()
+                ).hexdigest(),
+            }
+            for name, row in before.items()
+        },
         "deployments": deployed,
         "natural_runs_not_yet_verified": True,
         "production_accessed": False,
