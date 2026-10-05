@@ -72,6 +72,21 @@ HISTORY = (
 ).read_text()
 
 
+def browser_request(
+    url="https://snkrdunk.com/apparels/123", *, main=True, iframe=False
+):
+    frame = SimpleNamespace()
+    frame.page = SimpleNamespace(main_frame=frame if main else object())
+    return SimpleNamespace(
+        url=url,
+        method="GET",
+        headers={},
+        frame=frame,
+        resource_type="document" if main or iframe else "script",
+        is_navigation_request=lambda: main or iframe,
+    )
+
+
 @pytest.fixture(autouse=True)
 def forbid_unmocked_browser(monkeypatch):
     def refused(*args, **kwargs):
@@ -148,6 +163,7 @@ class Transport:
             else self.html if "/apparels/" in url else "<html>Home</html>"
         )
         route = MagicMock()
+        route.request = browser_request(url)
         route.fetch.side_effect = lambda **kwargs: self.get(url, **kwargs)
         self.handler(route)
         if route.abort.called:
@@ -597,15 +613,18 @@ def test_browser_subresources_redirects_and_denials_are_admitted(db):
         attempt.install_browser(context)
         handler = context.route.call_args.args[1]
         first = MagicMock()
+        first.request = browser_request(main=False)
         first.fetch.return_value.status = 200
         handler(first)  # helper page or image subresource
         first.fulfill.assert_called_once()
         redirect = MagicMock()
+        redirect.request = browser_request()
         redirect.fetch.return_value.status = 302
         handler(redirect)
         redirect.abort.assert_called_once()
         redirect.fulfill.assert_not_called()  # browser cannot follow unmetered
         later = MagicMock()
+        later.request = browser_request()
         handler(later)
         later.fetch.assert_not_called()
         assert attempt.charged_cost == 2
@@ -753,3 +772,217 @@ def test_missing_picker_is_parsing_failure_for_both_categories(db, monkeypatch):
         assert {r["availability"] for r in facts} == {"unknown"}
         assert {r["captured_at"] for r in facts} == {None}
         assert {r["consecutive_failures"] for r in facts} == {1}
+
+
+@pytest.mark.parametrize("status", [200, 429])
+def test_asset_redirect_hops_are_metered_and_cross_origin_secrets_removed(db, status):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        route = MagicMock()
+        route.request = SimpleNamespace(
+            url="https://snkrdunk.com/asset",
+            method="GET",
+            headers={
+                "cookie": "source-only",
+                "authorization": "source-only",
+                "accept": "image/*",
+            },
+            is_navigation_request=lambda: False,
+            resource_type="script",
+        )
+        route.fetch.side_effect = [
+            SimpleNamespace(
+                status=302, headers={"location": "https://cdn.example.test/asset"}
+            ),
+            SimpleNamespace(status=status),
+        ]
+        handler(route)
+        assert attempt.charged_cost == 2
+        assert route.fetch.call_args.kwargs["url"] == "https://cdn.example.test/asset"
+        assert route.fetch.call_args.kwargs["headers"] == {"accept": "image/*"}
+        assert route.fetch.call_args.kwargs["max_redirects"] == 0
+        assert attempt.denied == (status == 429)
+        if status == 429:
+            assert (
+                session.scalar(select(SourceDispatchBudget.pause_reason))
+                == "source_denial"
+            )
+
+
+def test_optional_asset_transport_failure_does_not_poison_product(db):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        handler = context.route.call_args.args[1]
+        asset = MagicMock()
+        asset.request = browser_request(main=False)
+        asset.fetch.side_effect = RuntimeError("connection reset")
+        handler(asset)
+        assert attempt.stopped is None
+        product = MagicMock()
+        product.request = browser_request()
+        product.fetch.return_value.status = 200
+        handler(product)
+        product.fulfill.assert_called_once()
+        assert attempt.charged_cost == 2
+
+
+@pytest.mark.parametrize(
+    "url,kind",
+    [
+        ("https://snkrdunk.com/v1/accounts/me", "fetch"),
+        ("https://bbc.bibian.co.jp/js/bbc_v1.js", "script"),
+        ("https://cdn.snkrdunk.com/large-presentation-image.png", "image"),
+        ("https://yuyu-tei.jp/presentation.woff2", "font"),
+        ("https://yuyu-tei.jp/presentation.mp4", "media"),
+    ],
+)
+def test_non_evidence_browser_requests_are_not_dispatched_or_charged(db, url, kind):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        route = MagicMock()
+        route.request = browser_request(url, main=False)
+        route.request.resource_type = kind
+        context.route.call_args.args[1](route)
+        route.abort.assert_called_once()
+        route.fetch.assert_not_called()
+        assert attempt.charged_cost == 0
+        assert attempt.stopped is None
+        assert not attempt.denied
+        assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
+
+
+@pytest.mark.parametrize(
+    "url,kind,main",
+    [
+        ("https://snkrdunk.com/apparels/123", "document", True),
+        ("https://snkrdunk.com/v1/products/123", "fetch", False),
+        ("https://snkrdunk.com/v1/accounts/me", "document", True),
+        ("https://yuyu-tei.jp/sell/opc/card/op01/10001", "document", True),
+    ],
+)
+def test_required_source_denials_still_pause(db, url, kind, main):
+    factory, source, mid, _ = db
+    seed(factory, mid, bound=5)
+    picked = claim(factory, source)[0]
+    with factory() as session:
+        attempt = Attempt(session, picked, clock=lambda: T0)
+        context = MagicMock()
+        attempt.install_browser(context)
+        route = MagicMock()
+        route.request = browser_request(url, main=main)
+        route.request.resource_type = kind
+        route.fetch.return_value.status = 403
+        context.route.call_args.args[1](route)
+        assert attempt.charged_cost == 1
+        assert attempt.denied
+        assert (
+            session.scalar(select(SourceDispatchBudget.pause_reason)) == "source_denial"
+        )
+
+
+def test_isolated_admission_failure_continues_with_other_products(db):
+    from app.services.freshness_integration import AdmissionStopped
+
+    factory, source, mid, pid = db
+    seed(factory, mid)
+    second = mapping(factory, source, pid, 200)
+    seed(factory, second)
+
+    def runner(session, mapping_id, *, freshness):
+        freshness.admit()
+        if mapping_id == mid:
+            freshness.stopped = "unsupported browser redirect"
+            raise AdmissionStopped(freshness.stopped)
+        rid = freshness.snapshot(
+            source,
+            "https://snkrdunk.com/apparels/200",
+            {"http_status": 200, "html": "mock verified no listing"},
+            "fixture",
+        )
+        freshness.result = CaptureResult(
+            "no_listing", raw_snapshot_id=rid, no_listing_categories={"raw", "psa10"}
+        )
+        return SimpleNamespace(
+            source_denied=False, stage="floor_unavailable", reasons=[]
+        )
+
+    with factory() as session:
+        assert (
+            len(
+                drain(
+                    session,
+                    source,
+                    "fixture",
+                    runner,
+                    runtime_seconds=60,
+                    mapping_seconds=10,
+                    max_work=2,
+                    clock=lambda: T0,
+                    sleep=lambda _: None,
+                )
+            )
+            == 2
+        )
+        assert session.scalars(
+            select(FreshnessAttempt.outcome).order_by(FreshnessAttempt.id)
+        ).all() == ["transient_failure", "no_listing"]
+
+
+def test_yuyu_small_turns_leave_budget_for_all_nine_shards(db, monkeypatch):
+    from opcg_source_identity import canonical_source_listing_identity
+    from app.services.freshness_queue import PriceCategory
+    from yuyutei_collector.due import run_due
+    from yuyutei_collector.config import settings as yuyu_settings
+
+    factory, source, mid, print_id = db
+    mids = [mid] + [mapping(factory, source, print_id, n) for n in range(124, 150)]
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        budget = session.scalar(select(SourceDispatchBudget))
+        budget.request_limit = 2300
+        for mapping_id in mids:
+            row = session.get(SourceCardMapping, mapping_id)
+            row.source_url = f"https://yuyu-tei.jp/sell/opc/card/op01/{10000 + mapping_id}"
+            row.canonical_source_listing_identity = canonical_source_listing_identity("yuyutei", row.source_url)
+            session.flush()
+            plan_refresh(session, mapping_id, {"raw": PriceCategory("sell")},
+                         high_interest=False, estimated_request_cost=300, clock=lambda: T0)
+    monkeypatch.setattr(yuyu_settings, "DUE_MAX_PRODUCTS_PER_RUN", 2)
+    monkeypatch.setattr(yuyu_settings, "YUYUTEI_REQUEST_DELAY_MS", 0)
+    visited = []
+
+    def runner(session, mapping_id, *, freshness):
+        freshness.admit(cost=110)  # Mock transport charge, no source network.
+        visited.append(mapping_id)
+        freshness.result = CaptureResult("identity_refusal", failure="fixture refusal")
+        return SimpleNamespace(source_denied=False, stage="validation_failed", reasons=[])
+
+    for shard in range(9):
+        previous = len(visited)
+        result = run_due(shard_index=shard, chunk_size=1, session_factory=factory, runner=runner)
+        assert len(result) == 2
+        assert all(mapping_id % 9 == shard for mapping_id in visited[previous:])
+    assert len(visited) == len(set(visited)) == 18
+    with factory() as session:
+        budget = session.scalar(select(SourceDispatchBudget))
+        assert budget.used_requests == 1980
+        assert budget.reserved_requests == 0
+        pending = list(session.scalars(select(FreshnessWork).where(FreshnessWork.state == "pending")))
+        assert len(pending) == 9
+        assert all(w.attempt_count == 0 and w.claim_token is None for w in pending)

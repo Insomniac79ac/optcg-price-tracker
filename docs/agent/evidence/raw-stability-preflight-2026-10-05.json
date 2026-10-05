@@ -1,0 +1,89 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-05T22:08:56.897550+00:00",
+  "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+  "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+  "collector_services": [
+    {
+      "name": "snkrdunk-collector",
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "recovery_deployment_id": "ff5b05ec-3446-45ea-8331-ed68fe267872"
+    },
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "recovery_deployment_id": "434ff635-dc30-43b2-96a8-a7ae818f9bc4"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "recovery_deployment_id": "f4712af1-b360-4530-8d77-f5f6fee69927"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "recovery_deployment_id": "fb150661-d0a6-495e-80d4-5062964016ca"
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "recovery_deployment_id": "a1b06d0a-d658-4e8c-9bca-98d0a57a4121"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "recovery_deployment_id": "b48ee41b-6209-4c8a-8234-66ee02ec55c8"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "recovery_deployment_id": "db79fd9e-f863-4a2a-8a50-072539e9d062"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "recovery_deployment_id": "0d17311a-4dc7-4143-98dc-daf4b3413dc5"
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "recovery_deployment_id": "c40b7b67-c755-4d28-8b85-8a4b8bce70cc"
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "recovery_deployment_id": "bd65910c-fa73-4a0c-80b9-6c37b7246a7a"
+    }
+  ],
+  "source_pauses": {
+    "yuyutei": false,
+    "snkrdunk": true
+  },
+  "baseline_evidence_sha256": "c09334b69a28b1a78fe58334b2d755cd14642f2c11c4520528393cb0929fa7d6",
+  "rollback": {
+    "source_commit": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+    "archive_sha256": "33349f4681395c383ea11dffa291e6aecdf898ee706335d77ed667f1511e9cfd",
+    "compatibility": "No migration or identity/writer changes. Roll back exact source on existing services; prior failures remain fail-closed. Preserve source pause. Stop affected source on integrity or required denial."
+  },
+  "expected_mutation": {
+    "services": 10,
+    "new_services": 0,
+    "schedule_changes": 0,
+    "source_budget_changes": 0,
+    "concurrency_changes": 0,
+    "mapping_changes": 0,
+    "psa10_activation": false,
+    "yuyu_max_work_per_run": 8,
+    "snkrdunk_pause_preserved": true,
+    "network_policy": "Exclude only known non-evidence requests; meter each bounded asset redirect; refuse main-frame redirects; required 403/429 remains source-wide stop."
+  },
+  "observation_window": "At least one subsequent unchanged 30-minute scheduled cycle for every collector; quantify actual request cost/runtime and freshness, never infer healthy deadline compliance from deploy success.",
+  "provider_docs_checked": "2026-10-05",
+  "official_references": [
+    "https://playwright.dev/python/docs/api/class-route",
+    "https://playwright.dev/python/docs/api/class-page",
+    "https://docs.railway.com/cli/deploying",
+    "https://docs.railway.com/cron-jobs"
+  ],
+  "production_accessed": false
+}

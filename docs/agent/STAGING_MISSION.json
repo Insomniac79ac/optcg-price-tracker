@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Verify structured RAW natural staging evidence and pin unchanged API deployment for collector-only delivery",
+  "mission": "Restore RAW staging request-boundary safeguards and fair nine-shard turns without unpausing an unverified source",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -25,48 +25,200 @@
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
     },
     {
       "files": [
-        "docs/agent/evidence/raw-health-credential-verified-2026-10-05.json"
+        "docs/agent/evidence/raw-stability-preflight-2026-10-05.json"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
     },
     {
       "files": [
-        "docs/agent/evidence/raw-health-rollout-verified-2026-10-05.json"
+        "docs/agent/evidence/staging-state-c09334b69a28b1a7.json"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
     },
     {
       "files": [
-        "docs/agent/evidence/staging-state-8dcfbf959cb15f6a.json"
+        "services/api/app/services/freshness_integration.py"
       ],
       "effects": [
-        "state_observation"
+        "application",
+        "infrastructure"
       ],
-      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
     },
     {
       "files": [
-        "docs/reports/structured-raw-health-verification-2026-10-05.md"
+        "services/api/tests/test_freshness_adapters_postgres.py"
       ],
       "effects": [
-        "documentation"
+        "tests"
       ],
-      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/api/tests/test_raw_browser_boundary.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/artwork_url.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/snkrdunk_collector/tests/test_artwork_url.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/yuyutei_collector/yuyutei_collector/config.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+    },
+    {
+      "files": [
+        "services/yuyutei_collector/yuyutei_collector/due.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
     }
   ],
-  "diff_sha256": "0efd2627ae8fb77112dfe5e1ceb716dde9beadc1ad5393d9c83badd62ff44c20",
+  "diff_sha256": "2090fc45ab5045f24b9707a7c13223ecde364280f8e776edb04ae4e0daef7440",
   "deployment_verification": {
-    "api_sha": "65ff5fd1a35803c8161c4f38d3af4f64e30a085e",
-    "revision": "c4e8a1d7b902"
+    "api_sha": "merge",
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "ff5b05ec-3446-45ea-8331-ed68fe267872"
+      },
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "434ff635-dc30-43b2-96a8-a7ae818f9bc4"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "f4712af1-b360-4530-8d77-f5f6fee69927"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "fb150661-d0a6-495e-80d4-5062964016ca"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "a1b06d0a-d658-4e8c-9bca-98d0a57a4121"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "b48ee41b-6209-4c8a-8234-66ee02ec55c8"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "db79fd9e-f863-4a2a-8a50-072539e9d062"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "0d17311a-4dc7-4143-98dc-daf4b3413dc5"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "c40b7b67-c755-4d28-8b85-8a4b8bce70cc"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "bd65910c-fa73-4a0c-80b9-6c37b7246a7a"
+      }
+    ]
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "c613898d-bf03-43a6-8813-761f72e1c00a/05d1eac2-510d-4bd3-999e-fea9ead766b7",
+        "Existing ten staging collectors and API; Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+      ],
+      "routes": [
+        "Existing due-work consumers and canonical staging verification"
+      ],
+      "dependencies": [
+        "Existing claims, source-wide budgets, RAW snapshots, identity guards and structured health"
+      ],
+      "deployment_impact": "Ten existing collector uploads, up to 20 builds/30 deployment records including one bounded recovery per service; no schedules/budgets/concurrency changes. Yuyu max work reduced to eight per invocation. SNKRDUNK persistent pause remains set.",
+      "database_writes": 60000,
+      "source_requests": 18000,
+      "estimated_runtime_minutes": 90
+    },
+    "recovery": {
+      "artifact": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+      "procedure": "Upload retained exact prior source only to affected existing staging collectors; API restore prior compatible source 65ff5fd1a35803c8161c4f38d3af4f64e30a085e. Preserve source pauses and schedules; prior source remains fail-closed. Do not retry denied source requests.",
+      "trigger": "Stop affected path on wrong identity, uncontrolled requests, CRASHED/second failed build, wrong destination/source, or unknown skip. Contain required source denial through existing persistent budget pause.",
+      "backup": "No migration, history mutation or mapping update; retained source archive verified. Existing raw evidence and append-only telemetry retained.",
+      "validation": [
+        "docs/agent/evidence/raw-stability-preflight-2026-10-05.json",
+        "services/api/tests/test_raw_browser_boundary.py",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/api/tests/test_operational_health_postgres.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/generate_staging_state.py",
+        "scripts/check_raw_health.py"
+      ],
+      "observation_window": "One subsequent normal scheduled cycle per collector, then ongoing operation until mission success or demonstrated source/evidence constraint. No blind unpause, no PSA10."
+    }
   }
 }
