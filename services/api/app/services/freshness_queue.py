@@ -479,6 +479,16 @@ def claim_due(
                 FreshnessWork.retry_not_before_at <= now,
             ),
         )
+        if yuyutei_shard_index is not None:
+            # Shards run at different cron times. Another shard's overdue
+            # refresh lane must not strand this shard's coverage work until
+            # tomorrow. Keep non-refresh lanes visible for shared fairness.
+            base = base.where(
+                or_(
+                    FreshnessWork.kind != "refresh",
+                    FreshnessWork.source_card_mapping_id % 9 == yuyutei_shard_index,
+                )
+            )
         base = (
             base.order_by(
                 FreshnessWork.next_due_at,
@@ -497,7 +507,13 @@ def claim_due(
         # before lane selection would silently steal discovery's fair turn.
         if supported_kinds is not None and work.kind not in supported_kinds:
             break
-        if yuyutei_shard_index is not None:
+        if (
+            yuyutei_shard_index is not None
+            and work.kind != "refresh"
+            and supported_kinds is None
+        ):
+            break  # shard consumers must explicitly opt in to discovery
+        if yuyutei_shard_index is not None and work.kind == "refresh":
             # A shard may take its own work from the selected source-wide
             # lane, but cannot consume a discovery/coverage turn as refresh.
             # Yield to the appropriate existing worker when it cannot serve

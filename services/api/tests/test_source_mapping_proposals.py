@@ -567,3 +567,56 @@ def test_cli_dry_run_executes_read_statements_only(db_session, monkeypatch, caps
     assert '"persisted": false' in payload
     assert seen
     assert set(seen) <= {"SELECT", "PRAGMA"}
+
+
+def test_discovery_refresh_versions_digest_and_reclassifies_ambiguous(db_session):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-002")
+    _print(db_session, family, release)
+    candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", 500, family.card_code)
+    first = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert first["resolutions"] == {"exact": 1}
+    old = db_session.scalar(select(SourceMappingProposalGroup))
+    old_digest = old.evidence_digest
+    candidate.name_jp = "refreshed source text"
+    changed = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert changed["superseded"] == 1
+    current = db_session.scalar(select(SourceMappingProposalGroup).where(SourceMappingProposalGroup.superseded_at.is_(None)))
+    assert current.evidence_digest != old_digest
+    assert old.evidence_digest == old_digest
+    _print(db_session, family, release, "p1")
+    ambiguous = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert ambiguous["resolutions"] == {"ambiguous": 1}
+    assert db_session.query(SourceCardMapping).count() == 0
+    db_session.rollback()
+    assert db_session.query(SourceMappingProposalGroup).count() == 0
+
+
+
+
+def test_discovery_refresh_preserves_reviewed_decision_evidence(db_session):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-002")
+    _print(db_session, family, release)
+    candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", 500, family.card_code)
+    refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    group = db_session.scalar(select(SourceMappingProposalGroup))
+    from datetime import datetime, timezone
+    group.review_status = "rejected"
+    group.reviewed_at = datetime.now(timezone.utc)
+    group.reviewed_by = "offline-fixture"
+    group.review_notes = "fixture decision"
+    group.decision_basis_updated_at = group.updated_at
+    original_digest = group.evidence_digest
+    candidate.name_jp = "changed listing text"
+    result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert result["reviewed_preserved"] == 1
+    assert result["created"] == result["superseded"] == 0
+    assert group.review_status == "rejected"
+    assert group.evidence_digest == original_digest
+    assert db_session.query(SourceCardMapping).count() == 0

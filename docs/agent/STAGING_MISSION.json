@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Restore RAW staging request-boundary safeguards and fair nine-shard turns without unpausing an unverified source",
+  "mission": "Restore existing recurring Yuyu discovery and proposal evidence refresh within the shared bounded staging consumer",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -25,25 +25,53 @@
       "effects": [
         "state_observation"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
-        "docs/agent/evidence/raw-stability-preflight-2026-10-05.json"
+        "docs/agent/evidence/raw-recurring-discovery-preflight-2026-10-05.json"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
-        "docs/agent/evidence/staging-state-c09334b69a28b1a7.json"
+        "docs/agent/evidence/raw-stability-delivery-79ef941.json"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "docs/agent/evidence/raw-stability-rollout-79ef941.json"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "docs/agent/evidence/staging-state-62809ffe916fe79b.json"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "services/api/app/services/discovery_proposal_refresh.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
@@ -53,7 +81,17 @@
         "application",
         "infrastructure"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "services/api/app/services/freshness_queue.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
@@ -62,55 +100,45 @@
       "effects": [
         "tests"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
-        "services/api/tests/test_raw_browser_boundary.py"
+        "services/api/tests/test_freshness_queue_postgres.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/artwork_url.py"
-      ],
-      "effects": [
-        "application",
-        "infrastructure"
-      ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
-    },
-    {
-      "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/collect.py"
-      ],
-      "effects": [
-        "application",
-        "infrastructure"
-      ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
-    },
-    {
-      "files": [
-        "services/snkrdunk_collector/tests/test_artwork_url.py"
+        "services/api/tests/test_source_mapping_proposals.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
-        "services/yuyutei_collector/yuyutei_collector/config.py"
+        "services/yuyutei_collector/yuyutei_collector/discovery.py"
       ],
       "effects": [
         "application",
         "infrastructure"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "services/yuyutei_collector/yuyutei_collector/discovery_probe.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     },
     {
       "files": [
@@ -120,10 +148,20 @@
         "application",
         "infrastructure"
       ],
-      "reason": "Restore the tested bounded request boundary and fair nine-shard turns, preserving structured telemetry, exact identity, source pauses and existing deployment destinations."
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
+    },
+    {
+      "files": [
+        "services/yuyutei_collector/yuyutei_collector/due_discovery.py"
+      ],
+      "effects": [
+        "application",
+        "infrastructure"
+      ],
+      "reason": "Restore only existing bounded recurring discovery and current proposal versioning; preserve identity, pause, reviewed decisions, schedules, shared budget, routing and work limit."
     }
   ],
-  "diff_sha256": "2090fc45ab5045f24b9707a7c13223ecde364280f8e776edb04ae4e0daef7440",
+  "diff_sha256": "c1918135a3f0ccf17be8cc66c7dca83687925b05fe5ae357804ab092c43804c3",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
@@ -131,82 +169,74 @@
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "ff5b05ec-3446-45ea-8331-ed68fe267872"
+        "recovery_deployment_id": "956e4484-2bfa-4d17-beac-2e947b27bda6"
       },
       {
         "name": "yuyutei-collector-shard-0",
         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "434ff635-dc30-43b2-96a8-a7ae818f9bc4"
+        "recovery_deployment_id": "83c356ef-eb24-4268-ad2e-c423443711a3"
       },
       {
         "name": "yuyutei-collector-shard-1",
         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "f4712af1-b360-4530-8d77-f5f6fee69927"
+        "recovery_deployment_id": "fc972e83-5772-4065-8a2c-daa9fd928fee"
       },
       {
         "name": "yuyutei-collector-shard-2",
         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "fb150661-d0a6-495e-80d4-5062964016ca"
+        "recovery_deployment_id": "d2acb6bf-929d-4ccf-894d-12822880d202"
       },
       {
         "name": "yuyutei-collector-shard-3",
         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "a1b06d0a-d658-4e8c-9bca-98d0a57a4121"
+        "recovery_deployment_id": "a9cba925-08b7-46f9-82a6-9dd6dba63759"
       },
       {
         "name": "yuyutei-collector-shard-4-v2",
         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "b48ee41b-6209-4c8a-8234-66ee02ec55c8"
+        "recovery_deployment_id": "2176f471-2251-450f-a782-636e11935e5b"
       },
       {
         "name": "yuyutei-collector-shard-5",
         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "db79fd9e-f863-4a2a-8a50-072539e9d062"
+        "recovery_deployment_id": "9e146786-02b7-4be7-83e8-793bb6644a1e"
       },
       {
         "name": "yuyutei-collector-shard-6",
         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "0d17311a-4dc7-4143-98dc-daf4b3413dc5"
+        "recovery_deployment_id": "e57cce84-7d86-4f42-b198-6d8fd134a787"
       },
       {
         "name": "yuyutei-collector-shard-7",
         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "c40b7b67-c755-4d28-8b85-8a4b8bce70cc"
+        "recovery_deployment_id": "2293e6d4-441b-4b7f-8f3b-535714caa9f6"
       },
       {
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "bd65910c-fa73-4a0c-80b9-6c37b7246a7a"
+        "recovery_deployment_id": "f9488e3f-0acb-4a1d-8b79-607c50d7278b"
       }
     ]
   },
   "safeguards": {
     "impact": {
-      "resources": [
-        "c613898d-bf03-43a6-8813-761f72e1c00a/05d1eac2-510d-4bd3-999e-fea9ead766b7",
-        "Existing ten staging collectors and API; Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
-      ],
-      "routes": [
-        "Existing due-work consumers and canonical staging verification"
-      ],
-      "dependencies": [
-        "Existing claims, source-wide budgets, RAW snapshots, identity guards and structured health"
-      ],
-      "deployment_impact": "Ten existing collector uploads, up to 20 builds/30 deployment records including one bounded recovery per service; no schedules/budgets/concurrency changes. Yuyu max work reduced to eight per invocation. SNKRDUNK persistent pause remains set.",
-      "database_writes": 60000,
+      "resources": "Same staging API and 10 existing collectors; only the 59 already-pending Yuyu discovery scopes become consumable. No new resources/scopes, schedules, service variables, budget limit or concurrency changes.",
+      "routes": "No new API/product routes. Restore listing evidence -> candidate -> pending proposal -> fenced checkpoint integration. Preserve exact CardPrint, approval and sale semantics.",
+      "dependencies": "Existing PostgreSQL queue/admission, Playwright source listing parser and pure proposal resolver; no packages or schema migration.",
+      "deployment_impact": "At most 10 uploads, 20 builds and 30 deployment records including native Git and recognized watch-path snapshot redeploys. No services or deployment-trigger changes. Existing work bound 8 includes discovery.",
+      "database_writes": 1000000,
       "source_requests": 18000,
       "estimated_runtime_minutes": 90
     },
     "recovery": {
-      "artifact": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
-      "procedure": "Upload retained exact prior source only to affected existing staging collectors; API restore prior compatible source 65ff5fd1a35803c8161c4f38d3af4f64e30a085e. Preserve source pauses and schedules; prior source remains fail-closed. Do not retry denied source requests.",
-      "trigger": "Stop affected path on wrong identity, uncontrolled requests, CRASHED/second failed build, wrong destination/source, or unknown skip. Contain required source denial through existing persistent budget pause.",
-      "backup": "No migration, history mutation or mapping update; retained source archive verified. Existing raw evidence and append-only telemetry retained.",
+      "artifact": "79ef9410a9eaa204328ba12932249704d598b4e7",
+      "procedure": "Restore the recorded exact prior collector deployment snapshots and prior API source on the same pinned staging services. Preserve SNKRDUNK pause, mappings/quarantines and immutable history. No rollback database writes.",
+      "trigger": "Wrong destination/identity, integrity risk, duplicate requests, required source denial or bounded rollout failure: contain the affected source and restore prior source snapshot.",
+      "backup": "Retained exact Git source and per-service prior deployment IDs; archive checksum is recorded in preflight. No migration or irreversible mapping operation.",
       "validation": [
-        "docs/agent/evidence/raw-stability-preflight-2026-10-05.json",
-        "services/api/tests/test_raw_browser_boundary.py",
+        "docs/agent/evidence/raw-recurring-discovery-preflight-2026-10-05.json",
         "services/api/tests/test_freshness_adapters_postgres.py",
-        "services/api/tests/test_operational_health_postgres.py"
+        "services/api/tests/test_source_mapping_proposals.py"
       ]
     },
     "verification": {
@@ -216,9 +246,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "scripts/check_raw_health.py"
+        "services/api/tests/test_source_mapping_proposals.py"
       ],
-      "observation_window": "One subsequent normal scheduled cycle per collector, then ongoing operation until mission success or demonstrated source/evidence constraint. No blind unpause, no PSA10."
+      "observation_window": "Verify exact runtime revision and subsequent unchanged scheduled collector executions. Discovery retains its existing due time; do not manually trigger it or accelerate due dates. Stop expansion on a real current source-health/exact-identity evidence constraint."
     }
   }
 }

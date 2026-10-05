@@ -99,13 +99,16 @@ def _pagination_links(page, base_url: str) -> list[str]:
     return out
 
 
-def _scrape_listing(page, url: str, timeout_s: int) -> dict[str, Any]:
+def _scrape_listing(page, url: str, timeout_s: int, *, evidence_sink=None) -> dict[str, Any]:
     """One listing page: navigate once, read what it carries, move on."""
     with deadline(timeout_s, "category_navigation"):
         response = page.goto(url, wait_until="domcontentloaded", timeout=30_000)
         page.wait_for_timeout(1_500)
 
     status = response.status if response else None
+    html = page.content()
+    if evidence_sink is not None:
+        evidence_sink(url, {"http_status": status, "html": html})
     if status in _DENIAL_STATUSES:
         log_event("probe_source_denied", url=url, http_status=status)
         raise SourceDenied(f"{status} at {url}")
@@ -155,7 +158,7 @@ def _scrape_listing(page, url: str, timeout_s: int) -> dict[str, Any]:
     return {
         "url": url,
         "http_status": status,
-        "html_bytes": len(page.content().encode("utf-8")),
+        "html_bytes": len(html.encode("utf-8")),
         "anchors": rows,
         "pagination_links": _pagination_links(page, url),
     }

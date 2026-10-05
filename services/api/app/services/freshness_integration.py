@@ -422,6 +422,7 @@ def _drain(
     monotonic=time.monotonic,
     sleep=time.sleep,
     max_work=None,
+    discovery_runner=None,
     telemetry=None,
 ):
     """Serial bounded chunks. Claim just-in-time so unstarted tails stay pending.
@@ -473,7 +474,7 @@ def _drain(
                 lease=timedelta(seconds=mapping_seconds + 60),
                 clock=clock,
                 yuyutei_shard_index=shard_index,
-                supported_kinds={"refresh"},
+                supported_kinds={"refresh"} | ({"discovery"} if discovery_runner else set()),
             )
             session.commit()
             if not claims:
@@ -482,9 +483,12 @@ def _drain(
                 session, claims[0], ownership_check=ownership_check, clock=clock
             )
             try:
-                outcome = runner(
-                    session, claims[0].source_card_mapping_id, freshness=attempt
-                )
+                if discovery_runner and claims[0].kind == "discovery":
+                    outcome = discovery_runner(session, claims[0], freshness=attempt)
+                else:
+                    outcome = runner(
+                        session, claims[0].source_card_mapping_id, freshness=attempt
+                    )
                 if attempt.result is None:
                     session.rollback()
                     attempt.result = CaptureResult(

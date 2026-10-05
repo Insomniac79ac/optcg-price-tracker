@@ -6,6 +6,7 @@ from app.services.freshness_integration import CaptureResult, drain
 from yuyutei_collector.config import settings
 from yuyutei_collector.db import SessionLocal
 from yuyutei_collector.models import Source
+from yuyutei_collector.due_discovery import run_discovery
 from yuyutei_collector.writer import validate_and_write_observation
 
 
@@ -51,6 +52,7 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
             mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
             chunk_size=chunk_size,
             max_work=settings.DUE_MAX_PRODUCTS_PER_RUN,
+            discovery_runner=run_discovery,
             shard_index=shard_index,
             delay_seconds=max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000,
         )

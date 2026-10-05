@@ -986,3 +986,115 @@ def test_yuyu_small_turns_leave_budget_for_all_nine_shards(db, monkeypatch):
         pending = list(session.scalars(select(FreshnessWork).where(FreshnessWork.state == "pending")))
         assert len(pending) == 9
         assert all(w.attempt_count == 0 and w.claim_token is None for w in pending)
+
+
+def test_recurring_yuyu_discovery_consumes_shared_lane_atomically(db):
+    from yuyutei_collector.due_discovery import persist_enumeration
+    from yuyutei_collector.discovery import SlugEnumeration
+    from app.models import YuyuteiDiscoveryRun
+
+    factory, source, _, _ = db
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        work = plan_discovery_scope(
+            session, source, "yuyu-category:op01", due_at=T0, estimated_request_cost=10
+        )
+        wid = work.id
+        session.scalar(select(SourceDispatchBudget)).claim_sequence = 3
+
+    def discovery(session, claim, *, freshness):
+        freshness.admit()
+        rid = freshness.snapshot(
+            source,
+            "https://yuyu-tei.jp/sell/opc/s/op01",
+            {"http_status": 200, "html": "<html>mock listing</html>"},
+            "fixture",
+        )
+        enumeration = SlugEnumeration(slug="op01")
+        return persist_enumeration(session, claim, freshness, enumeration, rid)
+
+    with factory() as session:
+        result = drain(
+            session,
+            source,
+            "yuyu-test-8",
+            lambda *a, **k: pytest.fail("refresh called"),
+            discovery_runner=discovery,
+            shard_index=8,
+            runtime_seconds=60,
+            mapping_seconds=10,
+            max_work=1,
+            clock=lambda: T0,
+            sleep=lambda _: None,
+        )
+        assert len(result) == 1
+    with factory() as session:
+        work = session.get(FreshnessWork, wid)
+        assert work.next_due_at == T0 + timedelta(hours=24)
+        assert work.state == "pending"
+        assert work.resume_cursor["discovery_run_id"] == session.scalar(
+            select(YuyuteiDiscoveryRun.id)
+        )
+        assert session.scalar(select(FreshnessAttempt.outcome)) == "completed"
+        assert (
+            session.scalar(select(func.count()).select_from(FreshnessPriceState)) == 0
+        )
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+
+
+def test_listing_snapshot_precedes_parse_and_denial(monkeypatch):
+    from yuyutei_collector.discovery_probe import _scrape_listing, SourceDenied
+
+    events = []
+    page = MagicMock()
+    page.goto.return_value.status = 200
+    page.content.return_value = "<html>source evidence</html>"
+    page.eval_on_selector_all.side_effect = lambda *args: events.append("parse") or []
+    sink = lambda url, step: events.append(
+        ("snapshot", step["http_status"], step["html"])
+    )
+    _scrape_listing(page, "https://yuyu-tei.jp/sell/opc/s/op01", 10, evidence_sink=sink)
+    assert events[0] == ("snapshot", 200, "<html>source evidence</html>")
+    assert events[1] == "parse"
+    events.clear()
+    page.goto.return_value.status = 403
+    with pytest.raises(SourceDenied):
+        _scrape_listing(
+            page, "https://yuyu-tei.jp/sell/opc/s/op01", 10, evidence_sink=sink
+        )
+    assert events == [("snapshot", 403, "<html>source evidence</html>")]
+
+
+def test_disappeared_discovery_category_is_bounded_failure(monkeypatch):
+    from yuyutei_collector import due_discovery as discovery
+
+    session = MagicMock()
+    session.get.return_value = SimpleNamespace(
+        scope_key="yuyu-category:st16", source_id=1
+    )
+    browser = MagicMock()
+    monkeypatch.setattr(discovery, "sync_playwright", MagicMock(return_value=browser))
+    monkeypatch.setattr(
+        discovery,
+        "goto_and_capture_raw",
+        lambda *a: {"http_status": 200, "html": "warmup"},
+    )
+    monkeypatch.setattr(discovery, "homepage_session_ok", lambda step: True)
+    monkeypatch.setattr(discovery.time, "sleep", lambda _: None)
+    parsed = []
+
+    def gone(page, slug, **kwargs):
+        kwargs["evidence_sink"](
+            "https://yuyu-tei.jp/sell/opc/s/st16", {"http_status": 404, "html": "gone"}
+        )
+        parsed.append(True)
+
+    monkeypatch.setattr(discovery, "enumerate_slug", gone)
+    attempt = MagicMock()
+    attempt.snapshot.side_effect = [101, 102]
+    discovery.run_discovery(session, SimpleNamespace(work_id=1), freshness=attempt)
+    assert parsed == []
+    assert attempt.result.outcome == "transient_failure"
+    assert attempt.result.raw_snapshot_id == 102
+    assert "404" in attempt.result.failure
+    session.add.assert_not_called()
