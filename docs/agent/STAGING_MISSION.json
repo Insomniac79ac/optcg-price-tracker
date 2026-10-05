@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Make RAW operational health machine-readable from retained authoritative evidence; observe existing natural staging cycles",
+  "mission": "Diagnose staging Railway capability failure safely before native auto-merge; preserve blocked SNKRDUNK source guard",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -25,227 +25,55 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "Add gated machine health tests and explicit ten-service staging collector rollout inside the existing native delivery concurrency lease."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     },
     {
       "files": [
-        "docs/agent/RAW_OPERATIONAL_HEALTH.md"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/raw-health-preflight-2026-10-05.json"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "docs/agent/raw-operational-run.schema.json"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "scripts/check_raw_health.py"
+        "scripts/probe_staging_credentials.py"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     },
     {
       "files": [
-        "scripts/deploy_staging_collectors.py"
-      ],
-      "effects": [
-        "staging_deployment"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "scripts/generate_staging_state.py"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "scripts/tests/test_operational_health.py"
+        "scripts/tests/test_probe_staging_credentials.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/freshness_integration.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health_runtime.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health_sql.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/tests/test_operational_health_postgres.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/due.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Reproduce deferred release options and await the selectable option before changing the filter, repairing an unrelated required CI race without changing application behavior."
-    },
-    {
-      "files": [
-        "apps/web/src/app/admin/(protected)/catalog-coverage/page.test.tsx"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Reproduce delayed catalog report loading and await the rendered mapping-gap tab, fixing a second required CI readiness race without application behavior changes."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     }
   ],
-  "diff_sha256": "bd51a99698325e0ecdf98688d2e96d6e29cb795b643f4c7a27a5f0761aa6e04e",
+  "diff_sha256": "b3a8e37edefad8784658c3a30ecefeea3eaafac4f4ebe94a2b405203ea522cb8",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
-    "revision": "c4e8a1d7b902",
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "4e3aacb2-4058-4206-8669-fb3a1fdd3e0f"
-      },
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "3fdd75fc-bb90-49b1-8fd5-448ac75c25c3"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "344afe97-cab9-4a82-904a-0823e5cf2129"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "e2e27f6c-8f3a-418c-9585-bc96df6e6757"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "79d748e9-a20e-404d-9c38-f72ef02f1722"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "9d66cc5f-7a08-41d2-a742-d440c65575fa"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "65940e64-cd2b-4408-b8df-13377daa3192"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "3a501c8f-1474-4630-81ce-8981a516d96e"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "19fdf2c4-14a0-43cf-9c5a-f1db668f6db4"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "28ecb5e3-c5ac-4023-8c1a-ad578ef75c51"
-      }
-    ]
+    "revision": "c4e8a1d7b902"
   },
   "safeguards": {
     "impact": {
       "resources": [
-        "Existing ten staging Railway collectors in c613898d-bf03-43a6-8813-761f72e1c00a / 05d1eac2-510d-4bd3-999e-fea9ead766b7",
-        "Existing staging-delivery concurrency group and Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+        "Existing staging-delivery Environment and staging Railway environment 05d1eac2-510d-4bd3-999e-fea9ead766b7"
       ],
       "routes": [
-        "Existing collector --due-work commands; no Run Now or schedule change",
-        "Canonical staging Home, exact CardPrint, Market, API health/version/session and read-only data audits"
+        "Read-only staging identity/collector metadata GraphQL queries"
       ],
       "dependencies": [
-        "Existing shared source admission/claims, snapshots, observations and app_log_events",
-        "Existing scoped Railway project token and Vercel staging Git deployment"
+        "Existing scoped staging Railway Project Token, normal CI and native merge protections"
       ],
-      "deployment_impact": "Ten existing collector code uploads after protected native merge; append structured events, enforce configured SNKRDUNK work bound; existing API remains pinned and no provider configuration changes.",
-      "database_writes": 140,
-      "source_requests": 36300,
-      "estimated_runtime_minutes": 90
+      "deployment_impact": "No manual collector rollout or source requests; normal existing staging Git deployment after verified CI only.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "2ff64b43f130f341d2258aba758bd5503c223ebc",
-      "procedure": "Recover affected collector with retained compatible base source or an available previous artifact; destination-pinned upload only, same schedules/budgets/guards. Retain informational events; no database rollback or historical rewrite.",
-      "trigger": "Wrong destination, identity/duplicate/denial/integrity failure, unsettled claims or bounded implementation regression",
-      "backup": "No schema migration or data transformation; append-only operational events. Retained base archive and provider artifacts checked.",
+      "artifact": "3bb5a00b4ba345f16f3be8f986336333101bdbd5",
+      "procedure": "Revert only this bounded read-only diagnostic change via a gated staging PR; leave denial pause and identity guards intact.",
+      "trigger": "Diagnostic rejects intended destination or provider capability; affected delivery stops before arming.",
+      "backup": "Not applicable: diagnostic has no database/configuration writes.",
       "validation": [
-        "docs/agent/evidence/raw-health-preflight-2026-10-05.json"
+        "scripts/tests/test_probe_staging_credentials.py"
       ]
     },
     "verification": {
@@ -253,11 +81,10 @@
         "engineering-gate"
       ],
       "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "scripts/check_raw_health.py"
+        "scripts/tests/test_probe_staging_credentials.py",
+        "scripts/probe_staging_credentials.py"
       ],
-      "observation_window": "Serialized existing staging delivery, then at least one subsequent scheduled 30-minute cycle per service with completed retained evidence. Do not guess unknown Railway trigger provenance."
+      "observation_window": "One fresh normal PR Environment job; retain sanitized capability artifact. No manual collector invocation."
     }
   }
 }
