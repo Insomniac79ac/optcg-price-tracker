@@ -23,9 +23,8 @@ class ProbeTests(unittest.TestCase):
     def test_destination_and_no_values(self):
         payload = {
             "data": {
-                "environment": {
-                    "id": probe.ENVIRONMENT,
-                    "name": "staging",
+                "projectToken": {
+                    "environmentId": probe.ENVIRONMENT,
                     "projectId": probe.PROJECT,
                     "meta": "SECRET-SENTINEL",
                 }
@@ -38,7 +37,8 @@ class ProbeTests(unittest.TestCase):
     def test_wrong_destination(self):
         self.assertEqual(
             probe.probe(
-                "secret", self.opener({"data": {"environment": {"name": "production"}}})
+                "secret",
+                self.opener({"data": {"projectToken": {"name": "production"}}}),
             )["status"],
             "BLOCKED",
         )
@@ -89,17 +89,49 @@ class ProbeTests(unittest.TestCase):
 
     def test_cli_success_requires_destination(self):
         payload = {
-            "data": {
-                "environment": {
-                    "id": probe.ENVIRONMENT,
-                    "name": "staging",
-                    "projectId": probe.PROJECT,
-                }
-            }
+            "id": probe.PROJECT,
+            "environments": {
+                "edges": [{"node": {"id": probe.ENVIRONMENT, "name": "staging"}}]
+            },
         }
         with patch.object(
             probe.subprocess,
             "run",
             return_value=Mock(returncode=0, stdout=json.dumps(payload)),
-        ):
+        ) as run:
             self.assertEqual(probe.cli_probe()["result"], "VERIFIED")
+            args = run.call_args.args[0]
+            self.assertEqual(
+                args,
+                [
+                    "railway",
+                    "status",
+                    "--project",
+                    probe.PROJECT,
+                    "--environment",
+                    probe.ENVIRONMENT,
+                    "--json",
+                ],
+            )
+            self.assertNotIn("api", args)
+
+    def test_wrong_project_and_environment_block(self):
+        for project, environment in [
+            ("wrong", probe.ENVIRONMENT),
+            (probe.PROJECT, "wrong"),
+        ]:
+            payload = {
+                "data": {
+                    "projectToken": {"projectId": project, "environmentId": environment}
+                }
+            }
+            self.assertEqual(
+                probe.probe("secret", self.opener(payload))["status"], "BLOCKED"
+            )
+
+    def test_scope_unrelated_queries_are_not_required(self):
+        self.assertEqual(list(probe.PROBES), ["project_token_identity"])
+        self.assertEqual(
+            probe.PROBES["project_token_identity"],
+            "query { projectToken { projectId environmentId } }",
+        )

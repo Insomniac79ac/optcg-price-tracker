@@ -153,20 +153,37 @@ def database_snapshot():
         variables.clear()
 
 
-def collect_live():
-    data = railway(
-        f"""query {{ project(id:"{PROJECT}") {{ id }} environment(id:"{ENVIRONMENT}") {{ id name projectId serviceInstances {{ edges {{ node {{ serviceName serviceId startCommand cronSchedule latestDeployment {{ id status meta }} }} }} }} }} }}"""
+def staging_environment():
+    # The documented status operation supports RAILWAY_TOKEN and explicit scope.
+    # Never require account/workspace identity from a staging Project Token.
+    data = command_json(
+        [
+            "railway",
+            "status",
+            "--project",
+            PROJECT,
+            "--environment",
+            ENVIRONMENT,
+            "--json",
+        ]
     )
-    environment = data["environment"]
+    environments = [
+        edge["node"] for edge in data.get("environments", {}).get("edges", [])
+    ]
     if (
-        data["project"]["id"],
-        environment["id"],
-        environment["name"],
-        environment["projectId"],
-    ) != (PROJECT, ENVIRONMENT, "staging", PROJECT):
+        data.get("id") != PROJECT
+        or len(environments) != 1
+        or (environments[0].get("id"), environments[0].get("name"))
+        != (ENVIRONMENT, "staging")
+    ):
         raise VerificationError(
             "Refused: target does not match pinned staging identity"
         )
+    return environments[0]
+
+
+def collect_live():
+    environment = staging_environment()
     services = []
     for edge in environment["serviceInstances"]["edges"]:
         service = edge["node"]

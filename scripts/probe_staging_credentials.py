@@ -25,9 +25,7 @@ def atomic_write(path, text):
 
 ENDPOINT = "https://backboard.railway.com/graphql/v2"
 PROBES = {
-    "environment_identity": f'query {{ environment(id:"{ENVIRONMENT}") {{ id name projectId }} }}',
-    "collector_metadata": f'query {{ environment(id:"{ENVIRONMENT}") {{ id name projectId serviceInstances {{ edges {{ node {{ serviceName serviceId startCommand cronSchedule latestDeployment {{ id status meta }} }} }} }} }}',
-    "generator_metadata": f'query {{ project(id:"{PROJECT}") {{ id }} environment(id:"{ENVIRONMENT}") {{ id name projectId serviceInstances {{ edges {{ node {{ serviceName serviceId startCommand cronSchedule latestDeployment {{ id status meta }} }} }} }} }}',
+    "project_token_identity": "query { projectToken { projectId environmentId } }"
 }
 CODES = {
     "UNAUTHENTICATED",
@@ -38,23 +36,7 @@ CODES = {
     "BAD_USER_INPUT",
     "NOT_FOUND",
 }
-FIELDS = {
-    "environment",
-    "project",
-    "serviceInstances",
-    "edges",
-    "node",
-    "serviceName",
-    "serviceId",
-    "startCommand",
-    "cronSchedule",
-    "latestDeployment",
-    "id",
-    "status",
-    "meta",
-    "name",
-    "projectId",
-}
+FIELDS = {"projectToken", "projectId", "environmentId"}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -102,12 +84,11 @@ def probe(token, opener=None):
                 ]
                 for e in errors
             ]
-            env = (payload.get("data") or {}).get("environment") or {}
+            env = (payload.get("data") or {}).get("projectToken") or {}
             if not errors and (
-                env.get("id"),
-                env.get("name"),
                 env.get("projectId"),
-            ) == (ENVIRONMENT, "staging", PROJECT):
+                env.get("environmentId"),
+            ) == (PROJECT, ENVIRONMENT):
                 result["result"] = "VERIFIED"
             elif not errors:
                 result["error_codes"] = ["DESTINATION_UNVERIFIED"]
@@ -133,14 +114,22 @@ def probe(token, opener=None):
 def cli_probe():
     """Compare the pinned installed CLI without publishing arbitrary stderr."""
     result = {
-        "probe": "railway_cli_collector_metadata",
+        "probe": "railway_cli_staging_status",
         "exit_code": None,
         "result": "BLOCKED",
         "error_codes": [],
     }
     try:
         command = subprocess.run(
-            ["railway", "api", PROBES["collector_metadata"]],
+            [
+                "railway",
+                "status",
+                "--project",
+                PROJECT,
+                "--environment",
+                ENVIRONMENT,
+                "--json",
+            ],
             capture_output=True,
             text=True,
             timeout=40,
@@ -162,12 +151,15 @@ def cli_probe():
             ] or ["CLI_FAILURE"]
         else:
             payload = json.loads(command.stdout)
-            env = (payload.get("data") or {}).get("environment") or {}
-            if not payload.get("errors") and (
-                env.get("id"),
-                env.get("name"),
-                env.get("projectId"),
-            ) == (ENVIRONMENT, "staging", PROJECT):
+            environments = [
+                e["node"] for e in payload.get("environments", {}).get("edges", [])
+            ]
+            if (
+                payload.get("id") == PROJECT
+                and len(environments) == 1
+                and environments[0].get("id") == ENVIRONMENT
+                and environments[0].get("name") == "staging"
+            ):
                 result["result"] = "VERIFIED"
             else:
                 result["error_codes"] = ["QUERY_OR_DESTINATION_UNVERIFIED"]

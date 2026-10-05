@@ -50,15 +50,7 @@ def selection(manifest):
 
 
 def inspect():
-    data = state.railway(
-        f"""query {{ environment(id:"{state.ENVIRONMENT}") {{ id name projectId serviceInstances {{ edges {{ node {{ serviceName serviceId startCommand cronSchedule latestDeployment {{ id status meta }} }} }} }} }}"""
-    )["environment"]
-    if (data["id"], data["name"], data["projectId"]) != (
-        state.ENVIRONMENT,
-        "staging",
-        state.PROJECT,
-    ):
-        raise state.VerificationError("Wrong collector environment")
+    data = state.staging_environment()
     return {
         edge["node"]["serviceName"]: edge["node"]
         for edge in data["serviceInstances"]["edges"]
