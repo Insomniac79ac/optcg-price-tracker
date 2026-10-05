@@ -56,16 +56,21 @@ def unnecessary_browser_resource(request):
     images, fonts and media do not participate in either collector's evidence.
     SNKRDUNK's logged-out profile endpoint normally returns 403. The Bibian
     shopping widget is external to both sources and also refuses this session.
+    Google conversion measurement is advertising telemetry, not source evidence.
     """
     if request.is_navigation_request():
         return False  # physical page routing and redirect guards stay intact
     if request.resource_type in {"image", "font", "media"}:
         return True
     parsed = urlsplit(request.url)
-    return parsed.hostname == "bbc.bibian.co.jp" or (
-        parsed.hostname == "snkrdunk.com"
-        and parsed.path == "/v1/accounts/me"
-        and request.method == "GET"
+    return (
+        (parsed.hostname == "www.google.com" and parsed.path == "/measurement/conversion")
+        or parsed.hostname == "bbc.bibian.co.jp"
+        or (
+            parsed.hostname == "snkrdunk.com"
+            and parsed.path == "/v1/accounts/me"
+            and request.method == "GET"
+        )
     )
 
 
