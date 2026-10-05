@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Complete watched-snapshot structured RAW staging rollout with exact destination/source verification and bounded read recovery",
+  "mission": "Verify structured RAW natural staging evidence and pin unchanged API deployment for collector-only delivery",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,130 +20,53 @@
   "impacts": [
     {
       "files": [
-        "scripts/deploy_staging_collectors.py"
-      ],
-      "effects": [
-        "infrastructure"
-      ],
-      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
-    },
-    {
-      "files": [
-        "scripts/generate_staging_state.py"
+        "docs/agent/CURRENT_STATE.yaml"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
+      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
     },
     {
       "files": [
-        "scripts/tests/test_operational_health.py"
+        "docs/agent/evidence/raw-health-credential-verified-2026-10-05.json"
       ],
       "effects": [
-        "tests"
+        "state_observation"
       ],
-      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
+      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+    },
+    {
+      "files": [
+        "docs/agent/evidence/raw-health-rollout-verified-2026-10-05.json"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+    },
+    {
+      "files": [
+        "docs/agent/evidence/staging-state-8dcfbf959cb15f6a.json"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
+    },
+    {
+      "files": [
+        "docs/reports/structured-raw-health-verification-2026-10-05.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Retain verified staging evidence and exact independent API deployment identity; no collector uploads or operational changes."
     }
   ],
-  "diff_sha256": "2a18bcbe0e75fea1d192ef9c4bef0a54955431c04749fa84167ab4a539b238b2",
+  "diff_sha256": "0efd2627ae8fb77112dfe5e1ceb716dde9beadc1ad5393d9c83badd62ff44c20",
   "deployment_verification": {
-    "api_sha": "merge",
-    "revision": "c4e8a1d7b902",
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "f6174197-1c5e-452c-9a51-afa2919f58d6"
-      },
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "3fdd75fc-bb90-49b1-8fd5-448ac75c25c3"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "344afe97-cab9-4a82-904a-0823e5cf2129"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "e2e27f6c-8f3a-418c-9585-bc96df6e6757"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "79d748e9-a20e-404d-9c38-f72ef02f1722"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "9d66cc5f-7a08-41d2-a742-d440c65575fa"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "65940e64-cd2b-4408-b8df-13377daa3192"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "3a501c8f-1474-4630-81ce-8981a516d96e"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "19fdf2c4-14a0-43cf-9c5a-f1db668f6db4"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "28ecb5e3-c5ac-4023-8c1a-ad578ef75c51"
-      }
-    ]
-  },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        "Existing ten staging Railway collectors in c613898d-bf03-43a6-8813-761f72e1c00a / 05d1eac2-510d-4bd3-999e-fea9ead766b7",
-        "Existing staging-delivery concurrency group and Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
-      ],
-      "routes": [
-        "Existing collector --due-work commands; no Run Now or schedule change",
-        "Canonical staging Home, exact CardPrint, Market, API health/version/session and read-only data audits"
-      ],
-      "dependencies": [
-        "Existing shared source admission/claims, snapshots, observations and app_log_events",
-        "Existing scoped Railway project token and Vercel staging Git deployment"
-      ],
-      "deployment_impact": "Existing ten staging collectors; at most 20 image builds and 30 deployment records including skipped uploads and one failed-build retry per service. 30-minute bounded wait. No service configuration, schedule, concurrency or source budget changes. Zero manual source requests.",
-      "database_writes": 140,
-      "source_requests": 36300,
-      "estimated_runtime_minutes": 90
-    },
-    "recovery": {
-      "artifact": "2ff64b43f130f341d2258aba758bd5503c223ebc",
-      "procedure": "Recover affected collector with retained compatible base source or an available previous artifact; destination-pinned upload only, same schedules/budgets/guards. Retain informational events; no database rollback or historical rewrite.",
-      "trigger": "Stop on CRASHED, second FAILED build, unknown or repeated SKIPPED reason, destination/source/configuration mismatch, obsolete SHA or timeout. Never blindly retry a mutation.",
-      "backup": "No schema migration or data transformation; append-only operational events. Retained base archive and provider artifacts checked.",
-      "validation": [
-        "docs/agent/evidence/raw-health-preflight-2026-10-05.json",
-        "scripts/tests/test_probe_staging_credentials.py",
-        "services/api/tests/test_operational_health_postgres.py"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "scripts/check_raw_health.py",
-        "scripts/probe_staging_credentials.py"
-      ],
-      "observation_window": "Observe one subsequent normal scheduled cycle for every collector after successful deployment; preserve unknown trigger provenance if Railway cannot prove it. SNKRDUNK persistent source-denial pause must remain set; a zero-request paused run and correct BLOCKED classification satisfy instrumentation evidence."
-    }
+    "api_sha": "65ff5fd1a35803c8161c4f38d3af4f64e30a085e",
+    "revision": "c4e8a1d7b902"
   }
 }
