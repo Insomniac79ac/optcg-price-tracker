@@ -396,10 +396,29 @@ def aggregate(due_rows, runs, budgets, now):
             status = max((status, "DEGRADED"), key=ranks.get)
             reasons.add("due_work_deficit")
         budget = next((b for b in budgets if b.get("name") == source), {})
+        if budget.get("reservation_mismatch") is True:
+            status = "BLOCKED"
+            reasons.add("orphaned_or_unaccounted_reservations")
+        if budget.get("reservation_mismatch") is None:
+            status = max((status, "DEGRADED"), key=ranks.get)
+            reasons.add("budget_accounting_unverified")
         limit = budget.get("request_limit")
         used, reserved = budget.get("used_requests"), budget.get("reserved_requests")
+        effective_used = used
+        if (
+            budget.get("window_started_at")
+            and budget.get("window_seconds")
+            and (
+                datetime.fromisoformat(now)
+                - datetime.fromisoformat(budget["window_started_at"])
+            ).total_seconds()
+            >= budget["window_seconds"]
+        ):
+            effective_used = (
+                0  # same rollover semantics as source admission; reservations survive
+            )
         headroom = (
-            max(0, limit - used - reserved)
+            max(0, limit - effective_used - reserved)
             if all(type(v) in {int, float} for v in (limit, used, reserved))
             else None
         )
@@ -448,6 +467,8 @@ def aggregate(due_rows, runs, budgets, now):
                 "request_headroom": headroom,
                 "utilization": used / limit if used is not None and limit else None,
                 "reserved_requests": reserved,
+                "open_reservations": budget.get("open_reservations"),
+                "reservation_mismatch": budget.get("reservation_mismatch"),
                 "window_seconds": budget.get("window_seconds"),
             },
             "evidence": "state evidence: database.operational_due and database.operational_runs",

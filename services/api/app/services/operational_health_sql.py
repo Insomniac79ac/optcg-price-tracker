@@ -69,3 +69,14 @@ EVENT_SQL = """select context_json from (
  and created_at>=now()-interval '48 hours'
  order by service,event_type,created_at desc,id desc
 ) r order by created_at desc"""
+
+BUDGET_SQL = """
+select s.name,b.enabled,b.request_limit,b.window_seconds,b.window_started_at,
+ b.used_requests,b.reserved_requests,b.paused_until,
+ coalesce(a.open_reservations,0) open_reservations,
+ b.reserved_requests!=coalesce(a.open_reservations,0) reservation_mismatch
+from source_dispatch_budgets b join sources s on s.id=b.source_id
+left join (select w.source_id,sum(a.reserved_request_cost) open_reservations
+ from freshness_attempts a join freshness_work w on w.id=a.work_id
+ where a.outcome is null group by w.source_id) a on a.source_id=b.source_id
+"""

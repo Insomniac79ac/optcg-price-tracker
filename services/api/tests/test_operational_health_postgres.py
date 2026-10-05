@@ -206,3 +206,15 @@ def test_revisit_gap_uses_capture_not_completion_or_old_price(db):
             row["maximum_successful_revisit_gap_seconds"]
             == (second - first).total_seconds()
         )
+
+
+def test_budget_accounting_detects_orphan_reservation(db):
+    from app.services.operational_health_sql import BUDGET_SQL
+
+    factory, source, _, _ = db
+    with factory.begin() as session:
+        session.scalar(select(SourceDispatchBudget)).reserved_requests = 1
+    with factory() as session:
+        row = session.execute(text(BUDGET_SQL)).mappings().one()
+        assert row["reservation_mismatch"] is True
+        assert row["open_reservations"] == 0

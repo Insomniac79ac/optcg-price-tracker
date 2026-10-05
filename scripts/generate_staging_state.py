@@ -20,7 +20,7 @@ import staging_db_read_check as guard
 # Pure shared classifier/query definitions; no application settings/provider imports.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services/api"))
 from app.services import operational_health as health
-from app.services.operational_health_sql import DUE_SQL, EVENT_SQL
+from app.services.operational_health_sql import DUE_SQL, EVENT_SQL, BUDGET_SQL
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "Insomniac79ac/optcg-price-tracker"
@@ -134,6 +134,7 @@ def database_snapshot():
                 name: connection.execute(sql).fetchall()
                 for name, sql in load_queries().items()
             }
+            result["budgets"] = connection.execute(BUDGET_SQL).fetchall()
             result["operational_due"] = connection.execute(DUE_SQL).fetchall()
             result["operational_runs"] = [
                 row["context_json"] for row in connection.execute(EVENT_SQL).fetchall()
@@ -271,6 +272,9 @@ def sanitize(evidence):
             "used_requests",
             "reserved_requests",
             "paused_until",
+            "window_started_at",
+            "open_reservations",
+            "reservation_mismatch",
         ],
         "work": ["name", "kind", "state", "policy_version", "count"],
         "freshness": [

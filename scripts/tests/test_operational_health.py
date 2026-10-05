@@ -158,7 +158,10 @@ class HealthTests(unittest.TestCase):
         started["work"]["runtime_limit_seconds"] = 1200
         rows = [{"source": "yuyutei", "shard": 0}]
         result = health.aggregate(
-            rows, [done, started], [], "2026-10-04T08:03:00+00:00"
+            rows,
+            [done, started],
+            [{"name": "yuyutei", "reservation_mismatch": False}],
+            "2026-10-04T08:03:00+00:00",
         )
         self.assertEqual(result["yuyu"]["status"], "HEALTHY")
         self.assertEqual(len(result["yuyu"]["active_executions"]), 1)
@@ -234,6 +237,25 @@ class HealthTests(unittest.TestCase):
         self.assertEqual(result["yuyu"]["status"], "BLOCKED")
         self.assertEqual(
             result["yuyu"]["blocked_shards"], ["yuyutei-collector-shard-1"]
+        )
+
+    def test_orphaned_source_reservation_blocks_safe_receipt(self):
+        run = healthy("snkrdunk")
+        rows = [{"source": "snkrdunk", "shard": None}]
+        budget = [
+            {
+                "name": "snkrdunk",
+                "request_limit": 3100,
+                "used_requests": 0,
+                "reserved_requests": 300,
+                "open_reservations": 0,
+                "reservation_mismatch": True,
+            }
+        ]
+        result = health.aggregate(rows, [run], budget, "2026-10-04T08:03:00+00:00")
+        self.assertEqual(result["snkrdunk"]["status"], "BLOCKED")
+        self.assertIn(
+            "orphaned_or_unaccounted_reservations", result["snkrdunk"]["reasons"]
         )
 
     def test_database_integrity_cannot_hide_behind_run_health(self):
