@@ -101,6 +101,14 @@ jobs:
           assert p['base']['ref'] == 'staging' and p['head']['repo']['full_name'] == os.environ['REPO']
           assert p['head']['sha'] == os.environ['HEAD'] and not p['draft']
           PY
+          # Replay may verify and deliver only the exact native-merged current head.
+          # Never attempt to arm a closed PR or deploy an obsolete merged commit.
+          if [ "$(jq -r '.merged' /tmp/pr.json)" = true ]; then
+            test "$(jq -r '.merge_commit_sha' /tmp/pr.json)" = "$(jq -r '.commit.sha' /tmp/branch.json)"
+            test "$(jq -r '.merged_by.login' /tmp/pr.json)" = 'github-actions[bot]'
+            echo 'Native merge already completed; exact current staging SHA verified.'
+            exit 0
+          fi
           # This mutation only enables native auto-merge. The CLI --auto
           # shortcut can instead merge immediately when a PR is already clean.
           node=$(jq -r '.node_id' /tmp/pr.json)
