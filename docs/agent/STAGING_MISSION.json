@@ -93,7 +93,7 @@
   ],
   "diff_sha256": "759a6f233988dc942c5900a4490a67a9ea8a9e9f1824c6daf137742670cf27c1",
   "deployment_verification": {
-    "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+    "api_sha": "merge",
     "revision": "c4e8a1d7b902"
   },
   "safeguards": {
@@ -131,7 +131,7 @@
         "scripts/probe_staging_credentials.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "One fresh normal PR Environment job; retain sanitized capability artifact. No manual collector invocation."
+      "observation_window": "One fresh normal PR Environment job; retain sanitized capability artifact. No manual collector invocation. API is connected to normal staging Git deployment; require its merged SHA rather than the previous CLI deployment."
     }
   }
 }
