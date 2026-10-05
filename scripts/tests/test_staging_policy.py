@@ -84,14 +84,23 @@ class NativeDeliveryRegressionTests(unittest.TestCase):
         self.assertIn('frontend-build', self.ci['jobs']['engineering-gate']['needs'])
         self.assertIn('backend-tests', self.ci['jobs']['engineering-gate']['needs'])
 
+    def test_environment_secret_resolution_has_no_reusable_boundary(self):
+        job = self.ci['jobs']['staging-automerge']
+        self.assertNotIn('uses', job)
+        self.assertEqual(job['environment'], 'staging-delivery')
+        self.assertEqual(job['environment'], self.ci['jobs']['staging-credential-presence']['environment'])
+        self.assertEqual(job['steps'][0]['env']['STAGING_RAILWAY_TOKEN'], '${{ secrets.STAGING_RAILWAY_TOKEN }}')
+        self.assertEqual(job['steps'][0]['env']['STAGING_VERCEL_READ_TOKEN'], '${{ secrets.STAGING_VERCEL_READ_TOKEN }}')
+
     def test_no_direct_merge_fallback_and_head_remains_pinned(self):
-        job = self.delivery['jobs']['deliver']
+        job = self.ci['jobs']['staging-automerge']
+        self.assertNotIn('uses', job, 'Environment secrets must resolve in a normal job')
         arm, wait = job['steps'][:2]
         self.assertIn('enablePullRequestAutoMerge', arm['run'])
         self.assertIn('expectedHeadOid:$head', arm['run'])
         self.assertNotIn('gh pr merge', arm['run'])
         self.assertIn(".head.sha", wait['run'])
-        self.assertEqual(wait['env']['HEAD'], '${{ inputs.head }}')
+        self.assertEqual(wait['env']['HEAD'], '${{ github.event.pull_request.head.sha }}')
         self.assertEqual(job['concurrency']['group'], 'card-pirate-staging-delivery')
         self.assertEqual(job['concurrency']['cancel-in-progress'], 'false')
         self.assertIn('Required staging environment secret unavailable: $name', arm['run'])

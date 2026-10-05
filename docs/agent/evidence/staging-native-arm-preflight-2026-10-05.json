@@ -40,6 +40,17 @@
     "concurrency": "same card-pirate-staging-delivery group, no active cancellation",
     "mutation": "No provider/API/database/source calls; nonempty checks only; prints names and presence booleans without values.",
     "added_runtime_bound_minutes": 5,
-    "native_delivery": "Requires independent presence success, then retains its own Environment presence guard and the protected engineering-gate."
-  }
+    "native_delivery": "Requires independent presence success, then retains its own Environment presence guard and the protected engineering-gate.",
+    "live_evidence": {
+      "run_id": 37304325897,
+      "normal_job_id": 111744304110,
+      "normal_presence_checks": {
+        "STAGING_RAILWAY_TOKEN": "present",
+        "STAGING_VERCEL_READ_TOKEN": "present"
+      },
+      "reusable_job_id": 111744342283,
+      "reusable_unavailable_secret": "STAGING_RAILWAY_TOKEN"
+    }
+  },
+  "credential_boundary_fix": "Use a normal staging-automerge job in CI, bound to staging-delivery, preserving the same checks, native-only mutation, head pin, failure cleanup and uninterrupted concurrency lease. No secrets inheritance or alternative credential scope."
 }
