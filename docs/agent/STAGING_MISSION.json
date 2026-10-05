@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Diagnose staging Railway capability failure safely before native auto-merge; preserve blocked SNKRDUNK source guard",
+  "mission": "Diagnose staging Railway read denial before native arming and preserve persistent source pauses in aggregate health",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -44,6 +44,51 @@
         "tests"
       ],
       "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
+    },
+    {
+      "files": [
+        "scripts/generate_staging_state.py"
+      ],
+      "effects": [
+        "state_observation"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+    },
+    {
+      "files": [
+        "services/api/app/services/operational_health.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+    },
+    {
+      "files": [
+        "services/api/app/services/operational_health_sql.py"
+      ],
+      "effects": [
+        "application"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+    },
+    {
+      "files": [
+        "scripts/tests/test_operational_health.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+    },
+    {
+      "files": [
+        "services/api/tests/test_operational_health_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
     }
   ],
   "diff_sha256": "759a6f233988dc942c5900a4490a67a9ea8a9e9f1824c6daf137742670cf27c1",
@@ -73,7 +118,8 @@
       "trigger": "Diagnostic rejects intended destination or provider capability; affected delivery stops before arming.",
       "backup": "Not applicable: diagnostic has no database/configuration writes.",
       "validation": [
-        "scripts/tests/test_probe_staging_credentials.py"
+        "scripts/tests/test_probe_staging_credentials.py",
+        "services/api/tests/test_operational_health_postgres.py"
       ]
     },
     "verification": {
@@ -82,7 +128,8 @@
       ],
       "post_change": [
         "scripts/tests/test_probe_staging_credentials.py",
-        "scripts/probe_staging_credentials.py"
+        "scripts/probe_staging_credentials.py",
+        "scripts/generate_staging_state.py"
       ],
       "observation_window": "One fresh normal PR Environment job; retain sanitized capability artifact. No manual collector invocation."
     }
