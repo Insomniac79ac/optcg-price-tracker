@@ -216,7 +216,7 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "Structured paired run revision, claim/reservation settlement and current pause evidence"
+        "scripts/check_raw_health.py"
       ],
       "observation_window": "One subsequent normal scheduled cycle per collector, then ongoing operation until mission success or demonstrated source/evidence constraint. No blind unpause, no PSA10."
     }
