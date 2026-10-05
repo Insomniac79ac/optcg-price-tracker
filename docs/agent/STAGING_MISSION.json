@@ -198,7 +198,7 @@
       "estimated_runtime_minutes": 90
     },
     "recovery": {
-      "artifact": "4df389f6f4c5db71eb0ef185584564a1563f7e09; archive SHA256 33349f4681395c383ea11dffa291e6aecdf898ee706335d77ed667f1511e9cfd",
+      "artifact": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
       "procedure": "Upload retained exact prior source only to affected existing staging collectors; API restore prior compatible source 65ff5fd1a35803c8161c4f38d3af4f64e30a085e. Preserve source pauses and schedules; prior source remains fail-closed. Do not retry denied source requests.",
       "trigger": "Stop affected path on wrong identity, uncontrolled requests, CRASHED/second failed build, wrong destination/source, or unknown skip. Contain required source denial through existing persistent budget pause.",
       "backup": "No migration, history mutation or mapping update; retained source archive verified. Existing raw evidence and append-only telemetry retained.",
