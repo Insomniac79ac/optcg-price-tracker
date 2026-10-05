@@ -32,7 +32,7 @@
         "scripts/generate_staging_state.py"
       ],
       "effects": [
-        "state_tooling"
+        "state_observation"
       ],
       "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
     },
