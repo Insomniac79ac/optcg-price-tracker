@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Make RAW operational health machine-readable from retained authoritative evidence; observe existing natural staging cycles",
+  "mission": "Repair least-privilege staging Project Token capability gate and finish structured RAW collector instrumentation rollout; preserve SNKRDUNK permanent source pause",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -25,52 +25,25 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "Add gated machine health tests and explicit ten-service staging collector rollout inside the existing native delivery concurrency lease."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     },
     {
       "files": [
-        "docs/agent/RAW_OPERATIONAL_HEALTH.md"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/raw-health-preflight-2026-10-05.json"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "docs/agent/raw-operational-run.schema.json"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "scripts/check_raw_health.py"
+        "scripts/probe_staging_credentials.py"
       ],
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     },
     {
       "files": [
-        "scripts/deploy_staging_collectors.py"
+        "scripts/tests/test_probe_staging_credentials.py"
       ],
       "effects": [
-        "staging_deployment"
+        "tests"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     },
     {
       "files": [
@@ -79,25 +52,7 @@
       "effects": [
         "state_observation"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "scripts/tests/test_operational_health.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/freshness_integration.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
     },
     {
       "files": [
@@ -106,16 +61,7 @@
       "effects": [
         "application"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health_runtime.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
     },
     {
       "files": [
@@ -124,7 +70,16 @@
       "effects": [
         "application"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+    },
+    {
+      "files": [
+        "scripts/tests/test_operational_health.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
     },
     {
       "files": [
@@ -133,45 +88,45 @@
       "effects": [
         "tests"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
     },
     {
       "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/due.py"
+        "scripts/deploy_staging_collectors.py"
       ],
       "effects": [
-        "application"
+        "staging_deployment"
       ],
-      "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
     },
     {
       "files": [
-        "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Reproduce deferred release options and await the selectable option before changing the filter, repairing an unrelated required CI race without changing application behavior."
-    },
-    {
-      "files": [
-        "apps/web/src/app/admin/(protected)/catalog-coverage/page.test.tsx"
+        "scripts/tests/test_generate_staging_state.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Reproduce delayed catalog report loading and await the rendered mapping-gap tab, fixing a second required CI readiness race without application behavior changes."
+      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
+    },
+    {
+      "files": [
+        "docs/agent/RAW_OPERATIONAL_HEALTH.md"
+      ],
+      "effects": [
+        "documentation"
+      ],
+      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
     }
   ],
-  "diff_sha256": "bd51a99698325e0ecdf98688d2e96d6e29cb795b643f4c7a27a5f0761aa6e04e",
+  "diff_sha256": "9d3a44a8d0f886f1191d60ffc20921c3f9411e113b4d350ecc5df334e31b72a2",
   "deployment_verification": {
-    "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+    "api_sha": "merge",
     "revision": "c4e8a1d7b902",
     "collector_services": [
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "4e3aacb2-4058-4206-8669-fb3a1fdd3e0f"
+        "recovery_deployment_id": "f6174197-1c5e-452c-9a51-afa2919f58d6"
       },
       {
         "name": "yuyutei-collector-shard-0",
@@ -245,7 +200,9 @@
       "trigger": "Wrong destination, identity/duplicate/denial/integrity failure, unsettled claims or bounded implementation regression",
       "backup": "No schema migration or data transformation; append-only operational events. Retained base archive and provider artifacts checked.",
       "validation": [
-        "docs/agent/evidence/raw-health-preflight-2026-10-05.json"
+        "docs/agent/evidence/raw-health-preflight-2026-10-05.json",
+        "scripts/tests/test_probe_staging_credentials.py",
+        "services/api/tests/test_operational_health_postgres.py"
       ]
     },
     "verification": {
@@ -255,9 +212,10 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "scripts/check_raw_health.py"
+        "scripts/check_raw_health.py",
+        "scripts/probe_staging_credentials.py"
       ],
-      "observation_window": "Serialized existing staging delivery, then at least one subsequent scheduled 30-minute cycle per service with completed retained evidence. Do not guess unknown Railway trigger provenance."
+      "observation_window": "Observe one subsequent normal scheduled cycle for every collector after successful deployment; preserve unknown trigger provenance if Railway cannot prove it. SNKRDUNK persistent source-denial pause must remain set; a zero-request paused run and correct BLOCKED classification satisfy instrumentation evidence."
     }
   }
 }

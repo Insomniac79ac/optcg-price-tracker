@@ -218,3 +218,17 @@ def test_budget_accounting_detects_orphan_reservation(db):
         row = session.execute(text(BUDGET_SQL)).mappings().one()
         assert row["reservation_mismatch"] is True
         assert row["open_reservations"] == 0
+
+
+def test_budget_snapshot_preserves_indefinite_pause_without_free_text(db):
+    from app.services.operational_health_sql import BUDGET_SQL
+
+    factory, _, _, _ = db
+    with factory.begin() as session:
+        budget = session.scalar(select(SourceDispatchBudget))
+        budget.pause_reason = "private-provider-detail"
+        budget.paused_until = None
+    with factory() as session:
+        row = session.execute(text(BUDGET_SQL)).mappings().one()
+        assert row["permanent_pause"] is True
+        assert "pause_reason" not in row

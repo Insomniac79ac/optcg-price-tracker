@@ -25,6 +25,12 @@ jobs:
       group: card-pirate-staging-delivery
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Check staging Environment secret presence without values
         env:
           STAGING_RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
@@ -40,6 +46,19 @@ jobs:
             fi
           done
           test "$unavailable" = 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g @railway/cli@5.62.1
+      - name: Verify destination-pinned Railway read capabilities without values
+        env:
+          RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+        run: python scripts/probe_staging_credentials.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-credential-probe-${{ github.event.pull_request.head.sha }}
+          path: docs/agent/evidence/latest-staging-credential-probe.json
 
   staging-automerge:
     # Resolve dedicated staging Environment secrets in this normal job.
@@ -231,6 +250,7 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_staging_policy.py -v
       - run: python -m unittest discover -s scripts/tests -p test_verify_staging_delivery.py -v
       - run: python -m unittest discover -s scripts/tests -p test_operational_health.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_probe_staging_credentials.py -v
 
   check-secrets:
     runs-on: ubuntu-latest

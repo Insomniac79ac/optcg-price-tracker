@@ -107,3 +107,21 @@ Provider documentation checked 2026-10-05:
 [CLI staging deployment](https://docs.railway.com/cli/up).
 Installed CLI help and live Deployment/DeploymentDeploymentInstance schema were
 inspected; neither an execution trigger nor scheduled timestamp is assumed.
+
+## Least-privilege delivery capability gate
+
+The staging Environment secret remains a staging Railway Project Token. The
+2026-10-05 correction verifies `projectToken { projectId environmentId }` with
+`Project-Access-Token`, requiring the exact pinned project and staging environment.
+CLI capability uses `RAILWAY_TOKEN` and `railway status --project ... --environment
+... --json` with the same destination IDs. No account/workspace identity query or
+temporary link is required. Delivery metadata and live state generation use that
+same documented scoped status operation; raw status bodies are never published.
+Destination mismatch or an unavailable required operation stops delivery. An
+unsupported administrative query is not evidence that a Project Token is invalid.
+Persistent source pauses are derived from budget state without exposing free-text
+reasons; paused SNKRDUNK remains BLOCKED even after its prior denial receipt ages out.
+
+Official references checked against installed Railway 5.62.1 help on 2026-10-05:
+[Project Token identity](https://docs.railway.com/integrations/api),
+[scoped CLI status](https://docs.railway.com/cli/status).

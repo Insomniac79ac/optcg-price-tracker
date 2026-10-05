@@ -109,20 +109,26 @@ class StateTests(unittest.TestCase):
 
     def test_wrong_live_environment_refused_before_credentials(self):
         response = {
-            "project": {"id": generator.PROJECT},
-            "environment": {
-                "id": generator.ENVIRONMENT,
-                "name": "production",
-                "projectId": generator.PROJECT,
+            "id": generator.PROJECT,
+            "environments": {
+                "edges": [
+                    {
+                        "node": {
+                            "id": generator.ENVIRONMENT,
+                            "name": "production",
+                            "projectId": generator.PROJECT,
+                        }
+                    }
+                ]
             },
         }
-        with patch.object(generator, "railway", return_value=response), patch.object(
-            generator, "database_snapshot"
-        ) as database, patch.object(generator, "command_json") as command:
+        with patch.object(
+            generator, "command_json", return_value=response
+        ) as command, patch.object(generator, "database_snapshot") as database:
             with self.assertRaises(generator.VerificationError):
                 generator.collect_live()
             database.assert_not_called()
-            command.assert_not_called()
+            command.assert_called_once()
 
     def test_atomic_publication_failure_preserves_previous_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
