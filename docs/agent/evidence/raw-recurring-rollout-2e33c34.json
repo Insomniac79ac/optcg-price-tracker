@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "started_at": "2026-10-05T23:20:56.346181+00:00",
+  "completed_at": "2026-10-05T23:23:36.760440+00:00",
+  "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+  "before": {
+    "snkrdunk-collector": {
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "deployment_id": "956e4484-2bfa-4d17-beac-2e947b27bda6",
+      "schedule_utc": "27,57 * * * *",
+      "start_command_sha256": "f67b31ba08b3aa39f5e81e69dcaf93f0817f88591f197c53ddd0230c070b78c7"
+    },
+    "yuyutei-collector-shard-0": {
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "deployment_id": "46f8ce82-068d-4c6a-9dff-0128c84de336",
+      "schedule_utc": "0,30 * * * *",
+      "start_command_sha256": "e2fac55c87565739857a67cac1da4bd14e6ab1f292d063ff592e8500cd7627c4"
+    },
+    "yuyutei-collector-shard-1": {
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "deployment_id": "f5a9a5d3-3f3d-49de-9d01-0859f6910c79",
+      "schedule_utc": "3,33 * * * *",
+      "start_command_sha256": "8f3d2eb2c515546c9aebb2a55deaa9c6f42672406a188a744ce839d9b8c0aa41"
+    },
+    "yuyutei-collector-shard-2": {
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "deployment_id": "73098f13-8c34-4687-bb92-59711e603815",
+      "schedule_utc": "6,36 * * * *",
+      "start_command_sha256": "635aac2bcd3a6c4059182c7c67e2ce2a9f06a288b52b6a1f073856381502041d"
+    },
+    "yuyutei-collector-shard-3": {
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "deployment_id": "5be1bb6d-1bd7-41e8-96ad-da827489b657",
+      "schedule_utc": "9,39 * * * *",
+      "start_command_sha256": "cca60cb052e9556a09ef5c82ffb561dbcf1e06e89cedd1288b064de67950027d"
+    },
+    "yuyutei-collector-shard-4-v2": {
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "deployment_id": "e765d817-f6c6-477f-a26b-fcf1c24ea03f",
+      "schedule_utc": "12,42 * * * *",
+      "start_command_sha256": "c445cd8c3a088b6c4301595b321f23d34cf254e632450288620be87044af0dec"
+    },
+    "yuyutei-collector-shard-5": {
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "deployment_id": "a41b298e-f891-4e0a-837a-7d48e534faff",
+      "schedule_utc": "15,45 * * * *",
+      "start_command_sha256": "47f35f535a1536f6b36ca6f832f488fbae45ebe4ebd790dd27e2e8de968a73f4"
+    },
+    "yuyutei-collector-shard-6": {
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "deployment_id": "b963605b-9238-4f5a-9c47-14f42a1e43de",
+      "schedule_utc": "18,48 * * * *",
+      "start_command_sha256": "85093ee9b6abbfb52ce62866e16cf9cab27fa35d2861bb441daa231ed3eb3cdd"
+    },
+    "yuyutei-collector-shard-7": {
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "deployment_id": "26d2dfc0-251c-4fbc-9a16-ef4a8f37e285",
+      "schedule_utc": "21,51 * * * *",
+      "start_command_sha256": "856bba9ff4f6473ac7c061839f2188e6d3b721fa8330e011db44d3ea8df447a0"
+    },
+    "yuyutei-collector-shard-8": {
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "deployment_id": "02d8ac13-f5f6-4da8-8ba5-8cde794983e3",
+      "schedule_utc": "24,54 * * * *",
+      "start_command_sha256": "f700e31ca8f1c484d71aeb8d1dd79086d3052330da6571dd2b6e40446a3d439f"
+    }
+  },
+  "deployments": {
+    "yuyutei-collector-shard-3": {
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "deployment_id": "45955d77-aefd-4681-801e-f82c21a1e4db",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "9,39 * * * *"
+    },
+    "yuyutei-collector-shard-0": {
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "deployment_id": "3036c93d-30ed-48bf-9b35-4a077565aabf",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "0,30 * * * *"
+    },
+    "yuyutei-collector-shard-5": {
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "deployment_id": "cdeaef54-7267-402d-95e7-64664d559d74",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "15,45 * * * *"
+    },
+    "snkrdunk-collector": {
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "deployment_id": "c9eb7df4-1e46-4d41-8b58-8c5b3a27d326",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "27,57 * * * *"
+    },
+    "yuyutei-collector-shard-2": {
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "deployment_id": "01e36f86-e513-4756-84c8-ee82cc6feef1",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "6,36 * * * *"
+    },
+    "yuyutei-collector-shard-8": {
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "deployment_id": "0c5b8785-cd6b-43d5-8367-df162869d02d",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "24,54 * * * *"
+    },
+    "yuyutei-collector-shard-1": {
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "deployment_id": "88aca63b-e9b4-4c23-a6c1-45fbdc02fb08",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "3,33 * * * *"
+    },
+    "yuyutei-collector-shard-6": {
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "deployment_id": "08a23466-b236-49e1-854d-842f993d0e5d",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "18,48 * * * *"
+    },
+    "yuyutei-collector-shard-4-v2": {
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "deployment_id": "de3a46bc-c819-44b9-9f1e-504adfa72d31",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "12,42 * * * *"
+    },
+    "yuyutei-collector-shard-7": {
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "deployment_id": "f3d70084-b5cb-4b0e-9546-40213240d7bc",
+      "source_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+      "schedule_utc": "21,51 * * * *"
+    }
+  },
+  "bounded_build_retries": {},
+  "watched_snapshot_redeploys": {
+    "snkrdunk-collector": "0e770821-8a5f-466c-a890-55adf2dea93f",
+    "yuyutei-collector-shard-3": "6bf41bb2-548e-4b90-a9f6-e993a277718f",
+    "yuyutei-collector-shard-0": "2b26fd31-c0ba-439a-9378-906859e1081e",
+    "yuyutei-collector-shard-2": "06e284cb-c3aa-4e9c-93b9-f33740dcc3f4",
+    "yuyutei-collector-shard-5": "2be04b4a-87b5-4df6-bf31-150e33c6fc4d",
+    "yuyutei-collector-shard-4-v2": "0d23e035-5813-4985-9551-aaf25cdeffba",
+    "yuyutei-collector-shard-1": "16d36b26-7328-4c46-aab5-38060ba07ab2",
+    "yuyutei-collector-shard-8": "cd9ea659-348c-42d2-a8f0-8b9967e126f5",
+    "yuyutei-collector-shard-6": "b4eda9d0-e962-46cc-bddc-d5ea37da248e",
+    "yuyutei-collector-shard-7": "0826840a-f001-4541-974d-f534375b42e2"
+  },
+  "natural_runs_not_yet_verified": true,
+  "production_accessed": false
+}

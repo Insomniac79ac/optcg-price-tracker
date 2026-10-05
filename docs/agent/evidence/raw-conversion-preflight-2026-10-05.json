@@ -1,0 +1,228 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-05T23:36:43.610086+00:00",
+  "state_evidence": {
+    "artifact": "evidence/staging-state-25c54499ae7392a9.json",
+    "sha256": "25c54499ae7392a9abababdf780f9aa5b88a121c8c4af357d610ecd40bedc1af",
+    "collected_at": "2026-10-05T23:36:39.861582+00:00",
+    "database_read_only": true,
+    "database_fingerprint": "passed"
+  },
+  "source_rollout_sha": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
+  "diagnostics": [
+    {
+      "timestamp": "2026-10-05T23:27:40.711910325Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 3
+    },
+    {
+      "timestamp": "2026-10-05T23:27:42.952962606Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 3
+    },
+    {
+      "timestamp": "2026-10-05T23:27:48.893071329Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 226
+    },
+    {
+      "timestamp": "2026-10-05T23:27:51.041952116Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 226
+    },
+    {
+      "timestamp": "2026-10-05T23:27:57.399769931Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 913
+    },
+    {
+      "timestamp": "2026-10-05T23:27:59.864242915Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 913
+    },
+    {
+      "timestamp": "2026-10-05T23:28:06.101351532Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 922
+    },
+    {
+      "timestamp": "2026-10-05T23:28:08.179405992Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 922
+    },
+    {
+      "timestamp": "2026-10-05T23:28:13.946896751Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 931
+    },
+    {
+      "timestamp": "2026-10-05T23:28:16.352144007Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 931
+    },
+    {
+      "timestamp": "2026-10-05T23:28:22.135346560Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 235
+    },
+    {
+      "timestamp": "2026-10-05T23:28:24.532768409Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 235
+    },
+    {
+      "timestamp": "2026-10-05T23:28:30.829935019Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 940
+    },
+    {
+      "timestamp": "2026-10-05T23:28:32.861990129Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 940
+    },
+    {
+      "timestamp": "2026-10-05T23:28:39.081491894Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 949
+    },
+    {
+      "timestamp": "2026-10-05T23:28:40.800466802Z",
+      "event": "browser_request_stopped",
+      "request_host": "www.google.com",
+      "request_path": "/measurement/conversion",
+      "resource_type": "fetch",
+      "http_status": 302,
+      "attempt_stopped": false,
+      "main_navigation": false,
+      "reason": "unsupported browser redirect",
+      "work_id": 949
+    }
+  ],
+  "interpretation": "Two non-navigation Google conversion measurement requests per accepted Yuyu check; unsupported optional redirects abort cleanly but consume budget and emit optional-resource warnings. This external advertising endpoint carries no source price/identity evidence. Exclude only this exact host/path before dispatch.",
+  "baseline_regression": {
+    "conversion_cases_failed": 2,
+    "navigation_and_other_endpoint_cases_passed": 4
+  },
+  "patched_regression": {
+    "source_boundary_tests_passed": 16
+  },
+  "mutations": {
+    "new_endpoints": 0,
+    "source_requests_change": "remove non-evidence requests; no increased allowance",
+    "mapping_approvals": 0,
+    "quarantine_releases": 0,
+    "source_unpauses": 0,
+    "schedules": 0,
+    "budget_limits": 0,
+    "concurrency": 0,
+    "max_work_per_run": 8,
+    "psa10_activation": false
+  },
+  "recovery_archive_sha256": "8b99cab512a6f5402ea04a66828441162cbe22a5798dae9034e5bd13ca89e68f",
+  "production_accessed": false
+}

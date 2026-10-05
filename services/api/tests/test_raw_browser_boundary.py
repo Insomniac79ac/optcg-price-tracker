@@ -118,3 +118,42 @@ def test_optional_asset_cannot_hide_admission_refusal():
     route.fetch.assert_not_called()
     with pytest.raises(AdmissionStopped):
         attempt.check()
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+def test_conversion_measurement_never_dispatches_or_degrades(method):
+    attempt, handler, route = boundary(
+        "https://www.google.com/measurement/conversion?opaque=redacted",
+        "fetch",
+        False,
+        method,
+    )
+    route.fetch.return_value = SimpleNamespace(status=302, headers={})
+    handler(route)
+    route.abort.assert_called_once()
+    route.fetch.assert_not_called()
+    attempt.admit.assert_not_called()
+    attempt.deny.assert_not_called()
+    assert attempt.health["optional_resource"] == 0
+    assert attempt.stopped is None
+
+
+@pytest.mark.parametrize(
+    "url,navigation",
+    [
+        ("https://www.google.com/measurement/conversion", True),
+        ("https://yuyu-tei.jp/measurement/conversion", False),
+        ("https://snkrdunk.com/measurement/conversion", False),
+        ("https://www.google.com/measurement/conversion/product", False),
+    ],
+)
+def test_conversion_exclusion_preserves_navigation_and_other_endpoints(url, navigation):
+    attempt, handler, route = boundary(
+        url, "document" if navigation else "fetch", navigation
+    )
+    route.fetch.return_value = SimpleNamespace(status=403, headers={})
+    handler(route)
+    attempt.admit.assert_called_once()
+    route.fetch.assert_called_once()
+    attempt.deny.assert_called_once()
+    assert attempt.stopped == "source_denial"
