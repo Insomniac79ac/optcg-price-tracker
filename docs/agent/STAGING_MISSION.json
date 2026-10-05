@@ -26,9 +26,18 @@
         "documentation"
       ],
       "reason": "Explain delivery artifact provenance, permission-limited configuration checks, and native auto-merge/review evidence without changing policy or runtime behavior."
+    },
+    {
+      "files": [
+        "apps/web/src/app/admin/(protected)/price-source-health/page.test.tsx"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Reproduce delayed health-report loading and wait for the rendered gap tab before clicking, fixing the CI race without changing application behavior."
     }
   ],
-  "diff_sha256": "1f06b2b1d9ed648d2b61d7d1be5143ae400c5c58d7bf44b0b7ebe76ccc1430b8",
+  "diff_sha256": "e615e2948cbf3944aa61c420cb42beb36caaaef10a25af6207544c6488fbe479",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"

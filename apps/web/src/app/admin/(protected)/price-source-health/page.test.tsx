@@ -142,8 +142,11 @@ describe("PriceSourceHealthPage", () => {
     );
   });
 
-  it("fetches the selected gap_type when switching tabs", async () => {
-    fetchPriceSourceHealth.mockResolvedValue(EMPTY_REPORT);
+  it("fetches the selected gap_type when switching tabs after the report loads", async () => {
+    let resolveReport!: (report: PriceSourceHealthReport) => void;
+    fetchPriceSourceHealth.mockReturnValue(new Promise<PriceSourceHealthReport>((resolve) => {
+      resolveReport = resolve;
+    }));
     fetchPriceSourceHealthGaps.mockResolvedValue(gapsResponse([]));
 
     render(<PriceSourceHealthPage />);
@@ -154,7 +157,9 @@ describe("PriceSourceHealthPage", () => {
       ),
     );
 
-    screen.getByRole("button", { name: "Missing prices" }).click();
+    expect(screen.queryByRole("button", { name: "Missing prices" })).not.toBeInTheDocument();
+    resolveReport(EMPTY_REPORT);
+    fireEvent.click(await screen.findByRole("button", { name: "Missing prices" }));
 
     await waitFor(() =>
       expect(fetchPriceSourceHealthGaps).toHaveBeenLastCalledWith(
