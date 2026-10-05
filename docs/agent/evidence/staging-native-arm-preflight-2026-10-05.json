@@ -32,5 +32,14 @@
     "https://docs.github.com/en/graphql/reference/mutations#enablepullrequestautomerge",
     "https://github.com/cli/cli/blob/v2.88.0/pkg/cmd/pr/merge/merge.go"
   ],
-  "live_graphql_schema": "EnablePullRequestAutoMergeInput supports expectedHeadOid; MERGE remains established method"
+  "live_graphql_schema": "EnablePullRequestAutoMergeInput supports expectedHeadOid; MERGE remains established method",
+  "credential_boundary_diagnostic": {
+    "reason": "Fresh reusable delivery still reports Railway Environment secret unavailable after owner recreation; distinguish normal Environment access from reusable-workflow wiring.",
+    "job": "staging-credential-presence",
+    "environment": "staging-delivery",
+    "concurrency": "same card-pirate-staging-delivery group, no active cancellation",
+    "mutation": "No provider/API/database/source calls; nonempty checks only; prints names and presence booleans without values.",
+    "added_runtime_bound_minutes": 5,
+    "native_delivery": "Requires independent presence success, then retains its own Environment presence guard and the protected engineering-gate."
+  }
 }

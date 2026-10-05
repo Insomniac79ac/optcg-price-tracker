@@ -44,7 +44,7 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "Remove the direct-merge CLI fallback by arming native auto-merge at the checked head while the required engineering-gate is pending. Preserve branch protection, concurrency ownership, staged credential checks and post-deploy verification."
+      "reason": "Remove the direct-merge CLI fallback by arming native auto-merge at the checked head while the required engineering-gate is pending. Preserve branch protection, concurrency ownership, staged credential checks and post-deploy verification. A serialized normal Environment presence check distinguishes credential availability from reusable-workflow wiring before native delivery."
     },
     {
       "files": [
@@ -58,7 +58,7 @@
       "reason": "Reproduce the existing native arming defects and retain bounded preflight/recovery evidence for the workflow correction."
     }
   ],
-  "diff_sha256": "dfa282437b1726f1f4c3be275cd853d99a0937608216c99b64020f78aab9670a",
+  "diff_sha256": "21502b8845c1ea9ecb882833541c287af4e651dec5dda8efe92cdd9b0c2ed5ec",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"

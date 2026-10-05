@@ -76,7 +76,10 @@ class NativeDeliveryRegressionTests(unittest.TestCase):
     def test_native_arming_cannot_wait_for_its_required_gate(self):
         # Waiting for engineering-gate made --auto fall through to a direct
         # merge. Keep that gate required and independent of the lease owner.
-        self.assertEqual(self.ci['jobs']['staging-automerge']['needs'], 'policy-gate')
+        needs = self.ci['jobs']['staging-automerge']['needs']
+        self.assertIn('policy-gate', needs)
+        self.assertIn('staging-credential-presence', needs)
+        self.assertNotIn('engineering-gate', needs)
         self.assertNotIn('staging-automerge', self.ci['jobs']['engineering-gate']['needs'])
         self.assertIn('frontend-build', self.ci['jobs']['engineering-gate']['needs'])
         self.assertIn('backend-tests', self.ci['jobs']['engineering-gate']['needs'])

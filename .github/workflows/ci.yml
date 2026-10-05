@@ -14,10 +14,38 @@ permissions:
 # etc. See scripts/prod_verify.sh (the local equivalent of the prod-compose
 # job) and docs/deployment.md.
 jobs:
+  staging-credential-presence:
+    # An independent normal Environment job distinguishes unavailable staging
+    # credentials from a reusable-workflow boundary without logging values.
+    needs: policy-gate
+    if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: staging-delivery
+    concurrency:
+      group: card-pirate-staging-delivery
+      cancel-in-progress: false
+    steps:
+      - name: Check staging Environment secret presence without values
+        env:
+          STAGING_RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
+          STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
+        run: |
+          unavailable=0
+          for name in STAGING_RAILWAY_TOKEN STAGING_VERCEL_READ_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required staging environment secret unavailable: $name"
+              unavailable=1
+            else
+              echo "Required staging environment secret present: $name"
+            fi
+          done
+          test "$unavailable" = 0
+
   staging-automerge:
     # Arm while the protected engineering-gate is pending. GitHub owns the
     # final merge decision; the delivery job retains its concurrency lease.
-    needs: policy-gate
+    needs: [policy-gate, staging-credential-presence]
     if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
     uses: ./.github/workflows/staging-delivery.yml
     permissions:
