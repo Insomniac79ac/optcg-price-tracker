@@ -1,0 +1,56 @@
+{
+  "observed_at": "2026-10-05",
+  "scope": "existing PR #38 and staging delivery only",
+  "recovery_commit": "6f5a1947f7304885f115b679ec155efe2bb0cf39",
+  "resources": [
+    "GitHub staging-delivery environment",
+    "card-pirate-staging-delivery concurrency group",
+    "existing Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+  ],
+  "persistent_database_writes": 0,
+  "external_source_requests": 0,
+  "production_targets": [],
+  "new_paid_services": 0,
+  "regression": {
+    "old_workflow_failures": 2,
+    "failure_modes": [
+      "arming waits until the PR is already mergeable",
+      "CLI --auto permits direct merge fallback and wait does not pin the PR head"
+    ]
+  },
+  "safeguards": [
+    "Exact PR head bound in native mutation and merge wait",
+    "engineering-gate remains required by enforced branch protection",
+    "Policy gate must succeed before native arming",
+    "Active delivery retains the existing concurrency group through merge and verification",
+    "Missing staging environment secret reports its name only",
+    "Failure cleanup disables native auto-merge for an unmerged PR"
+  ],
+  "backup": "Not applicable: no persistent database or provider configuration mutation",
+  "recovery": "Disable the PR auto-merge request on a failed unmerged delivery; restore the retained workflow source in a draft fix-forward PR for diagnosis, without merging or executing the old direct-merge path. Existing canonical frontend READY artifact dpl_CM3EaxCE1cp7xj2FGVKZjEzo3xtE remains the destination-pinned recovery artifact if post-merge frontend verification fails.",
+  "official_interfaces_checked": [
+    "https://docs.github.com/en/graphql/reference/mutations#enablepullrequestautomerge",
+    "https://github.com/cli/cli/blob/v2.88.0/pkg/cmd/pr/merge/merge.go"
+  ],
+  "live_graphql_schema": "EnablePullRequestAutoMergeInput supports expectedHeadOid; MERGE remains established method",
+  "credential_boundary_diagnostic": {
+    "reason": "Fresh reusable delivery still reports Railway Environment secret unavailable after owner recreation; distinguish normal Environment access from reusable-workflow wiring.",
+    "job": "staging-credential-presence",
+    "environment": "staging-delivery",
+    "concurrency": "same card-pirate-staging-delivery group, no active cancellation",
+    "mutation": "No provider/API/database/source calls; nonempty checks only; prints names and presence booleans without values.",
+    "added_runtime_bound_minutes": 5,
+    "native_delivery": "Requires independent presence success, then retains its own Environment presence guard and the protected engineering-gate.",
+    "live_evidence": {
+      "run_id": 37304325897,
+      "normal_job_id": 111744304110,
+      "normal_presence_checks": {
+        "STAGING_RAILWAY_TOKEN": "present",
+        "STAGING_VERCEL_READ_TOKEN": "present"
+      },
+      "reusable_job_id": 111744342283,
+      "reusable_unavailable_secret": "STAGING_RAILWAY_TOKEN"
+    }
+  },
+  "credential_boundary_fix": "Use a normal staging-automerge job in CI, bound to staging-delivery, preserving the same checks, native-only mutation, head pin, failure cleanup and uninterrupted concurrency lease. No secrets inheritance or alternative credential scope."
+}

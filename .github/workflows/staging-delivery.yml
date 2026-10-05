@@ -37,8 +37,12 @@ jobs:
           STAGING_RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
           STAGING_VERCEL_READ_TOKEN: ${{ secrets.STAGING_VERCEL_READ_TOKEN }}
         run: |
-          test -n "$STAGING_RAILWAY_TOKEN"
-          test -n "$STAGING_VERCEL_READ_TOKEN"
+          for name in STAGING_RAILWAY_TOKEN STAGING_VERCEL_READ_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required staging environment secret unavailable: $name"
+              exit 1
+            fi
+          done
           gh api "repos/$REPO" --jq '.allow_auto_merge' | grep -qx true
           gh api "repos/$REPO/branches/staging" > /tmp/branch.json
           gh api "repos/$REPO/pulls/$PR" > /tmp/pr.json
@@ -50,17 +54,30 @@ jobs:
           assert p['base']['ref'] == 'staging' and p['head']['repo']['full_name'] == os.environ['REPO']
           assert p['head']['sha'] == os.environ['HEAD'] and not p['draft']
           PY
-          # Native mechanism; no PAT, pull_request_target or REST merge bypass.
-          gh pr merge "$PR" --repo "$REPO" --auto --merge --match-head-commit "$HEAD"
+          # This mutation only enables native auto-merge. The CLI --auto
+          # shortcut can instead merge immediately when a PR is already clean.
+          node=$(jq -r '.node_id' /tmp/pr.json)
+          gh api graphql -f query='mutation($pr:ID!,$head:GitObjectID!){enablePullRequestAutoMerge(input:{pullRequestId:$pr,expectedHeadOid:$head,mergeMethod:MERGE}){pullRequest{number headRefOid autoMergeRequest{enabledAt mergeMethod}}}}' \
+            -f pr="$node" -f head="$HEAD" > /tmp/native-auto-merge.json
+          python - <<'PY'
+          import json, os
+          p = json.load(open('/tmp/native-auto-merge.json'))['data']['enablePullRequestAutoMerge']['pullRequest']
+          assert p['headRefOid'] == os.environ['HEAD']
+          assert p['autoMergeRequest'] and p['autoMergeRequest']['mergeMethod'] == 'MERGE'
+          print(json.dumps({'native_auto_merge_armed': True, 'head': p['headRefOid'],
+                            'enabled_at': p['autoMergeRequest']['enabledAt'], 'method': 'MERGE'}))
+          PY
       - name: Wait for native merge while owning staging
         id: merge
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ inputs.pr }}
+          HEAD: ${{ inputs.head }}
         run: |
           for attempt in $(seq 1 120); do
             gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json
+            test "$(jq -r '.head.sha' /tmp/merged.json)" = "$HEAD"
             merged=$(jq -r '.merged' /tmp/merged.json)
             if [ "$merged" = true ]; then
               echo "sha=$(jq -r '.merge_commit_sha' /tmp/merged.json)" >> "$GITHUB_OUTPUT"

@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from staging_policy import evaluate, RED
+import yaml
 
 
 class PolicyTests(unittest.TestCase):
@@ -64,6 +65,45 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(self.result()["eligible"])
         del self.m["safeguards"]["recovery"]["validation"]
         self.assertFalse(self.result()["eligible"])
+
+
+class NativeDeliveryRegressionTests(unittest.TestCase):
+    def setUp(self):
+        root = Path(__file__).resolve().parents[2]
+        self.ci = yaml.load((root / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+        self.delivery = yaml.load((root / '.github/workflows/staging-delivery.yml').read_text(), Loader=yaml.BaseLoader)
+
+    def test_native_arming_cannot_wait_for_its_required_gate(self):
+        # Waiting for engineering-gate made --auto fall through to a direct
+        # merge. Keep that gate required and independent of the lease owner.
+        needs = self.ci['jobs']['staging-automerge']['needs']
+        self.assertIn('policy-gate', needs)
+        self.assertIn('staging-credential-presence', needs)
+        self.assertNotIn('engineering-gate', needs)
+        self.assertNotIn('staging-automerge', self.ci['jobs']['engineering-gate']['needs'])
+        self.assertIn('frontend-build', self.ci['jobs']['engineering-gate']['needs'])
+        self.assertIn('backend-tests', self.ci['jobs']['engineering-gate']['needs'])
+
+    def test_environment_secret_resolution_has_no_reusable_boundary(self):
+        job = self.ci['jobs']['staging-automerge']
+        self.assertNotIn('uses', job)
+        self.assertEqual(job['environment'], 'staging-delivery')
+        self.assertEqual(job['environment'], self.ci['jobs']['staging-credential-presence']['environment'])
+        self.assertEqual(job['steps'][0]['env']['STAGING_RAILWAY_TOKEN'], '${{ secrets.STAGING_RAILWAY_TOKEN }}')
+        self.assertEqual(job['steps'][0]['env']['STAGING_VERCEL_READ_TOKEN'], '${{ secrets.STAGING_VERCEL_READ_TOKEN }}')
+
+    def test_no_direct_merge_fallback_and_head_remains_pinned(self):
+        job = self.ci['jobs']['staging-automerge']
+        self.assertNotIn('uses', job, 'Environment secrets must resolve in a normal job')
+        arm, wait = job['steps'][:2]
+        self.assertIn('enablePullRequestAutoMerge', arm['run'])
+        self.assertIn('expectedHeadOid:$head', arm['run'])
+        self.assertNotIn('gh pr merge', arm['run'])
+        self.assertIn(".head.sha", wait['run'])
+        self.assertEqual(wait['env']['HEAD'], '${{ github.event.pull_request.head.sha }}')
+        self.assertEqual(job['concurrency']['group'], 'card-pirate-staging-delivery')
+        self.assertEqual(job['concurrency']['cancel-in-progress'], 'false')
+        self.assertIn('Required staging environment secret unavailable: $name', arm['run'])
 
 
 if __name__ == "__main__":
