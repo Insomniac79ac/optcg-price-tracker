@@ -57,6 +57,32 @@ def inspect():
     }
 
 
+def upload(row, expected):
+    branch = state.command_json(
+        ["gh", "api", f"repos/{state.REPOSITORY}/branches/staging"]
+    )
+    if branch["commit"]["sha"] != expected:
+        raise state.VerificationError("Obsolete collector delivery; no upload allowed")
+    command = [
+        "railway",
+        "up",
+        "--project",
+        state.PROJECT,
+        "--environment",
+        state.ENVIRONMENT,
+        "--service",
+        row["service_id"],
+        "--detach",
+        "--message",
+        "Structured RAW health exact commit " + expected,
+    ]
+    result = subprocess.run(
+        command, cwd=state.ROOT, capture_output=True, text=True, timeout=120
+    )
+    if result.returncode:
+        raise state.VerificationError("Staging collector upload failed: " + row["name"])
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -103,28 +129,10 @@ def main(argv=None):
     started = state.timestamp()
     try:
         for row in requested:
-            command = [
-                "railway",
-                "up",
-                "--project",
-                state.PROJECT,
-                "--environment",
-                state.ENVIRONMENT,
-                "--service",
-                row["service_id"],
-                "--detach",
-                "--message",
-                "Structured RAW health exact commit " + args.expected,
-            ]
-            result = subprocess.run(
-                command, cwd=state.ROOT, capture_output=True, text=True, timeout=120
-            )
-            if result.returncode:
-                raise state.VerificationError(
-                    "Staging collector upload failed: " + row["name"]
-                )
-        deadline = time.monotonic() + 900
+            upload(row, args.expected)
+        deadline = time.monotonic() + 1800
         pending = {row["name"] for row in requested}
+        retried = {}
         deployed = {}
         while pending:
             current = inspect()
@@ -150,6 +158,14 @@ def main(argv=None):
                     meta.get("cliMessage")
                     != "Structured RAW health exact commit " + args.expected
                 ):
+                    continue
+                if deployment.get("id") == retried.get(name):
+                    continue  # allow provider metadata propagation after a retry
+                if deployment["status"] == "FAILED" and name not in retried:
+                    retried[name] = deployment["id"]
+                    upload(
+                        next(r for r in requested if r["name"] == name), args.expected
+                    )
                     continue
                 if deployment["status"] in {"FAILED", "CRASHED"}:
                     raise state.VerificationError(
@@ -189,6 +205,7 @@ def main(argv=None):
             for name, row in before.items()
         },
         "deployments": deployed,
+        "bounded_build_retries": retried,
         "natural_runs_not_yet_verified": True,
         "production_accessed": False,
     }

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Repair least-privilege staging Project Token capability gate and finish structured RAW collector instrumentation rollout; preserve SNKRDUNK permanent source pause",
+  "mission": "Finish structured RAW staging instrumentation after bounded Railway image-build failures; retry once without source-policy changes and allow safe exact-native-merge delivery replay",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -25,70 +25,7 @@
       "effects": [
         "infrastructure"
       ],
-      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
-    },
-    {
-      "files": [
-        "scripts/probe_staging_credentials.py"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
-    },
-    {
-      "files": [
-        "scripts/tests/test_probe_staging_credentials.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
-    },
-    {
-      "files": [
-        "scripts/generate_staging_state.py"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
-    },
-    {
-      "files": [
-        "services/api/app/services/operational_health_sql.py"
-      ],
-      "effects": [
-        "application"
-      ],
-      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
-    },
-    {
-      "files": [
-        "scripts/tests/test_operational_health.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
-    },
-    {
-      "files": [
-        "services/api/tests/test_operational_health_postgres.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Derive persistent source pause from authoritative budget state as a boolean; keep source BLOCKED after prior run evidence ages out without exposing free-text reasons."
+      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
     },
     {
       "files": [
@@ -97,28 +34,19 @@
       "effects": [
         "staging_deployment"
       ],
-      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
+      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
     },
     {
       "files": [
-        "scripts/tests/test_generate_staging_state.py"
+        "scripts/tests/test_operational_health.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
-    },
-    {
-      "files": [
-        "docs/agent/RAW_OPERATIONAL_HEALTH.md"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
+      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
     }
   ],
-  "diff_sha256": "9d3a44a8d0f886f1191d60ffc20921c3f9411e113b4d350ecc5df334e31b72a2",
+  "diff_sha256": "90c567df28474a9a6c29444c12ba89e60ba1565b7a5e49e587f88c7d4a97bb7d",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
@@ -189,7 +117,7 @@
         "Existing shared source admission/claims, snapshots, observations and app_log_events",
         "Existing scoped Railway project token and Vercel staging Git deployment"
       ],
-      "deployment_impact": "Ten existing collector code uploads after protected native merge; append structured events, enforce configured SNKRDUNK work bound; existing API remains pinned and no provider configuration changes.",
+      "deployment_impact": "Existing ten staging collectors; at most two uploads per service (20 builds total), 30-minute bounded build wait. No collector configuration, schedule, source concurrency or source budget changes. Zero manual source requests.",
       "database_writes": 140,
       "source_requests": 36300,
       "estimated_runtime_minutes": 90
@@ -197,7 +125,7 @@
     "recovery": {
       "artifact": "2ff64b43f130f341d2258aba758bd5503c223ebc",
       "procedure": "Recover affected collector with retained compatible base source or an available previous artifact; destination-pinned upload only, same schedules/budgets/guards. Retain informational events; no database rollback or historical rewrite.",
-      "trigger": "Wrong destination, identity/duplicate/denial/integrity failure, unsettled claims or bounded implementation regression",
+      "trigger": "Stop on CRASHED runtime, second FAILED build, destination/configuration mismatch, obsolete staging SHA, or bounded build wait expiry; no blind retry of an unsuccessful upload command.",
       "backup": "No schema migration or data transformation; append-only operational events. Retained base archive and provider artifacts checked.",
       "validation": [
         "docs/agent/evidence/raw-health-preflight-2026-10-05.json",

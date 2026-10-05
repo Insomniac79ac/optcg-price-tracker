@@ -469,3 +469,83 @@ class CollectorRolloutTests(unittest.TestCase):
             self.assertFalse(
                 (root / "services/api/app/services/collector_build.py").exists()
             )
+
+    def test_one_failed_build_retries_but_second_failure_and_crash_stop(self):
+        import deploy_staging_collectors as deploy
+
+        for statuses, succeeds, expected_uploads in [
+            (["FAILED", "SUCCESS"], True, 2),
+            (["FAILED", "FAILED"], False, 2),
+            (["CRASHED"], False, 1),
+        ]:
+            with self.subTest(
+                statuses=statuses
+            ), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "services/api/app/services").mkdir(parents=True)
+                row = {
+                    "name": "snkrdunk-collector",
+                    "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+                    "recovery_deployment_id": "retained",
+                }
+                manifest = root / "mission.json"
+                manifest.write_text(
+                    json.dumps(
+                        {
+                            "target": "staging",
+                            "classification": "AMBER",
+                            "deployment_verification": {"collector_services": [row]},
+                        }
+                    )
+                )
+                before = {
+                    row["name"]: {
+                        "serviceId": row["service_id"],
+                        "startCommand": "python --due-work",
+                        "cronSchedule": "27,57 * * * *",
+                        "latestDeployment": {"id": "retained"},
+                    }
+                }
+                snapshots = [before]
+                for ordinal, status in enumerate(statuses):
+                    snapshot = copy.deepcopy(before)
+                    snapshot[row["name"]]["latestDeployment"] = {
+                        "id": str(ordinal),
+                        "status": status,
+                        "meta": {
+                            "cliMessage": "Structured RAW health exact commit "
+                            + "a" * 40
+                        },
+                    }
+                    snapshots.append(snapshot)
+                with patch.object(deploy.state, "ROOT", root), patch.object(
+                    deploy, "inspect", side_effect=snapshots
+                ), patch.object(
+                    deploy.subprocess, "check_output", return_value="a" * 40
+                ), patch.object(
+                    deploy.state,
+                    "command_json",
+                    return_value={"commit": {"sha": "a" * 40}},
+                ), patch.object(
+                    deploy.subprocess, "run", return_value=Mock(returncode=0)
+                ) as upload, patch.object(
+                    deploy.time, "sleep"
+                ):
+                    args = [
+                        "--manifest",
+                        str(manifest),
+                        "--expected",
+                        "a" * 40,
+                        "--output",
+                        str(root / "result.json"),
+                    ]
+                    if succeeds:
+                        self.assertEqual(deploy.main(args), 0)
+                    else:
+                        with self.assertRaises(deploy.state.VerificationError):
+                            deploy.main(args)
+                    self.assertEqual(upload.call_count, expected_uploads)
+                self.assertEqual((root / "result.json").exists(), succeeds)
+                self.assertFalse(
+                    (root / "services/api/app/services/collector_build.py").exists()
+                )
