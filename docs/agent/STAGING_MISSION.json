@@ -143,9 +143,18 @@
         "application"
       ],
       "reason": "Retain/reconstruct RAW execution evidence and enforce deterministic source, due-work and safety health; no economic semantics, identity guards, source budgets or production change."
+    },
+    {
+      "files": [
+        "apps/web/src/app/admin/(protected)/source-mapping-proposals/page.test.tsx"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "Reproduce deferred release options and await the selectable option before changing the filter, repairing an unrelated required CI race without changing application behavior."
     }
   ],
-  "diff_sha256": "05e94e864b4e676ae5e4967f2345206fb651d94a228cf4b8f308d25ca89a7947",
+  "diff_sha256": "df0e2b660957d358b0dc32437dd8e4521b1f8797f91b9c7ac6a6b92264efcf40",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902",

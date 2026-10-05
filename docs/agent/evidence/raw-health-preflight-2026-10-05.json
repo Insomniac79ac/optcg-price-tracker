@@ -123,7 +123,7 @@
     "backup": "No migration or data transformation; raw captures/attempts retained and PostgreSQL writes remain existing fenced paths. Additional event rows need no destructive reversal."
   },
   "validation": {
-    "offline": "19 machine schema/classification/rollout tests; 28 mocked adapter and PostgreSQL reconstruction regressions; adopted state/policy/delivery suites",
+    "offline": "19 machine schema/classification/rollout tests; 29 mocked adapter and PostgreSQL reconstruction regressions, including capture-time revisit gap; adopted state/policy/delivery suites. Delayed release-option fixture reproduces unrelated frontend CI race before readiness fix; fixed release-filter suite passes.",
     "delivery": "Required engineering-gate, native auto-merge, same staging-delivery lease through ten destination-pinned collector uploads and standard frontend/API/data verification",
     "natural_window": "Observe at least one subsequent scheduled 30-minute cycle per collector after upload; no Run Now. Runtime trigger provenance remains unknown absent authoritative provider proof. Regenerate state after retained completed executions."
   },

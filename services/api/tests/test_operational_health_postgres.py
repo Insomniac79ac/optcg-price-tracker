@@ -176,3 +176,33 @@ def test_epoch_decimal_metrics_can_be_retained(db, monkeypatch):
         assert receipt["exit"]["terminal_state"] == "completed"
         assert receipt["freshness"]["successful_check_age_max"] > 86400
         assert classify(receipt)["status"] == "DEGRADED"
+
+
+def test_revisit_gap_uses_capture_not_completion_or_old_price(db):
+    from test_freshness_queue_postgres import claim, admit, snapshot, finish
+
+    factory, source, mid, _ = db
+    now = datetime.now(timezone.utc)
+    first = now - timedelta(hours=48)
+    second = first + timedelta(hours=24, minutes=5)
+    plan(factory, mid, at=first)
+    for at, delay in [(first, timedelta(seconds=10)), (second, timedelta(seconds=1))]:
+        token = claim(factory, source, at)[0].claim_token
+        admit(factory, token, at)
+        raw_id = snapshot(factory, source, at)
+        finish(
+            factory,
+            token,
+            at + delay,
+            outcome="no_listing",
+            actual_request_cost=1,
+            raw_snapshot_id=raw_id,
+            no_listing_categories={"raw"},
+            category_outcomes={"raw": "no_listing"},
+        )
+    with factory() as session:
+        row = session.execute(text(DUE_SQL)).mappings().one()
+        assert (
+            row["maximum_successful_revisit_gap_seconds"]
+            == (second - first).total_seconds()
+        )

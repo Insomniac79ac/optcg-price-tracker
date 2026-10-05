@@ -13,11 +13,12 @@ and p.is_active and p.verification_status='verified'
 and s.name in ('yuyutei','snkrdunk') and (s.name!='snkrdunk' or m.manual_verified)
 """
 DUE_SQL = """with e as (""" + ELIGIBLE + """), gaps as (
- select w.source_id, w.source_card_mapping_id, a.finished_at,
- extract(epoch from a.finished_at-lag(a.finished_at) over(partition by a.work_id order by a.finished_at)) gap
+ select w.source_id, w.source_card_mapping_id, r.fetched_at,
+ extract(epoch from r.fetched_at-lag(r.fetched_at) over(partition by a.work_id order by r.fetched_at)) gap
  from freshness_attempts a join freshness_work w on w.id=a.work_id
+ join raw_snapshots r on r.id=a.raw_snapshot_id
  where w.kind='refresh' and a.category_outcomes->>'raw' in ('captured','no_listing')
- and a.finished_at >= now()-interval '7 days'
+ and r.fetched_at >= now()-interval '7 days'
 ) select source, case when source='yuyutei' then shard else null end shard,
  count(*) eligible,
  count(*) filter(where checked_at is null or checked_at<=now()-interval '23 hours') due,
