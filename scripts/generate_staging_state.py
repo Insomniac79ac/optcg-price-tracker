@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -156,17 +157,23 @@ def database_snapshot():
 def staging_environment():
     # The documented status operation supports RAILWAY_TOKEN and explicit scope.
     # Never require account/workspace identity from a staging Project Token.
-    data = command_json(
-        [
-            "railway",
-            "status",
-            "--project",
-            PROJECT,
-            "--environment",
-            ENVIRONMENT,
-            "--json",
-        ]
-    )
+    command = [
+        "railway",
+        "status",
+        "--project",
+        PROJECT,
+        "--environment",
+        ENVIRONMENT,
+        "--json",
+    ]
+    for attempt in range(3):
+        try:
+            data = command_json(command)
+            break
+        except VerificationError:
+            if attempt == 2:
+                raise
+            time.sleep((2, 5)[attempt])
     environments = [
         edge["node"] for edge in data.get("environments", {}).get("edges", [])
     ]

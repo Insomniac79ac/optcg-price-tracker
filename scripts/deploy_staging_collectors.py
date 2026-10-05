@@ -83,6 +83,68 @@ def upload(row, expected):
         raise state.VerificationError("Staging collector upload failed: " + row["name"])
 
 
+def read_deployment(deployment_id, service_id, expected):
+    if not re.fullmatch("[0-9a-f-]{36}", deployment_id):
+        raise state.VerificationError("Invalid deployment identity")
+    row = state.railway(
+        f'query {{ deployment(id:"{deployment_id}") {{ id projectId environmentId serviceId status canRedeploy meta }} }}'
+    )["deployment"]
+    meta = row.get("meta") or {}
+    meta = json.loads(meta) if isinstance(meta, str) else meta
+    if (row.get("projectId"), row.get("environmentId"), row.get("serviceId")) != (
+        state.PROJECT,
+        state.ENVIRONMENT,
+        service_id,
+    ) or meta.get("cliMessage") != "Structured RAW health exact commit " + expected:
+        raise state.VerificationError("Uploaded deployment destination/source mismatch")
+    row["meta"] = meta
+    return row
+
+
+def latest_uploaded(row, expected):
+    rows = state.command_json(
+        [
+            "railway",
+            "deployment",
+            "list",
+            "--project",
+            state.PROJECT,
+            "--environment",
+            state.ENVIRONMENT,
+            "--service",
+            row["service_id"],
+            "--limit",
+            "3",
+            "--json",
+        ]
+    )
+    for item in rows:
+        meta = item.get("meta") or {}
+        meta = json.loads(meta) if isinstance(meta, str) else meta
+        if meta.get("cliMessage") == "Structured RAW health exact commit " + expected:
+            return read_deployment(item["id"], row["service_id"], expected)
+    return None
+
+
+def redeploy_uploaded(row, source, expected):
+    # No watch-path/configuration change and no Run Now: rebuild this exact upload.
+    checked = read_deployment(source["id"], row["service_id"], expected)
+    if not checked.get("canRedeploy"):
+        raise state.VerificationError("Uploaded staging snapshot cannot be redeployed")
+    current = state.command_json(
+        ["gh", "api", f"repos/{state.REPOSITORY}/branches/staging"]
+    )
+    if current["commit"]["sha"] != expected:
+        raise state.VerificationError(
+            "Obsolete collector delivery; no redeploy allowed"
+        )
+    result = state.railway(
+        f'mutation {{ deploymentRedeploy(id:"{checked["id"]}",usePreviousImageTag:false) {{ id projectId environmentId serviceId status meta }} }}'
+    )["deploymentRedeploy"]
+    # The clone must preserve both destination and the uploaded source marker.
+    return read_deployment(result["id"], row["service_id"], expected)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -133,12 +195,18 @@ def main(argv=None):
         deadline = time.monotonic() + 1800
         pending = {row["name"] for row in requested}
         retried = {}
+        forced = {}
+        tracked = {}
         deployed = {}
         while pending:
             current = inspect()
             for name in list(pending):
                 service = current[name]
-                if (
+                if name in tracked:
+                    deployment = read_deployment(
+                        tracked[name], service["serviceId"], args.expected
+                    )
+                elif (
                     service["serviceId"],
                     service["startCommand"],
                     service["cronSchedule"],
@@ -158,14 +226,40 @@ def main(argv=None):
                     meta.get("cliMessage")
                     != "Structured RAW health exact commit " + args.expected
                 ):
+                    candidate = latest_uploaded(
+                        next(r for r in requested if r["name"] == name), args.expected
+                    )
+                    if candidate is None:
+                        continue
+                    deployment = candidate
+                if deployment["status"] == "SKIPPED":
+                    if (
+                        name in forced
+                        or deployment["meta"].get("skippedReason")
+                        != "No changes to watched files"
+                    ):
+                        raise state.VerificationError(
+                            "Unrecognized/repeated skipped collector deployment: "
+                            + name
+                        )
+                    forced[name] = deployment["id"]
+                    child = redeploy_uploaded(
+                        next(r for r in requested if r["name"] == name),
+                        deployment,
+                        args.expected,
+                    )
+                    tracked[name] = child["id"]
                     continue
                 if deployment.get("id") == retried.get(name):
                     continue  # allow provider metadata propagation after a retry
                 if deployment["status"] == "FAILED" and name not in retried:
                     retried[name] = deployment["id"]
-                    upload(
-                        next(r for r in requested if r["name"] == name), args.expected
+                    child = redeploy_uploaded(
+                        next(r for r in requested if r["name"] == name),
+                        deployment,
+                        args.expected,
                     )
+                    tracked[name] = child["id"]
                     continue
                 if deployment["status"] in {"FAILED", "CRASHED"}:
                     raise state.VerificationError(
@@ -206,6 +300,7 @@ def main(argv=None):
         },
         "deployments": deployed,
         "bounded_build_retries": retried,
+        "watched_snapshot_redeploys": forced,
         "natural_runs_not_yet_verified": True,
         "production_accessed": False,
     }
