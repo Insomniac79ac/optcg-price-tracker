@@ -422,7 +422,9 @@ def aggregate(due_rows, runs, budgets, now):
             if all(type(v) in {int, float} for v in (limit, used, reserved))
             else None
         )
-        if budget.get("paused_until") and budget["paused_until"] > now:
+        if budget.get("permanent_pause") is True or (
+            budget.get("paused_until") and budget["paused_until"] > now
+        ):
             status = "BLOCKED"
             reasons.add("source_paused")
         if headroom == 0 or budget.get("enabled") is False:
@@ -470,6 +472,7 @@ def aggregate(due_rows, runs, budgets, now):
                 "open_reservations": budget.get("open_reservations"),
                 "reservation_mismatch": budget.get("reservation_mismatch"),
                 "window_seconds": budget.get("window_seconds"),
+                "permanent_pause": budget.get("permanent_pause"),
             },
             "evidence": "state evidence: database.operational_due and database.operational_runs",
         }

@@ -258,6 +258,25 @@ class HealthTests(unittest.TestCase):
             "orphaned_or_unaccounted_reservations", result["snkrdunk"]["reasons"]
         )
 
+    def test_permanent_source_pause_blocks_even_after_receipt_recovery(self):
+        budget = [
+            {
+                "name": "snkrdunk",
+                "permanent_pause": True,
+                "paused_until": None,
+                "reservation_mismatch": False,
+            }
+        ]
+        result = health.aggregate(
+            [{"source": "snkrdunk", "shard": None}],
+            [healthy("snkrdunk")],
+            budget,
+            "2026-10-04T08:03:00+00:00",
+        )
+        self.assertEqual(result["snkrdunk"]["status"], "BLOCKED")
+        self.assertIn("source_paused", result["snkrdunk"]["reasons"])
+        self.assertTrue(result["snkrdunk"]["budget"]["permanent_pause"])
+
     def test_database_integrity_cannot_hide_behind_run_health(self):
         evidence = fixture()
         evidence["database"]["duplicate_active_exact_print_source_groups"] = 1

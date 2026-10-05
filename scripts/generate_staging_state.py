@@ -272,6 +272,7 @@ def sanitize(evidence):
             "used_requests",
             "reserved_requests",
             "paused_until",
+            "permanent_pause",
             "window_started_at",
             "open_reservations",
             "reservation_mismatch",

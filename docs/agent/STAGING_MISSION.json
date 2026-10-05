@@ -46,7 +46,7 @@
       "reason": "Destination-pinned read-only capability diagnostics retain only safe enums and reject unverified access before native arming."
     }
   ],
-  "diff_sha256": "b3a8e37edefad8784658c3a30ecefeea3eaafac4f4ebe94a2b405203ea522cb8",
+  "diff_sha256": "759a6f233988dc942c5900a4490a67a9ea8a9e9f1824c6daf137742670cf27c1",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"

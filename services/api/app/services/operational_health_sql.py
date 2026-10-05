@@ -73,6 +73,7 @@ EVENT_SQL = """select context_json from (
 BUDGET_SQL = """
 select s.name,b.enabled,b.request_limit,b.window_seconds,b.window_started_at,
  b.used_requests,b.reserved_requests,b.paused_until,
+ (b.paused_until is null and b.pause_reason is not null) permanent_pause,
  coalesce(a.open_reservations,0) open_reservations,
  b.reserved_requests!=coalesce(a.open_reservations,0) reservation_mismatch
 from source_dispatch_budgets b join sources s on s.id=b.source_id
