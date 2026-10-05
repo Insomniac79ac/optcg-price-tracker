@@ -154,7 +154,7 @@
       "reason": "Reproduce deferred release options and await the selectable option before changing the filter, repairing an unrelated required CI race without changing application behavior."
     }
   ],
-  "diff_sha256": "df0e2b660957d358b0dc32437dd8e4521b1f8797f91b9c7ac6a6b92264efcf40",
+  "diff_sha256": "f67e54ca11de3b93f37a85ecc3ef55f60acd7b6c33142bd51817f3edfe8e8032",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902",

@@ -236,6 +236,15 @@ class HealthTests(unittest.TestCase):
             result["yuyu"]["blocked_shards"], ["yuyutei-collector-shard-1"]
         )
 
+    def test_database_integrity_cannot_hide_behind_run_health(self):
+        evidence = fixture()
+        evidence["database"]["duplicate_active_exact_print_source_groups"] = 1
+        result = decision(evidence)
+        self.assertEqual(
+            result["operational_health"]["raw_due_work"]["status"], "BLOCKED"
+        )
+        self.assertEqual(result["mission_actions"][0]["action"], "stop_affected_path")
+
     def test_state_contains_actionable_health_with_no_logs(self):
         result = decision(fixture())
         self.assertEqual(

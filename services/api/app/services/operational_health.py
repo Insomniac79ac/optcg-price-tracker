@@ -210,6 +210,8 @@ def classify(summary):
         degraded.append("expired_claims")
     if safety["claims_remaining"] or safety["reservations_remaining"]:
         degraded.append("unsettled_execution")
+    if summary["exit"]["stopped_reason"] == "admission_unconfigured":
+        degraded.append("admission_unconfigured")
     if summary["exit"]["terminal_state"] != "completed":
         degraded.append("execution_incomplete")
     if work["max_work"] is not None and (work["claimed"] or 0) > work["max_work"]:

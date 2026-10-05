@@ -330,6 +330,8 @@ def _drain(
         is None
     ):
         session.rollback()
+        if telemetry is not None:
+            telemetry["stopped_reason"] = "admission_unconfigured"
         return []  # unconfigured admission is closed, never unlimited
     if max_work is not None and (type(max_work) is not int or max_work < 1):
         raise ValueError("positive execution work bound required")
@@ -342,6 +344,8 @@ def _drain(
                     telemetry["stopped_reason"] = "work_bound"
                 return results
             if monotonic() + mapping_seconds > deadline:
+                if telemetry is not None:
+                    telemetry["stopped_reason"] = "runtime_bound"
                 return results
             ownership_check(session)
             claims = claim_due(
@@ -415,6 +419,8 @@ def _drain(
                     )
                 return results
             sleep(delay_seconds)
+    if telemetry is not None:
+        telemetry["stopped_reason"] = "runtime_bound"
     return results
 
 

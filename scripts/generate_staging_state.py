@@ -482,6 +482,25 @@ def build_state(evidence):
     blockers.extend(
         {"id": err, "scope": "snapshot completeness"} for err in evidence["errors"]
     )
+    operational = health.aggregate(
+        db.get("operational_due", []),
+        db.get("operational_runs", []),
+        db["budgets"],
+        db["as_of"][0]["at"],
+    )
+    integrity_reasons = []
+    if db["duplicate_active_exact_print_source_groups"]:
+        integrity_reasons.append("duplicate_active_exact_mapping")
+    if any(r["intentional_gap_rows"] for r in db["market_value"]):
+        integrity_reasons.append("immutable_history_gap_populated")
+    if integrity_reasons:
+        for source in ("yuyu", "snkrdunk"):
+            operational[source]["status"] = "BLOCKED"
+            operational[source]["action"] = "stop_affected_path"
+            operational[source]["reasons"] = sorted(
+                set(operational[source]["reasons"] + integrity_reasons)
+            )
+        operational["raw_due_work"]["status"] = "BLOCKED"
     return {
         "schema_version": 2,
         "verified_at": db["as_of"][0]["at"],
@@ -497,12 +516,7 @@ def build_state(evidence):
             "services": services,
             "collector_runtime_sha": UNKNOWN,
         },
-        "operational_health": health.aggregate(
-            db.get("operational_due", []),
-            db.get("operational_runs", []),
-            db["budgets"],
-            db["as_of"][0]["at"],
-        ),
+        "operational_health": operational,
         "coverage": coverage,
         "yuyu": {
             "eligible_mappings": eligible.get("yuyutei", 0),
