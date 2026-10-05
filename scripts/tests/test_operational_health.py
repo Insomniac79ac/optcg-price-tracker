@@ -474,9 +474,11 @@ class CollectorRolloutTests(unittest.TestCase):
         import deploy_staging_collectors as deploy
 
         for statuses, succeeds, expected_uploads in [
-            (["FAILED", "SUCCESS"], True, 2),
-            (["FAILED", "FAILED"], False, 2),
+            (["FAILED", "SUCCESS"], True, 1),
+            (["FAILED", "FAILED"], False, 1),
             (["CRASHED"], False, 1),
+            (["SKIPPED", "SUCCESS"], True, 1),
+            (["SKIPPED", "SKIPPED"], False, 1),
         ]:
             with self.subTest(
                 statuses=statuses
@@ -514,7 +516,8 @@ class CollectorRolloutTests(unittest.TestCase):
                         "status": status,
                         "meta": {
                             "cliMessage": "Structured RAW health exact commit "
-                            + "a" * 40
+                            + "a" * 40,
+                            "skippedReason": "No changes to watched files",
                         },
                     }
                     snapshots.append(snapshot)
@@ -530,6 +533,12 @@ class CollectorRolloutTests(unittest.TestCase):
                     deploy.subprocess, "run", return_value=Mock(returncode=0)
                 ) as upload, patch.object(
                     deploy.time, "sleep"
+                ), patch.object(
+                    deploy, "redeploy_uploaded", return_value={"id": "retry-new"}
+                ) as rebuild, patch.object(
+                    deploy,
+                    "read_deployment",
+                    return_value=snapshots[-1][row["name"]]["latestDeployment"],
                 ):
                     args = [
                         "--manifest",
@@ -545,7 +554,54 @@ class CollectorRolloutTests(unittest.TestCase):
                         with self.assertRaises(deploy.state.VerificationError):
                             deploy.main(args)
                     self.assertEqual(upload.call_count, expected_uploads)
+                    self.assertEqual(
+                        rebuild.call_count, 0 if statuses == ["CRASHED"] else 1
+                    )
                 self.assertEqual((root / "result.json").exists(), succeeds)
                 self.assertFalse(
                     (root / "services/api/app/services/collector_build.py").exists()
                 )
+
+    def test_uploaded_snapshot_destination_and_source_are_exact(self):
+        import deploy_staging_collectors as deploy
+
+        correct = {
+            "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "projectId": deploy.state.PROJECT,
+            "environmentId": deploy.state.ENVIRONMENT,
+            "serviceId": "service",
+            "meta": {"cliMessage": "Structured RAW health exact commit " + "a" * 40},
+        }
+        with patch.object(
+            deploy.state, "railway", return_value={"deployment": correct}
+        ):
+            self.assertEqual(
+                deploy.read_deployment(correct["id"], "service", "a" * 40), correct
+            )
+        for field in ("projectId", "environmentId", "serviceId", "meta"):
+            wrong = copy.deepcopy(correct)
+            wrong[field] = {} if field == "meta" else "wrong"
+            with self.subTest(field=field), patch.object(
+                deploy.state, "railway", return_value={"deployment": wrong}
+            ):
+                with self.assertRaises(deploy.state.VerificationError):
+                    deploy.read_deployment(correct["id"], "service", "a" * 40)
+
+    def test_redeploy_refuses_unavailable_snapshot_and_obsolete_branch(self):
+        import deploy_staging_collectors as deploy
+
+        row = {"service_id": "service"}
+        source = {"id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}
+        for allowed in (False, True):
+            with self.subTest(allowed=allowed), patch.object(
+                deploy,
+                "read_deployment",
+                return_value={**source, "canRedeploy": allowed},
+            ), patch.object(
+                deploy.state, "command_json", return_value={"commit": {"sha": "b" * 40}}
+            ), patch.object(
+                deploy.state, "railway"
+            ) as mutate:
+                with self.assertRaises(deploy.state.VerificationError):
+                    deploy.redeploy_uploaded(row, source, "a" * 40)
+                mutate.assert_not_called()

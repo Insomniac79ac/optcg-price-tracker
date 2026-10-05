@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Finish structured RAW staging instrumentation after bounded Railway image-build failures; retry once without source-policy changes and allow safe exact-native-merge delivery replay",
+  "mission": "Complete watched-snapshot structured RAW staging rollout with exact destination/source verification and bounded read recovery",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,21 +20,21 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ci.yml"
+        "scripts/deploy_staging_collectors.py"
       ],
       "effects": [
         "infrastructure"
       ],
-      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
+      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
     },
     {
       "files": [
-        "scripts/deploy_staging_collectors.py"
+        "scripts/generate_staging_state.py"
       ],
       "effects": [
-        "staging_deployment"
+        "state_tooling"
       ],
-      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
+      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
     },
     {
       "files": [
@@ -43,10 +43,10 @@
       "effects": [
         "tests"
       ],
-      "reason": "Bounded staging build recovery with unchanged destination, configuration, schedules, source budgets and identity/promotion guards."
+      "reason": "Recover exact uploaded staging snapshot without changing schedules, configuration, budgets, guards or persistent pause."
     }
   ],
-  "diff_sha256": "90c567df28474a9a6c29444c12ba89e60ba1565b7a5e49e587f88c7d4a97bb7d",
+  "diff_sha256": "2a18bcbe0e75fea1d192ef9c4bef0a54955431c04749fa84167ab4a539b238b2",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
@@ -117,7 +117,7 @@
         "Existing shared source admission/claims, snapshots, observations and app_log_events",
         "Existing scoped Railway project token and Vercel staging Git deployment"
       ],
-      "deployment_impact": "Existing ten staging collectors; at most two uploads per service (20 builds total), 30-minute bounded build wait. No collector configuration, schedule, source concurrency or source budget changes. Zero manual source requests.",
+      "deployment_impact": "Existing ten staging collectors; at most 20 image builds and 30 deployment records including skipped uploads and one failed-build retry per service. 30-minute bounded wait. No service configuration, schedule, concurrency or source budget changes. Zero manual source requests.",
       "database_writes": 140,
       "source_requests": 36300,
       "estimated_runtime_minutes": 90
@@ -125,7 +125,7 @@
     "recovery": {
       "artifact": "2ff64b43f130f341d2258aba758bd5503c223ebc",
       "procedure": "Recover affected collector with retained compatible base source or an available previous artifact; destination-pinned upload only, same schedules/budgets/guards. Retain informational events; no database rollback or historical rewrite.",
-      "trigger": "Stop on CRASHED runtime, second FAILED build, destination/configuration mismatch, obsolete staging SHA, or bounded build wait expiry; no blind retry of an unsuccessful upload command.",
+      "trigger": "Stop on CRASHED, second FAILED build, unknown or repeated SKIPPED reason, destination/source/configuration mismatch, obsolete SHA or timeout. Never blindly retry a mutation.",
       "backup": "No schema migration or data transformation; append-only operational events. Retained base archive and provider artifacts checked.",
       "validation": [
         "docs/agent/evidence/raw-health-preflight-2026-10-05.json",
