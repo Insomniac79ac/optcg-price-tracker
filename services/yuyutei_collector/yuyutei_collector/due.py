@@ -50,6 +50,7 @@ def run_due(*, shard_index, chunk_size=70, session_factory=SessionLocal, runner=
             runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
             mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
             chunk_size=chunk_size,
+            max_work=settings.DUE_MAX_PRODUCTS_PER_RUN,
             shard_index=shard_index,
             delay_seconds=max(0, settings.YUYUTEI_REQUEST_DELAY_MS) / 1000,
         )
