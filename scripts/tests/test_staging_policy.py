@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from staging_policy import evaluate, RED
+import yaml
 
 
 class PolicyTests(unittest.TestCase):
@@ -64,6 +65,33 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(self.result()["eligible"])
         del self.m["safeguards"]["recovery"]["validation"]
         self.assertFalse(self.result()["eligible"])
+
+
+class NativeDeliveryRegressionTests(unittest.TestCase):
+    def setUp(self):
+        root = Path(__file__).resolve().parents[2]
+        self.ci = yaml.load((root / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+        self.delivery = yaml.load((root / '.github/workflows/staging-delivery.yml').read_text(), Loader=yaml.BaseLoader)
+
+    def test_native_arming_cannot_wait_for_its_required_gate(self):
+        # Waiting for engineering-gate made --auto fall through to a direct
+        # merge. Keep that gate required and independent of the lease owner.
+        self.assertEqual(self.ci['jobs']['staging-automerge']['needs'], 'policy-gate')
+        self.assertNotIn('staging-automerge', self.ci['jobs']['engineering-gate']['needs'])
+        self.assertIn('frontend-build', self.ci['jobs']['engineering-gate']['needs'])
+        self.assertIn('backend-tests', self.ci['jobs']['engineering-gate']['needs'])
+
+    def test_no_direct_merge_fallback_and_head_remains_pinned(self):
+        job = self.delivery['jobs']['deliver']
+        arm, wait = job['steps'][:2]
+        self.assertIn('enablePullRequestAutoMerge', arm['run'])
+        self.assertIn('expectedHeadOid:$head', arm['run'])
+        self.assertNotIn('gh pr merge', arm['run'])
+        self.assertIn(".head.sha", wait['run'])
+        self.assertEqual(wait['env']['HEAD'], '${{ inputs.head }}')
+        self.assertEqual(job['concurrency']['group'], 'card-pirate-staging-delivery')
+        self.assertEqual(job['concurrency']['cancel-in-progress'], 'false')
+        self.assertIn('Required staging environment secret unavailable: $name', arm['run'])
 
 
 if __name__ == "__main__":

@@ -15,7 +15,9 @@ permissions:
 # job) and docs/deployment.md.
 jobs:
   staging-automerge:
-    needs: engineering-gate
+    # Arm while the protected engineering-gate is pending. GitHub owns the
+    # final merge decision; the delivery job retains its concurrency lease.
+    needs: policy-gate
     if: github.event_name == 'pull_request' && github.base_ref == 'staging' && github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && vars.STAGING_AUTONOMY_ENABLED == 'true'
     uses: ./.github/workflows/staging-delivery.yml
     permissions:

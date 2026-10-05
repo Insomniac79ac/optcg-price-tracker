@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Verify autonomous staging activation and document delivery evidence interpretation",
+  "mission": "Complete existing PR #38 staging activation with genuine native auto-merge and verified delivery",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -35,11 +35,70 @@
         "tests"
       ],
       "reason": "Reproduce delayed health-report loading and wait for the rendered gap tab before clicking, fixing the CI race without changing application behavior."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/staging-delivery.yml"
+      ],
+      "effects": [
+        "infrastructure"
+      ],
+      "reason": "Remove the direct-merge CLI fallback by arming native auto-merge at the checked head while the required engineering-gate is pending. Preserve branch protection, concurrency ownership, staged credential checks and post-deploy verification."
+    },
+    {
+      "files": [
+        "scripts/tests/test_staging_policy.py",
+        "docs/agent/evidence/staging-native-arm-preflight-2026-10-05.json"
+      ],
+      "effects": [
+        "tests",
+        "documentation"
+      ],
+      "reason": "Reproduce the existing native arming defects and retain bounded preflight/recovery evidence for the workflow correction."
     }
   ],
-  "diff_sha256": "e615e2948cbf3944aa61c420cb42beb36caaaef10a25af6207544c6488fbe479",
+  "diff_sha256": "dfa282437b1726f1f4c3be275cd853d99a0937608216c99b64020f78aab9670a",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "GitHub staging-delivery environment",
+        "card-pirate-staging-delivery concurrency group",
+        "existing Vercel staging project prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+      ],
+      "routes": [
+        "Existing canonical staging /, /prints/5661, /analytics and read-only health/version/auth checks"
+      ],
+      "dependencies": [
+        "Existing required CI and GitHub native auto-merge",
+        "Existing staging Railway API/database and Vercel Git integration"
+      ],
+      "deployment_impact": "Staging frontend Git deployment only after protected engineering-gate passes; existing API revision remains pinned. No provider configuration changes.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 40
+    },
+    "recovery": {
+      "artifact": "6f5a1947f7304885f115b679ec155efe2bb0cf39",
+      "procedure": "Disable the PR auto-merge request on a failed unmerged delivery; restore the retained workflow source in a draft fix-forward PR for diagnosis, without merging or executing the old direct-merge path. Existing canonical frontend READY artifact dpl_CM3EaxCE1cp7xj2FGVKZjEzo3xtE remains the destination-pinned recovery artifact if post-merge frontend verification fails.",
+      "trigger": "Wrong head, missing credentials, failed gate, provenance mismatch, runtime failure or invariant failure. Refuse merge and retain evidence; do not bypass guards.",
+      "backup": "Not applicable: no persistent database or provider configuration mutation",
+      "validation": [
+        "docs/agent/evidence/staging-native-arm-preflight-2026-10-05.json"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py"
+      ],
+      "observation_window": "One native merge and normal Vercel staging Git build; hold concurrency through the full paced browser/data audit and CURRENT_STATE generation."
+    }
   }
 }

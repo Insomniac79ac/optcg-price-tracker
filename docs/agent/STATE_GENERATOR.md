@@ -82,6 +82,12 @@ is readable. Retain the native auto-merge event and checked head SHA as evidence
 `gh pr merge --auto` can merge immediately when a PR is already mergeable, so the
 command line alone is not proof that native auto-merge was armed.
 
+The delivery owner now uses the head-pinned `enablePullRequestAutoMerge`
+mutation after policy validation while `engineering-gate` is pending. The
+protected gate still requires every applicable CI job to pass before GitHub
+merges. The owner retains its staging concurrency lease through that wait,
+deployment verification and state generation, and refuses a changed PR head.
+
 ## Reading the result
 
 Schema version 2 keeps the requested top-level sections and adds collection mode,
