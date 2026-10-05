@@ -1,0 +1,29 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-05T23:05:06.817854+00:00",
+  "state_evidence": {
+    "artifact": "evidence/staging-state-62809ffe916fe79b.json",
+    "sha256": "62809ffe916fe79b0799353d0c085589fb9f45a4330e32b2324bfeb59823a2ea",
+    "collected_at": "2026-10-05T23:05:03.356390+00:00",
+    "database_read_only": true,
+    "database_fingerprint": "passed"
+  },
+  "prior_rollout_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+  "recovery_archive_sha256": "e8ee858de5373c9a4260f1a077759e60050e8d1f7edf1949a58086ba7a26d894",
+  "mutations": {
+    "existing_pending_discovery_scopes": 59,
+    "new_scopes": 0,
+    "mapping_approvals": 0,
+    "quarantine_releases": 0,
+    "schedules": 0,
+    "budget_envelopes": 0,
+    "concurrency": 0,
+    "max_work_per_run": 8,
+    "discovery_limit_products": 500,
+    "discovery_limit_pages": 3,
+    "psa10_activation": false
+  },
+  "request_safety": "Same source budget, admission ordinal, lease, 9 refresh shards and existing serial worker. Required denial pauses source. No extra request lane/runner/scheduler. Each existing discovery scope repeats at +24h after a fenced result.",
+  "identity_safety": "Candidates and pending proposal versions only; no approval. Approved/rejected decision evidence preserved. Incomplete/ambiguous enumeration cannot infer an exact printing. No blocked scope activation.",
+  "production_accessed": false
+}
