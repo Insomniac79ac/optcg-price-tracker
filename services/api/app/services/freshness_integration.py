@@ -88,6 +88,7 @@ class Attempt:
         self.denied = False
         self.raw_snapshot_id = None
         self.result = None
+        self.health = {"http_403": 0, "http_429": 0, "optional_resource": 0}
 
     def check(self):
         if self.stopped:
@@ -114,6 +115,10 @@ class Attempt:
             self.session.rollback()
             self.stopped = str(exc)
             raise AdmissionStopped(self.stopped) from exc
+
+    def record_http(self, status):
+        if status in {403, 429}:
+            self.health[f"http_{status}"] += 1
 
     def deny(self):
         self.denied = True
@@ -142,6 +147,7 @@ class Attempt:
                     raise AdmissionStopped(
                         "browser redirect requires explicit admitted navigation"
                     )
+                self.record_http(response.status)
                 if response.status in {403, 429}:
                     self.deny()
                 route.fulfill(response=response)
@@ -161,6 +167,7 @@ class Attempt:
         """
         self.admit()
         response = client.get(url, follow_redirects=False)
+        self.record_http(response.status_code)
         if response.status_code in {403, 429}:
             self.deny()
         return response
@@ -170,9 +177,12 @@ class Attempt:
         response = page.context.request.get(
             url, max_redirects=0, max_retries=0, timeout=20000
         )
+        self.record_http(response.status)
         if response.status in {403, 429}:
             self.deny()
         self.check()
+        if not response.ok:
+            self.health["optional_resource"] += 1
         return response.body() if response.ok else None
 
     def snapshot(self, source_id, url, step, parser_version):
@@ -279,7 +289,7 @@ def price_facts(session, work_id, *, clock=utc_now):
     return facts
 
 
-def drain(
+def _drain(
     session,
     source_id,
     owner,
@@ -293,7 +303,9 @@ def drain(
     ownership_check=lambda session: None,
     clock=utc_now,
     monotonic=time.monotonic,
-    sleep=time.sleep
+    sleep=time.sleep,
+    max_work=None,
+    telemetry=None,
 ):
     """Serial bounded chunks. Claim just-in-time so unstarted tails stay pending.
 
@@ -319,10 +331,16 @@ def drain(
     ):
         session.rollback()
         return []  # unconfigured admission is closed, never unlimited
+    if max_work is not None and (type(max_work) is not int or max_work < 1):
+        raise ValueError("positive execution work bound required")
     deadline = monotonic() + runtime_seconds
     results = []
     while monotonic() + mapping_seconds <= deadline:
         for _ in range(chunk_size):
+            if max_work is not None and len(results) >= max_work:
+                if telemetry is not None:
+                    telemetry["stopped_reason"] = "work_bound"
+                return results
             if monotonic() + mapping_seconds > deadline:
                 return results
             ownership_check(session)
@@ -361,12 +379,21 @@ def drain(
                         ),
                         failure=";".join(outcome.reasons),
                     )
+                if (
+                    telemetry is not None
+                    and getattr(outcome, "classification", None)
+                    == "challenge_or_captcha"
+                ):
+                    telemetry["challenge"] += 1
+                if attempt.result.raw_snapshot_id is None:
+                    attempt.result.raw_snapshot_id = attempt.raw_snapshot_id
                 attempt.finish(attempt.result)
             except AdmissionStopped as exc:
                 session.rollback()
                 attempt.result = CaptureResult(
                     "source_denial" if attempt.denied else "transient_failure",
                     failure=str(exc),
+                    raw_snapshot_id=attempt.raw_snapshot_id,
                 )
                 attempt.finish(attempt.result)
             except Exception:
@@ -374,9 +401,45 @@ def drain(
                 # Ownership/lease failures propagate; the expired reservation is
                 # recovered conservatively. Never reacquire a singleton here.
                 raise
+            if telemetry is not None:
+                for field, count in attempt.health.items():
+                    telemetry[field] += count
             results.append(price_facts(session, claims[0].work_id, clock=clock))
             session.commit()
             if attempt.stopped or attempt.result.outcome == "source_denial":
+                if telemetry is not None:
+                    telemetry["stopped_reason"] = (
+                        "source_denial"
+                        if attempt.result.outcome == "source_denial"
+                        else "admission_stopped"
+                    )
                 return results
             sleep(delay_seconds)
     return results
+
+
+def drain(session, source_id, owner, runner, **kwargs):
+    """Retain execution identity automatically on the natural due-work path."""
+    from app.services.operational_health_runtime import execution
+
+    with execution(
+        session,
+        source_id,
+        owner,
+        shard=kwargs.get("shard_index"),
+        max_work=kwargs.get("max_work"),
+        runtime_seconds=kwargs.get("runtime_seconds"),
+        singleton=(
+            "held"
+            if session.info.get("snkrdunk_collection_lock_pid") is not None
+            else "not_required" if kwargs.get("shard_index") is not None else "unknown"
+        ),
+    ) as telemetry:
+        return _drain(
+            session,
+            source_id,
+            telemetry["owner"] if telemetry else owner,
+            runner,
+            telemetry=telemetry,
+            **kwargs,
+        )

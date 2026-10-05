@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "target": "staging",
+  "observed_at": "2026-10-05T12:37:35.505580+00:00",
+  "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+  "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+  "collector_services": [
+    {
+      "name": "snkrdunk-collector",
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "recovery_deployment_id": "4e3aacb2-4058-4206-8669-fb3a1fdd3e0f"
+    },
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "recovery_deployment_id": "3fdd75fc-bb90-49b1-8fd5-448ac75c25c3"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "recovery_deployment_id": "344afe97-cab9-4a82-904a-0823e5cf2129"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "recovery_deployment_id": "e2e27f6c-8f3a-418c-9585-bc96df6e6757"
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "recovery_deployment_id": "79d748e9-a20e-404d-9c38-f72ef02f1722"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "recovery_deployment_id": "9d66cc5f-7a08-41d2-a742-d440c65575fa"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "recovery_deployment_id": "65940e64-cd2b-4408-b8df-13377daa3192"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "recovery_deployment_id": "3a501c8f-1474-4630-81ce-8981a516d96e"
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "recovery_deployment_id": "19fdf2c4-14a0-43cf-9c5a-f1db668f6db4"
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "recovery_deployment_id": "28ecb5e3-c5ac-4023-8c1a-ad578ef75c51"
+    }
+  ],
+  "baseline_state_evidence_sha256": "bfd757881c32187f605c25df96820a38e8b96b3d76e04db7e463e7afa0ebb267",
+  "baseline_freshness": {
+    "yuyu": {
+      "eligible": 2100,
+      "due": 124,
+      "overdue": 88,
+      "claimed": 2,
+      "backoff": 0,
+      "quarantined": 0,
+      "never_checked": 0,
+      "within_23h": 1976,
+      "between_23_24h": 36,
+      "over_24h": 88,
+      "expired_claims": 0
+    },
+    "snkrdunk": {
+      "eligible": 353,
+      "due": 39,
+      "overdue": 22,
+      "claimed": 0,
+      "backoff": 0,
+      "quarantined": 22,
+      "never_checked": 22,
+      "within_23h": 314,
+      "between_23_24h": 17,
+      "over_24h": 0,
+      "expired_claims": 0
+    }
+  },
+  "budgets": {
+    "yuyutei": {
+      "enabled": true,
+      "request_limit": 9000,
+      "window_seconds": 1800,
+      "used_requests": 719,
+      "reserved_requests": 600,
+      "paused_until": null
+    },
+    "snkrdunk": {
+      "enabled": true,
+      "request_limit": 3100,
+      "window_seconds": 1800,
+      "used_requests": 2850,
+      "reserved_requests": 0,
+      "paused_until": null
+    }
+  },
+  "mutation": {
+    "collector_uploads": 10,
+    "new_services": 0,
+    "cron_changes": 0,
+    "budget_changes": 0,
+    "mapping_changes": 0,
+    "migrations": 0,
+    "event_rows": "Append two sanitized app_log_events per execution; no raw/price truth duplication",
+    "SNKRDUNK_execution_bound": "Respect existing configured BATCH_MAX_MAPPINGS_PER_RUN=70 in due-work",
+    "source_requests": "All collection stays under existing source-wide admission, token fencing and budget; no direct scraping from rollout or state tools"
+  },
+  "recovery": {
+    "source_commit": "2ff64b43f130f341d2258aba758bd5503c223ebc",
+    "retained_archive_sha256": "7d16738a3768d13a243f32ae807439c1cd8fafa34a1779a74b0d0b85c8e98638",
+    "compatibility": "No migration; prior collector code can read unchanged claims, price states, budgets and domain tables. New events are informational only. Existing admission/fencing/identity regression tests passed.",
+    "deployment_recovery": "Existing Yuyu artifacts report canRollback/canRedeploy=true. SNKRDUNK currently false: use retained compatible source archive and destination-pinned upload rather than assuming rollback API is available.",
+    "procedure": "Restore retained source in isolated checkout and upload only affected existing staging service with the same startCommand and cron; do not run collectors manually or alter budgets. New evidence rows remain retained. Stop source path on integrity/denial; investigate independently under policy.",
+    "backup": "No migration or data transformation; raw captures/attempts retained and PostgreSQL writes remain existing fenced paths. Additional event rows need no destructive reversal."
+  },
+  "validation": {
+    "offline": "19 machine schema/classification/rollout tests; 28 mocked adapter and PostgreSQL reconstruction regressions; adopted state/policy/delivery suites",
+    "delivery": "Required engineering-gate, native auto-merge, same staging-delivery lease through ten destination-pinned collector uploads and standard frontend/API/data verification",
+    "natural_window": "Observe at least one subsequent scheduled 30-minute cycle per collector after upload; no Run Now. Runtime trigger provenance remains unknown absent authoritative provider proof. Regenerate state after retained completed executions."
+  },
+  "provider_docs_checked": "2026-10-05",
+  "official_references": [
+    "https://docs.railway.com/cron-jobs",
+    "https://docs.railway.com/cli/up"
+  ],
+  "installed_railway_version": "5.62.1",
+  "production_accessed": false
+}

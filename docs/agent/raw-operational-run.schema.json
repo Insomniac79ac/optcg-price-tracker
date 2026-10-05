@@ -1,0 +1,523 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:card-pirate:raw-operational-run:v1",
+  "title": "Card Pirate RAW execution summary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "identity",
+    "work",
+    "failure",
+    "freshness",
+    "safety",
+    "exit"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "service",
+        "shard",
+        "execution_id",
+        "deployment_id",
+        "revision",
+        "image",
+        "scheduled_at",
+        "started_at",
+        "finished_at",
+        "runtime_seconds",
+        "trigger"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "yuyutei",
+            "snkrdunk"
+          ]
+        },
+        "service": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "shard": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "execution_id": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "deployment_id": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "revision": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "image": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "scheduled_at": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "runtime_seconds": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "trigger": {
+          "enum": [
+            "natural",
+            "manual",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible",
+        "due",
+        "selected",
+        "claimed",
+        "attempted",
+        "listed",
+        "no_listing",
+        "promotional_hidden",
+        "accepted_observations",
+        "raw_snapshots",
+        "max_work",
+        "runtime_limit_seconds"
+      ],
+      "properties": {
+        "eligible": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "due": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "selected": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "claimed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "attempted": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "listed": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "no_listing": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "promotional_hidden": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "accepted_observations": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "raw_snapshots": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "max_work": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "runtime_limit_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transient",
+        "parsing",
+        "identity",
+        "optional_resource",
+        "http_403",
+        "http_429",
+        "challenge",
+        "unexpected_skip"
+      ],
+      "properties": {
+        "transient": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "parsing": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "identity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "optional_resource": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "http_403": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "http_429": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "challenge": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "unexpected_skip": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "successful_checks",
+        "deadline_misses",
+        "successful_check_age_p50",
+        "successful_check_age_p95",
+        "successful_check_age_max",
+        "never_checked",
+        "retries",
+        "backoff",
+        "maximum_successful_revisit_gap_seconds"
+      ],
+      "properties": {
+        "successful_checks": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "deadline_misses": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "successful_check_age_p50": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "successful_check_age_p95": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "successful_check_age_max": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "never_checked": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "retries": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "backoff": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "maximum_successful_revisit_gap_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claims_remaining",
+        "expired_claims",
+        "reservations_remaining",
+        "reservation_overruns",
+        "singleton",
+        "duplicate_requests",
+        "wrong_shard",
+        "identity_integrity",
+        "promotion_policy",
+        "production_impact"
+      ],
+      "properties": {
+        "claims_remaining": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "expired_claims": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "reservations_remaining": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "reservation_overruns": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "singleton": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "duplicate_requests": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "wrong_shard": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "identity_integrity": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "promotion_policy": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "production_impact": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "terminal_state",
+        "exit_code",
+        "stopped_reason"
+      ],
+      "properties": {
+        "terminal_state": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "exit_code": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "stopped_reason": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

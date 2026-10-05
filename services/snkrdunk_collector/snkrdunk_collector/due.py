@@ -58,10 +58,14 @@ def write_capture(session, mapping, holder, attempt):
                         and conditions[label]["raw_text"] == "出品待ち"
                         for label in expected
                     )
-                    else "absent"
-                    if not conditions
-                    and extraction["raw"]["condition_container"].get("category_labels_complete")
-                    else "parsing_failure"
+                    else (
+                        "absent"
+                        if not conditions
+                        and extraction["raw"]["condition_container"].get(
+                            "category_labels_complete"
+                        )
+                        else "parsing_failure"
+                    )
                 )
             if category_outcomes[category] == "no_listing":
                 unlisted.add(category)
@@ -98,6 +102,22 @@ def run_due(
         engine = probe.get_bind()
     with lock_factory(engine) as lock:
         if not lock.acquired:
+            from app.services.operational_health_runtime import execution
+
+            with session_factory() as session:
+                source_id = session.scalar(
+                    select(Source.id).where(Source.name == "snkrdunk")
+                )
+                with execution(
+                    session,
+                    source_id,
+                    "snkrdunk-due",
+                    max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
+                    runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
+                    singleton="contended",
+                ) as telemetry:
+                    if telemetry is not None:
+                        telemetry["stopped_reason"] = "singleton_contended"
             return []
         with pinned_session(lock, session_factory) as session:
             assert_lock_owned(session)
@@ -112,6 +132,7 @@ def run_due(
                 runtime_seconds=settings.BATCH_TOTAL_TIMEOUT_S,
                 mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
                 chunk_size=chunk_size,
+                max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
                 delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
                 ownership_check=assert_lock_owned,
             )
