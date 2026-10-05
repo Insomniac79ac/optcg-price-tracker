@@ -6,6 +6,7 @@ header. Never prints response bodies, header values, error messages or metadata.
 """
 
 import json
+import io
 import os
 import subprocess
 from pathlib import Path
@@ -44,9 +45,63 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError("Provider redirect refused")
 
 
+class CurlResponse(io.StringIO):
+    def __init__(self, body, status):
+        super().__init__(body)
+        self.status = status
+
+
+class CurlOpener:
+    """Use the documented curl transport; credentials exist only on stdin.
+
+    No redirect following, temporary credential files or arbitrary error output.
+    The query, header and destination validation are identical to the HTTP probe.
+    """
+
+    def open(self, request, timeout):
+        config = "\n".join(
+            [
+                "url = " + json.dumps(ENDPOINT),
+                'request = "POST"',
+                'header = "Content-Type: application/json"',
+                "header = "
+                + json.dumps(
+                    "Project-Access-Token: "
+                    + request.get_header("Project-access-token")
+                ),
+                "data = " + json.dumps(request.data.decode()),
+            ]
+        )
+        command = subprocess.run(
+            [
+                "curl",
+                "-q",
+                "--silent",
+                "--show-error",
+                "--config",
+                "-",
+                "--max-time",
+                str(timeout),
+                "--write-out",
+                "\n%{http_code}",
+            ],
+            input=config,
+            capture_output=True,
+            text=True,
+            timeout=timeout + 5,
+        )
+        if command.returncode:
+            raise ValueError("HTTP transport unavailable")
+        body, code = command.stdout.rsplit("\n", 1)
+        status = int(code)
+        if status < 200 or status >= 300:
+            raise urllib.error.HTTPError(ENDPOINT, status, "HTTP failure", {}, None)
+        return CurlResponse(body, status)
+
+
 def probe(token, opener=None):
     results = []
-    opener = opener or urllib.request.build_opener(NoRedirect)
+    opener = opener or CurlOpener()
     for name, query in PROBES.items():
         result = {
             "probe": name,

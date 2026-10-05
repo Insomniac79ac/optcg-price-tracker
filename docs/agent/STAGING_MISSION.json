@@ -118,7 +118,7 @@
       "reason": "Use documented least-privilege staging Project Token identity and destination-pinned CLI status; complete the existing bounded ten-service instrumentation rollout."
     }
   ],
-  "diff_sha256": "3b953a391d6818c258c867a8521ea6a156961c636b4d5cb70de4b71ccc4322e4",
+  "diff_sha256": "9d3a44a8d0f886f1191d60ffc20921c3f9411e113b4d350ecc5df334e31b72a2",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",

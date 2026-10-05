@@ -135,3 +135,24 @@ class ProbeTests(unittest.TestCase):
             probe.PROBES["project_token_identity"],
             "query { projectToken { projectId environmentId } }",
         )
+
+    def test_documented_http_transport_keeps_token_off_argv(self):
+        payload = {
+            "data": {
+                "projectToken": {
+                    "projectId": probe.PROJECT,
+                    "environmentId": probe.ENVIRONMENT,
+                }
+            }
+        }
+        with patch.object(
+            probe.subprocess,
+            "run",
+            return_value=Mock(returncode=0, stdout=json.dumps(payload) + "\n200"),
+        ) as command:
+            result = probe.probe("SECRET-SENTINEL")
+        self.assertEqual(result["status"], "VERIFIED")
+        self.assertNotIn("SECRET-SENTINEL", json.dumps(command.call_args.args))
+        self.assertNotIn("SECRET-SENTINEL", json.dumps(result))
+        self.assertIn("Project-Access-Token", command.call_args.kwargs["input"])
+        self.assertNotIn("--location", command.call_args.args[0])
