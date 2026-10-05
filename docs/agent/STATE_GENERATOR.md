@@ -57,6 +57,31 @@ leave an unreferenced evidence file, but cannot truncate the previous snapshot.
 Concurrent invocations are not scheduled by this tool; callers should run one
 refresh at a time.
 
+## Delivery evidence and activation checks
+
+The serialized delivery workflow uploads its regenerated `CURRENT_STATE.yaml`,
+content-addressed state evidence and `latest-staging-delivery.json` together.
+Download the artifact for the exact merge SHA and compare the receipt's
+`expected_commit`, frontend SHA and state evidence digest before using it. The
+tracked snapshot can predate that artifact: the workflow deliberately does not
+commit generated state back to staging and trigger another delivery. A successful
+state collection alone does not establish successful delivery or activation.
+
+An App's HTTP 403 when listing Actions variables or environment secret metadata
+does not establish that configuration is missing. The delivery job's activation
+condition verifies that `STAGING_AUTONOMY_ENABLED` resolves to `true`; its nonempty
+secret checks establish presence without exposing values. Successful destination-
+pinned provider reads are still needed to establish credential usability.
+
+Check effective branch rules as well as the required status checks. A positive
+`requiredApprovingReviewCount` means GREEN classification and passing CI cannot
+complete unattended delivery without an eligible approving review. Preserve that
+requirement; never treat the mission manifest as a review or bypass protection.
+Inaccessible protection details remain unverified, even if other branch metadata
+is readable. Retain the native auto-merge event and checked head SHA as evidence:
+`gh pr merge --auto` can merge immediately when a PR is already mergeable, so the
+command line alone is not proof that native auto-merge was armed.
+
 ## Reading the result
 
 Schema version 2 keeps the requested top-level sections and adds collection mode,

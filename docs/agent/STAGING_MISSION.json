@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Fix cached homepage shell hydration within canonical staging delivery",
+  "mission": "Verify autonomous staging activation and document delivery evidence interpretation",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,21 +20,15 @@
   "impacts": [
     {
       "files": [
-        "apps/web/src/app/HomeClient.tsx",
-        "apps/web/src/components/ui/AppShell.test.tsx",
-        "apps/web/src/components/ui/AppShell.tsx",
-        "apps/web/src/components/ui/PublicBottomNav.tsx",
-        "apps/web/src/components/ui/TopBar.tsx",
-        "scripts/verify_staging_delivery.py"
+        "docs/agent/STATE_GENERATOR.md"
       ],
       "effects": [
-        "application",
-        "tests"
+        "documentation"
       ],
-      "reason": "Preserve the public homepage shell when the server router context is unavailable during cached rendering; seed the same known route through header, navigation and sign-in link presentation. Authentication guards, branding and data semantics are unchanged. Exercise cold and warm browser passes around the paced data audit."
+      "reason": "Explain delivery artifact provenance, permission-limited configuration checks, and native auto-merge/review evidence without changing policy or runtime behavior."
     }
   ],
-  "diff_sha256": "d4fe32ef9a39e5d85f4da712e1af0361c9452cfa22e8368636b3121c5d5376b5",
+  "diff_sha256": "1f06b2b1d9ed648d2b61d7d1be5143ae400c5c58d7bf44b0b7ebe76ccc1430b8",
   "deployment_verification": {
     "api_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
     "revision": "c4e8a1d7b902"
