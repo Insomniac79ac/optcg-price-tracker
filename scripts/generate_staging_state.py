@@ -17,6 +17,11 @@ from decimal import Decimal
 
 import staging_db_read_check as guard
 
+# Pure shared classifier/query definitions; no application settings/provider imports.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services/api"))
+from app.services import operational_health as health
+from app.services.operational_health_sql import DUE_SQL, EVENT_SQL, BUDGET_SQL
+
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "Insomniac79ac/optcg-price-tracker"
 PROJECT = "c613898d-bf03-43a6-8813-761f72e1c00a"
@@ -129,6 +134,11 @@ def database_snapshot():
                 name: connection.execute(sql).fetchall()
                 for name, sql in load_queries().items()
             }
+            result["budgets"] = connection.execute(BUDGET_SQL).fetchall()
+            result["operational_due"] = connection.execute(DUE_SQL).fetchall()
+            result["operational_runs"] = [
+                row["context_json"] for row in connection.execute(EVENT_SQL).fetchall()
+            ]
             connection.rollback()
             result["fingerprint"] = [{"name": c.name, "ok": c.ok} for c in checks]
             return result
@@ -262,6 +272,9 @@ def sanitize(evidence):
             "used_requests",
             "reserved_requests",
             "paused_until",
+            "window_started_at",
+            "open_reservations",
+            "reservation_mismatch",
         ],
         "work": ["name", "kind", "state", "policy_version", "count"],
         "freshness": [
@@ -287,6 +300,34 @@ def sanitize(evidence):
         key: [{field: row.get(field) for field in fields} for row in db.get(key, [])]
         for key, fields in allowed.items()
     }
+    due_fields = (
+        "source",
+        "shard",
+        "eligible",
+        "due",
+        "overdue",
+        "claimed",
+        "backoff",
+        "quarantined",
+        "never_checked",
+        "within_23h",
+        "between_23_24h",
+        "over_24h",
+        "expired_claims",
+        "retries",
+        "unplanned",
+        "oldest_actionable_due_at",
+        "successful_check_age_p50",
+        "successful_check_age_p95",
+        "successful_check_age_max",
+        "maximum_successful_revisit_gap_seconds",
+    )
+    clean_db["operational_due"] = [
+        {k: row.get(k) for k in due_fields} for row in db.get("operational_due", [])
+    ]
+    clean_db["operational_runs"] = [
+        health.sanitize(row) for row in db.get("operational_runs", [])
+    ]
     clean_db["fingerprint"] = [
         {"name": c["name"], "ok": c["ok"]} for c in db["fingerprint"]
     ]
@@ -445,6 +486,25 @@ def build_state(evidence):
     blockers.extend(
         {"id": err, "scope": "snapshot completeness"} for err in evidence["errors"]
     )
+    operational = health.aggregate(
+        db.get("operational_due", []),
+        db.get("operational_runs", []),
+        db["budgets"],
+        db["as_of"][0]["at"],
+    )
+    integrity_reasons = []
+    if db["duplicate_active_exact_print_source_groups"]:
+        integrity_reasons.append("duplicate_active_exact_mapping")
+    if any(r["intentional_gap_rows"] for r in db["market_value"]):
+        integrity_reasons.append("immutable_history_gap_populated")
+    if integrity_reasons:
+        for source in ("yuyu", "snkrdunk"):
+            operational[source]["status"] = "BLOCKED"
+            operational[source]["action"] = "stop_affected_path"
+            operational[source]["reasons"] = sorted(
+                set(operational[source]["reasons"] + integrity_reasons)
+            )
+        operational["raw_due_work"]["status"] = "BLOCKED"
     return {
         "schema_version": 2,
         "verified_at": db["as_of"][0]["at"],
@@ -460,6 +520,7 @@ def build_state(evidence):
             "services": services,
             "collector_runtime_sha": UNKNOWN,
         },
+        "operational_health": operational,
         "coverage": coverage,
         "yuyu": {
             "eligible_mappings": eligible.get("yuyutei", 0),
@@ -573,6 +634,12 @@ def write_snapshot(evidence, output):
         "database_read_only": True,
         "database_fingerprint": "passed",
     }
+    for section in ("yuyu", "snkrdunk"):
+        state["operational_health"][section]["evidence"] = {
+            "artifact": state["evidence"]["artifact"],
+            "sha256": digest,
+            "sections": ["database.operational_due", "database.operational_runs"],
+        }
     # Publish evidence first and the referencing snapshot last. A failed write leaves the old snapshot.
     serialized = yaml.safe_dump(state, sort_keys=False, allow_unicode=True, width=100)
     atomic_write(artifact, content)

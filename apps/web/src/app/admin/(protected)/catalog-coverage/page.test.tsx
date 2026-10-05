@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -152,7 +152,9 @@ describe("CatalogCoveragePage", () => {
   });
 
   it("fetches the selected gap_type when switching tabs", async () => {
-    fetchCatalogCoverage.mockResolvedValue(EMPTY_REPORT);
+    let resolveReport!: (value: CatalogCoverageReport) => void;
+    const pendingReport = new Promise<CatalogCoverageReport>((resolve) => { resolveReport = resolve; });
+    fetchCatalogCoverage.mockReturnValueOnce(pendingReport);
     fetchCatalogCoverageGaps.mockResolvedValue(gapsResponse([]));
 
     render(<CatalogCoveragePage />);
@@ -163,7 +165,9 @@ describe("CatalogCoveragePage", () => {
       ),
     );
 
-    screen.getByRole("button", { name: "Mapping gaps" }).click();
+    expect(screen.queryByRole("button", { name: "Mapping gaps" })).not.toBeInTheDocument();
+    await act(async () => { resolveReport(EMPTY_REPORT); await pendingReport; });
+    fireEvent.click(await screen.findByRole("button", { name: "Mapping gaps" }));
 
     await waitFor(() =>
       expect(fetchCatalogCoverageGaps).toHaveBeenLastCalledWith(

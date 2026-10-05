@@ -76,8 +76,14 @@ describe("ProposalReviewPage", () => {
   });
 
   it("keeps authoritative and unresolved release filters distinct", async () => {
+    let resolveReleases!: (value: typeof REVIEW_RELEASES) => void;
+    const pendingReleases = new Promise<typeof REVIEW_RELEASES>((resolve) => { resolveReleases = resolve; });
+    fetchProposalReviewReleases.mockReturnValueOnce(pendingReleases);
     renderPage();
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Authoritative release" })).toBeInTheDocument());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(screen.queryByRole("option", { name: /The New Emperor/ })).not.toBeInTheDocument();
+    await act(async () => { resolveReleases(REVIEW_RELEASES); await pendingReleases; });
+    await screen.findByRole("option", { name: /The New Emperor/ });
     const release = screen.getByRole("combobox", { name: "Authoritative release" });
     fireEvent.change(release, { target: { value: "17" } });
     await waitFor(() => expect(fetchProposalReviewGroups).toHaveBeenLastCalledWith(expect.objectContaining({ release_product_id: 17, unresolved_release: undefined })));
