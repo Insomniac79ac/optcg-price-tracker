@@ -1,0 +1,159 @@
+{"level":"info","timestamp":"2026-10-05T13:31:24.098603437Z","message":"Starting Container"}
+{"timestamp":"2026-10-05T13:31:24.765769648Z","level":"error","message":"unknown PostgreSQL timezone: 'Etc/UTC'; will use UTC"}
+{"event":"collection_start","source_url":"https://snkrdunk.com/apparels/142693","card_print_id":6136,"level":"info","mapping_id":2230,"validate_only":false,"source":"snkrdunk","timestamp":"2026-10-05T13:31:24.765776208Z","expected_treatment":null,"batch_run_id":null,"message":"","expected_card_code":"OP01-118"}
+{"timestamp":"2026-10-05T13:31:24.765780638Z","playwright_version":"1.61.0","event":"playwright_ready","level":"info","message":""}
+{"timestamp":"2026-10-05T13:31:44.560044469Z","level":"error","message":"Exception in callback Connection.dispatch.<locals>._done_callback(<Task cancell...ntext.py:245>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py:470"}
+{"message":"handle: <Handle Connection.dispatch.<locals>._done_callback(<Task cancell...ntext.py:245>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py:470>","level":"error","timestamp":"2026-10-05T13:31:44.560054699Z"}
+{"level":"error","message":"Traceback (most recent call last):","timestamp":"2026-10-05T13:31:44.560062249Z"}
+{"message":"  File \"/app/snkrdunk_collector/collect.py\", line 230, in run_one_mapping_detailed","timestamp":"2026-10-05T13:31:44.560067439Z","level":"error"}
+{"message":"    homepage_step = capture_page(page, HOMEPAGE_URL)","timestamp":"2026-10-05T13:31:44.560072789Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.560079618Z","level":"error","message":"  File \"/app/snkrdunk_collector/collect.py\", line 181, in capture_page"}
+{"level":"error","message":"    freshness.check()","timestamp":"2026-10-05T13:31:44.560084928Z"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.560089578Z","message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 95, in check"}
+{"timestamp":"2026-10-05T13:31:44.560093638Z","level":"error","message":"    raise AdmissionStopped(self.stopped)"}
+{"timestamp":"2026-10-05T13:31:44.560099328Z","level":"error","message":"app.services.freshness_integration.AdmissionStopped: source_denial"}
+{"timestamp":"2026-10-05T13:31:44.560107798Z","level":"error","message":""}
+{"level":"error","message":"During handling of the above exception, another exception occurred:","timestamp":"2026-10-05T13:31:44.560121678Z"}
+{"timestamp":"2026-10-05T13:31:44.560127128Z","level":"error","message":""}
+{"timestamp":"2026-10-05T13:31:44.560132088Z","level":"error","message":"Traceback (most recent call last):"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_browser_context.py\", line 260, in _on_route","level":"error","timestamp":"2026-10-05T13:31:44.560136338Z"}
+{"message":"    handled = await route_handler.handle(route)","timestamp":"2026-10-05T13:31:44.560141307Z","level":"error"}
+{"level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 430, in handle","timestamp":"2026-10-05T13:31:44.560146267Z"}
+{"level":"error","message":"    return await self._handle_internal(route)","timestamp":"2026-10-05T13:31:44.560151267Z"}
+{"timestamp":"2026-10-05T13:31:44.560155457Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 466, in _handle_internal"}
+{"message":"    await handler_finished_future","timestamp":"2026-10-05T13:31:44.561135471Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.561146291Z","message":"asyncio.exceptions.CancelledError","level":"error"}
+{"level":"error","message":"","timestamp":"2026-10-05T13:31:44.561151951Z"}
+{"message":"During handling of the above exception, another exception occurred:","timestamp":"2026-10-05T13:31:44.561155931Z","level":"error"}
+{"message":"","level":"error","timestamp":"2026-10-05T13:31:44.561160361Z"}
+{"level":"error","message":"Traceback (most recent call last):","timestamp":"2026-10-05T13:31:44.561165421Z"}
+{"message":"  File \"/usr/lib/python3.10/asyncio/events.py\", line 80, in _run","level":"error","timestamp":"2026-10-05T13:31:44.561169091Z"}
+{"message":"    self._context.run(self._callback, *self._args)","timestamp":"2026-10-05T13:31:44.561173441Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.561177161Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py\", line 471, in _done_callback"}
+{"timestamp":"2026-10-05T13:31:44.561182961Z","level":"error","message":"    exc = future.exception()"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.561187131Z","message":"asyncio.exceptions.CancelledError"}
+{"message":"Exception in callback SyncBase._sync.<locals>.<lambda>(<Task cancell...twork.py:368>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py:111","level":"error","timestamp":"2026-10-05T13:31:44.561190851Z"}
+{"message":"handle: <Handle SyncBase._sync.<locals>.<lambda>(<Task cancell...twork.py:368>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py:111>","timestamp":"2026-10-05T13:31:44.561194940Z","level":"error"}
+{"message":"Traceback (most recent call last):","level":"error","timestamp":"2026-10-05T13:31:44.561198480Z"}
+{"message":"  File \"/app/snkrdunk_collector/collect.py\", line 230, in run_one_mapping_detailed","timestamp":"2026-10-05T13:31:44.561202650Z","level":"error"}
+{"level":"error","message":"    homepage_step = capture_page(page, HOMEPAGE_URL)","timestamp":"2026-10-05T13:31:44.561206340Z"}
+{"level":"error","message":"  File \"/app/snkrdunk_collector/collect.py\", line 181, in capture_page","timestamp":"2026-10-05T13:31:44.561210320Z"}
+{"message":"    freshness.check()","timestamp":"2026-10-05T13:31:44.561214290Z","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.561217780Z","message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 95, in check"}
+{"timestamp":"2026-10-05T13:31:44.561221210Z","level":"error","message":"    raise AdmissionStopped(self.stopped)"}
+{"message":"    self._context.run(self._callback, *self._args)","timestamp":"2026-10-05T13:31:44.563433453Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py\", line 111, in <lambda>","timestamp":"2026-10-05T13:31:44.563439353Z","level":"error"}
+{"message":"  File \"/usr/lib/python3.10/asyncio/tasks.py\", line 491, in _wait","timestamp":"2026-10-05T13:31:44.563443763Z","level":"error"}
+{"message":"app.services.freshness_integration.AdmissionStopped: source_denial","timestamp":"2026-10-05T13:31:44.563450453Z","level":"error"}
+{"level":"error","message":"    await waiter","timestamp":"2026-10-05T13:31:44.563452773Z"}
+{"message":"asyncio.exceptions.CancelledError","level":"error","timestamp":"2026-10-05T13:31:44.563459233Z"}
+{"message":"","level":"error","timestamp":"2026-10-05T13:31:44.563459863Z"}
+{"timestamp":"2026-10-05T13:31:44.563465423Z","level":"error","message":""}
+{"timestamp":"2026-10-05T13:31:44.563467563Z","message":"During handling of the above exception, another exception occurred:","level":"error"}
+{"message":"During handling of the above exception, another exception occurred:","level":"error","timestamp":"2026-10-05T13:31:44.563473303Z"}
+{"level":"error","message":"","timestamp":"2026-10-05T13:31:44.563474573Z"}
+{"timestamp":"2026-10-05T13:31:44.563480873Z","level":"error","message":""}
+{"level":"error","timestamp":"2026-10-05T13:31:44.563481332Z","message":"Traceback (most recent call last):"}
+{"timestamp":"2026-10-05T13:31:44.563488772Z","message":"Traceback (most recent call last):","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 369, in abort","level":"error","timestamp":"2026-10-05T13:31:44.563489232Z"}
+{"level":"error","message":"  File \"/usr/lib/python3.10/asyncio/events.py\", line 80, in _run","timestamp":"2026-10-05T13:31:44.563496172Z"}
+{"timestamp":"2026-10-05T13:31:44.563496972Z","message":"    await self._handle_route(","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 464, in _handle_route","level":"error","timestamp":"2026-10-05T13:31:44.563501342Z"}
+{"message":"    await callback()","timestamp":"2026-10-05T13:31:44.563504722Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.563509822Z","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 558, in _race_with_page_close","level":"error"}
+{"level":"error","message":"    await asyncio.wait(","timestamp":"2026-10-05T13:31:44.563512962Z"}
+{"timestamp":"2026-10-05T13:31:44.563516452Z","level":"error","message":"  File \"/usr/lib/python3.10/asyncio/tasks.py\", line 384, in wait"}
+{"message":"    return await _wait(fs, timeout, return_when, loop)","level":"error","timestamp":"2026-10-05T13:31:44.563520012Z"}
+{"message":"    task.add_done_callback(lambda _: g_self.switch())","timestamp":"2026-10-05T13:31:44.564374848Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 457, in _handler","timestamp":"2026-10-05T13:31:44.564379268Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.564382818Z","message":"    self.handler(route, route.request)  # type: ignore","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_impl_to_api_mapping.py\", line 139, in wrapper_func","timestamp":"2026-10-05T13:31:44.564386748Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.564391038Z","level":"error","message":"    return handler("}
+{"timestamp":"2026-10-05T13:31:44.564394368Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 156, in route_request"}
+{"level":"error","message":"    route.abort()","timestamp":"2026-10-05T13:31:44.564397948Z"}
+{"level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/sync_api/_generated.py\", line 734, in abort","timestamp":"2026-10-05T13:31:44.564401138Z"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.564404348Z","message":"    self._sync(self._impl_obj.abort(errorCode=error_code))"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py\", line 115, in _sync","timestamp":"2026-10-05T13:31:44.564407568Z","level":"error"}
+{"message":"    return task.result()","timestamp":"2026-10-05T13:31:44.564410788Z","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.564414418Z","message":"asyncio.exceptions.CancelledError"}
+{"message":"Exception in callback Connection.dispatch.<locals>._done_callback(<Task cancell...ntext.py:245>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py:470","timestamp":"2026-10-05T13:31:44.564418228Z","level":"error"}
+{"message":"handle: <Handle Connection.dispatch.<locals>._done_callback(<Task cancell...ntext.py:245>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py:470>","timestamp":"2026-10-05T13:31:44.564421817Z","level":"error"}
+{"message":"Traceback (most recent call last):","timestamp":"2026-10-05T13:31:44.564425227Z","level":"error"}
+{"message":"  File \"/app/snkrdunk_collector/collect.py\", line 230, in run_one_mapping_detailed","timestamp":"2026-10-05T13:31:44.564428507Z","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.564432087Z","message":"    homepage_step = capture_page(page, HOMEPAGE_URL)"}
+{"message":"  File \"/app/snkrdunk_collector/collect.py\", line 181, in capture_page","timestamp":"2026-10-05T13:31:44.565554119Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.565561469Z","level":"error","message":"    freshness.check()"}
+{"level":"error","message":"    return await self._handle_internal(route)","timestamp":"2026-10-05T13:31:44.565565699Z"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 95, in check","level":"error","timestamp":"2026-10-05T13:31:44.565567819Z"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.565573799Z","message":"    raise AdmissionStopped(self.stopped)"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 466, in _handle_internal","level":"error","timestamp":"2026-10-05T13:31:44.565576679Z"}
+{"message":"app.services.freshness_integration.AdmissionStopped: source_denial","timestamp":"2026-10-05T13:31:44.565582009Z","level":"error"}
+{"level":"error","message":"    await handler_finished_future","timestamp":"2026-10-05T13:31:44.565585269Z"}
+{"timestamp":"2026-10-05T13:31:44.565591749Z","level":"error","message":""}
+{"message":"asyncio.exceptions.CancelledError","timestamp":"2026-10-05T13:31:44.565592619Z","level":"error"}
+{"message":"During handling of the above exception, another exception occurred:","timestamp":"2026-10-05T13:31:44.565600108Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.565601108Z","message":"","level":"error"}
+{"message":"","level":"error","timestamp":"2026-10-05T13:31:44.565605638Z"}
+{"timestamp":"2026-10-05T13:31:44.565608178Z","level":"error","message":"During handling of the above exception, another exception occurred:"}
+{"timestamp":"2026-10-05T13:31:44.565612618Z","message":"Traceback (most recent call last):","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.565615038Z","message":""}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_browser_context.py\", line 260, in _on_route","timestamp":"2026-10-05T13:31:44.565618578Z","level":"error"}
+{"message":"Traceback (most recent call last):","level":"error","timestamp":"2026-10-05T13:31:44.565621208Z"}
+{"timestamp":"2026-10-05T13:31:44.565625528Z","level":"error","message":"    handled = await route_handler.handle(route)"}
+{"message":"  File \"/usr/lib/python3.10/asyncio/events.py\", line 80, in _run","timestamp":"2026-10-05T13:31:44.565628008Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 430, in handle","timestamp":"2026-10-05T13:31:44.565632088Z","level":"error"}
+{"message":"    self._context.run(self._callback, *self._args)","timestamp":"2026-10-05T13:31:44.565634578Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_connection.py\", line 471, in _done_callback","timestamp":"2026-10-05T13:31:44.566339857Z","level":"error"}
+{"message":"    exc = future.exception()","timestamp":"2026-10-05T13:31:44.566343217Z","level":"error"}
+{"message":"asyncio.exceptions.CancelledError","timestamp":"2026-10-05T13:31:44.566345977Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.566349147Z","message":"Exception in callback SyncBase._sync.<locals>.<lambda>(<Task cancell...twork.py:368>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py:111","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.566350677Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 95, in check"}
+{"message":"handle: <Handle SyncBase._sync.<locals>.<lambda>(<Task cancell...twork.py:368>>) at /usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py:111>","timestamp":"2026-10-05T13:31:44.566351987Z","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.566354557Z","message":"Traceback (most recent call last):"}
+{"timestamp":"2026-10-05T13:31:44.566356806Z","level":"error","message":"    raise AdmissionStopped(self.stopped)"}
+{"message":"  File \"/app/snkrdunk_collector/collect.py\", line 230, in run_one_mapping_detailed","timestamp":"2026-10-05T13:31:44.566357216Z","level":"error"}
+{"message":"    homepage_step = capture_page(page, HOMEPAGE_URL)","timestamp":"2026-10-05T13:31:44.566359756Z","level":"error"}
+{"level":"error","message":"app.services.freshness_integration.AdmissionStopped: source_denial","timestamp":"2026-10-05T13:31:44.566360906Z"}
+{"level":"error","message":"  File \"/app/snkrdunk_collector/collect.py\", line 181, in capture_page","timestamp":"2026-10-05T13:31:44.566362866Z"}
+{"message":"","timestamp":"2026-10-05T13:31:44.566364476Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.566365646Z","message":"    freshness.check()","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.566367146Z","level":"error","message":"During handling of the above exception, another exception occurred:"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.566370106Z","message":""}
+{"level":"error","timestamp":"2026-10-05T13:31:44.566372556Z","message":"Traceback (most recent call last):"}
+{"timestamp":"2026-10-05T13:31:44.566375326Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 369, in abort"}
+{"timestamp":"2026-10-05T13:31:44.566377956Z","message":"    await self._handle_route(","level":"error"}
+{"level":"error","timestamp":"2026-10-05T13:31:44.566380586Z","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 464, in _handle_route"}
+{"level":"error","message":"    task.add_done_callback(lambda _: g_self.switch())","timestamp":"2026-10-05T13:31:44.567537806Z"}
+{"timestamp":"2026-10-05T13:31:44.567540776Z","level":"error","message":"    await callback()"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_helper.py\", line 457, in _handler","timestamp":"2026-10-05T13:31:44.567544166Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_network.py\", line 558, in _race_with_page_close","level":"error","timestamp":"2026-10-05T13:31:44.567547396Z"}
+{"message":"    self.handler(route, route.request)  # type: ignore","timestamp":"2026-10-05T13:31:44.567551586Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567554076Z","message":"    await asyncio.wait(","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567560456Z","level":"error","message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_impl_to_api_mapping.py\", line 139, in wrapper_func"}
+{"message":"  File \"/usr/lib/python3.10/asyncio/tasks.py\", line 384, in wait","timestamp":"2026-10-05T13:31:44.567560756Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567567346Z","level":"error","message":"    return await _wait(fs, timeout, return_when, loop)"}
+{"message":"    return handler(","timestamp":"2026-10-05T13:31:44.567568116Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/app/services/freshness_integration.py\", line 156, in route_request","level":"error","timestamp":"2026-10-05T13:31:44.567574496Z"}
+{"level":"error","message":"  File \"/usr/lib/python3.10/asyncio/tasks.py\", line 491, in _wait","timestamp":"2026-10-05T13:31:44.567574926Z"}
+{"message":"    await waiter","timestamp":"2026-10-05T13:31:44.567578987Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567581317Z","level":"error","message":"asyncio.exceptions.CancelledError"}
+{"level":"error","message":"","timestamp":"2026-10-05T13:31:44.567585867Z"}
+{"timestamp":"2026-10-05T13:31:44.567588466Z","message":"During handling of the above exception, another exception occurred:","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567591176Z","level":"error","message":""}
+{"message":"Traceback (most recent call last):","level":"error","timestamp":"2026-10-05T13:31:44.567593916Z"}
+{"message":"  File \"/usr/lib/python3.10/asyncio/events.py\", line 80, in _run","timestamp":"2026-10-05T13:31:44.567596546Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.567598986Z","message":"    self._context.run(self._callback, *self._args)","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py\", line 111, in <lambda>","level":"error","timestamp":"2026-10-05T13:31:44.567601736Z"}
+{"message":"    route.abort()","timestamp":"2026-10-05T13:31:44.568362733Z","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/sync_api/_generated.py\", line 734, in abort","timestamp":"2026-10-05T13:31:44.568368823Z","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.568372413Z","message":"    self._sync(self._impl_obj.abort(errorCode=error_code))","level":"error"}
+{"message":"  File \"/usr/local/lib/python3.10/dist-packages/playwright/_impl/_sync_base.py\", line 115, in _sync","level":"error","timestamp":"2026-10-05T13:31:44.568375753Z"}
+{"message":"    return task.result()","level":"error","timestamp":"2026-10-05T13:31:44.568380333Z"}
+{"level":"error","message":"asyncio.exceptions.CancelledError","timestamp":"2026-10-05T13:31:44.568383383Z"}
+{"error":"AdmissionStopped: source_denial","timestamp":"2026-10-05T13:31:44.568387373Z","message":"","batch_run_id":null,"level":"info","event":"collection_error","mapping_id":2230}
+{"level":"error","message":"Future exception was never retrieved","timestamp":"2026-10-05T13:31:44.568390543Z"}
+{"message":"future: <Future finished exception=TargetClosedError('Target page, context or browser has been closed')>","level":"error","timestamp":"2026-10-05T13:31:44.568393573Z"}
+{"timestamp":"2026-10-05T13:31:44.568397683Z","level":"error","message":"playwright._impl._errors.TargetClosedError: Target page, context or browser has been closed"}
+{"message":"Future exception was never retrieved","level":"error","timestamp":"2026-10-05T13:31:44.568401143Z"}
+{"timestamp":"2026-10-05T13:31:44.568404513Z","message":"future: <Future finished exception=TargetClosedError('Target page, context or browser has been closed')>","level":"error"}
+{"timestamp":"2026-10-05T13:31:44.568407933Z","level":"error","message":"playwright._impl._errors.TargetClosedError: Target page, context or browser has been closed"}

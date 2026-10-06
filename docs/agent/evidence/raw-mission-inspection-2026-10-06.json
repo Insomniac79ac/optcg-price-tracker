@@ -1,0 +1,5114 @@
+{
+  "observed_at": "2026-10-06T02:10:11.733223+00:00",
+  "target": "staging",
+  "read_only": true,
+  "production_accessed": false,
+  "recent_request_costs": [
+    {
+      "name": "yuyutei",
+      "kind": "discovery",
+      "outcome": "completed",
+      "attempts": 7,
+      "avg_requests": 100.43,
+      "max_requests": 102,
+      "avg_runtime": 11.48
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": "captured",
+      "attempts": 276,
+      "avg_requests": 100.36,
+      "max_requests": 103,
+      "avg_runtime": 8.9
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": null,
+      "attempts": 1,
+      "avg_requests": null,
+      "max_requests": null,
+      "avg_runtime": null
+    }
+  ],
+  "exact_recommendations": [
+    {
+      "name": "snkrdunk",
+      "groups": 82,
+      "exact_prints": 82,
+      "zero_source_prints": 1
+    },
+    {
+      "name": "yuyutei",
+      "groups": 185,
+      "exact_prints": 185,
+      "zero_source_prints": 59
+    }
+  ],
+  "discovery_runs": [
+    {
+      "id": 140,
+      "status": "completed",
+      "started_at": "2026-10-05T13:17:21.651209+00:00",
+      "finished_at": "2026-10-05T13:17:23.451831+00:00",
+      "requested_set_slugs": [
+        "op13"
+      ],
+      "products_seen": 176,
+      "candidates_written": 176,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op13": {
+          "slug": "op13",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 448,
+          "distinct_source_products": 219,
+          "own_series_products": 176,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 229,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 174,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 128,
+          "codes_with_multiple_products": 32,
+          "candidates_with_price": 176,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 176,
+          "candidates_with_rarity": 174,
+          "candidates_with_name_jp": 176,
+          "candidates_with_availability": 176,
+          "unmatched": 2,
+          "family_matched": 93,
+          "print_matched": 81,
+          "identity_conflict": 0,
+          "candidates_written": 176,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 176,
+          "proposal_refresh": {
+            "created": 80,
+            "reused": 0,
+            "superseded": 80,
+            "resolutions": {
+              "ambiguous": 78,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 15
+          }
+        }
+      }
+    },
+    {
+      "id": 141,
+      "status": "completed",
+      "started_at": "2026-10-05T13:21:52.008430+00:00",
+      "finished_at": "2026-10-05T13:21:55.497980+00:00",
+      "requested_set_slugs": [
+        "op17"
+      ],
+      "products_seen": 177,
+      "candidates_written": 177,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op17": {
+          "slug": "op17",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 450,
+          "distinct_source_products": 192,
+          "own_series_products": 177,
+          "foreign_series_filtered": 15,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 258,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 169,
+          "unparseable_codes": 8,
+          "distinct_card_codes": 130,
+          "codes_with_multiple_products": 32,
+          "candidates_with_price": 177,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 177,
+          "candidates_with_rarity": 169,
+          "candidates_with_name_jp": 177,
+          "candidates_with_availability": 177,
+          "unmatched": 8,
+          "family_matched": 81,
+          "print_matched": 88,
+          "identity_conflict": 0,
+          "candidates_written": 177,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 177,
+          "proposal_refresh": {
+            "created": 79,
+            "reused": 0,
+            "superseded": 79,
+            "resolutions": {
+              "ambiguous": 71,
+              "unresolved_identity": 8
+            },
+            "reviewed_preserved": 82
+          }
+        }
+      }
+    },
+    {
+      "id": 142,
+      "status": "completed",
+      "started_at": "2026-10-05T13:25:08.664500+00:00",
+      "finished_at": "2026-10-05T13:25:11.487846+00:00",
+      "requested_set_slugs": [
+        "prb01"
+      ],
+      "products_seen": 306,
+      "candidates_written": 306,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "prb01": {
+          "slug": "prb01",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 708,
+          "distinct_source_products": 352,
+          "own_series_products": 306,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 356,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 216,
+          "unparseable_codes": 90,
+          "distinct_card_codes": 108,
+          "codes_with_multiple_products": 77,
+          "candidates_with_price": 306,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 306,
+          "candidates_with_rarity": 216,
+          "candidates_with_name_jp": 306,
+          "candidates_with_availability": 306,
+          "unmatched": 90,
+          "family_matched": 216,
+          "print_matched": 0,
+          "identity_conflict": 0,
+          "candidates_written": 306,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 306,
+          "proposal_refresh": {
+            "created": 302,
+            "reused": 0,
+            "superseded": 302,
+            "resolutions": {
+              "ambiguous": 212,
+              "unresolved_identity": 90
+            },
+            "reviewed_preserved": 4
+          }
+        }
+      }
+    },
+    {
+      "id": 143,
+      "status": "completed",
+      "started_at": "2026-10-05T13:25:22.804963+00:00",
+      "finished_at": "2026-10-05T13:25:24.406316+00:00",
+      "requested_set_slugs": [
+        "op01"
+      ],
+      "products_seen": 156,
+      "candidates_written": 156,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op01": {
+          "slug": "op01",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 408,
+          "distinct_source_products": 202,
+          "own_series_products": 156,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 206,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 154,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 121,
+          "codes_with_multiple_products": 32,
+          "candidates_with_price": 156,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 156,
+          "candidates_with_rarity": 154,
+          "candidates_with_name_jp": 156,
+          "candidates_with_availability": 156,
+          "unmatched": 2,
+          "family_matched": 77,
+          "print_matched": 77,
+          "identity_conflict": 0,
+          "candidates_written": 156,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 156,
+          "proposal_refresh": {
+            "created": 75,
+            "reused": 0,
+            "superseded": 75,
+            "resolutions": {
+              "ambiguous": 61,
+              "exact": 12,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    },
+    {
+      "id": 144,
+      "status": "completed",
+      "started_at": "2026-10-05T13:25:36.496878+00:00",
+      "finished_at": "2026-10-05T13:25:38.200639+00:00",
+      "requested_set_slugs": [
+        "op02"
+      ],
+      "products_seen": 155,
+      "candidates_written": 155,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op02": {
+          "slug": "op02",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 406,
+          "distinct_source_products": 201,
+          "own_series_products": 155,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 205,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 154,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 121,
+          "codes_with_multiple_products": 32,
+          "candidates_with_price": 155,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 155,
+          "candidates_with_rarity": 154,
+          "candidates_with_name_jp": 155,
+          "candidates_with_availability": 155,
+          "unmatched": 1,
+          "family_matched": 89,
+          "print_matched": 65,
+          "identity_conflict": 0,
+          "candidates_written": 155,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 155,
+          "proposal_refresh": {
+            "created": 89,
+            "reused": 0,
+            "superseded": 89,
+            "resolutions": {
+              "ambiguous": 64,
+              "exact": 24,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    },
+    {
+      "id": 145,
+      "status": "completed",
+      "started_at": "2026-10-05T13:26:08.161207+00:00",
+      "finished_at": "2026-10-05T13:26:09.880280+00:00",
+      "requested_set_slugs": [
+        "op14"
+      ],
+      "products_seen": 158,
+      "candidates_written": 158,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op14": {
+          "slug": "op14",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 412,
+          "distinct_source_products": 203,
+          "own_series_products": 158,
+          "foreign_series_filtered": 45,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 209,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 156,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 126,
+          "codes_with_multiple_products": 28,
+          "candidates_with_price": 158,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 158,
+          "candidates_with_rarity": 156,
+          "candidates_with_name_jp": 158,
+          "candidates_with_availability": 158,
+          "unmatched": 2,
+          "family_matched": 65,
+          "print_matched": 91,
+          "identity_conflict": 0,
+          "candidates_written": 158,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 158,
+          "proposal_refresh": {
+            "created": 60,
+            "reused": 0,
+            "superseded": 60,
+            "resolutions": {
+              "ambiguous": 58,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 82
+          }
+        }
+      }
+    },
+    {
+      "id": 146,
+      "status": "completed",
+      "started_at": "2026-10-05T13:27:36.135997+00:00",
+      "finished_at": "2026-10-05T13:27:37.685669+00:00",
+      "requested_set_slugs": [
+        "op11"
+      ],
+      "products_seen": 156,
+      "candidates_written": 156,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op11": {
+          "slug": "op11",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 408,
+          "distinct_source_products": 201,
+          "own_series_products": 156,
+          "foreign_series_filtered": 45,
+          "foreign_series_seen": [
+            "op10",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 207,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 155,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 126,
+          "codes_with_multiple_products": 28,
+          "candidates_with_price": 156,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 156,
+          "candidates_with_rarity": 155,
+          "candidates_with_name_jp": 156,
+          "candidates_with_availability": 156,
+          "unmatched": 1,
+          "family_matched": 72,
+          "print_matched": 83,
+          "identity_conflict": 0,
+          "candidates_written": 156,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 156,
+          "proposal_refresh": {
+            "created": 58,
+            "reused": 0,
+            "superseded": 58,
+            "resolutions": {
+              "ambiguous": 57,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 98
+          }
+        }
+      }
+    },
+    {
+      "id": 147,
+      "status": "completed",
+      "started_at": "2026-10-05T13:27:49.851561+00:00",
+      "finished_at": "2026-10-05T13:27:51.710868+00:00",
+      "requested_set_slugs": [
+        "op09"
+      ],
+      "products_seen": 160,
+      "candidates_written": 160,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op09": {
+          "slug": "op09",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 416,
+          "distinct_source_products": 206,
+          "own_series_products": 160,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 210,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 159,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 126,
+          "codes_with_multiple_products": 25,
+          "candidates_with_price": 160,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 160,
+          "candidates_with_rarity": 159,
+          "candidates_with_name_jp": 160,
+          "candidates_with_availability": 160,
+          "unmatched": 1,
+          "family_matched": 102,
+          "print_matched": 57,
+          "identity_conflict": 0,
+          "candidates_written": 160,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 160,
+          "proposal_refresh": {
+            "created": 58,
+            "reused": 0,
+            "superseded": 58,
+            "resolutions": {
+              "ambiguous": 56,
+              "exact": 1,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 102
+          }
+        }
+      }
+    },
+    {
+      "id": 148,
+      "status": "completed",
+      "started_at": "2026-10-05T13:28:03.057963+00:00",
+      "finished_at": "2026-10-05T13:28:04.544775+00:00",
+      "requested_set_slugs": [
+        "op12"
+      ],
+      "products_seen": 155,
+      "candidates_written": 155,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op12": {
+          "slug": "op12",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 406,
+          "distinct_source_products": 199,
+          "own_series_products": 155,
+          "foreign_series_filtered": 44,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 207,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 154,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 126,
+          "codes_with_multiple_products": 27,
+          "candidates_with_price": 155,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 155,
+          "candidates_with_rarity": 154,
+          "candidates_with_name_jp": 155,
+          "candidates_with_availability": 155,
+          "unmatched": 1,
+          "family_matched": 76,
+          "print_matched": 78,
+          "identity_conflict": 0,
+          "candidates_written": 155,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 155,
+          "proposal_refresh": {
+            "created": 56,
+            "reused": 0,
+            "superseded": 56,
+            "resolutions": {
+              "ambiguous": 55,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 83
+          }
+        }
+      }
+    },
+    {
+      "id": 149,
+      "status": "completed",
+      "started_at": "2026-10-05T13:28:15.317776+00:00",
+      "finished_at": "2026-10-05T13:28:16.897731+00:00",
+      "requested_set_slugs": [
+        "op05"
+      ],
+      "products_seen": 155,
+      "candidates_written": 155,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op05": {
+          "slug": "op05",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 406,
+          "distinct_source_products": 201,
+          "own_series_products": 155,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 205,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 154,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 25,
+          "candidates_with_price": 155,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 155,
+          "candidates_with_rarity": 154,
+          "candidates_with_name_jp": 155,
+          "candidates_with_availability": 155,
+          "unmatched": 1,
+          "family_matched": 84,
+          "print_matched": 70,
+          "identity_conflict": 0,
+          "candidates_written": 155,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 155,
+          "proposal_refresh": {
+            "created": 114,
+            "reused": 0,
+            "superseded": 114,
+            "resolutions": {
+              "ambiguous": 54,
+              "exact": 59,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 41
+          }
+        }
+      }
+    },
+    {
+      "id": 150,
+      "status": "completed",
+      "started_at": "2026-10-05T13:28:27.697377+00:00",
+      "finished_at": "2026-10-05T13:28:29.214578+00:00",
+      "requested_set_slugs": [
+        "op03"
+      ],
+      "products_seen": 155,
+      "candidates_written": 155,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op03": {
+          "slug": "op03",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 406,
+          "distinct_source_products": 201,
+          "own_series_products": 155,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 205,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 154,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 127,
+          "codes_with_multiple_products": 26,
+          "candidates_with_price": 155,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 155,
+          "candidates_with_rarity": 154,
+          "candidates_with_name_jp": 155,
+          "candidates_with_availability": 155,
+          "unmatched": 1,
+          "family_matched": 81,
+          "print_matched": 73,
+          "identity_conflict": 0,
+          "candidates_written": 155,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 155,
+          "proposal_refresh": {
+            "created": 77,
+            "reused": 0,
+            "superseded": 77,
+            "resolutions": {
+              "ambiguous": 48,
+              "exact": 28,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    },
+    {
+      "id": 151,
+      "status": "completed",
+      "started_at": "2026-10-05T13:28:40.358404+00:00",
+      "finished_at": "2026-10-05T13:28:41.980171+00:00",
+      "requested_set_slugs": [
+        "op15"
+      ],
+      "products_seen": 154,
+      "candidates_written": 154,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op15": {
+          "slug": "op15",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 404,
+          "distinct_source_products": 198,
+          "own_series_products": 154,
+          "foreign_series_filtered": 44,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 206,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 152,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 26,
+          "candidates_with_price": 154,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 154,
+          "candidates_with_rarity": 152,
+          "candidates_with_name_jp": 154,
+          "candidates_with_availability": 154,
+          "unmatched": 2,
+          "family_matched": 60,
+          "print_matched": 92,
+          "identity_conflict": 0,
+          "candidates_written": 154,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 154,
+          "proposal_refresh": {
+            "created": 55,
+            "reused": 0,
+            "superseded": 55,
+            "resolutions": {
+              "ambiguous": 53,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 99
+          }
+        }
+      }
+    },
+    {
+      "id": 152,
+      "status": "completed",
+      "started_at": "2026-10-05T13:32:12.548106+00:00",
+      "finished_at": "2026-10-05T13:32:14.313657+00:00",
+      "requested_set_slugs": [
+        "op16"
+      ],
+      "products_seen": 157,
+      "candidates_written": 157,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op16": {
+          "slug": "op16",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 410,
+          "distinct_source_products": 202,
+          "own_series_products": 157,
+          "foreign_series_filtered": 45,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 208,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 155,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 27,
+          "candidates_with_price": 157,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 157,
+          "candidates_with_rarity": 155,
+          "candidates_with_name_jp": 157,
+          "candidates_with_availability": 157,
+          "unmatched": 2,
+          "family_matched": 63,
+          "print_matched": 92,
+          "identity_conflict": 0,
+          "candidates_written": 157,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 157,
+          "proposal_refresh": {
+            "created": 57,
+            "reused": 0,
+            "superseded": 57,
+            "resolutions": {
+              "exact": 2,
+              "ambiguous": 53,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 84
+          }
+        }
+      }
+    },
+    {
+      "id": 153,
+      "status": "completed",
+      "started_at": "2026-10-05T13:32:25.126062+00:00",
+      "finished_at": "2026-10-05T13:32:26.499516+00:00",
+      "requested_set_slugs": [
+        "op04"
+      ],
+      "products_seen": 150,
+      "candidates_written": 150,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op04": {
+          "slug": "op04",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 396,
+          "distinct_source_products": 196,
+          "own_series_products": 150,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 200,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 149,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 124,
+          "codes_with_multiple_products": 24,
+          "candidates_with_price": 150,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 150,
+          "candidates_with_rarity": 149,
+          "candidates_with_name_jp": 150,
+          "candidates_with_availability": 150,
+          "unmatched": 1,
+          "family_matched": 64,
+          "print_matched": 85,
+          "identity_conflict": 0,
+          "candidates_written": 150,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 150,
+          "proposal_refresh": {
+            "created": 96,
+            "reused": 0,
+            "superseded": 96,
+            "resolutions": {
+              "ambiguous": 41,
+              "exact": 54,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    },
+    {
+      "id": 154,
+      "status": "completed",
+      "started_at": "2026-10-05T13:32:37.345712+00:00",
+      "finished_at": "2026-10-05T13:32:38.764827+00:00",
+      "requested_set_slugs": [
+        "op06"
+      ],
+      "products_seen": 151,
+      "candidates_written": 151,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op06": {
+          "slug": "op06",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 398,
+          "distinct_source_products": 197,
+          "own_series_products": 151,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 201,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 150,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 24,
+          "candidates_with_price": 151,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 151,
+          "candidates_with_rarity": 150,
+          "candidates_with_name_jp": 151,
+          "candidates_with_availability": 151,
+          "unmatched": 1,
+          "family_matched": 85,
+          "print_matched": 65,
+          "identity_conflict": 0,
+          "candidates_written": 151,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 151,
+          "proposal_refresh": {
+            "created": 50,
+            "reused": 0,
+            "superseded": 50,
+            "resolutions": {
+              "ambiguous": 49,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 101
+          }
+        }
+      }
+    },
+    {
+      "id": 155,
+      "status": "completed",
+      "started_at": "2026-10-05T13:32:49.548801+00:00",
+      "finished_at": "2026-10-05T13:32:51.008055+00:00",
+      "requested_set_slugs": [
+        "op07"
+      ],
+      "products_seen": 152,
+      "candidates_written": 152,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op07": {
+          "slug": "op07",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 400,
+          "distinct_source_products": 198,
+          "own_series_products": 152,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 202,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 151,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 24,
+          "candidates_with_price": 152,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 152,
+          "candidates_with_rarity": 151,
+          "candidates_with_name_jp": 152,
+          "candidates_with_availability": 152,
+          "unmatched": 1,
+          "family_matched": 71,
+          "print_matched": 80,
+          "identity_conflict": 0,
+          "candidates_written": 152,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 152,
+          "proposal_refresh": {
+            "created": 51,
+            "reused": 0,
+            "superseded": 51,
+            "resolutions": {
+              "ambiguous": 50,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 101
+          }
+        }
+      }
+    },
+    {
+      "id": 156,
+      "status": "completed",
+      "started_at": "2026-10-05T13:33:02.548958+00:00",
+      "finished_at": "2026-10-05T13:33:03.948709+00:00",
+      "requested_set_slugs": [
+        "op08"
+      ],
+      "products_seen": 151,
+      "candidates_written": 151,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op08": {
+          "slug": "op08",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 398,
+          "distinct_source_products": 197,
+          "own_series_products": 151,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 201,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 150,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 24,
+          "candidates_with_price": 151,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 151,
+          "candidates_with_rarity": 150,
+          "candidates_with_name_jp": 151,
+          "candidates_with_availability": 151,
+          "unmatched": 1,
+          "family_matched": 58,
+          "print_matched": 92,
+          "identity_conflict": 0,
+          "candidates_written": 151,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 151,
+          "proposal_refresh": {
+            "created": 50,
+            "reused": 0,
+            "superseded": 50,
+            "resolutions": {
+              "ambiguous": 49,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 101
+          }
+        }
+      }
+    },
+    {
+      "id": 157,
+      "status": "completed",
+      "started_at": "2026-10-05T13:33:14.682471+00:00",
+      "finished_at": "2026-10-05T13:33:16.211531+00:00",
+      "requested_set_slugs": [
+        "op10"
+      ],
+      "products_seen": 151,
+      "candidates_written": 151,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "op10": {
+          "slug": "op10",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 398,
+          "distinct_source_products": 195,
+          "own_series_products": 151,
+          "foreign_series_filtered": 44,
+          "foreign_series_seen": [
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 203,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 150,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 125,
+          "codes_with_multiple_products": 24,
+          "candidates_with_price": 151,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 151,
+          "candidates_with_rarity": 150,
+          "candidates_with_name_jp": 151,
+          "candidates_with_availability": 151,
+          "unmatched": 1,
+          "family_matched": 68,
+          "print_matched": 82,
+          "identity_conflict": 0,
+          "candidates_written": 151,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 151,
+          "proposal_refresh": {
+            "created": 50,
+            "reused": 0,
+            "superseded": 50,
+            "resolutions": {
+              "ambiguous": 49,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 85
+          }
+        }
+      }
+    },
+    {
+      "id": 158,
+      "status": "completed",
+      "started_at": "2026-10-05T13:33:27.521467+00:00",
+      "finished_at": "2026-10-05T13:33:28.587434+00:00",
+      "requested_set_slugs": [
+        "eb03"
+      ],
+      "products_seen": 98,
+      "candidates_written": 98,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "eb03": {
+          "slug": "eb03",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 292,
+          "distinct_source_products": 144,
+          "own_series_products": 98,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 148,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 90,
+          "unparseable_codes": 8,
+          "distinct_card_codes": 62,
+          "codes_with_multiple_products": 18,
+          "candidates_with_price": 98,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 98,
+          "candidates_with_rarity": 90,
+          "candidates_with_name_jp": 98,
+          "candidates_with_availability": 98,
+          "unmatched": 8,
+          "family_matched": 48,
+          "print_matched": 42,
+          "identity_conflict": 0,
+          "candidates_written": 98,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 98,
+          "proposal_refresh": {
+            "created": 54,
+            "reused": 0,
+            "superseded": 54,
+            "resolutions": {
+              "ambiguous": 46,
+              "unresolved_identity": 8
+            },
+            "reviewed_preserved": 2
+          }
+        }
+      }
+    },
+    {
+      "id": 159,
+      "status": "completed",
+      "started_at": "2026-10-05T13:33:39.320412+00:00",
+      "finished_at": "2026-10-05T13:33:40.417826+00:00",
+      "requested_set_slugs": [
+        "eb04"
+      ],
+      "products_seen": 87,
+      "candidates_written": 87,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "eb04": {
+          "slug": "eb04",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 270,
+          "distinct_source_products": 133,
+          "own_series_products": 87,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 137,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 85,
+          "unparseable_codes": 2,
+          "distinct_card_codes": 65,
+          "codes_with_multiple_products": 19,
+          "candidates_with_price": 87,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 87,
+          "candidates_with_rarity": 85,
+          "candidates_with_name_jp": 87,
+          "candidates_with_availability": 87,
+          "unmatched": 2,
+          "family_matched": 46,
+          "print_matched": 39,
+          "identity_conflict": 0,
+          "candidates_written": 87,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 87,
+          "proposal_refresh": {
+            "created": 41,
+            "reused": 0,
+            "superseded": 41,
+            "resolutions": {
+              "ambiguous": 39,
+              "unresolved_identity": 2
+            },
+            "reviewed_preserved": 7
+          }
+        }
+      }
+    },
+    {
+      "id": 160,
+      "status": "completed",
+      "started_at": "2026-10-05T13:37:01.532200+00:00",
+      "finished_at": "2026-10-05T13:37:03.210522+00:00",
+      "requested_set_slugs": [
+        "eb01"
+      ],
+      "products_seen": 80,
+      "candidates_written": 80,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "eb01": {
+          "slug": "eb01",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 256,
+          "distinct_source_products": 126,
+          "own_series_products": 80,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 130,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 80,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 61,
+          "codes_with_multiple_products": 18,
+          "candidates_with_price": 80,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 80,
+          "candidates_with_rarity": 80,
+          "candidates_with_name_jp": 80,
+          "candidates_with_availability": 80,
+          "unmatched": 0,
+          "family_matched": 44,
+          "print_matched": 36,
+          "identity_conflict": 0,
+          "candidates_written": 80,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 80,
+          "proposal_refresh": {
+            "created": 38,
+            "reused": 0,
+            "superseded": 38,
+            "resolutions": {
+              "ambiguous": 37,
+              "exact": 1
+            },
+            "reviewed_preserved": 6
+          }
+        }
+      }
+    },
+    {
+      "id": 161,
+      "status": "completed",
+      "started_at": "2026-10-05T13:37:18.717944+00:00",
+      "finished_at": "2026-10-05T13:37:21.609451+00:00",
+      "requested_set_slugs": [
+        "eb02"
+      ],
+      "products_seen": 106,
+      "candidates_written": 106,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "eb02": {
+          "slug": "eb02",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 308,
+          "distinct_source_products": 152,
+          "own_series_products": 106,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 156,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 105,
+          "unparseable_codes": 1,
+          "distinct_card_codes": 87,
+          "codes_with_multiple_products": 17,
+          "candidates_with_price": 106,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 106,
+          "candidates_with_rarity": 105,
+          "candidates_with_name_jp": 106,
+          "candidates_with_availability": 106,
+          "unmatched": 1,
+          "family_matched": 62,
+          "print_matched": 43,
+          "identity_conflict": 0,
+          "candidates_written": 106,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 106,
+          "proposal_refresh": {
+            "created": 36,
+            "reused": 0,
+            "superseded": 36,
+            "resolutions": {
+              "ambiguous": 35,
+              "unresolved_identity": 1
+            },
+            "reviewed_preserved": 27
+          }
+        }
+      }
+    },
+    {
+      "id": 162,
+      "status": "completed",
+      "started_at": "2026-10-05T13:37:37.075198+00:00",
+      "finished_at": "2026-10-05T13:37:37.982126+00:00",
+      "requested_set_slugs": [
+        "st13"
+      ],
+      "products_seen": 35,
+      "candidates_written": 35,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st13": {
+          "slug": "st13",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 166,
+          "distinct_source_products": 81,
+          "own_series_products": 35,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 85,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 35,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 19,
+          "codes_with_multiple_products": 16,
+          "candidates_with_price": 35,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 35,
+          "candidates_with_rarity": 35,
+          "candidates_with_name_jp": 35,
+          "candidates_with_availability": 35,
+          "unmatched": 0,
+          "family_matched": 33,
+          "print_matched": 2,
+          "identity_conflict": 0,
+          "candidates_written": 35,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 35,
+          "proposal_refresh": {
+            "created": 32,
+            "reused": 0,
+            "superseded": 32,
+            "resolutions": {
+              "ambiguous": 32
+            },
+            "reviewed_preserved": 3
+          }
+        }
+      }
+    },
+    {
+      "id": 163,
+      "status": "completed",
+      "started_at": "2026-10-05T13:37:52.201541+00:00",
+      "finished_at": "2026-10-05T13:37:53.087953+00:00",
+      "requested_set_slugs": [
+        "st21"
+      ],
+      "products_seen": 32,
+      "candidates_written": 32,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st21": {
+          "slug": "st21",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 160,
+          "distinct_source_products": 78,
+          "own_series_products": 32,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 82,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 32,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 15,
+          "candidates_with_price": 32,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 32,
+          "candidates_with_rarity": 32,
+          "candidates_with_name_jp": 32,
+          "candidates_with_availability": 32,
+          "unmatched": 0,
+          "family_matched": 30,
+          "print_matched": 2,
+          "identity_conflict": 0,
+          "candidates_written": 32,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 32,
+          "proposal_refresh": {
+            "created": 30,
+            "reused": 0,
+            "superseded": 30,
+            "resolutions": {
+              "ambiguous": 30
+            },
+            "reviewed_preserved": 2
+          }
+        }
+      }
+    },
+    {
+      "id": 164,
+      "status": "completed",
+      "started_at": "2026-10-05T13:38:09.498510+00:00",
+      "finished_at": "2026-10-05T13:38:10.240987+00:00",
+      "requested_set_slugs": [
+        "st22"
+      ],
+      "products_seen": 31,
+      "candidates_written": 31,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st22": {
+          "slug": "st22",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 158,
+          "distinct_source_products": 77,
+          "own_series_products": 31,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 81,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 31,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 14,
+          "candidates_with_price": 31,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 31,
+          "candidates_with_rarity": 31,
+          "candidates_with_name_jp": 31,
+          "candidates_with_availability": 31,
+          "unmatched": 0,
+          "family_matched": 28,
+          "print_matched": 3,
+          "identity_conflict": 0,
+          "candidates_written": 31,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 31,
+          "proposal_refresh": {
+            "created": 28,
+            "reused": 0,
+            "superseded": 28,
+            "resolutions": {
+              "ambiguous": 28
+            },
+            "reviewed_preserved": 3
+          }
+        }
+      }
+    },
+    {
+      "id": 165,
+      "status": "completed",
+      "started_at": "2026-10-05T13:38:25.893818+00:00",
+      "finished_at": "2026-10-05T13:38:26.722424+00:00",
+      "requested_set_slugs": [
+        "st29"
+      ],
+      "products_seen": 31,
+      "candidates_written": 31,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st29": {
+          "slug": "st29",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 158,
+          "distinct_source_products": 77,
+          "own_series_products": 31,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 81,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 31,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 14,
+          "candidates_with_price": 31,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 31,
+          "candidates_with_rarity": 31,
+          "candidates_with_name_jp": 31,
+          "candidates_with_availability": 31,
+          "unmatched": 0,
+          "family_matched": 28,
+          "print_matched": 3,
+          "identity_conflict": 0,
+          "candidates_written": 31,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 31,
+          "proposal_refresh": {
+            "created": 28,
+            "reused": 0,
+            "superseded": 28,
+            "resolutions": {
+              "ambiguous": 28
+            },
+            "reviewed_preserved": 3
+          }
+        }
+      }
+    },
+    {
+      "id": 166,
+      "status": "completed",
+      "started_at": "2026-10-05T13:38:41.532821+00:00",
+      "finished_at": "2026-10-05T13:38:41.663497+00:00",
+      "requested_set_slugs": [
+        "st11"
+      ],
+      "products_seen": 7,
+      "candidates_written": 7,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st11": {
+          "slug": "st11",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 110,
+          "distinct_source_products": 53,
+          "own_series_products": 7,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 57,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 7,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 7,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 7,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 7,
+          "candidates_with_rarity": 7,
+          "candidates_with_name_jp": 7,
+          "candidates_with_availability": 7,
+          "unmatched": 0,
+          "family_matched": 6,
+          "print_matched": 1,
+          "identity_conflict": 0,
+          "candidates_written": 7,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 7,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 7
+          }
+        }
+      }
+    },
+    {
+      "id": 167,
+      "status": "completed",
+      "started_at": "2026-10-05T13:38:54.864522+00:00",
+      "finished_at": "2026-10-05T13:38:55.173712+00:00",
+      "requested_set_slugs": [
+        "st19"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st19": {
+          "slug": "st19",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 54,
+          "own_series_products": 8,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 58,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 168,
+      "status": "completed",
+      "started_at": "2026-10-05T13:40:12.622951+00:00",
+      "finished_at": "2026-10-05T13:40:12.723685+00:00",
+      "requested_set_slugs": [
+        "st26"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st26": {
+          "slug": "st26",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 54,
+          "own_series_products": 8,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 58,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 169,
+      "status": "completed",
+      "started_at": "2026-10-05T13:42:57.331780+00:00",
+      "finished_at": "2026-10-05T13:42:57.420022+00:00",
+      "requested_set_slugs": [
+        "st28"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st28": {
+          "slug": "st28",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 54,
+          "own_series_products": 8,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 58,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 3,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 170,
+      "status": "completed",
+      "started_at": "2026-10-05T13:45:16.616957+00:00",
+      "finished_at": "2026-10-05T13:45:16.880783+00:00",
+      "requested_set_slugs": [
+        "st35"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st35": {
+          "slug": "st35",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 54,
+          "own_series_products": 8,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 58,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 3,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 171,
+      "status": "completed",
+      "started_at": "2026-10-05T13:46:29.281273+00:00",
+      "finished_at": "2026-10-05T13:46:29.439585+00:00",
+      "requested_set_slugs": [
+        "st15"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st15": {
+          "slug": "st15",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 6,
+          "print_matched": 3,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 172,
+      "status": "completed",
+      "started_at": "2026-10-05T13:50:57.548429+00:00",
+      "finished_at": "2026-10-05T13:50:57.781568+00:00",
+      "requested_set_slugs": [
+        "st20"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st20": {
+          "slug": "st20",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 173,
+      "status": "completed",
+      "started_at": "2026-10-05T13:55:17.939834+00:00",
+      "finished_at": "2026-10-05T13:55:18.108201+00:00",
+      "requested_set_slugs": [
+        "st23"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st23": {
+          "slug": "st23",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 174,
+      "status": "completed",
+      "started_at": "2026-10-05T13:56:06.203384+00:00",
+      "finished_at": "2026-10-05T13:56:06.315567+00:00",
+      "requested_set_slugs": [
+        "st24"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st24": {
+          "slug": "st24",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 175,
+      "status": "completed",
+      "started_at": "2026-10-05T13:56:25.358498+00:00",
+      "finished_at": "2026-10-05T13:56:25.457845+00:00",
+      "requested_set_slugs": [
+        "st32"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st32": {
+          "slug": "st32",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 176,
+      "status": "completed",
+      "started_at": "2026-10-05T13:57:15.948102+00:00",
+      "finished_at": "2026-10-05T13:57:16.079988+00:00",
+      "requested_set_slugs": [
+        "st33"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st33": {
+          "slug": "st33",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 177,
+      "status": "completed",
+      "started_at": "2026-10-05T13:57:26.315044+00:00",
+      "finished_at": "2026-10-05T13:57:26.403312+00:00",
+      "requested_set_slugs": [
+        "st36"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st36": {
+          "slug": "st36",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 55,
+          "own_series_products": 9,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 59,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 178,
+      "status": "completed",
+      "started_at": "2026-10-05T13:57:36.797998+00:00",
+      "finished_at": "2026-10-05T13:57:36.917258+00:00",
+      "requested_set_slugs": [
+        "st25"
+      ],
+      "products_seen": 10,
+      "candidates_written": 10,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st25": {
+          "slug": "st25",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 116,
+          "distinct_source_products": 56,
+          "own_series_products": 10,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 60,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 10,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 10,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 10,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 10,
+          "candidates_with_rarity": 10,
+          "candidates_with_name_jp": 10,
+          "candidates_with_availability": 10,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 10,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 10,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 179,
+      "status": "completed",
+      "started_at": "2026-10-05T13:57:47.053251+00:00",
+      "finished_at": "2026-10-05T13:57:47.148541+00:00",
+      "requested_set_slugs": [
+        "st27"
+      ],
+      "products_seen": 10,
+      "candidates_written": 10,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st27": {
+          "slug": "st27",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 116,
+          "distinct_source_products": 56,
+          "own_series_products": 10,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 60,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 10,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 10,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 10,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 10,
+          "candidates_with_rarity": 10,
+          "candidates_with_name_jp": 10,
+          "candidates_with_availability": 10,
+          "unmatched": 0,
+          "family_matched": 6,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 10,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 10,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 180,
+      "status": "completed",
+      "started_at": "2026-10-05T13:57:57.788981+00:00",
+      "finished_at": "2026-10-05T13:57:57.995357+00:00",
+      "requested_set_slugs": [
+        "st01"
+      ],
+      "products_seen": 18,
+      "candidates_written": 18,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st01": {
+          "slug": "st01",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 132,
+          "distinct_source_products": 64,
+          "own_series_products": 18,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 68,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 18,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 1,
+          "candidates_with_price": 18,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 18,
+          "candidates_with_rarity": 18,
+          "candidates_with_name_jp": 18,
+          "candidates_with_availability": 18,
+          "unmatched": 0,
+          "family_matched": 11,
+          "print_matched": 7,
+          "identity_conflict": 0,
+          "candidates_written": 18,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 18,
+          "proposal_refresh": {
+            "created": 1,
+            "reused": 0,
+            "superseded": 1,
+            "resolutions": {
+              "exact": 1
+            },
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 181,
+      "status": "completed",
+      "started_at": "2026-10-05T13:58:08.494060+00:00",
+      "finished_at": "2026-10-05T13:58:08.655781+00:00",
+      "requested_set_slugs": [
+        "st02"
+      ],
+      "products_seen": 18,
+      "candidates_written": 18,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st02": {
+          "slug": "st02",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 132,
+          "distinct_source_products": 64,
+          "own_series_products": 18,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 68,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 18,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 1,
+          "candidates_with_price": 18,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 18,
+          "candidates_with_rarity": 18,
+          "candidates_with_name_jp": 18,
+          "candidates_with_availability": 18,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 14,
+          "identity_conflict": 0,
+          "candidates_written": 18,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 18,
+          "proposal_refresh": {
+            "created": 1,
+            "reused": 0,
+            "superseded": 1,
+            "resolutions": {
+              "exact": 1
+            },
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 182,
+      "status": "completed",
+      "started_at": "2026-10-05T13:58:18.532577+00:00",
+      "finished_at": "2026-10-05T13:58:18.689519+00:00",
+      "requested_set_slugs": [
+        "st03"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st03": {
+          "slug": "st03",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 9,
+          "print_matched": 8,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 183,
+      "status": "completed",
+      "started_at": "2026-10-05T13:58:28.718281+00:00",
+      "finished_at": "2026-10-05T13:58:28.873220+00:00",
+      "requested_set_slugs": [
+        "st04"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st04": {
+          "slug": "st04",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 12,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 2,
+            "reused": 0,
+            "superseded": 2,
+            "resolutions": {
+              "exact": 2
+            },
+            "reviewed_preserved": 15
+          }
+        }
+      }
+    },
+    {
+      "id": 184,
+      "status": "completed",
+      "started_at": "2026-10-05T14:03:47.376888+00:00",
+      "finished_at": "2026-10-05T14:03:47.983657+00:00",
+      "requested_set_slugs": [
+        "st05"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st05": {
+          "slug": "st05",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 1,
+          "print_matched": 16,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 185,
+      "status": "completed",
+      "started_at": "2026-10-05T14:03:59.010570+00:00",
+      "finished_at": "2026-10-05T14:03:59.209192+00:00",
+      "requested_set_slugs": [
+        "st06"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st06": {
+          "slug": "st06",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 13,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 186,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:05.242042+00:00",
+      "finished_at": "2026-10-05T14:04:05.698751+00:00",
+      "requested_set_slugs": [
+        "st07"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st07": {
+          "slug": "st07",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 3,
+          "print_matched": 14,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 187,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:10.534917+00:00",
+      "finished_at": "2026-10-05T14:04:10.728175+00:00",
+      "requested_set_slugs": [
+        "st08"
+      ],
+      "products_seen": 15,
+      "candidates_written": 15,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st08": {
+          "slug": "st08",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 126,
+          "distinct_source_products": 61,
+          "own_series_products": 15,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 65,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 15,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 15,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 15,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 15,
+          "candidates_with_rarity": 15,
+          "candidates_with_name_jp": 15,
+          "candidates_with_availability": 15,
+          "unmatched": 0,
+          "family_matched": 0,
+          "print_matched": 15,
+          "identity_conflict": 0,
+          "candidates_written": 15,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 15,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 15
+          }
+        }
+      }
+    },
+    {
+      "id": 188,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:20.966422+00:00",
+      "finished_at": "2026-10-05T14:04:21.147295+00:00",
+      "requested_set_slugs": [
+        "st10"
+      ],
+      "products_seen": 19,
+      "candidates_written": 19,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st10": {
+          "slug": "st10",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 134,
+          "distinct_source_products": 65,
+          "own_series_products": 19,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 69,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 19,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 19,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 19,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 19,
+          "candidates_with_rarity": 19,
+          "candidates_with_name_jp": 19,
+          "candidates_with_availability": 19,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 14,
+          "identity_conflict": 0,
+          "candidates_written": 19,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 19,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 19
+          }
+        }
+      }
+    },
+    {
+      "id": 189,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:23.824987+00:00",
+      "finished_at": "2026-10-05T14:04:24.237734+00:00",
+      "requested_set_slugs": [
+        "st09"
+      ],
+      "products_seen": 15,
+      "candidates_written": 15,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st09": {
+          "slug": "st09",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 126,
+          "distinct_source_products": 61,
+          "own_series_products": 15,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 65,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 15,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 15,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 15,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 15,
+          "candidates_with_rarity": 15,
+          "candidates_with_name_jp": 15,
+          "candidates_with_availability": 15,
+          "unmatched": 0,
+          "family_matched": 1,
+          "print_matched": 14,
+          "identity_conflict": 0,
+          "candidates_written": 15,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 15,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 15
+          }
+        }
+      }
+    },
+    {
+      "id": 190,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:33.932381+00:00",
+      "finished_at": "2026-10-05T14:04:34.095164+00:00",
+      "requested_set_slugs": [
+        "st12"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st12": {
+          "slug": "st12",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 13,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 191,
+      "status": "completed",
+      "started_at": "2026-10-05T14:04:41.672372+00:00",
+      "finished_at": "2026-10-05T14:04:42.116412+00:00",
+      "requested_set_slugs": [
+        "st14"
+      ],
+      "products_seen": 17,
+      "candidates_written": 17,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st14": {
+          "slug": "st14",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 130,
+          "distinct_source_products": 63,
+          "own_series_products": 17,
+          "foreign_series_filtered": 46,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st31",
+            "st34"
+          ],
+          "duplicate_products": 67,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 17,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 17,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 17,
+          "candidates_with_rarity": 17,
+          "candidates_with_name_jp": 17,
+          "candidates_with_availability": 17,
+          "unmatched": 0,
+          "family_matched": 6,
+          "print_matched": 11,
+          "identity_conflict": 0,
+          "candidates_written": 17,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 17,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 17
+          }
+        }
+      }
+    },
+    {
+      "id": 192,
+      "status": "completed",
+      "started_at": "2026-10-06T01:09:39.567148+00:00",
+      "finished_at": "2026-10-06T01:09:39.807119+00:00",
+      "requested_set_slugs": [
+        "st16"
+      ],
+      "products_seen": 13,
+      "candidates_written": 13,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st16": {
+          "slug": "st16",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 122,
+          "distinct_source_products": 56,
+          "own_series_products": 13,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 66,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 13,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 13,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 13,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 13,
+          "candidates_with_rarity": 13,
+          "candidates_with_name_jp": 13,
+          "candidates_with_availability": 13,
+          "unmatched": 0,
+          "family_matched": 7,
+          "print_matched": 6,
+          "identity_conflict": 0,
+          "candidates_written": 13,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 13,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 13
+          }
+        }
+      }
+    },
+    {
+      "id": 193,
+      "status": "completed",
+      "started_at": "2026-10-06T01:13:25.035132+00:00",
+      "finished_at": "2026-10-06T01:13:25.230334+00:00",
+      "requested_set_slugs": [
+        "st17"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st17": {
+          "slug": "st17",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 51,
+          "own_series_products": 8,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 61,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 6,
+          "print_matched": 2,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 194,
+      "status": "completed",
+      "started_at": "2026-10-06T01:16:52.704110+00:00",
+      "finished_at": "2026-10-06T01:16:52.915754+00:00",
+      "requested_set_slugs": [
+        "st18"
+      ],
+      "products_seen": 8,
+      "candidates_written": 8,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st18": {
+          "slug": "st18",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 112,
+          "distinct_source_products": 51,
+          "own_series_products": 8,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 61,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 8,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 8,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 8,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 8,
+          "candidates_with_rarity": 8,
+          "candidates_with_name_jp": 8,
+          "candidates_with_availability": 8,
+          "unmatched": 0,
+          "family_matched": 8,
+          "print_matched": 0,
+          "identity_conflict": 0,
+          "candidates_written": 8,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 8,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 8
+          }
+        }
+      }
+    },
+    {
+      "id": 195,
+      "status": "completed",
+      "started_at": "2026-10-06T01:17:54.630975+00:00",
+      "finished_at": "2026-10-06T01:17:54.827077+00:00",
+      "requested_set_slugs": [
+        "st31"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st31": {
+          "slug": "st31",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 52,
+          "own_series_products": 9,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 62,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 5,
+          "print_matched": 4,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 196,
+      "status": "completed",
+      "started_at": "2026-10-06T01:22:03.727139+00:00",
+      "finished_at": "2026-10-06T01:22:03.893303+00:00",
+      "requested_set_slugs": [
+        "st34"
+      ],
+      "products_seen": 9,
+      "candidates_written": 9,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st34": {
+          "slug": "st34",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 114,
+          "distinct_source_products": 51,
+          "own_series_products": 9,
+          "foreign_series_filtered": 42,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32"
+          ],
+          "duplicate_products": 63,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 9,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 9,
+          "codes_with_multiple_products": 0,
+          "candidates_with_price": 9,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 9,
+          "candidates_with_rarity": 9,
+          "candidates_with_name_jp": 9,
+          "candidates_with_availability": 9,
+          "unmatched": 0,
+          "family_matched": 4,
+          "print_matched": 5,
+          "identity_conflict": 0,
+          "candidates_written": 9,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 9,
+          "proposal_refresh": {
+            "created": 0,
+            "reused": 0,
+            "superseded": 0,
+            "resolutions": {},
+            "reviewed_preserved": 9
+          }
+        }
+      }
+    },
+    {
+      "id": 197,
+      "status": "completed",
+      "started_at": "2026-10-06T01:22:43.625075+00:00",
+      "finished_at": "2026-10-06T01:22:45.950764+00:00",
+      "requested_set_slugs": [
+        "prb02"
+      ],
+      "products_seen": 271,
+      "candidates_written": 271,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "prb02": {
+          "slug": "prb02",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 638,
+          "distinct_source_products": 314,
+          "own_series_products": 271,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 324,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 181,
+          "unparseable_codes": 90,
+          "distinct_card_codes": 137,
+          "codes_with_multiple_products": 43,
+          "candidates_with_price": 271,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 271,
+          "candidates_with_rarity": 181,
+          "candidates_with_name_jp": 271,
+          "candidates_with_availability": 271,
+          "unmatched": 90,
+          "family_matched": 181,
+          "print_matched": 0,
+          "identity_conflict": 0,
+          "candidates_written": 271,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 271,
+          "proposal_refresh": {
+            "created": 271,
+            "reused": 0,
+            "superseded": 271,
+            "resolutions": {
+              "ambiguous": 181,
+              "unresolved_identity": 90
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    },
+    {
+      "id": 198,
+      "status": "completed",
+      "started_at": "2026-10-06T01:28:04.796258+00:00",
+      "finished_at": "2026-10-06T01:28:05.325439+00:00",
+      "requested_set_slugs": [
+        "st30"
+      ],
+      "products_seen": 34,
+      "candidates_written": 34,
+      "pages_fetched": 1,
+      "stopped_reason": null,
+      "per_slug_metrics_json": {
+        "st30": {
+          "slug": "st30",
+          "pages_fetched": 1,
+          "pagination_seen": false,
+          "raw_product_anchors": 164,
+          "distinct_source_products": 77,
+          "own_series_products": 34,
+          "foreign_series_filtered": 43,
+          "foreign_series_seen": [
+            "op10",
+            "op11",
+            "op12",
+            "op13",
+            "op14",
+            "op15",
+            "op16",
+            "op17",
+            "st32",
+            "st34"
+          ],
+          "duplicate_products": 87,
+          "enumeration_complete": true,
+          "page_budget_exhausted": false,
+          "unfetched_pages": 0,
+          "parsed_card_codes": 34,
+          "unparseable_codes": 0,
+          "distinct_card_codes": 17,
+          "codes_with_multiple_products": 17,
+          "candidates_with_price": 34,
+          "candidates_with_ambiguous_price": 0,
+          "candidates_with_image": 34,
+          "candidates_with_rarity": 34,
+          "candidates_with_name_jp": 34,
+          "candidates_with_availability": 34,
+          "unmatched": 0,
+          "family_matched": 34,
+          "print_matched": 0,
+          "identity_conflict": 0,
+          "candidates_written": 34,
+          "budget_exhausted": false,
+          "visited": true,
+          "outcome": "enumerated",
+          "new_candidates": 0,
+          "refreshed_candidates": 34,
+          "proposal_refresh": {
+            "created": 34,
+            "reused": 0,
+            "superseded": 34,
+            "resolutions": {
+              "ambiguous": 34
+            },
+            "reviewed_preserved": 0
+          }
+        }
+      }
+    }
+  ],
+  "candidate_counts": [
+    {
+      "source": "yuyutei",
+      "candidates": 4153,
+      "new_24h": 0,
+      "latest": "2026-10-06T01:28:04.796258+00:00"
+    },
+    {
+      "source": "snkrdunk",
+      "candidates": 676,
+      "new_24h": 0,
+      "latest": "2026-10-02T15:40:14.682741+00:00"
+    }
+  ],
+  "denials": [
+    {
+      "name": "snkrdunk",
+      "work_id": 1875,
+      "source_card_mapping_id": 2230,
+      "claimed_at": "2026-10-05T13:31:24.193996+00:00",
+      "finished_at": "2026-10-05T13:31:36.085307+00:00",
+      "outcome": "source_denial",
+      "actual_request_cost": 299,
+      "raw_snapshot_id": null,
+      "last_failure": "AdmissionStopped: source_denial"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 46,
+      "source_card_mapping_id": 80,
+      "claimed_at": "2026-10-02T19:24:36.971519+00:00",
+      "finished_at": "2026-10-02T19:24:47.159498+00:00",
+      "outcome": "source_denial",
+      "actual_request_cost": 295,
+      "raw_snapshot_id": null,
+      "last_failure": "Error: APIRequestContext.get: Invalid URL"
+    }
+  ],
+  "quarantines": [
+    {
+      "name": "snkrdunk",
+      "work_id": 29,
+      "source_card_mapping_id": 43,
+      "card_print_id": 9,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 54,
+      "source_card_mapping_id": 88,
+      "card_print_id": 5837,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 67,
+      "source_card_mapping_id": 101,
+      "card_print_id": 6795,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 68,
+      "source_card_mapping_id": 102,
+      "card_print_id": 6799,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 77,
+      "source_card_mapping_id": 111,
+      "card_print_id": 5692,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 78,
+      "source_card_mapping_id": 112,
+      "card_print_id": 5802,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 81,
+      "source_card_mapping_id": 115,
+      "card_print_id": 5641,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 97,
+      "source_card_mapping_id": 131,
+      "card_print_id": 5838,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 98,
+      "source_card_mapping_id": 132,
+      "card_print_id": 5839,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 113,
+      "source_card_mapping_id": 147,
+      "card_print_id": 6818,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 114,
+      "source_card_mapping_id": 148,
+      "card_print_id": 6817,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 115,
+      "source_card_mapping_id": 149,
+      "card_print_id": 6815,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 118,
+      "source_card_mapping_id": 152,
+      "card_print_id": 6811,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 120,
+      "source_card_mapping_id": 154,
+      "card_print_id": 6809,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 125,
+      "source_card_mapping_id": 159,
+      "card_print_id": 5807,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 139,
+      "source_card_mapping_id": 173,
+      "card_print_id": 5798,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 145,
+      "source_card_mapping_id": 179,
+      "card_print_id": 5811,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 161,
+      "source_card_mapping_id": 195,
+      "card_print_id": 5816,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 165,
+      "source_card_mapping_id": 199,
+      "card_print_id": 5701,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 201,
+      "source_card_mapping_id": 235,
+      "card_print_id": 5868,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 206,
+      "source_card_mapping_id": 240,
+      "card_print_id": 5877,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "work_id": 214,
+      "source_card_mapping_id": 248,
+      "card_print_id": 5891,
+      "last_failure": "Existing confirmed identity-validation refusal; explicit review required",
+      "last_outcome": null,
+      "updated_at": "2026-10-02T15:54:46.480365+00:00"
+    }
+  ],
+  "request_costs": [
+    {
+      "name": "snkrdunk",
+      "kind": "refresh",
+      "outcome": "captured",
+      "attempts": 44,
+      "avg_requests": 231.52,
+      "max_requests": 252,
+      "avg_runtime": 11.29
+    },
+    {
+      "name": "snkrdunk",
+      "kind": "refresh",
+      "outcome": "no_listing",
+      "attempts": 218,
+      "avg_requests": 224.42,
+      "max_requests": 239,
+      "avg_runtime": 10.7
+    },
+    {
+      "name": "snkrdunk",
+      "kind": "refresh",
+      "outcome": "source_denial",
+      "attempts": 1,
+      "avg_requests": 299.0,
+      "max_requests": 299,
+      "avg_runtime": 11.49
+    },
+    {
+      "name": "snkrdunk",
+      "kind": "validation",
+      "outcome": "completed",
+      "attempts": 20,
+      "avg_requests": 227.85,
+      "max_requests": 242,
+      "avg_runtime": 9.82
+    },
+    {
+      "name": "yuyutei",
+      "kind": "discovery",
+      "outcome": "completed",
+      "attempts": 59,
+      "avg_requests": 102.63,
+      "max_requests": 104,
+      "avg_runtime": 11.58
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": "captured",
+      "attempts": 1784,
+      "avg_requests": 102.27,
+      "max_requests": 105,
+      "avg_runtime": 8.45
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": "expired",
+      "attempts": 2,
+      "avg_requests": null,
+      "max_requests": null,
+      "avg_runtime": 304.48
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": "transient_failure",
+      "attempts": 72,
+      "avg_requests": 155.56,
+      "max_requests": 162,
+      "avg_runtime": 7.74
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "outcome": null,
+      "attempts": 1,
+      "avg_requests": null,
+      "max_requests": null,
+      "avg_runtime": null
+    }
+  ],
+  "proposals": [
+    {
+      "name": "snkrdunk",
+      "resolution_status": "ambiguous",
+      "review_status": "pending",
+      "groups": 218,
+      "latest": "2026-09-20T15:12:30.449881+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "resolution_status": "exact",
+      "review_status": "approved",
+      "groups": 151,
+      "latest": "2026-10-02T15:40:14.682741+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "resolution_status": "exact",
+      "review_status": "pending",
+      "groups": 82,
+      "latest": "2026-09-20T15:12:30.449881+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "resolution_status": "release_unresolved",
+      "review_status": "pending",
+      "groups": 23,
+      "latest": "2026-09-20T15:12:34.318271+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "resolution_status": "ambiguous",
+      "review_status": "pending",
+      "groups": 1648,
+      "latest": "2026-10-06T01:28:04.796258+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "resolution_status": "exact",
+      "review_status": "approved",
+      "groups": 1500,
+      "latest": "2026-10-04T02:40:50.577647+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "resolution_status": "exact",
+      "review_status": "pending",
+      "groups": 185,
+      "latest": "2026-10-05T13:58:28.718281+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "resolution_status": "unresolved_identity",
+      "review_status": "pending",
+      "groups": 220,
+      "latest": "2026-10-06T01:22:43.625075+00:00"
+    }
+  ],
+  "operational_coverage": [
+    {
+      "denominator": 4316,
+      "operational_one_or_more": 1751,
+      "operational_both": 0,
+      "operational_zero": 2565
+    }
+  ],
+  "discovery_scopes": [
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:eb01",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:37:01.073912+00:00",
+      "next_due_at": "2026-10-06T13:37:04.741019+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:eb02",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:37:18.236631+00:00",
+      "next_due_at": "2026-10-06T13:37:23.241442+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:eb03",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:33:27.298033+00:00",
+      "next_due_at": "2026-10-06T13:33:29.567467+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:eb04",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:33:39.130147+00:00",
+      "next_due_at": "2026-10-06T13:33:41.402685+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op01",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:25:22.473555+00:00",
+      "next_due_at": "2026-10-06T13:25:25.329191+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op02",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:25:36.307840+00:00",
+      "next_due_at": "2026-10-06T13:25:39.194583+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op03",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:28:27.381715+00:00",
+      "next_due_at": "2026-10-06T13:28:30.073484+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op04",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:32:24.921711+00:00",
+      "next_due_at": "2026-10-06T13:32:27.375702+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op05",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:28:15.106626+00:00",
+      "next_due_at": "2026-10-06T13:28:17.835499+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op06",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:32:36.906066+00:00",
+      "next_due_at": "2026-10-06T13:32:39.625274+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op07",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:32:49.341263+00:00",
+      "next_due_at": "2026-10-06T13:32:51.987615+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op08",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:33:02.363905+00:00",
+      "next_due_at": "2026-10-06T13:33:04.848347+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op09",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:27:49.594720+00:00",
+      "next_due_at": "2026-10-06T13:27:52.656640+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op10",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:33:14.459733+00:00",
+      "next_due_at": "2026-10-06T13:33:17.166697+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op11",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:27:35.944414+00:00",
+      "next_due_at": "2026-10-06T13:27:38.487496+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op12",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:28:02.790169+00:00",
+      "next_due_at": "2026-10-06T13:28:05.442165+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op13",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:17:21.428290+00:00",
+      "next_due_at": "2026-10-06T13:17:24.430335+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op14",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:26:07.952865+00:00",
+      "next_due_at": "2026-10-06T13:26:10.818518+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op15",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:28:40.113209+00:00",
+      "next_due_at": "2026-10-06T13:28:42.942665+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op16",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:32:12.343668+00:00",
+      "next_due_at": "2026-10-06T13:32:15.243629+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:op17",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:21:51.505675+00:00",
+      "next_due_at": "2026-10-06T13:21:56.940661+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:prb01",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:25:08.374638+00:00",
+      "next_due_at": "2026-10-06T13:25:12.797322+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:prb02",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:22:43.348670+00:00",
+      "next_due_at": "2026-10-07T01:22:47.206877+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st01",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:57:57.641432+00:00",
+      "next_due_at": "2026-10-06T13:57:58.757425+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st02",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:58:08.368025+00:00",
+      "next_due_at": "2026-10-06T13:58:09.461532+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st03",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:58:18.407219+00:00",
+      "next_due_at": "2026-10-06T13:58:19.485714+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st04",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:58:28.566765+00:00",
+      "next_due_at": "2026-10-06T13:58:29.666573+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st05",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:03:46.825522+00:00",
+      "next_due_at": "2026-10-06T14:03:49.725582+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st06",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:03:58.871536+00:00",
+      "next_due_at": "2026-10-06T14:04:00.044810+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st07",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:04.745681+00:00",
+      "next_due_at": "2026-10-06T14:04:07.108908+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st08",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:10.376757+00:00",
+      "next_due_at": "2026-10-06T14:04:11.560537+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st09",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:22.911211+00:00",
+      "next_due_at": "2026-10-06T14:04:25.855568+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st10",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:20.822703+00:00",
+      "next_due_at": "2026-10-06T14:04:21.885002+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st11",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:38:41.283176+00:00",
+      "next_due_at": "2026-10-06T13:38:42.873905+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st12",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:33.653896+00:00",
+      "next_due_at": "2026-10-06T14:04:34.945420+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st13",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:37:36.691283+00:00",
+      "next_due_at": "2026-10-06T13:37:39.282860+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st14",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T14:04:41.368809+00:00",
+      "next_due_at": "2026-10-06T14:04:43.519381+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st15",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:46:29.046794+00:00",
+      "next_due_at": "2026-10-06T13:46:30.800856+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st16",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:09:39.321775+00:00",
+      "next_due_at": "2026-10-07T01:09:40.917444+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st17",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:13:24.820439+00:00",
+      "next_due_at": "2026-10-07T01:13:26.359719+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st18",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:16:52.419378+00:00",
+      "next_due_at": "2026-10-07T01:16:54.080955+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st19",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:38:54.446690+00:00",
+      "next_due_at": "2026-10-06T13:38:56.459723+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st20",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:50:57.261324+00:00",
+      "next_due_at": "2026-10-06T13:50:58.961425+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st21",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:37:51.817311+00:00",
+      "next_due_at": "2026-10-06T13:37:54.490760+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st22",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:38:09.043829+00:00",
+      "next_due_at": "2026-10-06T13:38:11.924707+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st23",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:55:17.773152+00:00",
+      "next_due_at": "2026-10-06T13:55:19.049328+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st24",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:56:06.018398+00:00",
+      "next_due_at": "2026-10-06T13:56:07.183978+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st25",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:57:36.622907+00:00",
+      "next_due_at": "2026-10-06T13:57:37.751645+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st26",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:40:12.497011+00:00",
+      "next_due_at": "2026-10-06T13:40:13.455985+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st27",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:57:46.912686+00:00",
+      "next_due_at": "2026-10-06T13:57:47.792384+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st28",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:42:57.225853+00:00",
+      "next_due_at": "2026-10-06T13:42:57.965100+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st29",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:38:25.471867+00:00",
+      "next_due_at": "2026-10-06T13:38:28.156719+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st30",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:28:04.517093+00:00",
+      "next_due_at": "2026-10-07T01:28:06.364097+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st31",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:17:54.369709+00:00",
+      "next_due_at": "2026-10-07T01:17:56.055799+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st32",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:56:25.197798+00:00",
+      "next_due_at": "2026-10-06T13:56:26.301515+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st33",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:57:15.792297+00:00",
+      "next_due_at": "2026-10-06T13:57:16.883836+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st34",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-06T01:22:03.540065+00:00",
+      "next_due_at": "2026-10-07T01:22:04.980074+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st35",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:45:16.164627+00:00",
+      "next_due_at": "2026-10-06T13:45:18.254917+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "scope_key": "yuyu-category:st36",
+      "state": "pending",
+      "last_outcome": "completed",
+      "last_failure": null,
+      "last_successfully_checked_at": "2026-10-05T13:57:26.166910+00:00",
+      "next_due_at": "2026-10-06T13:57:27.158755+00:00"
+    }
+  ],
+  "recent_snapshots": [
+    {
+      "id": 25528,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T13:31:35.936269+00:00",
+      "bytes": 1400192
+    },
+    {
+      "id": 25461,
+      "source_url": "https://snkrdunk.com/apparels/142692",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:39.598387+00:00",
+      "bytes": 236725
+    },
+    {
+      "id": 25460,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:34.330664+00:00",
+      "bytes": 1438329
+    },
+    {
+      "id": 25459,
+      "source_url": "https://snkrdunk.com/apparels/142691",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:27.782524+00:00",
+      "bytes": 236394
+    },
+    {
+      "id": 25458,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:22.802689+00:00",
+      "bytes": 1437591
+    },
+    {
+      "id": 25457,
+      "source_url": "https://snkrdunk.com/apparels/142690",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:16.431506+00:00",
+      "bytes": 235681
+    },
+    {
+      "id": 25456,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:11.686747+00:00",
+      "bytes": 1437597
+    },
+    {
+      "id": 25455,
+      "source_url": "https://snkrdunk.com/apparels/142689",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:59:03.651119+00:00",
+      "bytes": 230951
+    },
+    {
+      "id": 25454,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:58.263248+00:00",
+      "bytes": 1440742
+    },
+    {
+      "id": 25453,
+      "source_url": "https://snkrdunk.com/apparels/142688",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:51.431269+00:00",
+      "bytes": 235765
+    },
+    {
+      "id": 25452,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:45.422492+00:00",
+      "bytes": 1382114
+    },
+    {
+      "id": 25451,
+      "source_url": "https://snkrdunk.com/apparels/142687",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:39.760612+00:00",
+      "bytes": 235651
+    },
+    {
+      "id": 25450,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:34.789595+00:00",
+      "bytes": 1439710
+    },
+    {
+      "id": 25449,
+      "source_url": "https://snkrdunk.com/apparels/142686",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:28.222792+00:00",
+      "bytes": 236707
+    },
+    {
+      "id": 25448,
+      "source_url": "https://snkrdunk.com/",
+      "http_status": 200,
+      "fetched_at": "2026-10-05T12:58:22.800551+00:00",
+      "bytes": 1435494
+    }
+  ]
+}
