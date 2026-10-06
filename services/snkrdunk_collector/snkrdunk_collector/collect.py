@@ -260,6 +260,8 @@ def run_one_mapping_detailed(
                         reason=holder["product_classification"],
                         batch_run_id=batch_run_id,
                     )
+                    if freshness:
+                        freshness.settle_browser(page)
                     context.close()
                     browser.close()
                 else:

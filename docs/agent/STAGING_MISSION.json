@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Fix forward PR54 partial collector delivery with tracked-child polling and watched build revision markers",
+  "mission": "Settle admitted SNKRDUNK browser routes before context disposal",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,70 +20,30 @@
   "impacts": [
     {
       "files": [
-        "scripts/deploy_staging_collectors.py",
-        "scripts/tests/test_deploy_staging_collectors.py",
-        "docs/agent/evidence/pr54-delivery-repair-preflight-2026-10-06.json",
-        "scripts/tests/test_operational_health.py"
+        "services/api/app/services/freshness_integration.py",
+        "services/api/tests/test_browser_admission_shutdown.py",
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
+        "docs/agent/evidence/snkr-browser-shutdown-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "subsystem_activation",
+        "infrastructure",
         "staging_deployment"
       ],
-      "reason": "Repair tracked deployment polling and enforce configuration checks while following children. Generated revision markers fall inside existing collector watch paths. Deliver existing artwork feature to all nine Yuyu shards without source jobs or changes to schedules, routing, admission or identity policy."
+      "reason": "A bounded browser admission lifecycle fix fences new requests and settles granted routes before SNKRDUNK closes its context; late source denials remain fatal. Only the existing SNKRDUNK staging collector receives the rebuilt shared component. No scheduling, routing, capacity or identity-policy change."
     }
   ],
-  "diff_sha256": "a75383f80d6c2e6c816892c169e7bcaf6fb9d44ccab9fe304e12a9f207c62a8b",
+  "diff_sha256": "bcf4cea070caf842c63b3924cad67dc38bcdc57d9cc3aac3a8e2549cd1b5b515",
   "deployment_verification": {
-    "api_sha": "633c6674e31a43a00cadbf1a42f7243bf483aa42",
+    "api_sha": "merge",
     "revision": "c4e8a1d7b902",
     "collector_services": [
       {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "fdb572f7-8b43-4305-ab82-7e65990f7eca"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "6fe5c472-5bae-4820-bc70-9e8c0b832f0a"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "ad82b3bb-c08d-4c7d-a804-956e5cd5ce29"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "366f091a-601c-4a18-8391-a138ef0fbf4f"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "40ed197b-3835-450d-a207-80e740d89515"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "26a6ac06-eb16-4d57-9b07-45663a38985b"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "dee2622e-a7ae-4015-b038-4e86a61702ef"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "6c9ee255-e282-4105-8c03-93220e8cb0d1"
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "82b82851-b48c-471a-92d7-e1ec9deafcb4"
       }
     ]
   },
@@ -91,70 +51,30 @@
     "impact": {
       "resources": [
         {
-          "name": "yuyutei-collector-shard-0",
-          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "fdb572f7-8b43-4305-ab82-7e65990f7eca"
-        },
-        {
-          "name": "yuyutei-collector-shard-1",
-          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "6fe5c472-5bae-4820-bc70-9e8c0b832f0a"
-        },
-        {
-          "name": "yuyutei-collector-shard-2",
-          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
-        },
-        {
-          "name": "yuyutei-collector-shard-3",
-          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "ad82b3bb-c08d-4c7d-a804-956e5cd5ce29"
-        },
-        {
-          "name": "yuyutei-collector-shard-4-v2",
-          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "366f091a-601c-4a18-8391-a138ef0fbf4f"
-        },
-        {
-          "name": "yuyutei-collector-shard-5",
-          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "40ed197b-3835-450d-a207-80e740d89515"
-        },
-        {
-          "name": "yuyutei-collector-shard-6",
-          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "26a6ac06-eb16-4d57-9b07-45663a38985b"
-        },
-        {
-          "name": "yuyutei-collector-shard-7",
-          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "dee2622e-a7ae-4015-b038-4e86a61702ef"
-        },
-        {
-          "name": "yuyutei-collector-shard-8",
-          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "6c9ee255-e282-4105-8c03-93220e8cb0d1"
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "82b82851-b48c-471a-92d7-e1ec9deafcb4"
         }
       ],
       "routes": [
-        "Nine existing serial Yuyu due-work consumers, explicit yuyu-identity discovery scopes only"
+        "SNKRDUNK existing singleton due-work consumer; admission/browser shutdown only"
       ],
       "dependencies": [
-        "Current canonical ambiguous proposal digest, complete official release/family sibling set, source natural-key guards, ordinary singleton and request admission"
+        "Existing shared source budget, exact-print writer, source denial and singleton guards"
       ],
-      "deployment_impact": "Nine existing Yuyu staging collector builds. Zero manual source requests. Natural scheduled work retains all established limits.",
+      "deployment_impact": "Pinned staging API component and one existing SNKRDUNK collector; unchanged Yuyu component remains PR57.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "633c6674e31a43a00cadbf1a42f7243bf483aa42",
-      "procedure": "Contain any invalid evidence scope and fix forward retained exact collector source on the same pinned services; retain snapshots, mappings, observations and schedules.",
-      "trigger": "Required source denial, source-budget or lease violation, malformed evidence lineage or unintended identity/price write",
-      "backup": "No schema, configuration, mapping or price mutation; retained successful prior deployments and exact source commits provide code recovery.",
+      "artifact": "690e7faab1c18dcd1319b10517bd662269444093",
+      "procedure": "Fix forward prior shared/collector source on the same pinned staging resources if lifecycle or admission invariants fail; retain all evidence and quarantines.",
+      "trigger": "Unmetered dispatch, late required-denial loss, indefinite route settlement or unexpected identity/price writes",
+      "backup": "No schema, queue, mapping, price or service-configuration mutation. Previous exact source and successful deployment retained.",
       "validation": [
-        "docs/agent/evidence/pr54-delivery-repair-preflight-2026-10-06.json",
-        "scripts/tests/test_deploy_staging_collectors.py"
+        "services/api/tests/test_browser_admission_shutdown.py",
+        "docs/agent/evidence/snkr-browser-shutdown-preflight-2026-10-06.json"
       ]
     },
     "verification": {
@@ -164,9 +84,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "scripts/tests/test_deploy_staging_collectors.py"
+        "services/api/tests/test_browser_admission_shutdown.py"
       ],
-      "observation_window": "Full adopted delivery verification and ordinary scheduled runtime revision receipts for all nine shards before any artwork canary."
+      "observation_window": "After full adopted CI and serialized delivery, inspect the next ordinary scheduled SNKRDUNK turn and freshness attempts. Placeholder identities remain refused; no manual collector trigger."
     }
   }
 }

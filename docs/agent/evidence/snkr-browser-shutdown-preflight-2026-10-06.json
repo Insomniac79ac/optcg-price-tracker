@@ -1,0 +1,40 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T08:54:51.029784+00:00",
+  "verified_prior_delivery": {
+    "pr": 57,
+    "run": 37435775846,
+    "merge_sha": "690e7faab1c18dcd1319b10517bd662269444093",
+    "all_nine_yuyu_success": true
+  },
+  "failed_natural_checks": [
+    {
+      "work_id": 1876,
+      "mapping_id": 2231,
+      "attempt_id": 8912,
+      "raw_snapshot_id": 27469
+    },
+    {
+      "work_id": 1877,
+      "mapping_id": 2232,
+      "attempt_id": 8915,
+      "raw_snapshot_id": 27472
+    }
+  ],
+  "failure": "Route.fulfill: Fetch response has been disposed",
+  "evidence": "Required application route callbacks report HTTP200 then fail during context.close. Required product snapshots retain placeholder images and all A-D waiting; no identity or freshness success claimed.",
+  "fix": "Fence new requests with interception still installed; pump admitted callbacks for at most 31 seconds, retaining the existing 30-second fetch timeout. Check late denial/ownership failures before closing the context.",
+  "bounds": {
+    "services": 1,
+    "manual_source_requests": 0,
+    "database_writes": 0,
+    "settle_seconds": 31
+  },
+  "source_identity_policy_changed": false,
+  "production_accessed_in_continuation": false,
+  "psa10_enabled": false,
+  "official_reference": "https://playwright.dev/python/docs/api/class-browsercontext",
+  "official_reference_checked_utc": "2026-10-06",
+  "installed_playwright": "1.61.0",
+  "rollback_source": "690e7faab1c18dcd1319b10517bd662269444093"
+}
