@@ -807,12 +807,9 @@ def test_asset_redirect_hops_are_metered_and_cross_origin_secrets_removed(db, st
         assert route.fetch.call_args.kwargs["url"] == "https://cdn.example.test/asset"
         assert route.fetch.call_args.kwargs["headers"] == {"accept": "image/*"}
         assert route.fetch.call_args.kwargs["max_redirects"] == 0
-        assert attempt.denied == (status == 429)
-        if status == 429:
-            assert (
-                session.scalar(select(SourceDispatchBudget.pause_reason))
-                == "source_denial"
-            )
+        assert not attempt.denied
+        assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
+        assert attempt.health["optional_resource"] == int(status == 429)
 
 
 def test_optional_asset_transport_failure_does_not_poison_product(db):
@@ -1011,6 +1008,9 @@ def test_recurring_yuyu_discovery_consumes_shared_lane_atomically(db):
             "fixture",
         )
         enumeration = SlugEnumeration(slug="op01")
+        enumeration.advertised_scopes = {
+            "promo-100": "https://yuyu-tei.jp/sell/opc/s/search?vers%5B%5D=promo-100"
+        }
         return persist_enumeration(session, claim, freshness, enumeration, rid)
 
     with factory() as session:
@@ -1040,6 +1040,11 @@ def test_recurring_yuyu_discovery_consumes_shared_lane_atomically(db):
             session.scalar(select(func.count()).select_from(FreshnessPriceState)) == 0
         )
         assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        promo = session.scalar(select(FreshnessWork).where(
+            FreshnessWork.scope_key == "yuyu-category:promo-100"))
+        assert promo.state == "pending" and promo.attempt_count == 0
+        assert promo.resume_cursor["advertised_snapshot_id"] == session.scalar(select(RawSnapshot.id))
+        assert promo.resume_cursor["discovery_url"].endswith("=promo-100")
 
 
 def test_listing_snapshot_precedes_parse_and_denial(monkeypatch):
@@ -1070,7 +1075,7 @@ def test_disappeared_discovery_category_is_bounded_failure(monkeypatch):
 
     session = MagicMock()
     session.get.return_value = SimpleNamespace(
-        scope_key="yuyu-category:st16", source_id=1
+        scope_key="yuyu-category:st16", source_id=1, resume_cursor=None
     )
     browser = MagicMock()
     monkeypatch.setattr(discovery, "sync_playwright", MagicMock(return_value=browser))

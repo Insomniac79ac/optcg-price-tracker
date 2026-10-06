@@ -1,0 +1,102 @@
+{
+  "observed_at": "2026-10-06T02:50:43.480101+00:00",
+  "target": "staging",
+  "phase": "optional-request containment and source-advertised discovery",
+  "baseline_sha": "5cb8c5525814024ad1bc0fffe81fec90ce6dbe4b",
+  "resources": [
+    {
+      "name": "snkrdunk-collector",
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "recovery_deployment_id": "2ba23079-a6b2-48e7-96a4-dc00a866a7be"
+    },
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "recovery_deployment_id": "15f446b7-c139-446b-b7ae-8cb49db2cb09"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "recovery_deployment_id": "4c18e1de-efe3-421a-b961-72d185d653cf"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "recovery_deployment_id": "22930cd2-c705-46f0-8815-abeb68823281"
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "recovery_deployment_id": "c8c8f513-cc2f-4806-a287-496c09c0e385"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "recovery_deployment_id": "bd3ad2af-3ea0-4274-a58d-035c7d133762"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "recovery_deployment_id": "c96af23b-401b-4db9-8d47-5698268d73f6"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "recovery_deployment_id": "9b254326-72c9-4bda-adcc-03b623c9026c"
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "recovery_deployment_id": "5b91d293-55de-4180-ae2b-dd7fb4db1348"
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "recovery_deployment_id": "8f979f52-b01f-41d2-8a80-9c9157f1e4bd"
+    }
+  ],
+  "source_navigation": {
+    "retained_snapshot_id": 26072,
+    "advertised_options": 67,
+    "existing_scopes": 59,
+    "new_scopes": 8,
+    "new_groups": [
+      "promo-200",
+      "promo-100",
+      "promo-op20",
+      "promo-op10",
+      "promo-st10",
+      "promo-eb10",
+      "promo-prb10",
+      "don"
+    ],
+    "method": "GET",
+    "action": "https://yuyu-tei.jp/sell/opc/s/search"
+  },
+  "limits": {
+    "unchanged_http_concurrency": true,
+    "unchanged_shards": 9,
+    "unchanged_per_turn_work_bound": 8,
+    "unchanged_yuyu_request_budget_per_1800s": 9000,
+    "unchanged_snkr_request_budget_per_1800s": 3100,
+    "unchanged_persistent_snkr_pause": true,
+    "listing_pages_per_scope": 3,
+    "candidate_products_per_scope": 500,
+    "new_scope_product_upper_bound": 4000
+  },
+  "tests": {
+    "boundary_and_postgres_adapters": "64 passed",
+    "discovery_scope_persistence_probe": "191 passed (pending final rerun)"
+  },
+  "documentation_checked": "2026-10-06",
+  "official_references": [
+    "https://docs.railway.com/cli",
+    "https://cli.github.com/manual/gh_pr_create"
+  ],
+  "installed_cli": {
+    "railway": "5.62.1",
+    "gh": "2.88.0"
+  },
+  "rollback": "Rebuild retained baseline commit on these same ten services; stop newly advertised discovery scopes before rollback; preserve candidates/raw evidence; never approve during rollout. Persistent source pause retained. No schema change.",
+  "natural_verification": "At least two scheduled turns per Yuyu shard after deployment; verify reduced request cost, exact captures, new discovery scope completion/candidate insertion, lease settlement. SNKR remains contained pending metered recovery evidence."
+}
