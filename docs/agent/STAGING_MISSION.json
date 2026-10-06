@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Serve one explicitly authorized SNKRDUNK recovery validation under the existing natural scheduled singleton",
+  "mission": "Consume complete promotional source evidence and wait for native staging API delivery",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,11 +20,16 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/evidence/snkr-scheduled-recovery-preflight-2026-10-06.json",
-        "services/api/app/services/source_recovery.py",
-        "services/api/tests/test_source_recovery_postgres.py",
-        "services/snkrdunk_collector/snkrdunk_collector/due.py",
-        "services/snkrdunk_collector/snkrdunk_collector/recovery.py"
+        "docs/agent/evidence/raw-promotional-evidence-preflight-2026-10-06.json",
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/verify_staging_delivery.py",
+        "services/api/app/services/source_mapping_proposals.py",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "services/worker/tests/test_snkrdunk_listing_evidence.py",
+        "services/worker/worker/matching/snkrdunk_image_variant.py",
+        "services/worker/worker/matching/snkrdunk_listing_evidence.py",
+        "services/yuyutei_collector/tests/test_extractor.py",
+        "services/yuyutei_collector/yuyutei_collector/extractor.py"
       ],
       "effects": [
         "application",
@@ -33,18 +38,58 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Explicit durable recovery intent is consumed once by the existing scheduled singleton. No cron/command/concurrency change; all source-denial, exact lineage, raw evidence, ordinal, reservation and successful-resume guards preserved."
+      "reason": "Whole authoritative product labels resolve only positively named releases; ambiguous physical siblings remain fail-closed. Promotional code/natural-key grammar is integrated across source discovery and price extraction. Read-only deployment verification waits for independently finishing native builds within the existing deadline. No automatic mapping approval or source-budget increase."
     }
   ],
-  "diff_sha256": "9f5bd6ae8b084703be461e0e190b0b0b86a213b30fca5b8e8d814fb31f76d0ac",
+  "diff_sha256": "7fee0c09ca418de25deaf69dd034859ecd420e0c9956e744c6889194665aa653",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
     "collector_services": [
       {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "d83c0878-c3e5-4234-a0f1-c641fb9704ed"
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
       }
     ]
   },
@@ -52,31 +97,74 @@
     "impact": {
       "resources": [
         {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "d83c0878-c3e5-4234-a0f1-c641fb9704ed"
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
         }
       ],
       "routes": [
-        "Existing scheduled SNKRDUNK singleton; one explicit recovery intent only"
+        "Existing canonical proposal and exact-approval services",
+        "Nine serial Yuyu due/discovery consumers",
+        "Existing staging-native API/frontend verification"
       ],
       "dependencies": [
-        "Existing exact writer and current approved/manual mapping",
-        "Shared source-budget services; no schema change"
+        "Authoritative release membership, manual overrides and exact CardPrint guards",
+        "No migration, no mapping or history change in rollout"
       ],
-      "deployment_impact": "Staging API and one existing SNKRDUNK collector; unchanged service command and cron.",
-      "database_writes": 1000,
-      "source_requests": 600,
-      "estimated_runtime_minutes": 4
+      "deployment_impact": "Native staging API/frontend/worker plus existing nine Yuyu collectors; no command, cadence, budget or concurrency changes.",
+      "database_writes": 20000,
+      "source_requests": 9000,
+      "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "f3ef6283e62bd30afe26143af5b9fb44d6a749bf",
-      "procedure": "Block only an unattempted planned recovery work ID; retain source pause and all evidence. Rebuild retained staging collector if required. Normal admission re-pauses immediately on fresh required denial.",
-      "trigger": "Required denial, identity refusal, failed reservation/lease settlement, lineage change or absent/stale recovery proof",
-      "backup": "No migration, mapping change, persisted probe price or historical rewrite. Retained source/deployment and transactional hypothesis rollback.",
+      "artifact": "0ce610c484c28888846101a72f513bc3fdd305cb",
+      "procedure": "Rebuild retained code on the same staging resources. Preserve raw/candidates/mappings/history. Pending proposal digests can be recomputed with the retained resolver; reviewed decisions remain unchanged.",
+      "trigger": "Required denial, sustained runtime overlap, wrong identity, missed budget/lease bounds or invalid exact recommendation",
+      "backup": "No schema, history or mapping change in rollout. Retained baseline code and recorded successful source deployments; proposal digest versions preserve prior evidence.",
       "validation": [
-        "services/api/tests/test_source_recovery_postgres.py",
-        "docs/agent/evidence/snkr-scheduled-recovery-preflight-2026-10-06.json"
+        "docs/agent/evidence/raw-promotional-evidence-preflight-2026-10-06.json",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "scripts/tests/test_verify_staging_delivery.py"
       ]
     },
     "verification": {
@@ -86,9 +174,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "docs/agent/evidence/snkr-scheduled-recovery-preflight-2026-10-06.json"
+        "docs/agent/evidence/raw-promotional-evidence-preflight-2026-10-06.json"
       ],
-      "observation_window": "One explicit scheduled recovery validation, then subsequent natural RAW turns for captures/no-listings, source-health and reservation settlement; no repeated recovery after refusal."
+      "observation_window": "Subsequent natural source turns; refresh pending proposal evidence after verified delivery. Continue measuring freshness before guarded capacity expansion."
     }
   }
 }
