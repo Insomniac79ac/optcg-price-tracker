@@ -1,0 +1,184 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T10:39:30.056666+00:00",
+  "capture": {
+    "intents": 20,
+    "work_ids": [
+      2767,
+      2768,
+      2769,
+      2770,
+      2771,
+      2772,
+      2773,
+      2774,
+      2775,
+      2776,
+      2777,
+      2778,
+      2779,
+      2780,
+      2781,
+      2782,
+      2783,
+      2784,
+      2785,
+      2786
+    ],
+    "natural_completed": 20,
+    "single_attempt_each": true,
+    "requests_total": 1170,
+    "requests_min": 58,
+    "requests_max": 60,
+    "per_intent_bound": 100,
+    "product_plus_original_images": 81
+  },
+  "review": {
+    "method": "codex_visual_review_of_unique_full_physical_artwork",
+    "actor": "codex:retained-full-image-visual-review-2026-10-06",
+    "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+    "count": 20,
+    "images_viewed": 61,
+    "price_or_similarity_tie_breakers": false,
+    "physical_detail": "Full illustration/layout/printed physical markers distinguish each selected official sibling; exclusions for every other sibling recorded in the registry."
+  },
+  "live_read_only_validation": {
+    "target": "staging",
+    "observed_at": "2026-10-06T10:29:58.695662+00:00",
+    "read_only": true,
+    "source_requests": 0,
+    "database_writes": 0,
+    "records": [
+      {
+        "candidate_id": 2,
+        "card_print_id": 6140,
+        "evidence_digest": "1b1acde2ffab37890f6210fcc35411fd5bb74c288e72a648a41f7570abc3f9cf",
+        "proof_digest": "4d2b22a85faaf35e512378dc61c190d494be6e277cab105cbde9f708e4588693"
+      },
+      {
+        "candidate_id": 3,
+        "card_print_id": 6142,
+        "evidence_digest": "53ea2d961f15b38cf2d76373afcaa0e6fdd76b47253b639a4944738f6e89d78d",
+        "proof_digest": "d0b3e451186fac25b063f7339aeeb80773c91a846ea404a49786d6fdada978ba"
+      },
+      {
+        "candidate_id": 6,
+        "card_print_id": 6019,
+        "evidence_digest": "cbe250ad4d1742af0678ad9de994774124763cd0b35c37daeb5bd44d64ddaf62",
+        "proof_digest": "01e9eb7c0babc67c6bb1476e838207b10f2bc06ff3da66bcfc779314309508eb"
+      },
+      {
+        "candidate_id": 7,
+        "card_print_id": 6021,
+        "evidence_digest": "3c3414baf78f629c2a54327f50c538a49d6ca3709e8f4e5b04ce5bc8a9ac064a",
+        "proof_digest": "a9efdf9f6a098d41f1a9cee5e377dd176ac75b747cb256669321317ae28e5f12"
+      },
+      {
+        "candidate_id": 8,
+        "card_print_id": 6039,
+        "evidence_digest": "f1fe938de716c27ca903bfaa83a2290b902225bd0411c8505a913b36dd3e8087",
+        "proof_digest": "3566accb8d5875df7954ce6794d1a0b7fd8793152406c80e7ad55125a07aac77"
+      },
+      {
+        "candidate_id": 9,
+        "card_print_id": 6047,
+        "evidence_digest": "2f5d832f7ac3c23b2a0d2541a96f27edca4ed60901d8e1041375c1a28608f706",
+        "proof_digest": "14e275b7f146feff0854ada3f5031a614c379d4235065d487c891e619f95c781"
+      },
+      {
+        "candidate_id": 10,
+        "card_print_id": 6053,
+        "evidence_digest": "062437f30d027809d01aaef552f97d077e1945853b95bce655e2db68b93c1f9b",
+        "proof_digest": "9ea4b321d5f681fbc40802bbe67bf7c5a6776b35da740af0169d303c09d125bf"
+      },
+      {
+        "candidate_id": 11,
+        "card_print_id": 6074,
+        "evidence_digest": "c81acaf61cf8f294c8eef8bb206857767a89e465f3608b49a0ad06fae432af93",
+        "proof_digest": "860968fc3bb6be49fd62856a3e5fcac55a21e495e55dacb0f7dcc929d8432714"
+      },
+      {
+        "candidate_id": 12,
+        "card_print_id": 6078,
+        "evidence_digest": "561ad43f5cbb1fc97040c6994c902814d81cd08398e279148126dd042439994f",
+        "proof_digest": "c8ef145b76fe6a4b21ae1ee3d5081cbb5d680c96869a8a9390da1a62d5df8cd8"
+      },
+      {
+        "candidate_id": 13,
+        "card_print_id": 6089,
+        "evidence_digest": "841c494ef8d11525a39237b96789b6b1bb3441cf57bdfd00876ac80cf093fe5e",
+        "proof_digest": "32efa1f196615de97818d1d949ebdc06dd3d04b84d7ddf8eaf52ab1770935dbf"
+      },
+      {
+        "candidate_id": 14,
+        "card_print_id": 6108,
+        "evidence_digest": "1aeabe9e96adc75766123260650b2ed52c0ec95425ed9532be8ee9377d8c1331",
+        "proof_digest": "f60ca24741d3c094b3d2e670cad77ae865b6f01a7ba9c62ffa3d04736ee2ce25"
+      },
+      {
+        "candidate_id": 15,
+        "card_print_id": 6111,
+        "evidence_digest": "b8c25688757ec7c46a1e7be727fa13871f33597277ca56105b1e173cd65ba62b",
+        "proof_digest": "c561280222df3bba487d470568f10c45ee2c9f9c278582f343ea40c77f2cf0b7"
+      },
+      {
+        "candidate_id": 27,
+        "card_print_id": 6010,
+        "evidence_digest": "7079b82280703516ca4ec16e98be53e766fca28ce6a5771fe55daa056b163289",
+        "proof_digest": "e969b4c3d33fc662f37e6e9249c2b3151cbcc7f768100b6a73d7fa1f74b21876"
+      },
+      {
+        "candidate_id": 28,
+        "card_print_id": 6082,
+        "evidence_digest": "59694bb4789eaf2542c96b961d53be1c5853ac8d1cc707d24655b71fcb1821d0",
+        "proof_digest": "6c743b08881c724bb1a756dd7f163f286ad9a4e7add37ea2d8b011239fa42c79"
+      },
+      {
+        "candidate_id": 29,
+        "card_print_id": 6106,
+        "evidence_digest": "cdbb81f4f8d1a448be84f2b713934e6fb4ec18d1856b72a4311bce38177d1c78",
+        "proof_digest": "a3ef87c76923081af51a689153f609fb22615af54f852e9848d40ca8cfbe8996"
+      },
+      {
+        "candidate_id": 30,
+        "card_print_id": 6113,
+        "evidence_digest": "473beea1d463fce920dbd04a8b90ca5a11b77e0341ad8f3557c43b126c9f2333",
+        "proof_digest": "f8eff05a56001457f9ef8b6fcebafe553d0456641017580f6a66e12b5cfee19b"
+      },
+      {
+        "candidate_id": 31,
+        "card_print_id": 6119,
+        "evidence_digest": "3a435a61ef0ae385916ad721ccc8998051a823a61a1e8de3074cd7ae7e5aac5a",
+        "proof_digest": "7edc1257959cc218d1b1ad8354bde69b72e3cc5901eab1656fd9753a5e6f0339"
+      },
+      {
+        "candidate_id": 58,
+        "card_print_id": 6087,
+        "evidence_digest": "8cb5b69a2847b9202c9aff640e5aa334f50db579200b559e0d9c175487116a51",
+        "proof_digest": "810e79fa6e6424050741ccb18fc213579885a3bfa1c958e6b753e3a47bfbfaa7"
+      },
+      {
+        "candidate_id": 59,
+        "card_print_id": 6127,
+        "evidence_digest": "2b8d48a457935fa0105b98f7fc0c4af2d89883985feb29256f0325354515d983",
+        "proof_digest": "97ab92071b86ddd9b39e9db76d306d083817c12e6bdae55fbabf88d6e290b886"
+      },
+      {
+        "candidate_id": 90,
+        "card_print_id": 6002,
+        "evidence_digest": "c26c523d84083a318463f290d10ef8a467541a65e76b98855c55b140f7fd3efd",
+        "proof_digest": "eb8fb03e6ac1ed1924be29c897a01984fce3559d23d578de4073d0575a71434b"
+      }
+    ]
+  },
+  "bounds": {
+    "new_review_records": 20,
+    "total_registry_records": 21,
+    "source_requests": 0,
+    "mapping_writes": 0,
+    "price_writes": 0,
+    "queue_writes": 0
+  },
+  "preserved": "Existing current manual mappings, exact approval guards, physical duplicate prevention, complete authoritative siblings, language/release/variant/natural source identity, bytes and metered capture lineage. Missing/stale/same-pixel twin evidence remains ambiguous. PSA10 and perceptual artwork matching remain OFF.",
+  "rollback": "Restore prior staging API source0918c74 if proof integrity fails; no persistent data writes occur in delivery. Later exact approvals require fresh before/after receipts and contain only new mapping/work IDs, retaining all raw snapshots and immutable observations."
+}
