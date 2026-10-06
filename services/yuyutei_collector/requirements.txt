@@ -4,3 +4,5 @@ sqlalchemy>=2.0
 psycopg[binary]
 pydantic-settings
 pytest
+
+Pillow==12.3.0
