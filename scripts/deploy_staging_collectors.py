@@ -145,6 +145,28 @@ def redeploy_uploaded(row, source, expected):
     return read_deployment(result["id"], row["service_id"], expected)
 
 
+def rollout_deployment(service, before, tracked, expected):
+    # Check configuration even when following a redeploy child. The provider's
+    # latestDeployment may still point at its skipped/failed parent.
+    if (service.get("serviceId"), service.get("startCommand"), service.get("cronSchedule")) != (
+        before["service_id"], before["start_command"], before["schedule_utc"]
+    ):
+        raise state.VerificationError("Collector configuration changed during rollout")
+    if tracked:
+        return read_deployment(tracked, service["serviceId"], expected)
+    return service.get("latestDeployment") or {}
+
+
+def build_markers(requested):
+    # Watch patterns cover each collector package, not the shared API package.
+    # Change a build-only file in each selected package as well as the installed
+    # shared runtime marker; never mutate service watch configuration.
+    markers = [state.ROOT / "services/api/app/services/collector_build.py"]
+    for package in sorted({"snkrdunk_collector" if r["name"] == "snkrdunk-collector" else "yuyutei_collector" for r in requested}):
+        markers.append(state.ROOT / "services" / package / package / "_delivery_revision.py")
+    return markers
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -184,12 +206,13 @@ def main(argv=None):
         }
     # This build-only module is copied into the installed shared package. It
     # identifies actual uploaded source without trusting a stale runtime env var.
-    marker = state.ROOT / "services/api/app/services/collector_build.py"
-    if marker.exists():
+    markers = build_markers(requested)
+    if any(marker.exists() for marker in markers):
         raise state.VerificationError("Unreviewed build revision marker exists")
-    marker.write_text("REVISION = " + repr(args.expected) + "\n")
     started = state.timestamp()
     try:
+        for marker in markers:
+            marker.write_text("REVISION = " + repr(args.expected) + "\n")
         for row in requested:
             upload(row, args.expected)
         deadline = time.monotonic() + 1800
@@ -202,23 +225,9 @@ def main(argv=None):
             current = inspect()
             for name in list(pending):
                 service = current[name]
-                if name in tracked:
-                    deployment = read_deployment(
-                        tracked[name], service["serviceId"], args.expected
-                    )
-                elif (
-                    service["serviceId"],
-                    service["startCommand"],
-                    service["cronSchedule"],
-                ) != (
-                    before[name]["service_id"],
-                    before[name]["start_command"],
-                    before[name]["schedule_utc"],
-                ):
-                    raise state.VerificationError(
-                        "Collector configuration changed during rollout"
-                    )
-                deployment = service.get("latestDeployment") or {}
+                deployment = rollout_deployment(
+                    service, before[name], tracked.get(name), args.expected
+                )
                 meta = deployment.get("meta") or {}
                 if isinstance(meta, str):
                     meta = json.loads(meta)
@@ -280,7 +289,8 @@ def main(argv=None):
                     )
                 time.sleep(15)
     finally:
-        marker.unlink(missing_ok=True)
+        for marker in markers:
+            marker.unlink(missing_ok=True)
     receipt = {
         "schema_version": 1,
         "target": "staging",

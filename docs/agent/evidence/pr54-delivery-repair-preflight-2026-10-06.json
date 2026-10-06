@@ -1,0 +1,94 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T08:18:33.285532+00:00",
+  "failed_run": 37426001593,
+  "artifact": 11396385446,
+  "artifact_success_receipt_present": false,
+  "failed_deployment": "70a4cf1e-057e-4e4f-9b05-30b6a6ff0e49",
+  "root_cause": "Base-image registry metadata HEAD reset by peer before image build. Deployment FAILED; canRedeploy=false. No runtime logs.",
+  "build_error": "mcr.microsoft.com/playwright/python:v1.61.0-jammy failed to resolve source metadata: connection reset by peer",
+  "polling_defect": "Tracked child overwritten by latestDeployment; configuration was not checked while tracked.",
+  "watched_paths": [
+    "services/yuyutei_collector/**",
+    "deploy/railway/yuyutei-collector.Dockerfile"
+  ],
+  "generated_markers": [
+    "services/api/app/services/collector_build.py",
+    "services/yuyutei_collector/yuyutei_collector/_delivery_revision.py"
+  ],
+  "bounds": {
+    "services": 9,
+    "manual_source_requests": 0,
+    "database_writes": 0,
+    "build_retry_per_service": 1,
+    "wait_seconds": 1800
+  },
+  "recovery_intent_2765": {
+    "natural_attempt_id": 8796,
+    "outcome": "completed",
+    "requests": 123,
+    "raw_snapshot_id": 27351,
+    "network_pause_cleared": true,
+    "identity_verified": false,
+    "no_duplicate_intent": true
+  },
+  "api_expected_sha": "633c6674e31a43a00cadbf1a42f7243bf483aa42",
+  "api_reason": "No committed API component changes; source marker is generated only in collector upload context. API Git build retains previous component revision.",
+  "feature_unchanged": true,
+  "source_schedules_or_configuration_changes": false,
+  "production_incident": "Prior read-only metadata incident retained in handoff; no production reads or changes in this continuation.",
+  "official_references_checked_utc": "2026-10-06",
+  "references": [
+    "https://docs.railway.com/cli",
+    "https://cli.github.com/manual/gh_pr_create"
+  ],
+  "installed_railway": "5.62.1",
+  "installed_gh": "2.88.0",
+  "recovery_deployments": [
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "recovery_deployment_id": "fdb572f7-8b43-4305-ab82-7e65990f7eca"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "recovery_deployment_id": "6fe5c472-5bae-4820-bc70-9e8c0b832f0a"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "recovery_deployment_id": "ad82b3bb-c08d-4c7d-a804-956e5cd5ce29"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "recovery_deployment_id": "366f091a-601c-4a18-8391-a138ef0fbf4f"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "recovery_deployment_id": "40ed197b-3835-450d-a207-80e740d89515"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "recovery_deployment_id": "26a6ac06-eb16-4d57-9b07-45663a38985b"
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "recovery_deployment_id": "dee2622e-a7ae-4015-b038-4e86a61702ef"
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "recovery_deployment_id": "6c9ee255-e282-4105-8c03-93220e8cb0d1"
+    }
+  ]
+}

@@ -363,6 +363,7 @@ class CollectorRolloutTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "services/api/app/services").mkdir(parents=True)
+            (root / "services/snkrdunk_collector/snkrdunk_collector").mkdir(parents=True)
             row = {
                 "name": "snkrdunk-collector",
                 "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
@@ -422,6 +423,7 @@ class CollectorRolloutTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "services/api/app/services").mkdir(parents=True)
+            (root / "services/snkrdunk_collector/snkrdunk_collector").mkdir(parents=True)
             row = {
                 "name": "snkrdunk-collector",
                 "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
@@ -497,6 +499,7 @@ class CollectorRolloutTests(unittest.TestCase):
             ), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 (root / "services/api/app/services").mkdir(parents=True)
+                (root / "services/snkrdunk_collector/snkrdunk_collector").mkdir(parents=True)
                 row = {
                     "name": "snkrdunk-collector",
                     "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
