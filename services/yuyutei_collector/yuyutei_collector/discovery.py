@@ -89,6 +89,7 @@ class SlugEnumeration:
     page_budget_exhausted: bool = False
     unfetched_pages: int = 0
     enumeration_complete: bool = True
+    advertised_scopes: dict[str, str] = field(default_factory=dict)
 
 
 def enumerate_slug(
@@ -99,6 +100,7 @@ def enumerate_slug(
     max_pages: int = DEFAULT_MAX_PAGES_PER_SLUG,
     timeout_s: int = 90,
     evidence_sink=None,
+    start_url=None,
 ) -> SlugEnumeration:
     """Listing pages for one slug, deduplicated and filtered to that slug.
 
@@ -122,10 +124,12 @@ def enumerate_slug(
     result = SlugEnumeration(slug=slug)
     seen: set[tuple[str, str]] = set()
     foreign: set[str] = set()
-    queue = [CATEGORY_URL.format(slug=slug)]
+    queue = [start_url or CATEGORY_URL.format(slug=slug)]
     visited: set[str] = set()
 
-    while queue and len(result.pages_fetched) < max_pages and not result.budget_exhausted:
+    while (
+        queue and len(result.pages_fetched) < max_pages and not result.budget_exhausted
+    ):
         url = queue.pop(0)
         if url in visited:
             continue
@@ -136,8 +140,11 @@ def enumerate_slug(
             # and never skipped to go faster.
             time.sleep(settings.YUYUTEI_REQUEST_DELAY_MS / 1000)
 
-        scraped = (_scrape_listing(page, url, timeout_s, evidence_sink=evidence_sink)
-                   if evidence_sink is not None else _scrape_listing(page, url, timeout_s))
+        scraped = (
+            _scrape_listing(page, url, timeout_s, evidence_sink=evidence_sink)
+            if evidence_sink is not None
+            else _scrape_listing(page, url, timeout_s)
+        )
         result.pages_fetched.append(
             {
                 "url": url,
@@ -147,6 +154,7 @@ def enumerate_slug(
                 "pagination_links": scraped["pagination_links"],
             }
         )
+        result.advertised_scopes.update(scraped.get("advertised_scopes", {}))
         if scraped["pagination_links"]:
             result.pagination_seen = True
 
@@ -177,9 +185,13 @@ def enumerate_slug(
     # set links back to page 1, so a queue entry alone proves nothing - and
     # exhausting max_pages with nothing left to fetch is a complete read.
     unvisited = [url for url in dict.fromkeys(queue) if url not in visited]
-    result.page_budget_exhausted = bool(unvisited) and len(result.pages_fetched) >= max_pages
+    result.page_budget_exhausted = (
+        bool(unvisited) and len(result.pages_fetched) >= max_pages
+    )
     result.unfetched_pages = len(unvisited)
-    result.enumeration_complete = not (result.budget_exhausted or result.page_budget_exhausted)
+    result.enumeration_complete = not (
+        result.budget_exhausted or result.page_budget_exhausted
+    )
     result.distinct_source_products = len(seen)
     result.foreign_series_seen = sorted(foreign)
     return result
@@ -258,11 +270,15 @@ def own_series_code_counts(enumeration: SlugEnumeration) -> dict[str, int]:
     counts: dict[str, int] = {}
     for product in enumeration.products:
         if product.detected_card_code:
-            counts[product.detected_card_code] = counts.get(product.detected_card_code, 0) + 1
+            counts[product.detected_card_code] = (
+                counts.get(product.detected_card_code, 0) + 1
+            )
     return counts
 
 
-def _slug_metrics(enumeration: SlugEnumeration, statuses: list[str], written: int) -> dict[str, Any]:
+def _slug_metrics(
+    enumeration: SlugEnumeration, statuses: list[str], written: int
+) -> dict[str, Any]:
     """Everything measured for one slug. No count here is expected, configured
     or compared against a previous run - each is read off this run's data."""
     kept = enumeration.products
@@ -366,9 +382,7 @@ def _unvisited_metrics(slug: str, outcome: str) -> dict[str, Any]:
     return {"slug": slug, **_UNVISITED_ZEROES, "visited": False, "outcome": outcome}
 
 
-def _record_unvisited(
-    per_slug: dict[str, Any], slugs: list[str], outcome: str
-) -> None:
+def _record_unvisited(per_slug: dict[str, Any], slugs: list[str], outcome: str) -> None:
     """Fill in every requested slug the loop never reached.
 
     Order follows the REQUEST order, not the visited order, so reading
@@ -552,7 +566,9 @@ def discover_and_persist(
         # disagree. requested_set_slugs above is the scope that was asked for.
         "slugs_requested": len(slugs),
         "slugs_visited": sorted(k for k, m in per_slug.items() if m.get("visited")),
-        "slugs_not_visited": sorted(k for k, m in per_slug.items() if not m.get("visited")),
+        "slugs_not_visited": sorted(
+            k for k, m in per_slug.items() if not m.get("visited")
+        ),
     }
 
 
@@ -572,7 +588,9 @@ def _finalize(
     run.pages_fetched = sum(m["pages_fetched"] for m in per_slug.values())
     run.products_seen = sum(m["own_series_products"] for m in per_slug.values())
     run.candidates_written = sum(m["candidates_written"] for m in per_slug.values())
-    run.foreign_series_filtered = sum(m["foreign_series_filtered"] for m in per_slug.values())
+    run.foreign_series_filtered = sum(
+        m["foreign_series_filtered"] for m in per_slug.values()
+    )
     run.duplicate_products = sum(m["duplicate_products"] for m in per_slug.values())
     run.unparseable_codes = sum(m["unparseable_codes"] for m in per_slug.values())
     # Reassigned rather than mutated in place: a plain dict assignment into a
@@ -632,8 +650,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="print the resolved plan as JSON - catalogue prefixes, executable "
         "slugs and unresolved prefixes - and exit, making no source request",
     )
-    parser.add_argument("--max-products-per-slug", type=int, default=MAX_PRODUCTS_PER_SLUG)
-    parser.add_argument("--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG)
+    parser.add_argument(
+        "--max-products-per-slug", type=int, default=MAX_PRODUCTS_PER_SLUG
+    )
+    parser.add_argument(
+        "--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG
+    )
     return parser
 
 

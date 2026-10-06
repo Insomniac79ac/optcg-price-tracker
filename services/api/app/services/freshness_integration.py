@@ -44,8 +44,49 @@ CATEGORIES = {
 }
 
 MAX_BROWSER_ASSET_REDIRECTS = 8
-BROWSER_ADMISSION_VERSION = 2
+BROWSER_ADMISSION_VERSION = 3
 VALIDATION_ADMISSION_VERSION = 1
+
+# Observed advertising hosts, never the source's application/API or artwork.
+ADVERTISING_HOSTS = frozenset(
+    {
+        "www.googletagmanager.com",
+        "googleads.g.doubleclick.net",
+        "www.googleadservices.com",
+        "connect.facebook.net",
+        "www.facebook.com",
+        "static.ads-twitter.com",
+        "analytics.twitter.com",
+        "t.co",
+        "dynamic.criteo.com",
+        "gum.criteo.com",
+        "sslwidget.criteo.com",
+        "www.rentracks.jp",
+    }
+)
+
+
+def browser_request_role(request, main_navigation):
+    """Conservative roles: unknown API requests remain evidence-critical.
+
+    Scripts/styles and embedded frames are optional browser presentation. A
+    failed one cannot establish a successful product check; the collector still
+    requires its retained document and exact identity/price evidence.
+    """
+    if main_navigation:
+        return "required_document", True
+    if request.resource_type in {"script", "stylesheet", "document"}:
+        return "optional_presentation", False
+    return "required_application", True
+
+
+def request_host_class(url):
+    host = urlsplit(url).hostname
+    if host in {"yuyu-tei.jp", "www.yuyu-tei.jp", "snkrdunk.com", "www.snkrdunk.com"}:
+        return "source_application"
+    if host in {"card.yuyu-tei.jp", "cdn.yuyu-tei.jp"}:
+        return "source_asset"
+    return "external"
 
 
 def unnecessary_browser_resource(request):
@@ -64,7 +105,11 @@ def unnecessary_browser_resource(request):
         return True
     parsed = urlsplit(request.url)
     return (
-        (parsed.hostname == "www.google.com" and parsed.path == "/measurement/conversion")
+        parsed.hostname in ADVERTISING_HOSTS
+        or (
+            parsed.hostname == "www.google.com"
+            and parsed.path == "/measurement/conversion"
+        )
         or parsed.hostname == "bbc.bibian.co.jp"
         or (
             parsed.hostname == "snkrdunk.com"
@@ -187,17 +232,18 @@ class Attempt:
             main_navigation = request.is_navigation_request() and (
                 request.frame == request.frame.page.main_frame
             )
+            role, critical = browser_request_role(request, main_navigation)
             url = request.url
 
             def diagnostic(event, **fields):
-                parsed = urlsplit(url)
                 print(
                     json.dumps(
                         {
                             "event": event,
                             "work_id": self.claim.work_id,
-                            "request_host": parsed.hostname,
-                            "request_path": parsed.path,
+                            "request_host_class": request_host_class(url),
+                            "request_role": role,
+                            "evidence_critical": critical,
                             "resource_type": request.resource_type,
                             "main_navigation": bool(main_navigation),
                             "http_status": response.status if response else None,
@@ -250,10 +296,13 @@ class Attempt:
                     )
                     url = target
                     redirects += 1
-                self.record_http(response.status)
                 if response.status in {403, 429}:
-                    diagnostic("browser_response_denied")
-                    self.deny()
+                    diagnostic("browser_response_denied", outcome_category="denial")
+                    if critical:
+                        self.record_http(response.status)
+                        self.deny()
+                    else:
+                        self.health["optional_resource"] += 1
                 route.fulfill(response=response)
             except Exception as exc:
                 # A failed optional asset is a normal browser failure. It must
@@ -263,13 +312,13 @@ class Attempt:
                 # ownership and source-health refusals. A locally refused
                 # optional redirect (POST, invalid location, or hop limit)
                 # must abort that resource without poisoning the product.
-                if not self.stopped and not main_navigation:
+                if not self.stopped and not critical:
                     self.health["optional_resource"] += 1
-                if self.stopped or main_navigation:
+                if self.stopped or critical:
                     self.stopped = self.stopped or str(exc)
                 diagnostic(
                     "browser_request_stopped",
-                    reason=str(exc).splitlines()[0][:300],
+                    reason_category=type(exc).__name__,
                     attempt_stopped=bool(self.stopped),
                 )
                 try:
@@ -301,6 +350,20 @@ class Attempt:
         )
         self.record_http(response.status)
         if response.status in {403, 429}:
+            print(
+                json.dumps(
+                    {
+                        "event": "evidence_request_denied",
+                        "work_id": self.claim.work_id,
+                        "request_role": "required_artwork",
+                        "request_host_class": request_host_class(url),
+                        "evidence_critical": True,
+                        "http_status": response.status,
+                        "outcome_category": "denial",
+                    }
+                ),
+                flush=True,
+            )
             self.deny()
         self.check()
         if not response.ok:
@@ -479,7 +542,8 @@ def _drain(
                 lease=timedelta(seconds=mapping_seconds + 60),
                 clock=clock,
                 yuyutei_shard_index=shard_index,
-                supported_kinds={"refresh"} | ({"discovery"} if discovery_runner else set()),
+                supported_kinds={"refresh"}
+                | ({"discovery"} if discovery_runner else set()),
             )
             session.commit()
             if not claims:

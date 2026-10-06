@@ -64,6 +64,8 @@ untouched - this module cannot reach them.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlencode, urljoin, urlsplit, parse_qs
+from bs4 import BeautifulSoup
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -104,6 +106,57 @@ __all__ = [
 # rest; one arriving unnumbered lands in the unresolved list and is reported
 # rather than requested. Silence is not an outcome either way.
 EXECUTABLE_SLUG_RE = re.compile(r"[a-z]+\d{2}")
+
+
+def advertised_discovery_scopes(html: str, page_url: str) -> dict[str, str]:
+    """Source-provided GET search options, without guessing category aliases.
+
+    These are enumeration scopes, never authoritative CardPrint releases.
+    Only the source's OPC search form and bounded category values are accepted.
+    The caller persists the document before invoking this parser.
+    """
+    if urlsplit(page_url).hostname != "yuyu-tei.jp":
+        return {}
+    result = {}
+    soup = BeautifulSoup(html, "html.parser")
+    for form in soup.select("form[method]"):
+        action = urljoin(page_url, form.get("action", ""))
+        parsed = urlsplit(action)
+        if (
+            form.get("method", "").upper() != "GET"
+            or parsed.scheme != "https"
+            or parsed.hostname != "yuyu-tei.jp"
+            or parsed.path != "/sell/opc/s/search"
+            or parsed.query
+            or parsed.fragment
+        ):
+            continue
+        for option in form.select('input[name="vers[]"][value]'):
+            slug = option["value"]
+            if re.fullmatch(r"[a-z][a-z0-9-]{1,31}", slug):
+                result[slug] = action + "?" + urlencode({"vers[]": slug})
+    return result
+
+
+def validated_discovery_url(slug: str, supplied: str | None) -> str | None:
+    """Reject arbitrary cursor URLs; accept only a single source search option."""
+    if supplied is None:
+        return (
+            f"https://yuyu-tei.jp/sell/opc/s/{slug}"
+            if is_executable_slug(slug)
+            else None
+        )
+    parsed = urlsplit(supplied)
+    if (
+        parsed.scheme == "https"
+        and parsed.netloc == "yuyu-tei.jp"
+        and parsed.path == "/sell/opc/s/search"
+        and not parsed.fragment
+        and parse_qs(parsed.query, strict_parsing=True) == {"vers[]": [slug]}
+    ):
+        return supplied
+    return None
+
 
 # Printed beside the unresolved list so the exclusion states its own grounds
 # rather than being a bare name in a JSON array.

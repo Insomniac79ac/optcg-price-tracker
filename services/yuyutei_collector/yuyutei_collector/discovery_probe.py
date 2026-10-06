@@ -99,7 +99,9 @@ def _pagination_links(page, base_url: str) -> list[str]:
     return out
 
 
-def _scrape_listing(page, url: str, timeout_s: int, *, evidence_sink=None) -> dict[str, Any]:
+def _scrape_listing(
+    page, url: str, timeout_s: int, *, evidence_sink=None
+) -> dict[str, Any]:
     """One listing page: navigate once, read what it carries, move on."""
     with deadline(timeout_s, "category_navigation"):
         response = page.goto(url, wait_until="domcontentloaded", timeout=30_000)
@@ -155,12 +157,15 @@ def _scrape_listing(page, url: str, timeout_s: int, *, evidence_sink=None) -> di
             };
         })""",
     )
+    from yuyutei_collector.discovery_scope import advertised_discovery_scopes
+
     return {
         "url": url,
         "http_status": status,
         "html_bytes": len(html.encode("utf-8")),
         "anchors": rows,
         "pagination_links": _pagination_links(page, url),
+        "advertised_scopes": advertised_discovery_scopes(html, url),
     }
 
 
@@ -278,7 +283,9 @@ def run_probe(
         browser = playwright.chromium.launch(
             headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000
         )
-        context = browser.new_context(**({"service_workers": "block"} if admission else {}))
+        context = browser.new_context(
+            **({"service_workers": "block"} if admission else {})
+        )
         if admission:
             admission.install_browser(context)
         page = context.new_page()
@@ -311,12 +318,18 @@ def run_probe(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Read-only Yuyu-Tei listing probe. Writes nothing.")
-    parser.add_argument("--slugs", required=True, help="comma-separated, e.g. op01,op13,eb01")
+    parser = argparse.ArgumentParser(
+        description="Read-only Yuyu-Tei listing probe. Writes nothing."
+    )
+    parser.add_argument(
+        "--slugs", required=True, help="comma-separated, e.g. op01,op13,eb01"
+    )
     parser.add_argument(
         "--max-products-per-slug", type=int, default=DEFAULT_MAX_PRODUCTS_PER_SLUG
     )
-    parser.add_argument("--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG)
+    parser.add_argument(
+        "--max-pages-per-slug", type=int, default=DEFAULT_MAX_PAGES_PER_SLUG
+    )
     args = parser.parse_args()
 
     slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
@@ -340,7 +353,12 @@ def main() -> None:
             duplicates=result["duplicate_product_links"],
             other_series=result["products_from_other_series"],
         )
-    slim = {**report, "sets": [{k: v for k, v in s.items() if k != "products"} for s in report["sets"]]}
+    slim = {
+        **report,
+        "sets": [
+            {k: v for k, v in s.items() if k != "products"} for s in report["sets"]
+        ],
+    }
     print(json.dumps(slim, ensure_ascii=False, separators=(",", ":")))
 
 

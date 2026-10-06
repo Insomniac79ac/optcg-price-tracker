@@ -157,3 +157,42 @@ def test_conversion_exclusion_preserves_navigation_and_other_endpoints(url, navi
     route.fetch.assert_called_once()
     attempt.deny.assert_called_once()
     assert attempt.stopped == "source_denial"
+
+
+@pytest.mark.parametrize("status", [403, 429])
+@pytest.mark.parametrize("kind", ["script", "stylesheet"])
+def test_optional_denial_is_classified_without_pausing(status, kind, capsys):
+    attempt, handler, route = boundary(
+        "https://snkrdunk.com/asset?credential=secret", kind, False
+    )
+    route.fetch.return_value = SimpleNamespace(status=status, headers={})
+    handler(route)
+    attempt.deny.assert_not_called()
+    assert attempt.stopped is None
+    assert attempt.health["optional_resource"] == 1
+    assert attempt.health[f"http_{status}"] == 0
+    import json
+
+    evidence = json.loads(capsys.readouterr().out)
+    assert evidence["request_role"] == "optional_presentation"
+    assert evidence["request_host_class"] == "source_application"
+    assert evidence["evidence_critical"] is False
+    assert "secret" not in str(evidence) and "request_path" not in evidence
+
+
+def test_unknown_application_failure_fences_attempt():
+    attempt, handler, route = boundary(
+        "https://snkrdunk.com/v1/product", "fetch", False
+    )
+    route.fetch.side_effect = RuntimeError("required API unavailable")
+    handler(route)
+    with pytest.raises(AdmissionStopped):
+        attempt.check()
+
+
+@pytest.mark.parametrize("host", ["www.googletagmanager.com", "dynamic.criteo.com"])
+def test_observed_advertising_does_not_consume_source_budget(host):
+    attempt, handler, route = boundary(f"https://{host}/telemetry", "script", False)
+    handler(route)
+    route.fetch.assert_not_called()
+    attempt.admit.assert_not_called()

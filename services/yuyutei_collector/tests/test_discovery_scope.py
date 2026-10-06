@@ -30,6 +30,33 @@ in-memory SQLite built from the collector's own ORM mirrors.
 import ast
 import pathlib
 
+
+def test_source_advertised_promos_are_search_scopes_not_release_aliases():
+    from yuyutei_collector.discovery_scope import (
+        advertised_discovery_scopes,
+        validated_discovery_url,
+    )
+
+    html = """<form action="/sell/opc/s/search" method="GET">
+      <input name="vers[]" value="promo-100"><input name="vers[]" value="don">
+      <input name="vers[]" value="../escape"></form>
+      <form action="https://foreign.example/sell/opc/s/search" method="GET">
+      <input name="vers[]" value="fake"></form>"""
+    scopes = advertised_discovery_scopes(html, "https://yuyu-tei.jp/sell/opc/s/op01")
+    assert set(scopes) == {"promo-100", "don"}
+    assert (
+        scopes["promo-100"]
+        == "https://yuyu-tei.jp/sell/opc/s/search?vers%5B%5D=promo-100"
+    )
+    assert (
+        validated_discovery_url("promo-100", scopes["promo-100"]) == scopes["promo-100"]
+    )
+    assert validated_discovery_url("promo-100", None) is None
+    assert validated_discovery_url("promo-100", scopes["don"]) is None
+    assert validated_discovery_url("p", None) is None
+    assert advertised_discovery_scopes(html, "https://foreign.example/") == {}
+
+
 import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import sessionmaker
@@ -134,9 +161,9 @@ def test_inactive_prints_do_not_pull_in_a_set(session):
 def test_a_set_counts_once_however_many_prints_it_has(session):
     """base + parallels of the same card, and several cards, are still one
     category page."""
-    add_print(session, "OP01-006")   # base
-    add_print(session, "OP01-006")   # a parallel of the same card
-    add_print(session, "OP01-006")   # and another
+    add_print(session, "OP01-006")  # base
+    add_print(session, "OP01-006")  # a parallel of the same card
+    add_print(session, "OP01-006")  # and another
     add_print(session, "OP01-033")
 
     assert catalogue_prefixes(session) == ["op01"]
@@ -151,12 +178,12 @@ def test_a_set_counts_once_however_many_prints_it_has(session):
         "-",
         "-001",
         "OP01",
-        "OP1-001",          # one digit, not the grammar
-        "OP001-001",        # three digits
-        "XX01-001",         # unknown family
-        "OP01-1",           # short serial
+        "OP1-001",  # one digit, not the grammar
+        "OP001-001",  # three digits
+        "XX01-001",  # unknown family
+        "OP01-1",  # short serial
         "OP01-001 パラレル",  # trailing noise
-        "junk OP01-001",    # leading noise
+        "junk OP01-001",  # leading noise
     ],
 )
 def test_malformed_card_codes_yield_no_slug(code):
@@ -214,7 +241,12 @@ def test_the_scope_module_cannot_reach_the_network_or_write_evidence():
     }
     for forbidden in ("playwright", "requests", "httpx", "urllib"):
         assert not any(name.startswith(forbidden) for name in imported)
-    for forbidden in ("SourceCardMapping", "PriceObservation", "YuyuteiCandidate", "RawSnapshot"):
+    for forbidden in (
+        "SourceCardMapping",
+        "PriceObservation",
+        "YuyuteiCandidate",
+        "RawSnapshot",
+    ):
         assert forbidden not in imported
 
 
@@ -304,7 +336,9 @@ def test_a_scope_that_does_not_reconcile_cannot_be_constructed():
     with pytest.raises(ValueError):
         CatalogueScope(prefixes=("op01",), executable=("op01",), unresolved=("op01",))
     with pytest.raises(ValueError):
-        CatalogueScope(prefixes=("op01", "op02"), executable=("op02", "op01"), unresolved=())
+        CatalogueScope(
+            prefixes=("op01", "op02"), executable=("op02", "op01"), unresolved=()
+        )
 
     # The honest one is constructible.
     CatalogueScope(prefixes=("op01", "p"), executable=("op01",), unresolved=("p",))
@@ -433,7 +467,8 @@ def test_batch_selection_slices_the_scope(session):
     seen: list[str] = []
     for batch in (1, 2, 3):
         plan = discovery.resolve_scope(
-            parse(["--from-catalogue", "--batch-size", "3", "--batch", str(batch)]), session
+            parse(["--from-catalogue", "--batch-size", "3", "--batch", str(batch)]),
+            session,
         )
         assert plan["scope"] == scope
         assert plan["batch_count"] == 3
@@ -468,7 +503,10 @@ def test_the_plan_states_the_source_request_cost_before_anything_is_fetched(sess
     assert plan["slugs"] == ["op01", "op02"]
     assert plan["min_category_requests"] == 2
     # One page per slug is the floor; a paginating set costs up to the page cap.
-    assert plan["max_category_requests"] == 2 * parse(["--from-catalogue"]).max_pages_per_slug
+    assert (
+        plan["max_category_requests"]
+        == 2 * parse(["--from-catalogue"]).max_pages_per_slug
+    )
 
 
 def test_resolving_a_scope_makes_no_source_request_and_writes_nothing(session):
@@ -480,7 +518,9 @@ def test_resolving_a_scope_makes_no_source_request_and_writes_nothing(session):
 
     discovery.resolve_scope(parse(["--from-catalogue"]), session)
 
-    assert session.scalar(select(func.count()).select_from(YuyuteiDiscoveryRun)) == before
+    assert (
+        session.scalar(select(func.count()).select_from(YuyuteiDiscoveryRun)) == before
+    )
     assert session.scalar(select(func.count()).select_from(YuyuteiCandidate)) == 0
 
 
@@ -514,12 +554,13 @@ def test_the_unresolved_prefix_never_reaches_an_executable_batch(session):
     first = discovery.resolve_scope(
         parse(["--from-catalogue", "--batch-size", "2", "--batch", "1"]), session
     )
-    assert first["batch_count"] == 3   # 5 executable slugs, not 6 prefixes
+    assert first["batch_count"] == 3  # 5 executable slugs, not 6 prefixes
 
     requested: list[str] = []
     for batch in range(1, first["batch_count"] + 1):
         plan = discovery.resolve_scope(
-            parse(["--from-catalogue", "--batch-size", "2", "--batch", str(batch)]), session
+            parse(["--from-catalogue", "--batch-size", "2", "--batch", str(batch)]),
+            session,
         )
         requested.extend(plan["slugs"])
 
@@ -619,8 +660,16 @@ def test_the_five_slug_pilot_resolves_unchanged(session):
 def test_every_visited_slug_reports_its_own_measurements(session):
     page = FakePage(
         {
-            listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]},
-            listing("op13"): {"anchors": [product_row("op13", "2", "OP13-118", "C", "ゾロ", "410", "1 点")]},
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            },
+            listing("op13"): {
+                "anchors": [
+                    product_row("op13", "2", "OP13-118", "C", "ゾロ", "410", "1 点")
+                ]
+            },
         }
     )
     report = discovery.discover_and_persist(session, page, ["op01", "op13"])
@@ -650,11 +699,17 @@ def test_slugs_after_a_denial_are_reported_unvisited_not_successful(session):
     recorded as a covered one."""
     page = FakePage(
         {
-            listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]},
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            },
             listing("op13"): {"status": 403},
         }
     )
-    report = discovery.discover_and_persist(session, page, ["op01", "op13", "eb01", "st03"])
+    report = discovery.discover_and_persist(
+        session, page, ["op01", "op13", "eb01", "st03"]
+    )
 
     assert report["status"] == "denied"
     assert report["stopped_reason"].startswith("source_denied: 403")
@@ -684,7 +739,11 @@ def test_unvisited_slugs_add_accounting_but_not_arithmetic(session):
     still the totals of what was actually enumerated."""
     page = FakePage(
         {
-            listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]},
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            },
             listing("op13"): {"status": 403},
         }
     )
@@ -704,7 +763,11 @@ def test_a_denial_still_stops_the_whole_run_without_retrying(session):
     page = FakePage(
         {
             listing("op01"): {"status": 403},
-            listing("op13"): {"anchors": [product_row("op13", "2", "OP13-118", "C", "ゾロ", "410", "1 点")]},
+            listing("op13"): {
+                "anchors": [
+                    product_row("op13", "2", "OP13-118", "C", "ゾロ", "410", "1 点")
+                ]
+            },
         }
     )
     report = discovery.discover_and_persist(session, page, ["op01", "op13"])
@@ -761,7 +824,13 @@ def test_rediscovering_a_slug_creates_no_duplicate_candidate(session):
     denial."""
     add_print(session, "OP01-001")
     page = FakePage(
-        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+        {
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            }
+        }
     )
 
     discovery.discover_and_persist(session, page, ["op01"])
@@ -784,12 +853,24 @@ def test_a_repeat_run_refreshes_the_row_rather_than_corrupting_it(session):
     correct - not accumulate a second row and not keep the stale price."""
     add_print(session, "OP01-001")
     cheap = FakePage(
-        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+        {
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            }
+        }
     )
     discovery.discover_and_persist(session, cheap, ["op01"])
 
     dear = FakePage(
-        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "980", "-")]}}
+        {
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "980", "-")
+                ]
+            }
+        }
     )
     discovery.discover_and_persist(session, dear, ["op01"])
 
@@ -806,12 +887,20 @@ def test_classification_is_unchanged_by_the_scope_mechanism(session):
     print still demotes the same code to family_matched with no print id."""
     add_print(session, "OP01-001")
     page = FakePage(
-        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+        {
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            }
+        }
     )
     discovery.discover_and_persist(session, page, ["op01"])
-    assert session.scalars(select(YuyuteiCandidate)).one().match_status == "print_matched"
+    assert (
+        session.scalars(select(YuyuteiCandidate)).one().match_status == "print_matched"
+    )
 
-    add_print(session, "OP01-001")   # a second active print of the same card
+    add_print(session, "OP01-001")  # a second active print of the same card
     session.commit()
     discovery.discover_and_persist(session, page, ["op01"])
 
@@ -825,7 +914,13 @@ def test_the_scope_change_still_creates_no_mapping_and_no_observation(session):
     which pages may be read must not broaden what a run is allowed to write."""
     add_print(session, "OP01-001")
     page = FakePage(
-        {listing("op01"): {"anchors": [product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")]}}
+        {
+            listing("op01"): {
+                "anchors": [
+                    product_row("op01", "1", "OP01-001", "C", "ルフィ", "320", "3 点")
+                ]
+            }
+        }
     )
     discovery.discover_and_persist(session, page, ["op01"])
 
