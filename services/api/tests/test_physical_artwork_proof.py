@@ -349,3 +349,61 @@ def test_proposal_integration_recommends_only_reviewed_print_and_preserves_manua
         proof_module, "resolve", lambda *args: pytest.fail("manual mapping overridden")
     )
     assert not analyse_source_mapping_proposals(db_session).plans
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        None,
+        "wrong_scope",
+        "missing_proof_scope",
+        "old_attempt",
+        "old_digest",
+        "unknown_version",
+    ],
+)
+def test_versioned_capture_requires_new_single_attempt_and_current_digest(
+    evidence, tamper
+):
+    from app.services.identity_evidence_scope import identity_evidence_scope
+
+    e = evidence
+    digest = "a" * 64
+    e.plan.evidence_digest = digest
+    e.proof["baseline_evidence_digest"] = digest
+    e.work.resume_cursor.update(version=2, evidence_digest=digest)
+    scope = identity_evidence_scope(1, digest, 2)
+    e.work.scope_key = scope
+    e.proof["capture_scope"] = scope
+    if tamper == "wrong_scope":
+        e.work.scope_key = identity_evidence_scope(1, "b" * 64, 2)
+    if tamper == "missing_proof_scope":
+        e.proof.pop("capture_scope")
+    if tamper == "old_attempt":
+        e.work.attempt_count = 2
+    if tamper == "old_digest":
+        e.work.resume_cursor["evidence_digest"] = "b" * 64
+    if tamper == "unknown_version":
+        e.work.resume_cursor["version"] = 3
+    if tamper:
+        with pytest.raises(ValueError):
+            proof_module.validate(e.session, e.plan, e.siblings, e.proof)
+    else:
+        assert len(proof_module.validate(e.session, e.plan, e.siblings, e.proof)) == 64
+
+
+@pytest.mark.parametrize(
+    "version,digest",
+    [
+        (True, "a" * 64),
+        (3, "a" * 64),
+        (2, "A" * 64),
+        (2, "a" * 63),
+        (2, "a" * 64 + ":other"),
+    ],
+)
+def test_capture_scope_refuses_noncanonical_versions_and_digests(version, digest):
+    from app.services.identity_evidence_scope import identity_evidence_scope
+
+    with pytest.raises(ValueError):
+        identity_evidence_scope(1, digest, version)
