@@ -651,7 +651,9 @@ def admit_request(
     now = require_utc(clock())
     _require_owner(work, attempt, now)
     if not _source_open(budget, now):
-        raise ValueError("source paused or disabled; dispatch refused")
+        from app.services.source_recovery import permitted_recovery_request
+        if not permitted_recovery_request(db, budget, work):
+            raise ValueError("source paused or disabled; dispatch refused")
     if work.kind == "refresh":
         mapping = _eligible_mapping(db, work.source_card_mapping_id)
         if (
@@ -687,6 +689,8 @@ def pause_source(db: Session, token: str, *, clock: UTCClock = utc_now) -> None:
     budget, work, attempt = _locked_claim(db, token)
     _require_owner(work, attempt, require_utc(clock()))
     budget.pause_reason, budget.paused_until = "source_denial", None
+    if (work.resume_cursor or {}).get("recovery_denial_attempt_id"):
+        work.resume_cursor = {**work.resume_cursor, "required_denial": True}
     db.flush()
 
 
