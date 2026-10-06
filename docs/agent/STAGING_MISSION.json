@@ -22,6 +22,7 @@
       "files": [
         "docs/agent/evidence/yuyu-artwork-capture-preflight-2026-10-06.json",
         "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/yuyutei_collector/requirements.txt",
         "services/yuyutei_collector/tests/test_identity_evidence.py",
         "services/yuyutei_collector/yuyutei_collector/due_discovery.py",
         "services/yuyutei_collector/yuyutei_collector/identity_evidence.py"
@@ -33,10 +34,10 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Explicit one-shot discovery captures the published exact-product image and every eligible official sibling through existing serial metered collectors. It preserves raw bytes before decoding, retains ambiguity and adds no mapping approval or RAW price/check writes."
+      "reason": "Explicit one-shot discovery captures the published exact-product image and every eligible official sibling through existing serial metered collectors. It preserves raw bytes before decoding, retains ambiguity and adds no mapping approval or RAW price/check writes. Declares the existing SNKRDUNK-validated Pillow pin for image structural validation in the standalone Yuyu test/runtime environment."
     }
   ],
-  "diff_sha256": "f10c33ca61a9fa14a30657ac0bebf7f1a55dc215947fe895001ce5ecdd3d6caf",
+  "diff_sha256": "796250270ff075d88bebd0cdddf6df18882ae546d622ed5d9e6218a910f82176",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
