@@ -23,6 +23,193 @@ from test_freshness_adapters_postgres import (
 from snkrdunk_collector.recovery import run_recovery
 
 
+def missing_artwork_no_listing_html():
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(HTML, "html.parser")
+    for label in ("A", "B"):
+        chip = next(
+            p for p in soup.find_all("p") if p.get_text(strip=True) == label
+        ).parent
+        chip.find("p", class_="css3__price").replace_with(
+            BeautifulSoup('<p class="css3__awaiting">出品待ち</p>', "html.parser")
+        )
+    image = next(
+        img
+        for img in soup.find_all("img")
+        if any(c.endswith("__mainImage") for c in img.get("class", []))
+    )
+    image["src"] = "/_next/static/media/no-image.fixture.webp"
+    return str(soup)
+
+
+def original_missing_artwork_refusal(db, monkeypatch):
+    factory, source, mapping_id, _ = db
+    denial_id = denied_episode(factory, source, mapping_id)
+    transport = Transport(monkeypatch, missing_artwork_no_listing_html())
+    refused = run_recovery(
+        source, mapping_id, denial_id, request_bound=30, session_factory=factory
+    )
+    assert refused["status"] == "identity_refusal" and not refused["resumed"]
+    return factory, source, mapping_id, denial_id, refused, transport
+
+
+def test_explicit_network_repair_quarantines_missing_artwork_without_raw_success(
+    db, monkeypatch
+):
+    from app.models import FreshnessPriceState
+    from snkrdunk_collector.due import run_due
+
+    factory, source, mapping_id, denial_id, refused, transport = (
+        original_missing_artwork_refusal(db, monkeypatch)
+    )
+    before = len(transport.sent)
+    with factory.begin() as session:
+        repair = plan_source_recovery(
+            session,
+            source,
+            mapping_id,
+            denial_id,
+            request_bound=30,
+            network_repair_of=refused["work_id"],
+        )
+        repair_id = repair.id
+        assert repair.attempt_count == 0 and repair.state == "pending"
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+    assert len(transport.sent) == before  # planning never fetches
+    result = run_due(session_factory=factory)
+    assert len(result) == 1 and result[0]["resumed"]
+    assert len(transport.sent) - before == 2  # ordinary homepage + product
+    with factory() as session:
+        repair = session.get(FreshnessWork, repair_id)
+        normal = session.scalar(
+            select(FreshnessWork).where(FreshnessWork.kind == "refresh")
+        )
+        assert normal.state == "blocked" and normal.last_successfully_checked_at is None
+        assert normal.card_print_id == db[3]
+        assert repair.resume_cursor["raw_outcome"] == "quarantined"
+        assert repair.resume_cursor["identity_verified"] is False
+        assert repair.resume_cursor["quarantined_refresh_work_id"] == normal.id
+        assert session.scalar(select(SourceDispatchBudget.pause_reason)) is None
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert all(
+            row.last_successfully_checked_at is None
+            for row in session.scalars(select(FreshnessPriceState))
+        )
+        assert session.get(FreshnessWork, refused["work_id"]).attempt_count == 1
+        assert repair.attempt_count == 1
+
+
+@pytest.mark.parametrize(
+    "failure",
+    ["rarity_mismatch", "title_mismatch", "artwork_not_confirmed_match:wrong_artwork"],
+)
+def test_network_repair_does_not_accept_other_identity_refusals(
+    db, monkeypatch, failure
+):
+    factory, source, mapping_id, denial_id, refused, transport = (
+        original_missing_artwork_refusal(db, monkeypatch)
+    )
+    before = len(transport.sent)
+    with factory.begin() as session:
+        session.get(FreshnessWork, refused["work_id"]).last_failure = failure
+    with factory.begin() as session:
+        with pytest.raises(ValueError, match="original missing-artwork"):
+            plan_source_recovery(
+                session,
+                source,
+                mapping_id,
+                denial_id,
+                request_bound=30,
+                network_repair_of=refused["work_id"],
+            )
+    assert len(transport.sent) == before
+
+
+def test_required_denial_revokes_network_repair_and_cannot_repair_again(
+    db, monkeypatch
+):
+    from types import SimpleNamespace
+    from snkrdunk_collector.due import run_due
+
+    factory, source, mapping_id, denial_id, refused, transport = (
+        original_missing_artwork_refusal(db, monkeypatch)
+    )
+    with factory.begin() as session:
+        repair = plan_source_recovery(
+            session,
+            source,
+            mapping_id,
+            denial_id,
+            request_bound=30,
+            network_repair_of=refused["work_id"],
+        )
+        repair_id = repair.id
+    original = transport.response
+    transport.response = lambda url: (
+        SimpleNamespace(status=403, ok=False, body=lambda: b"Forbidden")
+        if "/apparels/" in url
+        else original(url)
+    )
+    before = len(transport.sent)
+    result = run_due(session_factory=factory)
+    assert result[0]["status"] == "source_denial" and not result[0]["resumed"]
+    assert len(transport.sent) - before == 2
+    with factory.begin() as session:
+        assert (
+            session.scalar(select(SourceDispatchBudget.pause_reason)) == "source_denial"
+        )
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        latest = session.scalar(
+            select(FreshnessAttempt.id).order_by(FreshnessAttempt.id.desc())
+        )
+        with pytest.raises(ValueError, match="another probe"):
+            plan_source_recovery(
+                session,
+                source,
+                mapping_id,
+                latest,
+                request_bound=30,
+                network_repair_of=repair_id,
+            )
+
+
+def test_network_recovery_does_not_use_expired_fresh_capture(db, monkeypatch):
+    from snkrdunk_collector import recovery
+    from snkrdunk_collector.due import run_due
+    from app.services.source_recovery import resume_after_network_recovery
+
+    factory, source, mapping_id, denial_id, refused, _ = (
+        original_missing_artwork_refusal(db, monkeypatch)
+    )
+    with factory.begin() as session:
+        plan_source_recovery(
+            session,
+            source,
+            mapping_id,
+            denial_id,
+            request_bound=30,
+            network_repair_of=refused["work_id"],
+        )
+    monkeypatch.setattr(
+        recovery,
+        "resume_after_network_recovery",
+        lambda session, token: resume_after_network_recovery(
+            session, token, clock=lambda: utc_now() + timedelta(minutes=6)
+        ),
+    )
+    with pytest.raises(ValueError, match="no longer current"):
+        run_due(session_factory=factory)
+    with factory() as session:
+        assert (
+            session.scalar(select(SourceDispatchBudget.pause_reason)) == "source_denial"
+        )
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+
+
 def denied_episode(factory, source, mapping_id):
     seed(factory, mapping_id, bound=30)
     picked = claim(factory, source)[0]
