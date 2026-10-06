@@ -11,6 +11,7 @@ from app.models import (
 )
 from app.services.freshness_queue import pause_source, complete_claim, claim_due
 from app.services.source_recovery import claim_source_recovery, resume_after_recovery
+from app.services.source_recovery import plan_source_recovery
 from app.services.freshness_policy import utc_now
 from test_freshness_queue_postgres import db, claim, admit, T0
 from test_freshness_adapters_postgres import (
@@ -239,4 +240,55 @@ def test_identity_refusal_cannot_unpause(db, monkeypatch):
         assert (
             session.scalar(select(SourceDispatchBudget.pause_reason)) == "source_denial"
         )
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+
+
+def test_scheduled_consumer_serves_only_explicit_intent_once(db, monkeypatch):
+    from snkrdunk_collector.due import run_due
+
+    factory, source, mapping_id, _ = db
+    denial_id = denied_episode(factory, source, mapping_id)
+    Transport(monkeypatch)
+    assert (
+        run_due(session_factory=factory) == []
+    )  # pause alone never authorizes a probe
+    with factory.begin() as session:
+        sequence = session.scalar(select(SourceDispatchBudget.claim_sequence))
+        work = plan_source_recovery(
+            session, source, mapping_id, denial_id, request_bound=30
+        )
+        wid = work.id
+        assert work.attempt_count == 0 and work.state == "pending"
+        assert session.scalar(select(SourceDispatchBudget.claim_sequence)) == sequence
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+        assert session.scalar(select(func.count()).select_from(FreshnessAttempt)) == 1
+    result = run_due(session_factory=factory)
+    assert len(result) == 1 and result[0]["resumed"] and result[0]["work_id"] == wid
+    with factory() as session:
+        work = session.get(FreshnessWork, wid)
+        assert work.attempt_count == 1 and work.last_outcome == "completed"
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
+    # A normal later invocation consumes ordinary work; it cannot repeat validation.
+    run_due(session_factory=factory)
+    with factory() as session:
+        assert session.get(FreshnessWork, wid).attempt_count == 1
+
+
+def test_planned_recovery_lineage_cannot_change_before_scheduled_consumption(db):
+    from app.models import SourceCardMapping
+
+    factory, source, mapping_id, _ = db
+    denial_id = denied_episode(factory, source, mapping_id)
+    with factory.begin() as session:
+        plan_source_recovery(session, source, mapping_id, denial_id, request_bound=30)
+    with factory.begin() as session:
+        mapping = session.get(SourceCardMapping, mapping_id)
+        mapping.source_url = "https://snkrdunk.com/apparels/999"
+        mapping.canonical_source_listing_identity = "999"
+    with factory.begin() as session:
+        with pytest.raises(ValueError):
+            claim_source_recovery(
+                session, source, mapping_id, denial_id, "changed", request_bound=30
+            )
         assert session.scalar(select(SourceDispatchBudget.reserved_requests)) == 0
