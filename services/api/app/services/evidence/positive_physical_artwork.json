@@ -48,6 +48,794 @@
           "body_sha256": "c8f6748542aa8bb75cacb3fbd305e2332b2092ecd172b3696271090ef8d90760"
         }
       ]
+    },
+    {
+      "source_candidate_id": 2,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10152",
+      "baseline_evidence_digest": "5818f3fe71b47bc890a7fd095a31e9a057dc5149ac59b8dcac2607ac72c17403",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6140,
+      "considered_print_ids": [
+        6138,
+        6139,
+        6140
+      ],
+      "positive_physical_basis": "Source shows smiling Shanks with sword hilt at lower left and monochrome manga panels behind him, including the large right-side face panel. These full-card illustration/background details are present in p2.",
+      "excluded_sibling_basis": {
+        "6138": "Base depicts serious Shanks thrusting a sword toward the viewer with a flame background.",
+        "6139": "p1 has red/orange geometric block-letter graphics rather than the source's monochrome manga panels."
+      },
+      "work_id": 2767,
+      "source_product_snapshot_id": 27814,
+      "source_product_content_hash": "e4f31d982f864b7dd84471fcc38683f07e802e35bb601425fab2a74c485db3bd",
+      "source_image_snapshot_id": 27815,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10152.jpg",
+      "source_body_sha256": "954f87212f97c966bba2d39a74fcb95cf3d978c0cd4f333923080d942191f742",
+      "official_images": [
+        {
+          "card_print_id": 6138,
+          "raw_snapshot_id": 27816,
+          "official_asset_variant": "base",
+          "body_sha256": "4a996805b226ee86a477fc1e5f594e7cdcb611f642fa5fb44dfdd33fc5fde525"
+        },
+        {
+          "card_print_id": 6139,
+          "raw_snapshot_id": 27817,
+          "official_asset_variant": "p1",
+          "body_sha256": "1a5bcc77f57b38e1d112d4d0c5c656bcc151194e28e3d03cab4e7575e7b6ff1c"
+        },
+        {
+          "card_print_id": 6140,
+          "raw_snapshot_id": 27818,
+          "official_asset_variant": "p2",
+          "body_sha256": "c8f6748542aa8bb75cacb3fbd305e2332b2092ecd172b3696271090ef8d90760"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 3,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10154",
+      "baseline_evidence_digest": "a36812a24ec6d2ab81bf1702eb25f5d3d00cfeec240649cc1bf3c46f7f04efa8",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6142,
+      "considered_print_ids": [
+        6141,
+        6142
+      ],
+      "positive_physical_basis": "Source depicts Yamato at upper right in a dynamic club attack, with sweeping black/gold and purple streaks across the left, matching the complete p1 illustration and layout.",
+      "excluded_sibling_basis": {
+        "6141": "Base is a large frontal Yamato portrait holding the club across the bottom with a purple rope filling the right; those physical details differ."
+      },
+      "work_id": 2768,
+      "source_product_snapshot_id": 27821,
+      "source_product_content_hash": "c1a265ebd2a7e49ea4569e729916697cd9fde7c52c84da2ffe007744db204ee4",
+      "source_image_snapshot_id": 27822,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10154.jpg",
+      "source_body_sha256": "6282b787eb417e4554357386de9064426451833e2152bc5391562eb1b1a664b7",
+      "official_images": [
+        {
+          "card_print_id": 6141,
+          "raw_snapshot_id": 27823,
+          "official_asset_variant": "base",
+          "body_sha256": "06ca7c3ec3ca814e92e3ebee621777f49facbf6ec828b3a9d35195e8870d545e"
+        },
+        {
+          "card_print_id": 6142,
+          "raw_snapshot_id": 27824,
+          "official_asset_variant": "p1",
+          "body_sha256": "6a1568dfdc3f5281cffac9ceb31c6dd7a492dcfc58cf102a0ceff8f4a91aa8af"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 6,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10031",
+      "baseline_evidence_digest": "8a9d2164a120363d32180269d7e5a2dd42d091e73ae61302dee021178884256c",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6019,
+      "considered_print_ids": [
+        6018,
+        6019
+      ],
+      "positive_physical_basis": "Source depicts Luffy leaning forward with both hands clasped centrally, straw hat behind his head and a dense orange/red angular burst background, matching p1's full illustration.",
+      "excluded_sibling_basis": {
+        "6018": "Base depicts Luffy kicking a raised bare foot toward the viewer with one extended fist and an orange blurred background."
+      },
+      "work_id": 2769,
+      "source_product_snapshot_id": 27827,
+      "source_product_content_hash": "84a1977c13fc6c22b56f1ea8365e352c9c359fecbe58ce18fb8e077eb9b399df",
+      "source_image_snapshot_id": 27828,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10031.jpg",
+      "source_body_sha256": "1ffb1134514cc2d462cd547d6af50e0ce67211d85bb8cf8f2c0c06523d3843a6",
+      "official_images": [
+        {
+          "card_print_id": 6018,
+          "raw_snapshot_id": 27829,
+          "official_asset_variant": "base",
+          "body_sha256": "9c035f458b3271069f40ab7b0129b799ff0d1b79b89cab82a9d5e2da867d5b57"
+        },
+        {
+          "card_print_id": 6019,
+          "raw_snapshot_id": 27832,
+          "official_asset_variant": "p1",
+          "body_sha256": "014e21930512844de457b030d857f8ab1c321cb9095bd3b49f3a0af18aea3f87"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 7,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10033",
+      "baseline_evidence_digest": "bfe8609cf26f4fe7f086bf6dea7fe279b8c15a9731e5017823409097cb1d2b5b",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6021,
+      "considered_print_ids": [
+        6020,
+        6021
+      ],
+      "positive_physical_basis": "Source shows shirtless Zoro crouched and leaning forward with a downward sword swing amid red/orange slash streaks, matching p1's full illustration and layout.",
+      "excluded_sibling_basis": {
+        "6020": "Base shows upright Zoro wearing a green robe, holding sword hilts at his hip against a purple background."
+      },
+      "work_id": 2770,
+      "source_product_snapshot_id": 27830,
+      "source_product_content_hash": "879450ef54500e5a1b62b11d666f5459515a18a429e07d18c31c24e96edd2a5c",
+      "source_image_snapshot_id": 27831,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10033.jpg",
+      "source_body_sha256": "218a1cc87f81bf928e26158e8a4fcc2deddfd8d08d7dc3fead5a12fab1ccde77",
+      "official_images": [
+        {
+          "card_print_id": 6020,
+          "raw_snapshot_id": 27833,
+          "official_asset_variant": "base",
+          "body_sha256": "efe6f7374328e057d43ece93858951def41c493089b815532c289a316e7eed3e"
+        },
+        {
+          "card_print_id": 6021,
+          "raw_snapshot_id": 27834,
+          "official_asset_variant": "p1",
+          "body_sha256": "7cd25282b13cf5ce46f40991fe00de376085529bcae007733ac88943bb315b47"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 8,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10051",
+      "baseline_evidence_digest": "290da5000df7936e4e7678611a9e4f3e6646845bed052b86b53c08043bd7bf9a",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6039,
+      "considered_print_ids": [
+        6038,
+        6039
+      ],
+      "positive_physical_basis": "Source shows Kinemon leaning forward with both hands low on the sword, clenched teeth and a sweeping orange/yellow flame arc curling around the left edge; p1 has these full physical illustration details.",
+      "excluded_sibling_basis": {
+        "6038": "Base shows a flatter large torso pose, upright crossed sword arms and broad striped sleeve against a purple/orange backdrop without the sweeping flame composition."
+      },
+      "work_id": 2771,
+      "source_product_snapshot_id": 27837,
+      "source_product_content_hash": "a231bf878ce7f5789d47a5b296869c3b8875238cb7e5cc796e6c83068eecde52",
+      "source_image_snapshot_id": 27838,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10051.jpg",
+      "source_body_sha256": "96a2299133e36cee6e89abef516fb1bf3b6164aaa3f41a3558ee73c6f0a89621",
+      "official_images": [
+        {
+          "card_print_id": 6038,
+          "raw_snapshot_id": 27840,
+          "official_asset_variant": "base",
+          "body_sha256": "b899bd98cfc30a04f6792406607dcad129b1c6c860ff14e303f3526579c78ec9"
+        },
+        {
+          "card_print_id": 6039,
+          "raw_snapshot_id": 27842,
+          "official_asset_variant": "p1",
+          "body_sha256": "1347745d156836c02e6992e305268de327115443ffc5d3a6cb7cd3c8d7d88c1a"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 9,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10059",
+      "baseline_evidence_digest": "c7125dc47e427356003b9cd0d3cb6025cbbd8ede3550cf6d11468caa64c50db6",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6047,
+      "considered_print_ids": [
+        6046,
+        6047
+      ],
+      "positive_physical_basis": "Source shows Law's large open tattooed palm toward the viewer at left, spotted fur hat in profile, sword held above the shoulder and pale blue swirling arcs; the complete composition matches p1.",
+      "excluded_sibling_basis": {
+        "6046": "Base shows front-facing Law gripping the sword hilt at right with a flaring dark coat and no open palm foreground."
+      },
+      "work_id": 2772,
+      "source_product_snapshot_id": 27839,
+      "source_product_content_hash": "ef3900b4feecd115db28bfeb20fd54c5b0e32882cfb05603c038f226f14477bc",
+      "source_image_snapshot_id": 27841,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10059.jpg",
+      "source_body_sha256": "d691c553d4fa5070c52748628f64508eafae0311fc313daefd636b354fe077e7",
+      "official_images": [
+        {
+          "card_print_id": 6046,
+          "raw_snapshot_id": 27843,
+          "official_asset_variant": "base",
+          "body_sha256": "d3c0d9531392db119d38244c514b8d43412018b224332f739af4366aea0c496b"
+        },
+        {
+          "card_print_id": 6047,
+          "raw_snapshot_id": 27844,
+          "official_asset_variant": "p1",
+          "body_sha256": "10e78c7da87359a6aac6181e31cae21c65a44fc8ec1fb3db798534f896e5390e"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 10,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10065",
+      "baseline_evidence_digest": "0080a0594a010c21b04a3c250be770e290fb1abf7f3c8471755671b14c33c82b",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6053,
+      "considered_print_ids": [
+        6052,
+        6053
+      ],
+      "positive_physical_basis": "Source shows Kid laughing with mouth wide open, one bare hand reaching forward and a chained metal arm at upper right amid pink lightning; this is the p1 illustration and layout.",
+      "excluded_sibling_basis": {
+        "6052": "Base shows Kid's closed-tooth grin and an upright open mechanical hand with segmented fingers against a purple radial background."
+      },
+      "work_id": 2773,
+      "source_product_snapshot_id": 27847,
+      "source_product_content_hash": "4b5f0e05b2bc361a63a60b99c9e6b526b8de19d9008152b8b7d5d9dc822000ed",
+      "source_image_snapshot_id": 27848,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10065.jpg",
+      "source_body_sha256": "6f37ddba74c55bc15d153591eb106074062f31700b488e1569f2c7dfa35040d2",
+      "official_images": [
+        {
+          "card_print_id": 6052,
+          "raw_snapshot_id": 27850,
+          "official_asset_variant": "base",
+          "body_sha256": "a8ca3f4eb438df2db5003f73e08366b4a698d47e63bb35bf7f15f8502f32ef87"
+        },
+        {
+          "card_print_id": 6053,
+          "raw_snapshot_id": 27852,
+          "official_asset_variant": "p1",
+          "body_sha256": "7eac6ae3b10aa1f678ac342f17a24830744cbcae1f829aab1a69af719960fcf2"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 11,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10086",
+      "baseline_evidence_digest": "5f594e8a2ec2f1e2fb2cf9c3deeadc48db984a43343bd1772874da801d72e437",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6074,
+      "considered_print_ids": [
+        6073,
+        6074
+      ],
+      "positive_physical_basis": "Source shows Crocodile standing with right hand raised above his head, a large gold hook at lower right and sand sweeping around the dark background; these distinctive full-art details match p1.",
+      "excluded_sibling_basis": {
+        "6073": "Base depicts a crouched Crocodile with a raised knee, hook at upper right and a gold background."
+      },
+      "work_id": 2774,
+      "source_product_snapshot_id": 27849,
+      "source_product_content_hash": "d1bcac3f0549ee3c3e9eaaa4692959a71ec97ec0042bf17ffb3ec9e176a5917b",
+      "source_image_snapshot_id": 27851,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10086.jpg",
+      "source_body_sha256": "57418979b13e3ca66d0878e952dfef4589c583fdba879fbdcb4c5d90c3a1e21a",
+      "official_images": [
+        {
+          "card_print_id": 6073,
+          "raw_snapshot_id": 27853,
+          "official_asset_variant": "base",
+          "body_sha256": "4fbe85688cd0abe1cd8650a9a38bc9b71d03ecd374972c186333a4ff9ee48d91"
+        },
+        {
+          "card_print_id": 6074,
+          "raw_snapshot_id": 27854,
+          "official_asset_variant": "p1",
+          "body_sha256": "739609eccb94e82accfea3fe0278da3e85fa9eb66b0ef5490acbd3147d1259dc"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 12,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10090",
+      "baseline_evidence_digest": "0e70be3124f885c0e7efc5fd699c74020b9ff2f11f902cb3030088537598eba4",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6078,
+      "considered_print_ids": [
+        6077,
+        6078
+      ],
+      "positive_physical_basis": "Source depicts hatless Mihawk seated with crossed legs on a tall red upholstered chair, hands resting on the armrests and an ornate carved lower panel; full illustration matches p1.",
+      "excluded_sibling_basis": {
+        "6077": "Base depicts standing red-hatted Mihawk holding a large cross-shaped sword across his chest."
+      },
+      "work_id": 2775,
+      "source_product_snapshot_id": 27857,
+      "source_product_content_hash": "2fdb759809edc6b133045bf83a6b99478745bbc6e73625cc19e2aa153b8be5eb",
+      "source_image_snapshot_id": 27858,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10090.jpg",
+      "source_body_sha256": "6e04a2196dbf3babda135110fab0d5960f1b474050ed09dea5f394a15adbcfed",
+      "official_images": [
+        {
+          "card_print_id": 6077,
+          "raw_snapshot_id": 27861,
+          "official_asset_variant": "base",
+          "body_sha256": "827a863449f0155663eed16499a3d9243156ba876101f3b629d214804c92ccd4"
+        },
+        {
+          "card_print_id": 6078,
+          "raw_snapshot_id": 27863,
+          "official_asset_variant": "p1",
+          "body_sha256": "b24647479988b48ea34efe26ed8be95bba601380a2eccc4b50fc23354d134370"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 13,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10101",
+      "baseline_evidence_digest": "923e8c126741e1c85da60e36ff7a94ee54847e64af621599abb235bf812fa716",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6089,
+      "considered_print_ids": [
+        6088,
+        6089
+      ],
+      "positive_physical_basis": "Source depicts Hancock reclining diagonally in a purple dress, one hand near her lips, with a heart-eyed tongue-out serpent at upper left and floating hearts; these full-card details match p1.",
+      "excluded_sibling_basis": {
+        "6088": "Base depicts upright blushing Hancock touching her cheek, with the serpent's closed mouth/skull at lower left."
+      },
+      "work_id": 2776,
+      "source_product_snapshot_id": 27859,
+      "source_product_content_hash": "003ef8b3bf248a929dc7f6978f706dc29ccb2ead09cdcd3962c2ed7dbbc9f424",
+      "source_image_snapshot_id": 27860,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10101.jpg",
+      "source_body_sha256": "00e7b4ea953a629204f1dd870256f72e9c05f496f6c89348cb2dda72c5d512a7",
+      "official_images": [
+        {
+          "card_print_id": 6088,
+          "raw_snapshot_id": 27862,
+          "official_asset_variant": "base",
+          "body_sha256": "f5df43373291da5c9bcc56b0458b02b0ad6a38813cb3c8e41a470c06e84e8b3b"
+        },
+        {
+          "card_print_id": 6089,
+          "raw_snapshot_id": 27864,
+          "official_asset_variant": "p1",
+          "body_sha256": "074526a16c903f25fa6ac11475b30f12671e120fc342fc05bee2ce7ed48ef215"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 14,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10120",
+      "baseline_evidence_digest": "d92635bb074ed2447735ce5962ac81542e0c054954c406907b13efe09434c731",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6108,
+      "considered_print_ids": [
+        6107,
+        6108
+      ],
+      "positive_physical_basis": "Source shows frontal bare-chested Kaido with a huge blue dragon head above him, horned human figure below and flaming edges; the complete p1 illustration has these distinctive features.",
+      "excluded_sibling_basis": {
+        "6107": "Base depicts only human Kaido in a side-facing club swing with an orange building background and no blue dragon head."
+      },
+      "work_id": 2777,
+      "source_product_snapshot_id": 27867,
+      "source_product_content_hash": "167f9314073a2b75b3f1223d6e4417fdce621248e902bb08d6b1086fcf076259",
+      "source_image_snapshot_id": 27869,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10120.jpg",
+      "source_body_sha256": "583de3082797cf95bc42bd90a6b90115620fbe1cc976a762f9a31d1b5242f5ce",
+      "official_images": [
+        {
+          "card_print_id": 6107,
+          "raw_snapshot_id": 27872,
+          "official_asset_variant": "base",
+          "body_sha256": "5c33a5a897a0f3c4b1a6349d571fee212b671166148b3482c8da648c6be8e06d"
+        },
+        {
+          "card_print_id": 6108,
+          "raw_snapshot_id": 27874,
+          "official_asset_variant": "p1",
+          "body_sha256": "353a06dce00b807d0684897ba8c4f3e94079e0e0713c2bc106a923fd13c81027"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 15,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10123",
+      "baseline_evidence_digest": "056446c2cfb351b95a6740d4c1ca8d5e5bd1c6221bc8703eda40368e489968e2",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6111,
+      "considered_print_ids": [
+        6110,
+        6111
+      ],
+      "positive_physical_basis": "Source shows an unmasked King with white hair, dark facial marking and stern frontal gaze, plus a separate masked head at upper right among flames; full illustration matches p1.",
+      "excluded_sibling_basis": {
+        "6110": "Base depicts fully masked winged King with arms spread and flames surrounding the whole figure."
+      },
+      "work_id": 2778,
+      "source_product_snapshot_id": 27868,
+      "source_product_content_hash": "4a6ce06700c394d0b24a987b1f8dfca32aa4825868c2b68ed26d5f9d6067c459",
+      "source_image_snapshot_id": 27870,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10123.jpg",
+      "source_body_sha256": "74bfb64b1c2d819769082885c05572b1e3e9f8cdbf86f31903d38e4329be94c8",
+      "official_images": [
+        {
+          "card_print_id": 6110,
+          "raw_snapshot_id": 27871,
+          "official_asset_variant": "base",
+          "body_sha256": "7ebade978bcfb8224a2229a8a847eac406fdd6aa634842eaf7417ecbd49d8144"
+        },
+        {
+          "card_print_id": 6111,
+          "raw_snapshot_id": 27873,
+          "official_asset_variant": "p1",
+          "body_sha256": "43e818abade21c195bd4f672935b5dcd8837fe90073318ca00a8ba77ed6ae606"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 27,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10022",
+      "baseline_evidence_digest": "f44853c8101875790eb00ddaf3fff68d6a72dcceb594bbeab7776eb88b7760a8",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6010,
+      "considered_print_ids": [
+        6009,
+        6010
+      ],
+      "positive_physical_basis": "Source shows winking Nami with one arm raised holding a long staff above her head, flowing hair, blue trousers/belt and a sea-blue bubble background extending behind the rules; full layout matches p1.",
+      "excluded_sibling_basis": {
+        "6009": "Base is a close portrait of open-eyed Nami with a shoulder tattoo and separate pale rules box, without the raised arm full-body composition."
+      },
+      "work_id": 2779,
+      "source_product_snapshot_id": 27877,
+      "source_product_content_hash": "391f68ab4b93d1c8254b4bd3a7c29cce749801cf43dc5d2a698ad9396b397c3e",
+      "source_image_snapshot_id": 27878,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10022.jpg",
+      "source_body_sha256": "fc858b8c2c604d430a5f463c578b2e32ff25389a94f223e6344cef8e7fecbb9d",
+      "official_images": [
+        {
+          "card_print_id": 6009,
+          "raw_snapshot_id": 27879,
+          "official_asset_variant": "base",
+          "body_sha256": "295d41e0fba9c9d6ec69d1e47b1600eda632bb96fbf1c0d2bc56585ac6b22266"
+        },
+        {
+          "card_print_id": 6010,
+          "raw_snapshot_id": 27880,
+          "official_asset_variant": "p2",
+          "body_sha256": "2e5a1af024572a208c57bb54b9daf5684643ed4b301448bb5648b9fc38b826e6"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 28,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10094",
+      "baseline_evidence_digest": "9d73d703055a4b585a693be78454e1ffdc3690d0f8d11e0e80957a3b07e02f8e",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6082,
+      "considered_print_ids": [
+        6081,
+        6082
+      ],
+      "positive_physical_basis": "Source shows Doflamingo leaning forward with spread clawlike hands, bent knees, a pink feather coat at the top and white strings crisscrossing the full dark background; matches p1.",
+      "excluded_sibling_basis": {
+        "6081": "Base is an upright side-facing waist-up Doflamingo portrait with a pink coat and an orange curving stroke against green."
+      },
+      "work_id": 2780,
+      "source_product_snapshot_id": 27882,
+      "source_product_content_hash": "8e1cca64358857b1b3635011c887c5e2e17f276b521b55b1a886cb7187439efd",
+      "source_image_snapshot_id": 27883,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10094.jpg",
+      "source_body_sha256": "7607c677776c04a618740b8fc6ee47a8f3ce8e8fd0720a376a52251ee4080345",
+      "official_images": [
+        {
+          "card_print_id": 6081,
+          "raw_snapshot_id": 27884,
+          "official_asset_variant": "base",
+          "body_sha256": "831d32a31634394256065677773a766043a259bb5ef6d8b8ba66632e8f5ba2fc"
+        },
+        {
+          "card_print_id": 6082,
+          "raw_snapshot_id": 27885,
+          "official_asset_variant": "p1",
+          "body_sha256": "06147669a7a871e63a220ff7bc6806813449ae7bab252793eeadbaa2badcbfa3"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 29,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10118",
+      "baseline_evidence_digest": "17fa21420f3388ae95b011e2d61754a7b19972f43f24ff391be528761b18804d",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6106,
+      "considered_print_ids": [
+        6105,
+        6106
+      ],
+      "positive_physical_basis": "Source shows Ulti lunging/jumping with both hands spread, one bent bare knee prominent and looping blue hair framing her mask amid diagonal streaks; full artwork matches p1.",
+      "excluded_sibling_basis": {
+        "6105": "Base is a closer upright chest-up Ulti portrait with golden flowing strands and a different hand/leg composition."
+      },
+      "work_id": 2781,
+      "source_product_snapshot_id": 27887,
+      "source_product_content_hash": "6e5f7452bc0941a58c73b8577a948aafc7e03bd155cc8eb97897e3dcbde50d0d",
+      "source_image_snapshot_id": 27888,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10118.jpg",
+      "source_body_sha256": "8a016a5b82b907287b848cfeff9c334106d228b272cb4f6145f9273479a90544",
+      "official_images": [
+        {
+          "card_print_id": 6105,
+          "raw_snapshot_id": 27889,
+          "official_asset_variant": "base",
+          "body_sha256": "00564d03d1cdf87e9f26989ae7ad28d60397913f12be7030be20b40f1accf7aa"
+        },
+        {
+          "card_print_id": 6106,
+          "raw_snapshot_id": 27890,
+          "official_asset_variant": "p1",
+          "body_sha256": "dc198c65576067650410dcae3be70db5ccce48474196f8f10bd3b41888f2214c"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 30,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10125",
+      "baseline_evidence_digest": "265cdfb5887328d04021a2be9ee13294c4f95c2a0093eb2e32f8e343e816d8a2",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6113,
+      "considered_print_ids": [
+        6112,
+        6113
+      ],
+      "positive_physical_basis": "Source depicts Queen leaning diagonally around a large green/gold multi-barrel gun at right, with an orange mechanical glove and braided yellow hair above; matches p1's complete illustration.",
+      "excluded_sibling_basis": {
+        "6112": "Base depicts frontal Queen with a clenched hand extended left, confetti and theatre masks at the top against a gold glow; no foreground multi-barrel gun."
+      },
+      "work_id": 2782,
+      "source_product_snapshot_id": 27892,
+      "source_product_content_hash": "05f0a6092e13c53fbd3a62ddfcf2a0c60cd222ac521941077509ff4b254a84d5",
+      "source_image_snapshot_id": 27893,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10125.jpg",
+      "source_body_sha256": "0564a22c16ac2aa7617e8efa0fcd01ead4b8760e7e8e0084c5f651c1e85f8d16",
+      "official_images": [
+        {
+          "card_print_id": 6112,
+          "raw_snapshot_id": 27894,
+          "official_asset_variant": "base",
+          "body_sha256": "8ff4502ad16fa32fa75ed878a682b1800b16102a1a9b427597f67bbe5dfb0525"
+        },
+        {
+          "card_print_id": 6113,
+          "raw_snapshot_id": 27895,
+          "official_asset_variant": "p1",
+          "body_sha256": "9cc0405deaa410e9226569f834c65e3364e8842e86649b2f4d0b21ea90923bfa"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 31,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10131",
+      "baseline_evidence_digest": "c899c0e89fd1ad52ff09ccab2dd6d8e0729d550dbc53042a544d05ecf862ef9f",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6119,
+      "considered_print_ids": [
+        6118,
+        6119
+      ],
+      "positive_physical_basis": "Source shows Jack's muscular frontal torso with two long yellow braids, a curved blade held horizontally across his masked face and wind/smoke streaks, matching p1's full illustration.",
+      "excluded_sibling_basis": {
+        "6118": "Base depicts a rounder side-facing Jack torso with no blade held across the face and a separate pale rules panel."
+      },
+      "work_id": 2783,
+      "source_product_snapshot_id": 27898,
+      "source_product_content_hash": "61f996bf306dcd6c386478751572d882b0f88a33e8c48c3cc2167c3e42e9a5d3",
+      "source_image_snapshot_id": 27899,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10131.jpg",
+      "source_body_sha256": "8251c4a28376fe81d6768ba2214a9b1c7a337b070249dab1826378cd412a6971",
+      "official_images": [
+        {
+          "card_print_id": 6118,
+          "raw_snapshot_id": 27900,
+          "official_asset_variant": "base",
+          "body_sha256": "9c89ac519fcb7c0363729d8b63228dd0e269ddd437f0ab4f160749ac7e6f2e07"
+        },
+        {
+          "card_print_id": 6119,
+          "raw_snapshot_id": 27901,
+          "official_asset_variant": "p1",
+          "body_sha256": "69bb72bfa22b659eb7603684e8a29a9e7dae56b90274c7feb0b0949d089dd0eb"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 58,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10099",
+      "baseline_evidence_digest": "ff3d052dd6dbda4a3113ebd193f16d7af96ead15f73463ca6f21d79a54ac9250",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6087,
+      "considered_print_ids": [
+        6086,
+        6087
+      ],
+      "positive_physical_basis": "Source has the close head/torso physical framing of Perona with pink bow at center, rules over the artwork and the printed NOT FOR SALE marker on the right edge. This full-card physical layout matches p1; the source does not show the base's extended legs/ghost layout.",
+      "excluded_sibling_basis": {
+        "6086": "Base has a white frame, full Perona body with both striped legs and large ghosts, and a separate pale rules panel; it lacks the p1 close framing/NOT FOR SALE physical marker."
+      },
+      "work_id": 2784,
+      "source_product_snapshot_id": 27903,
+      "source_product_content_hash": "4272b72ccea8e2b54e79c069e980f602e2877a31bb31e326c147b0b7b2664b7e",
+      "source_image_snapshot_id": 27904,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10099.jpg",
+      "source_body_sha256": "48492d34eb2c1d469e106e6e838f2ab2d3e00081c36c1a5346f5b5cba2eb9cfa",
+      "official_images": [
+        {
+          "card_print_id": 6086,
+          "raw_snapshot_id": 27905,
+          "official_asset_variant": "base",
+          "body_sha256": "f0c78fe9b0f0f30c6a4fbcdc55a002e590baa244de90b8631ef814a3dd711248"
+        },
+        {
+          "card_print_id": 6087,
+          "raw_snapshot_id": 27906,
+          "official_asset_variant": "p1",
+          "body_sha256": "30dc661e3bfdb28020fe8c7bdab0e26d94f925fac1a170cdaf6ba68e6f540100"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 59,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10139",
+      "baseline_evidence_digest": "b801798eeb4f31f0c75173e5d5731781949f95a0602f979590539d1a9ed16d0b",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6127,
+      "considered_print_ids": [
+        6126,
+        6127
+      ],
+      "positive_physical_basis": "Source has the close shoulder/chest framing of Who's-Who, rules over his chest artwork, and the printed NOT FOR SALE marker on the right edge. These positive full-card framing/marker details match p1.",
+      "excluded_sibling_basis": {
+        "6126": "Base has a white frame, full seated figure with widely crossed red legs and a separate pale rules panel; its full physical layout differs from the source's close framing."
+      },
+      "work_id": 2785,
+      "source_product_snapshot_id": 27908,
+      "source_product_content_hash": "b3685a784e59386758dadc1119778e435f24e7e0b887ca77a28162ee0dcf1e59",
+      "source_image_snapshot_id": 27909,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10139.jpg",
+      "source_body_sha256": "293064285ceb2f1203aec3bcb306b18dc6c32b1e13d6093af8844ef05c258b0d",
+      "official_images": [
+        {
+          "card_print_id": 6126,
+          "raw_snapshot_id": 27910,
+          "official_asset_variant": "base",
+          "body_sha256": "58799198c02c1ef27124e7c437ee9fbb1f6ffd0650421d897fcee6d821800ba4"
+        },
+        {
+          "card_print_id": 6127,
+          "raw_snapshot_id": 27911,
+          "official_asset_variant": "p1",
+          "body_sha256": "e2082cd252a1ba6100644e50195af8eba4a9fab92d8b3a4e0e1a0ca7549892c6"
+        }
+      ]
+    },
+    {
+      "source_candidate_id": 90,
+      "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10012",
+      "baseline_evidence_digest": "b59be28b7813bc13f2e02c84ee4a0adb2ff379782d0b7f6ca35055eef39f0624",
+      "release_product_id": 1,
+      "language": "jp",
+      "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+      "actor": "codex:retained-full-image-visual-review-2026-10-06",
+      "reviewed_at": "2026-10-06T10:26:59.897998+00:00",
+      "selected_card_print_id": 6002,
+      "considered_print_ids": [
+        6001,
+        6002
+      ],
+      "positive_physical_basis": "Source has close framing of Cavendish's face, feathered hat, rose and shoulder, with rules over the illustration and printed NOT FOR SALE at the right edge. These full-card physical details match p1.",
+      "excluded_sibling_basis": {
+        "6001": "Base has a white frame, wider seated composition including the chair and legs with a separate pale rules box; it lacks the source's close framing and printed NOT FOR SALE marker."
+      },
+      "work_id": 2786,
+      "source_product_snapshot_id": 27914,
+      "source_product_content_hash": "7514bca305dd35ce13d1e79ff2f92469a4d23b8b4112b0b53a2261bcc9b185e7",
+      "source_image_snapshot_id": 27915,
+      "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10012.jpg",
+      "source_body_sha256": "8d3bf9265f6203ff6a05e83bb9eabc3ae796f32e4d82e4eb7b57834d35723ee5",
+      "official_images": [
+        {
+          "card_print_id": 6001,
+          "raw_snapshot_id": 27916,
+          "official_asset_variant": "base",
+          "body_sha256": "683923f6faf4195d918128c021a2b9c036452d024dc888741e772c63d4191847"
+        },
+        {
+          "card_print_id": 6002,
+          "raw_snapshot_id": 27917,
+          "official_asset_variant": "p1",
+          "body_sha256": "159fad382b1c51d5c991adffc6d96007530c016937c0ff1330b88fed43e979ea"
+        }
+      ]
     }
   ]
 }
