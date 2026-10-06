@@ -1,0 +1,4385 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T03:35:24.628233+00:00",
+  "phase": "deterministic special rarity and measured Yuyu due-work turn tuning",
+  "resources": [
+    {
+      "name": "yuyutei-collector-shard-0",
+      "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+      "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
+    },
+    {
+      "name": "yuyutei-collector-shard-1",
+      "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+      "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
+    },
+    {
+      "name": "yuyutei-collector-shard-2",
+      "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+      "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+    },
+    {
+      "name": "yuyutei-collector-shard-3",
+      "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+      "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
+    },
+    {
+      "name": "yuyutei-collector-shard-4-v2",
+      "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+      "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
+    },
+    {
+      "name": "yuyutei-collector-shard-5",
+      "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+      "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
+    },
+    {
+      "name": "yuyutei-collector-shard-6",
+      "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+      "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
+    },
+    {
+      "name": "yuyutei-collector-shard-7",
+      "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+      "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
+    },
+    {
+      "name": "yuyutei-collector-shard-8",
+      "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+      "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
+    }
+  ],
+  "identity_rule": {
+    "ordinary_rarities_and_parallel_labels": "never discriminate exact variants",
+    "positive_special_rarity_tokens": {
+      "TR": [
+        "TR"
+      ],
+      "P": [
+        "P"
+      ],
+      "SP": [
+        "SP\u30ab\u30fc\u30c9",
+        "SP P"
+      ]
+    },
+    "SP_corrobation": "81 current approved listing/print pairs: 80 official SP\u30ab\u30fc\u30c9 and 1 official SP P; source SP remains ambiguous when multiple such release siblings exist",
+    "first_source_recommendations_created": 24,
+    "ambiguous_before": 1648,
+    "ambiguous_after": 1624,
+    "generic_tokens_not_resolved": [
+      "R",
+      "SR",
+      "P-R",
+      "P-SR"
+    ],
+    "guard": "Current resolver rerun, exact single recommendation, unchanged digest/version, release/family/language/provenance and all existing mapping overrides; stale or ambiguous proof fails before approval"
+  },
+  "resolver_report": {
+    "contract": {
+      "resolver_version": "source-mapping-proposals/1.1",
+      "target": "active verified Japanese CardPrints grouped by release_product_id",
+      "release_membership_from_card_code_prefix": false,
+      "dry_run_is_select_only": true
+    },
+    "overall": {
+      "release_products": 65,
+      "total_physical_prints": 4316,
+      "sources": {
+        "yuyutei": {
+          "existing_exact_mapping_rows": 2100,
+          "existing_exact_mapped_prints": 2100,
+          "candidates_considered": 4357,
+          "candidate_listings_already_exactly_mapped": 2100,
+          "candidate_resolution_counts": {
+            "exact": 2291,
+            "ambiguous": 1642,
+            "unresolved_identity": 379,
+            "release_unresolved": 45,
+            "conflict": 0,
+            "stale": 0,
+            "superseded": 0
+          },
+          "exact_proposal_groups": 209,
+          "unique_exact_prints_covered": 209,
+          "ambiguous_proposal_groups": 1624,
+          "unresolved_identity": 379,
+          "release_unresolved": 45,
+          "conflicts": 0,
+          "stale": 0,
+          "superseded": 0,
+          "physical_prints_with_no_candidate_evidence": 190,
+          "candidate_backed_but_not_exact": 1822,
+          "remaining_unmapped_after_all_exact_proposals": 2012
+        },
+        "snkrdunk": {
+          "existing_exact_mapping_rows": 353,
+          "existing_exact_mapped_prints": 353,
+          "candidates_considered": 676,
+          "candidate_listings_already_exactly_mapped": 353,
+          "candidate_resolution_counts": {
+            "exact": 417,
+            "ambiguous": 236,
+            "unresolved_identity": 0,
+            "release_unresolved": 23,
+            "conflict": 0,
+            "stale": 0,
+            "superseded": 0
+          },
+          "exact_proposal_groups": 82,
+          "unique_exact_prints_covered": 82,
+          "ambiguous_proposal_groups": 218,
+          "unresolved_identity": 0,
+          "release_unresolved": 23,
+          "conflicts": 0,
+          "stale": 0,
+          "superseded": 0,
+          "physical_prints_with_no_candidate_evidence": 3659,
+          "candidate_backed_but_not_exact": 222,
+          "remaining_unmapped_after_all_exact_proposals": 3881
+        }
+      }
+    },
+    "releases": [
+      {
+        "release_product_id": 1,
+        "official_code": "OP-01",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af ROMANCE DAWN\u3010OP-01\u3011",
+        "total_physical_prints": 154,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 81,
+          "candidates_considered": 156,
+          "exact_proposal_groups": 12,
+          "unique_exact_prints_covered": 12,
+          "ambiguous_proposal_groups": 61,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 61,
+          "remaining_unmapped_after_exact_proposals": 61
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 93,
+          "candidates_considered": 153,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 60,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 61,
+          "remaining_unmapped_after_exact_proposals": 61
+        },
+        "existing_exact_mapped_any_source": 93,
+        "mapped_by_neither": 61,
+        "usable_price_prints": 81,
+        "exact_proposal_prints_any_source": 12,
+        "ambiguous_candidate_groups": 121,
+        "candidates_considered": 309,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 61
+      },
+      {
+        "release_product_id": 2,
+        "official_code": "OP-02",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u9802\u4e0a\u6c7a\u6226\u3010OP-02\u3011",
+        "total_physical_prints": 154,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 66,
+          "candidates_considered": 155,
+          "exact_proposal_groups": 24,
+          "unique_exact_prints_covered": 24,
+          "ambiguous_proposal_groups": 64,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 64,
+          "remaining_unmapped_after_exact_proposals": 64
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 47,
+          "candidates_considered": 154,
+          "exact_proposal_groups": 43,
+          "unique_exact_prints_covered": 43,
+          "ambiguous_proposal_groups": 64,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 64,
+          "remaining_unmapped_after_exact_proposals": 64
+        },
+        "existing_exact_mapped_any_source": 90,
+        "mapped_by_neither": 64,
+        "usable_price_prints": 68,
+        "exact_proposal_prints_any_source": 67,
+        "ambiguous_candidate_groups": 128,
+        "candidates_considered": 309,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 64
+      },
+      {
+        "release_product_id": 3,
+        "official_code": "OP-03",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5f37\u5927\u306a\u6575\u3010OP-03\u3011",
+        "total_physical_prints": 154,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 78,
+          "candidates_considered": 155,
+          "exact_proposal_groups": 28,
+          "unique_exact_prints_covered": 28,
+          "ambiguous_proposal_groups": 48,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 48,
+          "remaining_unmapped_after_exact_proposals": 48
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 95,
+          "candidates_considered": 154,
+          "exact_proposal_groups": 11,
+          "unique_exact_prints_covered": 11,
+          "ambiguous_proposal_groups": 48,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 48,
+          "remaining_unmapped_after_exact_proposals": 48
+        },
+        "existing_exact_mapped_any_source": 106,
+        "mapped_by_neither": 48,
+        "usable_price_prints": 80,
+        "exact_proposal_prints_any_source": 39,
+        "ambiguous_candidate_groups": 96,
+        "candidates_considered": 309,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 48
+      },
+      {
+        "release_product_id": 4,
+        "official_code": "OP-04",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u8b00\u7565\u306e\u738b\u56fd\u3010OP-04\u3011",
+        "total_physical_prints": 149,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 54,
+          "candidates_considered": 150,
+          "exact_proposal_groups": 54,
+          "unique_exact_prints_covered": 54,
+          "ambiguous_proposal_groups": 41,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 41,
+          "remaining_unmapped_after_exact_proposals": 41
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 81,
+          "candidates_considered": 149,
+          "exact_proposal_groups": 27,
+          "unique_exact_prints_covered": 27,
+          "ambiguous_proposal_groups": 41,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 41,
+          "remaining_unmapped_after_exact_proposals": 41
+        },
+        "existing_exact_mapped_any_source": 108,
+        "mapped_by_neither": 41,
+        "usable_price_prints": 65,
+        "exact_proposal_prints_any_source": 81,
+        "ambiguous_candidate_groups": 82,
+        "candidates_considered": 299,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 41
+      },
+      {
+        "release_product_id": 170,
+        "official_code": "EB-01",
+        "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc \u30e1\u30e2\u30ea\u30a2\u30eb\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3010EB-01\u3011",
+        "total_physical_prints": 80,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 42,
+          "candidates_considered": 80,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 37,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 37,
+          "remaining_unmapped_after_exact_proposals": 37
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 2,
+          "candidates_considered": 7,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 5,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 70,
+          "candidate_backed_but_not_exact": 8,
+          "remaining_unmapped_after_exact_proposals": 78
+        },
+        "existing_exact_mapped_any_source": 43,
+        "mapped_by_neither": 37,
+        "usable_price_prints": 42,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 42,
+        "candidates_considered": 87,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 37
+      },
+      {
+        "release_product_id": 171,
+        "official_code": "EB-02",
+        "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc Anime 25th collection\u3010EB-02\u3011",
+        "total_physical_prints": 105,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 70,
+          "candidates_considered": 106,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 35,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 35,
+          "remaining_unmapped_after_exact_proposals": 35
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 105,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 105
+        },
+        "existing_exact_mapped_any_source": 70,
+        "mapped_by_neither": 35,
+        "usable_price_prints": 70,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 35,
+        "candidates_considered": 106,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 35
+      },
+      {
+        "release_product_id": 172,
+        "official_code": "EB-03",
+        "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE Heroines Edition\u3010EB-03\u3011",
+        "total_physical_prints": 90,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 44,
+          "candidates_considered": 98,
+          "exact_proposal_groups": 9,
+          "unique_exact_prints_covered": 9,
+          "ambiguous_proposal_groups": 37,
+          "unresolved_identity": 8,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 37,
+          "remaining_unmapped_after_exact_proposals": 37
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 90,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 90
+        },
+        "existing_exact_mapped_any_source": 44,
+        "mapped_by_neither": 46,
+        "usable_price_prints": 44,
+        "exact_proposal_prints_any_source": 9,
+        "ambiguous_candidate_groups": 37,
+        "candidates_considered": 98,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 37
+      },
+      {
+        "release_product_id": 173,
+        "official_code": "EB-04",
+        "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc EGGHEAD CRISIS\u3010EB-04\u3011",
+        "total_physical_prints": 85,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 46,
+          "candidates_considered": 87,
+          "exact_proposal_groups": 2,
+          "unique_exact_prints_covered": 2,
+          "ambiguous_proposal_groups": 37,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 37,
+          "remaining_unmapped_after_exact_proposals": 37
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 85,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 85
+        },
+        "existing_exact_mapped_any_source": 46,
+        "mapped_by_neither": 39,
+        "usable_price_prints": 46,
+        "exact_proposal_prints_any_source": 2,
+        "ambiguous_candidate_groups": 37,
+        "candidates_considered": 87,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 37
+      },
+      {
+        "release_product_id": 174,
+        "official_code": "OP-05",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u6642\u4ee3\u306e\u4e3b\u5f79\u3010OP-05\u3011",
+        "total_physical_prints": 154,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 41,
+          "candidates_considered": 155,
+          "exact_proposal_groups": 60,
+          "unique_exact_prints_covered": 60,
+          "ambiguous_proposal_groups": 53,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 53,
+          "remaining_unmapped_after_exact_proposals": 53
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 154,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 154
+        },
+        "existing_exact_mapped_any_source": 41,
+        "mapped_by_neither": 113,
+        "usable_price_prints": 41,
+        "exact_proposal_prints_any_source": 60,
+        "ambiguous_candidate_groups": 53,
+        "candidates_considered": 155,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 53
+      },
+      {
+        "release_product_id": 175,
+        "official_code": "OP-06",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53cc\u74a7\u306e\u8987\u8005\u3010OP-06\u3011",
+        "total_physical_prints": 150,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 101,
+          "candidates_considered": 151,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 49,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 49,
+          "remaining_unmapped_after_exact_proposals": 49
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 150,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 150
+        },
+        "existing_exact_mapped_any_source": 101,
+        "mapped_by_neither": 49,
+        "usable_price_prints": 101,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 49,
+        "candidates_considered": 151,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 49
+      },
+      {
+        "release_product_id": 176,
+        "official_code": "OP-07",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af 500\u5e74\u5f8c\u306e\u672a\u6765\u3010OP-07\u3011",
+        "total_physical_prints": 150,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 101,
+          "candidates_considered": 152,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 50,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 49,
+          "remaining_unmapped_after_exact_proposals": 49
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 150,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 150
+        },
+        "existing_exact_mapped_any_source": 101,
+        "mapped_by_neither": 49,
+        "usable_price_prints": 101,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 50,
+        "candidates_considered": 152,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 49
+      },
+      {
+        "release_product_id": 177,
+        "official_code": "OP-08",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e8c\u3064\u306e\u4f1d\u8aac\u3010OP-08\u3011",
+        "total_physical_prints": 150,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 101,
+          "candidates_considered": 151,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 49,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 49,
+          "remaining_unmapped_after_exact_proposals": 49
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 150,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 150
+        },
+        "existing_exact_mapped_any_source": 101,
+        "mapped_by_neither": 49,
+        "usable_price_prints": 101,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 49,
+        "candidates_considered": 151,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 49
+      },
+      {
+        "release_product_id": 178,
+        "official_code": "OP-09",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u305f\u306a\u308b\u7687\u5e1d\u3010OP-09\u3011",
+        "total_physical_prints": 158,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 102,
+          "candidates_considered": 160,
+          "exact_proposal_groups": 4,
+          "unique_exact_prints_covered": 4,
+          "ambiguous_proposal_groups": 53,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 53,
+          "remaining_unmapped_after_exact_proposals": 53
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 158,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 158
+        },
+        "existing_exact_mapped_any_source": 102,
+        "mapped_by_neither": 56,
+        "usable_price_prints": 102,
+        "exact_proposal_prints_any_source": 4,
+        "ambiguous_candidate_groups": 53,
+        "candidates_considered": 160,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 53
+      },
+      {
+        "release_product_id": 179,
+        "official_code": "OP-10",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u738b\u65cf\u306e\u8840\u7d71\u3010OP-10\u3011",
+        "total_physical_prints": 150,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 101,
+          "candidates_considered": 151,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 49,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 49,
+          "remaining_unmapped_after_exact_proposals": 49
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 150,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 150
+        },
+        "existing_exact_mapped_any_source": 101,
+        "mapped_by_neither": 49,
+        "usable_price_prints": 101,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 49,
+        "candidates_considered": 151,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 49
+      },
+      {
+        "release_product_id": 180,
+        "official_code": "OP-11",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u901f\u306e\u62f3\u3010OP-11\u3011",
+        "total_physical_prints": 155,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 98,
+          "candidates_considered": 156,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 57,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 57,
+          "remaining_unmapped_after_exact_proposals": 57
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 155,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 155
+        },
+        "existing_exact_mapped_any_source": 98,
+        "mapped_by_neither": 57,
+        "usable_price_prints": 98,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 57,
+        "candidates_considered": 156,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 57
+      },
+      {
+        "release_product_id": 181,
+        "official_code": "OP-12",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5e2b\u5f1f\u306e\u7d46\u3010OP-12\u3011",
+        "total_physical_prints": 154,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 99,
+          "candidates_considered": 155,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 55,
+          "unresolved_identity": 1,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 55,
+          "remaining_unmapped_after_exact_proposals": 55
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 154,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 154
+        },
+        "existing_exact_mapped_any_source": 99,
+        "mapped_by_neither": 55,
+        "usable_price_prints": 99,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 55,
+        "candidates_considered": 155,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 55
+      },
+      {
+        "release_product_id": 182,
+        "official_code": "OP-13",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53d7\u3051\u7d99\u304c\u308c\u308b\u610f\u5fd7\u3010OP-13\u3011",
+        "total_physical_prints": 174,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 96,
+          "candidates_considered": 176,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 78,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 78,
+          "remaining_unmapped_after_exact_proposals": 78
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 174,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 174
+        },
+        "existing_exact_mapped_any_source": 96,
+        "mapped_by_neither": 78,
+        "usable_price_prints": 96,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 78,
+        "candidates_considered": 176,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 78
+      },
+      {
+        "release_product_id": 183,
+        "official_code": "OP-14",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u84bc\u6d77\u306e\u4e03\u5091\u3010OP-14\u3011",
+        "total_physical_prints": 156,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 98,
+          "candidates_considered": 158,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 57,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 57,
+          "remaining_unmapped_after_exact_proposals": 57
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 156,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 156
+        },
+        "existing_exact_mapped_any_source": 98,
+        "mapped_by_neither": 58,
+        "usable_price_prints": 98,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 57,
+        "candidates_considered": 158,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 57
+      },
+      {
+        "release_product_id": 184,
+        "official_code": "OP-15",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u306e\u5cf6\u306e\u5192\u967a\u3010OP-15\u3011",
+        "total_physical_prints": 152,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 99,
+          "candidates_considered": 154,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 53,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 53,
+          "remaining_unmapped_after_exact_proposals": 53
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 152,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 152
+        },
+        "existing_exact_mapped_any_source": 99,
+        "mapped_by_neither": 53,
+        "usable_price_prints": 99,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 53,
+        "candidates_considered": 154,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 53
+      },
+      {
+        "release_product_id": 185,
+        "official_code": "OP-16",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u6c7a\u6226\u306e\u523b\u3010OP-16\u3011",
+        "total_physical_prints": 153,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 100,
+          "candidates_considered": 157,
+          "exact_proposal_groups": 3,
+          "unique_exact_prints_covered": 3,
+          "ambiguous_proposal_groups": 52,
+          "unresolved_identity": 2,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 52,
+          "remaining_unmapped_after_exact_proposals": 52
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 153,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 153
+        },
+        "existing_exact_mapped_any_source": 100,
+        "mapped_by_neither": 53,
+        "usable_price_prints": 100,
+        "exact_proposal_prints_any_source": 3,
+        "ambiguous_candidate_groups": 52,
+        "candidates_considered": 157,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 52
+      },
+      {
+        "release_product_id": 186,
+        "official_code": "OP-17",
+        "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e16\u754c\u6700\u5f37\u306e\u6226\u58eb\u3010OP-17\u3011",
+        "total_physical_prints": 169,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 98,
+          "candidates_considered": 177,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 70,
+          "unresolved_identity": 8,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 70,
+          "remaining_unmapped_after_exact_proposals": 70
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 169,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 169
+        },
+        "existing_exact_mapped_any_source": 98,
+        "mapped_by_neither": 71,
+        "usable_price_prints": 98,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 70,
+        "candidates_considered": 177,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 70
+      },
+      {
+        "release_product_id": 187,
+        "official_code": "PRB-01",
+        "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST\u3010PRB-01\u3011",
+        "total_physical_prints": 319,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 4,
+          "candidates_considered": 306,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 212,
+          "unresolved_identity": 90,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 3,
+          "candidate_backed_but_not_exact": 312,
+          "remaining_unmapped_after_exact_proposals": 315
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 319,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 319
+        },
+        "existing_exact_mapped_any_source": 4,
+        "mapped_by_neither": 315,
+        "usable_price_prints": 4,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 212,
+        "candidates_considered": 306,
+        "prints_with_no_candidate_evidence_any_source": 3,
+        "remaining_unmapped_after_all_exact_proposals": 315
+      },
+      {
+        "release_product_id": 188,
+        "official_code": "PRB-02",
+        "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+        "total_physical_prints": 316,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 271,
+          "exact_proposal_groups": 6,
+          "unique_exact_prints_covered": 6,
+          "ambiguous_proposal_groups": 175,
+          "unresolved_identity": 90,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 36,
+          "candidate_backed_but_not_exact": 274,
+          "remaining_unmapped_after_exact_proposals": 310
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 316,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 316
+        },
+        "existing_exact_mapped_any_source": 0,
+        "mapped_by_neither": 316,
+        "usable_price_prints": 0,
+        "exact_proposal_prints_any_source": 6,
+        "ambiguous_candidate_groups": 175,
+        "candidates_considered": 271,
+        "prints_with_no_candidate_evidence_any_source": 36,
+        "remaining_unmapped_after_all_exact_proposals": 310
+      },
+      {
+        "release_product_id": 189,
+        "official_code": "ST-01",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ea6\u308f\u3089\u306e\u4e00\u5473\u3010ST-01\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 18,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 18,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 190,
+        "official_code": "ST-02",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6700\u60aa\u306e\u4e16\u4ee3\u3010ST-02\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 18,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 18,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 191,
+        "official_code": "ST-03",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u738b\u4e0b\u4e03\u6b66\u6d77\u3010ST-03\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 192,
+        "official_code": "ST-04",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u767e\u7363\u6d77\u8cca\u56e3\u3010ST-04\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 15,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 2,
+          "unique_exact_prints_covered": 2,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 2,
+          "candidates_considered": 2,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 2,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 19,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 193,
+        "official_code": "ST-05",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad ONE PIECE FILM edition\u3010ST-05\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 194,
+        "official_code": "ST-06",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6d77\u8ecd\u3010ST-06\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 195,
+        "official_code": "ST-07",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30d3\u30c3\u30b0\u30fb\u30de\u30e0\u6d77\u8cca\u56e3\u3010ST-07\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 196,
+        "official_code": "ST-08",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-08\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 15,
+          "candidates_considered": 15,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 15,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 15,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 15,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 197,
+        "official_code": "ST-09",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e4\u30de\u30c8\u3010ST-09\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 15,
+          "candidates_considered": 15,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 15,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 15,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 15,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 198,
+        "official_code": "ST-10",
+        "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad \u201c\u4e09\u8239\u9577\u201d\u96c6\u7d50\u3010ST-10\u3011",
+        "total_physical_prints": 19,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 19,
+          "candidates_considered": 19,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 19,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 19
+        },
+        "existing_exact_mapped_any_source": 19,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 19,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 19,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 199,
+        "official_code": "ST-11",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30a6\u30bf\u3010ST-11\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 7,
+          "candidates_considered": 7,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 8,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 8
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 7,
+        "mapped_by_neither": 8,
+        "usable_price_prints": 7,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 7,
+        "prints_with_no_candidate_evidence_any_source": 8,
+        "remaining_unmapped_after_all_exact_proposals": 8
+      },
+      {
+        "release_product_id": 200,
+        "official_code": "ST-12",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30be\u30ed&\u30b5\u30f3\u30b8\u3010ST-12\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 201,
+        "official_code": "ST-13",
+        "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad 3\u5144\u5f1f\u306e\u7d46\u3010ST-13\u3011",
+        "total_physical_prints": 35,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 3,
+          "candidates_considered": 35,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 32,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 32,
+          "remaining_unmapped_after_exact_proposals": 32
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 35,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 35
+        },
+        "existing_exact_mapped_any_source": 3,
+        "mapped_by_neither": 32,
+        "usable_price_prints": 3,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 32,
+        "candidates_considered": 35,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 32
+      },
+      {
+        "release_product_id": 202,
+        "official_code": "ST-14",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad 3D2Y\u3010ST-14\u3011",
+        "total_physical_prints": 17,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 17,
+          "candidates_considered": 17,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 17,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 17
+        },
+        "existing_exact_mapped_any_source": 17,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 17,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 17,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 203,
+        "official_code": "ST-15",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-15\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 204,
+        "official_code": "ST-16",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30a6\u30bf\u3010ST-16\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 13,
+          "candidates_considered": 13,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 2,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 2
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 13,
+        "mapped_by_neither": 2,
+        "usable_price_prints": 13,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 13,
+        "prints_with_no_candidate_evidence_any_source": 2,
+        "remaining_unmapped_after_all_exact_proposals": 2
+      },
+      {
+        "release_product_id": 205,
+        "official_code": "ST-17",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4\u3010ST-17\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 206,
+        "official_code": "ST-18",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-18\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 207,
+        "official_code": "ST-19",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30b9\u30e2\u30fc\u30ab\u30fc\u3010ST-19\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 208,
+        "official_code": "ST-20",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-20\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 209,
+        "official_code": "ST-21",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30ae\u30a25\u3010ST-21\u3011",
+        "total_physical_prints": 32,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 2,
+          "candidates_considered": 32,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 30,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 30,
+          "remaining_unmapped_after_exact_proposals": 30
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 32,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 32
+        },
+        "existing_exact_mapped_any_source": 2,
+        "mapped_by_neither": 30,
+        "usable_price_prints": 2,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 30,
+        "candidates_considered": 32,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 30
+      },
+      {
+        "release_product_id": 210,
+        "official_code": "ST-22",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30a8\u30fc\u30b9&\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-22\u3011",
+        "total_physical_prints": 31,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 3,
+          "candidates_considered": 31,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 28,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 28,
+          "remaining_unmapped_after_exact_proposals": 28
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 31,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 31
+        },
+        "existing_exact_mapped_any_source": 3,
+        "mapped_by_neither": 28,
+        "usable_price_prints": 3,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 28,
+        "candidates_considered": 31,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 28
+      },
+      {
+        "release_product_id": 211,
+        "official_code": "ST-23",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30b7\u30e3\u30f3\u30af\u30b9\u3010ST-23\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 212,
+        "official_code": "ST-24",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc\u3010ST-24\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 213,
+        "official_code": "ST-25",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30d0\u30ae\u30fc\u3010ST-25\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 10,
+          "candidates_considered": 10,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 5,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 5
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 10,
+        "mapped_by_neither": 5,
+        "usable_price_prints": 10,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 10,
+        "prints_with_no_candidate_evidence_any_source": 5,
+        "remaining_unmapped_after_all_exact_proposals": 5
+      },
+      {
+        "release_product_id": 214,
+        "official_code": "ST-26",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b\u9ed2 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-26\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 215,
+        "official_code": "ST-27",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1\u3010ST-27\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 10,
+          "candidates_considered": 10,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 5,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 5
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 10,
+        "mapped_by_neither": 5,
+        "usable_price_prints": 10,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 10,
+        "prints_with_no_candidate_evidence_any_source": 5,
+        "remaining_unmapped_after_all_exact_proposals": 5
+      },
+      {
+        "release_product_id": 216,
+        "official_code": "ST-28",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1\u9ec4 \u30e4\u30de\u30c8\u3010ST-28\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 217,
+        "official_code": "ST-29",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad EGGHEAD\u3010ST-29\u3011",
+        "total_physical_prints": 31,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 3,
+          "candidates_considered": 31,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 28,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 28,
+          "remaining_unmapped_after_exact_proposals": 28
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 31,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 31
+        },
+        "existing_exact_mapped_any_source": 3,
+        "mapped_by_neither": 28,
+        "usable_price_prints": 3,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 28,
+        "candidates_considered": 31,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 28
+      },
+      {
+        "release_product_id": 218,
+        "official_code": "ST-30",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+        "total_physical_prints": 34,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 34,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 34,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 34,
+          "remaining_unmapped_after_exact_proposals": 34
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 34,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 34
+        },
+        "existing_exact_mapped_any_source": 0,
+        "mapped_by_neither": 34,
+        "usable_price_prints": 0,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 34,
+        "candidates_considered": 34,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 34
+      },
+      {
+        "release_product_id": 219,
+        "official_code": "ST-31",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-31\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 220,
+        "official_code": "ST-32",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed\u3010ST-32\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 221,
+        "official_code": "ST-33",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30af\u30b6\u30f3\u3010ST-33\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 222,
+        "official_code": "ST-34",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-34\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 223,
+        "official_code": "ST-35",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64\u9ed2 \u30b5\u30dc\u3010ST-35\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 8,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 7,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 7
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 8,
+        "mapped_by_neither": 7,
+        "usable_price_prints": 8,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 7,
+        "remaining_unmapped_after_all_exact_proposals": 7
+      },
+      {
+        "release_product_id": 224,
+        "official_code": "ST-36",
+        "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9\u3010ST-36\u3011",
+        "total_physical_prints": 15,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 9,
+          "candidates_considered": 9,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 6,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 6
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 15,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 15
+        },
+        "existing_exact_mapped_any_source": 9,
+        "mapped_by_neither": 6,
+        "usable_price_prints": 9,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 9,
+        "prints_with_no_candidate_evidence_any_source": 6,
+        "remaining_unmapped_after_all_exact_proposals": 6
+      },
+      {
+        "release_product_id": 225,
+        "official_code": null,
+        "display_name": "1st ANNIVERSARY SET",
+        "total_physical_prints": 3,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 3,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 3
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 3,
+          "candidates_considered": 3,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "existing_exact_mapped_any_source": 3,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 3,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 3,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 226,
+        "official_code": null,
+        "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+        "total_physical_prints": 4,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 4,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 4
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 4,
+          "candidates_considered": 4,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "existing_exact_mapped_any_source": 4,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 0,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 4,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 227,
+        "official_code": null,
+        "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+        "total_physical_prints": 3,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 3,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 3
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 3,
+          "candidates_considered": 3,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "existing_exact_mapped_any_source": 3,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 0,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 3,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 228,
+        "official_code": null,
+        "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.2",
+        "total_physical_prints": 4,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 4,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 4
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 4,
+          "candidates_considered": 4,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "existing_exact_mapped_any_source": 4,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 1,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 4,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 229,
+        "official_code": null,
+        "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 - \u30d9\u30b9\u30c8\u30bb\u30ec\u30af\u30b7\u30e7\u30f3vol.1 -",
+        "total_physical_prints": 12,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 12,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 12
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 12,
+          "candidates_considered": 12,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 0,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 0
+        },
+        "existing_exact_mapped_any_source": 12,
+        "mapped_by_neither": 0,
+        "usable_price_prints": 2,
+        "exact_proposal_prints_any_source": 0,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 12,
+        "prints_with_no_candidate_evidence_any_source": 0,
+        "remaining_unmapped_after_all_exact_proposals": 0
+      },
+      {
+        "release_product_id": 230,
+        "official_code": null,
+        "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 25\u5468\u5e74\u30a8\u30c7\u30a3\u30b7\u30e7\u30f3",
+        "total_physical_prints": 9,
+        "yuyutei": {
+          "existing_exact_mapped_prints": 0,
+          "candidates_considered": 0,
+          "exact_proposal_groups": 0,
+          "unique_exact_prints_covered": 0,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 9,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 9
+        },
+        "snkrdunk": {
+          "existing_exact_mapped_prints": 7,
+          "candidates_considered": 8,
+          "exact_proposal_groups": 1,
+          "unique_exact_prints_covered": 1,
+          "ambiguous_proposal_groups": 0,
+          "unresolved_identity": 0,
+          "release_unresolved": 0,
+          "conflicts": 0,
+          "physical_prints_with_no_candidate_evidence": 1,
+          "candidate_backed_but_not_exact": 0,
+          "remaining_unmapped_after_exact_proposals": 1
+        },
+        "existing_exact_mapped_any_source": 7,
+        "mapped_by_neither": 2,
+        "usable_price_prints": 7,
+        "exact_proposal_prints_any_source": 1,
+        "ambiguous_candidate_groups": 0,
+        "candidates_considered": 8,
+        "prints_with_no_candidate_evidence_any_source": 1,
+        "remaining_unmapped_after_all_exact_proposals": 1
+      }
+    ],
+    "prioritisation": {
+      "zero_usable_prices": [
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "usable_price_prints": 0
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "usable_price_prints": 0
+        },
+        {
+          "release_product_id": 226,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+          "usable_price_prints": 0
+        },
+        {
+          "release_product_id": 227,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+          "usable_price_prints": 0
+        }
+      ],
+      "zero_exact_mappings": [
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "existing_exact_mapped_any_source": 0
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "existing_exact_mapped_any_source": 0
+        }
+      ],
+      "highest_mapped_neither": [
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "mapped_by_neither": 316
+        },
+        {
+          "release_product_id": 187,
+          "official_code": "PRB-01",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST\u3010PRB-01\u3011",
+          "mapped_by_neither": 315
+        },
+        {
+          "release_product_id": 174,
+          "official_code": "OP-05",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u6642\u4ee3\u306e\u4e3b\u5f79\u3010OP-05\u3011",
+          "mapped_by_neither": 113
+        },
+        {
+          "release_product_id": 182,
+          "official_code": "OP-13",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53d7\u3051\u7d99\u304c\u308c\u308b\u610f\u5fd7\u3010OP-13\u3011",
+          "mapped_by_neither": 78
+        },
+        {
+          "release_product_id": 186,
+          "official_code": "OP-17",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e16\u754c\u6700\u5f37\u306e\u6226\u58eb\u3010OP-17\u3011",
+          "mapped_by_neither": 71
+        },
+        {
+          "release_product_id": 2,
+          "official_code": "OP-02",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u9802\u4e0a\u6c7a\u6226\u3010OP-02\u3011",
+          "mapped_by_neither": 64
+        },
+        {
+          "release_product_id": 1,
+          "official_code": "OP-01",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af ROMANCE DAWN\u3010OP-01\u3011",
+          "mapped_by_neither": 61
+        },
+        {
+          "release_product_id": 183,
+          "official_code": "OP-14",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u84bc\u6d77\u306e\u4e03\u5091\u3010OP-14\u3011",
+          "mapped_by_neither": 58
+        },
+        {
+          "release_product_id": 180,
+          "official_code": "OP-11",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u901f\u306e\u62f3\u3010OP-11\u3011",
+          "mapped_by_neither": 57
+        },
+        {
+          "release_product_id": 178,
+          "official_code": "OP-09",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u305f\u306a\u308b\u7687\u5e1d\u3010OP-09\u3011",
+          "mapped_by_neither": 56
+        },
+        {
+          "release_product_id": 181,
+          "official_code": "OP-12",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5e2b\u5f1f\u306e\u7d46\u3010OP-12\u3011",
+          "mapped_by_neither": 55
+        },
+        {
+          "release_product_id": 184,
+          "official_code": "OP-15",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u306e\u5cf6\u306e\u5192\u967a\u3010OP-15\u3011",
+          "mapped_by_neither": 53
+        },
+        {
+          "release_product_id": 185,
+          "official_code": "OP-16",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u6c7a\u6226\u306e\u523b\u3010OP-16\u3011",
+          "mapped_by_neither": 53
+        },
+        {
+          "release_product_id": 175,
+          "official_code": "OP-06",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53cc\u74a7\u306e\u8987\u8005\u3010OP-06\u3011",
+          "mapped_by_neither": 49
+        },
+        {
+          "release_product_id": 176,
+          "official_code": "OP-07",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af 500\u5e74\u5f8c\u306e\u672a\u6765\u3010OP-07\u3011",
+          "mapped_by_neither": 49
+        },
+        {
+          "release_product_id": 177,
+          "official_code": "OP-08",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e8c\u3064\u306e\u4f1d\u8aac\u3010OP-08\u3011",
+          "mapped_by_neither": 49
+        },
+        {
+          "release_product_id": 179,
+          "official_code": "OP-10",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u738b\u65cf\u306e\u8840\u7d71\u3010OP-10\u3011",
+          "mapped_by_neither": 49
+        },
+        {
+          "release_product_id": 3,
+          "official_code": "OP-03",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5f37\u5927\u306a\u6575\u3010OP-03\u3011",
+          "mapped_by_neither": 48
+        },
+        {
+          "release_product_id": 172,
+          "official_code": "EB-03",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE Heroines Edition\u3010EB-03\u3011",
+          "mapped_by_neither": 46
+        },
+        {
+          "release_product_id": 4,
+          "official_code": "OP-04",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u8b00\u7565\u306e\u738b\u56fd\u3010OP-04\u3011",
+          "mapped_by_neither": 41
+        },
+        {
+          "release_product_id": 173,
+          "official_code": "EB-04",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc EGGHEAD CRISIS\u3010EB-04\u3011",
+          "mapped_by_neither": 39
+        },
+        {
+          "release_product_id": 170,
+          "official_code": "EB-01",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc \u30e1\u30e2\u30ea\u30a2\u30eb\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3010EB-01\u3011",
+          "mapped_by_neither": 37
+        },
+        {
+          "release_product_id": 171,
+          "official_code": "EB-02",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc Anime 25th collection\u3010EB-02\u3011",
+          "mapped_by_neither": 35
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "mapped_by_neither": 34
+        },
+        {
+          "release_product_id": 201,
+          "official_code": "ST-13",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad 3\u5144\u5f1f\u306e\u7d46\u3010ST-13\u3011",
+          "mapped_by_neither": 32
+        },
+        {
+          "release_product_id": 209,
+          "official_code": "ST-21",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30ae\u30a25\u3010ST-21\u3011",
+          "mapped_by_neither": 30
+        },
+        {
+          "release_product_id": 210,
+          "official_code": "ST-22",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30a8\u30fc\u30b9&\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-22\u3011",
+          "mapped_by_neither": 28
+        },
+        {
+          "release_product_id": 217,
+          "official_code": "ST-29",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad EGGHEAD\u3010ST-29\u3011",
+          "mapped_by_neither": 28
+        },
+        {
+          "release_product_id": 199,
+          "official_code": "ST-11",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30a6\u30bf\u3010ST-11\u3011",
+          "mapped_by_neither": 8
+        },
+        {
+          "release_product_id": 205,
+          "official_code": "ST-17",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4\u3010ST-17\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 206,
+          "official_code": "ST-18",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-18\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 207,
+          "official_code": "ST-19",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30b9\u30e2\u30fc\u30ab\u30fc\u3010ST-19\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 214,
+          "official_code": "ST-26",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b\u9ed2 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-26\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 216,
+          "official_code": "ST-28",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1\u9ec4 \u30e4\u30de\u30c8\u3010ST-28\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 223,
+          "official_code": "ST-35",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64\u9ed2 \u30b5\u30dc\u3010ST-35\u3011",
+          "mapped_by_neither": 7
+        },
+        {
+          "release_product_id": 203,
+          "official_code": "ST-15",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-15\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 208,
+          "official_code": "ST-20",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-20\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 211,
+          "official_code": "ST-23",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30b7\u30e3\u30f3\u30af\u30b9\u3010ST-23\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 212,
+          "official_code": "ST-24",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc\u3010ST-24\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 219,
+          "official_code": "ST-31",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-31\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 220,
+          "official_code": "ST-32",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed\u3010ST-32\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 221,
+          "official_code": "ST-33",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30af\u30b6\u30f3\u3010ST-33\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 222,
+          "official_code": "ST-34",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-34\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 224,
+          "official_code": "ST-36",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9\u3010ST-36\u3011",
+          "mapped_by_neither": 6
+        },
+        {
+          "release_product_id": 213,
+          "official_code": "ST-25",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30d0\u30ae\u30fc\u3010ST-25\u3011",
+          "mapped_by_neither": 5
+        },
+        {
+          "release_product_id": 215,
+          "official_code": "ST-27",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1\u3010ST-27\u3011",
+          "mapped_by_neither": 5
+        },
+        {
+          "release_product_id": 204,
+          "official_code": "ST-16",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30a6\u30bf\u3010ST-16\u3011",
+          "mapped_by_neither": 2
+        },
+        {
+          "release_product_id": 230,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 25\u5468\u5e74\u30a8\u30c7\u30a3\u30b7\u30e7\u30f3",
+          "mapped_by_neither": 2
+        },
+        {
+          "release_product_id": 189,
+          "official_code": "ST-01",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ea6\u308f\u3089\u306e\u4e00\u5473\u3010ST-01\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 190,
+          "official_code": "ST-02",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6700\u60aa\u306e\u4e16\u4ee3\u3010ST-02\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 191,
+          "official_code": "ST-03",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u738b\u4e0b\u4e03\u6b66\u6d77\u3010ST-03\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 192,
+          "official_code": "ST-04",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u767e\u7363\u6d77\u8cca\u56e3\u3010ST-04\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 193,
+          "official_code": "ST-05",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad ONE PIECE FILM edition\u3010ST-05\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 194,
+          "official_code": "ST-06",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6d77\u8ecd\u3010ST-06\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 195,
+          "official_code": "ST-07",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30d3\u30c3\u30b0\u30fb\u30de\u30e0\u6d77\u8cca\u56e3\u3010ST-07\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 196,
+          "official_code": "ST-08",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-08\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 197,
+          "official_code": "ST-09",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e4\u30de\u30c8\u3010ST-09\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 198,
+          "official_code": "ST-10",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad \u201c\u4e09\u8239\u9577\u201d\u96c6\u7d50\u3010ST-10\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 200,
+          "official_code": "ST-12",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30be\u30ed&\u30b5\u30f3\u30b8\u3010ST-12\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 202,
+          "official_code": "ST-14",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad 3D2Y\u3010ST-14\u3011",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 225,
+          "official_code": null,
+          "display_name": "1st ANNIVERSARY SET",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 226,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 227,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 228,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.2",
+          "mapped_by_neither": 0
+        },
+        {
+          "release_product_id": 229,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 - \u30d9\u30b9\u30c8\u30bb\u30ec\u30af\u30b7\u30e7\u30f3vol.1 -",
+          "mapped_by_neither": 0
+        }
+      ],
+      "most_exact_proposals_ready": [
+        {
+          "release_product_id": 4,
+          "official_code": "OP-04",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u8b00\u7565\u306e\u738b\u56fd\u3010OP-04\u3011",
+          "exact_proposal_prints_any_source": 81
+        },
+        {
+          "release_product_id": 2,
+          "official_code": "OP-02",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u9802\u4e0a\u6c7a\u6226\u3010OP-02\u3011",
+          "exact_proposal_prints_any_source": 67
+        },
+        {
+          "release_product_id": 174,
+          "official_code": "OP-05",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u6642\u4ee3\u306e\u4e3b\u5f79\u3010OP-05\u3011",
+          "exact_proposal_prints_any_source": 60
+        },
+        {
+          "release_product_id": 3,
+          "official_code": "OP-03",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5f37\u5927\u306a\u6575\u3010OP-03\u3011",
+          "exact_proposal_prints_any_source": 39
+        },
+        {
+          "release_product_id": 1,
+          "official_code": "OP-01",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af ROMANCE DAWN\u3010OP-01\u3011",
+          "exact_proposal_prints_any_source": 12
+        },
+        {
+          "release_product_id": 172,
+          "official_code": "EB-03",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE Heroines Edition\u3010EB-03\u3011",
+          "exact_proposal_prints_any_source": 9
+        },
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "exact_proposal_prints_any_source": 6
+        },
+        {
+          "release_product_id": 178,
+          "official_code": "OP-09",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u305f\u306a\u308b\u7687\u5e1d\u3010OP-09\u3011",
+          "exact_proposal_prints_any_source": 4
+        },
+        {
+          "release_product_id": 185,
+          "official_code": "OP-16",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u6c7a\u6226\u306e\u523b\u3010OP-16\u3011",
+          "exact_proposal_prints_any_source": 3
+        },
+        {
+          "release_product_id": 173,
+          "official_code": "EB-04",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc EGGHEAD CRISIS\u3010EB-04\u3011",
+          "exact_proposal_prints_any_source": 2
+        },
+        {
+          "release_product_id": 192,
+          "official_code": "ST-04",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u767e\u7363\u6d77\u8cca\u56e3\u3010ST-04\u3011",
+          "exact_proposal_prints_any_source": 2
+        },
+        {
+          "release_product_id": 170,
+          "official_code": "EB-01",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc \u30e1\u30e2\u30ea\u30a2\u30eb\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3010EB-01\u3011",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 183,
+          "official_code": "OP-14",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u84bc\u6d77\u306e\u4e03\u5091\u3010OP-14\u3011",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 186,
+          "official_code": "OP-17",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e16\u754c\u6700\u5f37\u306e\u6226\u58eb\u3010OP-17\u3011",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 189,
+          "official_code": "ST-01",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ea6\u308f\u3089\u306e\u4e00\u5473\u3010ST-01\u3011",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 190,
+          "official_code": "ST-02",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6700\u60aa\u306e\u4e16\u4ee3\u3010ST-02\u3011",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 230,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 25\u5468\u5e74\u30a8\u30c7\u30a3\u30b7\u30e7\u30f3",
+          "exact_proposal_prints_any_source": 1
+        },
+        {
+          "release_product_id": 171,
+          "official_code": "EB-02",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc Anime 25th collection\u3010EB-02\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 175,
+          "official_code": "OP-06",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53cc\u74a7\u306e\u8987\u8005\u3010OP-06\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 176,
+          "official_code": "OP-07",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af 500\u5e74\u5f8c\u306e\u672a\u6765\u3010OP-07\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 177,
+          "official_code": "OP-08",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e8c\u3064\u306e\u4f1d\u8aac\u3010OP-08\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 179,
+          "official_code": "OP-10",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u738b\u65cf\u306e\u8840\u7d71\u3010OP-10\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 180,
+          "official_code": "OP-11",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u901f\u306e\u62f3\u3010OP-11\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 181,
+          "official_code": "OP-12",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5e2b\u5f1f\u306e\u7d46\u3010OP-12\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 182,
+          "official_code": "OP-13",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53d7\u3051\u7d99\u304c\u308c\u308b\u610f\u5fd7\u3010OP-13\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 184,
+          "official_code": "OP-15",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u306e\u5cf6\u306e\u5192\u967a\u3010OP-15\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 187,
+          "official_code": "PRB-01",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST\u3010PRB-01\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 191,
+          "official_code": "ST-03",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u738b\u4e0b\u4e03\u6b66\u6d77\u3010ST-03\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 193,
+          "official_code": "ST-05",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad ONE PIECE FILM edition\u3010ST-05\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 194,
+          "official_code": "ST-06",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6d77\u8ecd\u3010ST-06\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 195,
+          "official_code": "ST-07",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30d3\u30c3\u30b0\u30fb\u30de\u30e0\u6d77\u8cca\u56e3\u3010ST-07\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 196,
+          "official_code": "ST-08",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-08\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 197,
+          "official_code": "ST-09",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e4\u30de\u30c8\u3010ST-09\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 198,
+          "official_code": "ST-10",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad \u201c\u4e09\u8239\u9577\u201d\u96c6\u7d50\u3010ST-10\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 199,
+          "official_code": "ST-11",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30a6\u30bf\u3010ST-11\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 200,
+          "official_code": "ST-12",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30be\u30ed&\u30b5\u30f3\u30b8\u3010ST-12\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 201,
+          "official_code": "ST-13",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad 3\u5144\u5f1f\u306e\u7d46\u3010ST-13\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 202,
+          "official_code": "ST-14",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad 3D2Y\u3010ST-14\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 203,
+          "official_code": "ST-15",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-15\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 204,
+          "official_code": "ST-16",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30a6\u30bf\u3010ST-16\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 205,
+          "official_code": "ST-17",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4\u3010ST-17\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 206,
+          "official_code": "ST-18",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-18\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 207,
+          "official_code": "ST-19",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30b9\u30e2\u30fc\u30ab\u30fc\u3010ST-19\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 208,
+          "official_code": "ST-20",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-20\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 209,
+          "official_code": "ST-21",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30ae\u30a25\u3010ST-21\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 210,
+          "official_code": "ST-22",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30a8\u30fc\u30b9&\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-22\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 211,
+          "official_code": "ST-23",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30b7\u30e3\u30f3\u30af\u30b9\u3010ST-23\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 212,
+          "official_code": "ST-24",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc\u3010ST-24\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 213,
+          "official_code": "ST-25",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30d0\u30ae\u30fc\u3010ST-25\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 214,
+          "official_code": "ST-26",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b\u9ed2 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-26\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 215,
+          "official_code": "ST-27",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1\u3010ST-27\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 216,
+          "official_code": "ST-28",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1\u9ec4 \u30e4\u30de\u30c8\u3010ST-28\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 217,
+          "official_code": "ST-29",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad EGGHEAD\u3010ST-29\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 219,
+          "official_code": "ST-31",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-31\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 220,
+          "official_code": "ST-32",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed\u3010ST-32\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 221,
+          "official_code": "ST-33",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30af\u30b6\u30f3\u3010ST-33\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 222,
+          "official_code": "ST-34",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-34\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 223,
+          "official_code": "ST-35",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64\u9ed2 \u30b5\u30dc\u3010ST-35\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 224,
+          "official_code": "ST-36",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9\u3010ST-36\u3011",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 225,
+          "official_code": null,
+          "display_name": "1st ANNIVERSARY SET",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 226,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 227,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 228,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.2",
+          "exact_proposal_prints_any_source": 0
+        },
+        {
+          "release_product_id": 229,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 - \u30d9\u30b9\u30c8\u30bb\u30ec\u30af\u30b7\u30e7\u30f3vol.1 -",
+          "exact_proposal_prints_any_source": 0
+        }
+      ],
+      "most_ambiguous_candidates": [
+        {
+          "release_product_id": 187,
+          "official_code": "PRB-01",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST\u3010PRB-01\u3011",
+          "ambiguous_candidate_groups": 212
+        },
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "ambiguous_candidate_groups": 175
+        },
+        {
+          "release_product_id": 2,
+          "official_code": "OP-02",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u9802\u4e0a\u6c7a\u6226\u3010OP-02\u3011",
+          "ambiguous_candidate_groups": 128
+        },
+        {
+          "release_product_id": 1,
+          "official_code": "OP-01",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af ROMANCE DAWN\u3010OP-01\u3011",
+          "ambiguous_candidate_groups": 121
+        },
+        {
+          "release_product_id": 3,
+          "official_code": "OP-03",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5f37\u5927\u306a\u6575\u3010OP-03\u3011",
+          "ambiguous_candidate_groups": 96
+        },
+        {
+          "release_product_id": 4,
+          "official_code": "OP-04",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u8b00\u7565\u306e\u738b\u56fd\u3010OP-04\u3011",
+          "ambiguous_candidate_groups": 82
+        },
+        {
+          "release_product_id": 182,
+          "official_code": "OP-13",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53d7\u3051\u7d99\u304c\u308c\u308b\u610f\u5fd7\u3010OP-13\u3011",
+          "ambiguous_candidate_groups": 78
+        },
+        {
+          "release_product_id": 186,
+          "official_code": "OP-17",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e16\u754c\u6700\u5f37\u306e\u6226\u58eb\u3010OP-17\u3011",
+          "ambiguous_candidate_groups": 70
+        },
+        {
+          "release_product_id": 180,
+          "official_code": "OP-11",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u901f\u306e\u62f3\u3010OP-11\u3011",
+          "ambiguous_candidate_groups": 57
+        },
+        {
+          "release_product_id": 183,
+          "official_code": "OP-14",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u84bc\u6d77\u306e\u4e03\u5091\u3010OP-14\u3011",
+          "ambiguous_candidate_groups": 57
+        },
+        {
+          "release_product_id": 181,
+          "official_code": "OP-12",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5e2b\u5f1f\u306e\u7d46\u3010OP-12\u3011",
+          "ambiguous_candidate_groups": 55
+        },
+        {
+          "release_product_id": 174,
+          "official_code": "OP-05",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u6642\u4ee3\u306e\u4e3b\u5f79\u3010OP-05\u3011",
+          "ambiguous_candidate_groups": 53
+        },
+        {
+          "release_product_id": 178,
+          "official_code": "OP-09",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u305f\u306a\u308b\u7687\u5e1d\u3010OP-09\u3011",
+          "ambiguous_candidate_groups": 53
+        },
+        {
+          "release_product_id": 184,
+          "official_code": "OP-15",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u306e\u5cf6\u306e\u5192\u967a\u3010OP-15\u3011",
+          "ambiguous_candidate_groups": 53
+        },
+        {
+          "release_product_id": 185,
+          "official_code": "OP-16",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u6c7a\u6226\u306e\u523b\u3010OP-16\u3011",
+          "ambiguous_candidate_groups": 52
+        },
+        {
+          "release_product_id": 176,
+          "official_code": "OP-07",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af 500\u5e74\u5f8c\u306e\u672a\u6765\u3010OP-07\u3011",
+          "ambiguous_candidate_groups": 50
+        },
+        {
+          "release_product_id": 175,
+          "official_code": "OP-06",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53cc\u74a7\u306e\u8987\u8005\u3010OP-06\u3011",
+          "ambiguous_candidate_groups": 49
+        },
+        {
+          "release_product_id": 177,
+          "official_code": "OP-08",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e8c\u3064\u306e\u4f1d\u8aac\u3010OP-08\u3011",
+          "ambiguous_candidate_groups": 49
+        },
+        {
+          "release_product_id": 179,
+          "official_code": "OP-10",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u738b\u65cf\u306e\u8840\u7d71\u3010OP-10\u3011",
+          "ambiguous_candidate_groups": 49
+        },
+        {
+          "release_product_id": 170,
+          "official_code": "EB-01",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc \u30e1\u30e2\u30ea\u30a2\u30eb\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3010EB-01\u3011",
+          "ambiguous_candidate_groups": 42
+        },
+        {
+          "release_product_id": 172,
+          "official_code": "EB-03",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE Heroines Edition\u3010EB-03\u3011",
+          "ambiguous_candidate_groups": 37
+        },
+        {
+          "release_product_id": 173,
+          "official_code": "EB-04",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc EGGHEAD CRISIS\u3010EB-04\u3011",
+          "ambiguous_candidate_groups": 37
+        },
+        {
+          "release_product_id": 171,
+          "official_code": "EB-02",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc Anime 25th collection\u3010EB-02\u3011",
+          "ambiguous_candidate_groups": 35
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "ambiguous_candidate_groups": 34
+        },
+        {
+          "release_product_id": 201,
+          "official_code": "ST-13",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad 3\u5144\u5f1f\u306e\u7d46\u3010ST-13\u3011",
+          "ambiguous_candidate_groups": 32
+        },
+        {
+          "release_product_id": 209,
+          "official_code": "ST-21",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30ae\u30a25\u3010ST-21\u3011",
+          "ambiguous_candidate_groups": 30
+        },
+        {
+          "release_product_id": 210,
+          "official_code": "ST-22",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30a8\u30fc\u30b9&\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-22\u3011",
+          "ambiguous_candidate_groups": 28
+        },
+        {
+          "release_product_id": 217,
+          "official_code": "ST-29",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad EGGHEAD\u3010ST-29\u3011",
+          "ambiguous_candidate_groups": 28
+        },
+        {
+          "release_product_id": 189,
+          "official_code": "ST-01",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ea6\u308f\u3089\u306e\u4e00\u5473\u3010ST-01\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 190,
+          "official_code": "ST-02",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6700\u60aa\u306e\u4e16\u4ee3\u3010ST-02\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 191,
+          "official_code": "ST-03",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u738b\u4e0b\u4e03\u6b66\u6d77\u3010ST-03\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 192,
+          "official_code": "ST-04",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u767e\u7363\u6d77\u8cca\u56e3\u3010ST-04\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 193,
+          "official_code": "ST-05",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad ONE PIECE FILM edition\u3010ST-05\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 194,
+          "official_code": "ST-06",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6d77\u8ecd\u3010ST-06\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 195,
+          "official_code": "ST-07",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30d3\u30c3\u30b0\u30fb\u30de\u30e0\u6d77\u8cca\u56e3\u3010ST-07\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 196,
+          "official_code": "ST-08",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-08\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 197,
+          "official_code": "ST-09",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e4\u30de\u30c8\u3010ST-09\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 198,
+          "official_code": "ST-10",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad \u201c\u4e09\u8239\u9577\u201d\u96c6\u7d50\u3010ST-10\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 199,
+          "official_code": "ST-11",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30a6\u30bf\u3010ST-11\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 200,
+          "official_code": "ST-12",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30be\u30ed&\u30b5\u30f3\u30b8\u3010ST-12\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 202,
+          "official_code": "ST-14",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad 3D2Y\u3010ST-14\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 203,
+          "official_code": "ST-15",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-15\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 204,
+          "official_code": "ST-16",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30a6\u30bf\u3010ST-16\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 205,
+          "official_code": "ST-17",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4\u3010ST-17\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 206,
+          "official_code": "ST-18",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-18\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 207,
+          "official_code": "ST-19",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30b9\u30e2\u30fc\u30ab\u30fc\u3010ST-19\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 208,
+          "official_code": "ST-20",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-20\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 211,
+          "official_code": "ST-23",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30b7\u30e3\u30f3\u30af\u30b9\u3010ST-23\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 212,
+          "official_code": "ST-24",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc\u3010ST-24\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 213,
+          "official_code": "ST-25",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30d0\u30ae\u30fc\u3010ST-25\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 214,
+          "official_code": "ST-26",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b\u9ed2 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-26\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 215,
+          "official_code": "ST-27",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1\u3010ST-27\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 216,
+          "official_code": "ST-28",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1\u9ec4 \u30e4\u30de\u30c8\u3010ST-28\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 219,
+          "official_code": "ST-31",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-31\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 220,
+          "official_code": "ST-32",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed\u3010ST-32\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 221,
+          "official_code": "ST-33",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30af\u30b6\u30f3\u3010ST-33\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 222,
+          "official_code": "ST-34",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-34\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 223,
+          "official_code": "ST-35",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64\u9ed2 \u30b5\u30dc\u3010ST-35\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 224,
+          "official_code": "ST-36",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9\u3010ST-36\u3011",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 225,
+          "official_code": null,
+          "display_name": "1st ANNIVERSARY SET",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 226,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 227,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 228,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.2",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 229,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 - \u30d9\u30b9\u30c8\u30bb\u30ec\u30af\u30b7\u30e7\u30f3vol.1 -",
+          "ambiguous_candidate_groups": 0
+        },
+        {
+          "release_product_id": 230,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 25\u5468\u5e74\u30a8\u30c7\u30a3\u30b7\u30e7\u30f3",
+          "ambiguous_candidate_groups": 0
+        }
+      ],
+      "most_prints_with_no_candidate_evidence": [
+        {
+          "release_product_id": 188,
+          "official_code": "PRB-02",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST vol.2\u3010PRB-02\u3011",
+          "prints_with_no_candidate_evidence_any_source": 36
+        },
+        {
+          "release_product_id": 199,
+          "official_code": "ST-11",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30a6\u30bf\u3010ST-11\u3011",
+          "prints_with_no_candidate_evidence_any_source": 8
+        },
+        {
+          "release_product_id": 205,
+          "official_code": "ST-17",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30c9\u30f3\u30ad\u30db\u30fc\u30c6\u30fb\u30c9\u30d5\u30e9\u30df\u30f3\u30b4\u3010ST-17\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 206,
+          "official_code": "ST-18",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-18\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 207,
+          "official_code": "ST-19",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30b9\u30e2\u30fc\u30ab\u30fc\u3010ST-19\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 214,
+          "official_code": "ST-26",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b\u9ed2 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-26\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 216,
+          "official_code": "ST-28",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1\u9ec4 \u30e4\u30de\u30c8\u3010ST-28\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 223,
+          "official_code": "ST-35",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64\u9ed2 \u30b5\u30dc\u3010ST-35\u3011",
+          "prints_with_no_candidate_evidence_any_source": 7
+        },
+        {
+          "release_product_id": 203,
+          "official_code": "ST-15",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30a8\u30c9\u30ef\u30fc\u30c9\u30fb\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-15\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 208,
+          "official_code": "ST-20",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-20\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 211,
+          "official_code": "ST-23",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30b7\u30e3\u30f3\u30af\u30b9\u3010ST-23\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 212,
+          "official_code": "ST-24",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30b8\u30e5\u30a8\u30ea\u30fc\u30fb\u30dc\u30cb\u30fc\u3010ST-24\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 219,
+          "official_code": "ST-31",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u8d64 \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-31\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 220,
+          "official_code": "ST-32",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30ed\u30ed\u30ce\u30a2\u30fb\u30be\u30ed\u3010ST-32\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 221,
+          "official_code": "ST-33",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30af\u30b6\u30f3\u3010ST-33\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 222,
+          "official_code": "ST-34",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7d2b \u30b7\u30e3\u30fc\u30ed\u30c3\u30c8\u30fb\u30ab\u30bf\u30af\u30ea\u3010ST-34\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 224,
+          "official_code": "ST-36",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ec4 \u30e6\u30fc\u30b9\u30bf\u30b9\u30fb\u30ad\u30c3\u30c9\u3010ST-36\u3011",
+          "prints_with_no_candidate_evidence_any_source": 6
+        },
+        {
+          "release_product_id": 213,
+          "official_code": "ST-25",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9752 \u30d0\u30ae\u30fc\u3010ST-25\u3011",
+          "prints_with_no_candidate_evidence_any_source": 5
+        },
+        {
+          "release_product_id": 215,
+          "official_code": "ST-27",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ed2 \u30de\u30fc\u30b7\u30e3\u30eb\u30fbD\u30fb\u30c6\u30a3\u30fc\u30c1\u3010ST-27\u3011",
+          "prints_with_no_candidate_evidence_any_source": 5
+        },
+        {
+          "release_product_id": 187,
+          "official_code": "PRB-01",
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE CARD THE BEST\u3010PRB-01\u3011",
+          "prints_with_no_candidate_evidence_any_source": 3
+        },
+        {
+          "release_product_id": 204,
+          "official_code": "ST-16",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u7dd1 \u30a6\u30bf\u3010ST-16\u3011",
+          "prints_with_no_candidate_evidence_any_source": 2
+        },
+        {
+          "release_product_id": 230,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 25\u5468\u5e74\u30a8\u30c7\u30a3\u30b7\u30e7\u30f3",
+          "prints_with_no_candidate_evidence_any_source": 1
+        },
+        {
+          "release_product_id": 1,
+          "official_code": "OP-01",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af ROMANCE DAWN\u3010OP-01\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 2,
+          "official_code": "OP-02",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u9802\u4e0a\u6c7a\u6226\u3010OP-02\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 3,
+          "official_code": "OP-03",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5f37\u5927\u306a\u6575\u3010OP-03\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 4,
+          "official_code": "OP-04",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u8b00\u7565\u306e\u738b\u56fd\u3010OP-04\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 170,
+          "official_code": "EB-01",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc \u30e1\u30e2\u30ea\u30a2\u30eb\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3010EB-01\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 171,
+          "official_code": "EB-02",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc Anime 25th collection\u3010EB-02\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 172,
+          "official_code": "EB-03",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc ONE PIECE Heroines Edition\u3010EB-03\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 173,
+          "official_code": "EB-04",
+          "display_name": "\u30a8\u30af\u30b9\u30c8\u30e9\u30d6\u30fc\u30b9\u30bf\u30fc EGGHEAD CRISIS\u3010EB-04\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 174,
+          "official_code": "OP-05",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u6642\u4ee3\u306e\u4e3b\u5f79\u3010OP-05\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 175,
+          "official_code": "OP-06",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53cc\u74a7\u306e\u8987\u8005\u3010OP-06\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 176,
+          "official_code": "OP-07",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af 500\u5e74\u5f8c\u306e\u672a\u6765\u3010OP-07\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 177,
+          "official_code": "OP-08",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e8c\u3064\u306e\u4f1d\u8aac\u3010OP-08\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 178,
+          "official_code": "OP-09",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u65b0\u305f\u306a\u308b\u7687\u5e1d\u3010OP-09\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 179,
+          "official_code": "OP-10",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u738b\u65cf\u306e\u8840\u7d71\u3010OP-10\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 180,
+          "official_code": "OP-11",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u901f\u306e\u62f3\u3010OP-11\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 181,
+          "official_code": "OP-12",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u5e2b\u5f1f\u306e\u7d46\u3010OP-12\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 182,
+          "official_code": "OP-13",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u53d7\u3051\u7d99\u304c\u308c\u308b\u610f\u5fd7\u3010OP-13\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 183,
+          "official_code": "OP-14",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u84bc\u6d77\u306e\u4e03\u5091\u3010OP-14\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 184,
+          "official_code": "OP-15",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u795e\u306e\u5cf6\u306e\u5192\u967a\u3010OP-15\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 185,
+          "official_code": "OP-16",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u6c7a\u6226\u306e\u523b\u3010OP-16\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 186,
+          "official_code": "OP-17",
+          "display_name": "\u30d6\u30fc\u30b9\u30bf\u30fc\u30d1\u30c3\u30af \u4e16\u754c\u6700\u5f37\u306e\u6226\u58eb\u3010OP-17\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 189,
+          "official_code": "ST-01",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u9ea6\u308f\u3089\u306e\u4e00\u5473\u3010ST-01\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 190,
+          "official_code": "ST-02",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6700\u60aa\u306e\u4e16\u4ee3\u3010ST-02\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 191,
+          "official_code": "ST-03",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u738b\u4e0b\u4e03\u6b66\u6d77\u3010ST-03\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 192,
+          "official_code": "ST-04",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u767e\u7363\u6d77\u8cca\u56e3\u3010ST-04\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 193,
+          "official_code": "ST-05",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad ONE PIECE FILM edition\u3010ST-05\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 194,
+          "official_code": "ST-06",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u6d77\u8ecd\u3010ST-06\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 195,
+          "official_code": "ST-07",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30d3\u30c3\u30b0\u30fb\u30de\u30e0\u6d77\u8cca\u56e3\u3010ST-07\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 196,
+          "official_code": "ST-08",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e2\u30f3\u30ad\u30fc\u30fbD\u30fb\u30eb\u30d5\u30a3\u3010ST-08\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 197,
+          "official_code": "ST-09",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad Side \u30e4\u30de\u30c8\u3010ST-09\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 198,
+          "official_code": "ST-10",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad \u201c\u4e09\u8239\u9577\u201d\u96c6\u7d50\u3010ST-10\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 200,
+          "official_code": "ST-12",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30be\u30ed&\u30b5\u30f3\u30b8\u3010ST-12\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 201,
+          "official_code": "ST-13",
+          "display_name": "\u30a2\u30eb\u30c6\u30a3\u30e1\u30c3\u30c8\u30c7\u30c3\u30ad 3\u5144\u5f1f\u306e\u7d46\u3010ST-13\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 202,
+          "official_code": "ST-14",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad 3D2Y\u3010ST-14\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 209,
+          "official_code": "ST-21",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30ae\u30a25\u3010ST-21\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 210,
+          "official_code": "ST-22",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad \u30a8\u30fc\u30b9&\u30cb\u30e5\u30fc\u30b2\u30fc\u30c8\u3010ST-22\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 217,
+          "official_code": "ST-29",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30ad EGGHEAD\u3010ST-29\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 218,
+          "official_code": "ST-30",
+          "display_name": "\u30b9\u30bf\u30fc\u30c8\u30c7\u30c3\u30adEX \u30eb\u30d5\u30a3&\u30a8\u30fc\u30b9\u3010ST-30\u3011",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 225,
+          "official_code": null,
+          "display_name": "1st ANNIVERSARY SET",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 226,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af Vol.3",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 227,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.1",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 228,
+          "official_code": null,
+          "display_name": "\u30b9\u30bf\u30f3\u30c0\u30fc\u30c9\u30d0\u30c8\u30eb\u30d1\u30c3\u30af2022 Vol.2",
+          "prints_with_no_candidate_evidence_any_source": 0
+        },
+        {
+          "release_product_id": 229,
+          "official_code": null,
+          "display_name": "\u30d7\u30ec\u30df\u30a2\u30e0\u30ab\u30fc\u30c9\u30b3\u30ec\u30af\u30b7\u30e7\u30f3 - \u30d9\u30b9\u30c8\u30bb\u30ec\u30af\u30b7\u30e7\u30f3vol.1 -",
+          "prints_with_no_candidate_evidence_any_source": 0
+        }
+      ]
+    }
+  },
+  "natural_capacity_sample": {
+    "after": "2026-10-06T03:10:00Z",
+    "captured_attempts": 59,
+    "average_requests": 55.25,
+    "maximum_requests": 56,
+    "average_runtime_seconds": 7.42,
+    "source_denials": 0,
+    "required_challenges": 0
+  },
+  "change": {
+    "default_turn_bound_before": 8,
+    "default_turn_bound_after": 16,
+    "unchanged_request_budget_per_1800s": 9000,
+    "conservative_refresh_request_cost": 60,
+    "nine_turns_upper_refresh_cost": 8640,
+    "source_pacing_ms": 1000,
+    "unchanged_http_concurrency": true,
+    "unchanged_shards": 9,
+    "unchanged_cadence_minutes": 30,
+    "unchanged_deadline_hours": 24,
+    "unchanged_dispatch_hours": 23,
+    "discovery": "Existing 1200-request reservation remains; all work remains serial and source-budget fenced; budget pressure defers work rather than dispatching excess requests"
+  },
+  "tests": {
+    "identity_proposals_and_approval": "63 passed",
+    "nine_shard_measured_budget": "1 passed"
+  },
+  "rollback": "Restore retained commit or turn default8; no mapping approval in this delivery. Recompute pending digests using current resolver before any later approval; preserve reviewed evidence and historical prices.",
+  "natural_verification": "At least two subsequent scheduled turns per shard with request costs <=60/product and settled reservations; follow overdue drainage and recurring 23/24h deadline compliance. Restore turn bound if required denials, sustained runtime overlap or accounting drift appear."
+}

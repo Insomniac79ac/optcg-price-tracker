@@ -52,6 +52,38 @@ ACTOR = AdminActor(id="authjs-reviewer", email="Reviewer@Example.COM")
 TEST_ADMIN_TOKEN = "test-admin-token"
 
 
+def test_special_rarity_exact_proposal_rechecks_evidence_in_yuyu_writer(db_session):
+    _, release, family, ordinary, candidate, _ = _seed_yuyu(db_session)
+    ordinary.official_rarity = "R"
+    special = _print(db_session, family, release, "p1")
+    special.official_rarity = "TR"
+    candidate.detected_rarity = "TR"
+    db_session.commit()
+    group = _persist_one(db_session, "yuyutei", candidate.id)
+    assert group.resolution_status == "exact"
+    result = approve_exact_proposal(db_session, group.id, _request(group), ACTOR)
+    db_session.commit()
+    assert result.card_print_id == special.id
+    assert db_session.get(SourceCardMapping, result.resulting_source_card_mapping_id).card_print_id == special.id
+    assert candidate.match_status == "family_matched" and candidate.matched_card_print_id is None
+
+
+def test_special_rarity_proof_cannot_hide_a_new_matching_sibling(db_session):
+    _, release, family, ordinary, candidate, _ = _seed_yuyu(db_session)
+    ordinary.official_rarity = "R"
+    special = _print(db_session, family, release, "p1")
+    special.official_rarity = "TR"
+    candidate.detected_rarity = "TR"
+    db_session.commit()
+    group = _persist_one(db_session, "yuyutei", candidate.id)
+    request = _request(group)
+    _print(db_session, family, release, "p2").official_rarity = "TR"
+    db_session.commit()
+    with pytest.raises(ProposalDecisionError):
+        approve_exact_proposal(db_session, group.id, request, ACTOR)
+    assert db_session.query(SourceCardMapping).count() == 0
+
+
 def _source(db, name):
     row = Source(name=name, base_url=f"https://{name}.example.test")
     db.add(row)
@@ -118,6 +150,7 @@ def _persist_one(db, source_name, candidate_id):
     return db.scalar(
         select(SourceMappingProposalGroup).where(
             SourceMappingProposalGroup.source_candidate_id == candidate_id,
+            SourceMappingProposalGroup.superseded_at.is_(None),
             SourceMappingProposalGroup.source_id
             == db.scalar(select(Source.id).where(Source.name == source_name)),
         )
