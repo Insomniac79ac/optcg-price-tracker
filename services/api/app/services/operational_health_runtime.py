@@ -168,6 +168,8 @@ def execution(
                     "attempted",
                     "listed",
                     "no_listing",
+                    "completed",
+                    "discovery_progress",
                     "raw_snapshots",
                     "accepted_observations",
                     "promotional_hidden",

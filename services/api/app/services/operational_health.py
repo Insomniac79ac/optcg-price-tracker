@@ -31,6 +31,8 @@ SECTIONS = {
         "attempted",
         "listed",
         "no_listing",
+        "completed",
+        "discovery_progress",
         "promotional_hidden",
         "accepted_observations",
         "raw_snapshots",
@@ -262,6 +264,8 @@ def classify(summary):
             + work["no_listing"]
             + failure["transient"]
             + failure["identity"]
+            + (work.get("completed") or 0)
+            + (work.get("discovery_progress") or 0)
         ):
             degraded.append("unaccounted_attempts")
     if any(v is None for v in required) or safety["singleton"] in {
