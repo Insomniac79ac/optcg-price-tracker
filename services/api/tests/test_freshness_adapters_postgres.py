@@ -1047,6 +1047,43 @@ def test_recurring_yuyu_discovery_consumes_shared_lane_atomically(db):
         assert promo.resume_cursor["discovery_url"].endswith("=promo-100")
 
 
+def test_measured_yuyu_turns_fit_all_nine_shards_without_changing_budget(db, monkeypatch):
+    from opcg_source_identity import canonical_source_listing_identity
+    from app.services.freshness_queue import PriceCategory
+    from yuyutei_collector.due import run_due
+    from yuyutei_collector.config import settings as yuyu_settings
+    factory, source, mid, print_id = db
+    mids = [mid] + [mapping(factory, source, print_id, n) for n in range(124, 303)]
+    with factory.begin() as session:
+        session.get(Source, source).name = "yuyutei"
+        session.scalar(select(SourceDispatchBudget)).request_limit = 9000
+        for mapping_id in mids:
+            row = session.get(SourceCardMapping, mapping_id)
+            row.source_url = f"https://yuyu-tei.jp/sell/opc/card/op01/{10000+mapping_id}"
+            row.canonical_source_listing_identity = canonical_source_listing_identity("yuyutei", row.source_url)
+            session.flush()
+            plan_refresh(session, mapping_id, {"raw": PriceCategory("sell")},
+                high_interest=False, estimated_request_cost=300, clock=lambda: T0)
+    monkeypatch.setattr(yuyu_settings, "YUYUTEI_REQUEST_DELAY_MS", 0)
+    monkeypatch.setattr(yuyu_settings, "DUE_MAX_PRODUCTS_PER_RUN", 16)
+    visited = []
+    def runner(session, mapping_id, *, freshness):
+        freshness.admit(cost=60)  # conservative bound above natural <=56 measurement
+        visited.append(mapping_id)
+        freshness.result = CaptureResult("transient_failure", failure="fixture parsing failure")
+        return SimpleNamespace(source_denied=False, stage="operational_error", reasons=[])
+    for shard in range(9):
+        before = len(visited)
+        assert len(run_due(shard_index=shard, session_factory=factory, runner=runner)) == 16
+        assert all(mapping_id % 9 == shard for mapping_id in visited[before:])
+    assert len(visited) == len(set(visited)) == 144
+    with factory() as session:
+        budget = session.scalar(select(SourceDispatchBudget))
+        assert budget.used_requests == 8640 and budget.reserved_requests == 0
+        assert budget.request_limit == 9000 and budget.pause_reason is None
+        assert session.scalar(select(func.count()).select_from(FreshnessWork).where(FreshnessWork.state == "claimed")) == 0
+
+
 def test_listing_snapshot_precedes_parse_and_denial(monkeypatch):
     from yuyutei_collector.discovery_probe import _scrape_listing, SourceDenied
 

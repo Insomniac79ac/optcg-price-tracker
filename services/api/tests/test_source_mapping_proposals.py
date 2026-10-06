@@ -196,6 +196,53 @@ def test_siblings_inside_one_release_remain_ambiguous(db_session):
     assert not any(a.recommended for a in plan.alternatives)
 
 
+@pytest.mark.parametrize("token,official", [("TR", "TR"), ("SP", "SPカード"), ("SP", "SP P"), ("P", "P")])
+def test_positive_special_rarity_uniquely_resolves_authoritative_release(db_session, token, official):
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-001")
+    ordinary = _print(db_session, family, release)
+    ordinary.official_rarity = "R"
+    special = _print(db_session, family, release, "p1")
+    special.official_rarity = official
+    candidate = _yuyu(db_session, _run(db_session, "op17"), "op17", 301, family.card_code, detected_rarity=token)
+    db_session.commit()
+    plan = analyse_source_mapping_proposals(db_session).plans[0]
+    assert plan.resolution_status == "exact"
+    assert [a.card_print_id for a in plan.alternatives if a.recommended] == [special.id]
+    assert "unique_official_special_rarity_in_release" in plan.alternatives[0].supporting_evidence
+    old_digest = plan.evidence_digest
+    ordinary.official_rarity = official
+    db_session.commit()
+    refreshed = analyse_source_mapping_proposals(db_session).plans[0]
+    assert refreshed.resolution_status == "ambiguous"
+    assert refreshed.evidence_digest != old_digest
+
+
+@pytest.mark.parametrize("token", ["R", "P-R", "SR", "P-SR", "SPC", "SP-P", ""])
+def test_generic_or_unknown_rarity_never_selects_a_physical_variant(db_session, token):
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-001")
+    _print(db_session, family, release).official_rarity = "R"
+    _print(db_session, family, release, "p1").official_rarity = "SPカード"
+    _yuyu(db_session, _run(db_session, "op17"), "op17", 301, family.card_code, detected_rarity=token)
+    db_session.commit()
+    assert analyse_source_mapping_proposals(db_session).plans[0].resolution_status == "ambiguous"
+
+
+def test_exact_asset_and_positive_rarity_conflict_is_refused(db_session):
+    _base(db_session)
+    release = _release(db_session, "OP-17")
+    family = _family(db_session, "OP17-001")
+    _print(db_session, family, release).official_rarity = "R"
+    _print(db_session, family, release, "p1").official_rarity = "TR"
+    _yuyu(db_session, _run(db_session, "op17"), "op17", 301, family.card_code,
+          detected_rarity="TR", image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP17-001.png")
+    db_session.commit()
+    assert analyse_source_mapping_proposals(db_session).plans[0].resolution_status == "conflict"
+
+
 def test_snkrdunk_legacy_card_ids_are_not_card_print_ids(db_session):
     _, snk = _base(db_session)
     release = _release(db_session, "OP-01")
