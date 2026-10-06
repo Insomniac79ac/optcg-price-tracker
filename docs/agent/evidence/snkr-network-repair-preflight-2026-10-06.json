@@ -1,0 +1,29 @@
+{
+  "target": "staging",
+  "historical_denial_attempt_id": 6954,
+  "historical_request_roles": "unknown; cannot retrospectively classify the two historical 403s",
+  "original_validation_work_id": 2543,
+  "current_validation_attempt_id": 8144,
+  "primary_raw_snapshot_id": 26700,
+  "current_required_product_status": 200,
+  "required_denials_during_validation": 0,
+  "current_failure": "placeholder_image_url;no_raw_condition_price_available",
+  "current_source_published_artwork": "no-image placeholder; not exact physical identity evidence",
+  "request_bound": 600,
+  "existing_budget": {
+    "requests": 3100,
+    "window_seconds": 1800
+  },
+  "source_session": "same ordinary browser, static egress, pacing and singleton; no alternate access or evasion",
+  "authorization": "one explicitly planned fresh network repair of original work 2543; retained old 200 proof authorizes capture only, never pause clearing",
+  "source_pause_clear_guard": "fresh <=5 minute canonical product HTTP200, no required denial, primary raw stored before parsing, settled actual=charged ordinal request cost, reservation zero, unchanged denial episode, explicit missing-artwork-only refusal",
+  "identity_guard": "missing artwork is retained fail-closed; normal RAW work is quarantined individually, identity_verified=false; no successful RAW check or price from validation",
+  "failure": "Required 403/429/challenge, any other identity refusal, expired proof, altered lineage or a previously attempted repair preserve pause; no retry chain",
+  "concurrency": "unchanged; serial metered requests, one ordinary consumer, same lease budget and source singleton",
+  "tests": {
+    "mock_and_postgres": "57 passed; includes fresh capture, original-refusal non-resume, required-403 revocation, stale-proof rejection, independent quarantine and zero RAW/price mutations"
+  },
+  "source_requests_at_preflight": 0,
+  "database_mutations_at_preflight": 0,
+  "production_accessed": false
+}
