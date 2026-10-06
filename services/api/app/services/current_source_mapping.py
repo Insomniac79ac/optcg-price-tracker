@@ -14,6 +14,28 @@ from app.services.exact_print_approval import (
     REFUSAL_SOURCE_URL_NOT_CANONICAL,
 )
 
+
+def assert_print_source_available(db, *, source, card_print_id, mapping=None):
+    """Serialize supported writers and preserve the existing exact source row.
+
+    Another listing for the same physical print is not a second source. Never
+    activate it while a current mapping already owns that print/source pair.
+    """
+    db.scalar(select(Source.id).where(Source.id == source.id).with_for_update())
+    query = select(SourceCardMapping.id).where(
+        SourceCardMapping.source_id == source.id,
+        SourceCardMapping.card_print_id == card_print_id,
+        SourceCardMapping.is_active.is_(True),
+        SourceCardMapping.superseded_at.is_(None),
+    )
+    if mapping is not None and mapping.id is not None:
+        query = query.where(SourceCardMapping.id != mapping.id)
+    if db.scalar(query.order_by(SourceCardMapping.id).limit(1)) is not None:
+        raise ExactPrintApprovalError(
+            "print_source_already_mapped",
+            "A current active mapping already monitors this exact print on this source; preserve that mapping.",
+        )
+
 CURRENT_LISTING_UNIQUE_INDEX = "uq_mapping_current_canonical_listing_identity"
 
 
