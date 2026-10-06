@@ -25,6 +25,19 @@ def page(title: str, og_image: str | None = None) -> str:
 URL = "https://snkrdunk.com/en/trading-cards/142584"
 
 
+def test_promotional_card_code_is_source_evidence_without_release_inference():
+    ev = parse_listing(URL, page("Monkey D. Luffy P [P-107] (Unknown promotion)",
+                                 SEM + "TCG-OPC-P-107_p1.webp"))
+    assert ev.card_code == "P-107"
+    assert ev.asset_variant == "p1"
+    assert ev.resolved_product_code is None
+
+
+@pytest.mark.parametrize("code", ["P-1070", "P107", "SP-107", "P-10"])
+def test_malformed_promotional_tokens_do_not_create_card_identity(code):
+    assert parse_listing(URL, page(f"Luffy P [{code}] (Promotion)")).card_code is None
+
+
 # --- card code and language --------------------------------------------------
 
 

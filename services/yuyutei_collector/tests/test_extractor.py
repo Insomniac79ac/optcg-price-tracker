@@ -49,6 +49,13 @@ class ClassifyPageTests(unittest.TestCase):
 
 
 class ExtractWithAgreementSuccessTests(unittest.TestCase):
+    def test_promotional_url_keeps_exact_hyphenated_product_identity(self):
+        from yuyutei_collector.extractor import _external_product_id
+        self.assertEqual(_external_product_id("https://yuyu-tei.jp/sell/opc/card/promo-op10/10001"),
+                         "promo-op10-10001")
+        self.assertIsNone(_external_product_id("https://untrusted.example/sell/opc/card/promo-op10/10001"))
+        self.assertIsNone(_external_product_id("https://yuyu-tei.jp/sell/opc/card/promo-op10/not-a-product"))
+
     def setUp(self):
         self.html = load_fixture("product_op01_001_reduced.html")
 

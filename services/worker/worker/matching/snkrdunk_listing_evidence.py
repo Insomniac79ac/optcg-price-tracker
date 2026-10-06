@@ -45,7 +45,7 @@ from worker.matching.source_product_aliases import resolve_source_product_code
 # One Piece card codes as SNKRDUNK prints them, always inside square brackets:
 # "Trafalgar law L-P[OP01-002] (Booster Pack ROMANCE DAWN)". Anchoring on the
 # brackets is what keeps Pokemon listings ("[s12a 184/172]") out.
-_CARD_CODE_RE = re.compile(r"\[([A-Z]{2,4}\d{2}-\d{3})\]")
+_CARD_CODE_RE = re.compile(r"\[((?:[A-Z]{2,4}\d{2}|P)-\d{3})\]")
 
 # The trailing "(...)" group is the product label.
 _PRODUCT_RE = re.compile(r"\(([^()]+)\)\s*$")

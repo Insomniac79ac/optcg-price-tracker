@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 # This module used to declare its own OP-only copy under the same name;
 # see yuyutei_collector.card_code for what that drift cost.
 from yuyutei_collector.card_code import CARD_CODE_RE
+from opcg_source_identity import yuyutei_listing_identity
 
 SELECTOR_VERSION = "v3"
 # Historical default for the original single-print vertical slice. Callers
@@ -63,8 +64,8 @@ def _external_product_id(url: str) -> str | None:
     """Derived from the stable product URL path (.../card/<series>/<id>),
     not the displayed card code - this is Yuyu-Tei's own internal product
     id, a separate identifier from the printed card number."""
-    m = re.search(r"/card/([a-z0-9]+)/(\d+)", url, re.IGNORECASE)
-    return f"{m.group(1)}-{m.group(2)}".lower() if m else None
+    identity = yuyutei_listing_identity(url)
+    return f"{identity[0]}-{identity[1]}" if identity else None
 
 
 def _normalize_price_text(raw: str) -> int | None:

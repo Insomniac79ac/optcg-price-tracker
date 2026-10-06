@@ -115,6 +115,55 @@ def _base(db):
     return _source(db, "yuyutei"), _source(db, "snkrdunk")
 
 
+def test_promotional_whole_authoritative_product_label_resolves_release(db_session):
+    _base(db_session)
+    release = _release(db_session, None, name="1st ANNIVERSARY SET")
+    family = _family(db_session, "OP03-013")
+    exact = _print(db_session, family, release, "p3")
+    original = _release(db_session, "OP-03")
+    _print(db_session, family, original)
+    _yuyu(db_session, _run(db_session, "promo-op10"), "promo-op10", 101,
+          family.card_code, name_jp="マルコ(パラレル)(1st ANNIVERSARY SET)")
+    plan = analyse_source_mapping_proposals(db_session).plans[0]
+    assert plan.resolution_status == "exact"
+    assert plan.release_product_id == release.id
+    assert [a.card_print_id for a in plan.alternatives if a.recommended] == [exact.id]
+
+
+def test_named_release_with_multiple_physical_variants_remains_ambiguous(db_session):
+    _base(db_session)
+    release = _release(db_session, None, name="1st ANNIVERSARY SET")
+    family = _family(db_session, "OP03-013")
+    _print(db_session, family, release, "p3")
+    _print(db_session, family, release, "p4")
+    _yuyu(db_session, _run(db_session, "promo-op10"), "promo-op10", 101,
+          family.card_code, name_jp="マルコ(パラレル)(1st ANNIVERSARY SET)")
+    assert analyse_source_mapping_proposals(db_session).plans[0].resolution_status == "ambiguous"
+
+
+@pytest.mark.parametrize("label", ["ANNIVERSARY SET", "2nd ANNIVERSARY SET", "1st ANNIVERSARY SET foil"])
+def test_partial_similar_or_extended_product_label_is_not_release_evidence(db_session, label):
+    _base(db_session)
+    release = _release(db_session, None, name="1st ANNIVERSARY SET")
+    family = _family(db_session, "OP03-013")
+    _print(db_session, family, release)
+    _yuyu(db_session, _run(db_session, "promo-op10"), "promo-op10", 101,
+          family.card_code, name_jp=f"マルコ({label})")
+    assert analyse_source_mapping_proposals(db_session).plans[0].resolution_status == "release_unresolved"
+
+
+def test_numbered_series_and_different_explicit_release_fail_closed(db_session):
+    _base(db_session)
+    named = _release(db_session, None, name="1st ANNIVERSARY SET")
+    original = _release(db_session, "OP-03")
+    family = _family(db_session, "OP03-013")
+    _print(db_session, family, named)
+    _print(db_session, family, original)
+    _yuyu(db_session, _run(db_session, "op03"), "op03", 101, family.card_code,
+          name_jp="マルコ(1st ANNIVERSARY SET)")
+    assert analyse_source_mapping_proposals(db_session).plans[0].resolution_status == "conflict"
+
+
 def _release_scope_fixture(db):
     selected = _release(db, "SET-230", product_id=230)
     other = _release(db, "SET-231", product_id=231)

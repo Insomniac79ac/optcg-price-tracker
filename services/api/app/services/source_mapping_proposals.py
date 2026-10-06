@@ -38,7 +38,7 @@ from app.services.snkrdunk_urls import listing_id as snkrdunk_listing_id
 from app.services.yuyutei_urls import listing_identity as yuyutei_listing_identity
 
 
-RESOLVER_VERSION = "source-mapping-proposals/1.1"
+RESOLVER_VERSION = "source-mapping-proposals/1.2"
 SUPPORTED_SOURCES = ("yuyutei", "snkrdunk")
 TARGET_LANGUAGE = "jp"
 _ASSET_VARIANT = re.compile(r"^(?:base|[pr][1-9][0-9]*)$")
@@ -291,9 +291,12 @@ def analyse_source_mapping_proposals(
     releases = db.scalars(select(ReleaseProduct).order_by(ReleaseProduct.id)).all()
     release_by_id = {row.id: row for row in releases}
     release_by_code: dict[str, list[ReleaseProduct]] = defaultdict(list)
+    release_by_label: dict[str, list[ReleaseProduct]] = defaultdict(list)
     for row in releases:
         if row.source_catalogue == "bandai_jp" and _norm(row.official_code):
             release_by_code[_norm(row.official_code)].append(row)
+        if row.source_catalogue == "bandai_jp" and row.verification_status == "verified":
+            release_by_label[_norm(row.display_name)].append(row)
 
     selected_release_ids = {row.id for row in releases}
     has_resolved_release_filter = (
@@ -395,6 +398,22 @@ def analyse_source_mapping_proposals(
                 else:
                     listing_identity = f"{parsed[0]}:{parsed[1]}"
                 release_rows = release_by_code.get(_norm(candidate.set_slug), [])
+                # Promotional categories combine many releases. Only a whole
+                # published product label matching an authoritative name is
+                # release evidence; the card-code prefix and treatment aren't.
+                labels = re.findall(r"\(([^()]+)\)", candidate.name_jp or "")
+                labeled = {row.id: row for label in labels
+                           for row in release_by_label.get(_norm(label), [])}
+                payload["source_product_labels"] = labels
+                payload["named_release_product_ids"] = sorted(labeled)
+                if len(labeled) > 1:
+                    status = "conflict"
+                    reasons.append("published_product_labels_name_multiple_release_products")
+                elif len(release_rows) == 1 and labeled and release_rows[0].id not in labeled:
+                    status = "conflict"
+                    reasons.append("source_series_conflicts_with_published_release_label")
+                elif not release_rows and len(labeled) == 1:
+                    release_rows = list(labeled.values())
                 if len(release_rows) == 1:
                     release = release_rows[0]
                 elif len(release_rows) > 1:
