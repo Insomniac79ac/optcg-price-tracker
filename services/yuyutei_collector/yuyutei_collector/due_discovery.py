@@ -137,6 +137,9 @@ def persist_enumeration(session, claim, attempt, enumeration, raw_snapshot_id):
 
 
 def run_discovery(session, claim, *, freshness):
+    if (claim.scope_key or "").startswith("yuyu-identity:"):
+        from yuyutei_collector.identity_evidence import run_identity_evidence
+        return run_identity_evidence(session, claim, freshness=freshness)
     work = session.get(FreshnessWork, claim.work_id)
     slug = (work.scope_key or "").removeprefix("yuyu-category:")
     if work.scope_key != "yuyu-category:" + slug or not re.fullmatch(

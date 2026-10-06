@@ -72,6 +72,171 @@ HISTORY = (
 ).read_text()
 
 
+def test_explicit_artwork_capture_settles_without_price_or_mapping_decision(
+    db, monkeypatch
+):
+    import io
+    from PIL import Image
+    from app.models import YuyuteiCandidate, YuyuteiDiscoveryRun
+    from app.services.source_mapping_proposals import resolve_current_candidate_proposal
+    from app.services.freshness_queue import claim_due
+    from yuyutei_collector.identity_evidence import load_intent, capture_pages
+
+    factory, _, _, pid = db
+    with factory.begin() as session:
+        base = session.get(CardPrint, pid)
+        release = session.get(ReleaseProduct, base.release_product_id)
+        release.source_catalogue, release.official_code, release.verification_status = (
+            "bandai_jp",
+            "OP-01",
+            "verified",
+        )
+        base.image_url = (
+            "https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001.png"
+        )
+        sibling = CardPrint(
+            canonical_card_id=base.canonical_card_id,
+            release_product_id=release.id,
+            language="jp",
+            is_active=True,
+            verification_status="verified",
+            official_asset_variant="p2",
+            artwork_key="fixture-parallel",
+            image_url="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001_p2.png",
+        )
+        source = Source(name="yuyutei", base_url="https://yuyu-tei.jp")
+        run = YuyuteiDiscoveryRun(
+            status="completed",
+            requested_set_slugs=["op01"],
+            per_slug_metrics_json={"op01": {"enumeration_complete": True}},
+        )
+        session.add_all([sibling, source, run])
+        session.flush()
+        candidate = YuyuteiCandidate(
+            discovery_run_id=run.id,
+            set_slug="op01",
+            product_id="10002",
+            source_url="https://yuyu-tei.jp/sell/opc/card/op01/10002",
+            detected_card_code="OP01-001",
+            name_jp="ロロノア・ゾロ(パラレル)",
+            match_status="family_matched",
+        )
+        session.add(candidate)
+        session.flush()
+        session.add(
+            SourceDispatchBudget(
+                source_id=source.id,
+                enabled=True,
+                request_limit=100,
+                window_seconds=1800,
+                window_started_at=T0,
+            )
+        )
+        current = resolve_current_candidate_proposal(
+            session, source_name="yuyutei", candidate_id=candidate.id
+        )
+        assert current.resolution_status == "ambiguous"
+        work = plan_discovery_scope(
+            session,
+            source.id,
+            f"yuyu-identity:{candidate.id}",
+            due_at=T0,
+            estimated_request_cost=100,
+        )
+        work.resume_cursor = {
+            "version": 1,
+            "candidate_id": candidate.id,
+            "explicit_identity_capture": True,
+            "evidence_digest": current.evidence_digest,
+            "release_product_id": release.id,
+            "considered_print_ids": sorted([base.id, sibling.id]),
+        }
+        source_id = source.id
+    img = io.BytesIO()
+    Image.new("RGB", (40, 56), "red").save(img, format="PNG")
+    page = SimpleNamespace(
+        context=SimpleNamespace(
+            request=SimpleNamespace(
+                get=lambda *args, **kw: SimpleNamespace(
+                    status=200, ok=True, body=lambda: img.getvalue()
+                )
+            )
+        )
+    )
+    product_html = (
+        ROOT / "services/yuyutei_collector/tests/fixtures/product_op01_001_reduced.html"
+    ).read_text()
+    with factory() as session:
+        granted = claim_due(
+            session,
+            source_id,
+            "fixture-artwork",
+            limit=1,
+            lease=timedelta(minutes=4),
+            clock=lambda: T0,
+            supported_kinds={"discovery"},
+        )[0]
+        session.commit()
+        attempt = Attempt(session, granted, clock=lambda: T0)
+        candidate, current, prints, urls = load_intent(session, granted)
+
+        def navigation(page, url):
+            attempt.admit()
+            return {"html": product_html, "http_status": 200, "final_url": url}
+
+        monkeypatch.setattr(
+            "yuyutei_collector.identity_evidence.goto_and_capture_raw", navigation
+        )
+        monkeypatch.setattr(
+            "yuyutei_collector.identity_evidence.classify_capture",
+            lambda *args: {"classification": "normal_product", "http_status": 200},
+        )
+        monkeypatch.setattr(
+            "yuyutei_collector.identity_evidence.time.sleep", lambda _: None
+        )
+        capture_pages(session, granted, attempt, page, candidate, current, prints, urls)
+        assert attempt.finish(attempt.result)
+    with factory() as session:
+        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(SourceCardMapping)
+                .where(SourceCardMapping.source_id == source_id)
+            )
+            == 0
+        )
+        retained = session.scalar(
+            select(FreshnessWork).where(FreshnessWork.source_id == source_id)
+        )
+        assert retained.resume_cursor["identity_status"].startswith("unresolved")
+        assert (
+            retained.last_successfully_checked_at == T0
+        )  # discovery scope only, never RAW state
+        budget = session.scalar(
+            select(SourceDispatchBudget).where(
+                SourceDispatchBudget.source_id == source_id
+            )
+        )
+        assert budget.used_requests == 5 and budget.reserved_requests == 0
+        assert (
+            session.scalar(select(func.count()).select_from(FreshnessPriceState)) == 0
+        )
+        assert session.scalar(select(func.count()).select_from(RawSnapshot)) == 5
+        assert (
+            claim_due(
+                session,
+                source_id,
+                "fixture-replay",
+                limit=1,
+                lease=timedelta(minutes=4),
+                clock=lambda: T0,
+                supported_kinds={"discovery"},
+            )
+            == []
+        )
+
+
 def browser_request(
     url="https://snkrdunk.com/apparels/123", *, main=True, iframe=False
 ):
