@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Validate explicit positive physical artwork reviews against retained original evidence",
+  "mission": "Settle metered SNKRDUNK normal product path before closing browser context",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,56 +20,60 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/source_mapping_proposals.py",
-        "services/api/app/services/physical_artwork_proof.py",
-        "services/api/app/services/evidence/positive_physical_artwork.json",
-        "services/api/pyproject.toml",
-        "services/api/tests/test_physical_artwork_proof.py",
-        "docs/agent/evidence/retained-physical-artwork-preflight-2026-10-06.json"
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
+        "services/snkrdunk_collector/tests/test_metered_browser_close.py",
+        "docs/agent/evidence/snkr-normal-page-shutdown-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "subsystem_activation",
+        "infrastructure",
         "staging_deployment"
       ],
-      "reason": "One explicit retained visual review becomes an exact proposal only after complete original-byte lineage and unique physical sibling checks. This supplies positive physical evidence without changing exact identity policy or enabling perceptual matching."
+      "reason": "Two-line fix completes the previously delivered bounded shutdown logic on the normal product path. Real collector-flow regression checks normal and failed-homepage branches, success and late refusal. No scheduler, budget or identity change."
     }
   ],
-  "diff_sha256": "9ea31d89e89b35de9cfcaeecc32444533ff7ff8697945e9caa68d3f97d9023b3",
+  "diff_sha256": "1a3887affb9492e14ea6c8c50a6c31035c71900e890db1ad18cd85cd009e161b",
   "deployment_verification": {
-    "api_sha": "merge",
-    "revision": "c4e8a1d7b902"
+    "api_sha": "0918c74f8abbc66a2828e960cd555156db2636c0",
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "5be012bb-01c1-4a3b-a4f3-cf2e0ae171f4"
+      }
+    ]
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "optcg-price-tracker",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "3ade97f2-7469-453f-a2e5-9e5bdbef9d3c"
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "5be012bb-01c1-4a3b-a4f3-cf2e0ae171f4"
         }
       ],
       "routes": [
-        "Existing staging proposal resolver and exact approval checks"
+        "Existing SNKRDUNK metered due-work consumer, both browser close paths"
       ],
       "dependencies": [
-        "Retained metered snapshots, authoritative complete physical catalogue, existing manual precedence and approval guards"
+        "Existing browser settle, admission, source denial, singleton and exact identity writer guards"
       ],
-      "deployment_impact": "Staging API rebuild; existing Yuyu690e and SNKR5146 delivery components remain. No manual jobs, schedules or configuration changes.",
+      "deployment_impact": "One existing staging SNKRDUNK collector only; API keeps the verified PR59 source and all nine Yuyu shards keep PR57.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "5146af1c3a5833f66473b65653d1eb5e58ff3947",
-      "procedure": "Fix forward the prior pinned staging API source if proof validation or baseline invariants fail; retain all snapshots and mapping lineage. No mapping approval occurs in delivery.",
-      "trigger": "Proof accepts stale or incomplete evidence, same-art twins, a non-staging environment, or writes mapping/price state during analysis",
-      "backup": "Code delivery writes no schema, mapping, candidate, price or queue data; retained prior successful API deployment and exact source supply recovery. Any later bounded approval needs separate before/after receipt.",
+      "artifact": "0918c74f8abbc66a2828e960cd555156db2636c0",
+      "procedure": "Fix forward retained collector source on the pinned staging service if lifecycle invariants fail; retain raw captures and all quarantines.",
+      "trigger": "Unmetered requests, missed late denial, premature context disposal or unintended identity/price writes",
+      "backup": "No schema, configuration or data mutations; previous successful collector deployment and exact source retained.",
       "validation": [
-        "services/api/tests/test_physical_artwork_proof.py",
-        "docs/agent/evidence/retained-physical-artwork-preflight-2026-10-06.json"
+        "docs/agent/evidence/snkr-normal-page-shutdown-preflight-2026-10-06.json",
+        "services/snkrdunk_collector/tests/test_metered_browser_close.py"
       ]
     },
     "verification": {
@@ -79,9 +83,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "services/api/tests/test_physical_artwork_proof.py"
+        "services/snkrdunk_collector/tests/test_metered_browser_close.py"
       ],
-      "observation_window": "After serialized full delivery verification, re-read candidate1 and proof originals before any guarded mapping canary, then observe its ordinary natural collector attempt. Other ambiguities and quarantines remain unresolved."
+      "observation_window": "After strict serialized delivery, inspect next natural27/57 UTC SNKRDUNK turn. Shutdown disposal errors should cease; explicit missing-art identity refusal remains expected and does not count toward operational freshness."
     }
   }
 }

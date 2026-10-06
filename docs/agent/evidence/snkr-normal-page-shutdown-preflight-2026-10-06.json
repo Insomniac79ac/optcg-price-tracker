@@ -1,0 +1,37 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T10:17:04.880649+00:00",
+  "prior_delivery": {
+    "pr": 58,
+    "run": 37439679508,
+    "merge_sha": "5146af1c3a5833f66473b65653d1eb5e58ff3947"
+  },
+  "natural_failure_receipt": {
+    "started_at": "2026-10-06T10:01:32.540522+00:00",
+    "finished_at": "2026-10-06T10:06:28.794629+00:00",
+    "attempts": 22,
+    "transient_failures": 22,
+    "http403": 0,
+    "http429": 0,
+    "challenge": 0,
+    "claims_remaining": 0,
+    "reservations_remaining": 0,
+    "raw_snapshots": 22
+  },
+  "root_cause": "PR58 added settle_browser only to the homepage-failure branch; the normal product branch still closed context directly. Retained failures show TargetClosedError/Fetch response disposed during context.close.",
+  "fix": "Invoke the existing bounded settle before the normal-page close as well. Late required failures remain fatal before the writer.",
+  "mock_regression": "Normal path failed both cases before fix; failed-homepage path passed. All four collector-flow cases plus existing validation/shutdown checks pass after fix (38 tests).",
+  "bounds": {
+    "database_writes": 0,
+    "manual_source_requests": 0,
+    "services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "5be012bb-01c1-4a3b-a4f3-cf2e0ae171f4"
+      }
+    ]
+  },
+  "identity_and_prices": "No identity guard relaxation or freshness advance. Placeholder artwork and unconfirmed no-listing remain refused.",
+  "rollback": "Fix forward prior pinned collector source on the same staging service if admission or shutdown invariants fail; keep all evidence and source/mapping state."
+}
