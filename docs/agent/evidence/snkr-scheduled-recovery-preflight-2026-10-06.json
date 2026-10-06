@@ -1,0 +1,39 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T03:48:16Z",
+  "source_pause": "source_denial; permanent; preserved until completed exact product validation",
+  "retained_denial_attempt_id": 1875,
+  "request_bound": 600,
+  "maximum_lease_seconds": 240,
+  "existing_request_budget": 3100,
+  "request_window_seconds": 1800,
+  "measured_previous_successful_attempt_costs": [
+    249,
+    230,
+    241,
+    233,
+    234
+  ],
+  "http_concurrency": "unchanged; existing singleton and static egress",
+  "source_session": "same ordinary collector browser configuration; no alternate egress or evasion",
+  "mutations": [
+    "One validation work/attempt with ordinal grants, durable raw snapshots and settled reservation",
+    "Clear matching source-budget pause only after current exact identity plus listed/confident-no-listing validation",
+    "No persisted observation/mapping approval from the diagnostic probe"
+  ],
+  "failure_threshold": "Any required 403/429/challenge, identity refusal, stale lease or changed lineage preserves pause. No retry, expiry replay, mapping rotation, or second probe after a refused recovery.",
+  "rollback": "Block only an unattempted planned validation work ID; retain pause and all evidence. Rebuild retained staging collector source if needed.",
+  "resources": [
+    {
+      "name": "snkrdunk-collector",
+      "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+      "recovery_deployment_id": "454b7380-8ed1-4da0-8ca0-2ae5f9597134"
+    }
+  ],
+  "tests": {
+    "source_recovery_adapters": "50 passed against disposable PostgreSQL and mocked source"
+  },
+  "observation": "After single explicitly invoked probe, observe subsequent scheduled SNKRDUNK cycles for captures/no-listings, costs, source denials, leases and reservations; continue full natural 23/24h recurrence.",
+  "activation": "Only a destination-pinned explicit, pending, unattempted recovery intent is consumed under the existing scheduled singleton; no implicit recurring recovery or changed service command.",
+  "planning": "One short transaction: zero admitted requests, reservations, successful checks or price writes. Scheduled claim consumes authority once; lineage changes refuse admission."
+}
