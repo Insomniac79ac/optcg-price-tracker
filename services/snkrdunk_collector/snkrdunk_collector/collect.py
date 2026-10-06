@@ -163,7 +163,11 @@ def run_one_mapping_detailed(
     *, freshness=None,
 ) -> MappingOutcome:
     if freshness is not None and validate_only:
-        raise ValueError("due collection cannot use legacy validate-only")
+        cursor = freshness.claim.resume_cursor or {}
+        if (freshness.claim.kind != "validation"
+            or freshness.claim.scope_key != f"source-recovery:snkrdunk:{cursor.get('recovery_denial_attempt_id')}"
+            or cursor.get("mapping_id") != mapping_id):
+            raise ValueError("metered validation requires an explicit recovery claim")
     mapping, source, card_print, load_reasons = _load_mapping(session, mapping_id)
     if load_reasons:
         log_event("mapping_load_failed", mapping_id=mapping_id, reasons=load_reasons, batch_run_id=batch_run_id)
@@ -424,7 +428,7 @@ def run_one_mapping_detailed(
             reasons=reasons,
         )
 
-    if freshness:
+    if freshness and not validate_only:
         from snkrdunk_collector.due import write_capture
         freshness.begin_result()
         freshness.result = write_capture(session, mapping, holder, freshness)
@@ -441,10 +445,29 @@ def run_one_mapping_detailed(
         raw_html=holder["product_html"],
         source_url=holder["product_final_url"],
         parser_version=PARSER_VERSION,
+        raw_snapshot_id=freshness.raw_snapshot_id if freshness else None,
     )
 
     if validate_only:
         session.rollback()
+        if freshness:
+            from app.services.freshness_integration import CaptureResult
+            from datetime import timedelta
+            conditions = (holder["extraction"].get("extracted") or {}).get("conditions") or {}
+            no_listing = {"A", "B", "C", "D"} <= conditions.keys() and all(
+                conditions[k].get("price_jpy") is None and conditions[k].get("raw_text") == "出品待ち"
+                for k in ("A", "B", "C", "D"))
+            verified = write_result.identity_verified and (write_result.written or no_listing)
+            freshness.result = CaptureResult(
+                "completed" if verified else "identity_refusal",
+                raw_snapshot_id=freshness.raw_snapshot_id,
+                failure=None if verified else ";".join(write_result.reasons) or "RAW outcome unconfirmed",
+                resume_cursor={**freshness.claim.resume_cursor,
+                    "identity_verified": bool(write_result.identity_verified),
+                    "required_product_verified": holder["product_http_status"] == 200
+                        and holder["product_classification"] == "normal_page",
+                    "raw_outcome": "listed" if write_result.written else "no_listing" if no_listing else "unconfirmed"},
+                next_due_at=freshness.clock() + timedelta(days=36500))
         log_event(
             "validation_result",
             mapping_id=mapping.id,
