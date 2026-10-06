@@ -1,0 +1,91 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T09:58:13.877709+00:00",
+  "pr54_delivery_repair_verified": {
+    "pr": 57,
+    "run": 37435775846,
+    "all_nine_yuyu_natural_revision": "690e7faab1c18dcd1319b10517bd662269444093"
+  },
+  "last_verified_delivery": {
+    "pr": 58,
+    "run": 37439679508,
+    "merge_sha": "5146af1c3a5833f66473b65653d1eb5e58ff3947"
+  },
+  "capture": {
+    "work_id": 2766,
+    "completed_at": "2026-10-06T09:19:06Z",
+    "requests": 59,
+    "bound": 100,
+    "original_snapshots": [
+      27654,
+      27655,
+      27656,
+      27657,
+      27658
+    ]
+  },
+  "review": {
+    "source_candidate_id": 1,
+    "source_url": "https://yuyu-tei.jp/sell/opc/card/op01/10151",
+    "baseline_evidence_digest": "89b36c68213c009a9329ef4eaadd1d53e555030e56843f5eb56c6f1c5e82d65e",
+    "release_product_id": 1,
+    "language": "jp",
+    "review_method": "codex_visual_review_of_unique_full_physical_artwork",
+    "actor": "codex:retained-full-image-visual-review-2026-10-06",
+    "reviewed_at": "2026-10-06T09:32:50.711091+00:00",
+    "selected_card_print_id": 6139,
+    "considered_print_ids": [
+      6138,
+      6139,
+      6140
+    ],
+    "positive_physical_basis": "Source shows a smiling relaxed Shanks, sword hilt at lower left, red/orange geometric graphic background and large block-letter strokes. Full-card layout and these distinguishing illustration details are present in official p1. This is an explicit visual review, not a similarity score or asset-suffix inference.",
+    "excluded_sibling_basis": {
+      "6138": "Base has serious facial expression, sword thrust toward viewer and flame background; the source does not show those physical illustration details.",
+      "6140": "p2 shares the smiling figure but has monochrome manga panels across the background; the source instead has the red geometric/block-letter background."
+    },
+    "work_id": 2766,
+    "source_product_snapshot_id": 27654,
+    "source_product_content_hash": "5f6a80672d9d537b298bf04bf39e5f619a4b265eeb502d214e4e19b1baa11a3a",
+    "source_image_snapshot_id": 27655,
+    "source_image_url": "https://card.yuyu-tei.jp/opc/front/op01/10151.jpg",
+    "source_body_sha256": "e11124be21498dec0f73b43e8a85954bd4cc61c62f49f893bc1009c4e4f0b8d2",
+    "official_images": [
+      {
+        "card_print_id": 6138,
+        "raw_snapshot_id": 27656,
+        "official_asset_variant": "base",
+        "body_sha256": "4a996805b226ee86a477fc1e5f594e7cdcb611f642fa5fb44dfdd33fc5fde525"
+      },
+      {
+        "card_print_id": 6139,
+        "raw_snapshot_id": 27657,
+        "official_asset_variant": "p1",
+        "body_sha256": "1a5bcc77f57b38e1d112d4d0c5c656bcc151194e28e3d03cab4e7575e7b6ff1c"
+      },
+      {
+        "card_print_id": 6140,
+        "raw_snapshot_id": 27658,
+        "official_asset_variant": "p2",
+        "body_sha256": "c8f6748542aa8bb75cacb3fbd305e2332b2092ecd172b3696271090ef8d90760"
+      }
+    ]
+  },
+  "bounds": {
+    "proof_records": 1,
+    "candidate_id": 1,
+    "selected_card_print_id": 6139,
+    "database_writes": 0,
+    "source_requests": 0,
+    "services": [
+      {
+        "name": "optcg-price-tracker",
+        "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+        "recovery_deployment_id": "3ade97f2-7469-453f-a2e5-9e5bdbef9d3c"
+      }
+    ]
+  },
+  "physical_policy": "Only an explicit attributable positive review bound to original retained bytes and every authoritative physical sibling; same-art twins fail closed. No similarity ranking or price tie-breaker. Automatic ARTWORK_EVIDENCE_ENABLED remains OFF. Manual mappings and existing exact approval gates unchanged. Registry disabled outside staging.",
+  "mock_validation": "103 proposal/decision/physical-proof tests pass; changed-byte, stale-digest, missing-sibling, same-pixel distinct-byte twin, duplicate-attempt, language/release/variant, budget and production guards tested.",
+  "read_only_live_validation": "Current candidate1 exact plan recommends only6139; digest734088beb4f07987ccbeb222e926349976d55bd74b9ac6f4b280b0128a643a3c. No live writes or new source requests."
+}
