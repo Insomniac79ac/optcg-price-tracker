@@ -227,6 +227,8 @@ def approve_candidate_onto_print(
     # updates that row instead of creating a second mapping for one listing.
     mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, decision.card_print.id)
+    from app.services.current_source_mapping import assert_print_source_available
+    assert_print_source_available(db, source=source, card_print_id=decision.card_print.id, mapping=mapping)
     mapping_created = mapping is None
 
     if review_notes is None:

@@ -18,9 +18,11 @@ from app.models import (
     SourceCardMapping,
     SourceCollectionAttempt,
     SourceMappingProposalGroup,
+    YuyuteiCandidate,
 )
 from app.services.source_mapping_proposal_decision import approve_exact_proposal
-from tests.test_source_mapping_proposal_decision import ACTOR, _request, _seed_yuyu
+from tests.test_source_mapping_proposal_decision import ACTOR, _request, _seed_yuyu, _persist_one
+from app.services.exact_print_approval import ExactPrintApprovalError
 
 
 TEST_POSTGRES_URL = os.environ.get(
@@ -89,6 +91,50 @@ def test_postgres_concurrent_identical_approvals_serialize_to_one_mapping(postgr
     assert seed_session.query(PriceObservation).count() == 0
     assert seed_session.query(SourceCollectionAttempt).count() == 0
     assert seed_session.query(RawSnapshot).count() == 0
+
+
+def test_postgres_different_listings_for_same_print_serialize_to_one_active_source(postgres_db):
+    _, SessionFactory, session = postgres_db
+    _, _, _, _, candidate, first = _seed_yuyu(session)
+    second_candidate = YuyuteiCandidate(
+        discovery_run_id=candidate.discovery_run_id,
+        set_slug=candidate.set_slug, product_id="7002",
+        source_url="https://yuyu-tei.jp/sell/opc/card/op17/7002",
+        detected_card_code=candidate.detected_card_code,
+        match_status="family_matched",
+    )
+    session.add(second_candidate)
+    session.commit()
+    second = _persist_one(session, "yuyutei", second_candidate.id)
+    requests = [(first.id, _request(first)), (second.id, _request(second))]
+    barrier = threading.Barrier(2)
+    results, errors = [], []
+
+    def approve(group_id, request):
+        with SessionFactory() as worker:
+            try:
+                barrier.wait(timeout=5)
+                result = approve_exact_proposal(worker, group_id, request, ACTOR)
+                worker.commit()
+                results.append(result)
+            except Exception as exc:
+                worker.rollback()
+                errors.append(exc)
+
+    threads = [threading.Thread(target=approve, args=pair) for pair in requests]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+    assert all(not thread.is_alive() for thread in threads)
+    assert len(results) == len(errors) == 1
+    assert isinstance(errors[0], ExactPrintApprovalError)
+    assert errors[0].code == "print_source_already_mapped"
+    session.expire_all()
+    assert session.query(SourceCardMapping).count() == 1
+    assert sorted(g.review_status for g in session.query(SourceMappingProposalGroup)) == ["approved", "pending"]
+    assert session.query(PriceObservation).count() == 0
+    assert session.query(RawSnapshot).count() == 0
 
 
 def test_postgres_service_and_source_writer_never_commit(postgres_db):
