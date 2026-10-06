@@ -54,6 +54,8 @@ select count(*) claimed, count(*) filter(where a.started_at is not null) attempt
  count(*) filter(where a.category_outcomes->>'raw'='parsing_failure') parsing,
  count(*) filter(where a.category_outcomes->>'raw'='captured') listed,
  count(*) filter(where a.category_outcomes->>'raw'='no_listing') no_listing,
+ count(*) filter(where w.kind in ('discovery','validation') and a.outcome='completed') completed,
+ count(*) filter(where w.kind='discovery' and a.outcome='discovery_progress') discovery_progress,
  count(distinct a.raw_snapshot_id) raw_snapshots,
  count(*) filter(where w.source_id!=:source_id or (cast(:shard as integer) is not null and w.source_card_mapping_id%9!=:shard)) wrong_shard,
  count(*) filter(where a.outcome is not null and a.outcome!='expired' and a.actual_request_cost!=(select coalesce(sum(value::int),0) from json_array_elements_text(a.request_costs))) request_cost_mismatch,

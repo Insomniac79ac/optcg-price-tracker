@@ -42,6 +42,11 @@ and reservations; guarded identity/promotion rules; no deadline deficit or denia
 No-listing with exact identity evidence is successful, retaining the old price's
 capture time. Missing/malformed evidence is never promoted to no-listing.
 
+Settled discovery/validation `completed` outcomes and discovery progress are
+accounted separately from listed/no-listing price checks. They never contribute
+to RAW successful-check or fresh-price coverage. Older retained receipts with
+unknown counters remain unknown; no historical execution evidence is rewritten.
+
 DEGRADED emits `action=autonomous_fix_forward`, with reasons, under the active
 mission's GREEN/AMBER authority. It includes bounded transient/parsing/optional
 failures, capacity pressure, retry/backoff, deadline misses and guarded item
