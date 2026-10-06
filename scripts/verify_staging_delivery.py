@@ -151,6 +151,27 @@ def browser_check():
         return results
 
 
+def wait_for_delivery(expected, api_sha, deadline, *, collect=None, clock=time.monotonic,
+                      sleep=time.sleep):
+    """Native API and frontend builds finish independently of collector upload."""
+    collect = collect or state.collect_live
+    while True:
+        evidence = state.sanitize(collect())
+        require(evidence["mode"] == "live", "Fixture evidence is not a live verification")
+        require(evidence["railway"]["project_id"] == state.PROJECT
+                and evidence["railway"]["environment_id"] == state.ENVIRONMENT,
+                "Wrong Railway destination")
+        require(evidence["repository"]["sha"] == expected, "Staging moved during verification")
+        frontend = evidence["frontend"]
+        api = next(s for s in evidence["railway"]["services"] if s["name"] == "optcg-price-tracker")
+        if (isinstance(frontend, dict) and frontend.get("sha") == expected
+                and frontend.get("status") == "READY"
+                and api["git_sha"] == api_sha and api["status"] == "SUCCESS"):
+            return evidence
+        require(clock() < deadline, "Expected native staging deployments did not become ready")
+        sleep(min(15, max(0, deadline-clock())))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected", required=True)
@@ -162,12 +183,10 @@ def main():
     args = parser.parse_args()
     require(all(re.fullmatch("[0-9a-f]{40}", sha) for sha in (args.expected, args.api_sha)), "Full expected source SHAs required")
     deadline = time.monotonic() + args.wait_seconds
-    while True:
-        version = get(WEB + "/api/version")
-        if version["web"].get("source_commit") == args.expected:
-            break
-        require(time.monotonic() < deadline, "Expected frontend commit did not deploy")
-        time.sleep(15)
+    evidence = wait_for_delivery(args.expected, args.api_sha, deadline)
+    version = get(WEB + "/api/version")
+    require(version["web"].get("source_commit") == args.expected,
+            "Frontend runtime SHA disagrees with platform")
     health, api_version = get(API + "/health"), get(API + "/version")
     require(health.get("app_env") == "staging" and health.get("status") == "ok"
             and health.get("database_connected") and health.get("redis_connected"), "Staging API health failed")

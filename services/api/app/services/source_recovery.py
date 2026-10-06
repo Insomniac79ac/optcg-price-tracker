@@ -72,6 +72,8 @@ def claim_source_recovery(
         or len(owner) > 128
         or type(request_bound) is not int
         or not 1 <= request_bound <= MAX_RECOVERY_REQUESTS
+        or type(denial_attempt_id) is not int
+        or denial_attempt_id <= 0
         or not timedelta(0) < lease <= timedelta(minutes=5)
     ):
         raise ValueError(
@@ -94,7 +96,7 @@ def claim_source_recovery(
         .join(FreshnessAttempt, FreshnessAttempt.work_id == FreshnessWork.id)
         .where(FreshnessAttempt.id == denial_attempt_id)
     )
-    if denial_work.kind != "refresh":
+    if denial_work is None or denial_work.kind != "refresh":
         raise ValueError("a refused recovery probe cannot authorize another probe")
     if (
         budget.reserved_requests
@@ -102,19 +104,30 @@ def claim_source_recovery(
     ):
         return None
     scope = f"source-recovery:snkrdunk:{denial_attempt_id}"
-    if (
-        db.scalar(
-            select(FreshnessWork.id).where(
-                FreshnessWork.source_id == source_id, FreshnessWork.scope_key == scope
-            )
-        )
-        is not None
+    existing = db.scalar(
+        select(FreshnessWork)
+        .where(FreshnessWork.source_id == source_id, FreshnessWork.scope_key == scope)
+        .with_for_update()
+    )
+    if existing is not None and not (
+        existing.state == "pending"
+        and existing.attempt_count == 0
+        and existing.next_due_at <= now
+        and (existing.resume_cursor or {}).get("scheduled_recovery_authorized") is True
+        and existing.resume_cursor.get("mapping_id") == mapping_id
+        and existing.estimated_request_cost == request_bound
     ):
         return None  # Never replay, retry after expiry, or rotate mapping/session.
     mapping = queue._eligible_mapping(db, mapping_id)
     if mapping.source_id != source_id:
         raise ValueError("recovery mapping belongs to another source")
-    work = queue.plan_validation(
+    if existing is not None and (
+        existing.resume_cursor.get("card_print_id") != mapping.card_print_id
+        or existing.resume_cursor.get("product_identity")
+        != mapping.canonical_source_listing_identity
+    ):
+        raise ValueError("planned recovery lineage changed")
+    work = existing or queue.plan_validation(
         db, source_id, scope, due_at=now, estimated_request_cost=request_bound
     )
     cursor = {
@@ -155,6 +168,39 @@ def claim_source_recovery(
         (),
         request_bound,
     )
+
+
+def plan_source_recovery(
+    db, source_id, mapping_id, denial_attempt_id, *, request_bound=600, clock=utc_now
+):
+    """Explicit authority to serve one diagnostic at a normal scheduled turn.
+
+    Planning performs no I/O and reserves no requests. Reuse the same authority
+    validation as immediate invocation, then leave an unattempted pending scope.
+    """
+    claim = claim_source_recovery(
+        db,
+        source_id,
+        mapping_id,
+        denial_attempt_id,
+        "snkrdunk-recovery-planning",
+        request_bound=request_bound,
+        clock=clock,
+    )
+    if claim is None:
+        return None
+    budget, work, attempt = queue._locked_claim(db, claim.claim_token)
+    # No network grant exists: make only the explicit intent durable. The
+    # scheduled singleton will issue its own fresh claim/lease and reservation.
+    db.delete(attempt)
+    budget.reserved_requests -= request_bound
+    budget.claim_sequence -= 1
+    work.attempt_count = 0
+    work.last_claim_sequence = 0
+    queue._clear_claim(work, require_utc(clock()))
+    work.resume_cursor = {**work.resume_cursor, "scheduled_recovery_authorized": True}
+    db.flush()
+    return work
 
 
 def resume_after_recovery(db, token, *, clock=utc_now):

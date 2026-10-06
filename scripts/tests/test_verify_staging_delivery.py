@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from verify_staging_delivery import validate_state, get, state
+from verify_staging_delivery import validate_state, get, state, wait_for_delivery
 
 
 class VerificationTests(unittest.TestCase):
@@ -24,6 +24,28 @@ class VerificationTests(unittest.TestCase):
 
     def test_good_live_identity_and_core_database_invariants(self):
         self.validate()
+
+    def test_native_api_build_can_finish_after_frontend_without_false_failure(self):
+        pending = copy.deepcopy(self.evidence)
+        api = next(s for s in pending['railway']['services'] if s['name']=='optcg-price-tracker')
+        api.update(git_sha='0'*40, status='BUILDING')
+        collect = Mock(side_effect=[pending, self.evidence])
+        sleep = Mock()
+        result = wait_for_delivery(self.expected, self.api_sha, 100, collect=collect,
+                                   clock=lambda: 0, sleep=sleep)
+        self.assertEqual(result['repository']['sha'], self.expected)
+        self.assertEqual(collect.call_count, 2)
+        sleep.assert_called_once_with(15)
+
+    def test_wait_remains_bounded_and_rejects_branch_change(self):
+        pending = copy.deepcopy(self.evidence)
+        next(s for s in pending['railway']['services'] if s['name']=='optcg-price-tracker')['status']='BUILDING'
+        with self.assertRaises(state.VerificationError):
+            wait_for_delivery(self.expected,self.api_sha,0,collect=lambda:pending,clock=lambda:0,sleep=Mock())
+        moved = copy.deepcopy(pending)
+        moved['repository']['sha']='0'*40
+        with self.assertRaises(state.VerificationError):
+            wait_for_delivery(self.expected,self.api_sha,100,collect=lambda:moved,clock=lambda:0,sleep=Mock())
 
     def test_fail_closed_on_identity_or_integrity_change(self):
         for mutate in (

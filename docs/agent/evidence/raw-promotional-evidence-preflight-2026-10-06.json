@@ -1,0 +1,36 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T03:51:23.017180+00:00",
+  "new_source_candidates": 630,
+  "completed_new_scopes": [
+    "yuyu-category:promo-eb10",
+    "yuyu-category:don",
+    "yuyu-category:promo-100",
+    "yuyu-category:promo-200",
+    "yuyu-category:promo-op10",
+    "yuyu-category:promo-op20",
+    "yuyu-category:promo-prb10",
+    "yuyu-category:promo-st10"
+  ],
+  "before_yuyu_exact_proposal_prints": 209,
+  "after_yuyu_exact_proposal_prints": 223,
+  "new_exact_yuyu_print_recommendations": 14,
+  "whole_label_only": true,
+  "no_family_evidence_before": 5,
+  "no_family_evidence_after": 0,
+  "no_candidate_release_family_count": 156,
+  "ambiguous_pending_before": 1624,
+  "ambiguous_pending_after": 1624,
+  "proof_policy": "Whole published parenthetical product labels match complete verified authoritative release names after existing punctuation/space normalization; no substring, fuzzy, card-prefix or treatment inference. Missing catalogue membership conflicts; multiple physical siblings remain ambiguous.",
+  "tests": {
+    "api_source_mapping_proposals": "39 passed",
+    "worker_listing_and_image_evidence": "52 passed",
+    "api_exact_proposal_decisions": "27 passed",
+    "yuyu_extractor_price_guards": "57 passed",
+    "delivery_verification": "7 passed"
+  },
+  "snkr_parser_defect": "Published bracketed promotional P-### identifiers were excluded by both listing-card-code and image-asset grammar. Fix retains exact brackets, digit counts, asset suffixes and card-code agreement; no source requests or approvals.",
+  "new_first_source_prints_from_named_releases": 0,
+  "yuyu_product_identity_defect": "Price extractor duplicated a non-hyphenated category grammar; it now uses the authoritative source listing parser, preserving exact promotional natural keys and rejecting unsupported hosts.",
+  "delivery_race": "CI #51 reached verification while the native API still had the preceding commit. GitHub token cannot rerun Actions (HTTP 403). Bounded provider readiness wait preserves destination/current-branch checks and final exact source SHA/integrity validation."
+}
