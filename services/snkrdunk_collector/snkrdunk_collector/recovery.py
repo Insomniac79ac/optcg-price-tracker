@@ -7,7 +7,11 @@ from sqlalchemy import select
 from app.models import FreshnessWork
 from app.services.freshness_policy import utc_now
 from app.services.freshness_integration import Attempt, CaptureResult
-from app.services.source_recovery import claim_source_recovery, resume_after_recovery
+from app.services.source_recovery import (
+    claim_source_recovery,
+    resume_after_recovery,
+    resume_after_network_recovery,
+)
 from snkrdunk_collector.db import SessionLocal
 from snkrdunk_collector.run_lock import (
     collection_lock,
@@ -24,7 +28,7 @@ def run_recovery(
     request_bound=600,
     session_factory=SessionLocal,
     runner=None,
-    lock_factory=collection_lock
+    lock_factory=collection_lock,
 ):
     from snkrdunk_collector.collect import run_one_mapping_detailed
 
@@ -52,7 +56,8 @@ def consume_recovery(
     *,
     request_bound=600,
     runner=None,
-    owner="snkrdunk-explicit-recovery"
+    owner="snkrdunk-explicit-recovery",
+    network_repair_of=None,
 ):
     from snkrdunk_collector.collect import run_one_mapping_detailed
 
@@ -64,6 +69,7 @@ def consume_recovery(
         denial_attempt_id,
         owner,
         request_bound=request_bound,
+        network_repair_of=network_repair_of,
     )
     session.commit()
     if claim is None:
@@ -90,7 +96,10 @@ def consume_recovery(
     resumed = False
     if settled and attempt.result.outcome == "completed":
         assert_lock_owned(session)
-        resume_after_recovery(session, claim.claim_token)
+        if (attempt.result.resume_cursor or {}).get("source_access_verified"):
+            resume_after_network_recovery(session, claim.claim_token)
+        else:
+            resume_after_recovery(session, claim.claim_token)
         assert_lock_owned(session)
         session.commit()
         resumed = True
@@ -164,6 +173,7 @@ def consume_planned_recovery(session, source_id, *, runner=None):
             request_bound=bound,
             runner=runner,
             owner=telemetry["owner"] if telemetry else "snkrdunk-recovery",
+            network_repair_of=cursor.get("network_repair_of"),
         )
         if telemetry:
             telemetry["stopped_reason"] = "recovery_" + result["status"]
