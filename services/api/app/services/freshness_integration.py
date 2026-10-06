@@ -165,6 +165,8 @@ class Attempt:
         self.denied = False
         self.raw_snapshot_id = None
         self.result = None
+        self.browser_closing = False
+        self.active_routes = 0
         self.health = {"http_403": 0, "http_429": 0, "optional_resource": 0}
 
     def check(self):
@@ -218,10 +220,10 @@ class Attempt:
         source, conservatively. WebSockets are blocked (not a collection input).
         """
 
-        def route_request(route):
+        def route_request_inner(route):
             response = None
             request = route.request
-            if unnecessary_browser_resource(request):
+            if self.browser_closing or unnecessary_browser_resource(request):
                 try:
                     route.abort()
                 except Exception:
@@ -326,8 +328,31 @@ class Attempt:
                 except Exception:
                     pass  # teardown cannot revive a refused request
 
+        def route_request(route):
+            self.active_routes += 1
+            try:
+                route_request_inner(route)
+            finally:
+                self.active_routes -= 1
+
         context.route("**/*", route_request)
         context.route_web_socket("**/*", lambda socket: socket.close())
+
+    def settle_browser(self, page, *, monotonic=time.monotonic):
+        """Fence new traffic and settle granted routes before disposing context.
+
+        Keep interception installed: removing routes while waiting would allow
+        new requests to escape admission. Playwright's sync wait pumps pending
+        callbacks without closing their API response context.
+        """
+        self.browser_closing = True
+        end = monotonic() + 31  # route.fetch itself has a 30-second timeout
+        while self.active_routes:
+            if monotonic() >= end:
+                self.stopped = self.stopped or "browser_route_settle_timeout"
+                raise AdmissionStopped(self.stopped)
+            page.wait_for_timeout(10)
+        self.check()  # a late required denial/failure still fences publication
 
     def http_get(self, client, url):
         """Inject into discovery/validation transports without owning checkpoints.
