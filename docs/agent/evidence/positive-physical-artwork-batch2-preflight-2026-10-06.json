@@ -1,0 +1,590 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T12:03:51.398043+00:00",
+  "review": {
+    "method": "codex_visual_review_of_unique_full_physical_artwork",
+    "actor": "codex:retained-full-image-visual-review-2026-10-06",
+    "count": 93,
+    "images_viewed": 282,
+    "price_or_similarity_tie_breakers": false,
+    "physical_detail": "Full retained source front and every authoritative official sibling viewed at native pixels. Positive illustration/layout/printed-marker basis and concrete exclusion of every other sibling retained in each registry record. No inference from price, asset suffix or generic shared illustration."
+  },
+  "live_read_only_validation": {
+    "target": "staging",
+    "observed_at": "2026-10-06T12:02:55.222815+00:00",
+    "read_only": true,
+    "source_requests": 0,
+    "database_writes": 0,
+    "records": [
+      {
+        "candidate_id": 91,
+        "card_print_id": 6032,
+        "evidence_digest": "8d53bca84bff6b596f068b784ac7d975b8ba92237673d36939db41d71000fdb7",
+        "proof_digest": "a759a12d0900132ae4bd691f03fd92fdeb59a82dcaad7235b32d5ca42e18d387"
+      },
+      {
+        "candidate_id": 92,
+        "card_print_id": 6049,
+        "evidence_digest": "dd5e5ec11d8d140090dca499b3fef933f9bec18ac98dd05a9a624d866d8b0555",
+        "proof_digest": "7f8871077cc0e6ea718ca32f32bbdc0fcac78e6f14883b6f77b47599b0418746"
+      },
+      {
+        "candidate_id": 93,
+        "card_print_id": 6070,
+        "evidence_digest": "c57e22a2c8cb676ee63241a23ec6b289c65339bb780acf7791e924676c6b066f",
+        "proof_digest": "8b060c56801ff88fd061a7062bb09ea221338957c3c312deb2dd0082ea3cfeae"
+      },
+      {
+        "candidate_id": 141,
+        "card_print_id": 5996,
+        "evidence_digest": "ae02a2a9405e3292ff7d9cff79dea457cd919834f018fbe084e7e7671766838d",
+        "proof_digest": "4b054aa69bb277ec042189dcd764a08d841660424bb9fd2c13aa5f9edd2700de"
+      },
+      {
+        "candidate_id": 142,
+        "card_print_id": 6028,
+        "evidence_digest": "4e52652ff59aa3854f67970f16c9758a1e729ee437ac4ea10eb4ee4d404cd8e1",
+        "proof_digest": "6e07957cea2b03aace97adc25c8af562ea39c63aaa11083f32eea7e5f02ff257"
+      },
+      {
+        "candidate_id": 143,
+        "card_print_id": 6063,
+        "evidence_digest": "d74c6a741a83c7a80b80cf30a442e4bec9e931c24818a99a3582632d2b99b88f",
+        "proof_digest": "33ea824fc0343e0c089f4750b837e6cd455fb816255e4174c17ba8a34876e848"
+      },
+      {
+        "candidate_id": 144,
+        "card_print_id": 6065,
+        "evidence_digest": "63b1e39fab4d9f7c2bd225b669b4ca1066cf8ccc3bd34c78bb41a09821a19bee",
+        "proof_digest": "2b2ebd2c1cdd46ee533b6d3ca690228f89e8c388785e0fe651c8bd2173f7920e"
+      },
+      {
+        "candidate_id": 145,
+        "card_print_id": 6067,
+        "evidence_digest": "b8f37d6483cf07ae6931cf4cab57a217230c6266e6744734150e7eda5bbbe258",
+        "proof_digest": "ec2c8039813c0252dc96ac6989486748ecdc78daddd9f43848196c8b77d16e89"
+      },
+      {
+        "candidate_id": 146,
+        "card_print_id": 6103,
+        "evidence_digest": "786cc5e6eeb91739007edcde78f528b5ed53eaca0e68e4140a094aff642c0f60",
+        "proof_digest": "a7242704ef4d255b4067504e083068ab6ada7a4413f48331d992c0e5812b404e"
+      },
+      {
+        "candidate_id": 1502,
+        "card_print_id": 5990,
+        "evidence_digest": "91e8b47b6f8386a01878b6a84759a45403e93adb54030087f9c06b7c7205786e",
+        "proof_digest": "f991f6ab64cd9f3b17b43b355da89b6d6c6c3f836b1213d149a6ddd3d3feaee0"
+      },
+      {
+        "candidate_id": 1503,
+        "card_print_id": 5992,
+        "evidence_digest": "71bdcbe0040b20a07678c3e53990148cbc2ca9e4551ea83fb158d597c9820148",
+        "proof_digest": "dc47f14025ba36add101981551f061d66252253cc1aaa3c10cb8f95e8a8da7cb"
+      },
+      {
+        "candidate_id": 1506,
+        "card_print_id": 5846,
+        "evidence_digest": "d4114de24c92a0c426ffb8ac014008e2abea09b2b1a062317865f889f7e59ac0",
+        "proof_digest": "fa7650452e07b708e42a68b71f313a2c6e5c42e2688beeca6ff86d7866f6050b"
+      },
+      {
+        "candidate_id": 1509,
+        "card_print_id": 5879,
+        "evidence_digest": "e5604c4ddf22ddba81bd60b527701323d006f0b37405278bcf000f7bb7b462ee",
+        "proof_digest": "fb7208844cc24129c78510de7c928918c4c33293bbf3c29c80d003117d65e222"
+      },
+      {
+        "candidate_id": 1510,
+        "card_print_id": 5887,
+        "evidence_digest": "750a2c7759fbb8fc0b6ac3f02ab61900efcd80f04b385d1700a8c2d1751adfec",
+        "proof_digest": "2484778191d2eb33494242abf9bc8e7e4e654c3715404a178f611baf4027353c"
+      },
+      {
+        "candidate_id": 1511,
+        "card_print_id": 5905,
+        "evidence_digest": "aac777bceec5354dbd0da9e36e9550f860099457fa909904687cee223395ec6f",
+        "proof_digest": "65232b861ffc0b7ba383f39043698144e833ad499daf46f231db646b385ef89e"
+      },
+      {
+        "candidate_id": 1512,
+        "card_print_id": 5919,
+        "evidence_digest": "385753709c040ffa27b8e4c038368980377718f9dae188bebd7889524f856eda",
+        "proof_digest": "4aa5946216603654d84395dade03af52c2512dd703e29609a291c0b1512c7a87"
+      },
+      {
+        "candidate_id": 1513,
+        "card_print_id": 5946,
+        "evidence_digest": "a47ffbbb9e67155b9de55b0f2d6daae31a47c4dd19005ef42499662f28da7aea",
+        "proof_digest": "39caea23334e9c94c88f656afd774bd4e95d9b1764b0b9925fa9b7c221d27d46"
+      },
+      {
+        "candidate_id": 1514,
+        "card_print_id": 5960,
+        "evidence_digest": "410ccd05646f2a72d804a3953b6c53f031ea3aa08b66d91b0079fbfedde39173",
+        "proof_digest": "bcbf2ed74ced61332b4e7ed5984293319d341444a79f081aa6923aa6601e1816"
+      },
+      {
+        "candidate_id": 1515,
+        "card_print_id": 5964,
+        "evidence_digest": "e1ba91608adce5968a6552124086c76edd2ed7d6f9281fd5ea74d5dbee030fa0",
+        "proof_digest": "3e37361218b52ac6726cfa4a85eb25b00bba52bd06b46fb7c4150046753b6fea"
+      },
+      {
+        "candidate_id": 1516,
+        "card_print_id": 5982,
+        "evidence_digest": "8f5d965115db7f40712e71ebb3e136c66e572304d7150121e41ff0034064c712",
+        "proof_digest": "41cb8f4caefb4305cdd5ed68d1ca7706376a8ec15b234fe18f9f4c6a45a124b4"
+      },
+      {
+        "candidate_id": 1527,
+        "card_print_id": 5862,
+        "evidence_digest": "931dcc7e9c924903f8ca36972229bccf4c459d60979c13f6b4dbeb391ef20e18",
+        "proof_digest": "2b9a4405e5012bec3eb4a0bb6c51cefb3cfb472ef51833738db9b04c1b6e31c3"
+      },
+      {
+        "candidate_id": 1528,
+        "card_print_id": 5864,
+        "evidence_digest": "56c5483302cae1b1d74256660e176b98a6f751d1df6a2ab955254527da9160f0",
+        "proof_digest": "0e3c00f5c22f75ab283a0552514de806d2f354467f2116dd302fbb25f41bdf1a"
+      },
+      {
+        "candidate_id": 1529,
+        "card_print_id": 5893,
+        "evidence_digest": "ed05211f3118decb67ec1b6a310e98991b1600f89453722d1d4a6ccda326d75e",
+        "proof_digest": "f89f44e54566562286527163f9731dfb59c3a833c0a9f210746a467c26dae63c"
+      },
+      {
+        "candidate_id": 1530,
+        "card_print_id": 5913,
+        "evidence_digest": "2d72ef65c680113362121c107639b33028c04d070dfeff9dbade2832f077ad65",
+        "proof_digest": "c8f2152578a32660a29091d4b21268df72b8546a67fb35761a8856a55dffd671"
+      },
+      {
+        "candidate_id": 1531,
+        "card_print_id": 5933,
+        "evidence_digest": "894d355a01f702f579088335577e8fc755309887ea5b9cb11f3efcb259612960",
+        "proof_digest": "ac6b45dda3349c9c462fcace00f8fa3dfabafebf557c34e5b0f3888c58be5e6c"
+      },
+      {
+        "candidate_id": 1532,
+        "card_print_id": 5984,
+        "evidence_digest": "bedf25b04d00d2e4fcc895eafcd2f1e8ad0c7036a07a6e4fb4563ccccff1cdfb",
+        "proof_digest": "59f487268e307a552d85ec59970c3ca96375f4e6f089b4c53ce0e9964cbc4070"
+      },
+      {
+        "candidate_id": 1559,
+        "card_print_id": 5852,
+        "evidence_digest": "4f20bbb8e945002af8a7226e671a9eb606616a53f481c94181bb8acfd0452de3",
+        "proof_digest": "04975b0816ddff458598ef97dd266cffff18c0b89156fe0767de87834746e716"
+      },
+      {
+        "candidate_id": 1560,
+        "card_print_id": 5881,
+        "evidence_digest": "5aadca5512f2e0d5c75e25d483455f36c785583e1b20f948515a9edc5a07a7df",
+        "proof_digest": "24106f7e9cfc9937abc1eaa5e7ca1ad13be172c0208932b23312ac73f889dcd2"
+      },
+      {
+        "candidate_id": 1561,
+        "card_print_id": 5915,
+        "evidence_digest": "dcc4cf7820a5c53970f570bcf1a806eb89b688e3148dd050c78e2d81621290c4",
+        "proof_digest": "eecf15c601a62affbdddd1dc613c55b4aa0e2ae42abd124abb7b6d3903c30b5d"
+      },
+      {
+        "candidate_id": 1562,
+        "card_print_id": 5948,
+        "evidence_digest": "af119ccd000df57611ff96d6871c6ce4d913c31bad6d735e1f66786488d5bd11",
+        "proof_digest": "754b4b0ad83789cb7ec7165d7fd5048a78a408117b7fe7181f4285a3ca38fae4"
+      },
+      {
+        "candidate_id": 1593,
+        "card_print_id": 5971,
+        "evidence_digest": "bd6962808e7f644015947bb448b3922e45865ae50f27f76a55b6c1586e33394a",
+        "proof_digest": "97328a036bbd56ff8be88e8f71498afd8ed05a90840ce7f0c679a7b19214a7d1"
+      },
+      {
+        "candidate_id": 1594,
+        "card_print_id": 5975,
+        "evidence_digest": "edb0a44edd34d28d16b56dfdf1417c14cf87ccfc808b6e1c573fedbdb9a7553f",
+        "proof_digest": "d38b2d29b3eaf98933d48fb175330bec756fe6af263e4acee5c7fdb101b537a4"
+      },
+      {
+        "candidate_id": 1640,
+        "card_print_id": 5841,
+        "evidence_digest": "1aa786a9fc35d5cd64238df9b2f4592d212f9b76ff30b81dac9678dce7a99fc0",
+        "proof_digest": "dac59d7c4b1c1c2ebd8217108eed43268020e7ca110fe2ffeed9e7775a1f2351"
+      },
+      {
+        "candidate_id": 1641,
+        "card_print_id": 5843,
+        "evidence_digest": "caeefdebb69d89284b71d58e561246ea033369503e523bd3f26550d3ac8aed31",
+        "proof_digest": "7c287c37f44ebb48f68c95038145a418a77861ccbad16fc202bc32cd93f79d09"
+      },
+      {
+        "candidate_id": 1642,
+        "card_print_id": 5872,
+        "evidence_digest": "4ae4588f61ea21b896b6b67dc5fada5f3659dd4c94ca84a3ace6c694b3dff19b",
+        "proof_digest": "a711cfbf533a73613d7fe1f5ead042cfce3195f1c47a88e0a9c8985551fd1b67"
+      },
+      {
+        "candidate_id": 1643,
+        "card_print_id": 5874,
+        "evidence_digest": "e949248ebadc17faae86134d88867210753659fd279e7916871ee7f4ab70fc5e",
+        "proof_digest": "ee5f1d17b4fdd100f34b0b5ab8e5225791ad99dacc0a457b2c0b5d8fbb8a16e4"
+      },
+      {
+        "candidate_id": 1644,
+        "card_print_id": 5902,
+        "evidence_digest": "38661cf233fa7d78e543bb51e3432fe0377c8c111813fde875d6145552d711d4",
+        "proof_digest": "11db4aa5d4d5abe5f37ac0ab4153c095a11627d2833b50a4e160835f0ee24a84"
+      },
+      {
+        "candidate_id": 1645,
+        "card_print_id": 5929,
+        "evidence_digest": "eb27340c14857d63574a032b0dbb8febc6293fd3bc31ba9eccfdfcc9dc71a0b5",
+        "proof_digest": "69bebdd7ad6f91300e821e14c7ceebfd0f1c53283f4bd3ec0effab63232097a0"
+      },
+      {
+        "candidate_id": 1646,
+        "card_print_id": 5931,
+        "evidence_digest": "470b6601c365bfdf8e63b3a1a86069d7399e76307e7b9741325e7a742a75fe0b",
+        "proof_digest": "f5444d2c27ac977ac04eac0a7a012b5db3cf9d11c6a7b7625a70139ffbd2a52c"
+      },
+      {
+        "candidate_id": 333,
+        "card_print_id": 3526,
+        "evidence_digest": "ff27ac13eaf0a90a08b0adc96236396691adb5d2001f52c45361cdd0ac86ada8",
+        "proof_digest": "d08180b535d480d3a26d2ab39f46959a4c4857cf50438212f6be97e5eb188fde"
+      },
+      {
+        "candidate_id": 335,
+        "card_print_id": 3455,
+        "evidence_digest": "c37a577d84407965aa8ccb8b0f4da52fee5dbd27545d09e656e15db8482de9c5",
+        "proof_digest": "2c540247230a031ea041c98636e0c64127f29e0b5bfc6806d3f71c5d2d0c8b50"
+      },
+      {
+        "candidate_id": 337,
+        "card_print_id": 3463,
+        "evidence_digest": "7d498b42a2cfa161381dd8455064679bb01a48349b7f94d166f8479a860be38d",
+        "proof_digest": "bbd768a6d66a50e8bec2622656e166e5f892b7f80b62d871aa7b057a15e04d78"
+      },
+      {
+        "candidate_id": 338,
+        "card_print_id": 3476,
+        "evidence_digest": "ce7f0a4c4e0e4fbeac8e7010c7cc8a46bb336d86d59dbbd6cb4d7b7e3d605c76",
+        "proof_digest": "43e66413589c5e36443ed643a3ee24ffe265b589874835a3d01cfe17d2e71445"
+      },
+      {
+        "candidate_id": 339,
+        "card_print_id": 3491,
+        "evidence_digest": "9e301d74eb6abc63e2ba5fafe438f201cf5bc9a4183817b26d3a530395238055",
+        "proof_digest": "f47265d1be7c575a174350de784f82cf02d3ae8fb29e6d7569fe6941fab3c00b"
+      },
+      {
+        "candidate_id": 340,
+        "card_print_id": 3505,
+        "evidence_digest": "53f802e9f9682015ba5fb1932d703aa74fc58263f7076e6793d88e4cf2202c27",
+        "proof_digest": "a0025ecabfe5607b2ec43b52350db8467bf297bed71fbac4626fbbbc008c0c06"
+      },
+      {
+        "candidate_id": 341,
+        "card_print_id": 3508,
+        "evidence_digest": "993f5c7c5785d9ca4d081e60e956b68f38e02ec98b9930f25c26014bdb8f1f1d",
+        "proof_digest": "41e256396bf163250dc3279dbd86d4cffc122acbf08a24d8183bf3256e754d08"
+      },
+      {
+        "candidate_id": 342,
+        "card_print_id": 3514,
+        "evidence_digest": "48ea7bcb0780df6f2cf4214e58afd342f4dd8995f63788300b5a3b4713f2da31",
+        "proof_digest": "12b6a7cadd82c27dfa3a830b124034a970e69d8c85df13ff3cf90af746e2e144"
+      },
+      {
+        "candidate_id": 343,
+        "card_print_id": 3521,
+        "evidence_digest": "5c79dd0c7ad81b257a3813bcdd6233c2eb56ee0d9c33824f67e82e5425ae5b9b",
+        "proof_digest": "a0174d0ebef29170f129e1b11f544ac3de65afbaabac22ef660585352da46a0c"
+      },
+      {
+        "candidate_id": 352,
+        "card_print_id": 3451,
+        "evidence_digest": "00374900c1713aec7de0946825467754c895f79b34dd94662b496319ced7937e",
+        "proof_digest": "6cedb5ed72ee86cbd8321f2e422c2505eb4b3856b054321df6909732ebf0f196"
+      },
+      {
+        "candidate_id": 353,
+        "card_print_id": 3465,
+        "evidence_digest": "219114f3eab5280ddca951b3cdcaa09606485f5b126ca7dad9e24016f0ee376b",
+        "proof_digest": "7ea60f9d84386bb58834dbc3889ec639ffd819a8178f7d22984b8e90ca502ac0"
+      },
+      {
+        "candidate_id": 354,
+        "card_print_id": 3482,
+        "evidence_digest": "12c76a0b3fa28306359586ff67333d0d01dad2a33c6a61bd7b868a3bc11269ec",
+        "proof_digest": "e601f8effef31e16a85250076bb61e53eda99d23f3416e3d758dc232dde7240b"
+      },
+      {
+        "candidate_id": 355,
+        "card_print_id": 3487,
+        "evidence_digest": "c458197e1f8769eb7024dc6369d9298a66c1a76b93282563d1d10826a19fa377",
+        "proof_digest": "0543a490a894c657fb35257e12788da36647360d285a159925936a4eb22c608c"
+      },
+      {
+        "candidate_id": 356,
+        "card_print_id": 3510,
+        "evidence_digest": "66325b348fabc2954f36f439f05855f451aed46d814ed5508dee11b464daa9b7",
+        "proof_digest": "f658a076ebf3712b346bfb859371c83a2fcb103ed3ec0103f42f0826b7fca555"
+      },
+      {
+        "candidate_id": 357,
+        "card_print_id": 3519,
+        "evidence_digest": "ca108bc5f08f1831485c5a33b9ab8e9c19495d9e3338ddb4149b37f9a9bc6c17",
+        "proof_digest": "c671a7e8a591df412f36226f9d047213210ac8a9bc1ef07871471bf10e363d67"
+      },
+      {
+        "candidate_id": 407,
+        "card_print_id": 3448,
+        "evidence_digest": "26c248c067643b6e9e3d56e7d0004552fc1cc26f5924efbe0c4269b741f3631d",
+        "proof_digest": "55706656af86aa05aa523b40fdc140bddba711eda009b00c500d5f449891edbf"
+      },
+      {
+        "candidate_id": 408,
+        "card_print_id": 3474,
+        "evidence_digest": "1c72be018dd75b9652f31cfccebe9fab8c854a4bbf26de9c1c97baef72127ca6",
+        "proof_digest": "0a814c3972fbd4d861cb93d166401391f5d68bcceb8484b58e0334cba38e6d01"
+      },
+      {
+        "candidate_id": 409,
+        "card_print_id": 3498,
+        "evidence_digest": "a64988ee39361229a4fde53310f1becf367fcdfc5a561fa745b590716f360272",
+        "proof_digest": "665c3ab27827bbc184c68e26d2e2873880978268d4a9d3c3b5c492b3c8e7d310"
+      },
+      {
+        "candidate_id": 1211,
+        "card_print_id": 3422,
+        "evidence_digest": "77956052372350051b05a3aa14a91ed780f9073731f766854ab7c2472d3ab1f5",
+        "proof_digest": "cbaf745cc14eabbba9abf12adcf0f45f395a0a854203b90edadd5fb8510440e7"
+      },
+      {
+        "candidate_id": 1214,
+        "card_print_id": 3352,
+        "evidence_digest": "d99cb6e269f036ff68fc2430ce2cd3dfeb688f17019116d6d31d3edb78b91fc4",
+        "proof_digest": "509797f5281fb9c3923d104f489c6a032594a88b89cbe3fabeed6af0844736d9"
+      },
+      {
+        "candidate_id": 1215,
+        "card_print_id": 3359,
+        "evidence_digest": "1e3aea19636db42c613ae1a5f849ac43a5234b5c348ec16bb705fef3c692afd7",
+        "proof_digest": "ac39b644eb2b8b41a8cc6f3a3ff044f19df58f97aa743647ae8152a9bd2cde7c"
+      },
+      {
+        "candidate_id": 1216,
+        "card_print_id": 3364,
+        "evidence_digest": "3c0fc2c2d4b33018a1362a13cd0b84a1ff86d2e42532f86e68e477d6c60ab822",
+        "proof_digest": "185e89f128ae39e5c7fa1ae6828ef63af88d3cb564ca6c3825fa342aaa4e05cc"
+      },
+      {
+        "candidate_id": 1217,
+        "card_print_id": 3378,
+        "evidence_digest": "5e1266422960e00ef3848b45c1efe608e8a045cae0b9bb05473908c6af14d37c",
+        "proof_digest": "e5aa151bd78a3f8cd2ae2d138b75748989c4ca979ce86fe4ee72da817c9171de"
+      },
+      {
+        "candidate_id": 1218,
+        "card_print_id": 3388,
+        "evidence_digest": "9dfee3d1545ab67654c4ac3b1587713f79d1c8f3ee5233fcb6e3d19f6d15449d",
+        "proof_digest": "0d32d6eb576546953ba7f580c32a274c9f81a012c0e7d504714ed1be3fe51192"
+      },
+      {
+        "candidate_id": 1219,
+        "card_print_id": 3399,
+        "evidence_digest": "f2beffa3e10d588dcc7b8895169b4907b28714bf5fc5c70e049504eece533c0f",
+        "proof_digest": "6e3190718ff4e8dc5dd495f461e52ece35601a7d315fc0b30bc0a0eafb468900"
+      },
+      {
+        "candidate_id": 1220,
+        "card_print_id": 3401,
+        "evidence_digest": "7497002e0f28b5c8d32f4ae0ce797e4d31e4f860e4444ea79d38ead3a836440d",
+        "proof_digest": "bb96e4de1cb443011399be96de23c4675a30fb6ad1aef9f922e14db7d0856987"
+      },
+      {
+        "candidate_id": 1647,
+        "card_print_id": 5956,
+        "evidence_digest": "d3f4b929e0f6189fb848530e173f9058a30253c1819894c41144fd8e093d5bc5",
+        "proof_digest": "82c350528e5b5a1312b17fb628c4d734a7d9768a6baf782faaca4cfed876de13"
+      },
+      {
+        "candidate_id": 1657,
+        "card_print_id": 5832,
+        "evidence_digest": "0384a96ecb8f7d97d2b31bd43d9f1c4ae5504efed8e418f8e5ff152d3a6be8af",
+        "proof_digest": "8950dbf45c725db5c485c8d3317d6c805f4ec55245c2e53a0c2e5d1063080249"
+      },
+      {
+        "candidate_id": 1659,
+        "card_print_id": 5835,
+        "evidence_digest": "112a52dd7af3c52b58741580836ddea7b9425a80b148325b3c46f1c734306e29",
+        "proof_digest": "868967fb9005c0b37dab590113aedf7235cadf619a1ab616e7d4ab035b467317"
+      },
+      {
+        "candidate_id": 1663,
+        "card_print_id": 5718,
+        "evidence_digest": "9c8e99aae15a8df53a33f6c5f231688f6b91374adbad8266f992e61fcaec0851",
+        "proof_digest": "3c09ee54869875464499bf7c93a8f1b4ab19f97367337cf874e6080f429f3963"
+      },
+      {
+        "candidate_id": 1664,
+        "card_print_id": 5736,
+        "evidence_digest": "8a763a9736e125db47fbfd369604944da14fe23d9d952cd5aa7a6ff26634739d",
+        "proof_digest": "b20eca51e63dd966c0790893e4b3c01d64addfbe9743999e72557ee6fd11b3c3"
+      },
+      {
+        "candidate_id": 1665,
+        "card_print_id": 5764,
+        "evidence_digest": "730a3831e61b3c33331cfbaf1b83095c9318a873861d6c3fcdeb694ebca73c84",
+        "proof_digest": "d41b44683c6c5678e2ad84b22b0a25eb26157edb569f8cccd93be61a97f447df"
+      },
+      {
+        "candidate_id": 1666,
+        "card_print_id": 5779,
+        "evidence_digest": "4a415f076ccf157b8f7fb89d11bee0941b262e9b7b5a53e2a92007ee1ced3d37",
+        "proof_digest": "a072cdad69aca2bcfed2fe2ff217556065483286b167e51e16420b912794f4b8"
+      },
+      {
+        "candidate_id": 1667,
+        "card_print_id": 5782,
+        "evidence_digest": "c8fe8292fcfb3faf21429a7dcb3419ce15ff71f0a7a9033ff06c98b942a93aa2",
+        "proof_digest": "46d22abd2931e375d00292e22a7ca2c456809c9dd3c62bf18e2aa4486d2220e1"
+      },
+      {
+        "candidate_id": 1668,
+        "card_print_id": 5797,
+        "evidence_digest": "2ef455a13010003a5e700a6f55818812c9d145347e71ead8811666e76eedcf25",
+        "proof_digest": "0f64cc66649cf04b0014607db1a6ec6cfeeaca0998e19504f4a4208bde7f7f47"
+      },
+      {
+        "candidate_id": 1669,
+        "card_print_id": 5814,
+        "evidence_digest": "82ece079858b6c6777a238cea0dc0c5da754edb4c42fc823c1ae3fcc9a4b65f3",
+        "proof_digest": "2289bb8fb2960b0b9aa26b958ca68b5c84272fc2378210bddb71c32e4e704d94"
+      },
+      {
+        "candidate_id": 1670,
+        "card_print_id": 5821,
+        "evidence_digest": "fdf2856884bc823f0e931676cbd3e5d3782cc7dedff19f30580c0bc3ec6cccdb",
+        "proof_digest": "cb3d519d0a030c1bc6cf52c82a74dd87fa25dedc119396578af48af13e2f07f1"
+      },
+      {
+        "candidate_id": 1671,
+        "card_print_id": 5823,
+        "evidence_digest": "378c3025fb8e5a9ab96c4d194d8e7a11eecd0b894e8f74a278435069c9497c16",
+        "proof_digest": "0cdf8b4ac338e52f133bd16c7108870667423cd12fea4f0e57d1408427e7212a"
+      },
+      {
+        "candidate_id": 1682,
+        "card_print_id": 5707,
+        "evidence_digest": "b07513e48a5fede2ea25d40960613a36a89f1b3a5005fce889492a1b098f4cbc",
+        "proof_digest": "2f666a4c0ccf76132c0aa232c496f01399bfba075cec354f4118ea1d3efacfa6"
+      },
+      {
+        "candidate_id": 1683,
+        "card_print_id": 5716,
+        "evidence_digest": "3cd934271bae490e62e113e4e2c27e17fbeed4e994e6d962940efed9f5c6bcfa",
+        "proof_digest": "c93ed8bd39691989d01d52ac07f7da537c8029d5f2835d6b3516c0d3e69cc253"
+      },
+      {
+        "candidate_id": 1684,
+        "card_print_id": 5743,
+        "evidence_digest": "98d39ab37bbe68ebafd819ff8b701873055f2520840e2cfac0bd5ec19c217c81",
+        "proof_digest": "c0d9258f4a8c5743a553ffd13830e007f7b8b2c95d575a0fc900ff5e6c5fd8d8"
+      },
+      {
+        "candidate_id": 1685,
+        "card_print_id": 5784,
+        "evidence_digest": "2a900c94fa8f096fcc10d6ef03be61267fc28c765d9b5d8c4d1ee47a14e34df4",
+        "proof_digest": "1a5fbffbffa902d6679766943bb7070c95a1895f8508349206fb083b7555e74e"
+      },
+      {
+        "candidate_id": 1686,
+        "card_print_id": 5790,
+        "evidence_digest": "5d3e0d060516bf5618da6c2ff7b458d5d9336eaa46e863d143755f6354ad5298",
+        "proof_digest": "d9264bc7ccae0a4082dbf31832b228469fdf4b74e6b64c8fdf74c4ae50a1da8d"
+      },
+      {
+        "candidate_id": 1687,
+        "card_print_id": 5819,
+        "evidence_digest": "de87f78c5fadca242666ad46c1f511f9b5857516f00db47c7a59142b88e35d85",
+        "proof_digest": "1a4a387900244c39af33ef2db1c362d68465aea6f68ecc4c98edc58b1337d77c"
+      },
+      {
+        "candidate_id": 1792,
+        "card_print_id": 5711,
+        "evidence_digest": "66bd05d1497ddba4ca110ce773fad2899fd05f4eb1d975ebfdef6f442943bdd9",
+        "proof_digest": "ff25f5c9f04ebe32abc785ee5dca43aa9c2ce7162e6065e9fa77cc374aa96573"
+      },
+      {
+        "candidate_id": 1793,
+        "card_print_id": 5713,
+        "evidence_digest": "b4137ffc41cd3494f206bbbc86df2b45cba2c555ab815127844b9177e3e0febe",
+        "proof_digest": "52be4b9f61a8000325a096dceb0f1de718b43603aff1dd07fa715af9889a60b3"
+      },
+      {
+        "candidate_id": 1794,
+        "card_print_id": 5734,
+        "evidence_digest": "960a3bf078f12de4771e3bfbe615310c1e5ef912f065029ff45581a1990eb14e",
+        "proof_digest": "a3c4322d57328d02f83d85f4b0922a9a7655f8361cd8775530487f0da973bbe4"
+      },
+      {
+        "candidate_id": 1795,
+        "card_print_id": 5755,
+        "evidence_digest": "7ac88804a8857696f0677e2ab9a5c2822d7f457ff0a9fd29d60b3776fa7eb601",
+        "proof_digest": "f385a950c9cb009780faa0092fc04da5e13d16b5f7651dac18a8b68eb9c0e542"
+      },
+      {
+        "candidate_id": 1796,
+        "card_print_id": 5775,
+        "evidence_digest": "e1008d4a0c7029a3e48f17931c17265c8c61bc7b6da4a5a97ae22a8b3d1acdc1",
+        "proof_digest": "67d7ec4a077a9af927e3812336877105cee2d77407844ced8a4c21e802d9d8f1"
+      },
+      {
+        "candidate_id": 1797,
+        "card_print_id": 5777,
+        "evidence_digest": "61ae37b23d977ce426ecd576f281b5169cf23cd6af4047de13c46f2eded0f2ef",
+        "proof_digest": "8cfb8058aa4c391749ed1d7a7cc4cf26496ebb075f050076286a00b5d53da0fa"
+      },
+      {
+        "candidate_id": 1813,
+        "card_print_id": 5685,
+        "evidence_digest": "ea785ee93eafeb580cad72164ad0420e3d93df905fb97c664192de8ca5bd2878",
+        "proof_digest": "5407419f04de0f10fdb9fd7461c162f9ce9193aff29f021997964f3657343f80"
+      },
+      {
+        "candidate_id": 1816,
+        "card_print_id": 5562,
+        "evidence_digest": "650e9af92581b7a17e38510e96fa9c81778c0f7af3d6e5589ebc657d9f1193fe",
+        "proof_digest": "048777184f5e0be15f56a1273482badb3bbfaf60a167aa1e372b0f4709878cd4"
+      },
+      {
+        "candidate_id": 1818,
+        "card_print_id": 5585,
+        "evidence_digest": "901656291cd4de852df9a3df3afd0ad59efdc136ce8455022ac8b492634c6280",
+        "proof_digest": "fe29bf7ef8f5d4ea9a622ef900458acee185f04d42a44ac5cc7bc8e718b2bacf"
+      },
+      {
+        "candidate_id": 1820,
+        "card_print_id": 5618,
+        "evidence_digest": "39e38cafdcfdda097534fe9aef9255a53d0f13fad1928c8567d303adff07f5a3",
+        "proof_digest": "9270d1232c78d6617007cb39bef4fd499f327eafbb77e974f8ec90f131dad15d"
+      }
+    ]
+  },
+  "bounds": {
+    "new_review_records": 93,
+    "total_registry_records": 114,
+    "source_requests": 0,
+    "mapping_writes": 0,
+    "price_writes": 0,
+    "queue_writes": 0
+  },
+  "capacity": "Existing nine serial Yuyu consumers,16slots per half hour each,9000requests/1800seconds unchanged. Subsequent approval chunks at most20; every new mapping requires ordinary scheduled successful RAW receipt before operational credit.",
+  "preserved": "Staging-only validator; full raw/body hashes and completed singleton metered capture; complete current official siblings; manual precedence; exact release/language/physical-print domain guard and source duplicate exclusion. PSA10 OFF; Yuyu sales hidden; production RED.",
+  "rollback": "Restore prior staging API307f4c84 proof registry with a fix-forward PR if integrity fails; no persistent writes occur in delivery. Subsequent approval receipts identify only new mapping/work IDs for reversible quarantine, preserving raw and immutable history."
+}
