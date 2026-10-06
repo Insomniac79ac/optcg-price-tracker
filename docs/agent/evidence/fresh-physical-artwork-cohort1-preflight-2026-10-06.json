@@ -1,0 +1,615 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T15:37:07.954007+00:00",
+  "classification": "AMBER",
+  "live_read_only_validation": {
+    "target": "staging",
+    "observed_at": "2026-10-06T15:35:32.143436+00:00",
+    "read_only": true,
+    "source_requests": 0,
+    "database_writes": 0,
+    "records": [
+      {
+        "candidate_id": 1216,
+        "card_print_id": 3364,
+        "evidence_digest": "3b4a042ec974ea1d5c932d1721c9ed20f7805d2d005928d78da7302bdc619b97",
+        "proof_digest": "43269d0d3fb4047b7512c219209c518dd9d290ec4f8d14518cf7702f00f1daec",
+        "work_id": 3242,
+        "capture_scope": "yuyu-identity:1216:sha256:47250770c1c955d54b64b6c8848e353781312f6b767da32f9d912c25156834b5",
+        "original_review_continued": false
+      },
+      {
+        "candidate_id": 1217,
+        "card_print_id": 3378,
+        "evidence_digest": "91fd8937b8a9d88e9a6c68f246a4b418ffd954fc52fd72ee16c53dd877ec79a3",
+        "proof_digest": "1dc72d0b58c9dd8b8a5874aaca6cfb906ec01014a59306f281ccca8be13223b5",
+        "work_id": 3243,
+        "capture_scope": "yuyu-identity:1217:sha256:4749390ff3ee3cd6c9700c83e32a2661203cf6e36f342096bb7b523089811ff9",
+        "original_review_continued": false
+      },
+      {
+        "candidate_id": 1218,
+        "card_print_id": 3388,
+        "evidence_digest": "2dcf85692241dd52457df87cdb2adda026ce3c5185f1bfc150ae691cf7a7e97e",
+        "proof_digest": "d8eb484eb5685b67a74a5ba01005087679069fa05c541393b53164622e233e58",
+        "work_id": 3244,
+        "capture_scope": "yuyu-identity:1218:sha256:35f828005e80467bc56cf92b85ed7d101fe5d94473e785915f1b12ec74594600",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1219,
+        "card_print_id": 3399,
+        "evidence_digest": "57e3d3f0d89d1c71a7b7ae1a2f29905f3b0490783fa098cabaefa7d6ec3d0d2c",
+        "proof_digest": "79d6a19d81b02b71cd49b5bad60410ffae6fe29a3c73f7f6ed638213469658d1",
+        "work_id": 3245,
+        "capture_scope": "yuyu-identity:1219:sha256:185a832528acab77114c9b21ed14575e6dab460266bbca69938942dc359d44f2",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1220,
+        "card_print_id": 3401,
+        "evidence_digest": "3b1eb79aa95581dceb02d384ae83f6698e473a50e34b6c7917a9ec07a368194c",
+        "proof_digest": "1da0252b217e84ff9ddecb5aeb84683e9f94f5ba5d91798a59196ba5fe9a9660",
+        "work_id": 3246,
+        "capture_scope": "yuyu-identity:1220:sha256:a0de9a083d366e0fa3e1c04f0e0324addbaed5a5576494a374a262bf4028b447",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1647,
+        "card_print_id": 5956,
+        "evidence_digest": "c8528032384e4b8ad74ad808d64d573c018d1c6554cfce24b396d48202a742bd",
+        "proof_digest": "dab7d85385ed53f8ea94222cedce358d249b9276bf787f9780a5bae8f70b730e",
+        "work_id": 3247,
+        "capture_scope": "yuyu-identity:1647:sha256:6aac95dfa604f00df7509f45f5f5dbaf18cbc9a94be58732be778920da034d27",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1657,
+        "card_print_id": 5832,
+        "evidence_digest": "4fc1cf778a9d364c1c4667642afa54cfb2e49b88c6cd53e11789aee1d26fc419",
+        "proof_digest": "384379d0f8183e59f0a0fab12fa4812aac1086c86dd115311fb5e6920254a78c",
+        "work_id": 3248,
+        "capture_scope": "yuyu-identity:1657:sha256:92fe43611c3d260631eea8f9fe7b0336b20ddd1b445568e8942e08f773afb5bb",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1659,
+        "card_print_id": 5835,
+        "evidence_digest": "206f4d328fc0bfe0ef1f5d3c6a5ca3c4ff1cd722d97fa68b58c7a62ada423b02",
+        "proof_digest": "b83c3cb5ab7e166d648a6a267bd344725f617b7e9e5c0a075a9bb6993207f3d2",
+        "work_id": 3249,
+        "capture_scope": "yuyu-identity:1659:sha256:3420423786e3ccc646bae71a2a0deda11fceea9f5041f21e356813296d997271",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1663,
+        "card_print_id": 5718,
+        "evidence_digest": "24c13ddcb189072c410aaa78fa0a61fa9784b84401e5ea704e909587aec16b13",
+        "proof_digest": "7e15cc96e51be8057e4eeafc03c8a9664132ae177f0e65f5fef39b19e427a4b3",
+        "work_id": 3250,
+        "capture_scope": "yuyu-identity:1663:sha256:8fd98da9ce8b82fe2553bea689b7d43c732469d075ae1436c5a1a7f96ac57cc3",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1664,
+        "card_print_id": 5736,
+        "evidence_digest": "76556edd378d0ef154ff1282f3178d595d2d7a7326267a6a62072edf2a0c7d84",
+        "proof_digest": "91c0cfa78f4ca1f438fd6c265a5c6a971014ea63e00fd564470892485e535f42",
+        "work_id": 3251,
+        "capture_scope": "yuyu-identity:1664:sha256:52025ddab85c02277f6230e05bd4813185c88d7737fef5c933cfeac118e90618",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1665,
+        "card_print_id": 5764,
+        "evidence_digest": "2bc20bff9aa71f1e35018b8471b2bc25c9c60fed4c415966ea2a49e575afb0bb",
+        "proof_digest": "5349e28d01496cfff7bd91a7bc6e3af7f7676083d6bba3f156c7354a41eeeaa6",
+        "work_id": 3252,
+        "capture_scope": "yuyu-identity:1665:sha256:5cf357c602312faa82772682496b1354f93be30efd636f70fd988a6b1d8c7ac9",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1666,
+        "card_print_id": 5779,
+        "evidence_digest": "d67044e7e6bead2018d37cf987efa576a389523a37736664caffb5c10483d946",
+        "proof_digest": "9f358bd309afcb0862cff5160fdfcf8f6df391043f2d7bec27b5f4f3d37083d9",
+        "work_id": 3253,
+        "capture_scope": "yuyu-identity:1666:sha256:065ab9061cd6f4f49a7220afa442d6328a922fc299fd72650c80d8e48fc7d0bd",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1667,
+        "card_print_id": 5782,
+        "evidence_digest": "418fcf61b4b0ddbda9d6736e65078958a22cabea85653ea8b4cc4175bcc14e34",
+        "proof_digest": "bc1f19a28b1efd0f629f3e26fc39843b6699c6ca174811d0f99b2fcf1edf0b20",
+        "work_id": 3254,
+        "capture_scope": "yuyu-identity:1667:sha256:e4902aac08bbbddea6a121070a73753a6b4ba1c045d07780dc50419e340dafb2",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1668,
+        "card_print_id": 5797,
+        "evidence_digest": "158f120539b422f8e6453533f653a99c0c59c5e81f2f5449aeee2883403adef0",
+        "proof_digest": "d6c035dcca3e0e6439db2465d1bde873c788c7071f756f7b5bda91924dfcc6b6",
+        "work_id": 3255,
+        "capture_scope": "yuyu-identity:1668:sha256:c1bb1e65fa277bd5951a0f25b1201346daa998249069f21575a1fe20f872e7d1",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1669,
+        "card_print_id": 5814,
+        "evidence_digest": "6d442c3699d318b28516bff3d7846a27f24769f3239f222ec68a12ed81c4174f",
+        "proof_digest": "d49ed556fee780c28dcf0622c248efb8b02ee5aca80335504afcdff7972b2df7",
+        "work_id": 3256,
+        "capture_scope": "yuyu-identity:1669:sha256:54e52b4dff21746f4101b7b9de62c299f0368b73d1cb3ec796954990caac5270",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1670,
+        "card_print_id": 5821,
+        "evidence_digest": "7527ebad16eba9bdede9850c556292ec6259c92079732a924dedf5c2a36cee96",
+        "proof_digest": "f1ef97429f51c6f3a10a62bd2ced2349a76547c4cdfe67cc85e8f5c0ab79fb31",
+        "work_id": 3257,
+        "capture_scope": "yuyu-identity:1670:sha256:26aedf08f72d5d3bc1d762c9fb1c3d4082f495627a7fd180dba5c2319631edb2",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1671,
+        "card_print_id": 5823,
+        "evidence_digest": "e1e72dfb10e96d4e46131654571c6b0bd316edc6c874d6f6c56a58cdf5bf756f",
+        "proof_digest": "ebc13b680d4810a322047e47e8e437eb9cdd0e257d4b015d0e75ebc52cdc696c",
+        "work_id": 3258,
+        "capture_scope": "yuyu-identity:1671:sha256:1a39c01ab2098dc0a8d1b1fd13c99c7c9f021388916959743405dc7e5e21be01",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1682,
+        "card_print_id": 5707,
+        "evidence_digest": "38bb8d0d4d24951562426e38fbefa36718aa2ccddce2302664d295421b5bb07f",
+        "proof_digest": "b58c2767f659592adb94b47ed486a95529c146e969cd5573cd356b8da0df39b0",
+        "work_id": 3259,
+        "capture_scope": "yuyu-identity:1682:sha256:8f145cfe944bf3f9d831a988f8220b29e666d42114702a2861747ce16aa28616",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1683,
+        "card_print_id": 5716,
+        "evidence_digest": "d298545eb0c12ec6bcea5d001f0f70999e26360b4caa0a8ae870509efe4465c1",
+        "proof_digest": "2622226acf086629255decdaa60510480441efd7fa6715c9665e22a09d090a1b",
+        "work_id": 3260,
+        "capture_scope": "yuyu-identity:1683:sha256:74d2f66bfed1f3cfbbb851938c978c354ee31d159e01eef18488437445b80a6e",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1684,
+        "card_print_id": 5743,
+        "evidence_digest": "847c461832c30d24bec24c2ae185caee1062a2792e60abd5e05a3d67140c1cd5",
+        "proof_digest": "7bceaaf7d9d2d76749ed967f7e6fae22f5d973339516045b437928991a2e0941",
+        "work_id": 3261,
+        "capture_scope": "yuyu-identity:1684:sha256:555d0c6102af6a32c899f4e1b455a1874e0401d47cdce379c1ca74e44740d5c1",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1685,
+        "card_print_id": 5784,
+        "evidence_digest": "c24591a523f5f43f061090de99261a5d92980b493989baaa9b3287b699bdc56b",
+        "proof_digest": "c5719c0f19d2357de1d22ed85f5372506baeff9d3b34a5001393bf6a17a27a9c",
+        "work_id": 3262,
+        "capture_scope": "yuyu-identity:1685:sha256:0933e7c9c6d58d172e73099357cb4ec4bc9ada30da05bf6d7751c19eb3c53dbb",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1686,
+        "card_print_id": 5790,
+        "evidence_digest": "5978317f2af8f925661c64a175f848f3151e96a73fc95cea63cdb656d8511853",
+        "proof_digest": "047d6f12c14521d82ae994d009d839b25fd777ec2237d054701e3bf803675821",
+        "work_id": 3263,
+        "capture_scope": "yuyu-identity:1686:sha256:15b366e43d535c2babe2347ab802274bd40f3fb7c66b01d000db2cd2bcb3a4d3",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1687,
+        "card_print_id": 5819,
+        "evidence_digest": "32d7f86537df24f66f8aad578f258e1cbcf850fb90252c5b6b24448b74eac132",
+        "proof_digest": "ed6063f4646e3fcf0127f1e522c82ad6d90f14dbcf4a7808b458632307ae98ab",
+        "work_id": 3264,
+        "capture_scope": "yuyu-identity:1687:sha256:8f32377b55a11e88467d3d67c7bdfff6b3debdda497aed0de334e31ea61ae991",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1792,
+        "card_print_id": 5711,
+        "evidence_digest": "e2bf89dd0b9247eeda8940dd3f55d1d085ce758046bbab2e4ac1180f4f058417",
+        "proof_digest": "38c26d0bb8fd5f2b03c293f96a42a8d3c3cf060ce4db66cb4ad094a1e67e5e8b",
+        "work_id": 3265,
+        "capture_scope": "yuyu-identity:1792:sha256:b16dedb52a3bfd55d9b7edf5b7c3bd38e31e5a2fb0bc858c326ae71181fbcf26",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1793,
+        "card_print_id": 5713,
+        "evidence_digest": "ebdae43367acbe874b71621d33f5a36b03981c892db4278dfed97b510d57b64f",
+        "proof_digest": "2c2554b6d81686c452f4e3f37b18dacf6aded38243f29959fe7200842f8019b6",
+        "work_id": 3266,
+        "capture_scope": "yuyu-identity:1793:sha256:29a22de5b6ec192daf0d6392317c73838fc24d5f107594167c6878742e4ea4c2",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1794,
+        "card_print_id": 5734,
+        "evidence_digest": "bc0d46199e11e2182d3fcc83cd82677c37a4abf2e0ce55d07b91b8b266511425",
+        "proof_digest": "c3bde5c9a6e332f967cfd8974dca869865da5dfec42ca8fd04613e2978d2e314",
+        "work_id": 3267,
+        "capture_scope": "yuyu-identity:1794:sha256:4fc6d8a99564215e0dee25b9dc48036dec160c3cecf7cfdbf68c8d099df0ee06",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1221,
+        "card_print_id": 3410,
+        "evidence_digest": "1a3e829ddc26c73e9f9b8c69c5181ee4504871060f4c7c59c6898443e283bb4b",
+        "proof_digest": "c7d207d8dd3d8fe67bf74c9d11c0f2455ba14386eb9431a175315ae1f4bcb433",
+        "work_id": 3289,
+        "capture_scope": "yuyu-identity:1221:sha256:4b81cf1a3e6feeab699ce00deec5c91e0d43746e38b2373d15dcc0e9b477cc9f",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1222,
+        "card_print_id": 3416,
+        "evidence_digest": "bf0a39a279949a97f0c70f8746f5bf6a3e3cc620e1acd0b0782155d8a2197fd2",
+        "proof_digest": "2fe0099196600df8eeebc2e870d767c838ae7062966d2246e660c84ffc8beeae",
+        "work_id": 3290,
+        "capture_scope": "yuyu-identity:1222:sha256:51235bc5821cb33aa385d4d76896fe47e0a72f885dcd68a390d536adb4087374",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1232,
+        "card_print_id": 3348,
+        "evidence_digest": "d970c2c70ef7cf1629cc3a2717c144a8e0fd00512bbf2b0b6aa857732e2ac0c3",
+        "proof_digest": "03fee63eb034c09996401878b5cfc6fda1eceaaa02f04f0fc33085c60368d57c",
+        "work_id": 3291,
+        "capture_scope": "yuyu-identity:1232:sha256:105920307eba386b1a9129e818b4251fcf3c634ae5176ba3773390963d248eb5",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1795,
+        "card_print_id": 5755,
+        "evidence_digest": "574e8232c04efc93e3edb35f7a19da7d7ffb65346eb9a9e043f9fca279d6f4f4",
+        "proof_digest": "5d6680a86148c59608376dd52a78694fc51476b822a9a8ceb11ce5b4f08fbbc8",
+        "work_id": 3268,
+        "capture_scope": "yuyu-identity:1795:sha256:c2bb75dcf0cf9f32c16d27db7eed0031304f33811f5a5eadd2cbc6b7ad859d5e",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1796,
+        "card_print_id": 5775,
+        "evidence_digest": "ce5ad6af93e5263d222480f82200188dba0e59f4d6c9a2083b76c9a769d84199",
+        "proof_digest": "e2c6fbc1c17209719734a261027119c9cec9133c09117cbb0e4224a424a87785",
+        "work_id": 3269,
+        "capture_scope": "yuyu-identity:1796:sha256:d7529bb936d4d2b8ab3e7405cd0f259765f5f6ba017cb5362f6c9640e9a67d29",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1797,
+        "card_print_id": 5777,
+        "evidence_digest": "dea0407b5c6479c3c1fc653085a173b04287b1b5ecebafb986e916233bac4d5c",
+        "proof_digest": "4eeaf15e3e1886bb50a14de440b515afba1fd1f6d127466574ddac408f10f61c",
+        "work_id": 3270,
+        "capture_scope": "yuyu-identity:1797:sha256:e13d995e22a79b2ef324eaf5c3223bf4c60fdb503beb146e5c2dc867420d48e7",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1813,
+        "card_print_id": 5685,
+        "evidence_digest": "574f0d28a0dbb39d0c2a609568fb6f38b7a281789818042b35cb0997e0ac2148",
+        "proof_digest": "445ff9bea185d24338a53775dee1d388aca21bb768dae115bb7ca690164fbca3",
+        "work_id": 3271,
+        "capture_scope": "yuyu-identity:1813:sha256:0417fd06608999609f9e816aa53d1cc1b4ee923cf4a8664a434723106651a521",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1816,
+        "card_print_id": 5562,
+        "evidence_digest": "9d726a799a3febbe02a2fb243972053e970124ae918c2d94187388cea5058480",
+        "proof_digest": "b3afb944f436a6d10ac1ec7c0f160c700f7e40716a8aabf1ad612cd112467e57",
+        "work_id": 3272,
+        "capture_scope": "yuyu-identity:1816:sha256:4cd90941f18e89e1b8991c1fd50aba64edcb563c6f22f386bfadbd972e9ac361",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1818,
+        "card_print_id": 5585,
+        "evidence_digest": "847349f70a4bf4d510938567c7d8e0ff11e8f04735e7cdc4195b2eb52b4f760a",
+        "proof_digest": "8411f63c34202e589d6c6984f7e9e50ab27496c8b9b826a80251e2fd4196802c",
+        "work_id": 3273,
+        "capture_scope": "yuyu-identity:1818:sha256:a6899c4ab420ca181a63ceaf8dc0ab023c862841fb32c8cf623007c710e7acc0",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1820,
+        "card_print_id": 5618,
+        "evidence_digest": "a71b16f3b98a025b4cea4a0ebf2aa22b498aab95d45a48ca0141c72dffdf2de4",
+        "proof_digest": "9e9264c3055c106ec6ea90c7c9d6c2e13172354d6366a5f2f8666fccc1249969",
+        "work_id": 3274,
+        "capture_scope": "yuyu-identity:1820:sha256:932aa7380851e16aa5766da87dee82bf6eda47dd4c62244b8f265b2395666e76",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1821,
+        "card_print_id": 5623,
+        "evidence_digest": "790002295c8a1edb2bd06f37fedbfbc88b1e06d03a2ec896ebcd3a5706fa544c",
+        "proof_digest": "de914f5042de30d037c2d14babb252db3c684dc91a28741f466a3243204cd79a",
+        "work_id": 3275,
+        "capture_scope": "yuyu-identity:1821:sha256:3a27a5bc69085d9bc281e4522bf655c62d1a9bbb93c89f008e8f834c4881307e",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1825,
+        "card_print_id": 5668,
+        "evidence_digest": "18fca789850078faf24ba04540da8f4f7f11b85ffe01a66adc484af898f35ef4",
+        "proof_digest": "ccc7dbcc55589cdafbcfd305605191647fbfe3c770e8aed34e608fdbad17bfb9",
+        "work_id": 3276,
+        "capture_scope": "yuyu-identity:1825:sha256:e1bcf396e318d10dabfb1696406274311515fd692894e134af036e46306f3666",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1826,
+        "card_print_id": 5677,
+        "evidence_digest": "459a2a23973540d500bb3a262c1ced950d58db8830d22bac9970a4a7201be79e",
+        "proof_digest": "b97f7d1bdb2ff523053279d0764fde2bb82cdb724b229d2788a727dd18f876d4",
+        "work_id": 3277,
+        "capture_scope": "yuyu-identity:1826:sha256:66e6da9fe3e309dbb1f2b22bf697449ba99eebbfed12298065ce6ea317d856cc",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1837,
+        "card_print_id": 5580,
+        "evidence_digest": "eeccf47b9ee62debff59daf7fee52dc05e37a93ee9c825fe2dedf210f8905447",
+        "proof_digest": "de9d9a72498bd5f3a307fb5fe903a117baee234a49ff8a6d335c478b60e39954",
+        "work_id": 3278,
+        "capture_scope": "yuyu-identity:1837:sha256:52e9e56041693257530b063a1d2afd3a78a217b63ad1532dddb3c170dc5bc29e",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1838,
+        "card_print_id": 5583,
+        "evidence_digest": "c8ffcc8ffd7d7c5892c2accd6cd299f99d7687e146f8b7a791b71a7b3a2f4e63",
+        "proof_digest": "0d129a0603725365745e8d0a92bdc891e4709eec90c6143b3041de24b4caf8b5",
+        "work_id": 3279,
+        "capture_scope": "yuyu-identity:1838:sha256:ec93f64723e94b55c52b2058b4a0c38601848d528a336eb51600db1519c600ab",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1839,
+        "card_print_id": 5607,
+        "evidence_digest": "f9c120a0d70c8751d9bcb89e6d249320e60243719a09a190ad2990074c36337c",
+        "proof_digest": "0ec294ada6b42ef1976ae9cc04b847f0604ed84fc0e49eeaba263468bea4d0cf",
+        "work_id": 3280,
+        "capture_scope": "yuyu-identity:1839:sha256:3a757a94dd860bc1b9b2952c5a8f6c133ea2d93a6a20ad19f852db04b65aea37",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1840,
+        "card_print_id": 5632,
+        "evidence_digest": "44e8b560a23680e389552a94db13f29185c401870a25d1cb912e623855e5c40d",
+        "proof_digest": "5be61a370655699239d1439f8fe2cea8229bb6c72300f0f01604655ff7225317",
+        "work_id": 3281,
+        "capture_scope": "yuyu-identity:1840:sha256:9eafdca2e2ab39ded7d82b7ef74c4c0b937a145d8e3890c357c0b74a69a47371",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1841,
+        "card_print_id": 5643,
+        "evidence_digest": "17b5f0fc638cef219c8268735e494e26986ad03e5c11c1e869935adcee35c415",
+        "proof_digest": "87cbb33f85a734f01321dbeee10a0425c4d012bf0f6077299db75b42f65565a5",
+        "work_id": 3282,
+        "capture_scope": "yuyu-identity:1841:sha256:5405533da8aa5b26928bdf0ca6cfa66da92bc893d834122f194dfaef2d95cbd7",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1842,
+        "card_print_id": 5663,
+        "evidence_digest": "eac2943f18697c719a563786b53e4cd179d9abe74b7d5b971d6419c87e7b5121",
+        "proof_digest": "04a9d5fb52d4ec663a103d46cc32ac8e66c6d75a29de32faf95a8f4d37c07f24",
+        "work_id": 3283,
+        "capture_scope": "yuyu-identity:1842:sha256:af21db653a22698db1d2dd6caf9067c5ab73a85a769f0ba94038e4fc334ce8e2",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1945,
+        "card_print_id": 5569,
+        "evidence_digest": "f17761b14a28a7ff8d7b3544d5252a06afb237cbc1bc88725be8409a08399a69",
+        "proof_digest": "efe7a700e7c714f0df4db976165ddba2aa99cb2154f22a90532a9017497a52c6",
+        "work_id": 3284,
+        "capture_scope": "yuyu-identity:1945:sha256:f05eb16eeb36f2e6e89c49b93804af645910beefd82b7c5bf11157f094c83c02",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1946,
+        "card_print_id": 5571,
+        "evidence_digest": "1a6e2e9b34a5bac907352015bb2870e50872f155b83d87db4094aa0460d71b5e",
+        "proof_digest": "871ad8b34b82543d0c4de89092845a3c799f63d6f7398d2495060490442fa8f8",
+        "work_id": 3285,
+        "capture_scope": "yuyu-identity:1946:sha256:aa0f1c1cdfd943e924435fd16c49296ef145060b0f03eeffcf788163f1a0e525",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1947,
+        "card_print_id": 5594,
+        "evidence_digest": "d45608da8f454238a43a95c9f78ce9e5710266f447dd3c8ecf835665e635debb",
+        "proof_digest": "79ef884a590d161685167d1f7515940fdbd2b1b543849cff83b0521bc892844d",
+        "work_id": 3286,
+        "capture_scope": "yuyu-identity:1947:sha256:01b113256e9f13c6fc40bcc64bfcf7a4d3f5799d1aefabfef01bc0b064ad45a8",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1948,
+        "card_print_id": 5596,
+        "evidence_digest": "61a78c73d86555887b4390b33b03107511a511aacdee7dab0850fa9cb5736ef0",
+        "proof_digest": "cd182a70e2933be2610c8b6c2410a20d32b2e05a3fbb9b991823d4186618022b",
+        "work_id": 3287,
+        "capture_scope": "yuyu-identity:1948:sha256:974c17592e9f9af8b9f265182ab23b6ebe217cb4525be4b98d41f46dcd2b6d47",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1949,
+        "card_print_id": 5615,
+        "evidence_digest": "37fd7cf2f00eb2177eb58c7db90423107f31fff1128fc32e7b639c963af1a6f6",
+        "proof_digest": "6ae74d78f546b579e572c32447cfedfc849c4cbf39152295017f39f6022a4af0",
+        "work_id": 3288,
+        "capture_scope": "yuyu-identity:1949:sha256:5a89b06231111a81eff1f1af681ceea8371cf39f9eb815bbfa853ecddcddeb18",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1233,
+        "card_print_id": 3367,
+        "evidence_digest": "0e6a91cb0ab36dfe7a8888ab827c61ebe804d1a1d934aada8e6c4814af518a8e",
+        "proof_digest": "d29702c2f0a259324ca4a7bc0a95b1c88d326d300b535838c8f5c703f9c6a5e1",
+        "work_id": 3292,
+        "capture_scope": "yuyu-identity:1233:sha256:2ae220d2a1eb436fe21f9a3f1f8649d23afc3405987ce3f3f737253cb029c1ad",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1234,
+        "card_print_id": 3373,
+        "evidence_digest": "816c845e1e656d389eff78cfd6772c5c28b7bd56d16cedd3591cdf3552bf7d00",
+        "proof_digest": "5e43b4e1655b3c05c90bcde4e26e7e7bbdbf800149f3cb8502fb55b3ca259ea6",
+        "work_id": 3293,
+        "capture_scope": "yuyu-identity:1234:sha256:3fbe08698ed686e85830b40860a008a0574f89460a44d4e724edbc3f901d1724",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1235,
+        "card_print_id": 3390,
+        "evidence_digest": "f49d5946cc2cefacf50107ea59acbbdfff1a6c926fa4efc7d74b39fab19487b8",
+        "proof_digest": "da8224cd6a1684399c6fda0677a45957e9bea3cddadc734363ed501afa311ad5",
+        "work_id": 3294,
+        "capture_scope": "yuyu-identity:1235:sha256:98cc80715f9e5a799b1d9cf1421f3f8abefbc15fe415a510d10d08564543ea7a",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1236,
+        "card_print_id": 3405,
+        "evidence_digest": "2992d735a340b32e45cb27569089d17bd837ccd3163587e63925868460ae3247",
+        "proof_digest": "d8cc3f260f9d392ad02942b1ac4001cb2f4b2204ebed8d8c8ac6b1cb5f5aff5e",
+        "work_id": 3295,
+        "capture_scope": "yuyu-identity:1236:sha256:276aabdbb9f80cdf3093c3279afa0f6fe4802192fd636a9ce7b94db7f79dc74d",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1237,
+        "card_print_id": 3413,
+        "evidence_digest": "c54bac2f6dadc76417d3bfd83b5c968c7860a1a1298f4d29b62b2ff9b8433af7",
+        "proof_digest": "28b2fba945b93d47632a41189b74faff8afa2fb02e491990e029d0a84731901b",
+        "work_id": 3296,
+        "capture_scope": "yuyu-identity:1237:sha256:fea651c0e84c9fe20a7ff32348269df86254bbaf44cbf849e33dddaa18bf6a9d",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1288,
+        "card_print_id": 3357,
+        "evidence_digest": "8c3d3bee6bd170896842b942bc4a95fa47fe02f4f224f42e0ea95f7a6fa4b8cf",
+        "proof_digest": "0428aab1d967d15455ff1d24659995d2d00264e5885586f8c4b2b71bf096b482",
+        "work_id": 3297,
+        "capture_scope": "yuyu-identity:1288:sha256:359fdac868b95c8ad1c629c36eb3c7e05fe0fce9dd500e5df834127db1bb4f07",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1317,
+        "card_print_id": 3329,
+        "evidence_digest": "9846736520c2562119b522dd4e83a5e065f1be0092362778707745bbdedc1b29",
+        "proof_digest": "070888f119d7e996dc9cf6b5554e3da63198bba62e82b841e4bef6f9c1629e80",
+        "work_id": 3298,
+        "capture_scope": "yuyu-identity:1317:sha256:f0ebbf4277942ecf5c6cf342dbf2307c8e1a85e1945d7af440792b4f99d701ec",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1319,
+        "card_print_id": 3332,
+        "evidence_digest": "add117b05fdbef2738d9becb420593ead3b3cf98a91ffcec77cce791dcf5e6a3",
+        "proof_digest": "b835f048b0cd6488f4a5a9bb70e0da89e023827066d9838b015ad9004d8ee810",
+        "work_id": 3299,
+        "capture_scope": "yuyu-identity:1319:sha256:fb28878133cbb11432943f8bd80cb6de3b4c0aca380d4c31e16c14834daeffdf",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1340,
+        "card_print_id": 3262,
+        "evidence_digest": "1b73d06ac9415f9dae8f3a6055d8cc2608f007b1cfa26e290fae890759360f6f",
+        "proof_digest": "6af64e45b7635858ab68d0ee1593423acd55c120e0c7aecbd1d493bb9b76fe0d",
+        "work_id": 3300,
+        "capture_scope": "yuyu-identity:1340:sha256:059cfbdfa947f6a667156fbfba55a80770edc95b941771ae69b6d17f7d4ecedf",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1341,
+        "card_print_id": 3268,
+        "evidence_digest": "ee39f9a5959a2a8b50763dcf907cbf523fc7a64d01c45a0cea2ee90a6965a929",
+        "proof_digest": "009e19f1919cbad978a671a9623ac8c087d5caadc6e3f4f4139bbc6bd13ca9ee",
+        "work_id": 3301,
+        "capture_scope": "yuyu-identity:1341:sha256:21c80223db423b612455f90e7537b7fe4916ab0d32cbea0ed1a121ff0a162184",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1342,
+        "card_print_id": 3283,
+        "evidence_digest": "9d7178df3a459d0078a6368dc5b31575b3a71827d6ed99f35749e33bad19d717",
+        "proof_digest": "bd4c2f6c4dd49864bc0c379530d2c19d57ec8d9bf4972dcfed20aeaf4e71828c",
+        "work_id": 3302,
+        "capture_scope": "yuyu-identity:1342:sha256:2752df7c1269aad30530a5fdf7d765199b9d265d935be10fc539bf2f2fcce580",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1343,
+        "card_print_id": 3295,
+        "evidence_digest": "7acfe71cd0d0fbfa0e22bc08d8f9cc911c4a8b348a494889cc830a6c4208ba04",
+        "proof_digest": "359366f99d9544651b68ee70296d555b1b8a195cea1ef2f818a75df090c945fc",
+        "work_id": 3303,
+        "capture_scope": "yuyu-identity:1343:sha256:7685463bfcb2f3a7e93faacec8a6c41b44b531fe15d7c2de45d4c8067601f03e",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1344,
+        "card_print_id": 3303,
+        "evidence_digest": "29f9d4528086c922d19f34df845bf141e0af4cf6ff57a68b9c024c972620724c",
+        "proof_digest": "f342a11e129fe4fe3dff0b8ff025651eb61117648f89d45dcd7ca88a81d3c9d6",
+        "work_id": 3304,
+        "capture_scope": "yuyu-identity:1344:sha256:1fc5efc43652dcdbc271232eda84173c86ae74e8d51187a03fe6409d3821c64b",
+        "original_review_continued": true
+      },
+      {
+        "candidate_id": 1345,
+        "card_print_id": 3324,
+        "evidence_digest": "d30890d93e103cd5804f3533aa988bbf6be85c85521e7d392fbc8980e305c513",
+        "proof_digest": "5502ae21574abc8187c3bd9742133cd4e6a11df952d78e15f43fb243ba03e2ec",
+        "work_id": 3305,
+        "capture_scope": "yuyu-identity:1345:sha256:e1f8a213c46ff3edf932947dc1e5d4a8c0ade0208d18e3652e81e9461cd855e8",
+        "original_review_continued": true
+      }
+    ]
+  },
+  "bounds": {
+    "replaced_stale_proofs": 64,
+    "total_registry_records": 168,
+    "source_requests": 0,
+    "database_writes": 0,
+    "mapping_writes": 0,
+    "price_writes": 0,
+    "queue_writes": 0
+  },
+  "review": {
+    "actual_new_full_original_visual_reviews": 2,
+    "original_full_original_reviews_continued": 62,
+    "new_review_timestamps_fabricated": false,
+    "method": "Each continued review retains its real original actor/time/basis and binds to exact SHA256 equality of fresh source plus EVERY official sibling original, matching source URL, release, JP language, asset variant, full candidate set. Any byte or physical identity metadata change requires new full review. Current baseline, NEW naturally completed one-shot work, cursor2 and raw lineage validated independently by unchanged production code.",
+    "continuity_validation_source_requests": 0,
+    "images": 194
+  },
+  "capacity": "Nine serial consumers16slots each staggered half hour; shared9000/1800 unchanged.64exact approvals subsequently in atomic chunks<=20 with each current digest revalidated and ordinary scheduled RAW capture before coverage credit.",
+  "preserved": "No exact identity guard changes; same-art twins refuse; manual precedence; duplicate source/print0; raw-first; UTC/JPY; Yuyu sales hidden; PSA10 OFF; production RED.",
+  "rollback": {
+    "source_commit": "3a084f29679509d378eb71f6acd79bad7bc41f3d",
+    "api_deployment": "137829e4-4d10-4a3e-8fa0-5a4770bc919b",
+    "procedure": "Fix-forward restore prior registry from retained Git source. Data delivery writes no persistent state. Later approval receipts isolate new mapping/work IDs; deactivate only those mappings and block only owned pending work on integrity failure, preserving all raw, observations, decisions and immutable history."
+  },
+  "verification": "44physical proof tests passed; strict serialized API staging delivery required before any approval. Current canonical SELECT-only proof validation64exact zero-source passed. Observe normal scheduled RAW capture and remeasure operational and fresh separately."
+}
