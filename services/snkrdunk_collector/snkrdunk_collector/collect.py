@@ -398,6 +398,8 @@ def run_one_mapping_detailed(
                                 "link_diagnostics": history_link_diag,
                             }
 
+                    if freshness:
+                        freshness.settle_browser(page)
                     context.close()
                     browser.close()
     except DeadlineExceeded as exc:
