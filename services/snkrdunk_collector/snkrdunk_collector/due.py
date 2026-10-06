@@ -124,6 +124,10 @@ def run_due(
             source_id = session.scalar(
                 select(Source.id).where(Source.name == "snkrdunk")
             )
+            from snkrdunk_collector.recovery import consume_planned_recovery
+            recovery = consume_planned_recovery(session, source_id, runner=runner)
+            if recovery is not None:
+                return [recovery]  # ordinary checks resume on the next scheduled turn
             return drain(
                 session,
                 source_id,
