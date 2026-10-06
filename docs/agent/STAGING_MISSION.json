@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Account for completed discovery separately from RAW successful price checks",
+  "mission": "Retain bounded product and official sibling artwork evidence for unresolved physical identities",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,14 +20,11 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/RAW_OPERATIONAL_HEALTH.md",
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json",
-        "docs/agent/raw-operational-run.schema.json",
-        "scripts/tests/test_operational_health.py",
-        "services/api/app/services/operational_health.py",
-        "services/api/app/services/operational_health_runtime.py",
-        "services/api/app/services/operational_health_sql.py",
-        "services/api/tests/test_operational_health_postgres.py"
+        "docs/agent/evidence/yuyu-artwork-capture-preflight-2026-10-06.json",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py",
+        "services/yuyutei_collector/yuyutei_collector/due_discovery.py",
+        "services/yuyutei_collector/yuyutei_collector/identity_evidence.py"
       ],
       "effects": [
         "application",
@@ -36,10 +33,10 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Structured health accounts for completed discovery/validation and discovery progress without counting them as successful RAW checks or price coverage. Legacy receipts and source limits remain unchanged."
+      "reason": "Explicit one-shot discovery captures the published exact-product image and every eligible official sibling through existing serial metered collectors. It preserves raw bytes before decoding, retains ambiguity and adds no mapping approval or RAW price/check writes."
     }
   ],
-  "diff_sha256": "d9e547b50c53add2aa47ad4c29ae5db401a3dbbbe39ce3a03477ddf0ac09d8f5",
+  "diff_sha256": "f10c33ca61a9fa14a30657ac0bebf7f1a55dc215947fe895001ce5ecdd3d6caf",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
@@ -88,11 +85,6 @@
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
         "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
-      },
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "c06edf03-6076-4583-86f2-f1d028ae18cb"
       }
     ]
   },
@@ -143,32 +135,28 @@
           "name": "yuyutei-collector-shard-8",
           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
           "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
-        },
-        {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "c06edf03-6076-4583-86f2-f1d028ae18cb"
         }
       ],
       "routes": [
-        "Existing ten serial RAW due consumers and structured health reporting"
+        "Nine existing serial Yuyu due-work consumers, explicit yuyu-identity discovery scopes only"
       ],
       "dependencies": [
-        "Durable attempt outcomes, exact mapping and singleton guards unchanged"
+        "Current canonical ambiguous proposal digest, complete official release/family sibling set, source natural-key guards, ordinary singleton and request admission"
       ],
-      "deployment_impact": "Roll common health accounting to ten existing collectors; no schedule, command, source budget or concurrency changes.",
+      "deployment_impact": "Nine staging Yuyu collectors; no command, cadence, budget, HTTP concurrency or source session changes.",
       "database_writes": 20000,
       "source_requests": 9000,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "0ffd87720beafbcfa52aaa385be5ad93551a1a9d",
-      "procedure": "Rebuild retained collector health code on the same services; retain all raw snapshots, receipts, mappings and prices.",
-      "trigger": "Wrong successful-check accounting, schema/runtime drift, source amplification or identity-integrity regression",
-      "backup": "No data migration or historical receipt rewrite; all prior execution receipts remain retained.",
+      "artifact": "ec4df5e706b673490ba090fb262f18cc51c2e6e4",
+      "procedure": "Restore retained collector code on the same services; contain explicitly pending artwork work if needed. Keep all retained snapshots, ambiguity, mappings and historical prices.",
+      "trigger": "Required source denial, source-budget or lease violation, malformed evidence lineage or unintended identity/price write",
+      "backup": "No schema or historical mapping/price changes. All original image bytes and current source/canonical evidence are retained before any image decoding.",
       "validation": [
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json",
-        "services/api/tests/test_operational_health_postgres.py"
+        "docs/agent/evidence/yuyu-artwork-capture-preflight-2026-10-06.json",
+        "services/yuyutei_collector/tests/test_identity_evidence.py",
+        "services/api/tests/test_freshness_adapters_postgres.py"
       ]
     },
     "verification": {
@@ -178,9 +166,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json"
+        "docs/agent/evidence/yuyu-artwork-capture-preflight-2026-10-06.json"
       ],
-      "observation_window": "Observe subsequent natural completed-discovery and RAW source turns. Non-price work must not advance RAW freshness; deadline failures remain visible."
+      "observation_window": "After verified staging delivery, plan one metered capture prioritized for zero-source siblings and observe an ordinary scheduled turn. Retained images remain unresolved. Further evidence generation must fit measured refresh headroom."
     }
   }
 }
