@@ -1,0 +1,41 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T13:58:03.510347+00:00",
+  "classification": "AMBER",
+  "problem": "Natural24h category discovery refreshed all277 reviewed candidate payloads; old baseline proofs correctly refused, with no approval writes for refused chunk3. Remaining217 zero-source candidates need new current-digest one-shot capture lineage without resetting original attempts.",
+  "protocol": "Version2 exact scope yuyu-identity:<positive candidate id>:sha256:<current64lowercase hex evidence digest>. Collector checks current canonical ambiguous plan before network. Validator checks same scope, explicit proof capture_scope, current baseline digest, complete siblings, original bytes and single successful bounded attempt. Version1 scope and existing guards remain compatible.",
+  "new_scope_preflight": {
+    "observed_at": "2026-10-06T13:56:31.971033+00:00",
+    "count": 217,
+    "canonical_ambiguous_zero_source": 217,
+    "total_request_bound": 21700,
+    "per_work_request_bound": 100,
+    "database_writes": 0,
+    "source_requests": 0
+  },
+  "deployment_mutations": {
+    "queue_writes": 0,
+    "mapping_writes": 0,
+    "price_writes": 0,
+    "source_requests": 0,
+    "schema_changes": 0,
+    "schedules_or_capacity_changes": 0,
+    "production_accessed": false
+  },
+  "subsequent_planning": "Only after strict API/all9 collector delivery plus natural revision receipts; revalidate current digests, existing source admission and absence of new scope; bounded atomic plan new work. Preserve all original work, attempts and raw. No manually triggered external jobs. Fresh captures require new original-image review and serialized proof delivery before exact approvals.",
+  "capacity": "Existing nine serial consumers16 slots each per staggered half hour,9000/1800 shared budget; unchanged. New one-shot scopes occupy ordinary due-work slots. Total21700reservation bound is not immediate request authorization; each request still admitted.",
+  "tests": {
+    "focused_physical_and_collector": "59passed including16new invalid-version/digest/scope/attempt regressions",
+    "full_mocked_collector_with_local_PostgreSQL16": "498passed,42subtests passed"
+  },
+  "bounded_read_transport": {
+    "rows": 4316,
+    "bytes": 1981734,
+    "statement_timeout_ms": 30000,
+    "fetch_batch": 128,
+    "complete_catalogue_loaded": true,
+    "canonical_preflight_passed": 217,
+    "official_reference": "https://docs.sqlalchemy.org/en/20/orm/queryguide/api.html#fetching-large-result-sets-with-yield-per"
+  },
+  "recovery": "Fix forward prior API/collector source on pinned existing resources. Block only newly planned pending/unclaimed/unattempted digest scopes if needed; preserve all prior raw, immutable observations and decisions."
+}

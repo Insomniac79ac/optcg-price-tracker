@@ -178,3 +178,54 @@ def test_invalid_image_bytes_are_durable_before_decode_refusal():
         base64.b64decode(json.loads(freshness.snapshots[0][1]["html"])["body"])
         == b"not an image"
     )
+
+
+@pytest.mark.parametrize("tamper", [None, "scope", "digest", "attempt", "version"])
+def test_versioned_intent_retains_current_canonical_guards_before_io(tamper):
+    from app.services.identity_evidence_scope import identity_evidence_scope
+
+    digest = "a" * 64
+    cursor = dict(
+        version=2,
+        candidate_id=1,
+        explicit_identity_capture=True,
+        evidence_digest=digest,
+        release_product_id=1,
+        considered_print_ids=[1, 2],
+    )
+    work = NS(
+        kind="discovery",
+        attempt_count=1,
+        source_id=1,
+        scope_key=identity_evidence_scope(1, digest, 2),
+    )
+    plan = NS(
+        resolution_status="ambiguous",
+        evidence_digest=digest,
+        release_product_id=1,
+        source_id=1,
+        alternatives=[NS(card_print_id=1), NS(card_print_id=2)],
+    )
+    if tamper == "scope":
+        work.scope_key = "yuyu-identity:1"
+    if tamper == "digest":
+        cursor["evidence_digest"] = "b" * 64
+    if tamper == "attempt":
+        work.attempt_count = 2
+    if tamper == "version":
+        cursor["version"] = True
+    session = Mock()
+    session.get.side_effect = [work, candidate()]
+    session.scalars.return_value.all.return_value = [NS(id=1), NS(id=2)]
+    with patch(
+        "yuyutei_collector.identity_evidence.resolve_current_candidate_proposal",
+        return_value=plan,
+    ), patch(
+        "yuyutei_collector.identity_evidence.official_image_url",
+        return_value="https://www.onepiece-cardgame.com/images/cardlist/card/OP01-001.png",
+    ):
+        if tamper:
+            with pytest.raises(ValueError):
+                load_intent(session, NS(work_id=1, resume_cursor=cursor))
+        else:
+            assert load_intent(session, NS(work_id=1, resume_cursor=cursor))[1] is plan

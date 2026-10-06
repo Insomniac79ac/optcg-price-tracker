@@ -18,6 +18,7 @@ from app.models import CardPrint, FreshnessWork, YuyuteiCandidate
 from app.services.freshness_integration import CaptureResult, AdmissionStopped
 from app.services.source_mapping_proposals import resolve_current_candidate_proposal
 from app.services.official_asset_variant import parse_official_asset_variant
+from app.services.identity_evidence_scope import identity_evidence_scope
 from yuyutei_collector.browser import (
     HOMEPAGE_URL,
     HOMEPAGE_EXPECTED_MARKERS,
@@ -75,12 +76,15 @@ def load_intent(session, claim):
     cursor = claim.resume_cursor or {}
     work = session.get(FreshnessWork, claim.work_id)
     candidate_id = cursor.get("candidate_id")
+    expected_scope = identity_evidence_scope(
+        candidate_id, cursor.get("evidence_digest"), cursor.get("version", 1)
+    )
     if (
         type(candidate_id) is not int
         or candidate_id <= 0
         or work.kind != "discovery"
         or work.attempt_count != 1
-        or work.scope_key != f"yuyu-identity:{candidate_id}"
+        or work.scope_key != expected_scope
         or cursor.get("explicit_identity_capture") is not True
     ):
         raise ValueError("one explicitly planned capture required")

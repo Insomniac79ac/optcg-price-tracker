@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.models import FreshnessWork, FreshnessAttempt, RawSnapshot
 from app.services.yuyutei_urls import listing_identity
 from app.services.official_asset_variant import parse_official_asset_variant
+from app.services.identity_evidence_scope import identity_evidence_scope
 
 REGISTRY = Path(__file__).with_name("evidence") / "positive_physical_artwork.json"
 
@@ -97,16 +98,21 @@ def validate(session, plan, siblings, proof):
     ):
         raise ValueError("physical catalogue identity changed")
     work = session.get(FreshnessWork, proof["work_id"])
+    cursor = (work.resume_cursor or {}) if work is not None else {}
+    version = cursor.get("version", 1)
+    expected_scope = identity_evidence_scope(
+        plan.source_candidate_id, plan.evidence_digest, version
+    )
     if (
         work is None
         or work.source_id != plan.source_id
         or work.kind != "discovery"
-        or work.scope_key != f"yuyu-identity:{plan.source_candidate_id}"
+        or work.scope_key != expected_scope
+        or (version == 2 and proof.get("capture_scope") != expected_scope)
         or work.attempt_count != 1
         or work.last_outcome != "completed"
     ):
         raise ValueError("one successful metered evidence capture required")
-    cursor = work.resume_cursor or {}
     if (
         cursor.get("evidence_digest") != plan.evidence_digest
         or cursor.get("candidate_id") != plan.source_candidate_id

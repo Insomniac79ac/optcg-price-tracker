@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Bound discovery proposal refresh to its requested pending candidate IDs",
+  "mission": "Permit fresh one-shot physical evidence after current discovery lineage changes",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,23 +20,158 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/discovery_proposal_refresh.py",
-        "services/api/app/services/source_mapping_proposals.py",
-        "services/api/tests/test_source_mapping_proposals.py",
-        "docs/agent/evidence/scoped-proposal-refresh-preflight-2026-10-06.json"
+        "services/api/app/services/identity_evidence_scope.py",
+        "services/api/app/services/physical_artwork_proof.py",
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/yuyutei_collector/yuyutei_collector/identity_evidence.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py",
+        "docs/agent/evidence/versioned-physical-capture-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
+        "infrastructure",
+        "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Avoid resolving unrelated candidates and retained images when a bounded scheduled discovery or guarded approval chunk refreshes proposals. Preserve complete authoritative catalogue, sibling, mapping and current domain decision guards."
+      "reason": "Add digest-addressed fresh one-shot captures while preserving old attempts and all current proof/approval guards. No requests, data writes or schedule/configuration changes during delivery."
     }
   ],
-  "diff_sha256": "5c6d9bc1cbc09c3c6630fcbccea4d1056e89422c552cd8a6a5a61f5052d335ff",
+  "diff_sha256": "8d6115551099cbb374627af4beae8006dd047baae4e33443349e2a50130ac004",
   "deployment_verification": {
     "api_sha": "merge",
-    "revision": "c4e8a1d7b902"
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "88d0f2e9-79eb-4bee-abaf-77b010ff2a95"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "7cc93499-1437-4850-bcac-fdc74d2b5fbe"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "e3c8cc89-162c-4957-bb8b-2bb1a053094a"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "57a6a913-a0ad-4585-9231-1080f2d30a8d"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "8e09bb8c-86dc-4d3e-9010-b9fe70e1f162"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "a1f094de-f275-4dfe-91ee-cea0170bbca5"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "455ed5f1-998c-4cd3-ae2f-61d28c3a85fe"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "24a43830-0532-4f4c-973b-545ae6277dcc"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "5b88d848-ff98-468d-8d39-d8ab2eebd350"
+      }
+    ]
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "88d0f2e9-79eb-4bee-abaf-77b010ff2a95"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "7cc93499-1437-4850-bcac-fdc74d2b5fbe"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "e3c8cc89-162c-4957-bb8b-2bb1a053094a"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "57a6a913-a0ad-4585-9231-1080f2d30a8d"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "8e09bb8c-86dc-4d3e-9010-b9fe70e1f162"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "a1f094de-f275-4dfe-91ee-cea0170bbca5"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "455ed5f1-998c-4cd3-ae2f-61d28c3a85fe"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "24a43830-0532-4f4c-973b-545ae6277dcc"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "5b88d848-ff98-468d-8d39-d8ab2eebd350"
+        }
+      ],
+      "routes": [
+        "Existing scheduled Yuyu identity-evidence worker and staging-only physical proof validator"
+      ],
+      "dependencies": [
+        "Current canonical baseline, exact source natural key, complete official siblings, raw-first retention, shared admission and singleton guards"
+      ],
+      "deployment_impact": "API and nine existing Yuyu collectors; unchanged schedules and source budgets.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 45
+    },
+    "recovery": {
+      "artifact": "1f97b48a39bc1b25ddd2a0c7095390174ff3c0b1",
+      "procedure": "Fix forward prior protocol/collector source on existing pinned staging services; no schema rollback. Block only new pending/unclaimed digest-scoped capture work after ownership check if activated. Preserve previous work, attempts, raw and observations.",
+      "trigger": "Scope mismatch accepted, original work reset, source budget bypass or wrong physical identity",
+      "backup": "Retained prior source and verified nine PR57 collector deployments; delivery changes only code, no schema/queue/mapping/price mutation.",
+      "validation": [
+        "docs/agent/evidence/versioned-physical-capture-preflight-2026-10-06.json",
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/generate_staging_state.py",
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/yuyutei_collector/tests/test_identity_evidence.py"
+      ],
+      "observation_window": "Verify strict API and all nine collector component deliveries and first natural-cycle receipts before planning new fresh scopes. Observe natural one-shot capture, review full originals, deliver byte-bound proofs, then domain guarded approval and ordinary RAW capture. Never count an intent, approval or stale proof as operational coverage."
+    }
   }
 }
