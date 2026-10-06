@@ -1,0 +1,30 @@
+{
+  "target": "staging",
+  "production_accessed": false,
+  "purpose": "Retain published exact-product artwork plus every authoritative release/family sibling for unresolved physical identities.",
+  "authorization": "Explicit discovery work only; ordinary serial due-work consumer, singleton, static egress, global ordinal source budget and existing pacing.",
+  "bounds": {
+    "maximum_official_siblings": 12,
+    "maximum_image_bytes": 2097152,
+    "maximum_decoded_pixels": 16000000,
+    "maximum_attempts_with_source_io": 1,
+    "maximum_initial_probe_request_reservation": 100,
+    "initial_probe_requests_made": 0,
+    "initial_work_planned": false
+  },
+  "identity_guards": [
+    "Current ambiguous canonical proposal and unchanged digest/release/full sibling set required before I/O",
+    "Exact source natural key, published image URL and product card-code agreement",
+    "Current official asset URLs validated against exact canonical code/variant",
+    "Complete raw bytes durable before image decoding",
+    "No artwork similarity score or ranking changes identity; capture remains unresolved",
+    "No mapping approval, RAW price/check advancement or historical mutation"
+  ],
+  "tests": {
+    "offline_mock_artwork_and_existing_collectors_passed": 131,
+    "full_postgres_mock_adapters_passed": 43,
+    "postgres_proof": "5 admitted mock requests, all raw evidence retained, reservations settled, no mapping/price/RAW freshness state writes"
+  },
+  "rollback": "Restore retained staging collector code; block only explicitly pending unattempted artwork work if needed. Preserve all raw snapshots and identity ambiguity.",
+  "subsequent_verification": "After verified delivery, plan one metered product capture prioritized for zero-source siblings. Observe it through an ordinary scheduled collector turn before any broader evidence queue. Expansion must fit measured remaining refresh capacity."
+}
