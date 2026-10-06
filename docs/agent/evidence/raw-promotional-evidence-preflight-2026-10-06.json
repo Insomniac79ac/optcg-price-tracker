@@ -25,8 +25,10 @@
   "tests": {
     "api_source_mapping_proposals": "39 passed",
     "worker_listing_and_image_evidence": "52 passed",
-    "api_exact_proposal_decisions": "27 passed"
+    "api_exact_proposal_decisions": "27 passed",
+    "yuyu_extractor_price_guards": "57 passed"
   },
   "snkr_parser_defect": "Published bracketed promotional P-### identifiers were excluded by both listing-card-code and image-asset grammar. Fix retains exact brackets, digit counts, asset suffixes and card-code agreement; no source requests or approvals.",
-  "new_first_source_prints_from_named_releases": 0
+  "new_first_source_prints_from_named_releases": 0,
+  "yuyu_product_identity_defect": "Price extractor duplicated a non-hyphenated category grammar; it now uses the authoritative source listing parser, preserving exact promotional natural keys and rejecting unsupported hosts."
 }
