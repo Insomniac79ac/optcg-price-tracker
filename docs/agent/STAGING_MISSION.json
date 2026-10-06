@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Record the verified RAW staging exact-evidence ceiling and preserve contained source paths",
+  "mission": "Generate omitted source evidence and isolate optional browser denials on staging",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,24 +20,170 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/CURRENT_STATE.yaml",
-        "docs/agent/RAW_MISSION_2026-10-06.md",
-        "docs/agent/evidence/raw-current-resolver-2026-10-06.json",
-        "docs/agent/evidence/raw-mission-inspection-2026-10-06.json",
-        "docs/agent/evidence/raw-mission-result-2026-10-06.json",
-        "docs/agent/evidence/snkrdunk-retained-denial-2026-10-06.jsonl",
-        "docs/agent/evidence/staging-state-a05c36274c28de29.json"
+        "services/api/app/services/freshness_integration.py",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/api/tests/test_raw_browser_boundary.py",
+        "services/yuyutei_collector/tests/test_discovery_scope.py",
+        "services/yuyutei_collector/yuyutei_collector/discovery.py",
+        "services/yuyutei_collector/yuyutei_collector/discovery_probe.py",
+        "services/yuyutei_collector/yuyutei_collector/discovery_scope.py",
+        "services/yuyutei_collector/yuyutei_collector/due_discovery.py",
+        "docs/agent/evidence/raw-breakthrough-preflight-2026-10-06.json"
       ],
       "effects": [
+        "application",
+        "tests",
         "documentation",
-        "state_observation"
+        "staging_deployment",
+        "subsystem_activation"
       ],
-      "reason": "Read-only staging observation, current resolver ceiling and evidence report. No application, source, mapping, infrastructure, pricing or identity change."
+      "reason": "Use retained source GET form options for admitted recurring discovery; isolate optional browser failures and exclude observed advertising before dispatch. No identity-rule, HTTP concurrency, schedule, budget, price or approval change."
     }
   ],
-  "diff_sha256": "da0f80ffd6e4236f6fd8fd9a6f58e62dabc7bb00a8a6ae5ff1a5bbb7577c9c35",
+  "diff_sha256": "54a4cde6edb29f25ea7bd2a369a948d92a35ed2fb8aaa5ea3c6679d12d61e586",
   "deployment_verification": {
-    "api_sha": "5351fd44e4dac3713a9c88a21b8012de9813b65f",
-    "revision": "c4e8a1d7b902"
+    "api_sha": "merge",
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "2ba23079-a6b2-48e7-96a4-dc00a866a7be"
+      },
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "15f446b7-c139-446b-b7ae-8cb49db2cb09"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "4c18e1de-efe3-421a-b961-72d185d653cf"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "22930cd2-c705-46f0-8815-abeb68823281"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "c8c8f513-cc2f-4806-a287-496c09c0e385"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "bd3ad2af-3ea0-4274-a58d-035c7d133762"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "c96af23b-401b-4db9-8d47-5698268d73f6"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "9b254326-72c9-4bda-adcc-03b623c9026c"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "5b91d293-55de-4180-ae2b-dd7fb4db1348"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "8f979f52-b01f-41d2-8a80-9c9157f1e4bd"
+      }
+    ]
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        {
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "2ba23079-a6b2-48e7-96a4-dc00a866a7be"
+        },
+        {
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "15f446b7-c139-446b-b7ae-8cb49db2cb09"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "4c18e1de-efe3-421a-b961-72d185d653cf"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "22930cd2-c705-46f0-8815-abeb68823281"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "c8c8f513-cc2f-4806-a287-496c09c0e385"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "bd3ad2af-3ea0-4274-a58d-035c7d133762"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "c96af23b-401b-4db9-8d47-5698268d73f6"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "9b254326-72c9-4bda-adcc-03b623c9026c"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "5b91d293-55de-4180-ae2b-dd7fb4db1348"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "8f979f52-b01f-41d2-8a80-9c9157f1e4bd"
+        }
+      ],
+      "routes": [
+        "Existing nine modulo-9 Yuyu due-work shards and singleton SNKRDUNK service",
+        "Existing admission/budget queues only; source-advertised OPC GET search forms"
+      ],
+      "dependencies": [
+        "Shared opcg collection services; no migration; current identity/proposal guards"
+      ],
+      "deployment_impact": "Rebuild existing ten staging collectors and native Git API; same configuration/static egress. SNKR persistent pause stays set.",
+      "database_writes": 20000,
+      "source_requests": 9000,
+      "estimated_runtime_minutes": 30
+    },
+    "recovery": {
+      "artifact": "5cb8c5525814024ad1bc0fffe81fec90ce6dbe4b",
+      "procedure": "Rebuild retained commit on the same destination-pinned services; block newly advertised discovery scopes if needed. Keep retained source evidence and candidate rows. No observation/history rollback or mapping change.",
+      "trigger": "Required denial, wrong identity, lease/reservation drift, parser regression or unexpected source amplification",
+      "backup": "No migration or historical repair. Existing deployment IDs and retained Git artifact; additive idempotent discovery data remain available.",
+      "validation": [
+        "docs/agent/evidence/raw-breakthrough-preflight-2026-10-06.json",
+        "services/api/tests/test_raw_browser_boundary.py",
+        "services/api/tests/test_freshness_adapters_postgres.py"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/generate_staging_state.py",
+        "scripts/verify_staging_delivery.py",
+        "docs/agent/evidence/raw-breakthrough-preflight-2026-10-06.json"
+      ],
+      "observation_window": "Two subsequent natural 30-minute turns for every Yuyu shard plus admitted completion of eight missing discovery scopes; recurring freshness observation continues for full natural 23/24h cycles."
+    }
   }
 }
