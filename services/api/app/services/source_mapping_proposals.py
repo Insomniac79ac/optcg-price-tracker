@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
@@ -587,6 +587,43 @@ def analyse_source_mapping_proposals(
                     candidate_payload=payload,
                     eligible_prints=eligible,
                 )
+                if source_name == "yuyutei" and status == "ambiguous":
+                    from app.services.physical_artwork_proof import resolve
+
+                    proof = resolve(db, plan, eligible)
+                    if proof:
+                        selected, digest, actor = proof
+                        evidence = {
+                            **plan.evidence_summary,
+                            "positive_physical_artwork_proof": {
+                                "digest": digest,
+                                "actor": actor,
+                                "card_print_id": selected,
+                            },
+                        }
+                        status = "exact"
+                        plan = replace(
+                            plan,
+                            resolution_status=status,
+                            evidence_summary=evidence,
+                            evidence_digest=_digest(evidence),
+                            resolution_reasons=(
+                                *plan.resolution_reasons,
+                                "retained_positive_unique_physical_artwork_review",
+                            ),
+                            alternatives=(
+                                AlternativePlan(
+                                    selected,
+                                    True,
+                                    supporting_evidence=(
+                                        "canonical_source_listing_identity",
+                                        "authoritative_release_product",
+                                        "complete_physical_sibling_set",
+                                        "attributable_review_bound_to_retained_original_bytes",
+                                    ),
+                                ),
+                            ),
+                        )
             outcomes.append(CandidateOutcome(
                 source_name=source_name,
                 candidate_id=candidate.id,

@@ -11,3 +11,6 @@ dependencies = ["sqlalchemy>=2.0", "psycopg[binary]", "pydantic-settings", "opcg
 
 [tool.setuptools.packages.find]
 include = ["app", "app.*"]
+
+[tool.setuptools.package-data]
+"app.services" = ["evidence/*.json"]
