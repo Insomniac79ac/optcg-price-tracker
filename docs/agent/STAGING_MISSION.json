@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Publish93 explicit retained positive physical artwork reviews for zero-source prints",
+  "mission": "Publish54 additional retained positive physical artwork reviews for zero-source prints",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -21,7 +21,7 @@
     {
       "files": [
         "services/api/app/services/evidence/positive_physical_artwork.json",
-        "docs/agent/evidence/positive-physical-artwork-batch2-preflight-2026-10-06.json"
+        "docs/agent/evidence/positive-physical-artwork-batch3-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
@@ -29,10 +29,10 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Add93 explicit full-front physical reviews after metered natural retention and SELECT-only canonical validation. Existing staging-only validator and exact domain approvals remain unchanged; delivery writes no mappings or source requests."
+      "reason": "Add54 explicit full-front physical reviews after metered natural retention and SELECT-only canonical validation. Existing staging-only validator and exact domain approvals remain unchanged; delivery writes no mappings or source requests."
     }
   ],
-  "diff_sha256": "e4bde08084ea2ee85769c6d7e55c724d99c1bb0d2d424cd5225d18c4b575cda8",
+  "diff_sha256": "e3f5756ddd4c4bf0bdbb062f683977cb0d29c80398f139b6a084a350cac47c8b",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902"
@@ -43,7 +43,7 @@
         {
           "name": "optcg-price-tracker",
           "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "52f6e4b1-e544-4997-a464-ffb2d9feb3a3"
+          "recovery_deployment_id": "a3c9746c-daa1-483b-b917-6ab09e8e2fb2"
         }
       ],
       "routes": [
@@ -58,12 +58,12 @@
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "307f4c84cf29ca50d120e86d9210b1b0ec3359b5",
+      "artifact": "ffdfdef50dc8b85cc1ccb0a781fa0f9621015104",
       "procedure": "Fix forward prior staging API proof registry if evidence integrity fails. Retain all raw snapshots and immutable observations. No mapping approval happens during delivery.",
       "trigger": "Stale/incomplete proof accepted, same-art physical twins admitted, non-staging activation or incorrect physical selection",
       "backup": "Delivery changes only curated code evidence; no schema/data/queue mutation. Prior successful API deployment and exact source retained.",
       "validation": [
-        "docs/agent/evidence/positive-physical-artwork-batch2-preflight-2026-10-06.json",
+        "docs/agent/evidence/positive-physical-artwork-batch3-preflight-2026-10-06.json",
         "services/api/tests/test_physical_artwork_proof.py"
       ]
     },
