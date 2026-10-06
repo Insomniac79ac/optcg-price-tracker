@@ -1,0 +1,15 @@
+{
+  "target": "staging",
+  "production_accessed": false,
+  "problem": "Completed discovery was counted as an unaccounted RAW attempt.",
+  "change": "Count completed non-price work and discovery progress explicitly; successful RAW checks remain listed + confident no_listing only.",
+  "validation": {
+    "offline_and_schema_tests_passed": 35,
+    "postgres_tests_passed": 11,
+    "postgres_non_price_completion_has_no_raw_successful_check": true
+  },
+  "source_requests_added": 0,
+  "mapping_price_or_history_writes": 0,
+  "cron_budget_concurrency_changes": false,
+  "legacy_receipts": "Preserved unchanged; absent fields remain unknown."
+}

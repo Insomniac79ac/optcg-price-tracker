@@ -17,6 +17,37 @@ from app.services.operational_health import classify, validate
 from app.services.operational_health_sql import DUE_SQL, EVENT_SQL
 
 
+def test_completed_discovery_is_accounted_but_is_not_a_successful_raw_check(db, monkeypatch):
+    from app.services.freshness_queue import plan_discovery_scope
+    factory, source, _, _ = db
+    now = datetime.now(timezone.utc)
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID", "05d1eac2-510d-4bd3-999e-fea9ead766b7")
+    with factory() as session:
+        plan_discovery_scope(session, source, "fixture-catalogue", due_at=now,
+                             estimated_request_cost=1)
+        session.commit()
+
+    def discover(session, claim, *, freshness):
+        freshness.admit()
+        snapshot = freshness.snapshot(source, "https://snkrdunk.com/fixture-catalogue",
+                                      {"http_status": 200, "html": "<html>fixture</html>"}, "fixture")
+        freshness.result = CaptureResult("completed", raw_snapshot_id=snapshot,
+                                        next_due_at=now + timedelta(days=1))
+        return SimpleNamespace(stage="discovery_completed", source_denied=False, reasons=[])
+
+    with factory() as session:
+        drain(session, source, "fixture-discovery", lambda *args: None,
+              discovery_runner=discover, runtime_seconds=100, mapping_seconds=1,
+              max_work=1, delay_seconds=0, clock=lambda: now)
+    with factory() as session:
+        summary = session.scalars(select(AppLogEvent).order_by(AppLogEvent.id)).all()[-1].context_json
+        assert summary["work"]["attempted"] == summary["work"]["completed"] == 1
+        assert summary["work"]["listed"] == summary["work"]["no_listing"] == 0
+        assert summary["freshness"]["successful_checks"] == 0
+        assert "unaccounted_attempts" not in classify(summary)["reasons"]
+        assert classify(summary)["status"] == "DEGRADED"  # the untested mapping still misses its deadline
+
+
 def test_execution_evidence_survives_completion_and_enforces_total_bound(
     db, monkeypatch
 ):

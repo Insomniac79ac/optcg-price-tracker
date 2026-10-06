@@ -63,6 +63,18 @@ def healthy(source="yuyutei"):
 
 
 class HealthTests(unittest.TestCase):
+    def test_settled_discovery_is_accounted_without_price_freshness(self):
+        run = healthy()
+        run["work"].update(attempted=8, listed=7, completed=1, discovery_progress=0)
+        run["freshness"]["successful_checks"] = 7
+        self.assertEqual(health.classify(run)["status"], "HEALTHY")
+        run["freshness"]["deadline_misses"] = 1
+        result = health.classify(run)
+        self.assertEqual(result["status"], "DEGRADED")
+        self.assertNotIn("unaccounted_attempts", result["reasons"])
+        run["work"]["completed"] = None
+        self.assertIn("unaccounted_attempts", health.classify(run)["reasons"])
+
     def test_healthy_yuyu_and_silent_reporting(self):
         result = health.classify(healthy())
         self.assertEqual(result["status"], "HEALTHY")
