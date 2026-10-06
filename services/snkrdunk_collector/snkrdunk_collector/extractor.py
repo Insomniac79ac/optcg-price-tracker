@@ -178,6 +178,12 @@ def find_main_product_image(soup: BeautifulSoup) -> tuple[str | None, dict[str, 
         diagnostics["reason"] = "expected_exactly_one_mainImage_img"
         return None, diagnostics
     src = imgs[0].get("src")
+    if isinstance(src, str) and re.fullmatch(r"/_next/static/media/no-image\.[A-Za-z0-9_.-]+\.(?:webp|png)", src):
+        from snkrdunk_collector.retained_gallery import primary_gallery_url
+
+        retained = primary_gallery_url(soup)
+        if retained:
+            return retained, {**diagnostics, "reason": "retained_single_primary_gallery", "selector": "ApparelGalleryContainer.mainImages[0].src", "dom_placeholder": src}
     diagnostics["reason"] = "ok"
     diagnostics["selector"] = 'img[class$="__mainImage"]'
     return src, diagnostics
