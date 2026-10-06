@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Publish20explicit retained positive physical artwork reviews for zero-source prints",
+  "mission": "Recover primary gallery URL from retained server props after browser placeholder replacement",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,51 +20,62 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/evidence/positive_physical_artwork.json",
-        "docs/agent/evidence/positive-physical-artwork-batch1-preflight-2026-10-06.json"
+        "services/snkrdunk_collector/snkrdunk_collector/extractor.py",
+        "services/snkrdunk_collector/snkrdunk_collector/retained_gallery.py",
+        "services/snkrdunk_collector/tests/test_retained_gallery.py",
+        "docs/agent/evidence/snkr-retained-primary-gallery-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
+        "tests",
         "documentation",
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Add20explicit positive physical reviews after metered natural retention, full-source/all-sibling image review and read-only validation. The tested staging-only validator supplies evidence to existing exact proposal guards; delivery performs no approvals or source requests."
+      "reason": "Strictly scoped retained primary-gallery JSON data restores an image URL erased by browser onError replacement. Actual artwork fetch and every exact-print writer guard still apply; unrelated images and prices cannot supply evidence."
     }
   ],
-  "diff_sha256": "20eb0db8caa3313561718c7ae0101bba55234d7ab069f57683403108244fa86f",
+  "diff_sha256": "bc519e8bcde9c1e803a8af805e02be348c2ff22a5689b7cb4022aec48fd6a49a",
   "deployment_verification": {
-    "api_sha": "merge",
-    "revision": "c4e8a1d7b902"
+    "api_sha": "307f4c84cf29ca50d120e86d9210b1b0ec3359b5",
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "60340f26-346e-4f5c-81d5-dbea1b334bf6"
+      }
+    ]
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "optcg-price-tracker",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "86436aa7-b569-4439-9087-5e64b0c2ca0c"
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "60340f26-346e-4f5c-81d5-dbea1b334bf6"
         }
       ],
       "routes": [
-        "Existing staging-only positive physical-proof proposal integration"
+        "Existing metered SNKRDUNK primary artwork extraction"
       ],
       "dependencies": [
-        "Complete retained source/official originals and capture receipts; current catalogue/candidate lineage; existing exact domain approvals and manual precedence"
+        "Retained source page with unique named gallery",
+        "Existing source admission, actual artwork fetch, manual mapping, exact print/release/language writer gates"
       ],
-      "deployment_impact": "Staging API rebuild only. Existing source collectors continue with their verified components; no service configuration or schedule change.",
+      "deployment_impact": "One staging SNKRDUNK collector rebuild; other component deployments and all schedules/budgets unchanged.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "0918c74f8abbc66a2828e960cd555156db2636c0",
-      "procedure": "Fix forward prior staging API proof registry if evidence integrity fails. Retain all raw snapshots and immutable observations. No mapping approval happens during delivery.",
-      "trigger": "Stale/incomplete proof accepted, same-art physical twins admitted, non-staging activation or incorrect physical selection",
-      "backup": "Delivery changes only curated code evidence; no schema/data/queue mutation. Prior successful API deployment and exact source retained.",
+      "artifact": "307f4c84cf29ca50d120e86d9210b1b0ec3359b5",
+      "procedure": "Fix forward the retained prior collector source307f4c84cf29ca50d120e86d9210b1b0ec3359b5 if a nonprimary/ambiguous gallery is accepted. Preserve all raw evidence, attempts and quarantines. Existing intent2765 remains completed and is not duplicated.",
+      "trigger": "Wrong/unscoped primary URL, ambiguous gallery accepted, guard regression or resource bound exceeded",
+      "backup": "Retained prior collector source and deployment; no schema, data, config or queue change during delivery.",
       "validation": [
-        "docs/agent/evidence/positive-physical-artwork-batch1-preflight-2026-10-06.json",
-        "services/api/tests/test_physical_artwork_proof.py"
+        "docs/agent/evidence/snkr-retained-primary-gallery-preflight-2026-10-06.json",
+        "services/snkrdunk_collector/tests/test_retained_gallery.py"
       ]
     },
     "verification": {
@@ -74,9 +85,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "services/api/tests/test_physical_artwork_proof.py"
+        "services/snkrdunk_collector/tests/test_retained_gallery.py"
       ],
-      "observation_window": "After strict serialized delivery, freshly validate20proofs/current pending proposals and source capacity, approve only unique zero-source exact proposals through existing guards, then observe ordinary scheduled captures; do not count approvals as operational coverage."
+      "observation_window": "Require full strict delivery before observing the next natural turn. Source primary URL recovery is not physical identity confirmation and cannot release a quarantine by itself."
     }
   }
 }

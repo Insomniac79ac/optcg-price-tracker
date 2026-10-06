@@ -1,0 +1,40 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T11:19:10.214722+00:00",
+  "problem": "Metered browser image aborts invoke source onError handlers; the primary DOM image URL becomes no-image even though the retained named ApparelGalleryContainer contains the original primary source URL.",
+  "retained_evidence": {
+    "raw_snapshot_id": 27351,
+    "http_status": 200,
+    "source_url": "https://snkrdunk.com/apparels/142693",
+    "sha256": "45d6be112c775bfc4d5144e03cc4d86b987bdce4593a25547594ebe31e396762",
+    "primary_url": "https://cdn.snkrdunk.com/upload_bg_removed/88e7414d-449b-4ce5-bf15-b61311fc8865.webp",
+    "physical_identity": "Not yet verified; actual mandatory artwork fetch/comparison still required."
+  },
+  "positive_binding": "Only one existing primary DOM img bearing the exact no-image static placeholder, one named ApparelGalleryContainer module and element, one mainImages source, and one matching variantSources product entry. Parse JSON data only; source URL routing/title/release/language/manual approval and physical artwork writer guards remain authoritative.",
+  "refusals": [
+    "Zero/multiple primary DOM images",
+    "Missing/malformed/duplicate Flight record identity",
+    "Unrelated gallery or recommendation images",
+    "Zero/multiple primary gallery URLs",
+    "Unmatched or duplicated primary variant source",
+    "Non-HTTPS or non-source CDN URL, query/fragment, unexpected asset path"
+  ],
+  "tests": {
+    "focused": 41,
+    "full_snkr": 406,
+    "optional_skipped": 32,
+    "subtests": 48
+  },
+  "source_requests_at_preflight": 0,
+  "database_writes": 0,
+  "delivery_bound": {
+    "services": [
+      "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a"
+    ],
+    "source_requests": 0,
+    "database_writes": 0
+  },
+  "natural_observation_bound": "Existing source3100/1800 admission,300request reservation and27/57 UTC turns remain unchanged. Existing two mandatory artwork requests may now execute when positive primary URL data is recovered. No jobs or recovery intents are triggered by delivery.",
+  "rollback": "Fix forward the retained prior collector source307f4c84cf29ca50d120e86d9210b1b0ec3359b5 if a nonprimary/ambiguous gallery is accepted. Preserve all raw evidence, attempts and quarantines. Existing intent2765 remains completed and is not duplicated.",
+  "verification": "Require full strict delivery before observing the next natural turn. Source primary URL recovery is not physical identity confirmation and cannot release a quarantine by itself."
+}
