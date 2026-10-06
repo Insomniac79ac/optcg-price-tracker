@@ -1,0 +1,23 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T13:47:57.773122+00:00",
+  "classification": "GREEN",
+  "problem": "refresh_discovery_proposals loads/resolves whole source corpus then filters requested IDs; evidence expansion makes bounded chunks unnecessarily expensive.",
+  "change": "SQL restricts candidate loading to requested pending IDs; full authoritative catalogue, siblings, source aliases, discovery runs and mappings still load unchanged. Empty/reviewed-only input skips resolution.",
+  "source_requests": 0,
+  "database_writes_at_delivery": 0,
+  "jobs_or_schedule_changes": 0,
+  "production_accessed": false,
+  "tests": {
+    "focused_proposal_and_physical_proof": "77 passed:76 focused tests plus1 local HTTP TestClient regression rerun outside sandbox; sandboxed HTTP case stalled and was interrupted.",
+    "new_adversarial_tests": "5 passed: empty/subset selections, complete siblings remain ambiguous, filters intersect, unselected candidates omitted, reviewed rejection preserved without analysis."
+  },
+  "prior_strict_delivery": {
+    "pr": 64,
+    "run": 37469120628,
+    "merge": "1f97b48a39bc1b25ddd2a0c7095390174ff3c0b1",
+    "verified_at": "2026-10-06T13:41:55.432236+00:00"
+  },
+  "verification": "Required engineering CI and native auto-merge; strict serialized staging delivery; fresh state; operator proof validation/approvals remain exact and bounded.",
+  "rollback": "Fix forward prior source resolver and discovery refresh from verified PR64 source. No schema changes, queue/mapping/price writes or source requests during delivery."
+}

@@ -690,8 +690,6 @@ def test_discovery_refresh_versions_digest_and_reclassifies_ambiguous(db_session
     assert db_session.query(SourceMappingProposalGroup).count() == 0
 
 
-
-
 def test_discovery_refresh_preserves_reviewed_decision_evidence(db_session):
     from app.services.discovery_proposal_refresh import refresh_discovery_proposals
 
@@ -716,3 +714,88 @@ def test_discovery_refresh_preserves_reviewed_decision_evidence(db_session):
     assert group.review_status == "rejected"
     assert group.evidence_digest == original_digest
     assert db_session.query(SourceCardMapping).count() == 0
+
+
+@pytest.mark.parametrize("selected", [(), (0,), (0, 1)])
+def test_bounded_candidate_filter_keeps_full_physical_family(db_session, selected):
+    _base(db_session)
+    release = _release(db_session, "OP-01")
+    family = _family(db_session, "OP01-001")
+    _print(db_session, family, release)
+    _print(db_session, family, release, "p1")
+    run = _run(db_session, "op01")
+    candidates = [
+        _yuyu(db_session, run, "op01", 10001 + i, family.card_code) for i in range(3)
+    ]
+    ids = tuple(candidates[i].id for i in selected)
+    analysis = analyse_source_mapping_proposals(
+        db_session,
+        ProposalFilters(source="yuyutei", candidate_ids=ids),
+        build_report=False,
+    )
+    assert {p.source_candidate_id for p in analysis.plans} == set(ids)
+    assert all(
+        p.resolution_status == "ambiguous" and len(p.alternatives) == 2
+        for p in analysis.plans
+    )
+
+
+def test_candidate_filters_intersect_and_refresh_never_resolves_other_candidates(
+    db_session,
+):
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    _base(db_session)
+    release = _release(db_session, "OP-01")
+    family = _family(db_session, "OP01-001")
+    _print(db_session, family, release)
+    run = _run(db_session, "op01")
+    selected = _yuyu(db_session, run, "op01", 10001, family.card_code)
+    other = _yuyu(db_session, run, "op01", 10002, family.card_code)
+    assert not analyse_source_mapping_proposals(
+        db_session,
+        ProposalFilters(
+            source="yuyutei", candidate_id=other.id, candidate_ids=(selected.id,)
+        ),
+        build_report=False,
+    ).plans
+    with patch(
+        "app.services.discovery_proposal_refresh.analyse_source_mapping_proposals",
+        wraps=analyse_source_mapping_proposals,
+    ) as resolver:
+        result = refresh_discovery_proposals(
+            db_session, "yuyutei", [selected.id, selected.id]
+        )
+    assert result["created"] == 1 and result["resolutions"] == {"exact": 1}
+    assert resolver.call_args.args[1].candidate_ids == (selected.id,)
+    assert list(
+        db_session.scalars(select(SourceMappingProposalGroup.source_candidate_id))
+    ) == [selected.id]
+
+
+def test_refresh_preserves_reviewed_decision_without_analysis(db_session):
+    from datetime import datetime, timezone
+    from app.services.discovery_proposal_refresh import refresh_discovery_proposals
+
+    _base(db_session)
+    release = _release(db_session, "OP-01")
+    family = _family(db_session, "OP01-001")
+    _print(db_session, family, release)
+    candidate = _yuyu(
+        db_session, _run(db_session, "op01"), "op01", 10001, family.card_code
+    )
+    refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    group = db_session.scalar(select(SourceMappingProposalGroup))
+    group.review_status = "rejected"
+    group.reviewed_at = datetime.now(timezone.utc)
+    group.reviewed_by = "test:reviewer"
+    group.review_notes = "Retain explicit rejection"
+    group.decision_basis_updated_at = group.updated_at
+    db_session.flush()
+    with patch(
+        "app.services.discovery_proposal_refresh.analyse_source_mapping_proposals",
+        side_effect=AssertionError("reviewed candidate must not be reanalysed"),
+    ):
+        result = refresh_discovery_proposals(db_session, "yuyutei", [candidate.id])
+    assert result["reviewed_preserved"] == 1 and result["created"] == 0
+    assert group.review_status == "rejected" and group.superseded_at is None

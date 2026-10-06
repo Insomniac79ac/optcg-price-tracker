@@ -77,6 +77,7 @@ class ProposalFilters:
     candidate_id: int | None = None
     limit: int | None = None
     offset: int = 0
+    candidate_ids: tuple[int, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -373,6 +374,8 @@ def analyse_source_mapping_proposals(
         candidate_stmt = select(model).order_by(model.id)
         if filters.candidate_id is not None:
             candidate_stmt = candidate_stmt.where(model.id == filters.candidate_id)
+        if filters.candidate_ids is not None:
+            candidate_stmt = candidate_stmt.where(model.id.in_(filters.candidate_ids))
         candidates_by_source[source_name] = db.scalars(candidate_stmt).all()
 
     outcomes: list[CandidateOutcome] = []
