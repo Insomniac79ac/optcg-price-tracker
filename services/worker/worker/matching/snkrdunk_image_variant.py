@@ -41,7 +41,7 @@ from urllib.parse import urlparse
 #
 # `(?!\d)(?!-\d)` stops "OP01-0011" being read as "OP01-001" while still
 # allowing the "-of" suffix the EN uploads carry.
-_CODE_RE = re.compile(r"(?P<code>[A-Z]{2,4}\d{2}-\d{3})(?!\d)(?!-\d)", re.IGNORECASE)
+_CODE_RE = re.compile(r"(?<![A-Z0-9])(?P<code>(?:[A-Z]{2,4}\d{2}|P)-\d{3})(?!\d)(?!-\d)", re.IGNORECASE)
 
 # A well-formed Bandai asset suffix: p/r then a positive integer with no
 # leading zero, exactly as ck_card_prints_official_asset_variant_format
