@@ -38,11 +38,17 @@ from app.services.snkrdunk_urls import listing_id as snkrdunk_listing_id
 from app.services.yuyutei_urls import listing_identity as yuyutei_listing_identity
 
 
-RESOLVER_VERSION = "source-mapping-proposals/1.0"
+RESOLVER_VERSION = "source-mapping-proposals/1.1"
 SUPPORTED_SOURCES = ("yuyutei", "snkrdunk")
 TARGET_LANGUAGE = "jp"
 _ASSET_VARIANT = re.compile(r"^(?:base|[pr][1-9][0-9]*)$")
 _SNK_PRODUCT_LABEL = re.compile(r"\(([^()]+)\)\s*$")
+# Positive special-rarity evidence only. Ordinary C/R/SR or a P- prefix does
+# not identify artwork/treatment. SP is the retailer's special-rarity family:
+# retained approved source evidence corroborates both official renderings;
+# multiple SP siblings must remain ambiguous. TR/P are literal official tokens.
+YUYU_SPECIAL_RARITIES = {"SP": frozenset({"SPカード", "SP P"}),
+                       "TR": frozenset({"TR"}), "P": frozenset({"P"})}
 
 
 def _norm(value: str | None) -> str | None:
@@ -221,6 +227,7 @@ def _make_plan(
                 "card_print_id": row.id,
                 "release_product_id": row.release_product_id,
                 "official_asset_variant": row.official_asset_variant,
+                "official_rarity": row.official_rarity,
             }
             for row in sorted(eligible_prints, key=lambda item: item.id)
         ],
@@ -470,6 +477,9 @@ def analyse_source_mapping_proposals(
                 variant_matches = [
                     row for row in eligible if row.official_asset_variant == variant
                 ] if variant else []
+                special_rarities = (YUYU_SPECIAL_RARITIES.get(candidate.detected_rarity, frozenset())
+                                    if source_name == "yuyutei" else frozenset())
+                rarity_matches = [row for row in eligible if row.official_rarity in special_rarities]
                 if variant and not variant_matches:
                     status = "conflict"
                     reasons.append("stored_exact_asset_variant_conflicts_with_release_siblings")
@@ -480,6 +490,11 @@ def analyse_source_mapping_proposals(
                             conflict_reasons=("stored_exact_asset_variant_mismatch",),
                         ) for row in eligible
                     ]
+                elif (len(variant_matches) == 1 and special_rarities
+                      and all(row.official_rarity for row in eligible)
+                      and variant_matches[0] not in rarity_matches):
+                    status = "conflict"
+                    reasons.append("exact_asset_variant_contradicts_special_rarity")
                 elif len(eligible) == 1:
                     status = "exact"
                     alternatives = [AlternativePlan(
@@ -504,6 +519,14 @@ def analyse_source_mapping_proposals(
                         ),
                     )]
                     reasons.append("stored_exact_asset_variant_resolves_one_release_sibling")
+                elif len(rarity_matches) == 1 and all(row.official_rarity for row in eligible):
+                    status = "exact"
+                    alternatives = [AlternativePlan(
+                        rarity_matches[0].id, True,
+                        supporting_evidence=("canonical_card_family", "authoritative_release_product",
+                                             "unique_official_special_rarity_in_release"),
+                    )]
+                    reasons.append("positive_special_rarity_resolves_one_release_sibling")
                 elif len(eligible) > 1:
                     status = "ambiguous"
                     alternatives = [AlternativePlan(

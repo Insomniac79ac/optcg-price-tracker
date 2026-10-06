@@ -508,11 +508,16 @@ def approve_candidate_from_exact_proposal(
             CardPrint.verification_status == "verified",
         )
     ).all()
-    if [row.id for row in eligible] != [proof.card_print_id]:
+    from app.services.source_mapping_proposals import resolve_current_candidate_proposal
+    current = resolve_current_candidate_proposal(db, source_name="yuyutei", candidate_id=candidate.id)
+    recommended = [a.card_print_id for a in current.alternatives if a.recommended] if current else []
+    if (current is None or current.resolution_status != "exact"
+        or recommended != [proof.card_print_id] or current.evidence_digest != proof.evidence_digest
+        or current.resolver_version != proof.resolver_version
+        or current.release_product_id != proof.release_product_id):
         raise ExactPrintApprovalError(
             REFUSAL_AMBIGUOUS,
-            "The canonical family and authoritative release no longer contain exactly "
-            "the proposed active verified Japanese print.",
+            "Current exact source evidence no longer uniquely proves the proposed print.",
             alternatives=sorted(row.id for row in eligible),
         )
 
@@ -535,7 +540,7 @@ def approve_candidate_from_exact_proposal(
             f"authoritative release #{proof.release_product_id}",
             f"exact proposal #{proof.proposal_group_id}",
         ],
-        considered_print_ids=[proof.card_print_id],
+        considered_print_ids=sorted(row.id for row in eligible),
     )
     if review_notes is None:
         review_notes = (

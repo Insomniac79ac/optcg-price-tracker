@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Validate legitimate SNKRDUNK recovery once while ordinary RAW source dispatch stays paused",
+  "mission": "Resolve positively unique special-rarity identities and use measured Yuyu request headroom to drain oldest due work",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,32 +20,73 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/freshness_queue.py",
-        "services/api/app/services/source_recovery.py",
-        "services/api/tests/test_source_recovery_postgres.py",
-        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
-        "services/snkrdunk_collector/snkrdunk_collector/recovery.py",
-        "docs/agent/evidence/snkr-controlled-recovery-preflight-2026-10-06.json"
+        "services/api/app/services/source_mapping_proposals.py",
+        "services/api/app/services/yuyutei_candidate_approval.py",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/api/tests/test_source_mapping_proposal_decision.py",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "services/yuyutei_collector/yuyutei_collector/config.py",
+        "docs/agent/evidence/raw-special-rarity-capacity-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "subsystem_activation",
+        "source_envelope",
         "staging_deployment"
       ],
-      "reason": "One explicit metered staging-only recovery validation per retained ordinary source denial. Required refusal prevents any repeated recovery. Existing exact writer validates and rolls back hypothetical observation before controlled resume."
+      "reason": "Exact special-rarity evidence narrows only a unique authoritative release sibling; approval independently reruns the same current resolver. Natural <=56-request captures justify sixteen serial due checks within unchanged 9000/30min admission, nine-shard routing, pacing, cadence and freshness policy. No mappings approved by rollout."
     }
   ],
-  "diff_sha256": "1bf3a88acc8b7498503d678c20b2dd9930685a806107d2a8ae3965250c50186c",
+  "diff_sha256": "eb31e22190149ad2d9f4910ada8f1338a14c31ed3b19dcaa8f28cc026d7728ee",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
     "collector_services": [
       {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "454b7380-8ed1-4da0-8ca0-2ae5f9597134"
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
       }
     ]
   },
@@ -53,31 +94,73 @@
     "impact": {
       "resources": [
         {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "454b7380-8ed1-4da0-8ca0-2ae5f9597134"
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
         }
       ],
       "routes": [
-        "Pinned staging recovery CLI; same singleton/budget/ordinal/lease mechanisms"
+        "Existing modulo-nine Yuyu scheduled consumers and shared admission",
+        "Existing canonical exact proposal and approval services"
       ],
       "dependencies": [
-        "Existing exact writer and current approved/manual mapping",
-        "Shared source-budget services; no schema change"
+        "Current exact identity/provenance/manual mapping guards",
+        "No migration; reviewed evidence and all history preserved"
       ],
-      "deployment_impact": "Native staging API and the existing SNKRDUNK collector only. Ordinary source remains paused through rollout and the diagnostic probe.",
-      "database_writes": 1000,
-      "source_requests": 600,
-      "estimated_runtime_minutes": 20
+      "deployment_impact": "Native staging API plus nine existing Yuyu collectors; SNKRDUNK recovery path unchanged.",
+      "database_writes": 20000,
+      "source_requests": 9000,
+      "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "9375724249afcb5a2701dc35bc66a00bac8fc193",
-      "procedure": "Rebuild retained exact staging artifact on the existing SNKRDUNK service; retain permanent pause on any failed probe; restore source_denial pause if natural required evidence requests fail. Evidence retained, no price or historical repair.",
-      "trigger": "Required denial, identity refusal, failed reservation/lease settlement, lineage change or absent/stale recovery proof",
-      "backup": "No migration, mapping change, persisted probe price or historical rewrite. Retained source/deployment and transactional hypothesis rollback.",
+      "artifact": "70c7cc12d2c844cf38c2d69bf7d109fbb1ac008f",
+      "procedure": "Rebuild retained staging code on the same nine services or restore per-turn default8; source-wide admission contains any required denial. No mapping/price/history rollback. Recompute pending proposal digests after resolver changes.",
+      "trigger": "Required denial, sustained runtime overlap, wrong identity, missed budget/lease bounds or invalid exact recommendation",
+      "backup": "No schema, history or mapping change in rollout. Retained baseline code and recorded successful source deployments; proposal digest versions preserve prior evidence.",
       "validation": [
-        "docs/agent/evidence/snkr-controlled-recovery-preflight-2026-10-06.json",
-        "services/api/tests/test_source_recovery_postgres.py",
+        "docs/agent/evidence/raw-special-rarity-capacity-preflight-2026-10-06.json",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "services/api/tests/test_source_mapping_proposal_decision.py",
         "services/api/tests/test_freshness_adapters_postgres.py"
       ]
     },
@@ -88,9 +171,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "docs/agent/evidence/snkr-controlled-recovery-preflight-2026-10-06.json"
+        "docs/agent/evidence/raw-special-rarity-capacity-preflight-2026-10-06.json"
       ],
-      "observation_window": "Single metered diagnostic after rollout, then at least two subsequent scheduled 30-minute SNKRDUNK turns and full natural 23/24h recurrence; no probe retry after a required denial."
+      "observation_window": "Two subsequent natural scheduled turns per shard for admission, latency and settlement, then overdue drainage and full 23/24h recurring deadline cycles before major capacity expansion."
     }
   }
 }
