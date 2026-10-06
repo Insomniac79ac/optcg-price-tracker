@@ -244,6 +244,9 @@ def approve_exact_proposal(
             and group.reviewed_by == actor.email.strip().lower()
             and mapping is not None
             and mapping.card_print_id == requested_alternative.card_print_id
+            and mapping.source_id == source.id
+            and mapping.is_active and mapping.superseded_at is None
+            and mapping.review_status == "approved"
         )
         if not replay_matches:
             _fail("proposal_not_pending", "Approved proposal does not match this retry.")

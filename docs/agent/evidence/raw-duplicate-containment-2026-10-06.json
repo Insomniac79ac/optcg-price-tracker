@@ -1,0 +1,35 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-06T06:03:35.245709+00:00",
+  "production_accessed": false,
+  "source_requests": 0,
+  "historical_prices_or_review_receipts_rewritten": 0,
+  "contained": [
+    {
+      "mapping_id": 2893,
+      "original_mapping_id": 1944,
+      "card_print_id": 3841,
+      "work_id": 2628,
+      "retained_price_observations": 1,
+      "identity_unchanged": true
+    },
+    {
+      "mapping_id": 2894,
+      "original_mapping_id": 1945,
+      "card_print_id": 3842,
+      "work_id": 2629,
+      "retained_price_observations": 1,
+      "identity_unchanged": true
+    },
+    {
+      "mapping_id": 2895,
+      "original_mapping_id": 1437,
+      "card_print_id": 4886,
+      "work_id": 2630,
+      "retained_price_observations": 0,
+      "identity_unchanged": true
+    }
+  ],
+  "classification": "AMBER",
+  "rollback": "Keep the original active/manual mapping. The contained mappings and all history remain retained; restoration requires positively proving the original no longer occupies this print/source identity."
+}

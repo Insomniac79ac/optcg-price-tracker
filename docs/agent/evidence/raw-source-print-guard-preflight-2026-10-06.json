@@ -1,0 +1,26 @@
+{
+  "target": "staging",
+  "production_accessed": false,
+  "problem": "Existing approval writers serialize per source listing but did not refuse a different listing for an already active exact CardPrint/source pair.",
+  "change": "Use the same source row lock to refuse a second active current exact print/source mapping across both Yuyu writer paths, SNKRDUNK writer and direct approval endpoint. Inactive result mappings cannot claim idempotent approval replay.",
+  "incident": {
+    "new_duplicate_mappings_contained": 3,
+    "prior_manual_mappings_preserved": 3,
+    "valid_same_print_observations_retained": 2,
+    "wrong_card_print_observations": 0,
+    "published_history_rewritten": 0,
+    "approvals_halted_until_guard_verified": true
+  },
+  "post_containment_read": {
+    "observed_at": "2026-10-06T06:08:56.999227+00:00",
+    "active_exact_print_source_duplicate_groups": 0,
+    "exact_mapped": 2337,
+    "operational": 2009
+  },
+  "tests": {
+    "core_approval_and_postgres_tests": "82 passed, including SNKRDUNK same-print/different-listing refusal and PostgreSQL concurrency",
+    "postgres_concurrency": "Two distinct exact source listings for one physical print produce one committed mapping and one guard refusal; no raw or price writes."
+  },
+  "deployment": "Native staging API/frontend; no migration, collector rollout, budget, cadence or concurrency change.",
+  "rollback": "Restore retained API code and keep automatic approvals contained. Never reactivate the contained duplicate IDs while original manual mappings are active; retain all decisions and history."
+}

@@ -377,6 +377,8 @@ def approve_candidate(
 
     mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, decision.card_print.id)
+    from app.services.current_source_mapping import assert_print_source_available
+    assert_print_source_available(db, source=source, card_print_id=decision.card_print.id, mapping=mapping)
     mapping_created = mapping is None
 
     if review_notes is None:
@@ -524,6 +526,8 @@ def approve_candidate_from_exact_proposal(
     mapping_url = canonical_listing_url(candidate.source_url)
     mapping = find_mapping_for_listing(db, source=source, url=candidate.source_url, for_update=True)
     assert_mapping_may_be_approved(mapping, proof.card_print_id)
+    from app.services.current_source_mapping import assert_print_source_available
+    assert_print_source_available(db, source=source, card_print_id=proof.card_print_id, mapping=mapping)
     mapping_created = mapping is None
     if mapping is None:
         mapping = SourceCardMapping(

@@ -52,6 +52,57 @@ ACTOR = AdminActor(id="authjs-reviewer", email="Reviewer@Example.COM")
 TEST_ADMIN_TOKEN = "test-admin-token"
 
 
+@pytest.mark.parametrize("candidate_status", ["family_matched", "print_matched"])
+def test_other_listing_cannot_duplicate_current_exact_print_source(db_session, candidate_status):
+    source, _, _, physical, candidate, group = _seed_yuyu(db_session, status=candidate_status)
+    original = SourceCardMapping(
+        source_id=source.id, card_print_id=physical.id, source_card_id=candidate.detected_card_code,
+        source_url="https://yuyu-tei.jp/sell/opc/card/op17/7002",
+        manual_verified=True, review_status="approved", is_active=True,
+    )
+    db_session.add(original)
+    db_session.commit()
+    with pytest.raises(ExactPrintApprovalError) as error:
+        approve_exact_proposal(db_session, group.id, _request(group), ACTOR)
+    assert error.value.code == "print_source_already_mapped"
+    db_session.rollback()
+    assert db_session.query(SourceCardMapping).count() == 1
+    assert original.is_active and original.card_print_id == physical.id
+    assert db_session.get(SourceMappingProposalGroup, group.id).review_status == "pending"
+    assert db_session.query(PriceObservation).count() == 0
+
+
+def test_inactive_result_mapping_cannot_claim_idempotent_approval_replay(db_session):
+    _, _, _, _, _, group = _seed_yuyu(db_session)
+    request = _request(group)
+    result = approve_exact_proposal(db_session, group.id, request, ACTOR)
+    db_session.commit()
+    db_session.get(SourceCardMapping, result.resulting_source_card_mapping_id).is_active = False
+    db_session.commit()
+    with pytest.raises(ProposalDecisionError) as error:
+        approve_exact_proposal(db_session, group.id, request, ACTOR)
+    assert error.value.code == "proposal_not_pending"
+
+
+def test_snkrdunk_other_listing_cannot_duplicate_exact_print_source(db_session):
+    source, _, _, physical, candidate, group = _seed_snkr(db_session)
+    original = SourceCardMapping(
+        source_id=source.id, card_print_id=physical.id,
+        source_card_id=candidate.detected_card_code,
+        source_url="https://snkrdunk.com/apparels/7002",
+        manual_verified=True, review_status="approved", is_active=True,
+    )
+    db_session.add(original)
+    db_session.commit()
+    with pytest.raises(ExactPrintApprovalError) as error:
+        approve_exact_proposal(db_session, group.id, _request(group), ACTOR)
+    assert error.value.code == "print_source_already_mapped"
+    db_session.rollback()
+    assert db_session.query(SourceCardMapping).count() == 1
+    assert original.is_active
+    assert db_session.get(SourceMappingProposalGroup, group.id).review_status == "pending"
+
+
 def test_special_rarity_exact_proposal_rechecks_evidence_in_yuyu_writer(db_session):
     _, release, family, ordinary, candidate, _ = _seed_yuyu(db_session)
     ordinary.official_rarity = "R"

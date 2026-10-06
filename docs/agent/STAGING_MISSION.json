@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Account for completed discovery separately from RAW successful price checks",
+  "mission": "Enforce the existing one-active-exact-print-per-source invariant in every supported approval writer",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,155 +20,60 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/RAW_OPERATIONAL_HEALTH.md",
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json",
-        "docs/agent/raw-operational-run.schema.json",
-        "scripts/tests/test_operational_health.py",
-        "services/api/app/services/operational_health.py",
-        "services/api/app/services/operational_health_runtime.py",
-        "services/api/app/services/operational_health_sql.py",
-        "services/api/tests/test_operational_health_postgres.py"
+        "docs/agent/evidence/raw-duplicate-containment-2026-10-06.json",
+        "docs/agent/evidence/raw-source-print-guard-preflight-2026-10-06.json",
+        "services/api/app/api/snkrdunk_candidates.py",
+        "services/api/app/services/current_source_mapping.py",
+        "services/api/app/services/snkrdunk_candidate_approval.py",
+        "services/api/app/services/source_mapping_proposal_decision.py",
+        "services/api/app/services/yuyutei_candidate_approval.py",
+        "services/api/tests/test_source_mapping_proposal_decision.py",
+        "services/api/tests/test_source_mapping_proposal_decision_postgres.py"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "subsystem_activation",
-        "staging_deployment"
+        "staging_deployment",
+        "state_observation"
       ],
-      "reason": "Structured health accounts for completed discovery/validation and discovery progress without counting them as successful RAW checks or price coverage. Legacy receipts and source limits remain unchanged."
+      "reason": "Reject a different source listing while the exact physical print/source pair is already active. Source-row serialization also protects concurrent distinct proposal approvals. Preserve existing manual mappings and all history; contained duplicate results cannot replay as active approval."
     }
   ],
-  "diff_sha256": "d9e547b50c53add2aa47ad4c29ae5db401a3dbbbe39ce3a03477ddf0ac09d8f5",
+  "diff_sha256": "1f4a8f6a61ebca30f3b4758029f8ba8de4ba919493afb5dee3e383573127b126",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902",
-    "collector_services": [
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
-      },
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "c06edf03-6076-4583-86f2-f1d028ae18cb"
-      }
-    ]
+    "collector_services": []
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "yuyutei-collector-shard-0",
-          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "a959f7fe-c273-4f95-9dd4-9c4c9807ed4d"
-        },
-        {
-          "name": "yuyutei-collector-shard-1",
-          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "8a0ae9de-f4bd-4a5c-90bf-2a1781cef56f"
-        },
-        {
-          "name": "yuyutei-collector-shard-2",
-          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "c2e9f1cf-02c2-465e-a69c-ab8aaaa0ed8b"
-        },
-        {
-          "name": "yuyutei-collector-shard-3",
-          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "ffe807db-7192-4436-a6c8-cf9c263d1186"
-        },
-        {
-          "name": "yuyutei-collector-shard-4-v2",
-          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "d985fac4-8c55-451a-8057-d5edb7d1edd6"
-        },
-        {
-          "name": "yuyutei-collector-shard-5",
-          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "53fe72bd-ee31-44cc-ac11-4b4513c8a2e9"
-        },
-        {
-          "name": "yuyutei-collector-shard-6",
-          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "20281ea6-0f47-4ee0-83b3-2c61737bcf3e"
-        },
-        {
-          "name": "yuyutei-collector-shard-7",
-          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "c5609d86-529b-4a88-9968-c06dd7802545"
-        },
-        {
-          "name": "yuyutei-collector-shard-8",
-          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "442f96ed-d0f1-45ff-aa3e-10dcabc0fdfd"
-        },
-        {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "c06edf03-6076-4583-86f2-f1d028ae18cb"
+          "name": "optcg-price-tracker",
+          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
         }
       ],
       "routes": [
-        "Existing ten serial RAW due consumers and structured health reporting"
+        "Existing exact proposal approvals and SNKRDUNK direct approval endpoint"
       ],
       "dependencies": [
-        "Durable attempt outcomes, exact mapping and singleton guards unchanged"
+        "Unchanged exact physical CardPrint and manual identity guards; no schema change"
       ],
-      "deployment_impact": "Roll common health accounting to ten existing collectors; no schedule, command, source budget or concurrency changes.",
-      "database_writes": 20000,
-      "source_requests": 9000,
-      "estimated_runtime_minutes": 30
+      "deployment_impact": "Native staging API/frontend; no collector build, schedule, budget, HTTP concurrency or PSA10 activation.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 20
     },
     "recovery": {
-      "artifact": "0ffd87720beafbcfa52aaa385be5ad93551a1a9d",
-      "procedure": "Rebuild retained collector health code on the same services; retain all raw snapshots, receipts, mappings and prices.",
-      "trigger": "Wrong successful-check accounting, schema/runtime drift, source amplification or identity-integrity regression",
-      "backup": "No data migration or historical receipt rewrite; all prior execution receipts remain retained.",
+      "artifact": "ec4df5e706b673490ba090fb262f18cc51c2e6e4",
+      "procedure": "Keep automatic approvals contained and restore retained API code if needed. Preserve original manual mappings, raw snapshots, observations and all review receipts.",
+      "trigger": "A second current active exact print/source mapping or an inactive mapping reported as eligible approval replay",
+      "backup": "Only bounded application guards. The three incident mappings are retained inactive; two valid same-print source observations remain retained with their original lineage.",
       "validation": [
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json",
-        "services/api/tests/test_operational_health_postgres.py"
+        "docs/agent/evidence/raw-source-print-guard-preflight-2026-10-06.json",
+        "docs/agent/evidence/raw-duplicate-containment-2026-10-06.json",
+        "services/api/tests/test_source_mapping_proposal_decision_postgres.py"
       ]
     },
     "verification": {
@@ -178,9 +83,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "docs/agent/evidence/raw-health-accounting-preflight-2026-10-06.json"
+        "docs/agent/evidence/raw-source-print-guard-preflight-2026-10-06.json"
       ],
-      "observation_window": "Observe subsequent natural completed-discovery and RAW source turns. Non-price work must not advance RAW freshness; deadline failures remain visible."
+      "observation_window": "Verify live source/print reconciliation and delivery before resuming guarded exact approvals. Skip individual already-monitored print/source proposals; all remaining ordinary due consumers continue normally."
     }
   }
 }
