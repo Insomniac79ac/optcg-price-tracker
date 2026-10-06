@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Exclude observed advertising conversion traffic from RAW staging admission and optional-error telemetry",
+  "mission": "Record the verified RAW staging exact-evidence ceiling and preserve contained source paths",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,156 +20,24 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/CURRENT_STATE.yaml"
+        "docs/agent/CURRENT_STATE.yaml",
+        "docs/agent/RAW_MISSION_2026-10-06.md",
+        "docs/agent/evidence/raw-current-resolver-2026-10-06.json",
+        "docs/agent/evidence/raw-mission-inspection-2026-10-06.json",
+        "docs/agent/evidence/raw-mission-result-2026-10-06.json",
+        "docs/agent/evidence/snkrdunk-retained-denial-2026-10-06.jsonl",
+        "docs/agent/evidence/staging-state-a05c36274c28de29.json"
       ],
       "effects": [
+        "documentation",
         "state_observation"
       ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/raw-conversion-preflight-2026-10-05.json"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/raw-recurring-delivery-2e33c34.json"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/raw-recurring-rollout-2e33c34.json"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "docs/agent/evidence/staging-state-25c54499ae7392a9.json"
-      ],
-      "effects": [
-        "state_observation"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "services/api/app/services/freshness_integration.py"
-      ],
-      "effects": [
-        "application",
-        "infrastructure"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
-    },
-    {
-      "files": [
-        "services/api/tests/test_raw_browser_boundary.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Exclude only observed non-navigation advertising conversion traffic before network admission. Preserve primary navigation, required denial, exact identity, pause, cadence and budget limits."
+      "reason": "Read-only staging observation, current resolver ceiling and evidence report. No application, source, mapping, infrastructure, pricing or identity change."
     }
   ],
-  "diff_sha256": "fe0f1123598d1b8b82da043b5058d9abb01b83127a5021c0e415ad27d3dc4032",
+  "diff_sha256": "da0f80ffd6e4236f6fd8fd9a6f58e62dabc7bb00a8a6ae5ff1a5bbb7577c9c35",
   "deployment_verification": {
-    "api_sha": "merge",
-    "revision": "c4e8a1d7b902",
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "c9eb7df4-1e46-4d41-8b58-8c5b3a27d326"
-      },
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "3036c93d-30ed-48bf-9b35-4a077565aabf"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "88aca63b-e9b4-4c23-a6c1-45fbdc02fb08"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "01e36f86-e513-4756-84c8-ee82cc6feef1"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "45955d77-aefd-4681-801e-f82c21a1e4db"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "de3a46bc-c819-44b9-9f1e-504adfa72d31"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "cdeaef54-7267-402d-95e7-64664d559d74"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "08a23466-b236-49e1-854d-842f993d0e5d"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "f3d70084-b5cb-4b0e-9546-40213240d7bc"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "0c5b8785-cd6b-43d5-8367-df162869d02d"
-      }
-    ]
-  },
-  "safeguards": {
-    "impact": {
-      "resources": "Same staging API and 10 existing collectors. Exclude only an observed non-navigation advertising endpoint. No service/scopes, schedules, budget, work limit, concurrency or identity changes.",
-      "routes": "No API/public product behavior changes. Exclusion requires exact www.google.com host and /measurement/conversion path; navigation and source endpoints still undergo admission and denial guards.",
-      "dependencies": "Existing request boundary, shared source budget, fail-closed primary navigation and unchanged writers/resolver; no dependencies or migration.",
-      "deployment_impact": "At most 10 uploads, 20 builds and 30 deployment records including native Git and recognized watch-path snapshot redeploys. No service or deployment-trigger change.",
-      "database_writes": 100000,
-      "source_requests": 36000,
-      "estimated_runtime_minutes": 90
-    },
-    "recovery": {
-      "artifact": "2e33c34ab097d6fc1d2396f6c2d416f4cd8f694e",
-      "procedure": "Restore recorded prior exact collector snapshots and prior API on the same pinned staging services. Preserve all source pause/quarantine state and immutable history. No rollback database writes.",
-      "trigger": "Wrong destination/identity, integrity risk, duplicate requests, required source denial or bounded rollout failure: contain the affected source and restore prior source snapshot.",
-      "backup": "Retained exact prior Git and deployment snapshots; archive checksum recorded in preflight. No migration or irreversible mapping change.",
-      "validation": [
-        "docs/agent/evidence/raw-conversion-preflight-2026-10-05.json",
-        "services/api/tests/test_raw_browser_boundary.py"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "services/api/tests/test_raw_browser_boundary.py"
-      ],
-      "observation_window": "Observe final exact runtime revision across all 9 Yuyu shards and paused SNKRDUNK on subsequent unchanged scheduled executions. Check successful captures, settled claims/reservations, required source denial guard and disappearance of only non-evidence conversion warnings. Do not infer sustained 24h compliance or clear the source pause from deploy success."
-    }
+    "api_sha": "5351fd44e4dac3713a9c88a21b8012de9813b65f",
+    "revision": "c4e8a1d7b902"
   }
 }
