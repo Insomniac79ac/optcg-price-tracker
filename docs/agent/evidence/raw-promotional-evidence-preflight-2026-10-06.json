@@ -24,7 +24,9 @@
   "proof_policy": "Whole published parenthetical product labels match complete verified authoritative release names after existing punctuation/space normalization; no substring, fuzzy, card-prefix or treatment inference. Missing catalogue membership conflicts; multiple physical siblings remain ambiguous.",
   "tests": {
     "api_source_mapping_proposals": "39 passed",
-    "worker_listing_and_image_evidence": "52 passed"
+    "worker_listing_and_image_evidence": "52 passed",
+    "api_exact_proposal_decisions": "27 passed"
   },
-  "snkr_parser_defect": "Published bracketed promotional P-### identifiers were excluded by both listing-card-code and image-asset grammar. Fix retains exact brackets, digit counts, asset suffixes and card-code agreement; no source requests or approvals."
+  "snkr_parser_defect": "Published bracketed promotional P-### identifiers were excluded by both listing-card-code and image-asset grammar. Fix retains exact brackets, digit counts, asset suffixes and card-code agreement; no source requests or approvals.",
+  "new_first_source_prints_from_named_releases": 0
 }
