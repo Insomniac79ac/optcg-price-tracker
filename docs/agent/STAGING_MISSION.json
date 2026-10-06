@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Publish54 additional retained positive physical artwork reviews for zero-source prints",
+  "mission": "Bound discovery proposal refresh to its requested pending candidate IDs",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,63 +20,23 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/evidence/positive_physical_artwork.json",
-        "docs/agent/evidence/positive-physical-artwork-batch3-preflight-2026-10-06.json"
+        "services/api/app/services/discovery_proposal_refresh.py",
+        "services/api/app/services/source_mapping_proposals.py",
+        "services/api/tests/test_source_mapping_proposals.py",
+        "docs/agent/evidence/scoped-proposal-refresh-preflight-2026-10-06.json"
       ],
       "effects": [
         "application",
+        "tests",
         "documentation",
-        "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Add54 explicit full-front physical reviews after metered natural retention and SELECT-only canonical validation. Existing staging-only validator and exact domain approvals remain unchanged; delivery writes no mappings or source requests."
+      "reason": "Avoid resolving unrelated candidates and retained images when a bounded scheduled discovery or guarded approval chunk refreshes proposals. Preserve complete authoritative catalogue, sibling, mapping and current domain decision guards."
     }
   ],
-  "diff_sha256": "e3f5756ddd4c4bf0bdbb062f683977cb0d29c80398f139b6a084a350cac47c8b",
+  "diff_sha256": "5c6d9bc1cbc09c3c6630fcbccea4d1056e89422c552cd8a6a5a61f5052d335ff",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902"
-  },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        {
-          "name": "optcg-price-tracker",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "a3c9746c-daa1-483b-b917-6ab09e8e2fb2"
-        }
-      ],
-      "routes": [
-        "Existing staging-only positive physical-proof proposal integration"
-      ],
-      "dependencies": [
-        "Complete retained source/official originals and capture receipts; current catalogue/candidate lineage; existing exact domain approvals and manual precedence"
-      ],
-      "deployment_impact": "Staging API rebuild only. Existing source collectors continue with their verified components; no service configuration or schedule change.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 30
-    },
-    "recovery": {
-      "artifact": "ffdfdef50dc8b85cc1ccb0a781fa0f9621015104",
-      "procedure": "Fix forward prior staging API proof registry if evidence integrity fails. Retain all raw snapshots and immutable observations. No mapping approval happens during delivery.",
-      "trigger": "Stale/incomplete proof accepted, same-art physical twins admitted, non-staging activation or incorrect physical selection",
-      "backup": "Delivery changes only curated code evidence; no schema/data/queue mutation. Prior successful API deployment and exact source retained.",
-      "validation": [
-        "docs/agent/evidence/positive-physical-artwork-batch3-preflight-2026-10-06.json",
-        "services/api/tests/test_physical_artwork_proof.py"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "services/api/tests/test_physical_artwork_proof.py"
-      ],
-      "observation_window": "Require full strict serialized delivery before any approval. Revalidate current proof digests, pending proposal versions, zero-source status and open source capacity in chunks at most20 through existing exact domain guards; observe ordinary scheduled RAW captures before counting operational coverage."
-    }
   }
 }

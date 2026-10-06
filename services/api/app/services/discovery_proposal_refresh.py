@@ -26,10 +26,15 @@ def refresh_discovery_proposals(session, source, candidate_ids):
             )
         )
     )
-    analysis = analyse_source_mapping_proposals(
-        session, ProposalFilters(source=source), build_report=False
-    )
-    plans = [p for p in analysis.plans if p.source_candidate_id in ids - reviewed]
+    pending_ids = ids - reviewed
+    plans = []
+    if pending_ids:
+        analysis = analyse_source_mapping_proposals(
+            session,
+            ProposalFilters(source=source, candidate_ids=tuple(sorted(pending_ids))),
+            build_report=False,
+        )
+        plans = list(analysis.plans)
     result = persist_proposals(session, plans)
     return {
         "created": result.created_groups,
