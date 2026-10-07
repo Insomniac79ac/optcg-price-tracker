@@ -11,6 +11,7 @@ from app.models import (
     SourceCardMapping,
     SnkrdunkCandidate,
     PriceObservation,
+    RawSnapshot,
 )
 from app.services.freshness_queue import plan_discovery_scope
 from opcg_source_identity import canonical_source_listing_identity
@@ -153,6 +154,44 @@ def test_known_candidate_and_review_are_preserved_without_fetch(setup):
         and old.price_jpy == 9999
         and old.match_status == "rejected"
     )
+
+
+@pytest.mark.parametrize("evidence_kind", ["mapped", "retained"])
+def test_known_evidence_alias_without_candidate_is_not_refetched(setup, evidence_kind):
+    session, claim, _, anchor = setup
+    alias = "https://snkrdunk.com/apparels/900005"
+    if evidence_kind == "mapped":
+        prior = SourceCardMapping(
+            source_id=anchor.source_id,
+            card_id=2,
+            card_print_id=2,
+            source_card_id="900005",
+            source_url=alias,
+            is_active=False,
+            manual_verified=True,
+            review_status="approved",
+        )
+    else:
+        prior = RawSnapshot(
+            source_id=anchor.source_id,
+            source_url=alias,
+            http_status=404,
+            content_hash="a" * 64,
+            raw_content="immutable prior source evidence",
+        )
+    session.add(prior)
+    session.commit()
+    result, calls, _ = run(session, claim, documents())
+    assert calls == [ROBOTS, INDEX, SHARD]
+    assert result.resume_cursor["new_candidate_ids"] == []
+    assert session.scalars(select(SnkrdunkCandidate)).all() == []
+    assert prior.source_url == alias
+    if evidence_kind == "mapped":
+        assert prior.manual_verified and prior.review_status == "approved"
+        assert not prior.is_active
+    else:
+        assert prior.raw_content == "immutable prior source evidence"
+        assert prior.http_status == 404
 
 
 def test_missing_published_anchor_creates_no_probe_urls(setup):

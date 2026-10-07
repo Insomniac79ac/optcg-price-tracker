@@ -145,6 +145,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.merge.outputs.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -346,6 +347,8 @@ jobs:
       SNKRDUNK_TEST_PG_URL: postgresql+psycopg://opcg:opcg@localhost:5544/opcg_test
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

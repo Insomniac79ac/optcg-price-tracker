@@ -1,8 +1,10 @@
 import copy
 from pathlib import Path
 import sys
+import subprocess
+import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import verify_snkr_published_discovery_component as check
@@ -76,6 +78,48 @@ class ComponentVerificationTests(unittest.TestCase):
                 run=Mock(return_value="services/api/app/services/freshness_queue.py\n"),
             )
 
+    def test_real_git_shallow_history_cannot_prove_retained_component_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            origin.mkdir()
+
+            def git(cwd, *args):
+                return subprocess.check_output(
+                    ["git", *args], cwd=cwd, text=True, stderr=subprocess.PIPE
+                ).strip()
+
+            git(origin, "init", "-q")
+            git(origin, "config", "user.name", "Disposable test fixture")
+            git(origin, "config", "user.email", "fixture@example.test")
+            source = origin / "services/api/fixture.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("unchanged API bytes\n")
+            git(origin, "add", ".")
+            git(origin, "commit", "-qm", "fixture baseline")
+            baseline = git(origin, "rev-parse", "HEAD")
+            (origin / "docs.txt").write_text("later documentation\n")
+            git(origin, "add", ".")
+            git(origin, "commit", "-qm", "fixture delivery")
+            shallow = root / "shallow"
+            git(root, "clone", "-q", "--depth=1", origin.as_uri(), str(shallow))
+            head = git(shallow, "rev-parse", "HEAD")
+            with patch.object(check.state, "ROOT", shallow):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    check.continuity(baseline, head, check.API_PATHS)
+                git(shallow, "fetch", "-q", "--unshallow")
+                check.continuity(baseline, head, check.API_PATHS)
+                source = shallow / "services/api/fixture.py"
+                source.write_text("changed API bytes\n")
+                git(shallow, "config", "user.name", "Disposable test fixture")
+                git(shallow, "config", "user.email", "fixture@example.test")
+                git(shallow, "add", ".")
+                git(shallow, "commit", "-qm", "fixture changed API")
+                with self.assertRaises(check.state.VerificationError):
+                    check.continuity(
+                        baseline, git(shallow, "rev-parse", "HEAD"), check.API_PATHS
+                    )
+
     def test_deployment_marker_cannot_replace_actual_runtime_receipt(self):
         for field, value in [
             ("revision", check.API),
@@ -103,3 +147,54 @@ class ComponentVerificationTests(unittest.TestCase):
             mutate(live)
             with self.assertRaises(check.state.VerificationError):
                 check.verify(live, self.head)
+
+    def test_new_component_requires_its_own_actual_receipt(self):
+        live = copy.deepcopy(self.live)
+        live["railway"]["services"][1]["reported_sha"] = self.head
+        with self.assertRaises(check.AdoptionPending):
+            check.verify(live, self.head, self.head)
+        live["database"]["operational_runs"][0]["identity"]["revision"] = self.head
+        self.assertEqual(
+            check.verify(live, self.head, self.head)["snkr_component"], self.head
+        )
+
+    def test_wait_is_bounded_read_only_and_accepts_natural_adoption(self):
+        old = copy.deepcopy(self.live)
+        old["database"]["operational_runs"][0]["identity"]["deployment_id"] = "prior"
+        sleep = Mock()
+        collect = Mock(side_effect=[old, self.live])
+        result = check.wait_for_adoption(
+            self.head,
+            check.SNKR,
+            collect=collect,
+            clock=Mock(side_effect=[0, 1]),
+            sleep=sleep,
+            timeout=40,
+        )
+        self.assertEqual(result["source_jobs_triggered"], 0)
+        sleep.assert_called_once_with(30)
+        with self.assertRaisesRegex(check.state.VerificationError, "deadline"):
+            check.wait_for_adoption(
+                self.head,
+                check.SNKR,
+                collect=Mock(return_value=old),
+                clock=Mock(side_effect=[0, 2]),
+                sleep=sleep,
+                timeout=1,
+            )
+
+    def test_wait_never_retries_a_denial_or_wrong_deployment(self):
+        for mutate in [
+            lambda e: e["database"]["operational_runs"][0]["failure"].update(
+                http_429=1
+            ),
+            lambda e: e["railway"]["services"][1].update(reported_sha=check.API),
+        ]:
+            live = copy.deepcopy(self.live)
+            mutate(live)
+            sleep = Mock()
+            with self.assertRaises(check.state.VerificationError):
+                check.wait_for_adoption(
+                    self.head, check.SNKR, collect=Mock(return_value=live), sleep=sleep
+                )
+            sleep.assert_not_called()

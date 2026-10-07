@@ -3,6 +3,7 @@
 
 import json
 import subprocess
+import time
 
 import generate_staging_state as state
 
@@ -34,7 +35,11 @@ def continuity(component, head, paths, *, run=subprocess.check_output):
         )
 
 
-def verify(live, head):
+class AdoptionPending(state.VerificationError):
+    """Installed source has not yet produced a completed scheduled receipt."""
+
+
+def verify(live, head, snkr_expected=SNKR):
     if live["repository"]["sha"] != head or live["mode"] != "live":
         raise state.VerificationError("Staging source changed or live evidence missing")
     api = next(
@@ -47,7 +52,7 @@ def verify(live, head):
         raise state.VerificationError("Unexpected adopted API deployment")
     if (
         collector["status"] != "SUCCESS"
-        or collector["reported_sha"] != SNKR
+        or collector["reported_sha"] != snkr_expected
         or collector["schedule_utc"] != "27,57 * * * *"
         or not collector["due_work_configured"]
     ):
@@ -59,15 +64,13 @@ def verify(live, head):
         and r["identity"].get("finished_at")
     ]
     if not runs:
-        raise state.VerificationError("No completed ordinary SNKR runtime receipt")
+        raise AdoptionPending("No completed ordinary SNKR runtime receipt")
     receipt = max(runs, key=lambda r: r["identity"]["finished_at"])
     if (
-        receipt["identity"]["revision"] != SNKR
-        or receipt["identity"]["deployment_id"] != collector["deployment_id"]
-        or receipt["exit"]["terminal_state"] != "completed"
+        receipt["exit"]["terminal_state"] != "completed"
         or receipt["safety"]["singleton"] != "held"
     ):
-        raise state.VerificationError("Actual SNKR runtime adoption not verified")
+        raise state.VerificationError("SNKR terminal/singleton receipt refused")
     for field in (
         "claims_remaining",
         "expired_claims",
@@ -80,9 +83,14 @@ def verify(live, head):
     for field in ("http_403", "http_429", "challenge"):
         if receipt["failure"][field] != 0:
             raise state.VerificationError("SNKR required denial remains unresolved")
+    if (
+        receipt["identity"]["revision"] != snkr_expected
+        or receipt["identity"]["deployment_id"] != collector["deployment_id"]
+    ):
+        raise AdoptionPending("Actual SNKR runtime adoption not yet verified")
     return {
         "api_component": API,
-        "snkr_component": SNKR,
+        "snkr_component": snkr_expected,
         "snkr_actual_runtime_identity": receipt["identity"],
         "identity_basis": "Unchanged Git runtime inputs plus actual installed component receipt; platform Git may be unknown",
         "source_jobs_triggered": 0,
@@ -90,13 +98,36 @@ def verify(live, head):
     }
 
 
+def wait_for_adoption(
+    head,
+    snkr_expected,
+    *,
+    collect=state.collect_live,
+    clock=time.monotonic,
+    sleep=time.sleep,
+    timeout=1800
+):
+    deadline = clock() + timeout
+    while True:
+        try:
+            return verify(collect(), head, snkr_expected)
+        except AdoptionPending:
+            remaining = deadline - clock()
+            if remaining <= 0:
+                raise state.VerificationError("Natural SNKR adoption deadline exceeded")
+            sleep(min(30, remaining))
+
+
 def main():
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=state.ROOT, text=True
     ).strip()
+    mission = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
+    expected = mission["deployment_verification"].get("snkr_component", SNKR)
+    expected = head if expected == "merge" else expected
     continuity(API, head, API_PATHS)
-    continuity(SNKR, head, SNKR_PATHS)
-    print(json.dumps(verify(state.collect_live(), head), indent=2))
+    continuity(expected, head, SNKR_PATHS)
+    print(json.dumps(wait_for_adoption(head, expected), indent=2))
 
 
 if __name__ == "__main__":

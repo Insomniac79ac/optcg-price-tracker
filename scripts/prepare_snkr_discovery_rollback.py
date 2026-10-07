@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Prepare and check a local rollback patch; never apply it or contact a provider.
 
-Publish the patch through a new authorized PR and strict staging delivery. The
-prior dispatcher supports only refresh, so pending discovery intents stay inert.
+Publish the patch through a new authorized PR and strict staging delivery.
+Settle pending discovery without requests, so it cannot strand the fairness cursor.
 All retained RAW and unmatched candidates remain evidence, not deletion targets.
 """
 
@@ -16,6 +16,32 @@ import subprocess
 BASE = "1ddb234b8a0a51a2ad313359e22168182bf07dbd"
 PATH = "services/snkrdunk_collector/snkrdunk_collector/due.py"
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def rollback_source(before):
+    """Retain prior RAW/recovery behavior and fence off discovery without traffic."""
+    refusal = """def reject_disabled_discovery(session, claim, *, freshness):
+    result = CaptureResult(
+        "identity_refusal", failure="published_discovery_disabled_by_rollback"
+    )
+    freshness.result = result
+    return result
+
+
+"""
+    entry = "def run_due("
+    call = (
+        "                max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,\n"
+        "                delay_seconds="
+    )
+    if before.count(entry) != 1 or before.count(call) != 1:
+        raise ValueError("Retained dispatcher shape differs; rollback refused")
+    return before.replace(entry, refusal + entry).replace(
+        call,
+        "                max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,\n"
+        "                discovery_runner=reject_disabled_discovery,\n"
+        "                delay_seconds=",
+    )
 
 
 def main():
@@ -35,10 +61,11 @@ def main():
         )
     if current.count("discovery_runner=run_discovery") != 1:
         raise SystemExit("Expected bounded discovery dispatcher is not current")
+    recovered = rollback_source(before)
     patch = "".join(
         difflib.unified_diff(
             current.splitlines(True),
-            before.splitlines(True),
+            recovered.splitlines(True),
             fromfile="a/" + PATH,
             tofile="b/" + PATH,
         )

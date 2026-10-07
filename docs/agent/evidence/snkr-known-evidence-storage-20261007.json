@@ -1,0 +1,19 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-07T10:33:20.108235+00:00",
+  "database_writes": 0,
+  "source_http": 0,
+  "volume": {
+    "currentSizeMB": 3158.310912,
+    "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+    "mountPath": "/var/lib/postgresql/data",
+    "serviceId": "08c557d4-9d74-43fa-a0ac-5a909e731f4e",
+    "sizeMB": 10000,
+    "state": "READY",
+    "volumeId": "80cf7316-3091-4eff-b9b1-0d8d327dc5ac"
+  },
+  "reported_free_bytes": 6841689088,
+  "reserve_bytes": 2147483648,
+  "operational_allowance_bytes": 536870912,
+  "not_a_hard_transport_cap": true
+}

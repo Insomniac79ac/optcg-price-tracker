@@ -10,7 +10,13 @@ import unicodedata
 from urllib.robotparser import RobotFileParser
 
 from sqlalchemy import select
-from app.models import FreshnessWork, SnkrdunkCandidate, Source, SourceCardMapping
+from app.models import (
+    FreshnessWork,
+    RawSnapshot,
+    SnkrdunkCandidate,
+    Source,
+    SourceCardMapping,
+)
 from app.services.freshness_integration import CaptureResult, AdmissionStopped
 from opcg_source_identity import canonical_source_listing_identity
 from snkrdunk_collector.published_discovery import (
@@ -78,6 +84,22 @@ def consume(session, claim, *, freshness, fetch, settle=lambda: None):
     work, source, cursor, anchors = intent(session, claim)
     # Previously retained pages and candidate rows are evidence, not re-fetch targets.
     known = set(session.scalars(select(SnkrdunkCandidate.source_url)))
+    known.update(
+        session.scalars(
+            select(SourceCardMapping.source_url).where(
+                SourceCardMapping.source_id == source.id
+            )
+        )
+    )
+    # Read URL keys only, never the retained payloads. Include inactive mappings
+    # and unsuccessful retained responses: discovery must not replay that evidence.
+    known.update(
+        session.scalars(
+            select(RawSnapshot.source_url)
+            .where(RawSnapshot.source_id == source.id)
+            .distinct()
+        )
+    )
     exclusions = {canonical_source_listing_identity("snkrdunk", u) for u in known}
     exclusions |= set(anchors)
     previous = session.scalars(
