@@ -60,6 +60,19 @@ class ReaderAdoptionTests(unittest.TestCase):
         self.assertEqual(len(r["actual_natural_reader_components"]), 9)
         self.assertFalse(r["encoded_writes_enabled"])
 
+    def test_capacity_cadence_requires_explicit_declaration_and_all_nine(self):
+        for shard, service in enumerate(self.live["railway"]["services"]):
+            service["schedule_utc"] = (
+                ",".join(str(shard + offset) for offset in range(0, 60, 10))
+                + " * * * *"
+            )
+        with self.assertRaises(check.state.VerificationError):
+            check.verify(self.live, self.head)
+        check.verify(self.live, self.head, capacity_cadence=True)
+        self.live["railway"]["services"][0]["schedule_utc"] = "0,30 * * * *"
+        with self.assertRaises(check.state.VerificationError):
+            check.verify(self.live, self.head, capacity_cadence=True)
+
     def test_verifier_only_commit_preserves_exact_installed_component(self):
         self.live["repository"]["sha"] = "b" * 40
         result = check.verify(self.live, "b" * 40, self.head)

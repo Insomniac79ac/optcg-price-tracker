@@ -52,7 +52,9 @@ class Settings(BaseSettings):
     # Natural post-advertising-filter executions measured <=56 requests and
     # 7.42s average per product. Sixteen serial checks per each of nine turns
     # fit the unchanged 9,000/30min budget even at a conservative 60 requests.
-    # Keep the 30min cadence, source pacing and modulo-nine routing unchanged.
+    # Shared admission additionally caps Yuyu at four active product claims.
+    # A cadence change needs a separate measured staging preflight; source
+    # pacing, request reservations and modulo-nine routing stay unchanged.
     DUE_MAX_PRODUCTS_PER_RUN: int = Field(default=16, ge=1, le=70)
 
     @field_validator("DATABASE_URL")

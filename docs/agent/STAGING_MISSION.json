@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Deliver guarded RAW storage writer OFF with additive protected dependencies and portable backups",
+  "mission": "Bound Yuyu active captures before measured scheduler capacity expansion",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,45 +20,25 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        "docs/agent/RAW_STORAGE_WRITER.md",
-        "docs/agent/evidence/raw-storage-writer-off-preflight-20261007.json",
-        "scripts/apply_staging_raw_dependency.py",
-        "scripts/generate_staging_state.py",
-        "scripts/staging-migration-requirements.txt",
-        "scripts/tests/test_apply_staging_raw_dependency.py",
-        "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py",
-        "services/api/app/models/__init__.py",
-        "services/api/app/models/raw_snapshot_dictionary.py",
-        "services/api/app/services/backup.py",
-        "services/api/app/services/freshness_integration.py",
-        "services/api/app/services/raw_dictionary_backup.py",
-        "services/api/app/services/raw_dictionary_storage.py",
-        "services/api/tests/test_attempt_raw_snapshot_link_migration.py",
-        "services/api/tests/test_freshness_adapters_postgres.py",
+        "docs/agent/YUYU_BOUNDED_ADMISSION.md",
+        "docs/agent/evidence/yuyu-bounded-admission-preflight-20261007.json",
+        "scripts/tests/test_yuyu_raw_reader_component.py",
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "services/api/app/services/freshness_queue.py",
         "services/api/tests/test_freshness_queue_postgres.py",
-        "services/api/tests/test_freshness_retry_postgres.py",
-        "services/api/tests/test_mapping_listing_foundation.py",
-        "services/api/tests/test_market_index_completion_backup.py",
-        "services/api/tests/test_market_value_persistence.py",
-        "services/api/tests/test_raw_dictionary_backup.py",
-        "services/api/tests/test_raw_dictionary_storage_postgres.py",
-        "services/api/tests/test_unique_current_listing_identity_postgres.py",
-        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py",
-        "services/yuyutei_collector/yuyutei_collector/telemetry.py"
+        "services/yuyutei_collector/yuyutei_collector/config.py"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "staging_deployment",
-        "migration"
+        "source_envelope",
+        "staging_deployment"
       ],
-      "reason": "Empty additive RESTRICT dependencies, default-OFF globally bounded new-snapshot writer and independent plaintext portable backup/recovery. Existing RAW/identity/price/publication data are unchanged. Serialized checksum-pinned DDL exactlyone table plus revision row update; explicit currentAPI/all10collector component proof and source guards retained. Repair test-only migration recorder isolation and schema-specific index assertions; verify legacy v17/v18 archives alongside19. Collector CI installs Alembic only for the actual protected-dependency migration fixture; collector runtime dependencies remain unchanged."
+      "reason": "Enforce atomic Yuyu4 active-claim bound under existing shared admission lock before any cadence expansion; preserve source pacing/mod9/identity/recurrence. Recognise only declared uniform bounded schedule profile; do not activate schedule or added volume in delivery. Include measured forecast with explicit limitations and rollback."
     }
   ],
-  "diff_sha256": "011463268a28c0f7a7f6860abd0824256d62c750634981bba51f46efba164933",
+  "diff_sha256": "17a3d768dc66f731a18d5c3a2748e85a3916ef87e7a9fdd250b3077cec6ca258",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "e8c2d4f6a901",
@@ -120,12 +100,7 @@
         "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
       }
     ],
-    "raw_dependency_migration": {
-      "revision": "e8c2d4f6a901",
-      "parent": "c4e8a1d7b902",
-      "file": "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py",
-      "sha256": "91f01e1c1277219a738fbc9bf805a5889c6f2b145188b04240051919cc504d54"
-    }
+    "yuyu_capacity_cadence": true
   },
   "safeguards": {
     "impact": {
@@ -197,21 +172,19 @@
       "dependencies": [
         "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
       ],
-      "deployment_impact": "Serialized checksum-pinned empty RESTRICT table+one Alembic revision row update, API rebuild and all10 existing collector uploads. Writer stays OFF. Worker/beat unchanged until separate consumer delivery. Source intents/config/cadence/budgets/approvals remain unchanged.",
-      "database_writes": 1,
+      "deployment_impact": "Native API and all10 shared-package collector delivery, hard Yuyu4 active claims; existing cron/budgets/writers remain unchanged. Uniform explicitly declared legacy/ten-minute profile recognition does not activate cadence or volume.",
+      "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "bf4475a47ccdf8b06ef93a1a1cd4f29779834f64",
-      "procedure": "Leave additive RESTRICT table installed; feature OFF. Empty-table downgrade validated locally; no destructive staging downgrade. Explicit writer-owned child can be expanded losslessly after OFF, preserving rows/IDs/hashes/capture times and ledger; PostgreSQL tested. Keep reader and backup19 compatibility; fix forward.",
+      "artifact": "a1c4a4f4b66df50a4be1e6119cc8675abc62bedf",
+      "procedure": "Keep current cron; if separately tuned, restore original pinned all9 cron before reverting admission source. Keep e8 schema and shared raw readers. No evidence or price history removal.",
       "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
-      "backup": "No historical rows modified by OFF additive schema; data restore not applicable. Git/migration checksum and existing immutable raw evidence retained. Backup19 plaintext export/restore plus dictionary lineage validated locally, old12..18 readable. Old runtime cannot consume newv19 backup; retain new reader and v19 backup support during fix-forward.",
+      "backup": "No historical rows changed and no migration; Git before source and live staging schedule receipts retained. Ordinary collector mutations remain fenced by existing queue.",
       "validation": [
-        "services/api/tests/test_raw_dictionary_storage_postgres.py",
-        "services/api/tests/test_raw_dictionary_backup.py",
-        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py",
-        "scripts/tests/test_apply_staging_raw_dependency.py"
+        "services/api/tests/test_freshness_queue_postgres.py",
+        "scripts/tests/test_yuyu_raw_reader_component.py"
       ]
     },
     "verification": {
@@ -224,7 +197,7 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Actual merged frontend/API/e8 DB, sale226/historygap0/browser3 + installed SNKR/all9 ordinary receipts unchangedmax16/9mod/pacing/budgets. Bounded30min component windows. No encoding/storage capacity expansion claimed until separate natural canary."
+      "observation_window": "All9 and SNKR ordinary component receipts at existing schedules, exact current API/e8/frontend/sale/history guards. Separate normal 02\u201306 UTC busy peak for any later cadence or volume change."
     }
   }
 }
