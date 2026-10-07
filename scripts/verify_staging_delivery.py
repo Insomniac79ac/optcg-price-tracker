@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, destination-pinned post-merge verification; no deploy or job triggers."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
 import re
@@ -20,9 +21,39 @@ def require(condition, message):
         raise state.VerificationError(message)
 
 
+def run_component_checks(checks):
+    paths = []
+    for check in checks:
+        path = (state.ROOT / check).resolve()
+        require(
+            path.is_relative_to(state.ROOT) and path.suffix == ".py",
+            "Check must be a repository Python file",
+        )
+        paths.append(path)
+
+    def run(path):
+        # These two read-only checks explicitly wait up to one complete 30-min
+        # staggered cron cycle. Give their own 1800s deadline a bounded cleanup
+        # allowance. Other repository checks retain their existing 300s bound.
+        natural = path.relative_to(state.ROOT).as_posix() in {
+            "scripts/verify_snkr_published_discovery_component.py",
+            "scripts/verify_yuyu_raw_reader_component.py",
+        }
+        subprocess.run(
+            ["python", str(path)], check=True, timeout=1860 if natural else 300
+        )
+
+    # These checks only read provider/retained evidence, so adoption windows
+    # overlap without invoking sources or changing any source concurrency.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(run, paths))
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
-        raise state.VerificationError("Unexpected HTTP redirect; destination not verified")
+        raise state.VerificationError(
+            "Unexpected HTTP redirect; destination not verified"
+        )
 
 
 def get(url):
@@ -200,10 +231,7 @@ def main():
     browser_check()
     sale = sale_audit()
     routes = browser_check()
-    for check in args.check:
-        path = (state.ROOT / check).resolve()
-        require(path.is_relative_to(state.ROOT) and path.suffix == ".py", "Check must be a repository Python file")
-        subprocess.run(["python", str(path)], check=True, timeout=300)
+    run_component_checks(args.check)
     # Re-read after browser/data checks, so a competing deployment cannot be called success.
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)

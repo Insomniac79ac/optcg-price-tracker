@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Install lossless RAW readers before guarded staging storage and admission expansion",
+  "mission": "Repair bounded natural reader adoption verification and complete strict staging proof",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,175 +20,60 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/RAW_STORAGE_READERS.md",
-        "docs/agent/evidence/raw-storage-reader-preflight-20261007.json",
-        "packages/opcg_source_identity/src/opcg_source_identity/raw_payload.py",
-        "scripts/tests/test_snkr_discovery_component.py",
-        "scripts/tests/test_yuyu_raw_reader_component.py",
-        "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/verify_staging_delivery.py",
         "scripts/verify_yuyu_raw_reader_component.py",
-        "services/api/app/models/raw_snapshot.py",
-        "services/api/requirements.txt",
-        "services/api/tests/test_raw_payload_reader.py",
-        "services/snkrdunk_collector/requirements.txt",
-        "services/snkrdunk_collector/snkrdunk_collector/models.py",
-        "services/worker/requirements.txt",
-        "services/worker/worker/models.py",
-        "services/yuyutei_collector/requirements.txt",
-        "services/yuyutei_collector/yuyutei_collector/models.py"
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/tests/test_yuyu_raw_reader_component.py",
+        "docs/agent/evidence/raw-reader-window-preflight-20261007.json",
+        ".github/workflows/ci.yml"
       ],
       "effects": [
-        "application",
         "tests",
         "documentation",
-        "staging_deployment",
-        "subsystem_activation"
+        "staging_deployment"
       ],
-      "reason": "Readers precede encoded writes: all existing plaintext parsing, capture timestamps, hashes, identity guards, backup lineage and source policies remain compatible. No encoding writer, DDL, source intent, source schedule or budget change is included. Strict exact API, SNKR and all-nine natural component verification required."
+      "reason": "Fix child verification timeout300 shorter than declared natural30min adoption window; bounded1860s for two read-only adoption checks, parallel provider reads only; exact prior component SHA with runtime continuity guards. No collector deployment/config/source job/volume/DB change. Staging CI uses supported webpack build after Turbopack Fraunces resolver failure; full type/UI tests retained; no frontend runtime/source input change."
     }
   ],
-  "diff_sha256": "df30b4b8c52b085adfd6918254255c576a3b1b1b7bd480aca9e03dc60cb14353",
+  "diff_sha256": "209e1f384da609174b92fd9c87287ee930c0f3de0454bf63381d5bdd2e3d17ef",
   "deployment_verification": {
-    "api_sha": "merge",
+    "api_sha": "d65a523486290f5af480acb50907ff0b9976855c",
     "revision": "c4e8a1d7b902",
     "checks": [
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
     ],
-    "snkr_component": "merge",
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "19e777cd-8b8b-420d-9d43-12fb5666a7a2"
-      },
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "8c863d88-6081-4415-bac6-f4c77d5a26b2"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "c1a72cf2-9a55-4e23-9891-242eef9863a9"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "aba1b04f-e8ce-40b8-9d17-a7b9514433bb"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "e88c1dd2-51ec-41b8-acbf-1ac6fae2384a"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "3f5113e8-2eed-460d-8efa-4eb0b967e7d5"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "f71c909b-664d-4424-9ea6-755ef9172f6d"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "2eaff494-406e-4637-8db4-d05b2491e0c8"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "0fc8db28-5647-45e0-94a9-b3019c1967e5"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "349681b5-08cc-4f0b-8ccb-d5f3acf84245"
-      }
-    ]
+    "snkr_component": "d65a523486290f5af480acb50907ff0b9976855c",
+    "collector_services": [],
+    "yuyu_reader_component": "d65a523486290f5af480acb50907ff0b9976855c"
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "optcg-price-tracker",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-        },
-        {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "19e777cd-8b8b-420d-9d43-12fb5666a7a2"
-        },
-        {
-          "name": "yuyutei-collector-shard-0",
-          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "8c863d88-6081-4415-bac6-f4c77d5a26b2"
-        },
-        {
-          "name": "yuyutei-collector-shard-1",
-          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "c1a72cf2-9a55-4e23-9891-242eef9863a9"
-        },
-        {
-          "name": "yuyutei-collector-shard-2",
-          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "aba1b04f-e8ce-40b8-9d17-a7b9514433bb"
-        },
-        {
-          "name": "yuyutei-collector-shard-3",
-          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "e88c1dd2-51ec-41b8-acbf-1ac6fae2384a"
-        },
-        {
-          "name": "yuyutei-collector-shard-4-v2",
-          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "3f5113e8-2eed-460d-8efa-4eb0b967e7d5"
-        },
-        {
-          "name": "yuyutei-collector-shard-5",
-          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "f71c909b-664d-4424-9ea6-755ef9172f6d"
-        },
-        {
-          "name": "yuyutei-collector-shard-6",
-          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "2eaff494-406e-4637-8db4-d05b2491e0c8"
-        },
-        {
-          "name": "yuyutei-collector-shard-7",
-          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "0fc8db28-5647-45e0-94a9-b3019c1967e5"
-        },
-        {
-          "name": "yuyutei-collector-shard-8",
-          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "349681b5-08cc-4f0b-8ccb-d5f3acf84245"
+          "name": "Staging CI and frontend verifier",
+          "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
         }
       ],
       "routes": [
-        "Existing staging RAW retained-evidence and portable backup readers"
+        "Strict staging verification only"
       ],
       "dependencies": [
-        "Pinned zstandard0.25.0 from official library documentation checked2026-10-07; existing shared source package; existing SQLAlchemy model/backup interfaces"
+        "Existing native deployment and read-only component checks"
       ],
-      "deployment_impact": "Exact staging API rebuild and ten existing collector uploads inside the established serialized delivery lease. Writer remains absent. No schema/config/source-job/volume changes. Worker mock plaintext input remains compatible; explicit worker/beat reader installation is still required before a future encoded writer.",
+      "deployment_impact": "Frontend verifier-only staging merge; API and all ten collectors remain exact d65a523 installed inputs. No source job or service mutation.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "183076f8e1f71b1ed6efec4a81e9146564df123f",
-      "procedure": "Forward isolated PR restores prior RawSnapshot mappings and library inputs under strict staging delivery. No encoded writes or schema changes exist, so database reversal is not applicable. Preserve all evidence and source pauses. Keep new intents unplanned until guarded writer/dependency/recovery/storage/natural capacity pass.",
+      "artifact": "d65a523486290f5af480acb50907ff0b9976855c",
+      "procedure": "Forward PR reverts verifier timeout/CI compiler flag. Existing source and database state need no reversal. Actual runtime inputs remain d65.",
       "trigger": "Plaintext or backup regression, wrong identity, ownership/admission failure, uncontrolled requests or source denial.",
-      "backup": "Not applicable to reader-only code: no extant record or schema is modified. Retain original183 commit, all ten exact recovery deployment IDs, previousAPI1ddb, immutable source evidence and durable checkpoint. Portable decoded backup/restore is tested.",
+      "backup": "Not applicable: read-only verification code only; no persistent state mutation.",
       "validation": [
-        "services/api/tests/test_raw_payload_reader.py",
-        "services/api/tests/test_backup_exact_lineage.py",
-        "services/api/tests/test_backup.py",
-        "services/snkrdunk_collector/tests",
-        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py"
+        "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/tests/test_yuyu_raw_reader_component.py"
       ]
     },
     "verification": {
@@ -201,7 +86,7 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Strict exact frontend/API/DB/sale/history/browser audit plus actual installed completed ordinary SNKR and all9Yuyu receipts on the unchanged30min schedules. Reader-only max_work16 retained. Bounded read-only adoption waits<=1800seconds; no source-job invocation. No operational/storage expansion claim from offline100-pair5.3percent compression benchmark."
+      "observation_window": "Exact strict frontend/API/sale/history/browser verification; latest completed actual d65 installed SNKR plus all9Yuyu receipts, unchanged schedules and max_work16. Adoption checks run concurrently with internal1800s and bounded outer1860s deadlines, no source invocation."
     }
   }
 }
