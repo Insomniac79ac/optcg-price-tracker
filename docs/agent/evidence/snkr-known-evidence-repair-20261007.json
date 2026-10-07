@@ -10,10 +10,10 @@
   "source_jobs_triggered": 0,
   "new_discovery_intents": 0,
   "production_accessed": false,
-  "rollback_patch_sha256": "ad91c0fab66c6e4a3ab3411eafe893ff2e1a6fcb9a13982b475732b032fc8364",
+  "rollback_patch_sha256": "e21ee6a0c9339f39a26a1c66a79c33ca464335cd9f04fdd36f378c004c347a04",
   "focused_tests": "32 passed, including a real local shallow Git clone that fails baseline resolution, succeeds with full history, and rejects changed API bytes",
-  "full_collector_tests": "558 passed, 48 subtests passed; real disposable PostgreSQL ownership/expiry/late-denial rollback exercised",
-  "full_test_log_sha256": "626583a48e6f81652f450ee39af690b0b76e9175622cc9459bfa48fe0346422c",
+  "full_collector_tests": "559 passed, 48 subtests passed; real disposable PostgreSQL ownership/expiry/late-denial rollback and executed fair recovery covered",
+  "full_test_log_sha256": "b2c966906f6ebd58994893ea7fd84af1730838e2d777fb2bf50e83720dd4063e",
   "first_pr73_engineering_run": {
     "run": 37608438799,
     "cause": "DockerHub HTTP500 for Node/Python base manifests before compilation; other engineering tests including backend passed",
@@ -21,5 +21,8 @@
     "official_retry_reference": "https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run",
     "checked_at": "2026-10-07",
     "source_jobs_triggered": 0
-  }
+  },
+  "recovery_defect": "Restoring refresh-only dispatcher can strand its fairness cursor at an unsupported pending discovery scope. No live discovery scope was ever planned.",
+  "recovery_repair": "Generated rollback retains prior RAW behavior and settles pending discovery via zero-request identity_refusal under ordinary source singleton/claim/result fences; scope blocked, evidence preserved, next RAW work dispatched.",
+  "recovery_execution_test": "Real PostgreSQL reproduced unsupported-lane stall; generated dispatcher settled discovery with zero requests and continued RAW. Existing snapshot, rejected candidate, manual mapping and reservations preserved. Passed."
 }

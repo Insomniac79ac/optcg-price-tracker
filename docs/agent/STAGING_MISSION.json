@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Skip previously retained/mapped published SNKR listings and repair strict delivery Git continuity",
+  "mission": "Skip retained SNKR evidence and validate strict staging delivery and nonstarving recovery",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -23,11 +23,14 @@
         ".github/workflows/ci.yml",
         ".github/workflows/staging-delivery.yml",
         ".github/workflows/staging-verify.yml",
+        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md",
         "docs/agent/evidence/snkr-known-evidence-repair-20261007.json",
         "docs/agent/evidence/snkr-known-evidence-storage-20261007.json",
+        "scripts/prepare_snkr_discovery_rollback.py",
         "scripts/tests/test_snkr_discovery_component.py",
         "scripts/verify_snkr_published_discovery_component.py",
         "services/snkrdunk_collector/snkrdunk_collector/discovery.py",
+        "services/snkrdunk_collector/tests/test_discovery_rollback_postgres.py",
         "services/snkrdunk_collector/tests/test_discovery_runtime.py"
       ],
       "effects": [
@@ -38,10 +41,10 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Bounded URL-key exclusions preserve previous evidence and source cost. Full Git checkouts support mandatory API byte-continuity proof; new collector component requires its own completed natural receipt, with bounded read-only observation."
+      "reason": "Bounded URL-key exclusions preserve previous evidence and source cost. Full Git history proves unchanged API bytes. Exact new collector component requires actual natural adoption. Executed generated rollback settles pending discovery without HTTP under existing fences, preserves evidence and advances ordinary RAW fairness; no schedule/budget/trigger/permission changes."
     }
   ],
-  "diff_sha256": "c140eddd9975874f322b2b9d4ae3d3da5b6a532e837795d96e11d4d24775d0d8",
+  "diff_sha256": "5594fdb8f7f47954b279e9308aef22fe0e33c8d9d65d4aca4d9c1a3e9ee86e08",
   "deployment_verification": {
     "api_sha": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
     "revision": "c4e8a1d7b902",
@@ -80,13 +83,14 @@
     },
     "recovery": {
       "artifact": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
-      "procedure": "Hold new discovery intents until strict success. Apply the checked PR70 dispatcher rollback patch via a new strict isolated PR if source safety fails; prior scheduled RAW dispatcher leaves pending discovery inert and preserves all snapshots/candidates. Full-history checkout is safe to retain. Never rerun completed source scopes or jobs.",
+      "procedure": "Hold new intents until strict success and fresh measured capacity/storage guards. Prepare checked PR70 RAW dispatcher rollback patch with zero-request discovery refusal callback; publish in a new strict isolated PR if safety fails. Ordinary claim/result fences block pending discovery and advance its fairness cursor so later RAW dispatch continues. Preserve RAW/candidates/decisions, source denial pause and immutable history. Never replay completed scopes or recovery2765.",
       "trigger": "Uncontrolled source requests, candidate fence escape, price/mapping writes, resource pressure, widespread denial or invalid valid-input parsing. Required denial preserves source pause; no unpause/replay.",
       "backup": "No persistent rows modified by publication. Retained PR70/PR71/PR72 commits, actual component deployment4ac, failed CI artifacts and checked dispatcher rollback patch remain recovery evidence.",
       "validation": [
         "scripts/prepare_snkr_discovery_rollback.py",
         "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
-        "docs/agent/evidence/snkr-known-evidence-repair-20261007.json"
+        "docs/agent/evidence/snkr-known-evidence-repair-20261007.json",
+        "services/snkrdunk_collector/tests/test_discovery_rollback_postgres.py"
       ]
     },
     "verification": {
@@ -98,7 +102,7 @@
         "scripts/verify_snkr_published_discovery_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Full serialized strict frontend/API/browser/sale/history/DB delivery. API1ddb verified against complete Git history. New exact merged SNKR component must produce its own completed ordinary receipt with settled claims/reservations, held singleton and no required denial. Read-only observer waits <=1800s; no source job triggers. No canary intent before genuine successful receipt. Refreshed storage has >2GiB reserve +512MiB operational allowance (not a hard transport cap). Yuyu expansion remains held for peak capacity."
+      "observation_window": "Full serialized strict frontend/API/browser/sale/history/DB delivery. API1ddb verified against complete Git history. New exact merged SNKR component must produce its own completed ordinary receipt with settled claims/reservations, held singleton and no required denial. Read-only observer waits <=1800s; no source job triggers. No canary intent before genuine successful receipt. Refreshed storage has >2GiB reserve +512MiB operational allowance (not a hard transport cap). Yuyu expansion remains held for peak capacity. Generated rollback executes in real PostgreSQL and does not strand pending RAW fairness. Next40min planned RAW count times observed24h maximum request cost plus300 must fit3100 before canary planning; currently held."
     }
   }
 }
