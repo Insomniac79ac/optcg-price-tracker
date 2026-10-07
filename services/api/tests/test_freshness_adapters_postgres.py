@@ -565,9 +565,20 @@ def test_discovery_lane_yields_without_changing_checkpoint(db):
 
 
 def test_raw_valuation_input_and_snapshot_selection_exclude_psa10(db, monkeypatch):
+    from datetime import datetime
+    from app.services import print_market_index
     from app.services.print_market_index import get_market_index_for_print
     from app.snapshot_market_index import select_snapshottable_print_ids
 
+    class FixtureClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            value = T0 + timedelta(minutes=1)
+            return value.astimezone(tz) if tz is not None else value.replace(tzinfo=None)
+
+    # Collection uses T0. Keep valuation in that same fixture window so this
+    # RAW-versus-PSA10 test does not expire as the wall clock advances.
+    monkeypatch.setattr(print_market_index, "datetime", FixtureClock)
     factory, source, mid, pid = db
     seed(factory, mid)
     Transport(monkeypatch)

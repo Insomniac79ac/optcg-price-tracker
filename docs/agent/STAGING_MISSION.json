@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Deliver153 remaining current-digest physical proofs:23 replacements and130 additions,registry298",
+  "mission": "Deliver153 current-digest physical proofs and keep the RAW-versus-PSA10 regression in its fixture clock window",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -30,9 +30,18 @@
         "staging_deployment"
       ],
       "reason": "Publish153 current-digest byte-bound physical proofs after full authoritative catalogue validation, preserving first64. Existing guard code, source budgets, schedules and approval semantics unchanged; delivery performs zero source/data/queue operations."
+    },
+    {
+      "files": [
+        "services/api/tests/test_freshness_adapters_postgres.py"
+      ],
+      "effects": [
+        "tests"
+      ],
+      "reason": "CI exposed a September30 fixture expiring against the seven-day wall clock on October7. Pin only this test valuation clock to its existing collection fixture time; application pricing and freshness rules remain unchanged. Disposable local PostgreSQL18 regression passed."
     }
   ],
-  "diff_sha256": "2805c26f61ea3ee07d813fe99ea281b6923a1cb05d3c10d9e6e1f6fb697ea539",
+  "diff_sha256": "1cfeaafe4d61e9afac20db7f9b54b7968f952655e0613c2fd86fbb09b651d3eb",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902"

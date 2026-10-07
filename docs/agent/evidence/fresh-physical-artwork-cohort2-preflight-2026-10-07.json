@@ -1413,5 +1413,11 @@
     "api_deployment": "2f096846-dc4d-4a74-87bc-d123caf2d998",
     "procedure": "Fix forward prior registry from retained Git source. Delivery has no data/queue/source writes. Later approval receipts isolate mapping/work IDs; deactivate only those mappings and block owned pending/unclaimed work on integrity failure; retain raw, observations, immutable decisions and history."
   },
-  "verification": "77mock/adversarial tests passed;153current canonical exact zero-source proofs validated SELECT-only. Strict serialized staging delivery required before fresh revalidation/approval; verify ordinary RAW scheduled captures and separate operational/fresh counts."
+  "verification": "77mock/adversarial tests passed;153current canonical exact zero-source proofs validated SELECT-only. Strict serialized staging delivery required before fresh revalidation/approval; verify ordinary RAW scheduled captures and separate operational/fresh counts.",
+  "ci_fix_forward": {
+    "failure": "One fixed-time test compared a September30 capture against the real October7 valuation clock; seven-day eligibility correctly excluded it.",
+    "change": "Pin only the test valuation clock to T0+1minute.",
+    "local_validation": "Targeted RAW-versus-PSA10 PostgreSQL18 offline regression:1passed. Existing77mock/adversarial proof/artwork tests passed.",
+    "application_pricing_or_freshness_change": false
+  }
 }
