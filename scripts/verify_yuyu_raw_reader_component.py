@@ -90,12 +90,24 @@ def main():
         if not re.fullmatch("[0-9a-f]{40}", component):
             raise state.VerificationError("Full installed reader component required")
         changed = subprocess.check_output(
-            ["git", "diff", "--name-only", component, head, "--", "services/api",
-             "services/yuyutei_collector", "packages/opcg_source_identity"],
-            cwd=state.ROOT, text=True,
+            [
+                "git",
+                "diff",
+                "--name-only",
+                component,
+                head,
+                "--",
+                "services/api",
+                "services/yuyutei_collector",
+                "packages/opcg_source_identity",
+            ],
+            cwd=state.ROOT,
+            text=True,
         ).strip()
         if changed:
-            raise state.VerificationError("Installed Yuyu reader runtime inputs changed")
+            raise state.VerificationError(
+                "Installed Yuyu reader runtime inputs changed"
+            )
     deadline = time.monotonic() + 1800
     while True:
         try:

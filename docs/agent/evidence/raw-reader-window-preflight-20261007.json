@@ -3,5 +3,11 @@
   "after": "Named read-only adoption checks bounded1860s, parallel; other checks retain300s; exact reader component continuity remains mandatory",
   "tests": "13 regression tests passed",
   "source_jobs_triggered": 0,
-  "production_accessed": false
+  "production_accessed": false,
+  "ci_failure": "37631656719 frontend job112827201918: Next16.2.10 Turbopack Fraunces internal font resolver query errors",
+  "bounded_fix": "Official next build --webpack supported by installed16.2.10 help; stagingPR CI only; production runtime untouched; all type/UI checks required",
+  "official_docs": "https://nextjs.org/docs/app/api-reference/cli/next",
+  "checked_at": "2026-10-07",
+  "local_build": "webpack complete, TypeScript and138 pages passed",
+  "recovery": "Revert CI compiler flag and verifier-only code in a forward PR, no data/config/source changes"
 }

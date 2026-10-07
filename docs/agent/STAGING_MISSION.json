@@ -2,7 +2,7 @@
   "schema_version": 1,
   "mission": "Repair bounded natural reader adoption verification and complete strict staging proof",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -24,17 +24,18 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/tests/test_verify_staging_delivery.py",
         "scripts/tests/test_yuyu_raw_reader_component.py",
-        "docs/agent/evidence/raw-reader-window-preflight-20261007.json"
+        "docs/agent/evidence/raw-reader-window-preflight-20261007.json",
+        ".github/workflows/ci.yml"
       ],
       "effects": [
         "tests",
         "documentation",
         "staging_deployment"
       ],
-      "reason": "Fix child verification timeout300 shorter than declared natural30min adoption window; bounded1860s for two read-only adoption checks, parallel provider reads only; exact prior component SHA with runtime continuity guards. No collector deployment/config/source job/volume/DB change."
+      "reason": "Fix child verification timeout300 shorter than declared natural30min adoption window; bounded1860s for two read-only adoption checks, parallel provider reads only; exact prior component SHA with runtime continuity guards. No collector deployment/config/source job/volume/DB change. Staging CI uses supported webpack build after Turbopack Fraunces resolver failure; full type/UI tests retained; no frontend runtime/source input change."
     }
   ],
-  "diff_sha256": "c3b659752ab41198deaaf2b0b80fe4e93264058442cacab9998f023424fac255",
+  "diff_sha256": "209e1f384da609174b92fd9c87287ee930c0f3de0454bf63381d5bdd2e3d17ef",
   "deployment_verification": {
     "api_sha": "d65a523486290f5af480acb50907ff0b9976855c",
     "revision": "c4e8a1d7b902",
@@ -48,7 +49,12 @@
   },
   "safeguards": {
     "impact": {
-      "resources": [],
+      "resources": [
+        {
+          "name": "Staging CI and frontend verifier",
+          "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+        }
+      ],
       "routes": [
         "Strict staging verification only"
       ],
@@ -62,7 +68,7 @@
     },
     "recovery": {
       "artifact": "d65a523486290f5af480acb50907ff0b9976855c",
-      "procedure": "Forward PR reverts verifier-only changes. Source code, evidence and service configuration unchanged; no database or collector rollback required.",
+      "procedure": "Forward PR reverts verifier timeout/CI compiler flag. Existing source and database state need no reversal. Actual runtime inputs remain d65.",
       "trigger": "Plaintext or backup regression, wrong identity, ownership/admission failure, uncontrolled requests or source denial.",
       "backup": "Not applicable: read-only verification code only; no persistent state mutation.",
       "validation": [

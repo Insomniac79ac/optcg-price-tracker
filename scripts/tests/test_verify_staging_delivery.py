@@ -13,11 +13,17 @@ from verify_staging_delivery import validate_state, get, state, wait_for_deliver
 
 class VerificationTests(unittest.TestCase):
     def test_natural_checks_keep_full_bounded_cycle_and_other_checks_keep_300s(self):
-        checks = ["scripts/verify_yuyu_raw_reader_component.py",
-                  "scripts/verify_snkr_published_discovery_component.py", "scripts/verify_staging_delivery.py"]
+        checks = [
+            "scripts/verify_yuyu_raw_reader_component.py",
+            "scripts/verify_snkr_published_discovery_component.py",
+            "scripts/verify_staging_delivery.py",
+        ]
         with patch("verify_staging_delivery.subprocess.run") as run:
             run_component_checks(checks)
-        bounds = {Path(call.args[0][1]).name: call.kwargs["timeout"] for call in run.call_args_list}
+        bounds = {
+            Path(call.args[0][1]).name: call.kwargs["timeout"]
+            for call in run.call_args_list
+        }
         self.assertEqual(bounds["verify_yuyu_raw_reader_component.py"], 1860)
         self.assertEqual(bounds["verify_snkr_published_discovery_component.py"], 1860)
         self.assertEqual(bounds["verify_staging_delivery.py"], 300)

@@ -25,7 +25,10 @@ def run_component_checks(checks):
     paths = []
     for check in checks:
         path = (state.ROOT / check).resolve()
-        require(path.is_relative_to(state.ROOT) and path.suffix == ".py", "Check must be a repository Python file")
+        require(
+            path.is_relative_to(state.ROOT) and path.suffix == ".py",
+            "Check must be a repository Python file",
+        )
         paths.append(path)
 
     def run(path):
@@ -36,7 +39,9 @@ def run_component_checks(checks):
             "scripts/verify_snkr_published_discovery_component.py",
             "scripts/verify_yuyu_raw_reader_component.py",
         }
-        subprocess.run(["python", str(path)], check=True, timeout=1860 if natural else 300)
+        subprocess.run(
+            ["python", str(path)], check=True, timeout=1860 if natural else 300
+        )
 
     # These checks only read provider/retained evidence, so adoption windows
     # overlap without invoking sources or changing any source concurrency.
@@ -46,7 +51,9 @@ def run_component_checks(checks):
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
-        raise state.VerificationError("Unexpected HTTP redirect; destination not verified")
+        raise state.VerificationError(
+            "Unexpected HTTP redirect; destination not verified"
+        )
 
 
 def get(url):
