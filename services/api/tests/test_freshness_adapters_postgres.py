@@ -672,7 +672,7 @@ def test_category_outcomes_backup_roundtrip_and_v16_compatibility(db):
         archive = export_backup(
             session, include_prices=True, include_raw_snapshots=True
         )
-    assert archive["metadata"]["backup_version"] == 18
+    assert archive["metadata"]["backup_version"] == 19
     assert validate_backup(archive).valid
     outcomes = archive["tables"]["freshness_attempts"][0]["category_outcomes"]
     assert outcomes == {"raw": "absent", "psa10": "parsing_failure"}

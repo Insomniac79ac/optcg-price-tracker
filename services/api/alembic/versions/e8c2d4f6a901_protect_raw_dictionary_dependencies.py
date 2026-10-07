@@ -7,8 +7,8 @@ Revises: c4e8a1d7b902
 from alembic import op
 import sqlalchemy as sa
 
-revision = "e8c2d4f6a901"
-down_revision = "c4e8a1d7b902"
+revision: str = "e8c2d4f6a901"
+down_revision: str | None = "c4e8a1d7b902"
 branch_labels = None
 depends_on = None
 

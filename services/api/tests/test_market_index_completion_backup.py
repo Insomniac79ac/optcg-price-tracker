@@ -19,7 +19,7 @@ from tests.test_snapshot_market_index import catalogue  # noqa: F401
 
 def test_receipts_share_price_history_backup_flag(db_session, catalogue):
     writer.snapshot_market_index(db_session, skip_lock=True)
-    assert BACKUP_VERSION == 18
+    assert BACKUP_VERSION == 19
     assert (
         "market_index_snapshot_completions" not in export_backup(db_session)["tables"]
     )

@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 import sqlalchemy as sa
 
@@ -27,8 +28,12 @@ def _capture(direction: str):
         "add_column", "drop_column", "create_foreign_key", "drop_constraint",
         "create_index", "drop_index", "execute", "bulk_insert", "get_bind",
     )}
-    for name in calls:
-        setattr(module.op, name, lambda *args, _name=name, **kwargs: calls[_name].append((args, kwargs)))
+    # Keep this recorder local; mutating the shared Alembic facade contaminates
+    # subsequent real migration/FK tests in the same pytest process.
+    module.op = SimpleNamespace(**{
+        name: lambda *args, _name=name, **kwargs: calls[_name].append((args, kwargs))
+        for name in calls
+    })
     getattr(module, direction)()
     return module, calls
 
@@ -87,3 +92,12 @@ def test_downgrade_removes_index_then_fk_then_column():
     assert calls["drop_column"] == [
         (("source_collection_attempts", "raw_snapshot_id"), {})
     ]
+
+
+def test_recorder_preserves_real_alembic_operations():
+    from alembic import op
+
+    before = {name: getattr(op, name) for name in ("get_bind", "create_index", "execute")}
+    _capture("upgrade")
+    _capture("downgrade")
+    assert {name: getattr(op, name) for name in before} == before

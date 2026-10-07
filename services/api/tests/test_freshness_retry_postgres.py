@@ -304,7 +304,7 @@ def test_transient_failures_without_page_use_durable_bounded_streaks(db):
             assert state.last_valid_price_observed_at is None
 
 
-@pytest.mark.parametrize("restore_version", [17, 18])
+@pytest.mark.parametrize("restore_version", [17, 18, 19])
 def test_retry_backup_preserves_streaks_and_legacy_archives(db, restore_version):
     from copy import deepcopy
     from app.services.backup import export_backup, restore_backup, validate_backup
@@ -323,7 +323,7 @@ def test_retry_backup_preserves_streaks_and_legacy_archives(db, restore_version)
         archive = export_backup(
             session, include_prices=True, include_raw_snapshots=True
         )
-    assert archive["metadata"]["backup_version"] == 18
+    assert archive["metadata"]["backup_version"] == 19
     assert validate_backup(archive).valid
     restored, _ = prepare_restore(archive["tables"], T0)
     assert (
@@ -349,7 +349,14 @@ def test_retry_backup_preserves_streaks_and_legacy_archives(db, restore_version)
     from app.db import Base
     from app.models import SourceDispatchBudget
 
-    to_restore = archive if restore_version == 18 else old
+    to_restore = deepcopy(archive)
+    to_restore["metadata"]["backup_version"] = restore_version
+    if restore_version < 19:
+        to_restore["tables"].pop("raw_snapshot_dictionaries", None)
+    if restore_version < 18:
+        for state in to_restore["tables"]["freshness_price_states"]:
+            del state["consecutive_failures"], state["retry_not_before_at"]
+    assert validate_backup(to_restore).valid
     engine = factory.kw["bind"]
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
@@ -369,9 +376,9 @@ def test_retry_backup_preserves_streaks_and_legacy_archives(db, restore_version)
                 FreshnessPriceState.price_category == "psa10"
             )
         )
-        assert state.consecutive_failures == (1 if restore_version == 18 else None)
+        assert state.consecutive_failures == (1 if restore_version >= 18 else None)
         assert state.retry_not_before_at == (
-            T0 + timedelta(minutes=15) if restore_version == 18 else None
+            T0 + timedelta(minutes=15) if restore_version >= 18 else None
         )
         assert not session.scalar(select(SourceDispatchBudget.enabled))
 
