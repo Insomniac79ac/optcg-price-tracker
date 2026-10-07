@@ -1,0 +1,17 @@
+{
+  "target": "staging",
+  "pr": 72,
+  "run": 37601389938,
+  "merge": "0ffc601b537f1da37d6c06e5e3a4fc52d1e32ac2",
+  "strict_delivery": "failure",
+  "cause": "Shallow post-merge checkout lacks 1ddb API baseline Git object; byte-continuity proof correctly failed closed. Public sale audit ran; no success receipt written.",
+  "repair": "Full Git history in all strict delivery checkouts; installed component revision resolved from manifest; bounded read-only wait for actual natural adoption.",
+  "discovery_change": "Exclude all existing source mapping URLs and distinct retained snapshot URL keys, including aliases without candidate rows. Preserve every prior row.",
+  "source_jobs_triggered": 0,
+  "new_discovery_intents": 0,
+  "production_accessed": false,
+  "rollback_patch_sha256": "ad91c0fab66c6e4a3ab3411eafe893ff2e1a6fcb9a13982b475732b032fc8364",
+  "focused_tests": "31 passed",
+  "full_collector_tests": "558 passed, 48 subtests passed; real disposable PostgreSQL ownership/expiry/late-denial rollback exercised",
+  "full_test_log_sha256": "626583a48e6f81652f450ee39af690b0b76e9175622cc9459bfa48fe0346422c"
+}
