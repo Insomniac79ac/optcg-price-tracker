@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Resume staging bounded published SNKRDUNK sitemap discovery; candidate-only, explicit natural one-shot lane",
+  "mission": "Repair strict staging delivery expectations using unchanged API bytes and actual natural SNKR adoption",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,62 +20,25 @@
   "impacts": [
     {
       "files": [
-        "services/snkrdunk_collector/snkrdunk_collector/discovery.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/__init__.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/non_target_tcg.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/release_product_aliases.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/snkrdunk_image_variant.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/snkrdunk_listing_evidence.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/source_product_aliases.py",
-        "services/snkrdunk_collector/snkrdunk_collector/due.py",
-        "services/snkrdunk_collector/snkrdunk_collector/published_discovery.py"
-      ],
-      "effects": [
-        "application",
-        "subsystem_activation",
-        "staging_deployment"
-      ],
-      "reason": "Collector-owned pure parser port and explicit one-shot published discovery runner. Preserve singleton, admission, exact identity, RAW-first, no retry/redirect and pending unmatched metadata only."
-    },
-    {
-      "files": [
-        "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
-        "services/snkrdunk_collector/tests/test_discovery_port_non_target_tcg.py",
-        "services/snkrdunk_collector/tests/test_discovery_port_snkrdunk_image_variant.py",
-        "services/snkrdunk_collector/tests/test_discovery_port_snkrdunk_listing_evidence.py",
-        "services/snkrdunk_collector/tests/test_discovery_runtime.py",
-        "services/snkrdunk_collector/tests/test_published_discovery.py"
-      ],
-      "effects": [
-        "tests"
-      ],
-      "reason": "Mock transport and real disposable PostgreSQL fence/lease/late-denial rollback tests plus unchanged parser parity regressions."
-    },
-    {
-      "files": [
-        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md",
-        "docs/agent/evidence/snkr-published-discovery-capacity-20261007.json",
-        "docs/agent/evidence/snkr-published-discovery-preflight-20261007.json",
-        "scripts/mission_measure_snkr_discovery_capacity.py",
-        "scripts/prepare_snkr_discovery_rollback.py"
+        "docs/agent/evidence/snkr-discovery-delivery-expectation-20261007.json",
+        "scripts/tests/test_snkr_discovery_component.py",
+        "scripts/verify_snkr_published_discovery_component.py"
       ],
       "effects": [
         "documentation",
-        "tests"
+        "tests",
+        "subsystem_activation",
+        "staging_deployment"
       ],
-      "reason": "Measured synthetic capacity, staging storage/source preflight, checked executable rollback patch preparation and durable recovery instructions."
+      "reason": "Correct expectation for unmodified API component with full Git input continuity; add mandatory actual installed SNKR execution proof while keeping strict frontend/browser/sale/history/database guards unchanged."
     }
   ],
-  "diff_sha256": "430ad70fc3686358b41be742bed64b199757c884ddcd20a2ae2c90c4c9dc06c4",
+  "diff_sha256": "f4373c2206fd4afbed4a5526035521f601a4772fd6edd372f329045bfdd77877",
   "deployment_verification": {
-    "api_sha": "merge",
+    "api_sha": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
     "revision": "c4e8a1d7b902",
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "446e3604-a969-42ac-8537-fb2cf94fbf0d"
-      }
+    "checks": [
+      "scripts/verify_snkr_published_discovery_component.py"
     ]
   },
   "safeguards": {
@@ -94,20 +57,20 @@
         "Existing shared claim/result fence, source singleton, source request admission and browser settlement",
         "Collector image installs API shared service package; pure discovery parsers have no Worker runtime imports"
       ],
-      "deployment_impact": "Only existing SNKR collector receives strict exact merged source; API/frontend native delivery remain required. No service configuration, schedules or budgets change. Explicit lane creates only unmatched candidate metadata when a separate fresh-guarded scope is planned; no scopes exist at publication. Parser limits are not hard download caps.",
+      "deployment_impact": "No collector/API runtime code changes or collector redeploy. Frontend native build at exact new merge; API remains exact verified unchangedPR70 and SNKR remains exact PR71installed bytes, each independently verified. No source intent/config/schedule/budget/trigger changes.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
       "artifact": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
-      "procedure": "Run scripts/prepare_snkr_discovery_rollback.py --output /tmp/snkr-discovery-rollback.patch; apply in isolated recovery branch and publish a fresh AMBER manifest PR through native auto-merge and strict serialized delivery. Prior dispatcher supports refresh only, leaving any pending discovery inert. Preserve all RAW/candidates/history.",
+      "procedure": "Do not plan discovery unless strict verification passes. Preserve failedPR71 artifact and current API1ddb/SNKRffbb. If source runtime fails, use the checked scripts/prepare_snkr_discovery_rollback.py patch in a new isolated PR with correct unchanged API expectation; preserve all RAW and candidates. No replay, deletion or manual job.",
       "trigger": "Uncontrolled source requests, candidate fence escape, price/mapping writes, resource pressure, widespread denial or invalid valid-input parsing. Required denial preserves source pause; no unpause/replay.",
-      "backup": "No schema/data write at deployment. Prior Git source and pinned deployment retained. Natural candidates/RAW remain immutable evidence; no database restore/deletion is needed.",
+      "backup": "No persistent or runtime-code mutation by this repair; prior commits, actual deployments and failed delivery artifact retained.",
       "validation": [
+        "scripts/tests/test_snkr_discovery_component.py",
         "scripts/prepare_snkr_discovery_rollback.py",
-        "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
-        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md"
+        "docs/agent/evidence/snkr-discovery-delivery-expectation-20261007.json"
       ]
     },
     "verification": {
@@ -116,10 +79,10 @@
       ],
       "post_change": [
         "scripts/verify_staging_delivery.py",
-        "scripts/generate_staging_state.py",
-        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md"
+        "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Strict serialized delivery and first ordinary SNKR scheduled runtime receipt with actual new installed component revision. Only after zero current actionable SNKR RAW backlog, >=300 available requests, no pause and storage2GiB+512MiB allowance pass, plan one explicit <=300 request scope for natural schedule. Observe next turn plus one cycle for cost, RAW lineage, unmatched candidates, zero price/mapping writes and settled claims. No manual jobs. Full collector555/48subtests and added real runtime denial regression passed."
+      "observation_window": "Full strict serialized delivery with exact frontend merge, API unchanged1ddb verified by Git runtime-input continuity, and mandatory latest completed ordinary SNKR receipt from actualffbb installed component and current deployment. No new intents before success; same current capacity/storage gates apply after delivery.11 mock verification regressions passed."
     }
   }
 }
