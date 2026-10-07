@@ -11,7 +11,15 @@
   "new_discovery_intents": 0,
   "production_accessed": false,
   "rollback_patch_sha256": "ad91c0fab66c6e4a3ab3411eafe893ff2e1a6fcb9a13982b475732b032fc8364",
-  "focused_tests": "31 passed",
+  "focused_tests": "32 passed, including a real local shallow Git clone that fails baseline resolution, succeeds with full history, and rejects changed API bytes",
   "full_collector_tests": "558 passed, 48 subtests passed; real disposable PostgreSQL ownership/expiry/late-denial rollback exercised",
-  "full_test_log_sha256": "626583a48e6f81652f450ee39af690b0b76e9175622cc9459bfa48fe0346422c"
+  "full_test_log_sha256": "626583a48e6f81652f450ee39af690b0b76e9175622cc9459bfa48fe0346422c",
+  "first_pr73_engineering_run": {
+    "run": 37608438799,
+    "cause": "DockerHub HTTP500 for Node/Python base manifests before compilation; other engineering tests including backend passed",
+    "focused_retry": "GitHub refused while run active; cancellation denied Resource not accessible by integration. Push real Git history regression through existing PR trigger; no CI permissions/triggers changes.",
+    "official_retry_reference": "https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run",
+    "checked_at": "2026-10-07",
+    "source_jobs_triggered": 0
+  }
 }

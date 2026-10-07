@@ -1,8 +1,10 @@
 import copy
 from pathlib import Path
 import sys
+import subprocess
+import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import verify_snkr_published_discovery_component as check
@@ -75,6 +77,48 @@ class ComponentVerificationTests(unittest.TestCase):
                 check.API_PATHS,
                 run=Mock(return_value="services/api/app/services/freshness_queue.py\n"),
             )
+
+    def test_real_git_shallow_history_cannot_prove_retained_component_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin = root / "origin"
+            origin.mkdir()
+
+            def git(cwd, *args):
+                return subprocess.check_output(
+                    ["git", *args], cwd=cwd, text=True, stderr=subprocess.PIPE
+                ).strip()
+
+            git(origin, "init", "-q")
+            git(origin, "config", "user.name", "Disposable test fixture")
+            git(origin, "config", "user.email", "fixture@example.test")
+            source = origin / "services/api/fixture.py"
+            source.parent.mkdir(parents=True)
+            source.write_text("unchanged API bytes\n")
+            git(origin, "add", ".")
+            git(origin, "commit", "-qm", "fixture baseline")
+            baseline = git(origin, "rev-parse", "HEAD")
+            (origin / "docs.txt").write_text("later documentation\n")
+            git(origin, "add", ".")
+            git(origin, "commit", "-qm", "fixture delivery")
+            shallow = root / "shallow"
+            git(root, "clone", "-q", "--depth=1", origin.as_uri(), str(shallow))
+            head = git(shallow, "rev-parse", "HEAD")
+            with patch.object(check.state, "ROOT", shallow):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    check.continuity(baseline, head, check.API_PATHS)
+                git(shallow, "fetch", "-q", "--unshallow")
+                check.continuity(baseline, head, check.API_PATHS)
+                source = shallow / "services/api/fixture.py"
+                source.write_text("changed API bytes\n")
+                git(shallow, "config", "user.name", "Disposable test fixture")
+                git(shallow, "config", "user.email", "fixture@example.test")
+                git(shallow, "add", ".")
+                git(shallow, "commit", "-qm", "fixture changed API")
+                with self.assertRaises(check.state.VerificationError):
+                    check.continuity(
+                        baseline, git(shallow, "rev-parse", "HEAD"), check.API_PATHS
+                    )
 
     def test_deployment_marker_cannot_replace_actual_runtime_receipt(self):
         for field, value in [

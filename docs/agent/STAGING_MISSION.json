@@ -41,7 +41,7 @@
       "reason": "Bounded URL-key exclusions preserve previous evidence and source cost. Full Git checkouts support mandatory API byte-continuity proof; new collector component requires its own completed natural receipt, with bounded read-only observation."
     }
   ],
-  "diff_sha256": "4c3b83729795be6560099bb33290846881c9854ebfff2420909478fb6c9c3775",
+  "diff_sha256": "c140eddd9975874f322b2b9d4ae3d3da5b6a532e837795d96e11d4d24775d0d8",
   "deployment_verification": {
     "api_sha": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
     "revision": "c4e8a1d7b902",
