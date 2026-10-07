@@ -15,7 +15,7 @@ import json
 from uuid import uuid4
 
 from opcg_source_identity import canonical_source_listing_identity
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,8 @@ from app.services.freshness_policy import (
     require_utc,
     utc_now,
 )
+
+YUYU_ACTIVE_CLAIM_LIMIT = 4
 
 OUTCOMES = frozenset(
     {
@@ -462,6 +464,20 @@ def claim_due(
     _recover_expired(db, budget, now)
     if not _source_open(budget, now):
         return []
+    # All Yuyu consumers share this admission row lock. Cadence must never
+    # increase the four simultaneously active captures observed in staging.
+    # Count every work kind, including other consumers and crash recovery.
+    yuyu = db.scalar(select(Source.name).where(Source.id == source_id)) == "yuyutei"
+    if yuyu:
+        active = db.scalar(
+            select(func.count())
+            .select_from(FreshnessWork)
+            .where(
+                FreshnessWork.source_id == source_id,
+                FreshnessWork.state == "claimed",
+            )
+        )
+        limit = min(limit, max(0, YUYU_ACTIVE_CLAIM_LIMIT - active))
     claims: list[Claim] = []
     for _ in range(limit):
         remaining = (
@@ -652,6 +668,7 @@ def admit_request(
     _require_owner(work, attempt, now)
     if not _source_open(budget, now):
         from app.services.source_recovery import permitted_recovery_request
+
         if not permitted_recovery_request(db, budget, work):
             raise ValueError("source paused or disabled; dispatch refused")
     if work.kind == "refresh":

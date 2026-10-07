@@ -1,0 +1,622 @@
+{
+  "target": "staging",
+  "classification": "AMBER",
+  "observed_at": "2026-10-07T23:19:39Z",
+  "source_http": 0,
+  "production_accessed": false,
+  "measured_before": {
+    "component": "a1c4a4f4b66df50a4be1e6119cc8675abc62bedf",
+    "eligible": 2616,
+    "shards": [
+      291,
+      290,
+      290,
+      291,
+      290,
+      291,
+      291,
+      292,
+      290
+    ],
+    "max_active_natural_executions72h": 4,
+    "raw_actual_requests24h_max": 56,
+    "budget": {
+      "request_limit": 9000,
+      "window_seconds": 1800,
+      "raw_reservation": 300,
+      "ordinary_discovery_reservation": 1200
+    },
+    "max_raw_per_execution": 16,
+    "max_execution_runtime72h_seconds": 603.164,
+    "source_denials24h": 0
+  },
+  "forecast": [
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8282,
+      "requests": 463792,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 3,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8064,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8282,
+      "requests": 463792,
+      "deadline_misses": 11,
+      "worst_lateness_seconds": 191.16344802283857,
+      "late_by_shard": {
+        "5": 11
+      },
+      "admission_stops": 9,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8120,
+      "examples": [
+        {
+          "id": 3637,
+          "shard": 5,
+          "lag": 3638.081221012115,
+          "time": 25261.393567947387
+        },
+        {
+          "id": 3646,
+          "shard": 5,
+          "lag": 3668.786149080275,
+          "time": 25300.091317947386
+        },
+        {
+          "id": 1612,
+          "shard": 5,
+          "lag": 3698.920477115629,
+          "time": 25338.789067947386
+        },
+        {
+          "id": 3655,
+          "shard": 5,
+          "lag": 3729.714666954038,
+          "time": 25377.486817947385
+        },
+        {
+          "id": 3664,
+          "shard": 5,
+          "lag": 3760.373610038754,
+          "time": 25416.184567947384
+        },
+        {
+          "id": 3673,
+          "shard": 5,
+          "lag": 3791.1634480228386,
+          "time": 25454.882317947384
+        },
+        {
+          "id": 1675,
+          "shard": 5,
+          "lag": 3618.086227949141,
+          "time": 27100.091317947386
+        },
+        {
+          "id": 2754,
+          "shard": 5,
+          "lag": 3648.9075801010113,
+          "time": 27138.789067947386
+        },
+        {
+          "id": 478,
+          "shard": 5,
+          "lag": 3679.21930109596,
+          "time": 27177.486817947385
+        },
+        {
+          "id": 2763,
+          "shard": 5,
+          "lag": 3709.992042083737,
+          "time": 27216.184567947384
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8588,
+      "requests": 480928,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 2,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8064,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8585,
+      "requests": 480760,
+      "deadline_misses": 14,
+      "worst_lateness_seconds": 229.86119802283793,
+      "late_by_shard": {
+        "5": 13,
+        "8": 1
+      },
+      "admission_stops": 17,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8120,
+      "examples": [
+        {
+          "id": 3628,
+          "shard": 5,
+          "lag": 3645.953169969558,
+          "time": 25261.393567947387
+        },
+        {
+          "id": 3637,
+          "shard": 5,
+          "lag": 3676.778971012114,
+          "time": 25300.091317947386
+        },
+        {
+          "id": 3646,
+          "shard": 5,
+          "lag": 3707.4838990802746,
+          "time": 25338.789067947386
+        },
+        {
+          "id": 1612,
+          "shard": 5,
+          "lag": 3737.6182271156285,
+          "time": 25377.486817947385
+        },
+        {
+          "id": 3655,
+          "shard": 5,
+          "lag": 3768.4124169540373,
+          "time": 25416.184567947384
+        },
+        {
+          "id": 3664,
+          "shard": 5,
+          "lag": 3799.0713600387535,
+          "time": 25454.882317947384
+        },
+        {
+          "id": 3673,
+          "shard": 5,
+          "lag": 3829.861198022838,
+          "time": 25493.580067947383
+        },
+        {
+          "id": 1666,
+          "shard": 5,
+          "lag": 3625.9155240612017,
+          "time": 27100.091317947386
+        },
+        {
+          "id": 1675,
+          "shard": 5,
+          "lag": 3656.7839779491405,
+          "time": 27138.789067947386
+        },
+        {
+          "id": 2754,
+          "shard": 5,
+          "lag": 3687.6053301010106,
+          "time": 27177.486817947385
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10161,
+      "requests": 569016,
+      "deadline_misses": 159,
+      "worst_lateness_seconds": 230.2567921161717,
+      "late_by_shard": {
+        "8": 70,
+        "0": 61,
+        "3": 9,
+        "4": 19
+      },
+      "admission_stops": 1,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8064,
+      "examples": [
+        {
+          "id": 1615,
+          "shard": 8,
+          "lag": 3641.970031929017,
+          "time": 18571.89581794739
+        },
+        {
+          "id": 1705,
+          "shard": 8,
+          "lag": 3716.6154329299934,
+          "time": 20371.89581794739
+        },
+        {
+          "id": 1714,
+          "shard": 8,
+          "lag": 3717.2460249900832,
+          "time": 20381.09581794739
+        },
+        {
+          "id": 1751,
+          "shard": 0,
+          "lag": 3732.4886979579933,
+          "time": 20731.89581794739
+        },
+        {
+          "id": 517,
+          "shard": 8,
+          "lag": 3609.855558109284,
+          "time": 22171.89581794739
+        },
+        {
+          "id": 3559,
+          "shard": 8,
+          "lag": 3610.8334690570846,
+          "time": 22181.09581794739
+        },
+        {
+          "id": 526,
+          "shard": 8,
+          "lag": 3611.9601050376914,
+          "time": 22190.29581794739
+        },
+        {
+          "id": 2569,
+          "shard": 8,
+          "lag": 3613.171524095538,
+          "time": 22199.49581794739
+        },
+        {
+          "id": 563,
+          "shard": 0,
+          "lag": 3621.0098950386055,
+          "time": 22531.89581794739
+        },
+        {
+          "id": 572,
+          "shard": 0,
+          "lag": 3622.4828690528884,
+          "time": 22541.09581794739
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10163,
+      "requests": 569128,
+      "deadline_misses": 198,
+      "worst_lateness_seconds": 1902.1711170864073,
+      "late_by_shard": {
+        "8": 104,
+        "3": 22,
+        "5": 72
+      },
+      "admission_stops": 11,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8064,
+      "examples": [
+        {
+          "id": 1606,
+          "shard": 8,
+          "lag": 3687.362991003036,
+          "time": 18601.393567947387
+        },
+        {
+          "id": 460,
+          "shard": 8,
+          "lag": 3718.0222108917224,
+          "time": 18640.091317947386
+        },
+        {
+          "id": 1615,
+          "shard": 8,
+          "lag": 3748.863281929014,
+          "time": 18678.789067947386
+        },
+        {
+          "id": 490,
+          "shard": 8,
+          "lag": 3762.4116000213617,
+          "time": 20401.393567947387
+        },
+        {
+          "id": 1696,
+          "shard": 8,
+          "lag": 3792.980515058516,
+          "time": 20440.091317947386
+        },
+        {
+          "id": 1705,
+          "shard": 8,
+          "lag": 3823.5086829299908,
+          "time": 20478.789067947386
+        },
+        {
+          "id": 1714,
+          "shard": 8,
+          "lag": 3853.637024990079,
+          "time": 20517.486817947385
+        },
+        {
+          "id": 100130,
+          "shard": 3,
+          "lag": 3606.9776441417853,
+          "time": 21340.091317947386
+        },
+        {
+          "id": 1504,
+          "shard": 5,
+          "lag": 3621.7088459091174,
+          "time": 21700.091317947386
+        },
+        {
+          "id": 2656,
+          "shard": 5,
+          "lag": 3652.0515009994488,
+          "time": 21738.789067947386
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8429,
+      "requests": 472024,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 26,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2400,
+      "max_used_lazy_window": 8736,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8420,
+      "requests": 471520,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 22,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 639,
+      "max_reserved": 3000,
+      "max_used_lazy_window": 7896,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8741,
+      "requests": 489496,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 34,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3600,
+      "max_used_lazy_window": 8736,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8731,
+      "requests": 488936,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 21,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 662,
+      "max_reserved": 3600,
+      "max_used_lazy_window": 8008,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10338,
+      "requests": 578928,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 53,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3600,
+      "max_used_lazy_window": 8736,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10309,
+      "requests": 577304,
+      "deadline_misses": 31,
+      "worst_lateness_seconds": 293.78584207152744,
+      "late_by_shard": {
+        "7": 2,
+        "6": 17,
+        "8": 12
+      },
+      "admission_stops": 28,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 767,
+      "max_reserved": 3600,
+      "max_used_lazy_window": 8232,
+      "examples": [
+        {
+          "id": 2181,
+          "shard": 7,
+          "lag": 3618.0637321109753,
+          "time": 27258.789067947386
+        },
+        {
+          "id": 2190,
+          "shard": 7,
+          "lag": 3648.2205039176915,
+          "time": 27297.486817947385
+        },
+        {
+          "id": 2486,
+          "shard": 6,
+          "lag": 3686.4301349201196,
+          "time": 28921.393567947387
+        },
+        {
+          "id": 2495,
+          "shard": 6,
+          "lag": 3716.7473040180193,
+          "time": 28960.091317947386
+        },
+        {
+          "id": 2504,
+          "shard": 6,
+          "lag": 3747.0171310539226,
+          "time": 28998.789067947386
+        },
+        {
+          "id": 2513,
+          "shard": 6,
+          "lag": 3777.455021968839,
+          "time": 29037.486817947385
+        },
+        {
+          "id": 2522,
+          "shard": 6,
+          "lag": 3807.851547975537,
+          "time": 29076.184567947384
+        },
+        {
+          "id": 2594,
+          "shard": 6,
+          "lag": 3838.5321110954246,
+          "time": 29114.882317947384
+        },
+        {
+          "id": 2531,
+          "shard": 6,
+          "lag": 3868.6143770961717,
+          "time": 29153.580067947383
+        },
+        {
+          "id": 100187,
+          "shard": 6,
+          "lag": 3683.8758410116316,
+          "time": 29192.277817947383
+        }
+      ]
+    }
+  ],
+  "forecast_limits": "Not proven safe throughput. Exact current due times with phased future modulo9 mappings. Fixed window phase and reset-before-settlement are modelled. Costs are settled at completion; runtime stress is worst observed whole-run average, not an individual timeout bound. Initial 300 reserved requests are not modelled; no NEW100 capture burst is included. Admission needs a fresh conservative image-capture model and natural peak verification before volume is added.",
+  "mutation": "All Yuyu claimants share the existing source budget row lock and hard cap4 live claims across work kinds. Source requests/pacing/identity/freshness policy are unchanged. Cadence stays legacy during native delivery. A separately guarded ten-minute profile is recognised only when explicitly declared; uniform all9 profile required.",
+  "rollback": "Restore every pinned shard original cron first, then revert the bounded guard if necessary. Keep e8 schema/shared dictionary reader/portable backup support. No source jobs or data replay. Historical evidence retained.",
+  "stop_thresholds": [
+    "any source denial/challenge",
+    "wrong shard or duplicate request",
+    "claim/reservation leak",
+    "more than4 simultaneous source claims",
+    "sustained actionable >24h failure",
+    "unexpected runtime/memory increase"
+  ],
+  "verification": "Local PostgreSQL atomic concurrent claim, completion/expiry, routing, adapter and retry tests; native CI and serialized all10 adoption. Cadence may change only after fresh state, source-open budget accounting, exact source adoption, pinned staging fork isolation and executable rollback. Natural overnight 02\u201306 UTC peak required before expanded recurring RAW load."
+}

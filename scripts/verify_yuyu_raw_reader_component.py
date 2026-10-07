@@ -8,7 +8,7 @@ import generate_staging_state as state
 from verify_snkr_published_discovery_component import AdoptionPending
 
 
-def verify(live, head, component=None):
+def verify(live, head, component=None, *, capacity_cadence=False):
     component = component or head
     if live["mode"] != "live" or live["repository"]["sha"] != head:
         raise state.VerificationError("Current merged staging source required")
@@ -23,13 +23,24 @@ def verify(live, head, component=None):
     }:
         raise state.VerificationError("Nine existing staging shards required")
     receipts = []
+    profiles = []
     for service in services:
         shard = int(service["name"].split("shard-")[1].split("-")[0])
         minute = shard * 3
+        legacy = f"{minute},{minute+30} * * * *"
+        bounded = (
+            ",".join(str(shard + offset) for offset in range(0, 60, 10)) + " * * * *"
+        )
+        schedule = service["schedule_utc"]
+        profiles.append(
+            "legacy"
+            if schedule == legacy
+            else "bounded" if capacity_cadence and schedule == bounded else "invalid"
+        )
         if (
             service["status"] != "SUCCESS"
             or service["reported_sha"] != component
-            or service["schedule_utc"] != f"{minute},{minute+30} * * * *"
+            or profiles[-1] == "invalid"
             or not service["due_work_configured"]
         ):
             raise state.VerificationError("Yuyu deployed source/schedule changed")
@@ -69,6 +80,10 @@ def verify(live, head, component=None):
         if any(receipt["failure"][k] for k in ("http_403", "http_429", "challenge")):
             raise state.VerificationError("Required source denial remains unresolved")
         receipts.append(receipt["identity"])
+    if len(set(profiles)) != 1:
+        raise state.VerificationError(
+            "All nine shards require one declared cadence profile"
+        )
     return {
         "actual_natural_reader_components": receipts,
         "encoded_writes_enabled": False,
@@ -84,6 +99,25 @@ def main():
     manifest = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
     declared = manifest["deployment_verification"].get("yuyu_reader_component", "merge")
     component = head if declared == "merge" else declared
+    capacity_cadence = manifest["deployment_verification"].get(
+        "yuyu_capacity_cadence", False
+    )
+    if capacity_cadence:
+        installed = subprocess.check_output(
+            [
+                "git",
+                "show",
+                component + ":services/api/app/services/freshness_queue.py",
+            ],
+            text=True,
+        )
+        if (
+            "YUYU_ACTIVE_CLAIM_LIMIT = 4" not in installed
+            or "YUYU_ACTIVE_CLAIM_LIMIT - active" not in installed
+        ):
+            raise state.VerificationError(
+                "Declared cadence requires installed four-claim admission"
+            )
     if component != head:
         import re
 
@@ -111,7 +145,12 @@ def main():
     deadline = time.monotonic() + 1800
     while True:
         try:
-            result = verify(state.collect_live(), head, component)
+            result = verify(
+                state.collect_live(),
+                head,
+                component,
+                capacity_cadence=capacity_cadence,
+            )
             print(json.dumps(result, indent=2))
             return
         except AdoptionPending:

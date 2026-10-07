@@ -42,6 +42,62 @@ URL = os.environ.get(
 )
 
 
+def test_yuyu_active_claim_cap_is_atomic_and_releases_on_completion_and_expiry(db):
+    factory, source_id, _, _ = db
+    with factory.begin() as session:
+        session.get(Source, source_id).name = "yuyutei"
+        for number in range(12):
+            plan_discovery_scope(session, source_id, f"capacity:{number}", due_at=T0)
+
+    def take(number, at=T0, limit=1):
+        with factory.begin() as session:
+            return claim_due(
+                session,
+                source_id,
+                f"serial-{number}",
+                limit=limit,
+                lease=timedelta(minutes=2),
+                clock=lambda: at,
+                supported_kinds={"discovery"},
+            )
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        claimed = [claim for group in pool.map(take, range(8)) for claim in group]
+    assert len(claimed) == 4
+    assert take("full") == []
+    with factory.begin() as session:
+        complete_claim(
+            session,
+            claimed[0].claim_token,
+            outcome="transient_failure",
+            actual_request_cost=0,
+            clock=lambda: T0,
+        )
+    assert len(take("replacement", limit=10)) == 1
+    # Expired holders settle their full reservation before new admission.
+    assert len(take("recovered", T0 + timedelta(minutes=3), limit=10)) == 4
+    with factory() as session:
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(FreshnessWork)
+                .where(
+                    FreshnessWork.source_id == source_id,
+                    FreshnessWork.state == "claimed",
+                )
+            )
+            == 4
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(FreshnessAttempt)
+                .where(FreshnessAttempt.outcome == "expired")
+            )
+            == 4
+        )
+
+
 @pytest.fixture()
 def db():
     parsed = make_url(URL)
@@ -796,6 +852,14 @@ def test_yuyutei_nine_shard_membership_is_preserved(db):
             )
             assert all(item.source_card_mapping_id % 9 == shard for item in batch)
             claimed.extend(item.source_card_mapping_id for item in batch)
+            for item in batch:
+                complete_claim(
+                    session,
+                    item.claim_token,
+                    outcome="transient_failure",
+                    actual_request_cost=0,
+                    clock=lambda: T0,
+                )
     assert sorted(claimed) == sorted(ids)
 
 
