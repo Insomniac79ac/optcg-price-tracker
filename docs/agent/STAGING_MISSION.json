@@ -55,10 +55,10 @@
         "staging_deployment",
         "migration"
       ],
-      "reason": "Empty additive RESTRICT dependencies, default-OFF globally bounded new-snapshot writer and independent plaintext portable backup/recovery. Existing RAW/identity/price/publication data are unchanged. Serialized checksum-pinned DDL exactlyone table plus revision row update; explicit currentAPI/all10collector component proof and source guards retained. Repair test-only migration recorder isolation and schema-specific index assertions; verify legacy v17/v18 archives alongside19."
+      "reason": "Empty additive RESTRICT dependencies, default-OFF globally bounded new-snapshot writer and independent plaintext portable backup/recovery. Existing RAW/identity/price/publication data are unchanged. Serialized checksum-pinned DDL exactlyone table plus revision row update; explicit currentAPI/all10collector component proof and source guards retained. Repair test-only migration recorder isolation and schema-specific index assertions; verify legacy v17/v18 archives alongside19. Collector CI installs Alembic only for the actual protected-dependency migration fixture; collector runtime dependencies remain unchanged."
     }
   ],
-  "diff_sha256": "09de0697fabf85ee8f101d57be57a044930b484de98df646485b790a97734ff7",
+  "diff_sha256": "3c19f8f8892c24fffc587e9f4d5073055095bba1ef95f3130cb8677405658122",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "e8c2d4f6a901",
