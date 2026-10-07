@@ -18,14 +18,22 @@ from app.services.official_asset_variant import parse_official_asset_variant
 from app.services.identity_evidence_scope import identity_evidence_scope
 
 REGISTRY = Path(__file__).with_name("evidence") / "positive_physical_artwork.json"
+MAX_REGISTRY_PROOFS = 1000
+MAX_REGISTRY_BYTES = 8 * 1024 * 1024
 
 
 def registry():
-    data = json.loads(REGISTRY.read_text())
+    with REGISTRY.open("rb") as handle:
+        payload = handle.read(MAX_REGISTRY_BYTES + 1)
+    if len(payload) > MAX_REGISTRY_BYTES:
+        raise ValueError("physical evidence registry exceeds byte bound")
+    data = json.loads(payload)
     if (
-        data.get("schema_version") != 1
+        not isinstance(data, dict)
+        or not isinstance(data.get("proofs"), list)
+        or data.get("schema_version") != 1
         or data.get("target") != "staging"
-        or len(data.get("proofs", [])) > 300
+        or len(data["proofs"]) > MAX_REGISTRY_PROOFS
     ):
         raise ValueError("unrecognized bounded physical evidence registry")
     return data["proofs"]

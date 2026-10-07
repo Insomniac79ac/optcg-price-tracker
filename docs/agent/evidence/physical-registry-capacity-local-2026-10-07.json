@@ -1,0 +1,23 @@
+{
+  "target": "local_synthetic",
+  "synthetic_proofs": 1000,
+  "bytes": 3261067,
+  "byte_bound": 8388608,
+  "iterations": 100,
+  "load_mean_ms": 21.454958710019127,
+  "load_p95_ms": 26.65752800021437,
+  "load_max_ms": 80.2897280000252,
+  "peak_traced_allocation_bytes": 11635693,
+  "unbatched_5000_loads_estimated_seconds": 107.27479355009564,
+  "serial_16_work_loads_estimated_seconds": 0.343279339360306,
+  "source_requests": 0,
+  "database_writes": 0,
+  "valid_new_identity_claims": 0,
+  "synthetic_fixture_ephemeral": true,
+  "checked_at": "2026-10-07",
+  "base_component": "276aac16baea72d3105e94ba8801ed8316bbc6b0",
+  "real_delivered_registry_proofs": 298,
+  "max_additional_proofs": 702,
+  "identity_validation_changed": false,
+  "source_capacity_claim": false
+}

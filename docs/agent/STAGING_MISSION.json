@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Preserve exact approval serialization while allowing independent RAW retention during bounded staging bulk approvals",
+  "mission": "Bound the staging physical proof registry at1000 records and8MiB for continued exact evidence work",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,35 +20,36 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/current_source_mapping.py"
+        "services/api/app/services/physical_artwork_proof.py"
       ],
       "effects": [
         "application",
         "bulk_data",
         "staging_deployment"
       ],
-      "reason": "Shared writer used by the authorized bounded mapping mission; keep the source mutex exclusive between all supported approvals while allowing collector foreign-key raw retention. Identity selection and refusal predicates remain unchanged."
+      "reason": "Raise only reviewed proof transport capacity; cap bytes before decoding and preserve all per-proof identity and raw lineage validation."
     },
     {
       "files": [
-        "services/api/tests/test_source_mapping_proposal_decision_postgres.py"
+        "services/api/tests/test_physical_registry_bounds.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Reproduce both blocked raw-insert paths, then prove independent durability and explicit competing-writer exclusion; retain existing same-print/source concurrent refusal and idempotent approval coverage."
+      "reason": "Prove record and byte limits, exact byte boundary and fail-closed staging-only schema; run unchanged physical identity adversarial tests."
     },
     {
       "files": [
-        "docs/agent/evidence/source-approval-raw-retention-preflight-2026-10-07.json"
+        "scripts/mission_measure_registry_capacity.py",
+        "docs/agent/evidence/physical-registry-capacity-local-2026-10-07.json"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Record truthful staging failure diagnostics, local PostgreSQL reproduction, historical-cause inference limits,53passing tests and executable rollback/post-delivery checks."
+      "reason": "Reproducible synthetic reader timing/memory measurement from delivered298 proofs; no synthetic physical identity claims or source capacity claim."
     }
   ],
-  "diff_sha256": "46c4ca736424199587ca8a23246d6ec19054fbd02a3b1ba70f7ea7bbf9b689c0",
+  "diff_sha256": "6cbc67665d84f545e1b3600eaef0dcf056e97c80c01d75894b9753a3bbbfc26e",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902"
@@ -59,28 +60,28 @@
         {
           "name": "optcg-price-tracker",
           "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "1e5c2251-11fa-45a2-9f56-ea9bc3f23498"
+          "recovery_deployment_id": "28745e8c-c7af-4ba3-8093-dd29a88119cd"
         }
       ],
       "routes": [
-        "Supported exact source-mapping writer mutexes; independent collector raw retention FK checks"
+        "Staging-only positive physical evidence registry transport"
       ],
       "dependencies": [
-        "PostgreSQL row-lock conflict matrix; all supported writers share the same source mutex; unchanged exact domain and duplicate-source/print guards; raw-first collector persistence"
+        "Existing exact candidate/release/language identity, complete sibling originals, current digest, natural one-shot capture, same-art refusal and manual precedence"
       ],
-      "deployment_impact": "Staging API writer code rebuild. No configuration, schedules, budgets, schema or data changes; strict delivery adopts unchanged collectors by measured component identity.",
+      "deployment_impact": "API code rebuild; zero registry proof edits, data writes, migrations, collector/config/schedule/budget changes.1000 proofs and8MiB cap.1000 synthetic proofs3.26MiB,p9526.66ms,peak11.64MB;16serial reads0.344s estimated. Unbatched5000 loads107.3s estimated is an administrative batch runtime limitation, not source capacity.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "1d93d96ca75aaf67c01cb91650aba0ec912e6815",
-      "procedure": "Stop the affected bulk approval path and fix forward prior source mutex code if mutual exclusion or integrity fails. Leave collector-owned work and all raw, observations, immutable decisions/history intact.",
-      "trigger": "Competing supported approvals fail mutual exclusion, wrong identity or duplicate physical print/source mapping; isolate affected approval path before recovery.",
-      "backup": "Delivery changes only curated code evidence; no schema/data/queue mutation. Prior successful API deployment and exact source retained.",
+      "artifact": "276aac16baea72d3105e94ba8801ed8316bbc6b0",
+      "procedure": "Stop new proof publication before exceeding300 if bounds or memory fail. Restore prior reader before crossing300; after crossing300 retain all proofs/raw/history and fix forward a bounded reader instead of dropping evidence or replaying scopes.",
+      "trigger": "Bound bypass, registry reader exceptions on valid evidence, material resource pressure, or physical identity predicate regression.",
+      "backup": "No schema/data/queue/proof mutation; prior code artifact and delivered registry298 retained.",
       "validation": [
-        "docs/agent/evidence/source-approval-raw-retention-preflight-2026-10-07.json",
-        "services/api/tests/test_source_mapping_proposal_decision_postgres.py"
+        "services/api/tests/test_physical_registry_bounds.py",
+        "docs/agent/evidence/physical-registry-capacity-local-2026-10-07.json"
       ]
     },
     "verification": {
@@ -90,9 +91,10 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "services/api/tests/test_source_mapping_proposal_decision_postgres.py"
+        "services/api/tests/test_physical_artwork_proof.py",
+        "services/api/tests/test_physical_registry_bounds.py"
       ],
-      "observation_window": "Strict serialized staging delivery required before using this source mutex in remaining bulk approvals. Freshly verify staging and each selected exact proof/zero-source/pending state; observe ordinary staggered RAW captures during approvals and require retained raw and no source-lock deadline failure. No source job triggers or backoff resets."
+      "observation_window": "Strict serialized staging delivery; verify all298 existing proofs unchanged and current exact guards. Source volume separately requires current natural-cycle capacity preflight before planning any new captures. No source job triggers.56 focused tests pass."
     }
   }
 }
