@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Bound the staging physical proof registry at1000 records and8MiB for continued exact evidence work",
+  "mission": "Resume staging bounded published SNKRDUNK sitemap discovery; candidate-only, explicit natural one-shot lane",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,68 +20,94 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/physical_artwork_proof.py"
+        "services/snkrdunk_collector/snkrdunk_collector/discovery.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/__init__.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/non_target_tcg.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/release_product_aliases.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/snkrdunk_image_variant.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/snkrdunk_listing_evidence.py",
+        "services/snkrdunk_collector/snkrdunk_collector/discovery_evidence/source_product_aliases.py",
+        "services/snkrdunk_collector/snkrdunk_collector/due.py",
+        "services/snkrdunk_collector/snkrdunk_collector/published_discovery.py"
       ],
       "effects": [
         "application",
-        "bulk_data",
+        "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Raise only reviewed proof transport capacity; cap bytes before decoding and preserve all per-proof identity and raw lineage validation."
+      "reason": "Collector-owned pure parser port and explicit one-shot published discovery runner. Preserve singleton, admission, exact identity, RAW-first, no retry/redirect and pending unmatched metadata only."
     },
     {
       "files": [
-        "services/api/tests/test_physical_registry_bounds.py"
+        "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
+        "services/snkrdunk_collector/tests/test_discovery_port_non_target_tcg.py",
+        "services/snkrdunk_collector/tests/test_discovery_port_snkrdunk_image_variant.py",
+        "services/snkrdunk_collector/tests/test_discovery_port_snkrdunk_listing_evidence.py",
+        "services/snkrdunk_collector/tests/test_discovery_runtime.py",
+        "services/snkrdunk_collector/tests/test_published_discovery.py"
       ],
       "effects": [
         "tests"
       ],
-      "reason": "Prove record and byte limits, exact byte boundary and fail-closed staging-only schema; run unchanged physical identity adversarial tests."
+      "reason": "Mock transport and real disposable PostgreSQL fence/lease/late-denial rollback tests plus unchanged parser parity regressions."
     },
     {
       "files": [
-        "scripts/mission_measure_registry_capacity.py",
-        "docs/agent/evidence/physical-registry-capacity-local-2026-10-07.json"
+        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md",
+        "docs/agent/evidence/snkr-published-discovery-capacity-20261007.json",
+        "docs/agent/evidence/snkr-published-discovery-preflight-20261007.json",
+        "scripts/mission_measure_snkr_discovery_capacity.py",
+        "scripts/prepare_snkr_discovery_rollback.py"
       ],
       "effects": [
-        "documentation"
+        "documentation",
+        "tests"
       ],
-      "reason": "Reproducible synthetic reader timing/memory measurement from delivered298 proofs; no synthetic physical identity claims or source capacity claim."
+      "reason": "Measured synthetic capacity, staging storage/source preflight, checked executable rollback patch preparation and durable recovery instructions."
     }
   ],
-  "diff_sha256": "6cbc67665d84f545e1b3600eaef0dcf056e97c80c01d75894b9753a3bbbfc26e",
+  "diff_sha256": "430ad70fc3686358b41be742bed64b199757c884ddcd20a2ae2c90c4c9dc06c4",
   "deployment_verification": {
     "api_sha": "merge",
-    "revision": "c4e8a1d7b902"
+    "revision": "c4e8a1d7b902",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "446e3604-a969-42ac-8537-fb2cf94fbf0d"
+      }
+    ]
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "optcg-price-tracker",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "28745e8c-c7af-4ba3-8093-dd29a88119cd"
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "446e3604-a969-42ac-8537-fb2cf94fbf0d"
         }
       ],
       "routes": [
-        "Staging-only positive physical evidence registry transport"
+        "Staging SNKR ordinary --due-work dispatcher; no public pricing change"
       ],
       "dependencies": [
-        "Existing exact candidate/release/language identity, complete sibling originals, current digest, natural one-shot capture, same-art refusal and manual precedence"
+        "Existing shared claim/result fence, source singleton, source request admission and browser settlement",
+        "Collector image installs API shared service package; pure discovery parsers have no Worker runtime imports"
       ],
-      "deployment_impact": "API code rebuild; zero registry proof edits, data writes, migrations, collector/config/schedule/budget changes.1000 proofs and8MiB cap.1000 synthetic proofs3.26MiB,p9526.66ms,peak11.64MB;16serial reads0.344s estimated. Unbatched5000 loads107.3s estimated is an administrative batch runtime limitation, not source capacity.",
+      "deployment_impact": "Only existing SNKR collector receives strict exact merged source; API/frontend native delivery remain required. No service configuration, schedules or budgets change. Explicit lane creates only unmatched candidate metadata when a separate fresh-guarded scope is planned; no scopes exist at publication. Parser limits are not hard download caps.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "276aac16baea72d3105e94ba8801ed8316bbc6b0",
-      "procedure": "Stop new proof publication before exceeding300 if bounds or memory fail. Restore prior reader before crossing300; after crossing300 retain all proofs/raw/history and fix forward a bounded reader instead of dropping evidence or replaying scopes.",
-      "trigger": "Bound bypass, registry reader exceptions on valid evidence, material resource pressure, or physical identity predicate regression.",
-      "backup": "No schema/data/queue/proof mutation; prior code artifact and delivered registry298 retained.",
+      "artifact": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
+      "procedure": "Run scripts/prepare_snkr_discovery_rollback.py --output /tmp/snkr-discovery-rollback.patch; apply in isolated recovery branch and publish a fresh AMBER manifest PR through native auto-merge and strict serialized delivery. Prior dispatcher supports refresh only, leaving any pending discovery inert. Preserve all RAW/candidates/history.",
+      "trigger": "Uncontrolled source requests, candidate fence escape, price/mapping writes, resource pressure, widespread denial or invalid valid-input parsing. Required denial preserves source pause; no unpause/replay.",
+      "backup": "No schema/data write at deployment. Prior Git source and pinned deployment retained. Natural candidates/RAW remain immutable evidence; no database restore/deletion is needed.",
       "validation": [
-        "services/api/tests/test_physical_registry_bounds.py",
-        "docs/agent/evidence/physical-registry-capacity-local-2026-10-07.json"
+        "scripts/prepare_snkr_discovery_rollback.py",
+        "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
+        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md"
       ]
     },
     "verification": {
@@ -91,10 +117,9 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/generate_staging_state.py",
-        "services/api/tests/test_physical_artwork_proof.py",
-        "services/api/tests/test_physical_registry_bounds.py"
+        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md"
       ],
-      "observation_window": "Strict serialized staging delivery; verify all298 existing proofs unchanged and current exact guards. Source volume separately requires current natural-cycle capacity preflight before planning any new captures. No source job triggers.56 focused tests pass."
+      "observation_window": "Strict serialized delivery and first ordinary SNKR scheduled runtime receipt with actual new installed component revision. Only after zero current actionable SNKR RAW backlog, >=300 available requests, no pause and storage2GiB+512MiB allowance pass, plan one explicit <=300 request scope for natural schedule. Observe next turn plus one cycle for cost, RAW lineage, unmatched candidates, zero price/mapping writes and settled claims. No manual jobs. Full collector555/48subtests and added real runtime denial regression passed."
     }
   }
 }
