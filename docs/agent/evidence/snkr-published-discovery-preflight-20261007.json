@@ -1,0 +1,92 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-07T08:41:02.532569+00:00",
+  "read_only": true,
+  "source_requests": 0,
+  "database_writes": 0,
+  "storage": {
+    "database_bytes": 2382485183,
+    "raw_relation_bytes": 2246934528
+  },
+  "snkr_attempts24h": [
+    {
+      "kind": "refresh",
+      "outcome": "captured",
+      "attempts": 50,
+      "mean_requests": 164.34,
+      "max_requests": 193,
+      "max_seconds": 18.016901
+    },
+    {
+      "kind": "refresh",
+      "outcome": "identity_refusal",
+      "attempts": 43,
+      "mean_requests": 142.84,
+      "max_requests": 177,
+      "max_seconds": 10.515217
+    },
+    {
+      "kind": "refresh",
+      "outcome": "no_listing",
+      "attempts": 237,
+      "mean_requests": 154.47,
+      "max_requests": 183,
+      "max_seconds": 16.202223
+    },
+    {
+      "kind": "refresh",
+      "outcome": "transient_failure",
+      "attempts": 44,
+      "mean_requests": 127.95,
+      "max_requests": 137,
+      "max_seconds": 23.350592
+    }
+  ],
+  "snkr_hourly_due": [
+    {
+      "due_hour": 2,
+      "items": 35
+    },
+    {
+      "due_hour": 3,
+      "items": 36
+    },
+    {
+      "due_hour": 4,
+      "items": 37
+    },
+    {
+      "due_hour": 5,
+      "items": 36
+    },
+    {
+      "due_hour": 6,
+      "items": 37
+    },
+    {
+      "due_hour": 7,
+      "items": 37
+    },
+    {
+      "due_hour": 8,
+      "items": 37
+    },
+    {
+      "due_hour": 9,
+      "items": 32
+    }
+  ],
+  "staging_postgres_volume": {
+    "currentSizeMB": 3105.685504,
+    "sizeMB": 10000,
+    "serviceId": "08c557d4-9d74-43fa-a0ac-5a909e731f4e",
+    "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+    "state": "READY",
+    "observation_note": "Provider size reading may lag; fresh database_bytes measured separately."
+  },
+  "configured_minus_reported_used_MB": 6894.314496,
+  "deployment_only_source_requests": 0,
+  "new_intents_planned": 0,
+  "natural_discovery_preflight": "Before planning one <=300 request intent re-read current staging, zero current SNKR actionable RAW backlog, budget >=300 available, no source pause, storage >=2GiB reserve plus512MiB operational allowance. Post-deploy natural component receipt required.",
+  "yuyu_expansion": "Blocked:12 existing checks >24h; current next-hour per-shard maximum35 exceeds32 configured serial slots/hour. Schedules/budgets unchanged."
+}
