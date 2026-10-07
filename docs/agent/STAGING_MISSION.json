@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Repair bounded natural reader adoption verification and complete strict staging proof",
+  "mission": "Deliver guarded RAW storage writer OFF with additive protected dependencies and portable backups",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,60 +20,198 @@
   "impacts": [
     {
       "files": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/verify_yuyu_raw_reader_component.py",
-        "scripts/tests/test_verify_staging_delivery.py",
-        "scripts/tests/test_yuyu_raw_reader_component.py",
-        "docs/agent/evidence/raw-reader-window-preflight-20261007.json",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        ".github/workflows/staging-delivery.yml",
+        "docs/agent/RAW_STORAGE_WRITER.md",
+        "docs/agent/evidence/raw-storage-writer-off-preflight-20261007.json",
+        "scripts/apply_staging_raw_dependency.py",
+        "scripts/generate_staging_state.py",
+        "scripts/staging-migration-requirements.txt",
+        "scripts/tests/test_apply_staging_raw_dependency.py",
+        "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py",
+        "services/api/app/models/__init__.py",
+        "services/api/app/models/raw_snapshot_dictionary.py",
+        "services/api/app/services/backup.py",
+        "services/api/app/services/freshness_integration.py",
+        "services/api/app/services/raw_dictionary_backup.py",
+        "services/api/app/services/raw_dictionary_storage.py",
+        "services/api/tests/test_attempt_raw_snapshot_link_migration.py",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "services/api/tests/test_freshness_queue_postgres.py",
+        "services/api/tests/test_freshness_retry_postgres.py",
+        "services/api/tests/test_mapping_listing_foundation.py",
+        "services/api/tests/test_market_index_completion_backup.py",
+        "services/api/tests/test_market_value_persistence.py",
+        "services/api/tests/test_raw_dictionary_backup.py",
+        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+        "services/api/tests/test_unique_current_listing_identity_postgres.py",
+        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py",
+        "services/yuyutei_collector/yuyutei_collector/telemetry.py"
       ],
       "effects": [
+        "application",
         "tests",
         "documentation",
-        "staging_deployment"
+        "staging_deployment",
+        "migration"
       ],
-      "reason": "Fix child verification timeout300 shorter than declared natural30min adoption window; bounded1860s for two read-only adoption checks, parallel provider reads only; exact prior component SHA with runtime continuity guards. No collector deployment/config/source job/volume/DB change. Staging CI uses supported webpack build after Turbopack Fraunces resolver failure; full type/UI tests retained; no frontend runtime/source input change."
+      "reason": "Empty additive RESTRICT dependencies, default-OFF globally bounded new-snapshot writer and independent plaintext portable backup/recovery. Existing RAW/identity/price/publication data are unchanged. Serialized checksum-pinned DDL exactlyone table plus revision row update; explicit currentAPI/all10collector component proof and source guards retained. Repair test-only migration recorder isolation and schema-specific index assertions; verify legacy v17/v18 archives alongside19. Collector CI installs Alembic only for the actual protected-dependency migration fixture; collector runtime dependencies remain unchanged."
     }
   ],
-  "diff_sha256": "209e1f384da609174b92fd9c87287ee930c0f3de0454bf63381d5bdd2e3d17ef",
+  "diff_sha256": "011463268a28c0f7a7f6860abd0824256d62c750634981bba51f46efba164933",
   "deployment_verification": {
-    "api_sha": "d65a523486290f5af480acb50907ff0b9976855c",
-    "revision": "c4e8a1d7b902",
+    "api_sha": "merge",
+    "revision": "e8c2d4f6a901",
     "checks": [
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
     ],
-    "snkr_component": "d65a523486290f5af480acb50907ff0b9976855c",
-    "collector_services": [],
-    "yuyu_reader_component": "d65a523486290f5af480acb50907ff0b9976855c"
+    "snkr_component": "merge",
+    "yuyu_reader_component": "merge",
+    "collector_services": [
+      {
+        "name": "snkrdunk-collector",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
+      },
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
+      }
+    ],
+    "raw_dependency_migration": {
+      "revision": "e8c2d4f6a901",
+      "parent": "c4e8a1d7b902",
+      "file": "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py",
+      "sha256": "91f01e1c1277219a738fbc9bf805a5889c6f2b145188b04240051919cc504d54"
+    }
   },
   "safeguards": {
     "impact": {
       "resources": [
         {
-          "name": "Staging CI and frontend verifier",
-          "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr"
+          "name": "Staging protected RAW dependency schema",
+          "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+          "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+          "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
+        },
+        {
+          "name": "Staging API",
+          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+        },
+        {
+          "name": "snkrdunk-collector",
+          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+          "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
+        },
+        {
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
         }
       ],
       "routes": [
-        "Strict staging verification only"
+        "Existing RAW before-parse persistence and portable backup export/restore"
       ],
       "dependencies": [
-        "Existing native deployment and read-only component checks"
+        "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
       ],
-      "deployment_impact": "Frontend verifier-only staging merge; API and all ten collectors remain exact d65a523 installed inputs. No source job or service mutation.",
-      "database_writes": 0,
+      "deployment_impact": "Serialized checksum-pinned empty RESTRICT table+one Alembic revision row update, API rebuild and all10 existing collector uploads. Writer stays OFF. Worker/beat unchanged until separate consumer delivery. Source intents/config/cadence/budgets/approvals remain unchanged.",
+      "database_writes": 1,
       "source_requests": 0,
       "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "d65a523486290f5af480acb50907ff0b9976855c",
-      "procedure": "Forward PR reverts verifier timeout/CI compiler flag. Existing source and database state need no reversal. Actual runtime inputs remain d65.",
-      "trigger": "Plaintext or backup regression, wrong identity, ownership/admission failure, uncontrolled requests or source denial.",
-      "backup": "Not applicable: read-only verification code only; no persistent state mutation.",
+      "artifact": "bf4475a47ccdf8b06ef93a1a1cd4f29779834f64",
+      "procedure": "Leave additive RESTRICT table installed; feature OFF. Empty-table downgrade validated locally; no destructive staging downgrade. Explicit writer-owned child can be expanded losslessly after OFF, preserving rows/IDs/hashes/capture times and ledger; PostgreSQL tested. Keep reader and backup19 compatibility; fix forward.",
+      "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
+      "backup": "No historical rows modified by OFF additive schema; data restore not applicable. Git/migration checksum and existing immutable raw evidence retained. Backup19 plaintext export/restore plus dictionary lineage validated locally, old12..18 readable. Old runtime cannot consume newv19 backup; retain new reader and v19 backup support during fix-forward.",
       "validation": [
-        "scripts/tests/test_verify_staging_delivery.py",
-        "scripts/tests/test_yuyu_raw_reader_component.py"
+        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+        "services/api/tests/test_raw_dictionary_backup.py",
+        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py",
+        "scripts/tests/test_apply_staging_raw_dependency.py"
       ]
     },
     "verification": {
@@ -86,7 +224,7 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Exact strict frontend/API/sale/history/browser verification; latest completed actual d65 installed SNKR plus all9Yuyu receipts, unchanged schedules and max_work16. Adoption checks run concurrently with internal1800s and bounded outer1860s deadlines, no source invocation."
+      "observation_window": "Actual merged frontend/API/e8 DB, sale226/historygap0/browser3 + installed SNKR/all9 ordinary receipts unchangedmax16/9mod/pacing/budgets. Bounded30min component windows. No encoding/storage capacity expansion claimed until separate natural canary."
     }
   }
 }

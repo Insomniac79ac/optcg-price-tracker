@@ -604,7 +604,7 @@ def test_backup_roundtrip_disables_dispatch_and_fences_restored_claims(
             )
         )
     assert validate_backup(archive).valid
-    assert archive["metadata"]["backup_version"] == 18
+    assert archive["metadata"]["backup_version"] == 19
     assert archive["tables"]["freshness_price_states"][0]["last_observation_id"] == (
         obs if include_prices else None
     )

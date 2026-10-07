@@ -86,6 +86,7 @@ def test_unique_current_lifecycle_and_fixture_shape(pg_connection):
                pg_get_indexdef(i.indexrelid) AS definition
         FROM pg_index i JOIN pg_class idx ON idx.oid = i.indexrelid
         WHERE idx.relname = 'uq_mapping_current_canonical_listing_identity'
+          AND idx.relnamespace = current_schema()::regnamespace
     """)).mappings().one()
     assert index["indisunique"] and index["indisvalid"]
     assert "superseded_at IS NULL" in index["predicate"]
