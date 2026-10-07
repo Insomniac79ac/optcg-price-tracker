@@ -1,0 +1,7 @@
+{
+  "before": "PR74 strict failed13:40:56 TimeoutExpired because generic wrapper300s killed all9 adoption; SNKR d65 natural receipt completed13:35:22",
+  "after": "Named read-only adoption checks bounded1860s, parallel; other checks retain300s; exact reader component continuity remains mandatory",
+  "tests": "13 regression tests passed",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}
