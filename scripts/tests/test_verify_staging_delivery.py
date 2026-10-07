@@ -8,10 +8,32 @@ from urllib.error import HTTPError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from verify_staging_delivery import validate_state, get, state, wait_for_delivery
+from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks
 
 
 class VerificationTests(unittest.TestCase):
+    def test_natural_checks_keep_full_bounded_cycle_and_other_checks_keep_300s(self):
+        checks = [
+            "scripts/verify_yuyu_raw_reader_component.py",
+            "scripts/verify_snkr_published_discovery_component.py",
+            "scripts/verify_staging_delivery.py",
+        ]
+        with patch("verify_staging_delivery.subprocess.run") as run:
+            run_component_checks(checks)
+        bounds = {
+            Path(call.args[0][1]).name: call.kwargs["timeout"]
+            for call in run.call_args_list
+        }
+        self.assertEqual(bounds["verify_yuyu_raw_reader_component.py"], 1860)
+        self.assertEqual(bounds["verify_snkr_published_discovery_component.py"], 1860)
+        self.assertEqual(bounds["verify_staging_delivery.py"], 300)
+
+    def test_component_checks_refuse_outside_repository_before_launch(self):
+        with patch("verify_staging_delivery.subprocess.run") as run:
+            with self.assertRaises(state.VerificationError):
+                run_component_checks(["/tmp/unreviewed.py"])
+        run.assert_not_called()
+
     def setUp(self):
         path = Path(__file__).resolve().parents[2] / 'docs/agent/evidence/staging-state-3391abad5c997c5a.json'
         self.evidence = json.loads(path.read_text())

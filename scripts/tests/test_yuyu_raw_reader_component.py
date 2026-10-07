@@ -60,6 +60,13 @@ class ReaderAdoptionTests(unittest.TestCase):
         self.assertEqual(len(r["actual_natural_reader_components"]), 9)
         self.assertFalse(r["encoded_writes_enabled"])
 
+    def test_verifier_only_commit_preserves_exact_installed_component(self):
+        self.live["repository"]["sha"] = "b" * 40
+        result = check.verify(self.live, "b" * 40, self.head)
+        self.assertEqual(len(result["actual_natural_reader_components"]), 9)
+        with self.assertRaises(check.state.VerificationError):
+            check.verify(self.live, "b" * 40, "c" * 40)
+
     def test_old_or_missing_receipt_waits_without_source_invocation(self):
         for mutate in (
             lambda e: e["database"]["operational_runs"].pop(),

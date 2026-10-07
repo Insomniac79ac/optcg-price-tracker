@@ -8,7 +8,8 @@ import generate_staging_state as state
 from verify_snkr_published_discovery_component import AdoptionPending
 
 
-def verify(live, head):
+def verify(live, head, component=None):
+    component = component or head
     if live["mode"] != "live" or live["repository"]["sha"] != head:
         raise state.VerificationError("Current merged staging source required")
     services = [
@@ -27,7 +28,7 @@ def verify(live, head):
         minute = shard * 3
         if (
             service["status"] != "SUCCESS"
-            or service["reported_sha"] != head
+            or service["reported_sha"] != component
             or service["schedule_utc"] != f"{minute},{minute+30} * * * *"
             or not service["due_work_configured"]
         ):
@@ -42,7 +43,7 @@ def verify(live, head):
             raise AdoptionPending("Awaiting completed ordinary shard receipt")
         receipt = max(runs, key=lambda r: r["identity"]["finished_at"])
         if (
-            receipt["identity"]["revision"] != head
+            receipt["identity"]["revision"] != component
             or receipt["identity"]["deployment_id"] != service["deployment_id"]
         ):
             raise AdoptionPending("Awaiting actual installed reader adoption")
@@ -80,10 +81,37 @@ def main():
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=state.ROOT, text=True
     ).strip()
+    manifest = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
+    declared = manifest["deployment_verification"].get("yuyu_reader_component", "merge")
+    component = head if declared == "merge" else declared
+    if component != head:
+        import re
+
+        if not re.fullmatch("[0-9a-f]{40}", component):
+            raise state.VerificationError("Full installed reader component required")
+        changed = subprocess.check_output(
+            [
+                "git",
+                "diff",
+                "--name-only",
+                component,
+                head,
+                "--",
+                "services/api",
+                "services/yuyutei_collector",
+                "packages/opcg_source_identity",
+            ],
+            cwd=state.ROOT,
+            text=True,
+        ).strip()
+        if changed:
+            raise state.VerificationError(
+                "Installed Yuyu reader runtime inputs changed"
+            )
     deadline = time.monotonic() + 1800
     while True:
         try:
-            result = verify(state.collect_live(), head)
+            result = verify(state.collect_live(), head, component)
             print(json.dumps(result, indent=2))
             return
         except AdoptionPending:
