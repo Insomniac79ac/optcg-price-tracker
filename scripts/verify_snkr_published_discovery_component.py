@@ -39,7 +39,7 @@ class AdoptionPending(state.VerificationError):
     """Installed source has not yet produced a completed scheduled receipt."""
 
 
-def verify(live, head, snkr_expected=SNKR):
+def verify(live, head, snkr_expected=SNKR, api_expected=API):
     if live["repository"]["sha"] != head or live["mode"] != "live":
         raise state.VerificationError("Staging source changed or live evidence missing")
     api = next(
@@ -48,7 +48,7 @@ def verify(live, head, snkr_expected=SNKR):
     collector = next(
         s for s in live["railway"]["services"] if s["service_id"] == SERVICE
     )
-    if api["git_sha"] != API or api["status"] != "SUCCESS":
+    if api["git_sha"] != api_expected or api["status"] != "SUCCESS":
         raise state.VerificationError("Unexpected adopted API deployment")
     if (
         collector["status"] != "SUCCESS"
@@ -89,7 +89,7 @@ def verify(live, head, snkr_expected=SNKR):
     ):
         raise AdoptionPending("Actual SNKR runtime adoption not yet verified")
     return {
-        "api_component": API,
+        "api_component": api_expected,
         "snkr_component": snkr_expected,
         "snkr_actual_runtime_identity": receipt["identity"],
         "identity_basis": "Unchanged Git runtime inputs plus actual installed component receipt; platform Git may be unknown",
@@ -105,12 +105,13 @@ def wait_for_adoption(
     collect=state.collect_live,
     clock=time.monotonic,
     sleep=time.sleep,
-    timeout=1800
+    timeout=1800,
+    api_expected=API,
 ):
     deadline = clock() + timeout
     while True:
         try:
-            return verify(collect(), head, snkr_expected)
+            return verify(collect(), head, snkr_expected, api_expected)
         except AdoptionPending:
             remaining = deadline - clock()
             if remaining <= 0:
@@ -125,9 +126,15 @@ def main():
     mission = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
     expected = mission["deployment_verification"].get("snkr_component", SNKR)
     expected = head if expected == "merge" else expected
-    continuity(API, head, API_PATHS)
+    api_expected = mission["deployment_verification"]["api_sha"]
+    api_expected = head if api_expected == "merge" else api_expected
+    continuity(api_expected, head, API_PATHS)
     continuity(expected, head, SNKR_PATHS)
-    print(json.dumps(wait_for_adoption(head, expected), indent=2))
+    print(
+        json.dumps(
+            wait_for_adoption(head, expected, api_expected=api_expected), indent=2
+        )
+    )
 
 
 if __name__ == "__main__":

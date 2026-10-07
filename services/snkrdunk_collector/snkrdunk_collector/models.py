@@ -13,6 +13,8 @@ artwork (perceptual hash against the print's own official Bandai
 image_url) and page language, neither of which yuyutei_collector needs.
 """
 
+from opcg_source_identity.raw_payload import RawContentAccess
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -132,7 +134,7 @@ class SourceCardMapping(Base):
     )
 
 
-class RawSnapshot(Base):
+class RawSnapshot(RawContentAccess, Base):
     __tablename__ = "raw_snapshots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -141,7 +143,7 @@ class RawSnapshot(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     http_status: Mapped[int] = mapped_column(Integer)
     content_hash: Mapped[str] = mapped_column(String(64))
-    raw_content: Mapped[str] = mapped_column(Text)
+    _stored_raw_content: Mapped[str] = mapped_column("raw_content", Text)
     parser_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 

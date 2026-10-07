@@ -1,3 +1,5 @@
+from opcg_source_identity.raw_payload import RawContentAccess
+
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -168,7 +170,7 @@ def _derive_mapping_listing_identity(mapper, connection, mapping):
     mapping.canonical_source_listing_identity = derived
 
 
-class RawSnapshot(Base):
+class RawSnapshot(RawContentAccess, Base):
     __tablename__ = "raw_snapshots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -181,7 +183,7 @@ class RawSnapshot(Base):
     )
     http_status: Mapped[int] = mapped_column(Integer)
     content_hash: Mapped[str] = mapped_column(String(64), index=True)
-    raw_content: Mapped[str] = mapped_column(Text)
+    _stored_raw_content: Mapped[str] = mapped_column("raw_content", Text)
     parser_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 

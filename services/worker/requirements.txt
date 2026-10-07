@@ -5,3 +5,5 @@ pytest
 httpx
 beautifulsoup4
 celery[redis]
+# Optional RAW dictionary reader; writers activate separately in staging.
+zstandard==0.25.0

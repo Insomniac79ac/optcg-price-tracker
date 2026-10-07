@@ -1,0 +1,21 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-07T12:33:46.933983+00:00",
+  "source_http": 0,
+  "database_writes": 0,
+  "encoded_writes_enabled": false,
+  "original_snapshots_rewritten": 0,
+  "production_accessed": false,
+  "psa10": "OFF",
+  "database_bytes": 2404669119,
+  "postgres_volume_bytes": 10000000000,
+  "postgres_provider_used_bytes": 3158310912,
+  "natural_baseline_sha256": "333c3d5b4ae0fe8f4afa2f9d7d9ef51f6b4db6c44035d24c58a6dafd7a0c1de7",
+  "benchmark_sha256": "e5fb37c95185deff6d8157f53d29fb3efee1b822213570184de6713b5d430e35",
+  "pairs": 100,
+  "measured_stored_bytes": 4021110,
+  "dictionary_encoded_bytes_before_envelopes": 212864,
+  "max_compress_and_verify_seconds": 0.0032897540004341863,
+  "max_body_bytes": 1490498,
+  "limitation": "Offline storage benchmark; no installed capacity claim. First release readers only. Require dependency protection, guarded writer, recovery and natural measured savings before volume."
+}
