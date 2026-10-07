@@ -106,7 +106,7 @@
     "full_disabled_writer_suites": {
       "worker": "606passed18skipped",
       "yuyu": "479passed11skipped42subtests;9realPG beforeparsepassed",
-      "snkr": "520passed32skipped48subtests; dedicated realPG ownership/rollback in progress",
+      "snkr": "520passed32skipped48subtests; separately7realPG discovery fences/rollback and32realPG singleton/lease/admission passed (559 total passed across same suite partition).",
       "api": "Full5209passed41skipped19failed before bounded fixes; affected75passed8deselected after annotation/global-Alembic-recorder/schema-index-isolation repairs.2existing constraint assertions requirePG17+ while localPG16; requiredCI usesPG18."
     }
   },
@@ -122,5 +122,6 @@
     "sale_hiding": "intact",
     "immutable_market_value": "preserved",
     "historical_evidence_deleted": false
-  }
+  },
+  "current_state_regenerated_at": "2026-10-07T14:50:17.521422Z"
 }

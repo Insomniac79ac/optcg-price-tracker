@@ -58,7 +58,7 @@
       "reason": "Empty additive RESTRICT dependencies, default-OFF globally bounded new-snapshot writer and independent plaintext portable backup/recovery. Existing RAW/identity/price/publication data are unchanged. Serialized checksum-pinned DDL exactlyone table plus revision row update; explicit currentAPI/all10collector component proof and source guards retained. Repair test-only migration recorder isolation and schema-specific index assertions; verify legacy v17/v18 archives alongside19."
     }
   ],
-  "diff_sha256": "e9107b62882a68bc6427f4e0fb43874d33543112006fc18c22edf751d9fb93ac",
+  "diff_sha256": "09de0697fabf85ee8f101d57be57a044930b484de98df646485b790a97734ff7",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "e8c2d4f6a901",
