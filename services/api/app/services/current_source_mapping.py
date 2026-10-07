@@ -21,7 +21,9 @@ def assert_print_source_available(db, *, source, card_print_id, mapping=None):
     Another listing for the same physical print is not a second source. Never
     activate it while a current mapping already owns that print/source pair.
     """
-    db.scalar(select(Source.id).where(Source.id == source.id).with_for_update())
+    # Approvals still exclude each other. Allow collectors' foreign-key KEY
+    # SHARE checks to retain raw snapshots while this transaction is open.
+    db.scalar(select(Source.id).where(Source.id == source.id).with_for_update(key_share=True))
     query = select(SourceCardMapping.id).where(
         SourceCardMapping.source_id == source.id,
         SourceCardMapping.card_print_id == card_print_id,
@@ -64,7 +66,7 @@ def lookup_current_mapping(db: Session, *, source: Source, url: str | None, for_
     # Serialize supported writers for a readable refusal. PostgreSQL's partial
     # unique index is the final boundary if another writer races this lookup.
     if for_update:
-        db.execute(select(Source.id).where(Source.id == source.id).with_for_update()).scalar_one()
+        db.execute(select(Source.id).where(Source.id == source.id).with_for_update(key_share=True)).scalar_one()
     rows = db.scalars(select(SourceCardMapping).where(
         SourceCardMapping.source_id == source.id,
         SourceCardMapping.canonical_source_listing_identity == identity,

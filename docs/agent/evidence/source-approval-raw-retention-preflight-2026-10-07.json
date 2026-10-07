@@ -1,0 +1,45 @@
+{
+  "target": "staging",
+  "classification": "AMBER",
+  "source_requests": 0,
+  "database_writes": 0,
+  "mapping_writes": 0,
+  "price_writes": 0,
+  "schema_changes": 0,
+  "problem": "Long supported exact-approval transactions take FOR UPDATE on sources. Independent raw_snapshots inserts require foreign-key FOR KEY SHARE on that same row and can block until the collector deadline.",
+  "staging_observation": {
+    "work_id": 3460,
+    "mapping_id": 3113,
+    "attempt_id": 11315,
+    "failure": "raw_snapshot_persistence_failed:database_error:OperationalError",
+    "successful_check_at_failure": null,
+    "raw_snapshot_id": null,
+    "request_cost": 56,
+    "logs": "Evidence flush interrupted by total_run deadline; rollback reports another command already in progress. Source-row blocking as the historical staging cause is an inference; no historical pg_locks sample was retained."
+  },
+  "local_reproduction": "Both supported source locking paths failed an independent mock RAW insert with PostgreSQL LockNotAvailable. Driver context names sources and foreign-key FOR KEY SHARE. After fix both retain independently committed RAW while the approval remains open.",
+  "fix": "Use PostgreSQL FOR NO KEY UPDATE (SQLAlchemy with_for_update(key_share=True), read=False) for the same source-row mutex on both writer paths. Competing supported approvals still take conflicting exclusive locks; foreign-key KEY SHARE can persist raw. All identity, current-listing, print/source and duplicate checks stay identical.",
+  "validation": {
+    "focused_tests_passed": 53,
+    "postgres_tests_passed": 6,
+    "explicit_checks": [
+      "RAW inserts persist with the approval uncommitted",
+      "Second supported writer on either source path receives lock timeout until the first ends",
+      "Concurrent different listings for one physical print yield one mapping and one guarded refusal",
+      "Concurrent identical approval replay stays one mapping",
+      "Domain service never commits and failure rolls back all mapping state"
+    ]
+  },
+  "official_references_checked_utc": "2026-10-07",
+  "official_references": [
+    "https://www.postgresql.org/docs/current/explicit-locking.html",
+    "https://docs.sqlalchemy.org/en/20/core/selectable.html"
+  ],
+  "impact": "Staging API shared supported-mapping writer only. No schema, source budget, cron, queue, approval, price, history, feature-flag or production operation during delivery. Existing serialized source service components must be adopted and strictly verified.",
+  "rollback": {
+    "source_commit": "1d93d96ca75aaf67c01cb91650aba0ec912e6815",
+    "api_deployment": "1e5c2251-11fa-45a2-9f56-ea9bc3f23498",
+    "procedure": "Stop the affected bulk approval path and fix forward prior source mutex code if mutual exclusion or integrity fails. Leave collector-owned work and all raw, observations, immutable decisions/history intact."
+  },
+  "post_delivery": "Reverify exact API and adopted collector components, migration, sale hiding and immutable gaps; freshly regenerate state. Use current delivered domain code for subsequent bounded approvals and verify ordinary scheduled RAW persists without source-lock deadline failures. No manual jobs or backoff resets."
+}

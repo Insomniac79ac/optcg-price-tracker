@@ -6,7 +6,7 @@ import os
 import threading
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -23,6 +23,10 @@ from app.models import (
 from app.services.source_mapping_proposal_decision import approve_exact_proposal
 from tests.test_source_mapping_proposal_decision import ACTOR, _request, _seed_yuyu, _persist_one
 from app.services.exact_print_approval import ExactPrintApprovalError
+from app.services.current_source_mapping import (
+    assert_print_source_available,
+    lookup_current_mapping,
+)
 
 
 TEST_POSTGRES_URL = os.environ.get(
@@ -151,6 +155,57 @@ def test_postgres_service_and_source_writer_never_commit(postgres_db):
         observer.close()
     session.rollback()
     assert session.query(SourceCardMapping).count() == 0
+
+
+@pytest.mark.parametrize("lock_path", ["print_source", "listing"])
+def test_source_approval_lock_allows_independent_raw_retention(postgres_db, lock_path):
+    """Collectors must retain raw while an exact approval owns its source mutex."""
+    _, SessionFactory, approval = postgres_db
+    source, _, _, physical, candidate, _ = _seed_yuyu(approval)
+    if lock_path == "print_source":
+        assert_print_source_available(
+            approval, source=source, card_print_id=physical.id
+        )
+    else:
+        lookup_current_mapping(
+            approval, source=source, url=candidate.source_url, for_update=True
+        )
+
+    with SessionFactory() as collector:
+        collector.execute(text("SET LOCAL lock_timeout = '300ms'"))
+        raw = RawSnapshot(
+            source_id=source.id,
+            source_url=candidate.source_url,
+            http_status=200,
+            content_hash="a" * 64,
+            raw_content="retained mock source payload",
+            parser_version="mock-source-lock",
+        )
+        collector.add(raw)
+        collector.commit()
+        raw_id = raw.id
+
+    # A second supported approval must still wait for the same source mutex.
+    with SessionFactory() as competitor:
+        competitor.execute(text("SET LOCAL lock_timeout = '300ms'"))
+        with pytest.raises(OperationalError, match="lock timeout"):
+            if lock_path == "print_source":
+                assert_print_source_available(
+                    competitor, source=source, card_print_id=physical.id
+                )
+            else:
+                lookup_current_mapping(
+                    competitor,
+                    source=source,
+                    url=candidate.source_url,
+                    for_update=True,
+                )
+        competitor.rollback()
+
+    # The approval is still uncommitted; raw retention is independently durable.
+    approval.rollback()
+    assert approval.get(RawSnapshot, raw_id) is not None
+    assert approval.query(SourceCardMapping).count() == 0
 
 
 def test_postgres_failure_after_mapping_flush_rolls_back_all_state(postgres_db, monkeypatch):
