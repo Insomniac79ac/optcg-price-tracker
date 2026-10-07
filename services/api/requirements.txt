@@ -35,3 +35,5 @@ numpy
 # never contacted unless an R2ObjectStorage is explicitly constructed, so the
 # API starts and every unrelated test runs with all R2_* settings unset.
 boto3
+# Optional RAW dictionary reader; writers activate separately in staging.
+zstandard==0.25.0

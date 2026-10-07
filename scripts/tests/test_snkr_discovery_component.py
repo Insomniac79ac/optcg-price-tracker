@@ -158,6 +158,16 @@ class ComponentVerificationTests(unittest.TestCase):
             check.verify(live, self.head, self.head)["snkr_component"], self.head
         )
 
+    def test_changed_api_requires_its_exact_new_adopted_component(self):
+        live = copy.deepcopy(self.live)
+        with self.assertRaises(check.state.VerificationError):
+            check.verify(live, self.head, api_expected=self.head)
+        live["railway"]["services"][0]["git_sha"] = self.head
+        self.assertEqual(
+            check.verify(live, self.head, api_expected=self.head)["api_component"],
+            self.head,
+        )
+
     def test_wait_is_bounded_read_only_and_accepts_natural_adoption(self):
         old = copy.deepcopy(self.live)
         old["database"]["operational_runs"][0]["identity"]["deployment_id"] = "prior"

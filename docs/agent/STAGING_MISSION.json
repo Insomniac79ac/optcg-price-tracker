@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Skip retained SNKR evidence and validate strict staging delivery and nonstarving recovery",
+  "mission": "Install lossless RAW readers before guarded staging storage and admission expansion",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,43 +20,92 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        ".github/workflows/staging-verify.yml",
-        "docs/agent/SNKR_PUBLISHED_DISCOVERY_RECOVERY.md",
-        "docs/agent/evidence/snkr-known-evidence-repair-20261007.json",
-        "docs/agent/evidence/snkr-known-evidence-storage-20261007.json",
-        "scripts/prepare_snkr_discovery_rollback.py",
+        "docs/agent/RAW_STORAGE_READERS.md",
+        "docs/agent/evidence/raw-storage-reader-preflight-20261007.json",
+        "packages/opcg_source_identity/src/opcg_source_identity/raw_payload.py",
         "scripts/tests/test_snkr_discovery_component.py",
+        "scripts/tests/test_yuyu_raw_reader_component.py",
         "scripts/verify_snkr_published_discovery_component.py",
-        "services/snkrdunk_collector/snkrdunk_collector/discovery.py",
-        "services/snkrdunk_collector/tests/test_discovery_rollback_postgres.py",
-        "services/snkrdunk_collector/tests/test_discovery_runtime.py"
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "services/api/app/models/raw_snapshot.py",
+        "services/api/requirements.txt",
+        "services/api/tests/test_raw_payload_reader.py",
+        "services/snkrdunk_collector/requirements.txt",
+        "services/snkrdunk_collector/snkrdunk_collector/models.py",
+        "services/worker/requirements.txt",
+        "services/worker/worker/models.py",
+        "services/yuyutei_collector/requirements.txt",
+        "services/yuyutei_collector/yuyutei_collector/models.py"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "infrastructure",
-        "subsystem_activation",
-        "staging_deployment"
+        "staging_deployment",
+        "subsystem_activation"
       ],
-      "reason": "Bounded URL-key exclusions preserve previous evidence and source cost. Full Git history proves unchanged API bytes. Exact new collector component requires actual natural adoption. Executed generated rollback settles pending discovery without HTTP under existing fences, preserves evidence and advances ordinary RAW fairness; no schedule/budget/trigger/permission changes."
+      "reason": "Readers precede encoded writes: all existing plaintext parsing, capture timestamps, hashes, identity guards, backup lineage and source policies remain compatible. No encoding writer, DDL, source intent, source schedule or budget change is included. Strict exact API, SNKR and all-nine natural component verification required."
     }
   ],
-  "diff_sha256": "5594fdb8f7f47954b279e9308aef22fe0e33c8d9d65d4aca4d9c1a3e9ee86e08",
+  "diff_sha256": "df30b4b8c52b085adfd6918254255c576a3b1b1b7bd480aca9e03dc60cb14353",
   "deployment_verification": {
-    "api_sha": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
+    "api_sha": "merge",
     "revision": "c4e8a1d7b902",
     "checks": [
-      "scripts/verify_snkr_published_discovery_component.py"
+      "scripts/verify_snkr_published_discovery_component.py",
+      "scripts/verify_yuyu_raw_reader_component.py"
     ],
     "snkr_component": "merge",
     "collector_services": [
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "4ac1f569-dfcf-4ce9-b00f-1c5f127d5dd3"
+        "recovery_deployment_id": "19e777cd-8b8b-420d-9d43-12fb5666a7a2"
+      },
+      {
+        "name": "yuyutei-collector-shard-0",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "recovery_deployment_id": "8c863d88-6081-4415-bac6-f4c77d5a26b2"
+      },
+      {
+        "name": "yuyutei-collector-shard-1",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "recovery_deployment_id": "c1a72cf2-9a55-4e23-9891-242eef9863a9"
+      },
+      {
+        "name": "yuyutei-collector-shard-2",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "recovery_deployment_id": "aba1b04f-e8ce-40b8-9d17-a7b9514433bb"
+      },
+      {
+        "name": "yuyutei-collector-shard-3",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "recovery_deployment_id": "e88c1dd2-51ec-41b8-acbf-1ac6fae2384a"
+      },
+      {
+        "name": "yuyutei-collector-shard-4-v2",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "recovery_deployment_id": "3f5113e8-2eed-460d-8efa-4eb0b967e7d5"
+      },
+      {
+        "name": "yuyutei-collector-shard-5",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "recovery_deployment_id": "f71c909b-664d-4424-9ea6-755ef9172f6d"
+      },
+      {
+        "name": "yuyutei-collector-shard-6",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "recovery_deployment_id": "2eaff494-406e-4637-8db4-d05b2491e0c8"
+      },
+      {
+        "name": "yuyutei-collector-shard-7",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "recovery_deployment_id": "0fc8db28-5647-45e0-94a9-b3019c1967e5"
+      },
+      {
+        "name": "yuyutei-collector-shard-8",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "recovery_deployment_id": "349681b5-08cc-4f0b-8ccb-d5f3acf84245"
       }
     ]
   },
@@ -64,33 +113,82 @@
     "impact": {
       "resources": [
         {
+          "name": "optcg-price-tracker",
+          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+        },
+        {
           "name": "snkrdunk-collector",
           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "4ac1f569-dfcf-4ce9-b00f-1c5f127d5dd3"
+          "recovery_deployment_id": "19e777cd-8b8b-420d-9d43-12fb5666a7a2"
+        },
+        {
+          "name": "yuyutei-collector-shard-0",
+          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+          "recovery_deployment_id": "8c863d88-6081-4415-bac6-f4c77d5a26b2"
+        },
+        {
+          "name": "yuyutei-collector-shard-1",
+          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+          "recovery_deployment_id": "c1a72cf2-9a55-4e23-9891-242eef9863a9"
+        },
+        {
+          "name": "yuyutei-collector-shard-2",
+          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+          "recovery_deployment_id": "aba1b04f-e8ce-40b8-9d17-a7b9514433bb"
+        },
+        {
+          "name": "yuyutei-collector-shard-3",
+          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+          "recovery_deployment_id": "e88c1dd2-51ec-41b8-acbf-1ac6fae2384a"
+        },
+        {
+          "name": "yuyutei-collector-shard-4-v2",
+          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+          "recovery_deployment_id": "3f5113e8-2eed-460d-8efa-4eb0b967e7d5"
+        },
+        {
+          "name": "yuyutei-collector-shard-5",
+          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+          "recovery_deployment_id": "f71c909b-664d-4424-9ea6-755ef9172f6d"
+        },
+        {
+          "name": "yuyutei-collector-shard-6",
+          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+          "recovery_deployment_id": "2eaff494-406e-4637-8db4-d05b2491e0c8"
+        },
+        {
+          "name": "yuyutei-collector-shard-7",
+          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+          "recovery_deployment_id": "0fc8db28-5647-45e0-94a9-b3019c1967e5"
+        },
+        {
+          "name": "yuyutei-collector-shard-8",
+          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+          "recovery_deployment_id": "349681b5-08cc-4f0b-8ccb-d5f3acf84245"
         }
       ],
       "routes": [
-        "Staging SNKR ordinary --due-work dispatcher; no public pricing change"
+        "Existing staging RAW retained-evidence and portable backup readers"
       ],
       "dependencies": [
-        "Existing shared claim/result fence, source singleton, source request admission and browser settlement",
-        "Collector image installs API shared service package; pure discovery parsers have no Worker runtime imports"
+        "Pinned zstandard0.25.0 from official library documentation checked2026-10-07; existing shared source package; existing SQLAlchemy model/backup interfaces"
       ],
-      "deployment_impact": "One existing staging SNKR collector receives exact merged bytes. API inputs unchanged at1ddb. Three verification checkouts retain Git history; no permissions/concurrency/triggers altered. No source intents, schedules, budgets or configuration changes. Candidate/mapping/RAW rows preserved.",
+      "deployment_impact": "Exact staging API rebuild and ten existing collector uploads inside the established serialized delivery lease. Writer remains absent. No schema/config/source-job/volume changes. Worker mock plaintext input remains compatible; explicit worker/beat reader installation is still required before a future encoded writer.",
       "database_writes": 0,
       "source_requests": 0,
-      "estimated_runtime_minutes": 55
+      "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "1ddb234b8a0a51a2ad313359e22168182bf07dbd",
-      "procedure": "Hold new intents until strict success and fresh measured capacity/storage guards. Prepare checked PR70 RAW dispatcher rollback patch with zero-request discovery refusal callback; publish in a new strict isolated PR if safety fails. Ordinary claim/result fences block pending discovery and advance its fairness cursor so later RAW dispatch continues. Preserve RAW/candidates/decisions, source denial pause and immutable history. Never replay completed scopes or recovery2765.",
-      "trigger": "Uncontrolled source requests, candidate fence escape, price/mapping writes, resource pressure, widespread denial or invalid valid-input parsing. Required denial preserves source pause; no unpause/replay.",
-      "backup": "No persistent rows modified by publication. Retained PR70/PR71/PR72 commits, actual component deployment4ac, failed CI artifacts and checked dispatcher rollback patch remain recovery evidence.",
+      "artifact": "183076f8e1f71b1ed6efec4a81e9146564df123f",
+      "procedure": "Forward isolated PR restores prior RawSnapshot mappings and library inputs under strict staging delivery. No encoded writes or schema changes exist, so database reversal is not applicable. Preserve all evidence and source pauses. Keep new intents unplanned until guarded writer/dependency/recovery/storage/natural capacity pass.",
+      "trigger": "Plaintext or backup regression, wrong identity, ownership/admission failure, uncontrolled requests or source denial.",
+      "backup": "Not applicable to reader-only code: no extant record or schema is modified. Retain original183 commit, all ten exact recovery deployment IDs, previousAPI1ddb, immutable source evidence and durable checkpoint. Portable decoded backup/restore is tested.",
       "validation": [
-        "scripts/prepare_snkr_discovery_rollback.py",
-        "services/snkrdunk_collector/tests/test_discovery_fences_postgres.py",
-        "docs/agent/evidence/snkr-known-evidence-repair-20261007.json",
-        "services/snkrdunk_collector/tests/test_discovery_rollback_postgres.py"
+        "services/api/tests/test_raw_payload_reader.py",
+        "services/api/tests/test_backup_exact_lineage.py",
+        "services/api/tests/test_backup.py",
+        "services/snkrdunk_collector/tests",
+        "services/yuyutei_collector/tests/test_raw_before_parse_postgres.py"
       ]
     },
     "verification": {
@@ -100,9 +198,10 @@
       "post_change": [
         "scripts/verify_staging_delivery.py",
         "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Full serialized strict frontend/API/browser/sale/history/DB delivery. API1ddb verified against complete Git history. New exact merged SNKR component must produce its own completed ordinary receipt with settled claims/reservations, held singleton and no required denial. Read-only observer waits <=1800s; no source job triggers. No canary intent before genuine successful receipt. Refreshed storage has >2GiB reserve +512MiB operational allowance (not a hard transport cap). Yuyu expansion remains held for peak capacity. Generated rollback executes in real PostgreSQL and does not strand pending RAW fairness. Next40min planned RAW count times observed24h maximum request cost plus300 must fit3100 before canary planning; currently held."
+      "observation_window": "Strict exact frontend/API/DB/sale/history/browser audit plus actual installed completed ordinary SNKR and all9Yuyu receipts on the unchanged30min schedules. Reader-only max_work16 retained. Bounded read-only adoption waits<=1800seconds; no source-job invocation. No operational/storage expansion claim from offline100-pair5.3percent compression benchmark."
     }
   }
 }

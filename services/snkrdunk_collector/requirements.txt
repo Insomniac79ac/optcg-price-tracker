@@ -11,3 +11,5 @@ sqlalchemy>=2.0
 psycopg[binary]
 pydantic-settings
 pytest
+# Optional RAW dictionary reader; writers activate separately in staging.
+zstandard==0.25.0
