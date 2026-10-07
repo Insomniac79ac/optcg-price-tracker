@@ -1,0 +1,105 @@
+import copy
+from pathlib import Path
+import sys
+import unittest
+from unittest.mock import Mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import verify_snkr_published_discovery_component as check
+
+
+class ComponentVerificationTests(unittest.TestCase):
+    def setUp(self):
+        self.head = "f" * 40
+        self.receipt = {
+            "identity": {
+                "service": "snkrdunk-collector",
+                "revision": check.SNKR,
+                "deployment_id": "real-deployment",
+                "finished_at": "2026-10-07T09:30:00Z",
+            },
+            "exit": {"terminal_state": "completed"},
+            "safety": {
+                "singleton": "held",
+                **{
+                    k: 0
+                    for k in [
+                        "claims_remaining",
+                        "expired_claims",
+                        "reservations_remaining",
+                        "reservation_overruns",
+                        "duplicate_requests",
+                    ]
+                },
+            },
+            "failure": {"http_403": 0, "http_429": 0, "challenge": 0},
+        }
+        self.live = {
+            "mode": "live",
+            "repository": {"sha": self.head},
+            "railway": {
+                "services": [
+                    {
+                        "name": "optcg-price-tracker",
+                        "service_id": "api",
+                        "git_sha": check.API,
+                        "status": "SUCCESS",
+                    },
+                    {
+                        "name": "snkrdunk-collector",
+                        "service_id": check.SERVICE,
+                        "deployment_id": "real-deployment",
+                        "status": "SUCCESS",
+                        "reported_sha": check.SNKR,
+                        "schedule_utc": "27,57 * * * *",
+                        "due_work_configured": True,
+                    },
+                ]
+            },
+            "database": {"operational_runs": [self.receipt]},
+        }
+
+    def test_unchanged_adopted_source_does_not_require_untriggered_api_build(self):
+        result = check.verify(self.live, self.head)
+        self.assertEqual(result["api_component"], check.API)
+        self.assertEqual(result["snkr_component"], check.SNKR)
+
+    def test_byte_continuity_fails_for_changed_runtime_inputs(self):
+        check.continuity(
+            check.API, self.head, check.API_PATHS, run=Mock(return_value="")
+        )
+        with self.assertRaises(check.state.VerificationError):
+            check.continuity(
+                check.API,
+                self.head,
+                check.API_PATHS,
+                run=Mock(return_value="services/api/app/services/freshness_queue.py\n"),
+            )
+
+    def test_deployment_marker_cannot_replace_actual_runtime_receipt(self):
+        for field, value in [
+            ("revision", check.API),
+            ("deployment_id", "old"),
+            ("finished_at", None),
+        ]:
+            live = copy.deepcopy(self.live)
+            live["database"]["operational_runs"][0]["identity"][field] = value
+            with self.assertRaises(check.state.VerificationError):
+                check.verify(live, self.head)
+
+    def test_identity_and_safety_changes_remain_fail_closed(self):
+        for mutate in [
+            lambda e: e.update(mode="fixture"),
+            lambda e: e["repository"].update(sha="0" * 40),
+            lambda e: e["railway"]["services"][0].update(git_sha="0" * 40),
+            lambda e: e["database"]["operational_runs"][0]["safety"].update(
+                duplicate_requests=1
+            ),
+            lambda e: e["database"]["operational_runs"][0]["failure"].update(
+                http_403=1
+            ),
+        ]:
+            live = copy.deepcopy(self.live)
+            mutate(live)
+            with self.assertRaises(check.state.VerificationError):
+                check.verify(live, self.head)

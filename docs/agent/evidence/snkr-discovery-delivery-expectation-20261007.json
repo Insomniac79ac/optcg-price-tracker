@@ -1,0 +1,29 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-07T09:25:49.558476+00:00",
+  "read_only": true,
+  "source_jobs_triggered": 0,
+  "database_writes": 0,
+  "production_accessed": false,
+  "pr71": {
+    "merge": "ffbb5a8a1ca852d28763b175e2e850b0824edeea",
+    "run": 37596155084,
+    "engineering_gate": "success",
+    "collector_rollout": "success",
+    "strict_delivery": "failed: expected native API deployment did not become ready within900s",
+    "strict_success_receipt_present": false
+  },
+  "verified_api": {
+    "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+    "deployment_id": "dc88a75c-fd16-4a99-865d-95488349447e",
+    "status": "SUCCESS",
+    "git_sha": "1ddb234b8a0a51a2ad313359e22168182bf07dbd"
+  },
+  "unchanged_api_runtime_paths": [
+    "services/api",
+    "packages/opcg_source_identity",
+    "deploy/railway/api.Dockerfile"
+  ],
+  "byte_continuity_diff_exit_code": 0,
+  "fix": "Correct expectedAPI to retained1ddb only with unchanged runtime-input proof. Keep frontend exact merge and full strict database/public sale/history/browser checks, add actual natural SNKR component verification. No source/config/schedule/budget changes and no rerun of failedCI."
+}
