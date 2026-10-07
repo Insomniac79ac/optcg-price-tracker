@@ -97,6 +97,7 @@ def run_due(
     lock_factory=collection_lock
 ):
     from snkrdunk_collector.collect import run_one_mapping_detailed
+    from snkrdunk_collector.discovery import run_discovery
 
     with session_factory() as probe:
         engine = probe.get_bind()
@@ -137,6 +138,7 @@ def run_due(
                 mapping_seconds=settings.TOTAL_RUN_TIMEOUT_S,
                 chunk_size=chunk_size,
                 max_work=settings.BATCH_MAX_MAPPINGS_PER_RUN,
+                discovery_runner=run_discovery,
                 delay_seconds=max(0, settings.SNKRDUNK_REQUEST_DELAY_MS) / 1000,
                 ownership_check=assert_lock_owned,
             )
