@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Replace64 stale physical proofs using fresh current-digest natural capture lineage",
+  "mission": "Deliver153 remaining current-digest physical proofs:23 replacements and130 additions,registry298",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -21,7 +21,7 @@
     {
       "files": [
         "services/api/app/services/evidence/positive_physical_artwork.json",
-        "docs/agent/evidence/fresh-physical-artwork-cohort1-preflight-2026-10-06.json"
+        "docs/agent/evidence/fresh-physical-artwork-cohort2-preflight-2026-10-07.json"
       ],
       "effects": [
         "application",
@@ -29,10 +29,10 @@
         "subsystem_activation",
         "staging_deployment"
       ],
-      "reason": "Replace64 stale baselines only after current exact zero-source validation. Preserve truthful prior review times when complete fresh originals are byte-identical; record explicit continuity. Unchanged validator, domain approvals, budgets and schedules. Delivery performs zero data/source operations."
+      "reason": "Publish153 current-digest byte-bound physical proofs after full authoritative catalogue validation, preserving first64. Existing guard code, source budgets, schedules and approval semantics unchanged; delivery performs zero source/data/queue operations."
     }
   ],
-  "diff_sha256": "24f6db6cbd8338b8c4cf0d7ddd2d2dd8df519b1c1d1ee2b0794354a99889e920",
+  "diff_sha256": "2805c26f61ea3ee07d813fe99ea281b6923a1cb05d3c10d9e6e1f6fb697ea539",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "c4e8a1d7b902"
@@ -43,7 +43,7 @@
         {
           "name": "optcg-price-tracker",
           "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
-          "recovery_deployment_id": "137829e4-4d10-4a3e-8fa0-5a4770bc919b"
+          "recovery_deployment_id": "2f096846-dc4d-4a74-87bc-d123caf2d998"
         }
       ],
       "routes": [
@@ -58,12 +58,12 @@
       "estimated_runtime_minutes": 30
     },
     "recovery": {
-      "artifact": "3a084f29679509d378eb71f6acd79bad7bc41f3d",
+      "artifact": "41b8bf2fb8b73a1545c944468f0a55d0f3f569cb",
       "procedure": "Fix forward prior staging API proof registry if evidence integrity fails. Retain all raw snapshots and immutable observations. No mapping approval happens during delivery.",
       "trigger": "Stale/incomplete proof accepted, same-art physical twins admitted, non-staging activation or incorrect physical selection",
       "backup": "Delivery changes only curated code evidence; no schema/data/queue mutation. Prior successful API deployment and exact source retained.",
       "validation": [
-        "docs/agent/evidence/fresh-physical-artwork-cohort1-preflight-2026-10-06.json",
+        "docs/agent/evidence/fresh-physical-artwork-cohort2-preflight-2026-10-07.json",
         "services/api/tests/test_physical_artwork_proof.py"
       ]
     },
@@ -76,7 +76,7 @@
         "scripts/generate_staging_state.py",
         "services/api/tests/test_physical_artwork_proof.py"
       ],
-      "observation_window": "Require full strict serialized delivery before any approval. Revalidate current proof digests, pending proposal versions, zero-source status and open source capacity in chunks at most20 through existing exact domain guards; observe ordinary scheduled RAW captures before counting operational coverage."
+      "observation_window": "Strict serialized API/frontend/source-component staging delivery first. Reverify each current digest, pending proposal and zero-source print through unchanged domain guards, atomic chunks<=20; observe normal scheduled RAW captures without source triggers before operational credit."
     }
   }
 }
