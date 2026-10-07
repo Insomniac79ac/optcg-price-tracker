@@ -109,8 +109,11 @@ def migrate(connection, migration_path):
     spec.loader.exec_module(module)
     if module.revision != REVISION or module.down_revision != PARENT:
         raise state.VerificationError("RAW migration revision identity mismatch")
-    with Operations.context(MigrationContext.configure(connection)):
-        module.upgrade()
+    # Bind this reviewed module to this exact connection. Do not depend on
+    # process-global Alembic facade functions (which may be replaced by tests
+    # or another migration runner in the importing process).
+    module.op = Operations(MigrationContext.configure(connection))
+    module.upgrade()
     result = connection.execute(
         text("UPDATE alembic_version SET version_num=:new WHERE version_num=:old"),
         {"new": REVISION, "old": PARENT},

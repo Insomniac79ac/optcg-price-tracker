@@ -54,7 +54,7 @@ class Snapshot(RawContentAccess, FixtureBase):
     _stored_raw_content: Mapped[str] = mapped_column("raw_content", Text)
 
 
-def migration():
+def migration(connection):
     path = (
         Path(__file__).parents[1]
         / "alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py"
@@ -64,6 +64,7 @@ def migration():
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module.op = Operations(MigrationContext.configure(connection))
     return module
 
 
@@ -86,7 +87,7 @@ def database(monkeypatch):
     with engine.begin() as connection:
         FixtureBase.metadata.create_all(connection)
         with Operations.context(MigrationContext.configure(connection)):
-            migration().upgrade()
+            migration(connection).upgrade()
     monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "true")
     monkeypatch.setenv("RAILWAY_PROJECT_ID", storage.PROJECT)
     monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID", storage.STAGING_ENVIRONMENT)
@@ -240,7 +241,7 @@ def test_disabled_has_no_schema_dependency(database, monkeypatch):
     monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "false")
     with database.begin() as connection:
         with Operations.context(MigrationContext.configure(connection)):
-            migration().downgrade()
+            migration(connection).downgrade()
     with Session(database) as session:
         child = row()
         session.add(child)
@@ -284,7 +285,7 @@ def test_used_migration_refuses_destructive_reversal(database):
     with database.begin() as connection:
         with Operations.context(MigrationContext.configure(connection)):
             with pytest.raises(RuntimeError, match="retain used"):
-                migration().downgrade()
+                migration(connection).downgrade()
 
 
 def test_global_admission_is_nonblocking_and_count_ceiling_survives_recovery(
@@ -326,10 +327,17 @@ def test_caller_ownership_refusal_rolls_back_new_evidence_and_ledger(database):
         assert session.scalar(select(func.count()).select_from(Snapshot)) == 1
 
 
-def test_serialized_migration_is_additive_and_idempotent(database):
+def test_serialized_migration_is_additive_and_idempotent(database, monkeypatch):
+    from alembic import op
+
+    def refuse_global_facade(*args, **kwargs):
+        raise AssertionError("serialized migration must use its pinned connection")
+
+    for name in ("create_table", "create_index", "get_bind", "execute"):
+        monkeypatch.setattr(op, name, refuse_global_facade)
     with database.begin() as connection:
         with Operations.context(MigrationContext.configure(connection)):
-            migration().downgrade()
+            migration(connection).downgrade()
         connection.execute(
             text("CREATE TABLE alembic_version (version_num varchar(32) PRIMARY KEY)")
         )
