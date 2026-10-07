@@ -43,6 +43,7 @@ from app.models import (
     PriceObservation,
     PriceRefreshRun,
     RawSnapshot,
+    RawSnapshotDictionary,
     ReleaseProduct,
     ReleaseProductAlias,
     SavedView,
@@ -88,8 +89,11 @@ from app.services.job_locks import with_job_lock
 # attempt outcomes; v16 archives retain unknown category results on restore.
 # v18 adds durable per-category retry gates/streaks. v16/v17 rows without those
 # nullable fields start with no category retry history; no old evidence is renewed.
-BACKUP_VERSION = 18
-READABLE_BACKUP_VERSIONS = (12, 13, 14, 15, 16, 17, 18)
+# v19 includes protected RAW dictionary lineage when snapshots are included.
+# Every exported snapshot body is already reconstructed plaintext, so portable
+# restore needs no codec dependency or source fetch. Old runtimes refuse v19.
+BACKUP_VERSION = 19
+READABLE_BACKUP_VERSIONS = (12, 13, 14, 15, 16, 17, 18, 19)
 APP_NAME = "opcg-price-tracker"
 
 
@@ -123,6 +127,9 @@ BACKUP_REGISTRY: tuple[BackupTableSpec, ...] = (
     BackupTableSpec("portfolio_valuation_snapshots", PortfolioValuationSnapshot),
     BackupTableSpec("price_refresh_runs", PriceRefreshRun, "include_refresh_runs"),
     BackupTableSpec("raw_snapshots", RawSnapshot, "include_raw_snapshots"),
+    BackupTableSpec(
+        "raw_snapshot_dictionaries", RawSnapshotDictionary, "include_raw_snapshots"
+    ),
     BackupTableSpec("snkrdunk_discovery_runs", SnkrdunkDiscoveryRun),
     BackupTableSpec("snkrdunk_candidates", SnkrdunkCandidate),
     BackupTableSpec("yuyutei_discovery_runs", YuyuteiDiscoveryRun),
@@ -192,6 +199,7 @@ CASCADE_RISK_OPTIONAL_TABLES: tuple[str, ...] = (
     "market_index_snapshot_completions",
     "market_value_points",
     "raw_snapshots",
+    "raw_snapshot_dictionaries",
     "price_refresh_runs",
 )
 
@@ -538,6 +546,10 @@ def validate_backup(backup: Any) -> ValidationResult:
                 errors.append(
                     f"raw_snapshots[{i}] references missing source_id {row.get('source_id')!r}"
                 )
+
+        from app.services.raw_dictionary_backup import validate_dictionary_references
+
+        errors.extend(validate_dictionary_references(tables))
 
         for i, row in enumerate(tables.get("snkrdunk_candidates", [])):
             run_id = row.get("discovery_run_id")

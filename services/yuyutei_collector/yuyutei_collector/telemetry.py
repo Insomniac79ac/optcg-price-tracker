@@ -151,6 +151,9 @@ def persist_response_snapshot(
                     parser_version=parser_version,
                 )
                 evidence_session.add(snapshot)
+                from app.services.raw_dictionary_storage import encode_new_snapshot
+
+                encode_new_snapshot(evidence_session, snapshot)
                 evidence_session.flush()
                 snapshot_id = snapshot.id
                 created = True

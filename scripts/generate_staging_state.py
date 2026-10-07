@@ -84,7 +84,7 @@ def load_queries():
     return queries
 
 
-def database_snapshot():
+def database_snapshot(expected_revisions=None):
     import psycopg
     from psycopg.rows import dict_row
 
@@ -123,7 +123,7 @@ def database_snapshot():
             # Fingerprints and all aggregates share a single consistent read-only transaction.
             facts = guard.collect_facts(connection)
             checks = guard.evaluate(
-                facts, guard.expected_revisions_from_repo(str(ROOT))
+                facts, expected_revisions if expected_revisions is not None else guard.expected_revisions_from_repo(str(ROOT))
             )
             if not all(check.ok for check in checks):
                 raise VerificationError(
@@ -189,7 +189,7 @@ def staging_environment():
     return environments[0]
 
 
-def collect_live():
+def collect_live(database_expected_revisions=None):
     environment = staging_environment()
     services = []
     for edge in environment["serviceInstances"]["edges"]:
@@ -243,7 +243,7 @@ def collect_live():
         },
         "errors": [],
     }
-    evidence["database"] = database_snapshot()
+    evidence["database"] = database_snapshot() if database_expected_revisions is None else database_snapshot(database_expected_revisions)
     try:
         project = command_json(["vercel", "api", f"/v9/projects/{VERCEL}", "--raw"])
     except VerificationError:

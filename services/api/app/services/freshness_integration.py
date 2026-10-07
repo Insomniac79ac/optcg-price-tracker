@@ -408,6 +408,9 @@ class Attempt:
             parser_version=parser_version,
         )
         self.session.add(row)
+        from app.services.raw_dictionary_storage import encode_new_snapshot
+
+        encode_new_snapshot(self.session, row)
         self.session.flush()
         snapshot_id = row.id
         self.ownership_check(self.session)

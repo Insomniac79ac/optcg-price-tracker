@@ -1,4 +1,5 @@
 from app.db import Base
+from app.models.raw_snapshot_dictionary import RawSnapshotDictionary
 from app.models.alert_event import AlertEvent
 from app.models.alert_rule import AlertRule
 from app.models.analytics_digest_report import AnalyticsDigestReport

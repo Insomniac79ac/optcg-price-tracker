@@ -375,3 +375,61 @@ def test_production_validate_only_entry_writes_nothing(pg):
     assert result.results[0].stage == "validated_only"
     assert _rows(pg) == ([], [], [])
     persist.assert_not_called()
+
+
+def test_guarded_encoding_and_dependency_commit_before_parser_failure(pg, monkeypatch):
+    import hashlib
+    import importlib.util
+    from pathlib import Path
+    import random
+    import string
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from opcg_source_identity.raw_payload import PREFIX
+    from app.services import raw_dictionary_storage as storage
+
+    path = Path(__file__).parents[3] / "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py"
+    spec = importlib.util.spec_from_file_location("mock_raw_dictionary_migration", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with pg.engine.begin() as connection:
+        with Operations.context(MigrationContext.configure(connection)):
+            module.upgrade()
+    generator = random.Random(19)
+    original = "<html><body>OP01-001 " + "".join(generator.choices(string.ascii_letters, k=100000)) + "</body></html>"
+    current = original.replace("</body>", "CHANGED</body>")
+    with pg.Session() as session:
+        base = RawSnapshot(source_id=pg.source_id, source_url=PRODUCT_URL,
+                           http_status=200, raw_content=original,
+                           content_hash=hashlib.sha256(original.encode()).hexdigest(),
+                           parser_version=PARSER_VERSION)
+        session.add(base)
+        session.commit()
+        base_id = base.id
+    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "true")
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("RAILWAY_PROJECT_ID", storage.PROJECT)
+    monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID", storage.STAGING_ENVIRONMENT)
+    observed = []
+
+    def parse_after_independent_commit(*args):
+        with pg.Session() as observer:
+            child = observer.scalar(select(RawSnapshot).where(RawSnapshot.id != base_id))
+            attempt = observer.scalar(select(SourceCollectionAttempt))
+            assert child._stored_raw_content.startswith(PREFIX)
+            assert child.raw_content == current
+            assert attempt.raw_snapshot_id == child.id
+            assert observer.scalar(text("SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"), {"id": child.id}) == base_id
+            observed.append(child.id)
+        raise RuntimeError("mock parser refusal after committed complete evidence")
+
+    with (
+        patch.object(collect, "warm_up_homepage", return_value=_normal_homepage()),
+        patch.object(collect, "goto_and_capture_raw", return_value=_product(current)),
+        patch.object(collect, "extract_with_agreement", side_effect=parse_after_independent_commit),
+    ):
+        run_batch(session_factory=pg.Session)
+    assert len(observed) == 1
+    with pg.Session() as observer:
+        assert observer.get(RawSnapshot, observed[0]).raw_content == current
+        assert observer.scalars(select(PriceObservation)).all() == []
