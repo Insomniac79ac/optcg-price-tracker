@@ -1,0 +1,17 @@
+{
+ "service": "yuyutei-collector-shard-6",
+ "active_before": "954d0f1d-7a05-48b4-930c-317e0c6db445",
+ "active_before_digest": "sha256:947665662ccb01fb1a1ae1ed23918cfdb1e2e068c6055b548a9dcba0d751fc77",
+ "source_upload": "4b56336b-4be1-4c49-ba0a-5a5072e3ee50",
+ "source_digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+ "deployment": "d73332cc-d84c-4440-90cd-cc91f2a4240a",
+ "status": "SUCCESS",
+ "digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+ "marker": "Structured RAW health exact commit 1b1b64d23555b5abc315f1aaa79f547784136f59",
+ "observed": {
+  "RAW_DICTIONARY_STORAGE_ENABLED": "false",
+  "RAW_DICTIONARY_STORAGE_MODE": "canary",
+  "APP_ENV": "staging"
+ },
+ "observed_at": "2026-10-08T12:30:50.221065+00:00"
+}

@@ -1,0 +1,1 @@
+{"observed_at": "2026-10-08T10:49:50.787760+00:00", "volumes": [{"average_mb": 3344.233348123116, "current_mb": 3455.410241536, "limit_mb": 10000.0, "max_mb": 3455.410241536, "mount_path": "/var/lib/postgresql/data", "name": "postgres-volume"}]}

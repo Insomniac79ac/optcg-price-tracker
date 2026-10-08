@@ -1,0 +1,9 @@
+{
+  "service": "yuyutei-collector-shard-6",
+  "deployment": null,
+  "status": "REFUSED_AFTER_DEPLOY",
+  "image_digest": null,
+  "observed": null,
+  "observed_at": null,
+  "refusal": "No redeployable deployment of the verified upload image"
+}

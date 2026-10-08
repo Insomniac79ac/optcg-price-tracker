@@ -1,0 +1,21 @@
+{
+  "status": "session_boundary",
+  "written_at": "2026-10-08T12:40:00Z",
+  "objective_complete": false,
+  "staging_only": true, "production_accessed": false, "psa10": "OFF",
+  "writers_at_end": "ALL OFF (snkr + yuyu 0-3,5,6: false/canary/staging; shards 4-v2,7,8: unset=false, APP_ENV unset)",
+  "staging_sha": "f05facf67e9242f65629dbc864cd38519a4f1375",
+  "collector_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "collector_deployments": {"snkrdunk-collector": "c7156df2", "shard-0": "6905c9bd", "shard-1": "34e7d71a", "shard-2": "f990d4a1", "shard-3": "f695fae8", "shard-4-v2": "d4c20ffd", "shard-5": "1a91d2fe", "shard-6": "d73332cc", "shard-7": "e0473070", "shard-8": "50613647"},
+  "prs": {"83": "merged 852ccdc; delivery verify failed (component check api_sha) - fixed by 84", "84": "merged 7501143; delivery failed (transient Vercel Google Fonts fetch)", "85": "merged f05facf; docs-only delivery GREEN, all Railway SKIPPED, api skip->1b1b64d"},
+  "snkr_canary": {"result": "PASS", "turn": "2026-10-08T11:57Z", "encoded": 36, "lossless": true, "original_bytes": 31229577, "encoded_bytes": 631330, "physical_plaintext_estimate_bytes": 4011228, "runtime_s": 181, "denials": 0, "expired_claims": 0},
+  "daily_v1": {"active": false, "reason": "shard-6 redeploy rebuilt image (digest mismatch); rolled back per preflight", "partial_window_encoded_yuyu": 16, "lossless": true, "recovery_selection": "ledger ids > 37661"},
+  "ledger_rows": 68,
+  "next_fix": "collector_variables: usePreviousImageTag:true for variable-only redeploys; rollback targets original upload; one-shard OFF->OFF trial",
+  "quiet_windows_utc": ["2026-10-09T02:00Z/2026-10-09T06:00Z (activation must finish by 01:15Z or start after 06:00Z)", "daily-v1: 24h after activation, rollback only"],
+  "coverage": {"mapped": 2635, "operational": 2630, "fresh_usable": 2398, "both_sources": 334, "zero_source": 1681},
+  "storage": {"volume_mb": 3480.95, "measured_at": "2026-10-08T12:31:49Z", "growth_mb_per_day_3_8h_window": 208, "forecast": "carried_forward_not_recomputed"},
+  "yuyu_request_capacity": "next workstream after storage: per-capture 55.4 req, peak 97.2% window; NEW100 blocked on requests too",
+  "never_replay": ["snkr intents 3676", "snkr intents 3677", "raw recovery 35175", "yuyu storage canary evidence", "PR77-85 deliveries"],
+  "no_source_jobs_manually_invoked": true, "no_mapping_approvals": true
+}

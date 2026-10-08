@@ -1,0 +1,70 @@
+{
+  "verified_at": "2026-10-08T10:47:55.356941+00:00",
+  "expected_commit": "f05facf67e9242f65629dbc864cd38519a4f1375",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_9aoZzGHddc115mHZ4QJZkLBsXDsV",
+    "status": "READY",
+    "sha": "f05facf67e9242f65629dbc864cd38519a4f1375"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 226,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "428b32302267373c54f1ea5a4c69e30e7a69f0ef592cd327aab5fc2b0f8a24a1",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "7501143e021e4e868dcfd7db06fc8b1a881ac087",
+    "merge": "f05facf67e9242f65629dbc864cd38519a4f1375",
+    "decision": "skip",
+    "files": [
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/CONTINUATION.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/CURRENT_STATE-end.yaml",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/CURRENT_STATE-start.yaml",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/HANDOFF.md",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/ci/pr81-delivery-scope.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/ci/pr82-staging-delivery.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/coverage-latest.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/flags-end.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/flags-start.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/snkr-canary-preflight-FAILED.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/snkr-writer-off-preflight.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/state-evidence/staging-state-78900b93f20a4009.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/state-evidence/staging-state-8b3d4c30a24875a0.json",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/tools/db.py",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/tools/deploys.py",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/tools/flags.py",
+      "docs/agent/handoff/2026-10-08/capacity75-session4/yuyu-windows-24h.jsonl"
+    ],
+    "reason": "Every changed path is allowlisted documentation; manifest requests no rollout or migration"
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}
