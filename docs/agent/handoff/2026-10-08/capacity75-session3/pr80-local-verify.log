@@ -1,0 +1,187 @@
+Checking public sale exclusion for 226 active prints
+{
+  "api_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "snkr_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "snkr_actual_runtime_identity": {
+    "source": "snkrdunk",
+    "service": "snkrdunk-collector",
+    "shard": null,
+    "execution_id": "snkrdunk-due:3a5e249a1f2c4adc9cffc4898479c6fd",
+    "deployment_id": "f3286a0a-421e-42f1-bc4b-b917a98cad3b",
+    "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+    "image": null,
+    "scheduled_at": null,
+    "started_at": "2026-10-08T05:30:24.811516+00:00",
+    "finished_at": "2026-10-08T05:30:24.874149+00:00",
+    "runtime_seconds": 0.062633,
+    "trigger": "unknown"
+  },
+  "identity_basis": "Unchanged Git runtime inputs plus actual installed component receipt; platform Git may be unknown",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}
+{
+  "actual_natural_reader_components": [
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-0",
+      "shard": 0,
+      "execution_id": "yuyutei-due-0:7cab5f65751448f1a508f31a128b01f8",
+      "deployment_id": "0f1e22a7-d527-40d6-9f1b-b175bc51026e",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:31:37.330388+00:00",
+      "finished_at": "2026-10-08T05:33:55.780108+00:00",
+      "runtime_seconds": 138.44972,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-1",
+      "shard": 1,
+      "execution_id": "yuyutei-due-1:5eebef9847ad49b9941de5f24a4a8a16",
+      "deployment_id": "33b3b86b-aea3-4ac7-befd-b1a1b3a344df",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:33:18.451071+00:00",
+      "finished_at": "2026-10-08T05:35:26.553312+00:00",
+      "runtime_seconds": 128.102241,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-2",
+      "shard": 2,
+      "execution_id": "yuyutei-due-2:20b5a17825b94e569b487fa8f58b0c26",
+      "deployment_id": "605c7222-9d6d-4676-8c47-c6d17d2e006c",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:38:23.967436+00:00",
+      "finished_at": "2026-10-08T05:40:38.722376+00:00",
+      "runtime_seconds": 134.75494,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-3",
+      "shard": 3,
+      "execution_id": "yuyutei-due-3:bc637748b18d4843b93ab2fb29c5702c",
+      "deployment_id": "7d85b51c-ad17-41aa-bd53-abb4bce607dd",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:40:17.643948+00:00",
+      "finished_at": "2026-10-08T05:42:46.518380+00:00",
+      "runtime_seconds": 148.874432,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-4-v2",
+      "shard": 4,
+      "execution_id": "yuyutei-due-4:b8a8adad05a14c93ac541d6247b2c47d",
+      "deployment_id": "d4c20ffd-9d50-4ad7-a547-551efe0e7d23",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:46:11.769675+00:00",
+      "finished_at": "2026-10-08T05:49:02.140827+00:00",
+      "runtime_seconds": 170.371152,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-5",
+      "shard": 5,
+      "execution_id": "yuyutei-due-5:0829a7b68c1d42c98b3483654824ed4f",
+      "deployment_id": "bd63f91f-ae5a-464d-8d3e-e400fe5b305d",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:48:14.392514+00:00",
+      "finished_at": "2026-10-08T05:50:30.805323+00:00",
+      "runtime_seconds": 136.412809,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-6",
+      "shard": 6,
+      "execution_id": "yuyutei-due-6:83f7f320b8af4be1ac3c1dd76157c407",
+      "deployment_id": "4b56336b-4be1-4c49-ba0a-5a5072e3ee50",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:50:06.385522+00:00",
+      "finished_at": "2026-10-08T05:52:21.831331+00:00",
+      "runtime_seconds": 135.445809,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-7",
+      "shard": 7,
+      "execution_id": "yuyutei-due-7:076f97f29b6e4b11b61ff5f2279f620b",
+      "deployment_id": "e0473070-c327-4670-9582-b4dc609ba469",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:25:17.920837+00:00",
+      "finished_at": "2026-10-08T05:27:33.599883+00:00",
+      "runtime_seconds": 135.679046,
+      "trigger": "unknown"
+    },
+    {
+      "source": "yuyutei",
+      "service": "yuyutei-collector-shard-8",
+      "shard": 8,
+      "execution_id": "yuyutei-due-8:fd6b6db4a69042979259138d2504859a",
+      "deployment_id": "50613647-7947-414d-bf9d-df0d960697a6",
+      "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+      "image": null,
+      "scheduled_at": null,
+      "started_at": "2026-10-08T05:27:29.211574+00:00",
+      "finished_at": "2026-10-08T05:30:05.859477+00:00",
+      "runtime_seconds": 156.647903,
+      "trigger": "unknown"
+    }
+  ],
+  "encoded_writes_enabled": false,
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}
+{
+  "verified_at": "2026-10-08T05:53:31.101540+00:00",
+  "expected_commit": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_7YEneK3CB83zaNBg21KbNFymxKQj",
+    "status": "READY",
+    "sha": "1b1b64d23555b5abc315f1aaa79f547784136f59"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 226,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "4f6180e61df3c6f393920d69613fb5e39e3bfcf486b56fe6efc904568f2acea0",
+  "production_accessed": false
+}
+rc=0

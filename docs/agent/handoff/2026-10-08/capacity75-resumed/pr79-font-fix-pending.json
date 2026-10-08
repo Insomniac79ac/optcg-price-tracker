@@ -1,0 +1,15 @@
+{
+  "pr": 79,
+  "head": "ce05291b5137ab86e1dc854b41ecf0fe00bc7313",
+  "status": "NEW_HEAD_CI_RUNNING",
+  "prior_ci_failure": 37722437879,
+  "prior_failure": "Manrope URL extension in NextGooglefont loader; no check bypass",
+  "focused_backend_tests": 121,
+  "frontend_tests": 1639,
+  "frontend_script_tests": 21,
+  "webpack_type_build": "PASS138pages",
+  "patch_sha256": "01348ab13e4590265aefd9105fb4f62119b3cef808804b3606bbbb8835f686e1",
+  "source_deployed": false,
+  "writers_enabled": false,
+  "new100": "UNPLANNED"
+}

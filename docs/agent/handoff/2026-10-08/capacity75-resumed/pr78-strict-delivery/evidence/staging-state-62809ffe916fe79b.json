@@ -1,0 +1,2005 @@
+{
+  "collected_at": "2026-10-05T23:05:03.356390+00:00",
+  "database": {
+    "as_of": [
+      {
+        "at": "2026-10-05T23:05:06.817854+00:00",
+        "read_only": "on"
+      }
+    ],
+    "attempts_24h": [
+      {
+        "attempts": 51,
+        "kind": "refresh",
+        "latest": "2026-10-05T11:03:07.188207+00:00",
+        "name": "snkrdunk",
+        "outcome": "captured"
+      },
+      {
+        "attempts": 235,
+        "kind": "refresh",
+        "latest": "2026-10-05T12:59:39.910321+00:00",
+        "name": "snkrdunk",
+        "outcome": "no_listing"
+      },
+      {
+        "attempts": 1,
+        "kind": "refresh",
+        "latest": "2026-10-05T13:31:36.085307+00:00",
+        "name": "snkrdunk",
+        "outcome": "source_denial"
+      },
+      {
+        "attempts": 22,
+        "kind": "validation",
+        "latest": "2026-10-05T09:02:12.762091+00:00",
+        "name": "snkrdunk",
+        "outcome": "completed"
+      },
+      {
+        "attempts": 59,
+        "kind": "discovery",
+        "latest": "2026-10-05T14:04:43.564050+00:00",
+        "name": "yuyutei",
+        "outcome": "completed"
+      },
+      {
+        "attempts": 1703,
+        "kind": "refresh",
+        "latest": "2026-10-05T23:04:59.858685+00:00",
+        "name": "yuyutei",
+        "outcome": "captured"
+      },
+      {
+        "attempts": 73,
+        "kind": "refresh",
+        "latest": "2026-10-05T22:37:28.490283+00:00",
+        "name": "yuyutei",
+        "outcome": "transient_failure"
+      },
+      {
+        "attempts": 1,
+        "kind": "refresh",
+        "latest": null,
+        "name": "yuyutei",
+        "outcome": null
+      }
+    ],
+    "budgets": [
+      {
+        "enabled": true,
+        "name": "yuyutei",
+        "open_reservations": 300,
+        "paused_until": null,
+        "permanent_pause": false,
+        "request_limit": 9000,
+        "reservation_mismatch": false,
+        "reserved_requests": 300,
+        "used_requests": 2266,
+        "window_seconds": 1800,
+        "window_started_at": "2026-10-05T22:53:57.124648+00:00"
+      },
+      {
+        "enabled": true,
+        "name": "snkrdunk",
+        "open_reservations": 0,
+        "paused_until": null,
+        "permanent_pause": true,
+        "request_limit": 3100,
+        "reservation_mismatch": false,
+        "reserved_requests": 0,
+        "used_requests": 0,
+        "window_seconds": 1800,
+        "window_started_at": "2026-10-05T22:53:57.124648+00:00"
+      }
+    ],
+    "categories": [
+      {
+        "count": 2100,
+        "price_category": "raw",
+        "price_type": "sell"
+      },
+      {
+        "count": 353,
+        "price_category": "raw",
+        "price_type": "floor"
+      }
+    ],
+    "coverage": [
+      {
+        "both_sources": 199,
+        "canonical_variants": 4316,
+        "one_or_more_sources": 2254,
+        "one_or_more_sources_pct": 52.2243,
+        "zero_sources": 2062
+      }
+    ],
+    "duplicate_active_exact_print_source_groups": 0,
+    "eligible": [
+      {
+        "count": 353,
+        "name": "snkrdunk"
+      },
+      {
+        "count": 2100,
+        "name": "yuyutei"
+      }
+    ],
+    "fingerprint": [
+      {
+        "name": "session is read-only",
+        "ok": true
+      },
+      {
+        "name": "fingerprint A - required tables",
+        "ok": true
+      },
+      {
+        "name": "fingerprint B - named indexes/constraints",
+        "ok": true
+      },
+      {
+        "name": "fingerprint C - print-lineage columns",
+        "ok": true
+      },
+      {
+        "name": "fingerprint D - alembic revision",
+        "ok": true
+      },
+      {
+        "name": "fingerprint E - non-empty invariants",
+        "ok": true
+      }
+    ],
+    "freshness": [
+      {
+        "check_older_than_24h": 397,
+        "name": "yuyutei",
+        "never_successfully_checked": 0,
+        "no_listing": 0,
+        "price_older_than_24h": 397,
+        "total": 2100
+      },
+      {
+        "check_older_than_24h": 45,
+        "name": "snkrdunk",
+        "never_successfully_checked": 22,
+        "no_listing": 278,
+        "price_older_than_24h": 3,
+        "total": 353
+      }
+    ],
+    "market_value": [
+      {
+        "intentional_gap_rows": 0,
+        "latest_published_date": "2026-10-05",
+        "scope_kind": "overall"
+      },
+      {
+        "intentional_gap_rows": 0,
+        "latest_published_date": "2026-10-05",
+        "scope_kind": "release"
+      }
+    ],
+    "operational_due": [
+      {
+        "backoff": 0,
+        "between_23_24h": 0,
+        "claimed": 0,
+        "due": 67,
+        "eligible": 353,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 86442.765913,
+        "never_checked": 22,
+        "oldest_actionable_due_at": "2026-10-05T12:30:27.951785+00:00",
+        "over_24h": 45,
+        "overdue": 67,
+        "quarantined": 22,
+        "retries": 0,
+        "shard": null,
+        "source": "snkrdunk",
+        "successful_check_age_max": 120878.866069,
+        "successful_check_age_p50": 59581.49944,
+        "successful_check_age_p95": 118146.755389,
+        "unplanned": 0,
+        "within_23h": 286
+      },
+      {
+        "backoff": 1,
+        "between_23_24h": 16,
+        "claimed": 1,
+        "due": 66,
+        "eligible": 234,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 119183.057802,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T19:31:26.380993+00:00",
+        "over_24h": 50,
+        "overdue": 50,
+        "quarantined": 0,
+        "retries": 1,
+        "shard": 0,
+        "source": "yuyutei",
+        "successful_check_age_max": 97208.308361,
+        "successful_check_age_p50": 70178.0779195,
+        "successful_check_age_p95": 93803.18476209999,
+        "unplanned": 0,
+        "within_23h": 168
+      },
+      {
+        "backoff": 1,
+        "between_23_24h": 16,
+        "claimed": 0,
+        "due": 32,
+        "eligible": 232,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 119163.729329,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T21:04:53.666533+00:00",
+        "over_24h": 16,
+        "overdue": 16,
+        "quarantined": 0,
+        "retries": 2,
+        "shard": 1,
+        "source": "yuyutei",
+        "successful_check_age_max": 90025.719752,
+        "successful_check_age_p50": 64671.0694575,
+        "successful_check_age_p95": 87988.55033215,
+        "unplanned": 0,
+        "within_23h": 200
+      },
+      {
+        "backoff": 3,
+        "between_23_24h": 0,
+        "claimed": 0,
+        "due": 3,
+        "eligible": 233,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 102661.498945,
+        "never_checked": 0,
+        "oldest_actionable_due_at": null,
+        "over_24h": 3,
+        "overdue": 3,
+        "quarantined": 0,
+        "retries": 3,
+        "shard": 2,
+        "source": "yuyutei",
+        "successful_check_age_max": 131018.879353,
+        "successful_check_age_p50": 55534.618096,
+        "successful_check_age_p95": 78977.802738,
+        "unplanned": 0,
+        "within_23h": 230
+      },
+      {
+        "backoff": 0,
+        "between_23_24h": 0,
+        "claimed": 0,
+        "due": 0,
+        "eligible": 233,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 93792.84131,
+        "never_checked": 0,
+        "oldest_actionable_due_at": null,
+        "over_24h": 0,
+        "overdue": 0,
+        "quarantined": 0,
+        "retries": 0,
+        "shard": 3,
+        "source": "yuyutei",
+        "successful_check_age_max": 82506.208166,
+        "successful_check_age_p50": 57120.571789,
+        "successful_check_age_p95": 80480.8796528,
+        "unplanned": 0,
+        "within_23h": 233
+      },
+      {
+        "backoff": 0,
+        "between_23_24h": 8,
+        "claimed": 0,
+        "due": 8,
+        "eligible": 233,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 93237.821803,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T22:45:52.409437+00:00",
+        "over_24h": 0,
+        "overdue": 0,
+        "quarantined": 0,
+        "retries": 0,
+        "shard": 4,
+        "source": "yuyutei",
+        "successful_check_age_max": 83954.408417,
+        "successful_check_age_p50": 58714.964651,
+        "successful_check_age_p95": 82255.6431786,
+        "unplanned": 0,
+        "within_23h": 225
+      },
+      {
+        "backoff": 0,
+        "between_23_24h": 0,
+        "claimed": 0,
+        "due": 0,
+        "eligible": 234,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 91332.440297,
+        "never_checked": 0,
+        "oldest_actionable_due_at": null,
+        "over_24h": 0,
+        "overdue": 0,
+        "quarantined": 0,
+        "retries": 0,
+        "shard": 5,
+        "source": "yuyutei",
+        "successful_check_age_max": 82065.849381,
+        "successful_check_age_p50": 56862.8448305,
+        "successful_check_age_p95": 80329.76708805001,
+        "unplanned": 0,
+        "within_23h": 234
+      },
+      {
+        "backoff": 3,
+        "between_23_24h": 0,
+        "claimed": 0,
+        "due": 113,
+        "eligible": 234,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 119713.074109,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T15:23:04.817162+00:00",
+        "over_24h": 113,
+        "overdue": 113,
+        "quarantined": 0,
+        "retries": 3,
+        "shard": 6,
+        "source": "yuyutei",
+        "successful_check_age_max": 114185.370753,
+        "successful_check_age_p50": 76515.125523,
+        "successful_check_age_p95": 108694.64434900001,
+        "unplanned": 0,
+        "within_23h": 121
+      },
+      {
+        "backoff": 2,
+        "between_23_24h": 16,
+        "claimed": 0,
+        "due": 127,
+        "eligible": 234,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 120252.617217,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T15:26:27.741542+00:00",
+        "over_24h": 111,
+        "overdue": 111,
+        "quarantined": 0,
+        "retries": 2,
+        "shard": 7,
+        "source": "yuyutei",
+        "successful_check_age_max": 112337.631996,
+        "successful_check_age_p50": 85268.481973,
+        "successful_check_age_p95": 108766.87552335,
+        "unplanned": 0,
+        "within_23h": 107
+      },
+      {
+        "backoff": 2,
+        "between_23_24h": 16,
+        "claimed": 0,
+        "due": 120,
+        "eligible": 233,
+        "expired_claims": 0,
+        "maximum_successful_revisit_gap_seconds": 120657.499742,
+        "never_checked": 0,
+        "oldest_actionable_due_at": "2026-10-05T15:24:49.116338+00:00",
+        "over_24h": 104,
+        "overdue": 104,
+        "quarantined": 0,
+        "retries": 3,
+        "shard": 8,
+        "source": "yuyutei",
+        "successful_check_age_max": 110443.502602,
+        "successful_check_age_p50": 83256.421294,
+        "successful_check_age_p95": 106742.7982668,
+        "unplanned": 0,
+        "within_23h": 113
+      }
+    ],
+    "operational_runs": [
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "83c356ef-eb24-4268-ad2e-c423443711a3",
+          "execution_id": "yuyutei-due-0:0fb41bd93e094983b4572da646fca7ca",
+          "finished_at": null,
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-0",
+          "shard": 0,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T23:04:10.103267+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": 8,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 0,
+          "deadline_misses": 67,
+          "maximum_successful_revisit_gap_seconds": 86442.765913,
+          "never_checked": 22,
+          "retries": 0,
+          "successful_check_age_max": 120508.051907,
+          "successful_check_age_p50": 59210.685278,
+          "successful_check_age_p95": 117775.941227,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "956e4484-2bfa-4d17-beac-2e947b27bda6",
+          "execution_id": "snkrdunk-due:9aef4be19796403a847ff5fd96263ca5",
+          "finished_at": "2026-10-05T22:58:56.002699+00:00",
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": 0.144321,
+          "scheduled_at": null,
+          "service": "snkrdunk-collector",
+          "shard": null,
+          "source": "snkrdunk",
+          "started_at": "2026-10-05T22:58:55.858378+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "not_applicable",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "held",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 0,
+          "claimed": 0,
+          "due": 67,
+          "eligible": 353,
+          "listed": 0,
+          "max_work": 70,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 0
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "956e4484-2bfa-4d17-beac-2e947b27bda6",
+          "execution_id": "snkrdunk-due:9aef4be19796403a847ff5fd96263ca5",
+          "finished_at": null,
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "snkrdunk-collector",
+          "shard": null,
+          "source": "snkrdunk",
+          "started_at": "2026-10-05T22:58:55.858378+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "not_applicable",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "held",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": 70,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "work_bound",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 16,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 2,
+          "deadline_misses": 111,
+          "maximum_successful_revisit_gap_seconds": 120252.617217,
+          "never_checked": 0,
+          "retries": 2,
+          "successful_check_age_max": 111827.344574,
+          "successful_check_age_p50": 84758.194551,
+          "successful_check_age_p95": 108256.58810135,
+          "successful_checks": 8
+        },
+        "identity": {
+          "deployment_id": "2293e6d4-441b-4b7f-8f3b-535714caa9f6",
+          "execution_id": "yuyutei-due-7:7073764c64f040d6a52394a7656b7482",
+          "finished_at": "2026-10-05T22:56:36.526157+00:00",
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": 73.735852,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-7",
+          "shard": 7,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:55:22.790305+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 8,
+          "attempted": 8,
+          "claimed": 8,
+          "due": 127,
+          "eligible": 234,
+          "listed": 8,
+          "max_work": 8,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 8,
+          "runtime_limit_seconds": 1200,
+          "selected": 8
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "work_bound",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 16,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 3,
+          "deadline_misses": 100,
+          "maximum_successful_revisit_gap_seconds": 120657.499742,
+          "never_checked": 0,
+          "retries": 3,
+          "successful_check_age_max": 109872.233662,
+          "successful_check_age_p50": 82685.152354,
+          "successful_check_age_p95": 106171.52932680001,
+          "successful_checks": 8
+        },
+        "identity": {
+          "deployment_id": "f9488e3f-0acb-4a1d-8b79-607c50d7278b",
+          "execution_id": "yuyutei-due-8:3ce7b183f3064c8799aa0c69b2681a92",
+          "finished_at": "2026-10-05T22:55:35.546497+00:00",
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": 73.131082,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-8",
+          "shard": 8,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:54:22.415415+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 8,
+          "attempted": 8,
+          "claimed": 8,
+          "due": 112,
+          "eligible": 233,
+          "listed": 8,
+          "max_work": 8,
+          "no_listing": 0,
+          "promotional_hidden": 2,
+          "raw_snapshots": 8,
+          "runtime_limit_seconds": 1200,
+          "selected": 8
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "2293e6d4-441b-4b7f-8f3b-535714caa9f6",
+          "execution_id": "yuyutei-due-7:7073764c64f040d6a52394a7656b7482",
+          "finished_at": null,
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-7",
+          "shard": 7,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:55:22.790305+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": 8,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "f9488e3f-0acb-4a1d-8b79-607c50d7278b",
+          "execution_id": "yuyutei-due-8:3ce7b183f3064c8799aa0c69b2681a92",
+          "finished_at": null,
+          "image": null,
+          "revision": "79ef9410a9eaa204328ba12932249704d598b4e7",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-8",
+          "shard": 8,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:54:22.415415+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": 8,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "work_bound",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 16,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 3,
+          "deadline_misses": 105,
+          "maximum_successful_revisit_gap_seconds": 119713.074109,
+          "never_checked": 0,
+          "retries": 3,
+          "successful_check_age_max": 113300.497651,
+          "successful_check_age_p50": 75630.252421,
+          "successful_check_age_p95": 107809.771247,
+          "successful_checks": 8
+        },
+        "identity": {
+          "deployment_id": "f260438f-8f66-499f-bfd6-fc66a3f58d68",
+          "execution_id": "yuyutei-due-6:09f0b725347c448fbe8d03dd73b7cf55",
+          "finished_at": "2026-10-05T22:50:21.941403+00:00",
+          "image": null,
+          "revision": null,
+          "runtime_seconds": 70.930608,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-6",
+          "shard": 6,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:49:11.010795+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 8,
+          "attempted": 8,
+          "claimed": 8,
+          "due": 113,
+          "eligible": 234,
+          "listed": 8,
+          "max_work": 8,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 8,
+          "runtime_limit_seconds": 1200,
+          "selected": 8
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "f260438f-8f66-499f-bfd6-fc66a3f58d68",
+          "execution_id": "yuyutei-due-6:09f0b725347c448fbe8d03dd73b7cf55",
+          "finished_at": null,
+          "image": null,
+          "revision": null,
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-6",
+          "shard": 6,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:49:11.010795+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": 8,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 0,
+          "deadline_misses": 0,
+          "maximum_successful_revisit_gap_seconds": 91332.440297,
+          "never_checked": 0,
+          "retries": 0,
+          "successful_check_age_max": 80993.639332,
+          "successful_check_age_p50": 55790.634781500004,
+          "successful_check_age_p95": 79257.55703905,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "db79fd9e-f863-4a2a-8a50-072539e9d062",
+          "execution_id": "yuyutei-due-5:0c8fcbe2dc1449db841586af4acf1e3e",
+          "finished_at": "2026-10-05T22:47:14.606277+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 0.082891,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-5",
+          "shard": 5,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:47:14.523386+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 0,
+          "claimed": 0,
+          "due": 0,
+          "eligible": 234,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 0
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "db79fd9e-f863-4a2a-8a50-072539e9d062",
+          "execution_id": "yuyutei-due-5:0c8fcbe2dc1449db841586af4acf1e3e",
+          "finished_at": null,
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-5",
+          "shard": 5,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:47:14.523386+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": null,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 0,
+          "deadline_misses": 0,
+          "maximum_successful_revisit_gap_seconds": 93792.84131,
+          "never_checked": 0,
+          "retries": 0,
+          "successful_check_age_max": 81182.314536,
+          "successful_check_age_p50": 55796.678159,
+          "successful_check_age_p95": 79156.9860228,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "a1b06d0a-d658-4e8c-9bca-98d0a57a4121",
+          "execution_id": "yuyutei-due-3:73f87440019b4116944096c32054829f",
+          "finished_at": "2026-10-05T22:43:02.922519+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 0.100596,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-3",
+          "shard": 3,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:43:02.821923+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 0,
+          "claimed": 0,
+          "due": 0,
+          "eligible": 233,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 0
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "a1b06d0a-d658-4e8c-9bca-98d0a57a4121",
+          "execution_id": "yuyutei-due-3:73f87440019b4116944096c32054829f",
+          "finished_at": null,
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-3",
+          "shard": 3,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:43:02.821923+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": null,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 0,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 0,
+          "deadline_misses": 0,
+          "maximum_successful_revisit_gap_seconds": 93237.821803,
+          "never_checked": 0,
+          "retries": 0,
+          "successful_check_age_max": 82616.979009,
+          "successful_check_age_p50": 57377.535243,
+          "successful_check_age_p95": 80918.2137706,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "b48ee41b-6209-4c8a-8234-66ee02ec55c8",
+          "execution_id": "yuyutei-due-4:0c211f53838c4533b4b7866b7e48dc75",
+          "finished_at": "2026-10-05T22:42:49.386212+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 0.105774,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-4-v2",
+          "shard": 4,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:42:49.280438+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 0,
+          "claimed": 0,
+          "due": 0,
+          "eligible": 233,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 0
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "b48ee41b-6209-4c8a-8234-66ee02ec55c8",
+          "execution_id": "yuyutei-due-4:0c211f53838c4533b4b7866b7e48dc75",
+          "finished_at": null,
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-4-v2",
+          "shard": 4,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:42:49.280438+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": null,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "admission_stopped",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 1,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 2,
+          "deadline_misses": 8,
+          "maximum_successful_revisit_gap_seconds": 119163.729329,
+          "never_checked": 0,
+          "retries": 2,
+          "successful_check_age_max": 88367.427699,
+          "successful_check_age_p50": 63012.7774045,
+          "successful_check_age_p95": 86330.25827915,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "f4712af1-b360-4530-8d77-f5f6fee69927",
+          "execution_id": "yuyutei-due-1:63fc98b3bc0d4cacb1d6f5efc1db26fd",
+          "finished_at": "2026-10-05T22:37:28.525161+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 7.677635,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-1",
+          "shard": 1,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:37:20.847526+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 1,
+          "claimed": 1,
+          "due": 32,
+          "eligible": 232,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 1
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "f4712af1-b360-4530-8d77-f5f6fee69927",
+          "execution_id": "yuyutei-due-1:63fc98b3bc0d4cacb1d6f5efc1db26fd",
+          "finished_at": null,
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-1",
+          "shard": 1,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:37:20.847526+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": null,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "admission_stopped",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 1,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 3,
+          "deadline_misses": 3,
+          "maximum_successful_revisit_gap_seconds": 102661.498945,
+          "never_checked": 0,
+          "retries": 3,
+          "successful_check_age_max": 129316.696862,
+          "successful_check_age_p50": 53832.435605,
+          "successful_check_age_p95": 77275.620247,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "fb150661-d0a6-495e-80d4-5062964016ca",
+          "execution_id": "yuyutei-due-2:65a26c88fe95441b9dfff2521d1e8300",
+          "finished_at": "2026-10-05T22:36:44.635001+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 7.618308,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-2",
+          "shard": 2,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:36:37.016693+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 1,
+          "claimed": 1,
+          "due": 3,
+          "eligible": 233,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 1
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": null,
+          "terminal_state": "running"
+        },
+        "failure": {
+          "challenge": null,
+          "http_403": null,
+          "http_429": null,
+          "identity": null,
+          "optional_resource": null,
+          "parsing": null,
+          "transient": null,
+          "unexpected_skip": null
+        },
+        "freshness": {
+          "backoff": null,
+          "deadline_misses": null,
+          "maximum_successful_revisit_gap_seconds": null,
+          "never_checked": null,
+          "retries": null,
+          "successful_check_age_max": null,
+          "successful_check_age_p50": null,
+          "successful_check_age_p95": null,
+          "successful_checks": null
+        },
+        "identity": {
+          "deployment_id": "fb150661-d0a6-495e-80d4-5062964016ca",
+          "execution_id": "yuyutei-due-2:65a26c88fe95441b9dfff2521d1e8300",
+          "finished_at": null,
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": null,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-2",
+          "shard": 2,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:36:37.016693+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": null,
+          "duplicate_requests": null,
+          "expired_claims": null,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": null,
+          "reservations_remaining": null,
+          "singleton": "not_required",
+          "wrong_shard": null
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": null,
+          "attempted": null,
+          "claimed": null,
+          "due": null,
+          "eligible": null,
+          "listed": null,
+          "max_work": null,
+          "no_listing": null,
+          "promotional_hidden": null,
+          "raw_snapshots": null,
+          "runtime_limit_seconds": 1200,
+          "selected": null
+        }
+      },
+      {
+        "exit": {
+          "exit_code": null,
+          "stopped_reason": "admission_stopped",
+          "terminal_state": "completed"
+        },
+        "failure": {
+          "challenge": 0,
+          "http_403": 0,
+          "http_429": 0,
+          "identity": 0,
+          "optional_resource": 0,
+          "parsing": 0,
+          "transient": 1,
+          "unexpected_skip": 0
+        },
+        "freshness": {
+          "backoff": 1,
+          "deadline_misses": 44,
+          "maximum_successful_revisit_gap_seconds": 119183.057802,
+          "never_checked": 0,
+          "retries": 3,
+          "successful_check_age_max": 95155.100355,
+          "successful_check_age_p50": 69988.8594505,
+          "successful_check_age_p95": 93533.5121765,
+          "successful_checks": 0
+        },
+        "identity": {
+          "deployment_id": "434ff635-dc30-43b2-96a8-a7ae818f9bc4",
+          "execution_id": "yuyutei-due-0:38219ca2021f40428164593f5014fbec",
+          "finished_at": "2026-10-05T22:30:53.608472+00:00",
+          "image": null,
+          "revision": "4df389f6f4c5db71eb0ef185584564a1563f7e09",
+          "runtime_seconds": 8.988899,
+          "scheduled_at": null,
+          "service": "yuyutei-collector-shard-0",
+          "shard": 0,
+          "source": "yuyutei",
+          "started_at": "2026-10-05T22:30:44.619573+00:00",
+          "trigger": "unknown"
+        },
+        "safety": {
+          "claims_remaining": 0,
+          "duplicate_requests": 0,
+          "expired_claims": 0,
+          "identity_integrity": "guarded",
+          "production_impact": false,
+          "promotion_policy": "guarded",
+          "reservation_overruns": 0,
+          "reservations_remaining": 0,
+          "singleton": "not_required",
+          "wrong_shard": 0
+        },
+        "schema_version": 1,
+        "work": {
+          "accepted_observations": 0,
+          "attempted": 1,
+          "claimed": 1,
+          "due": 56,
+          "eligible": 234,
+          "listed": 0,
+          "max_work": null,
+          "no_listing": 0,
+          "promotional_hidden": 0,
+          "raw_snapshots": 0,
+          "runtime_limit_seconds": 1200,
+          "selected": 1
+        }
+      }
+    ],
+    "psa10": [
+      {
+        "count": 0,
+        "latest": null
+      }
+    ],
+    "quarantined_identity": 22,
+    "receipts": [
+      {
+        "expected_print_count": 2130,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-05",
+        "snapshot_row_count": 2130
+      },
+      {
+        "expected_print_count": 2130,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-04",
+        "snapshot_row_count": 2130
+      },
+      {
+        "expected_print_count": 962,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-03",
+        "snapshot_row_count": 962
+      }
+    ],
+    "revision": [
+      {
+        "version_num": "c4e8a1d7b902"
+      }
+    ],
+    "work": [
+      {
+        "count": 22,
+        "kind": "refresh",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "blocked"
+      },
+      {
+        "count": 331,
+        "kind": "refresh",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 22,
+        "kind": "validation",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 59,
+        "kind": "discovery",
+        "name": "yuyutei",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 1,
+        "kind": "refresh",
+        "name": "yuyutei",
+        "policy_version": "current-price-v1",
+        "state": "claimed"
+      },
+      {
+        "count": 2099,
+        "kind": "refresh",
+        "name": "yuyutei",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      }
+    ]
+  },
+  "environment": "staging",
+  "errors": [],
+  "frontend": {
+    "deployment_id": "dpl_Dong7ZjhNneRty2ioPYUWSddqk1C",
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+    "status": "READY"
+  },
+  "mode": "live",
+  "railway": {
+    "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+    "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+    "services": [
+      {
+        "deployment_id": "94010808-bf33-49ac-a34f-5c1f33aa7eba",
+        "due_work_configured": false,
+        "git_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "name": "market-index-snapshot",
+        "reported_sha": "unknown",
+        "schedule_utc": "0 20 * * *",
+        "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "f1339c14-3789-4f2f-9ce8-237f4d71b47d",
+        "due_work_configured": false,
+        "git_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "name": "optcg-price-tracker",
+        "reported_sha": "unknown",
+        "schedule_utc": null,
+        "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "956e4484-2bfa-4d17-beac-2e947b27bda6",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "snkrdunk-collector",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "27,57 * * * *",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "83c356ef-eb24-4268-ad2e-c423443711a3",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-0",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "0,30 * * * *",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "fc972e83-5772-4065-8a2c-daa9fd928fee",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-1",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "3,33 * * * *",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "d2acb6bf-929d-4ccf-894d-12822880d202",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-2",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "6,36 * * * *",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "a9cba925-08b7-46f9-82a6-9dd6dba63759",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-3",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "9,39 * * * *",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "2176f471-2251-450f-a782-636e11935e5b",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-4-v2",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "12,42 * * * *",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "9e146786-02b7-4be7-83e8-793bb6644a1e",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-5",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "15,45 * * * *",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "e57cce84-7d86-4f42-b198-6d8fd134a787",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-6",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "18,48 * * * *",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "2293e6d4-441b-4b7f-8f3b-535714caa9f6",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-7",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "21,51 * * * *",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "f9488e3f-0acb-4a1d-8b79-607c50d7278b",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-8",
+        "reported_sha": "79ef9410a9eaa204328ba12932249704d598b4e7",
+        "schedule_utc": "24,54 * * * *",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "status": "SUCCESS"
+      }
+    ]
+  },
+  "repository": {
+    "branch": "staging",
+    "name": "Insomniac79ac/optcg-price-tracker",
+    "sha": "79ef9410a9eaa204328ba12932249704d598b4e7"
+  }
+}

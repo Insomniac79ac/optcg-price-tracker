@@ -1,0 +1,2296 @@
+diff --git a/docs/agent/STAGING_MISSION.json b/docs/agent/STAGING_MISSION.json
+index 54f77e7..6533555 100644
+--- a/docs/agent/STAGING_MISSION.json
++++ b/docs/agent/STAGING_MISSION.json
+@@ -1,8 +1,8 @@
+ {
+   "schema_version": 1,
+-  "mission": "Bound RAW body evaluation and repair Manrope build delivery; every writer remains OFF",
++  "mission": "Bound staging Yuyu claim-contention wait and deliver the guarded ten-service fleet; original source envelope and RAW writers OFF",
+   "target": "staging",
+-  "classification": "GREEN",
++  "classification": "AMBER",
+   "red_decisions": {
+     "ambiguous_approval": false,
+     "destructive_migration": false,
+@@ -20,35 +20,23 @@
+   "impacts": [
+     {
+       "files": [
+-        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
+-        "docs/agent/evidence/raw-storage-query-preflight-20261008.json",
+-        "services/api/app/services/raw_dictionary_storage.py",
+-        "services/api/tests/test_raw_dictionary_storage_postgres.py"
++        "services/api/app/services/freshness_queue.py",
++        "services/api/app/services/freshness_integration.py",
++        "services/api/tests/test_freshness_claim_wait_postgres.py",
++        "docs/agent/YUYU_CLAIM_WAIT.md",
++        "docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json"
+       ],
+       "effects": [
+         "application",
+         "tests",
+         "documentation",
+-        "staging_deployment"
++        "staging_deployment",
++        "infrastructure"
+       ],
+-      "reason": "Fix planner-sensitive marker projection using bounded ID selection before body inspection. Proven sorting-plan regression old202/new<=34. Keep writersOFF/f9/codec/default200/daily bounds, no schema or RAW/history writes, preserve all source scheduling/admission/identity safeguards."
+-    },
+-    {
+-      "files": [
+-        "apps/web/src/app/layout.tsx",
+-        "apps/web/src/app/fonts/Manrope-Variable.ttf",
+-        "apps/web/src/app/fonts/Manrope-OFL.txt",
+-        "apps/web/src/app/fonts/README.md"
+-      ],
+-      "effects": [
+-        "application",
+-        "documentation",
+-        "staging_deployment"
+-      ],
+-      "reason": "Repair observed unrelated frontend delivery blocker with the same unmodified licensed Manrope font bundled locally. Preserves typeface/weights/variable/swap and every CI/build/type check; <=170KiB asset pluslicense. No pricing, identity, schema/source or service configuration change."
++      "reason": "Bound explicit four-slot contention recovery to six five-second waits inside the unchanged execution deadline. Native rollout to ten existing staging collectors requires AMBER fleet preflight. Preserve max16, atomic cap4, request budgets, pacing, original crons and writerOFF; no new jobs, mapping decisions, schema or history writes."
+     }
+   ],
+-  "diff_sha256": "e1f841c8c2573af453aa68dcd782e5386c2cd4056399e6dbe44bf054d338346c",
++  "diff_sha256": "3e843e73d02e8577557dd31ac509f309d5aacb455f7c39eae950017f5e505a0d",
+   "deployment_verification": {
+     "api_sha": "merge",
+     "revision": "f9e5b4a8c012",
+@@ -59,55 +47,55 @@
+     "snkr_component": "merge",
+     "yuyu_reader_component": "merge",
+     "collector_services": [
++      {
++        "name": "yuyutei-collector-shard-8",
++        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
++        "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
++      },
++      {
++        "name": "yuyutei-collector-shard-5",
++        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
++        "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
++      },
++      {
++        "name": "yuyutei-collector-shard-3",
++        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
++        "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
++      },
+       {
+         "name": "snkrdunk-collector",
+         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+         "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
+       },
+-      {
+-        "name": "yuyutei-collector-shard-0",
+-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-        "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+-      },
+       {
+         "name": "yuyutei-collector-shard-1",
+         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+         "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
+       },
+       {
+-        "name": "yuyutei-collector-shard-2",
+-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-        "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
+-      },
+-      {
+-        "name": "yuyutei-collector-shard-3",
+-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-        "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
++        "name": "yuyutei-collector-shard-0",
++        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
++        "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+       },
+       {
+         "name": "yuyutei-collector-shard-4-v2",
+         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+         "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
+       },
+-      {
+-        "name": "yuyutei-collector-shard-5",
+-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-        "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
+-      },
+       {
+         "name": "yuyutei-collector-shard-6",
+         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+         "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
+       },
++      {
++        "name": "yuyutei-collector-shard-2",
++        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
++        "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
++      },
+       {
+         "name": "yuyutei-collector-shard-7",
+         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+         "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
+-      },
+-      {
+-        "name": "yuyutei-collector-shard-8",
+-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-        "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
+       }
+     ],
+     "yuyu_capacity_cadence": true
+@@ -116,7 +104,7 @@
+     "impact": {
+       "resources": [
+         {
+-          "name": "Staging protected RAW dependency schema",
++          "name": "Staging Postgres (read-only fingerprint, no migration)",
+           "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+           "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+           "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
+@@ -125,77 +113,78 @@
+           "name": "Staging API",
+           "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
+         },
++        {
++          "name": "yuyutei-collector-shard-8",
++          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
++          "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
++        },
++        {
++          "name": "yuyutei-collector-shard-5",
++          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
++          "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
++        },
++        {
++          "name": "yuyutei-collector-shard-3",
++          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
++          "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
++        },
+         {
+           "name": "snkrdunk-collector",
+           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+           "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
+         },
+-        {
+-          "name": "yuyutei-collector-shard-0",
+-          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-          "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+-        },
+         {
+           "name": "yuyutei-collector-shard-1",
+           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+           "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
+         },
+         {
+-          "name": "yuyutei-collector-shard-2",
+-          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-          "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
+-        },
+-        {
+-          "name": "yuyutei-collector-shard-3",
+-          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-          "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
++          "name": "yuyutei-collector-shard-0",
++          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
++          "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+         },
+         {
+           "name": "yuyutei-collector-shard-4-v2",
+           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+           "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
+         },
+-        {
+-          "name": "yuyutei-collector-shard-5",
+-          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-          "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
+-        },
+         {
+           "name": "yuyutei-collector-shard-6",
+           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+           "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
+         },
++        {
++          "name": "yuyutei-collector-shard-2",
++          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
++          "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
++        },
+         {
+           "name": "yuyutei-collector-shard-7",
+           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+           "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
+-        },
+-        {
+-          "name": "yuyutei-collector-shard-8",
+-          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-          "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
+         }
+       ],
+       "routes": [
+-        "Existing RAW before-parse persistence and portable backup export/restore"
++        "Existing admitted ordinary RAW and discovery queue; no manual source invocation"
+       ],
+       "dependencies": [
+-        "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
++        "f9/e8 protected RAW ledger/readers/portable backup19 remain compatible; original nine shards and SNKR singleton unchanged"
+       ],
+-      "deployment_impact": "Native API/all10 query correction with writers OFF. Read-only existingf9 schema verification; no migration requested, data/schema/source volume/schedule/budget/pacing/claim/price changes.",
++      "deployment_impact": "Native API/frontend and ten existing collector image updates. Complete preflight pins original crons, current-source naturally adopted recovery images, staging destination, OFF flags, ledger hashes, source budgets and actionable RAW freshness. No new services/config/cron/budget/pacing/writer/mapping/schema mutations. Await independent actual-current natural components, not CLI metadata alone.",
+       "database_writes": 0,
+       "source_requests": 0,
+-      "estimated_runtime_minutes": 60
++      "estimated_runtime_minutes": 90
+     },
+     "recovery": {
+-      "artifact": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+-      "procedure": "Retain all writersOFF and f9/readers/dependencies/portable backup19. Query-only native revert to4995007 is executable on the unchangedf9 schema. No RAW expansion or obsoletee8 delivery. Existing installed indexes only validated, not recreated.",
+-      "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
+-      "backup": "No persistent data or schema mutation by this fix; current16 lossless canary copies/digests, protected15 rows and previous portable19 backup validation retained. Focused121 reader/storage/backup tests passed.",
++      "artifact": "a6c080902895922ba60c4161d417255006b2bd1f",
++      "procedure": "Keep all13 writer flagsOFF and f9 schema/readers/ledger unchanged. Native revert of this bounded code/manifest restores retained PR79 API source. If containment is needed, redeploy only the ten exact staging recovery image IDs listed here (live canRedeploy verified), preserving cron/start commands and f9. No obsolete e8 full delivery or RAW expansion. Deployer never invokes Run Now; ordinary source execution stays scheduled.",
++      "trigger": "source denial or duplicate/uncontrolled request, wrong physical identity or integrity failure, lost ownership/lease/reservation leak, unexpected writer activation, actionable24h freshness regression or retry exceeding30seconds/execution deadline",
++      "backup": "Release writes no schema or historical RAW. Original16 ledger/hash/length pairs and protected15 encodings match preserved independent plaintext audit; f9 and portable backup19 compatible. All ten retained successful deployment IDs are destination-pinned and live canRedeploy=true. Retain all evidence and current state; no deletion or historical expansion.",
+       "validation": [
+-        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+-        "services/api/tests/test_raw_dictionary_backup.py",
+-        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md"
++        "services/api/tests/test_freshness_claim_wait_postgres.py",
++        "services/api/tests/test_freshness_queue_postgres.py",
++        "docs/agent/YUYU_CLAIM_WAIT.md",
++        "docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json"
+       ]
+     },
+     "verification": {
+@@ -208,7 +197,7 @@
+         "scripts/verify_yuyu_raw_reader_component.py",
+         "scripts/generate_staging_state.py"
+       ],
+-      "observation_window": "All10 current-source ordinary component receipts under original schedules. Writers OFF. Any subsequent activation requires separate fresh canary and sustained physical-growth, 30/90d headroom and natural RAW recurrence evidence."
++      "observation_window": "Strict delivery artifact plus all10 actual new-source completed natural receipts under original schedules. Then measure positive RAW, contention waits, aggregate active claims<=4, zero denials/duplicates/leaks, budget<=bounds and RAW recurrence<=24h across a busy window. Empty SNKR turns establish image adoption only. No compression/cadence/NEW100 activation until separate fresh AMBER safeguards pass."
+     }
+   }
+ }
+diff --git a/docs/agent/YUYU_CLAIM_WAIT.md b/docs/agent/YUYU_CLAIM_WAIT.md
+new file mode 100644
+index 0000000..ff4caf9
+--- /dev/null
++++ b/docs/agent/YUYU_CLAIM_WAIT.md
+@@ -0,0 +1,75 @@
++# Bounded Yuyu claim contention recovery
++
++The shared four-claim limit remains authoritative for every Yuyu consumer and
++work kind. An ordinary sharded collector may retry an empty claim only when the
++budget-locked refusal explicitly reports that limit and affordable, eligible work
++exists for that shard. Six five-second waits bound each collision to thirty
++seconds. Each wait releases the transaction; each retry checks ownership and
++uses the original queue locks, source pause, budget, lane fairness, shard,
++reservation and lease rules. A retry cannot outlive the existing execution
++deadline plus the mapping runtime allowance. Other empty/refused claims stop
++immediately. Waiting makes no source request and acquires no work lease.
++
++This release changes no cron, request budget, pacing, maximum work, price or
++physical-card identity policy. The original nine modulo-nine shards retain their
++thirty-minute schedules, sixteen-work bound and shared9000/1800 request envelope.
++SNKRDUNK retains its singleton,3100/1800 envelope and original schedule. All RAW
++dictionary writers remain OFF. Completed sitemap intents3676/3677 and previous
++RAW recovery35175 must never replay.
++
++The original reader verifier remains unchanged. It requires all nine shards to
++share one declared profile, the existing original or explicitly declared
++ten-minute schedules, and refuses changed phases, mixed schedules and larger
++work bounds. No profile is activated by this code release.
++
++Fixture validation covers slot release, continued contention, insufficient
++deadline, disabled source before/during retry, lost ownership, unsharded callers,
++empty queues, unaffordable work and wrong shards. It asserts no invented RAW or
++price success, no source HTTP and no excess active claim/reservation.105 queue,
++both-source adapter, retry and health tests passed before the declaration-only
++initial implementation;10 contention cases passed after the named retry
++constants were added. Native full engineering checks remain
++required for delivery.
++
++The offline72-hour forecast uses exact observed due times, the original lane
++cycle, per-RAW reservation300, measured56-request proxy, startup proxy302seconds,
++uniform stress latency603.164/16seconds, and unchanged budgets/pacing/max16.
++The corrected model keeps each service busy throughout scheduled startup AND
++execution, as required by Railway same-service overlap behavior. The earlier
++execution-only model undercounted overlap and is retained as superseded evidence.
++With thirty-second claim wait and integer-minute phases, ten-minute scheduling
++forecasts zero misses for the current population,100 phased additions, and a
++separate100-capture scenario spaced600seconds, but61 misses for607 additions.
++Five-minute scheduling forecasts166 misses with607 additions; it is not a
++justified capacity solution. Modeled concurrent claims remain<=4 and request
++usage below9000. These forecasts do not prove future capacity: populations are
++phased, uniform stress is not every product timing out, startup is an approximate
++proxy, and capture load is separate from the added recurring population.
++Retained inputs and both models are in the capacity75-resumed handoff. No cadence
++expansion may rely on the superseded forecast.
++
++A cadence activation is a separate AMBER action. It must first refresh exact
++staging identity, all ten installed natural components, queue/deadline state,
++budgets, source denials, reservations, physical growth and recovery artifacts.
++Its manifest must bound the extra empty startup/log overhead (five-minute is at
++most2592 launches/day versus432 under the original schedule, and same-service
++overlaps may be skipped), retain all original source envelopes and provide an
++executable reversal to each original cron. Activation requires natural busy
++window evidence, bounded retries, all-source RAW recurrence within24hours and
++no leaks/denials before any NEW100 expansion. Compression/storage continuity
++must independently pass; scheduler modeling does not waive storage safeguards.
++
++PR79's full engineering checks passed and it merged as
++`a6c080902895922ba60c4161d417255006b2bd1f`, but the fleet delivery guard refused its
++GREEN manifest before any collector upload. The current release uses the
++required AMBER fleet preflight; it installs PR79's bounded RAW body query together
++with this retry. No classification guard or engineering check is bypassed.
++
++Recovery is a native code revert, with all writer flags retained OFF and schema
++`f9e5b4a8c012` preserved. The current verified collector recovery images are the
++PR78 ten-service fleet, and the API source recovery is PR79. RAW, dependency
++ledger, portable backup compatibility and historical published data remain
++unchanged. Source denials, duplicate requests, identity/integrity failures,
++ownership or reservation leaks, unexpected writer activation, increased deadline
++misses or runtime regression stop the affected path and require bounded diagnosis
++before expansion.
+diff --git a/docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json b/docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json
+new file mode 100644
+index 0000000..1d285b6
+--- /dev/null
++++ b/docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json
+@@ -0,0 +1,1645 @@
++{
++  "target": "staging",
++  "classification": "AMBER",
++  "before_sha": "a6c080902895922ba60c4161d417255006b2bd1f",
++  "observed_at": "2026-10-08T04:59:46.806293+00:00",
++  "live_preflight_sha256": "8980bfdc7e6322bb9f9f38d50ecd7e53d6e03fd3bf0646fc413fedc6596f41d7",
++  "live_preflight": {
++    "target": "staging",
++    "observed_at": "2026-10-08T04:59:46.806293+00:00",
++    "source_sha": "a6c080902895922ba60c4161d417255006b2bd1f",
++    "installed_collector_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++    "source_requests": 0,
++    "database_writes": 0,
++    "source_jobs_triggered": 0,
++    "production_accessed": false,
++    "flags": [
++      {
++        "name": "yuyutei-collector-shard-8",
++        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "24,54 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 8",
++        "deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
++      },
++      {
++        "name": "yuyutei-collector-shard-5",
++        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "15,45 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 5",
++        "deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
++      },
++      {
++        "name": "beat",
++        "service_id": "fd28246d-50d2-40da-81dd-c6779e0d3faa",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": "staging",
++          "SCRAPING_MODE": "mock",
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": "false",
++          "DATA_RETENTION_ENABLED": "false",
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": null,
++        "start_command": null,
++        "deployment_id": "f73a4465-7aa0-4157-b173-0614bb23ecf0"
++      },
++      {
++        "name": "optcg-price-tracker",
++        "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": "staging",
++          "SCRAPING_MODE": "mock",
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": "false",
++          "DATA_RETENTION_ENABLED": "false",
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": null,
++        "start_command": null,
++        "deployment_id": "fc1daf41-f0c8-4b5d-9fc0-e79f01bd241c"
++      },
++      {
++        "name": "yuyutei-collector-shard-3",
++        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "9,39 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 3",
++        "deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
++      },
++      {
++        "name": "snkrdunk-collector",
++        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "27,57 * * * *",
++        "start_command": "python -m snkrdunk_collector.collect --due-work",
++        "deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
++      },
++      {
++        "name": "yuyutei-collector-shard-1",
++        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "3,33 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 1",
++        "deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
++      },
++      {
++        "name": "yuyutei-collector-shard-0",
++        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": "false",
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": "staging",
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "0,30 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 0",
++        "deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
++      },
++      {
++        "name": "yuyutei-collector-shard-4-v2",
++        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "12,42 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 4",
++        "deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
++      },
++      {
++        "name": "yuyutei-collector-shard-6",
++        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "18,48 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 6",
++        "deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
++      },
++      {
++        "name": "yuyutei-collector-shard-2",
++        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "6,36 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 2",
++        "deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
++      },
++      {
++        "name": "worker",
++        "service_id": "0042350a-ee15-4bac-a210-3efa20a3fa8c",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": "staging",
++          "SCRAPING_MODE": "mock",
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": null,
++        "start_command": null,
++        "deployment_id": "0f1a943f-6691-4806-8ae6-9ba87a3c6db8"
++      },
++      {
++        "name": "yuyutei-collector-shard-7",
++        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
++        "flags": {
++          "RAW_DICTIONARY_STORAGE_ENABLED": null,
++          "RAW_DICTIONARY_STORAGE_MODE": null,
++          "APP_ENV": null,
++          "SCRAPING_MODE": null,
++          "LEGACY_PRICE_REFRESH_ENABLED": null,
++          "MARKET_WORKFLOW_ENABLED": null,
++          "DATA_RETENTION_ENABLED": null,
++          "MOCK_MODE": null,
++          "RAW_RETENTION_ENABLED": null,
++          "PSA10_ENABLED": null,
++          "SNKRDUNK_PSA10_ENABLED": null,
++          "YUYUTEI_ENABLED": null,
++          "SNKRDUNK_ENABLED": null,
++          "YUYUTEI_DISCOVERY_ENABLED": null,
++          "COLLECTORS_ENABLED": null
++        },
++        "schedule": "21,51 * * * *",
++        "start_command": "python -m yuyutei_collector.collect --due-work --shard-count 9 --shard-index 7",
++        "deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
++      }
++    ],
++    "legacy": [
++      {
++        "name": "worker",
++        "deployment_id": "0f1a943f-6691-4806-8ae6-9ba87a3c6db8",
++        "source_sha": "d65a523486290f5af480acb50907ff0b9976855c"
++      },
++      {
++        "name": "beat",
++        "deployment_id": "f73a4465-7aa0-4157-b173-0614bb23ecf0",
++        "source_sha": "d65a523486290f5af480acb50907ff0b9976855c"
++      }
++    ],
++    "adoption": {
++      "yuyu": {
++        "actual_natural_reader_components": [
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-0",
++            "shard": 0,
++            "execution_id": "yuyutei-due-0:3baf3924c62c404f8ac9c6dc786db50a",
++            "deployment_id": "6426db78-71e8-4027-b561-56d15da53315",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:31:27.922530+00:00",
++            "finished_at": "2026-10-08T04:34:15.291061+00:00",
++            "runtime_seconds": 167.368531,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-1",
++            "shard": 1,
++            "execution_id": "yuyutei-due-1:3e7b7eb3396f42dd91cb41c77d769df6",
++            "deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:37:42.574353+00:00",
++            "finished_at": "2026-10-08T04:40:08.052082+00:00",
++            "runtime_seconds": 145.477729,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-2",
++            "shard": 2,
++            "execution_id": "yuyutei-due-2:56aaa13dbc2845119b3954f958faef40",
++            "deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:40:46.921532+00:00",
++            "finished_at": "2026-10-08T04:43:34.550445+00:00",
++            "runtime_seconds": 167.628913,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-3",
++            "shard": 3,
++            "execution_id": "yuyutei-due-3:e5a63f90056a4ee1afd846a5f2d37f29",
++            "deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:43:12.684383+00:00",
++            "finished_at": "2026-10-08T04:45:57.809420+00:00",
++            "runtime_seconds": 165.125037,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-4-v2",
++            "shard": 4,
++            "execution_id": "yuyutei-due-4:01fd8d8804d9455cbd1c06ca8eca24b2",
++            "deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:46:43.700612+00:00",
++            "finished_at": "2026-10-08T04:49:07.284955+00:00",
++            "runtime_seconds": 143.584343,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-5",
++            "shard": 5,
++            "execution_id": "yuyutei-due-5:58f944d14cd24a59b68d57cd9f9e38e0",
++            "deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:45:03.060549+00:00",
++            "finished_at": "2026-10-08T04:47:36.139983+00:00",
++            "runtime_seconds": 153.079434,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-6",
++            "shard": 6,
++            "execution_id": "yuyutei-due-6:90e26cbf59e5427a8fcc24cf86b82557",
++            "deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:52:01.290881+00:00",
++            "finished_at": "2026-10-08T04:54:24.710463+00:00",
++            "runtime_seconds": 143.419582,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-7",
++            "shard": 7,
++            "execution_id": "yuyutei-due-7:e8715ec0b9bc4a27bbb9d144b85fe079",
++            "deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:52:21.058661+00:00",
++            "finished_at": "2026-10-08T04:53:23.497304+00:00",
++            "runtime_seconds": 62.438643,
++            "trigger": "unknown"
++          },
++          {
++            "source": "yuyutei",
++            "service": "yuyutei-collector-shard-8",
++            "shard": 8,
++            "execution_id": "yuyutei-due-8:f3b294251cb5446d927d7f992425546d",
++            "deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48",
++            "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++            "image": null,
++            "scheduled_at": null,
++            "started_at": "2026-10-08T04:28:19.251737+00:00",
++            "finished_at": "2026-10-08T04:31:20.539864+00:00",
++            "runtime_seconds": 181.288127,
++            "trigger": "unknown"
++          }
++        ],
++        "encoded_writes_enabled": false,
++        "source_jobs_triggered": 0,
++        "production_accessed": false
++      },
++      "snkr": {
++        "api_component": "a6c080902895922ba60c4161d417255006b2bd1f",
++        "snkr_component": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++        "snkr_actual_runtime_identity": {
++          "source": "snkrdunk",
++          "service": "snkrdunk-collector",
++          "shard": null,
++          "execution_id": "snkrdunk-due:1220a460a49846c78ff857f368b6a6bd",
++          "deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133",
++          "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++          "image": null,
++          "scheduled_at": null,
++          "started_at": "2026-10-08T04:28:33.730200+00:00",
++          "finished_at": "2026-10-08T04:28:33.801869+00:00",
++          "runtime_seconds": 0.071669,
++          "trigger": "unknown"
++        },
++        "identity_basis": "Unchanged Git runtime inputs plus actual installed component receipt; platform Git may be unknown",
++        "source_jobs_triggered": 0,
++        "production_accessed": false
++      }
++    },
++    "recovery_deployments": {
++      "d0": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "28c05f0b-2b59-4049-b04d-75738d504c48",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "f83b902e-f79c-49f4-a2f6-b13018be1926",
++        "status": "SUCCESS"
++      },
++      "d1": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "5d928d70-8102-4bd4-be9b-6bd1f910974a",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
++        "status": "SUCCESS"
++      },
++      "d2": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "5150aeb3-108b-40ef-8091-7c796edb299a",
++        "status": "SUCCESS"
++      },
++      "d3": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
++        "status": "SUCCESS"
++      },
++      "d4": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "1473f16f-8972-4f62-9eaf-99166f5e787d",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
++        "status": "SUCCESS"
++      },
++      "d5": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "6426db78-71e8-4027-b561-56d15da53315",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
++        "status": "SUCCESS"
++      },
++      "d6": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "ba196a45-acff-44d9-9813-8f5f1bd862ba",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "2f4b87da-369d-4b95-8341-0123e6c1c442",
++        "status": "SUCCESS"
++      },
++      "d7": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "54051b0c-359d-47ec-8dcb-32535350c35f",
++        "status": "SUCCESS"
++      },
++      "d8": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "0169974d-e181-4454-8a0d-65733a76cdb3",
++        "status": "SUCCESS"
++      },
++      "d9": {
++        "canRedeploy": true,
++        "environmentId": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
++        "id": "7a47a093-0416-4cdf-8792-7fe279bb394c",
++        "projectId": "c613898d-bf03-43a6-8813-761f72e1c00a",
++        "serviceId": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
++        "status": "SUCCESS"
++      }
++    },
++    "queries": {
++      "budgets": [
++        {
++          "name": "snkrdunk",
++          "id": 2,
++          "source_id": 2,
++          "enabled": true,
++          "request_limit": 3100,
++          "window_seconds": 1800,
++          "window_started_at": "2026-10-08T04:23:57.124648+00:00",
++          "used_requests": 0,
++          "reserved_requests": 0,
++          "paused_until": null,
++          "pause_reason": null,
++          "claim_sequence": 1618
++        },
++        {
++          "name": "yuyutei",
++          "id": 1,
++          "source_id": 1,
++          "enabled": true,
++          "request_limit": 9000,
++          "window_seconds": 1800,
++          "window_started_at": "2026-10-08T04:53:57.124648+00:00",
++          "used_requests": 893,
++          "reserved_requests": 300,
++          "paused_until": null,
++          "pause_reason": null,
++          "claim_sequence": 13226
++        }
++      ],
++      "active_claims": [
++        {
++          "name": "yuyutei",
++          "active": 1
++        }
++      ],
++      "actionable_raw": [
++        {
++          "name": "yuyutei",
++          "never": 0,
++          "older24": 0,
++          "due": 139
++        },
++        {
++          "name": "snkrdunk",
++          "never": 0,
++          "older24": 0,
++          "due": 0
++        }
++      ],
++      "protected_ledger": [
++        {
++          "id": 35175,
++          "base_snapshot_id": 31866,
++          "original_sha256": "0ecebb7423587d8be3d149618a625f89228904f7ee372c31f12b4a27133ae77e",
++          "original_bytes": 209851,
++          "content_hash": "0ecebb7423587d8be3d149618a625f89228904f7ee372c31f12b4a27133ae77e",
++          "encoded": false,
++          "physical_bytes": 35767
++        },
++        {
++          "id": 35176,
++          "base_snapshot_id": 31867,
++          "original_sha256": "98fc18c9cd22aa8d3b9a524494200bed51fffa61c212e7a798ffa9600273a799",
++          "original_bytes": 225962,
++          "content_hash": "98fc18c9cd22aa8d3b9a524494200bed51fffa61c212e7a798ffa9600273a799",
++          "encoded": true,
++          "physical_bytes": 2078
++        },
++        {
++          "id": 35177,
++          "base_snapshot_id": 31868,
++          "original_sha256": "cd30ad673065dcf44dbb49dd62ea3a762f796c4153ce1be76f30ac0d8e3bf134",
++          "original_bytes": 222906,
++          "content_hash": "cd30ad673065dcf44dbb49dd62ea3a762f796c4153ce1be76f30ac0d8e3bf134",
++          "encoded": true,
++          "physical_bytes": 1762
++        },
++        {
++          "id": 35178,
++          "base_snapshot_id": 31869,
++          "original_sha256": "977d0ca5a9cff7176bb320cc965c7bcd1e93d17fbc48fdef2917aea4bd68c809",
++          "original_bytes": 225101,
++          "content_hash": "977d0ca5a9cff7176bb320cc965c7bcd1e93d17fbc48fdef2917aea4bd68c809",
++          "encoded": true,
++          "physical_bytes": 1810
++        },
++        {
++          "id": 35179,
++          "base_snapshot_id": 31870,
++          "original_sha256": "0ae16d4af9182c790afc76abd07abefee1cc86072e5a262985d2e6acd4eaed45",
++          "original_bytes": 225657,
++          "content_hash": "0ae16d4af9182c790afc76abd07abefee1cc86072e5a262985d2e6acd4eaed45",
++          "encoded": true,
++          "physical_bytes": 1974
++        },
++        {
++          "id": 35180,
++          "base_snapshot_id": 31871,
++          "original_sha256": "0e9707d5da1dba73edc395874a2c3d68b9878ab7f8e97ddb8e989fddcd502d7c",
++          "original_bytes": 223528,
++          "content_hash": "0e9707d5da1dba73edc395874a2c3d68b9878ab7f8e97ddb8e989fddcd502d7c",
++          "encoded": true,
++          "physical_bytes": 1926
++        },
++        {
++          "id": 35181,
++          "base_snapshot_id": 31872,
++          "original_sha256": "9b7c30c1aff28058d5b4352ac7ceb5c3bc2768ae25195fc41091b7fa42caae25",
++          "original_bytes": 221959,
++          "content_hash": "9b7c30c1aff28058d5b4352ac7ceb5c3bc2768ae25195fc41091b7fa42caae25",
++          "encoded": true,
++          "physical_bytes": 1714
++        },
++        {
++          "id": 35182,
++          "base_snapshot_id": 31873,
++          "original_sha256": "972e52140700b2f34a6235552fdb4c6d7cb57fbdf298ccccbf1473844e47e073",
++          "original_bytes": 211907,
++          "content_hash": "972e52140700b2f34a6235552fdb4c6d7cb57fbdf298ccccbf1473844e47e073",
++          "encoded": true,
++          "physical_bytes": 1046
++        },
++        {
++          "id": 35183,
++          "base_snapshot_id": 31874,
++          "original_sha256": "534d6e116bf1b4243c927cd54d90c4da1166e21913b6efb64f2ce7c43c14b681",
++          "original_bytes": 226563,
++          "content_hash": "534d6e116bf1b4243c927cd54d90c4da1166e21913b6efb64f2ce7c43c14b681",
++          "encoded": true,
++          "physical_bytes": 1822
++        },
++        {
++          "id": 35184,
++          "base_snapshot_id": 31875,
++          "original_sha256": "3c206e2058681ecb28e1e56f2fc8ada4cd2f025f97c44da1a4b15b3f6c5c597a",
++          "original_bytes": 222949,
++          "content_hash": "3c206e2058681ecb28e1e56f2fc8ada4cd2f025f97c44da1a4b15b3f6c5c597a",
++          "encoded": true,
++          "physical_bytes": 2046
++        },
++        {
++          "id": 35185,
++          "base_snapshot_id": 31876,
++          "original_sha256": "e550cd2df9396883e86c8153a3097546a971de628b36e7730bc36f16df48f24b",
++          "original_bytes": 223527,
++          "content_hash": "e550cd2df9396883e86c8153a3097546a971de628b36e7730bc36f16df48f24b",
++          "encoded": true,
++          "physical_bytes": 1942
++        },
++        {
++          "id": 35186,
++          "base_snapshot_id": 31877,
++          "original_sha256": "a9b5f42f3f6bac7c0a94719167eedfd8bf7c078350bb826ae087abc178bdbde9",
++          "original_bytes": 222002,
++          "content_hash": "a9b5f42f3f6bac7c0a94719167eedfd8bf7c078350bb826ae087abc178bdbde9",
++          "encoded": true,
++          "physical_bytes": 1154
++        },
++        {
++          "id": 35187,
++          "base_snapshot_id": 31878,
++          "original_sha256": "2c260ebf2a5454a4b2c57d4d629d584d54639633981458b3c27e3d6a97af3a89",
++          "original_bytes": 223242,
++          "content_hash": "2c260ebf2a5454a4b2c57d4d629d584d54639633981458b3c27e3d6a97af3a89",
++          "encoded": true,
++          "physical_bytes": 1834
++        },
++        {
++          "id": 35188,
++          "base_snapshot_id": 31879,
++          "original_sha256": "eb1e07bda806fbe05a0bb9ffd41526d436a24e61d429d9dd5729b7c639e3ec9a",
++          "original_bytes": 222778,
++          "content_hash": "eb1e07bda806fbe05a0bb9ffd41526d436a24e61d429d9dd5729b7c639e3ec9a",
++          "encoded": true,
++          "physical_bytes": 1942
++        },
++        {
++          "id": 35189,
++          "base_snapshot_id": 31880,
++          "original_sha256": "45e76873986e24965b06aadde1a04afeaf15765f470ae70721f4edf9619eaece",
++          "original_bytes": 225758,
++          "content_hash": "45e76873986e24965b06aadde1a04afeaf15765f470ae70721f4edf9619eaece",
++          "encoded": true,
++          "physical_bytes": 2074
++        },
++        {
++          "id": 35190,
++          "base_snapshot_id": 31881,
++          "original_sha256": "9842d3eb579b44cf571e96fab7ebc88782cb37fbc6860f4d66cc4f6bf2907776",
++          "original_bytes": 214571,
++          "content_hash": "9842d3eb579b44cf571e96fab7ebc88782cb37fbc6860f4d66cc4f6bf2907776",
++          "encoded": true,
++          "physical_bytes": 1018
++        }
++      ],
++      "psa10": [
++        {
++          "states": 0,
++          "observations": 0
++        }
++      ],
++      "duplicate_exact": [
++        {
++          "n": 0
++        }
++      ],
++      "completed_intents": [
++        {
++          "id": 3676,
++          "state": "pending",
++          "last_outcome": "completed",
++          "next_due_at": "2126-09-13T23:02:01.866292+00:00"
++        },
++        {
++          "id": 3677,
++          "state": "pending",
++          "last_outcome": "completed",
++          "next_due_at": "2126-09-13T23:29:50.797132+00:00"
++        }
++      ],
++      "latest_runs": [
++        {
++          "service": "snkrdunk-collector",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "snkrdunk",
++              "service": "snkrdunk-collector",
++              "shard": null,
++              "execution_id": "snkrdunk-due:1220a460a49846c78ff857f368b6a6bd",
++              "deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:28:33.730200+00:00",
++              "finished_at": "2026-10-08T04:28:33.801869+00:00",
++              "runtime_seconds": 0.071669,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 353,
++              "due": 66,
++              "selected": 0,
++              "claimed": 0,
++              "attempted": 0,
++              "listed": 0,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 0,
++              "accepted_observations": 0,
++              "raw_snapshots": 0,
++              "max_work": 70,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 0,
++              "deadline_misses": 66,
++              "successful_check_age_p50": 50115.883199,
++              "successful_check_age_p95": 310353.733869,
++              "successful_check_age_max": 313085.844549,
++              "never_checked": 22,
++              "retries": 21,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 163695.030986
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "held",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "not_applicable",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": null
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-0",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-0",
++              "shard": 0,
++              "execution_id": "yuyutei-due-0:3baf3924c62c404f8ac9c6dc786db50a",
++              "deployment_id": "6426db78-71e8-4027-b561-56d15da53315",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:31:27.922530+00:00",
++              "finished_at": "2026-10-08T04:34:15.291061+00:00",
++              "runtime_seconds": 167.368531,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 291,
++              "due": 4,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 2,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 23440.798383,
++              "successful_check_age_p95": 81205.28022300001,
++              "successful_check_age_max": 82828.167081,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 119183.057802
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-1",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-1",
++              "shard": 1,
++              "execution_id": "yuyutei-due-1:3e7b7eb3396f42dd91cb41c77d769df6",
++              "deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:37:42.574353+00:00",
++              "finished_at": "2026-10-08T04:40:08.052082+00:00",
++              "runtime_seconds": 145.477729,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 290,
++              "due": 17,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 1,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 25493.363013000002,
++              "successful_check_age_p95": 82895.3292609,
++              "successful_check_age_max": 84826.303055,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 119163.729329
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-2",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-2",
++              "shard": 2,
++              "execution_id": "yuyutei-due-2:56aaa13dbc2845119b3954f958faef40",
++              "deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:40:46.921532+00:00",
++              "finished_at": "2026-10-08T04:43:34.550445+00:00",
++              "runtime_seconds": 167.628913,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 290,
++              "due": 9,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 0,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 57754.9160905,
++              "successful_check_age_p95": 81213.18540645,
++              "successful_check_age_max": 82922.516795,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 142241.690585
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-3",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-3",
++              "shard": 3,
++              "execution_id": "yuyutei-due-3:e5a63f90056a4ee1afd846a5f2d37f29",
++              "deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:43:12.684383+00:00",
++              "finished_at": "2026-10-08T04:45:57.809420+00:00",
++              "runtime_seconds": 165.125037,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 291,
++              "due": 16,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 4,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 57611.440409,
++              "successful_check_age_p95": 83063.76659,
++              "successful_check_age_max": 83190.775486,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 93792.84131
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-4-v2",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-4-v2",
++              "shard": 4,
++              "execution_id": "yuyutei-due-4:01fd8d8804d9455cbd1c06ca8eca24b2",
++              "deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:46:43.700612+00:00",
++              "finished_at": "2026-10-08T04:49:07.284955+00:00",
++              "runtime_seconds": 143.584343,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 290,
++              "due": 14,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 1,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 57846.434999,
++              "successful_check_age_p95": 81253.78810125,
++              "successful_check_age_max": 83068.236978,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 93237.821803
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-5",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-5",
++              "shard": 5,
++              "execution_id": "yuyutei-due-5:58f944d14cd24a59b68d57cd9f9e38e0",
++              "deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:45:03.060549+00:00",
++              "finished_at": "2026-10-08T04:47:36.139983+00:00",
++              "runtime_seconds": 153.079434,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 291,
++              "due": 0,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 1,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 57494.20776,
++              "successful_check_age_p95": 82597.55959749999,
++              "successful_check_age_max": 82715.450769,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 91332.440297
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-6",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-6",
++              "shard": 6,
++              "execution_id": "yuyutei-due-6:90e26cbf59e5427a8fcc24cf86b82557",
++              "deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:52:01.290881+00:00",
++              "finished_at": "2026-10-08T04:54:24.710463+00:00",
++              "runtime_seconds": 143.419582,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 291,
++              "due": 18,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 0,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 56027.707661,
++              "successful_check_age_p95": 83047.83528900001,
++              "successful_check_age_max": 84623.313951,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 122487.089474
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-7",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-7",
++              "shard": 7,
++              "execution_id": "yuyutei-due-7:e8715ec0b9bc4a27bbb9d144b85fe079",
++              "deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:52:21.058661+00:00",
++              "finished_at": "2026-10-08T04:53:23.497304+00:00",
++              "runtime_seconds": 62.438643,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 292,
++              "due": 11,
++              "selected": 7,
++              "claimed": 7,
++              "attempted": 7,
++              "listed": 7,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 2,
++              "accepted_observations": 7,
++              "raw_snapshots": 7,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 7,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 39666.7599255,
++              "successful_check_age_p95": 82766.60493145,
++              "successful_check_age_max": 84406.205702,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 120252.617217
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": null
++            }
++          }
++        },
++        {
++          "service": "yuyutei-collector-shard-8",
++          "context_json": {
++            "schema_version": 1,
++            "identity": {
++              "source": "yuyutei",
++              "service": "yuyutei-collector-shard-8",
++              "shard": 8,
++              "execution_id": "yuyutei-due-8:f3b294251cb5446d927d7f992425546d",
++              "deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48",
++              "revision": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++              "image": null,
++              "scheduled_at": null,
++              "started_at": "2026-10-08T04:28:19.251737+00:00",
++              "finished_at": "2026-10-08T04:31:20.539864+00:00",
++              "runtime_seconds": 181.288127,
++              "trigger": "unknown"
++            },
++            "work": {
++              "eligible": 290,
++              "due": 14,
++              "selected": 16,
++              "claimed": 16,
++              "attempted": 16,
++              "listed": 16,
++              "no_listing": 0,
++              "completed": 0,
++              "discovery_progress": 0,
++              "promotional_hidden": 3,
++              "accepted_observations": 16,
++              "raw_snapshots": 16,
++              "max_work": 16,
++              "runtime_limit_seconds": 1200
++            },
++            "failure": {
++              "transient": 0,
++              "parsing": 0,
++              "identity": 0,
++              "optional_resource": 0,
++              "http_403": 0,
++              "http_429": 0,
++              "challenge": 0,
++              "unexpected_skip": 0
++            },
++            "freshness": {
++              "successful_checks": 16,
++              "deadline_misses": 0,
++              "successful_check_age_p50": 59610.6086885,
++              "successful_check_age_p95": 81172.74532285,
++              "successful_check_age_max": 83020.880068,
++              "never_checked": 0,
++              "retries": 0,
++              "backoff": 0,
++              "maximum_successful_revisit_gap_seconds": 120657.499742
++            },
++            "safety": {
++              "claims_remaining": 0,
++              "expired_claims": 0,
++              "reservations_remaining": 0,
++              "reservation_overruns": 0,
++              "singleton": "not_required",
++              "duplicate_requests": 0,
++              "wrong_shard": 0,
++              "identity_integrity": "guarded",
++              "promotion_policy": "guarded",
++              "production_impact": false
++            },
++            "exit": {
++              "terminal_state": "completed",
++              "exit_code": null,
++              "stopped_reason": "work_bound"
++            }
++          }
++        }
++      ],
++      "operational_budgets": [
++        {
++          "name": "yuyutei",
++          "enabled": true,
++          "request_limit": 9000,
++          "window_seconds": 1800,
++          "window_started_at": "2026-10-08T04:53:57.124648+00:00",
++          "used_requests": 949,
++          "reserved_requests": 0,
++          "paused_until": null,
++          "permanent_pause": false,
++          "open_reservations": 0,
++          "reservation_mismatch": false
++        },
++        {
++          "name": "snkrdunk",
++          "enabled": true,
++          "request_limit": 3100,
++          "window_seconds": 1800,
++          "window_started_at": "2026-10-08T04:23:57.124648+00:00",
++          "used_requests": 0,
++          "reserved_requests": 0,
++          "paused_until": null,
++          "permanent_pause": false,
++          "open_reservations": 0,
++          "reservation_mismatch": false
++        }
++      ]
++    },
++    "volume": {
++      "average_mb": 3286.8979181329637,
++      "current_mb": 3392.6754374217144,
++      "limit_mb": 10000.0,
++      "max_mb": 3392.6754374217144,
++      "mount_path": "/var/lib/postgresql/data",
++      "name": "postgres-volume"
++    },
++    "purpose": "AMBER ten-service native deployment of bounded claim wait and already merged bounded RAW query. No source job, cadence, budget, mapping, writer or migration changes."
++  },
++  "validation": {
++    "mock_queue_adapters_retry_health_tests_passed": 105,
++    "focused_contention_tests_after_constants": 10,
++    "source_http_in_tests": 0,
++    "full_native_engineering_required": true
++  },
++  "retry_bound_seconds": 30,
++  "retry_count": 6,
++  "retry_seconds": 5,
++  "active_claim_limit": 4,
++  "max_work": 16,
++  "runtime_deadline_unchanged": true,
++  "cron_changes": 0,
++  "source_budget_changes": 0,
++  "writer_activations": 0,
++  "manual_source_jobs": 0,
++  "mapping_writes": 0,
++  "migrations": 0,
++  "production_accessed": false,
++  "pr79": {
++    "merge": "a6c080902895922ba60c4161d417255006b2bd1f",
++    "engineering_checks": "all passed",
++    "native_delivery": "guard refused GREEN fleet manifest before any collector upload",
++    "failed_ci": [
++      37726361014,
++      37726360626
++    ],
++    "bounded_query_fleet_delivery_still_required": true
++  },
++  "forecast_correction": {
++    "prior_execution_only_overlap": "superseded; preserved",
++    "provider_busy_includes": "scheduled startup plus runtime",
++    "thirty_second_wait_10minute_current_and_new100": "zero modeled deadline misses; NOT natural capacity proof",
++    "thirty_second_wait_10minute_added607": "61 misses",
++    "thirty_second_wait_5minute_added607": "166 misses",
++    "cadence_activation_authorized_by_this_release": false,
++    "new100": "UNPLANNED; storage and natural capacity gates remain"
++  },
++  "post_change": {
++    "required_checks": [
++      "engineering-gate"
++    ],
++    "post_change": [
++      "scripts/verify_staging_delivery.py",
++      "scripts/verify_snkr_published_discovery_component.py",
++      "scripts/verify_yuyu_raw_reader_component.py",
++      "scripts/generate_staging_state.py"
++    ],
++    "observation_window": "Strict delivery artifact plus all10 actual new-source completed natural receipts under original schedules. Then measure positive RAW, contention waits, aggregate active claims<=4, zero denials/duplicates/leaks, budget<=bounds and RAW recurrence<=24h across a busy window. Empty SNKR turns establish image adoption only. No compression/cadence/NEW100 activation until separate fresh AMBER safeguards pass."
++  },
++  "recovery": {
++    "artifact": "a6c080902895922ba60c4161d417255006b2bd1f",
++    "procedure": "Keep all13 writer flagsOFF and f9 schema/readers/ledger unchanged. Native revert of this bounded code/manifest restores retained PR79 API source. If containment is needed, redeploy only the ten exact staging recovery image IDs listed here (live canRedeploy verified), preserving cron/start commands and f9. No obsolete e8 full delivery or RAW expansion. Deployer never invokes Run Now; ordinary source execution stays scheduled.",
++    "trigger": "source denial or duplicate/uncontrolled request, wrong physical identity or integrity failure, lost ownership/lease/reservation leak, unexpected writer activation, actionable24h freshness regression or retry exceeding30seconds/execution deadline",
++    "backup": "Release writes no schema or historical RAW. Original16 ledger/hash/length pairs and protected15 encodings match preserved independent plaintext audit; f9 and portable backup19 compatible. All ten retained successful deployment IDs are destination-pinned and live canRedeploy=true. Retain all evidence and current state; no deletion or historical expansion.",
++    "validation": [
++      "services/api/tests/test_freshness_claim_wait_postgres.py",
++      "services/api/tests/test_freshness_queue_postgres.py",
++      "docs/agent/YUYU_CLAIM_WAIT.md",
++      "docs/agent/evidence/yuyu-claim-wait-preflight-20261008.json"
++    ]
++  }
++}
+diff --git a/services/api/app/services/freshness_integration.py b/services/api/app/services/freshness_integration.py
+index 6dccb07..2ef598a 100644
+--- a/services/api/app/services/freshness_integration.py
++++ b/services/api/app/services/freshness_integration.py
+@@ -46,6 +46,8 @@ CATEGORIES = {
+ MAX_BROWSER_ASSET_REDIRECTS = 8
+ BROWSER_ADMISSION_VERSION = 3
+ VALIDATION_ADMISSION_VERSION = 1
++CLAIM_CAP_RETRY_COUNT = 6
++CLAIM_CAP_RETRY_SECONDS = 5
+ 
+ # Observed advertising hosts, never the source's application/API or artwork.
+ ADVERTISING_HOSTS = frozenset(
+@@ -561,21 +563,41 @@ def _drain(
+                 if telemetry is not None:
+                     telemetry["stopped_reason"] = "runtime_bound"
+                 return results
+-            ownership_check(session)
+-            claims = claim_due(
+-                session,
+-                source_id,
+-                owner,
+-                limit=1,
+-                lease=timedelta(seconds=mapping_seconds + 60),
+-                clock=clock,
+-                yuyutei_shard_index=shard_index,
+-                supported_kinds={"refresh"}
+-                | ({"discovery"} if discovery_runner else set()),
+-            )
+-            session.commit()
+-            if not claims:
+-                return results
++            # A full shared claim cap can clear while this scheduled consumer
++            # still has runtime. Retry only that explicit refusal for <=30s;
++            # release the admission transaction before every five-second wait.
++            # Other refusals retain their immediate stop and every retry uses
++            # the original locking, fairness, reservation and ownership guards.
++            for retry in range(CLAIM_CAP_RETRY_COUNT + 1):
++                ownership_check(session)
++                admission_status = {}
++                claims = claim_due(
++                    session,
++                    source_id,
++                    owner,
++                    limit=1,
++                    lease=timedelta(seconds=mapping_seconds + 60),
++                    clock=clock,
++                    yuyutei_shard_index=shard_index,
++                    supported_kinds={"refresh"}
++                    | ({"discovery"} if discovery_runner else set()),
++                    admission_status=admission_status,
++                )
++                session.commit()
++                if claims:
++                    break
++                capped = admission_status.get("reason") == "yuyu_active_claim_cap"
++                if (
++                    shard_index is None
++                    or not capped
++                    or retry == CLAIM_CAP_RETRY_COUNT
++                    or monotonic() + CLAIM_CAP_RETRY_SECONDS + mapping_seconds
++                    > deadline
++                ):
++                    if capped and telemetry is not None:
++                        telemetry["stopped_reason"] = "active_claim_wait_bound"
++                    return results
++                sleep(CLAIM_CAP_RETRY_SECONDS)
+             attempt = Attempt(
+                 session, claims[0], ownership_check=ownership_check, clock=clock
+             )
+diff --git a/services/api/app/services/freshness_queue.py b/services/api/app/services/freshness_queue.py
+index bac53f5..cc917a6 100644
+--- a/services/api/app/services/freshness_queue.py
++++ b/services/api/app/services/freshness_queue.py
+@@ -448,6 +448,7 @@ def claim_due(
+     clock: UTCClock = utc_now,
+     yuyutei_shard_index: int | None = None,
+     supported_kinds: set[str] | None = None,
++    admission_status: dict | None = None,
+ ) -> list[Claim]:
+     """Reserve a processing chunk. The next chunk can be claimed immediately."""
+     if not owner or len(owner) > 128 or not 1 <= limit <= 100 or lease <= timedelta(0):
+@@ -459,6 +460,8 @@ def claim_due(
+         ):
+             raise ValueError("routing requires an existing Yuyu shard index in 0..8")
+     budget = _budget(db, source_id)
++    if admission_status is not None:
++        admission_status.clear()
+     now = require_utc(clock())
+     _roll_window(budget, now)
+     _recover_expired(db, budget, now)
+@@ -478,6 +481,33 @@ def claim_due(
+             )
+         )
+         limit = min(limit, max(0, YUYU_ACTIVE_CLAIM_LIMIT - active))
++        if limit == 0 and admission_status is not None:
++            # Do not make an empty, unaffordable or wrong-shard consumer wait.
++            # This projection only explains refusal; it cannot grant a claim.
++            pending = select(FreshnessWork.id).where(
++                FreshnessWork.source_id == source_id,
++                FreshnessWork.state == "pending",
++                FreshnessWork.next_due_at <= now,
++                FreshnessWork.estimated_request_cost
++                <= budget.request_limit
++                - budget.used_requests
++                - budget.reserved_requests,
++                or_(
++                    FreshnessWork.retry_not_before_at.is_(None),
++                    FreshnessWork.retry_not_before_at <= now,
++                ),
++            )
++            if supported_kinds is not None:
++                pending = pending.where(FreshnessWork.kind.in_(supported_kinds))
++            if yuyutei_shard_index is not None:
++                pending = pending.where(
++                    or_(
++                        FreshnessWork.kind != "refresh",
++                        FreshnessWork.source_card_mapping_id % 9 == yuyutei_shard_index,
++                    )
++                )
++            if db.scalar(pending.limit(1)) is not None:
++                admission_status["reason"] = "yuyu_active_claim_cap"
+     claims: list[Claim] = []
+     for _ in range(limit):
+         remaining = (
+diff --git a/services/api/tests/test_freshness_claim_wait_postgres.py b/services/api/tests/test_freshness_claim_wait_postgres.py
+new file mode 100644
+index 0000000..5d117cd
+--- /dev/null
++++ b/services/api/tests/test_freshness_claim_wait_postgres.py
+@@ -0,0 +1,163 @@
++"""Bounded contention recovery with mock outcomes and disposable localhost DB."""
++
++from datetime import timedelta
++from types import SimpleNamespace
++from collections import defaultdict
++
++import pytest
++from sqlalchemy import func, select
++
++from test_freshness_queue_postgres import db, T0, plan
++from app.models import (
++    FreshnessAttempt,
++    FreshnessPriceState,
++    FreshnessWork,
++    PriceObservation,
++    Source,
++    SourceCardMapping,
++    SourceDispatchBudget,
++)
++from app.services.freshness_integration import CaptureResult, _drain
++from app.services.freshness_queue import claim_due, complete_claim, plan_discovery_scope
++
++
++def occupied(db):
++    factory, source, mapping, _ = db
++    with factory.begin() as session:
++        session.get(Source, source).name = "yuyutei"
++        session.flush()
++        session.get(SourceCardMapping, mapping).source_url = (
++            "https://yuyu-tei.jp/sell/opc/card/op01/10001"
++        )
++        for i in range(4):
++            plan_discovery_scope(
++                session, source, f"held:{i}", due_at=T0, estimated_request_cost=10
++            )
++    with factory.begin() as session:
++        holders = claim_due(
++            session,
++            source,
++            "existing",
++            limit=4,
++            lease=timedelta(minutes=3),
++            clock=lambda: T0,
++            supported_kinds={"discovery"},
++        )
++    assert len(holders) == 4
++    own = plan(factory, mapping, cost=20)
++    return factory, source, mapping, own, holders
++
++
++@pytest.mark.parametrize(
++    "case",
++    [
++        "released",
++        "held",
++        "deadline",
++        "disabled",
++        "ownership_lost",
++        "unsharded",
++        "disabled_on_retry",
++        "empty",
++        "unaffordable",
++        "wrong_shard",
++    ],
++)
++def test_wait_never_bypasses_claim_budget_ownership_or_deadline(db, case):
++    factory, source, mapping, own, holders = occupied(db)
++    elapsed = [0]
++    waits, calls, checks = [], [], []
++    telemetry = defaultdict(int)
++    if case == "disabled":
++        with factory.begin() as session:
++            session.get(SourceDispatchBudget, source).enabled = False
++    if case in {"empty", "unaffordable"}:
++        with factory.begin() as session:
++            if case == "empty":
++                session.get(FreshnessWork, own).state = "blocked"
++            else:
++                session.get(SourceDispatchBudget, source).request_limit = 40
++
++    def sleep(seconds):
++        if not seconds:
++            return
++        waits.append(seconds)
++        elapsed[0] += seconds
++        if case in {"released", "disabled_on_retry"}:
++            with factory.begin() as session:
++                complete_claim(
++                    session,
++                    holders[0].claim_token,
++                    outcome="transient_failure",
++                    actual_request_cost=0,
++                    clock=lambda: T0 + timedelta(seconds=elapsed[0]),
++                )
++                if case == "disabled_on_retry":
++                    session.get(SourceDispatchBudget, source).enabled = False
++
++    def ownership(session):
++        checks.append(elapsed[0])
++        if case == "ownership_lost" and elapsed[0]:
++            raise RuntimeError("mock owner lost")
++
++    def runner(session, mapping_id, *, freshness):
++        calls.append(mapping_id)
++        assert (
++            session.scalar(
++                select(func.count())
++                .select_from(FreshnessWork)
++                .where(FreshnessWork.state == "claimed")
++            )
++            <= 4
++        )
++        freshness.result = CaptureResult(
++            "transient_failure", failure="mock no transport"
++        )
++        return SimpleNamespace(source_denied=False, reasons=[], stage="mock")
++
++    with factory() as session:
++        kwargs = dict(
++            runtime_seconds=182 if case == "deadline" else 1020,
++            mapping_seconds=180,
++            shard_index=(
++                None if case == "unsharded" else (mapping + (case == "wrong_shard")) % 9
++            ),
++            max_work=1,
++            delay_seconds=0,
++            clock=lambda: T0 + timedelta(seconds=elapsed[0]),
++            monotonic=lambda: elapsed[0],
++            sleep=sleep,
++            ownership_check=ownership,
++            telemetry=telemetry,
++        )
++        if case == "ownership_lost":
++            with pytest.raises(RuntimeError, match="owner lost"):
++                _drain(session, source, "waiting", runner, **kwargs)
++        else:
++            result = _drain(session, source, "waiting", runner, **kwargs)
++            assert len(result) == (1 if case == "released" else 0)
++    assert calls == ([mapping] if case == "released" else [])
++    expected_waits = (
++        [5] * 6
++        if case == "held"
++        else [5] if case in {"released", "ownership_lost", "disabled_on_retry"} else []
++    )
++    assert waits == expected_waits
++    assert sum(waits) <= 30
++    with factory() as session:
++        work = session.get(FreshnessWork, own)
++        assert work.attempt_count == (1 if case == "released" else 0)
++        assert work.state == ("blocked" if case == "empty" else "pending")
++        price_state = session.scalar(
++            select(FreshnessPriceState).where(FreshnessPriceState.work_id == own)
++        )
++        assert price_state.last_successfully_checked_at is None
++        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
++        reserved = session.scalar(select(SourceDispatchBudget.reserved_requests))
++        assert reserved == (30 if case in {"released", "disabled_on_retry"} else 40)
++        unfinished = session.scalar(
++            select(func.count())
++            .select_from(FreshnessAttempt)
++            .where(FreshnessAttempt.outcome.is_(None))
++        )
++        assert unfinished == (3 if case in {"released", "disabled_on_retry"} else 4)

@@ -1,0 +1,17 @@
+{
+  "before": "32G size / 28G used / 2.6G available / 92% used",
+  "cleaned": [
+    "npm reproducible content cache: 2.1 GiB",
+    "apps/web/.next reproducible build output: 223 MiB"
+  ],
+  "after": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/loop4       32G   25G  4.9G  84% /workspaces\n/dev/sda1       118G  4.2G  108G   4% /tmp\n",
+  "preserved": [
+    "data RAW/source assets 987 MiB",
+    "docs historical evidence 979 MiB",
+    "12 Docker database volumes 3.217 GB",
+    "Docker PostgreSQL images used for recovery/tests 1.595 GB",
+    "active Python/browser dependencies",
+    "three unrelated tracked edits and all untracked user artifacts"
+  ],
+  "constraint": "Workspace below20% free; new checkouts/reports/downloads use separate /tmp with108GiB free. No database/evidence deletion."
+}

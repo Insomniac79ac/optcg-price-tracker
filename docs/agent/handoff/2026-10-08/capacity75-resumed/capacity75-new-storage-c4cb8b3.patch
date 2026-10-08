@@ -1,0 +1,1140 @@
+diff --git a/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md b/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md
+new file mode 100644
+index 0000000..d730a5a
+--- /dev/null
++++ b/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md
+@@ -0,0 +1,70 @@
++# Bounded renewable staging RAW storage
++
++This delivery keeps every writer OFF and does not establish sustained storage
++savings. It adds a separately selectable `RAW_DICTIONARY_STORAGE_MODE=daily-v1`
++behind the existing `RAW_DICTIONARY_STORAGE_ENABLED` and exact staging guards.
++The default remains the original global, all-time 200-row canary, including the
++16 previously consumed rows and the recovered row. No prior intent is replayed.
++
++Daily mode admits at most 8,192 encoded snapshots and 32 MiB of encoded bodies
++per UTC transaction day, across both sources under the original nonblocking
++transaction advisory lock. The body must fit the remaining byte allowance.
++Recovery does not refund charges. A rolled-back insert also rolls back its
++ledger charge. Admission exhaustion, lock contention, or insufficient savings
++retains newly fetched plaintext under unchanged ownership and source budgets.
++These ceilings are storage admission limits, not observed throughput or a
++90-day volume forecast. Codec, full source URL equality, hashes, dependencies,
++RAW-before-parse commits, CardPrint identity, and price semantics stay guarded.
++
++Migration `f9e5b4a8c012` adds only a UTC ledger-time index and a compact scoped
++RAW lookup index. The latter indexes source/parser/URL hash/ID for HTTP 200;
++the writer also compares the entire URL. Building it does not inspect TOAST
++bodies. Lookup examines at most 32 recent scoped bodies, then the oldest
++retained scoped plaintext anchor. Every encoded child has an older plaintext
++same-scope dependency. A page that no longer compresses efficiently remains
++plaintext and becomes a recent anchor. The indexed daily ledger scan depends
++on one day's admitted rows, rather than the lifetime ledger size.
++
++AMBER delivery preflight is in
++`evidence/raw-storage-daily-preflight-20261008.json`. The existing serialized
++delivery helper accepts only the individually allowlisted parent/revision/path
++and reviewed checksum; writer-OFF, destination, schema, lease, lock and statement
++timeout guards remain. The original e8 transition remains independently tested.
++The new migration does not rewrite raw bodies or dictionary ledger records.
++Both new indexes can be removed after writer-OFF and application rollback,
++while retaining e8 dependency protection, codec readers, portable backup19,
++all captured bodies and immutable price/check/publication history.
++
++Activation is separate from delivery. It requires current natural component
++receipts, all old reader/backup protections, staging APP_ENV, a fresh snapshot,
++source safety/volume/rollback preflight, and an ordinary SNKR writer sample.
++Measure lossless original lengths/digests/lineage, actual physical bytes and
++index/ledger overhead, codec/base lookup costs, admission skips, denials,
++leases, runtime, and successful RAW recurrence. Sample both sources; do not
++treat an empty scheduled turn as a writer sample. The existing SNKR next due
++at the resume census is 2026-10-08T10:32:04Z. Do not invoke a source job to
++manufacture this evidence. Recompute 30/90-day headroom using measured coverage
++of encoded writes and plaintext fallbacks, reserve 3 GiB, and separately reserve
++the full 887,045,884-byte NEW100 image bound before any capture expansion.
++
++Immediate rollback disables the selected writer(s) and restores mode to canary.
++The tested OFF path bypasses storage admission and lookup. Retain the new schema
++revision and installed readers; they understand this unchanged representation.
++If application source must be reverted, restore the writer implementation from
++PR77 through a new bounded native delivery while retaining the additive migration
++and its current revision. An obsolete full PR77 delivery expects e8 and is not
++the rollback command. Keep e8 dependency protection and all dependency rows.
++Bounded, explicitly selected canary
++rows may be expanded only after independent original SHA/length verification
++with the existing OFF recovery function. Broad expansion is not assumed to fit
++the volume, and is not the application rollback. Any later activation preflight
++must record its exact writer-owned recovery selection and room before writing.
++
++Official references checked 2026-10-08:
++[Railway volumes](https://docs.railway.com/volumes/reference) (downsizing remains
++unsupported), [Railway cron](https://docs.railway.com/cron-jobs) (overlapping
++same-service turns are skipped, timing is not exact), and
++[SQLAlchemy conditional DDL](https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.HasConditionalDDL.ddl_if).
++Installed Railway 5.62.1 and GitHub CLI 2.88.0 help verified. Source budgets,
++cadence, pacing, Yuyu four-claim bound, SNKR singleton, PSA10 OFF, production
++boundary and historical evidence are unchanged by this delivery.
+diff --git a/docs/agent/STAGING_MISSION.json b/docs/agent/STAGING_MISSION.json
+index 476726e..9b5aa92 100644
+--- a/docs/agent/STAGING_MISSION.json
++++ b/docs/agent/STAGING_MISSION.json
+@@ -1,6 +1,6 @@
+ {
+   "schema_version": 1,
+-  "mission": "Bound Yuyu active captures before measured scheduler capacity expansion",
++  "mission": "Install bounded renewable RAW storage admission with writers OFF before natural validation",
+   "target": "staging",
+   "classification": "AMBER",
+   "red_decisions": {
+@@ -20,28 +20,30 @@
+   "impacts": [
+     {
+       "files": [
+-        "docs/agent/YUYU_BOUNDED_ADMISSION.md",
+-        "docs/agent/evidence/yuyu-bounded-admission-preflight-20261007.json",
+-        "scripts/tests/test_yuyu_raw_reader_component.py",
+-        "scripts/verify_yuyu_raw_reader_component.py",
+-        "services/api/app/services/freshness_queue.py",
+-        "services/api/tests/test_freshness_queue_postgres.py",
+-        "services/yuyutei_collector/yuyutei_collector/config.py"
++        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
++        "docs/agent/evidence/raw-storage-daily-preflight-20261008.json",
++        "scripts/apply_staging_raw_dependency.py",
++        "scripts/tests/test_apply_staging_raw_dependency.py",
++        "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
++        "services/api/app/models/raw_snapshot.py",
++        "services/api/app/models/raw_snapshot_dictionary.py",
++        "services/api/app/services/raw_dictionary_storage.py",
++        "services/api/tests/test_raw_dictionary_storage_postgres.py"
+       ],
+       "effects": [
+         "application",
+         "tests",
+         "documentation",
+-        "source_envelope",
++        "migration",
+         "staging_deployment"
+       ],
+-      "reason": "Enforce atomic Yuyu4 active-claim bound under existing shared admission lock before any cadence expansion; preserve source pacing/mod9/identity/recurrence. Recognise only declared uniform bounded schedule profile; do not activate schedule or added volume in delivery. Include measured forecast with explicit limitations and rollback."
++      "reason": "Replace lifetime scanning only for explicitly selected daily-v1 mode, add bounded scoped lookup and UTC row/byte admission under existing global lock. Deliver OFF, preserve default200/codec/e8 lineage/readers/portable backup. Allowlist index-only transition with exact parent/path/checksum and executable fixture rollback; no activation or volume expansion."
+     }
+   ],
+-  "diff_sha256": "17a3d768dc66f731a18d5c3a2748e85a3916ef87e7a9fdd250b3077cec6ca258",
++  "diff_sha256": "469c10b200491506e009c92d52d49d96fa7fe3b8f8d91504e369c1a5a86c7135",
+   "deployment_verification": {
+     "api_sha": "merge",
+-    "revision": "e8c2d4f6a901",
++    "revision": "f9e5b4a8c012",
+     "checks": [
+       "scripts/verify_snkr_published_discovery_component.py",
+       "scripts/verify_yuyu_raw_reader_component.py"
+@@ -52,55 +54,61 @@
+       {
+         "name": "snkrdunk-collector",
+         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+-        "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
++        "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
+       },
+       {
+         "name": "yuyutei-collector-shard-0",
+         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-        "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
++        "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
+       },
+       {
+         "name": "yuyutei-collector-shard-1",
+         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+-        "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
++        "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
+       },
+       {
+         "name": "yuyutei-collector-shard-2",
+         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-        "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
++        "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
+       },
+       {
+         "name": "yuyutei-collector-shard-3",
+         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-        "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
++        "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
+       },
+       {
+         "name": "yuyutei-collector-shard-4-v2",
+         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+-        "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
++        "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
+       },
+       {
+         "name": "yuyutei-collector-shard-5",
+         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-        "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
++        "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
+       },
+       {
+         "name": "yuyutei-collector-shard-6",
+         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+-        "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
++        "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
+       },
+       {
+         "name": "yuyutei-collector-shard-7",
+         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+-        "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
++        "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
+       },
+       {
+         "name": "yuyutei-collector-shard-8",
+         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-        "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
++        "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
+       }
+     ],
+-    "yuyu_capacity_cadence": true
++    "yuyu_capacity_cadence": true,
++    "raw_dependency_migration": {
++      "parent": "e8c2d4f6a901",
++      "revision": "f9e5b4a8c012",
++      "file": "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
++      "sha256": "47d3006731b04c8e522b3509278741ffedc804cefea9cea23a60b2eda5371db3"
++    }
+   },
+   "safeguards": {
+     "impact": {
+@@ -118,52 +126,52 @@
+         {
+           "name": "snkrdunk-collector",
+           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+-          "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
++          "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
+         },
+         {
+           "name": "yuyutei-collector-shard-0",
+           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-          "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
++          "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
+         },
+         {
+           "name": "yuyutei-collector-shard-1",
+           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+-          "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
++          "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
+         },
+         {
+           "name": "yuyutei-collector-shard-2",
+           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-          "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
++          "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
+         },
+         {
+           "name": "yuyutei-collector-shard-3",
+           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-          "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
++          "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
+         },
+         {
+           "name": "yuyutei-collector-shard-4-v2",
+           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+-          "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
++          "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
+         },
+         {
+           "name": "yuyutei-collector-shard-5",
+           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-          "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
++          "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
+         },
+         {
+           "name": "yuyutei-collector-shard-6",
+           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+-          "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
++          "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
+         },
+         {
+           "name": "yuyutei-collector-shard-7",
+           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+-          "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
++          "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
+         },
+         {
+           "name": "yuyutei-collector-shard-8",
+           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-          "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
++          "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
+         }
+       ],
+       "routes": [
+@@ -172,19 +180,20 @@
+       "dependencies": [
+         "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
+       ],
+-      "deployment_impact": "Native API and all10 shared-package collector delivery, hard Yuyu4 active claims; existing cron/budgets/writers remain unchanged. Uniform explicitly declared legacy/ten-minute profile recognition does not activate cadence or volume.",
+-      "database_writes": 0,
++      "deployment_impact": "Add two small bounded RAW lookup/admission indexes and opt-in daily quota mode with writers OFF. Native API/all10 delivery. No codec, budget, schedule, source-volume or price changes.",
++      "database_writes": 1,
+       "source_requests": 0,
+       "estimated_runtime_minutes": 60
+     },
+     "recovery": {
+-      "artifact": "a1c4a4f4b66df50a4be1e6119cc8675abc62bedf",
+-      "procedure": "Keep current cron; if separately tuned, restore original pinned all9 cron before reverting admission source. Keep e8 schema and shared raw readers. No evidence or price history removal.",
++      "artifact": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
++      "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
+       "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
+-      "backup": "No historical rows changed and no migration; Git before source and live staging schedule receipts retained. Ordinary collector mutations remain fenced by existing queue.",
++      "backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
+       "validation": [
+-        "services/api/tests/test_freshness_queue_postgres.py",
+-        "scripts/tests/test_yuyu_raw_reader_component.py"
++        "services/api/tests/test_raw_dictionary_storage_postgres.py",
++        "services/api/tests/test_raw_dictionary_backup.py",
++        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md"
+       ]
+     },
+     "verification": {
+@@ -197,7 +206,7 @@
+         "scripts/verify_yuyu_raw_reader_component.py",
+         "scripts/generate_staging_state.py"
+       ],
+-      "observation_window": "All9 and SNKR ordinary component receipts at existing schedules, exact current API/e8/frontend/sale/history guards. Separate normal 02\u201306 UTC busy peak for any later cadence or volume change."
++      "observation_window": "All10 current-source ordinary component receipts under original schedules. Writers OFF. Any subsequent activation requires separate fresh canary and sustained physical-growth, 30/90d headroom and natural RAW recurrence evidence."
+     }
+   }
+ }
+diff --git a/docs/agent/evidence/raw-storage-daily-preflight-20261008.json b/docs/agent/evidence/raw-storage-daily-preflight-20261008.json
+new file mode 100644
+index 0000000..d0c0019
+--- /dev/null
++++ b/docs/agent/evidence/raw-storage-daily-preflight-20261008.json
+@@ -0,0 +1,152 @@
++{
++  "target": "staging",
++  "classification": "AMBER",
++  "observed_at": "2026-10-08T02:04:09.049273+00:00",
++  "before_source_sha": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
++  "before_revision": "e8c2d4f6a901",
++  "after_revision": "f9e5b4a8c012",
++  "production_accessed": false,
++  "source_requests": 0,
++  "manually_invoked_source_jobs": 0,
++  "baseline": {
++    "operational": 2630,
++    "target": 3237,
++    "remaining": 607,
++    "mapped": 2635,
++    "fresh_usable": 2398,
++    "dual": 334,
++    "zero": 1681,
++    "denominator": 4316
++  },
++  "storage_inputs": {
++    "observed_at": "2026-10-08T02:04:09.049273+00:00",
++    "target": "staging",
++    "production_accessed": false,
++    "source_http": 0,
++    "database_writes": 0,
++    "payload_by_parser24h": [
++      {
++        "name": "snkrdunk",
++        "parser_version": "snkrdunk-collector-v2",
++        "snapshots": 574,
++        "stored_payload_bytes": 64019612,
++        "stored_row_bytes": 64117192
++      },
++      {
++        "name": "snkrdunk",
++        "parser_version": "snkr-published-discovery-v1",
++        "snapshots": 40,
++        "stored_payload_bytes": 18376113,
++        "stored_row_bytes": 18384353
++      },
++      {
++        "name": "yuyutei",
++        "parser_version": "yuyutei-collector-v3",
++        "snapshots": 2724,
++        "stored_payload_bytes": 100114452,
++        "stored_row_bytes": 100618472
++      },
++      {
++        "name": "yuyutei",
++        "parser_version": "yuyutei-recurring-discovery-v1",
++        "snapshots": 134,
++        "stored_payload_bytes": 4856290,
++        "stored_row_bytes": 4880460
++      }
++    ],
++    "observations24h": {
++      "rows": 2772,
++      "row_bytes": 247175
++    },
++    "events24h": {
++      "rows": 1019,
++      "row_bytes": 1690802
++    },
++    "volume": {
++      "average_mb": 3262.707582684474,
++      "current_mb": 3362.246361088,
++      "limit_mb": 10000.0,
++      "max_mb": 3362.246361088,
++      "mount_path": "/var/lib/postgresql/data",
++      "name": "postgres-volume"
++    },
++    "projection_semantics": "Current writer flags OFF, global all-time cap200; no continuous canary savings assumed. Partial calendar days and one-shot image/sitemap envelopes are separate. Payload is physically PostgreSQL-compressed; row bytes overlap payload and cannot be added again. Relation/index deltas and provider growth include overhead and variable WAL; these are not a stable recurring slope.",
++    "unknowns": [
++      "R2 quota",
++      "shared asset bucket footprint",
++      "provider log byte retention",
++      "ephemeral disk headroom",
++      "process-level browser RSS",
++      "future source allocation of607 exact identities"
++    ]
++  },
++  "migration": {
++    "objects_added": [
++      "ix_raw_dictionary_created",
++      "ix_raw_snapshot_dictionary_scope"
++    ],
++    "raw_rows_rewritten": 0,
++    "ledger_rows_rewritten": 0,
++    "immutable_history_rewritten": 0,
++    "version_rows_updated": 1,
++    "raw_live_rows_observed": 34368,
++    "index_byte_envelope_model": 8388608,
++    "no_toast_body_scan": true,
++    "lock_timeout_seconds": 2,
++    "statement_timeout_seconds": 30,
++    "transactional_rollback_on_timeout": true
++  },
++  "configuration_change_on_delivery": null,
++  "writer_activation_on_delivery": false,
++  "admission": {
++    "default": "all-time200, unchanged",
++    "optional_mode": "daily-v1",
++    "utc_day_rows": 8192,
++    "utc_day_encoded_bytes": 33554432,
++    "nonblocking_global_transaction_lock": 734027410,
++    "recovery_never_refunds_charge": true
++  },
++  "lookup": {
++    "recent_scope_rows_bound": 32,
++    "fallback_oldest_scoped_plain_anchor": true,
++    "hash_index_full_url_equality": true,
++    "codec_changed": false,
++    "planner_reordering_guard": "Bounded ID/encoded-flag projection first; load only the selected exact base under shared lock. No raw filter outside a limited ID subquery."
++  },
++  "rollback": {
++    "source": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
++    "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
++    "data_backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
++    "broad_body_expansion_authorized": false,
++    "runtime_startup_compatibility": "Current API uvicorn only and due-collector start commands do not invoke Alembic. Source rollback retains new migration/revision for guarded native delivery."
++  },
++  "post_delivery": "Strict SHA/schema/API/frontend and all10 ordinary natural receipts; all13 writer flags OFF; no source/budget/cron change; retained15 encoded bodies still lossless.",
++  "activation_gate": "Separate fresh AMBER preflight; normal SNKR writer sample and both-source coverage/cost/physical savings/30d90d projections; no configured cap is measured headroom.",
++  "local_tests": {
++    "storage_reader_backup": 120,
++    "allowlisted_delivery": 4
++  },
++  "failure_triggers": [
++    "unexpected writer ON",
++    "schema/index mismatch",
++    "hash/lineage mismatch",
++    "new source denial",
++    "ownership or reservation leak",
++    "uncontrolled source requests",
++    "actionable deadline regression"
++  ],
++  "snkr_next_natural_raw_due": "2026-10-08T10:32:04.612116+00:00",
++  "new100": "UNPLANNED until sustained storage/admission/peak safeguards pass",
++  "official_references_checked_utc": "2026-10-08",
++  "references": [
++    "https://docs.railway.com/volumes/reference",
++    "https://docs.railway.com/cron-jobs",
++    "https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.HasConditionalDDL.ddl_if",
++    "https://cli.github.com/manual/gh_pr_create"
++  ],
++  "installed_tool_versions": {
++    "Railway": "5.62.1",
++    "GitHubCLI": "2.88.0",
++    "local_SQLAlchemy": "2.1.1"
++  }
++}
+diff --git a/scripts/apply_staging_raw_dependency.py b/scripts/apply_staging_raw_dependency.py
+index a41a047..0a7bdf4 100644
+--- a/scripts/apply_staging_raw_dependency.py
++++ b/scripts/apply_staging_raw_dependency.py
+@@ -24,6 +24,14 @@ REVISION = "e8c2d4f6a901"
+ MIGRATION = (
+     "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py"
+ )
++INDEX_REVISION = "f9e5b4a8c012"
++INDEX_MIGRATION = (
++    "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
++)
++TRANSITIONS = {
++    REVISION: (PARENT, MIGRATION),
++    INDEX_REVISION: (REVISION, INDEX_MIGRATION),
++}
+ 
+ 
+ def selection(manifest):
+@@ -32,17 +40,17 @@ def selection(manifest):
+     )
+     if requested is None:
+         return None
++    transition = TRANSITIONS.get(requested.get("revision"))
+     if (
+         manifest.get("target") != "staging"
+         or manifest.get("classification") != "AMBER"
+-        or requested.get("revision") != REVISION
+-        or requested.get("parent") != PARENT
+-        or requested.get("file") != MIGRATION
++        or transition is None
++        or (requested.get("parent"), requested.get("file")) != transition
+         or set(requested) != {"revision", "parent", "file", "sha256"}
+-        or manifest["deployment_verification"]["revision"] != REVISION
++        or manifest["deployment_verification"]["revision"] != requested["revision"]
+     ):
+         raise state.VerificationError("Unapproved RAW dependency migration")
+-    path = state.ROOT / MIGRATION
++    path = state.ROOT / requested["file"]
+     if hashlib.sha256(path.read_bytes()).hexdigest() != requested["sha256"]:
+         raise state.VerificationError("Reviewed migration checksum mismatch")
+     return requested
+@@ -82,6 +90,15 @@ def migrate(connection, migration_path):
+     from alembic.operations import Operations
+     from sqlalchemy import text
+ 
++    selected = [
++        r
++        for r, (_, path) in TRANSITIONS.items()
++        if Path(path).name == migration_path.name
++    ]
++    if len(selected) != 1:
++        raise state.VerificationError("Unapproved RAW migration path")
++    revision = selected[0]
++    parent, _ = TRANSITIONS[revision]
+     connection.execute(text("SET LOCAL lock_timeout='2s'"))
+     connection.execute(text("SET LOCAL statement_timeout='30s'"))
+     if not connection.scalar(text("SELECT pg_try_advisory_xact_lock(734027411)")):
+@@ -91,12 +108,14 @@ def migrate(connection, migration_path):
+         .scalars()
+         .all()
+     )
+-    if revisions == [REVISION]:
++    if revisions == [revision]:
+         validate_schema(connection)
++        if revision == INDEX_REVISION:
++            validate_indexes(connection)
+         return False
+-    if (
+-        revisions != [PARENT]
+-        or connection.scalar(text("SELECT to_regclass('raw_snapshot_dictionaries')"))
++    if revisions != [parent] or (
++        revision == REVISION
++        and connection.scalar(text("SELECT to_regclass('raw_snapshot_dictionaries')"))
+         is not None
+     ):
+         raise state.VerificationError(
+@@ -107,7 +126,7 @@ def migrate(connection, migration_path):
+     )
+     module = importlib.util.module_from_spec(spec)
+     spec.loader.exec_module(module)
+-    if module.revision != REVISION or module.down_revision != PARENT:
++    if module.revision != revision or module.down_revision != parent:
+         raise state.VerificationError("RAW migration revision identity mismatch")
+     # Bind this reviewed module to this exact connection. Do not depend on
+     # process-global Alembic facade functions (which may be replaced by tests
+@@ -116,16 +135,36 @@ def migrate(connection, migration_path):
+     module.upgrade()
+     result = connection.execute(
+         text("UPDATE alembic_version SET version_num=:new WHERE version_num=:old"),
+-        {"new": REVISION, "old": PARENT},
++        {"new": revision, "old": parent},
+     )
+     if result.rowcount != 1:
+         raise state.VerificationError("RAW migration revision update was not singular")
+     validate_schema(connection)
+-    if connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) != 0:
++    if revision == INDEX_REVISION:
++        validate_indexes(connection)
++    elif connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) != 0:
+         raise state.VerificationError("Additive dependency table must begin empty")
+     return True
+ 
+ 
++def validate_indexes(connection):
++    from sqlalchemy import text
++
++    rows = dict(connection.execute(text("""
++        SELECT indexname, indexdef FROM pg_indexes WHERE schemaname=current_schema()
++          AND indexname IN ('ix_raw_dictionary_created','ix_raw_snapshot_dictionary_scope')
++    """)).all())
++    if (
++        len(rows) != 2
++        or "(created_at)" not in rows.get("ix_raw_dictionary_created", "")
++        or "(source_id, parser_version, md5((source_url)::text), id)"
++        not in rows.get("ix_raw_snapshot_dictionary_scope", "")
++        or "WHERE (http_status = 200)"
++        not in rows.get("ix_raw_snapshot_dictionary_scope", "")
++    ):
++        raise state.VerificationError("RAW bounded admission indexes mismatch")
++
++
+ def validate_schema(connection):
+     from sqlalchemy import inspect
+ 
+@@ -165,7 +204,8 @@ def main(argv=None):
+     parser.add_argument("--output", type=Path, required=True)
+     args = parser.parse_args(argv)
+     manifest = json.loads(args.manifest.read_text())
+-    if selection(manifest) is None:
++    requested = selection(manifest)
++    if requested is None:
+         return 0
+     if not re.fullmatch("[0-9a-f]{40}", args.expected):
+         raise state.VerificationError("Full merged revision required")
+@@ -175,7 +215,7 @@ def main(argv=None):
+     )
+     if head != args.expected or branch["commit"]["sha"] != args.expected:
+         raise state.VerificationError("Obsolete or unmerged RAW migration checkout")
+-    allowed = frozenset({PARENT, REVISION})
++    allowed = frozenset({requested["parent"], requested["revision"]})
+     before = state.collect_live(database_expected_revisions=allowed)
+     state.write_snapshot(before, state.CANONICAL_OUTPUT)
+     services = before["railway"]["services"]
+@@ -240,7 +280,7 @@ def main(argv=None):
+                         "Staging database migration fingerprint failed"
+                     )
+             with engine.begin() as connection:
+-                changed = migrate(connection, state.ROOT / MIGRATION)
++                changed = migrate(connection, state.ROOT / requested["file"])
+         finally:
+             engine.dispose()
+     except state.VerificationError:
+@@ -262,7 +302,7 @@ def main(argv=None):
+                 "environment_id": state.ENVIRONMENT,
+                 "postgres_service_id": state.POSTGRES,
+                 "merged_sha": args.expected,
+-                "revision": REVISION,
++                "revision": requested["revision"],
+                 "changed": changed,
+                 "before_collected_at": before["collected_at"],
+                 "after_collected_at": after["collected_at"],
+diff --git a/scripts/tests/test_apply_staging_raw_dependency.py b/scripts/tests/test_apply_staging_raw_dependency.py
+index d07b574..c7e6cdd 100644
+--- a/scripts/tests/test_apply_staging_raw_dependency.py
++++ b/scripts/tests/test_apply_staging_raw_dependency.py
+@@ -95,6 +95,40 @@ class RawDependencyDeliveryTests(unittest.TestCase):
+                 with self.assertRaises(delivery.state.VerificationError):
+                     delivery.require_writers_off("mock-existing-staging-service")
+ 
++    def test_index_transition_is_independently_allowlisted_and_checksum_pinned(self):
++        with tempfile.TemporaryDirectory() as directory:
++            root = Path(directory)
++            migration = root / delivery.INDEX_MIGRATION
++            migration.parent.mkdir(parents=True)
++            migration.write_text("mock additive indexes only")
++            requested = {
++                "revision": delivery.INDEX_REVISION,
++                "parent": delivery.REVISION,
++                "file": delivery.INDEX_MIGRATION,
++                "sha256": hashlib.sha256(migration.read_bytes()).hexdigest(),
++            }
++            manifest = self.manifest(requested["sha256"])
++            manifest["deployment_verification"] = {
++                "revision": delivery.INDEX_REVISION,
++                "raw_dependency_migration": requested,
++            }
++            with patch.object(delivery.state, "ROOT", root):
++                self.assertEqual(delivery.selection(manifest), requested)
++                for field, value in (
++                    ("parent", delivery.PARENT),
++                    ("revision", "abcdef012345"),
++                    ("file", delivery.MIGRATION),
++                    ("sha256", "0" * 64),
++                ):
++                    bad = json.loads(json.dumps(manifest))
++                    bad["deployment_verification"]["raw_dependency_migration"][
++                        field
++                    ] = value
++                    with self.subTest(field=field), self.assertRaises(
++                        delivery.state.VerificationError
++                    ):
++                        delivery.selection(bad)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py b/services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py
+new file mode 100644
+index 0000000..a933d19
+--- /dev/null
++++ b/services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py
+@@ -0,0 +1,34 @@
++"""Index bounded RAW storage admission and dictionary scope; no evidence edits.
++
++Revision ID: f9e5b4a8c012
++Revises: e8c2d4f6a901
++"""
++
++from alembic import op
++import sqlalchemy as sa
++
++revision: str = "f9e5b4a8c012"
++down_revision: str | None = "e8c2d4f6a901"
++branch_labels = None
++depends_on = None
++
++
++def upgrade():
++    op.create_index(
++        "ix_raw_dictionary_created", "raw_snapshot_dictionaries", ["created_at"]
++    )
++    # Hash keeps long URLs below PostgreSQL's btree entry limit. The writer also
++    # compares the complete URL, so a hash collision can never cross identities.
++    # No raw body predicate: building this index never reads retained TOAST bodies.
++    op.create_index(
++        "ix_raw_snapshot_dictionary_scope",
++        "raw_snapshots",
++        ["source_id", "parser_version", sa.text("md5(source_url)"), "id"],
++        postgresql_where=sa.text("http_status = 200"),
++    )
++
++
++def downgrade():
++    # Compatible rollback retains e8 representation dependencies and all bodies.
++    op.drop_index("ix_raw_snapshot_dictionary_scope", table_name="raw_snapshots")
++    op.drop_index("ix_raw_dictionary_created", table_name="raw_snapshot_dictionaries")
+diff --git a/services/api/app/models/raw_snapshot.py b/services/api/app/models/raw_snapshot.py
+index 0b6056c..2976f0d 100644
+--- a/services/api/app/models/raw_snapshot.py
++++ b/services/api/app/models/raw_snapshot.py
+@@ -2,7 +2,7 @@ from opcg_source_identity.raw_payload import RawContentAccess
+ 
+ from datetime import datetime
+ 
+-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
++from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func, text
+ from sqlalchemy.orm import Mapped, mapped_column
+ 
+ from app.db import Base
+@@ -10,6 +10,16 @@ from app.db import Base
+ 
+ class RawSnapshot(RawContentAccess, Base):
+     __tablename__ = "raw_snapshots"
++    __table_args__ = (
++        Index(
++            "ix_raw_snapshot_dictionary_scope",
++            "source_id",
++            "parser_version",
++            text("md5(source_url)"),
++            "id",
++            postgresql_where=text("http_status = 200"),
++        ).ddl_if(dialect="postgresql"),
++    )
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     source_id: Mapped[int] = mapped_column(
+diff --git a/services/api/app/models/raw_snapshot_dictionary.py b/services/api/app/models/raw_snapshot_dictionary.py
+index 4c023c1..e782133 100644
+--- a/services/api/app/models/raw_snapshot_dictionary.py
++++ b/services/api/app/models/raw_snapshot_dictionary.py
+@@ -18,6 +18,7 @@ class RawSnapshotDictionary(Base):
+     __tablename__ = "raw_snapshot_dictionaries"
+     __table_args__ = (
+         Index("ix_raw_dictionary_base", "base_snapshot_id"),
++        Index("ix_raw_dictionary_created", "created_at"),
+         CheckConstraint("base_snapshot_id < id", name="ck_raw_dictionary_older_base"),
+         CheckConstraint(
+             "original_bytes BETWEEN 1 AND 8388608 AND encoded_bytes > 0",
+diff --git a/services/api/app/services/raw_dictionary_storage.py b/services/api/app/services/raw_dictionary_storage.py
+index f3c6b6c..3442fd9 100644
+--- a/services/api/app/services/raw_dictionary_storage.py
++++ b/services/api/app/services/raw_dictionary_storage.py
+@@ -22,9 +22,82 @@ from opcg_source_identity.raw_payload import (
+ PROJECT = "c613898d-bf03-43a6-8813-761f72e1c00a"
+ PARSERS = frozenset({"yuyutei-collector-v3", "snkrdunk-collector-v2"})
+ CANARY_LIMIT = 200
++DAILY_ROWS = 8192
++DAILY_BYTES = 32 * 1024 * 1024
++RECENT_BASE_ROWS = 32
+ LOCK = 734027410
+ 
+ 
++def admission(session):
++    """Charge retained ledger rows; recovery never releases storage admission."""
++    mode = os.getenv("RAW_DICTIONARY_STORAGE_MODE", "canary")
++    if mode == "canary":
++        count = session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
++        return count < CANARY_LIMIT, None
++    if mode != "daily-v1":
++        raise RawPayloadError("unknown dictionary storage admission mode")
++    indexes = session.execute(text("""
++        SELECT indexname FROM pg_indexes WHERE schemaname=current_schema()
++        AND indexname IN ('ix_raw_dictionary_created', 'ix_raw_snapshot_dictionary_scope')
++    """)).scalars().all()
++    if len(indexes) != 2:
++        raise RawPayloadError(
++            "daily dictionary admission requires installed lookup indexes"
++        )
++    # Both bounds use the transaction's UTC day and match ledger server timestamps.
++    # The indexed scan is bounded by one admitted day, rather than lifetime history.
++    count, used = session.execute(text("""
++        SELECT count(*), coalesce(sum(encoded_bytes), 0)
++        FROM raw_snapshot_dictionaries
++        WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
++          AND created_at < (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE 'UTC'
++    """)).one()
++    return count < DAILY_ROWS and used < DAILY_BYTES, DAILY_BYTES - used
++
++
++def dictionary_base(session, model, snapshot):
++    """At most 32 recent bodies, then the oldest retained plaintext anchor.
++
++    The scope index avoids scanning unrelated URLs. An encoding always has an
++    older plaintext same-scope dependency, so the oldest surviving scoped row
++    cannot be encoded. Full URL equality still guards hash-index collisions.
++    A changed page that cannot encode is kept plain and becomes the recent base.
++    """
++    scope = (
++        model.source_id == snapshot.source_id,
++        model.parser_version == snapshot.parser_version,
++        func.md5(model.source_url) == func.md5(snapshot.source_url),
++        model.source_url == snapshot.source_url,
++        model.http_status == 200,
++    )
++    # Separate bounded projection from base loading: placing a raw-content
++    # filter outside an IN/LIMIT subquery can let PostgreSQL evaluate that
++    # predicate against unrelated historical rows before applying the IDs.
++    projected = select(model.id, model._stored_raw_content.startswith(PREFIX))
++    recent = session.execute(
++        projected.where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
++    ).all()
++    base_id = next(
++        (snapshot_id for snapshot_id, encoded in recent if not encoded), None
++    )
++    if base_id is None:
++        oldest = session.execute(
++            projected.where(*scope).order_by(model.id).limit(1)
++        ).first()
++        if oldest is None or oldest[1]:
++            return None
++        base_id = oldest[0]
++    # Retain the same-scope, plaintext, hash and shared-row-lock guards on the
++    # exact base used to encode; the projection cannot authorise a changed row.
++    return session.execute(
++        select(model, func.pg_column_size(model._stored_raw_content))
++        .where(
++            model.id == base_id, *scope, ~model._stored_raw_content.startswith(PREFIX)
++        )
++        .with_for_update(read=True)
++    ).first()
++
++
+ def enabled():
+     if os.getenv("RAW_DICTIONARY_STORAGE_ENABLED", "false").lower() != "true":
+         return False
+@@ -41,8 +114,9 @@ def encode_new_snapshot(session, snapshot):
+     """Return whether this NEW snapshot obtained a protected encoding.
+ 
+     Try-lock admission avoids extending source-job deadlines behind another
+-    writer. The global 200-row ceiling includes recovered rows; retries cannot
+-    reset the canary. Missing/changed dictionaries remain newly captured plain
++    writer. Default canary admission retains the global 200-row ceiling.
++    Explicit daily-v1 admission needs installed indexes and UTC row/byte bounds;
++    recovered rows remain charged in both modes. Missing/changed dictionaries remain newly captured plain
+     evidence; invalid hashes and lost transaction ownership fail closed.
+     """
+     with session.no_autoflush:
+@@ -67,25 +141,13 @@ def _encode_new_snapshot(session, snapshot):
+         text("SELECT pg_try_advisory_xact_lock(:lock)"), {"lock": LOCK}
+     ):
+         return False
+-    count = session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
+-    if count >= CANARY_LIMIT:
++    admitted, remaining_bytes = admission(session)
++    if not admitted:
+         return False
+     model = type(snapshot)
+     # Prevent this pending INSERT from autoflushing into the base selection.
+     with session.no_autoflush:
+-        base_result = session.execute(
+-            select(model, func.pg_column_size(model._stored_raw_content))
+-            .where(
+-                model.source_id == snapshot.source_id,
+-                model.source_url == snapshot.source_url,
+-                model.parser_version == snapshot.parser_version,
+-                model.http_status == 200,
+-                ~model._stored_raw_content.startswith(PREFIX),
+-            )
+-            .order_by(model.id.desc())
+-            .limit(1)
+-            .with_for_update(read=True)
+-        ).first()
++        base_result = dictionary_base(session, model, snapshot)
+     if base_result is None:
+         return False
+     base, current_stored_bytes = base_result
+@@ -96,6 +158,8 @@ def _encode_new_snapshot(session, snapshot):
+         return False
+     packed = encode(body, base_id=base.id, base_body=base_body)
+     packed_bytes = len(packed.encode("utf-8"))
++    if remaining_bytes is not None and packed_bytes > remaining_bytes:
++        return False
+     # PostgreSQL already compresses plaintext. Require savings against measured
+     # physical base bytes, not an inflated uncompressed HTML denominator.
+     if packed_bytes * 4 > current_stored_bytes * 3:
+diff --git a/services/api/tests/test_raw_dictionary_storage_postgres.py b/services/api/tests/test_raw_dictionary_storage_postgres.py
+index 8270e09..d5a23c2 100644
+--- a/services/api/tests/test_raw_dictionary_storage_postgres.py
++++ b/services/api/tests/test_raw_dictionary_storage_postgres.py
+@@ -30,6 +30,7 @@ from opcg_source_identity.raw_payload import (
+     PREFIX,
+     RawContentAccess,
+     RawPayloadError,
++    encode,
+     sha256,
+ )
+ from app.services import raw_dictionary_storage as storage
+@@ -361,3 +362,240 @@ def test_serialized_migration_is_additive_and_idempotent(database, monkeypatch):
+             connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
+             == 0
+         )
++
++
++def install_daily_indexes(database):
++    path = (
++        Path(__file__).parents[1]
++        / "alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
++    )
++    spec = importlib.util.spec_from_file_location("daily_index_fixture", path)
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    with database.begin() as connection:
++        module.op = Operations(MigrationContext.configure(connection))
++        module.upgrade()
++        delivery.validate_indexes(connection)
++    return module
++
++
++def test_daily_mode_requires_indexes_and_refuses_unknown_mode(database, monkeypatch):
++    with Session(database) as session:
++        base_row(session)
++        child = row()
++        session.add(child)
++        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
++        with pytest.raises(RawPayloadError, match="installed lookup indexes"):
++            storage.encode_new_snapshot(session, child)
++        session.rollback()
++        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "unknown")
++        session.add(row())
++        with pytest.raises(RawPayloadError, match="unknown dictionary"):
++            storage.encode_new_snapshot(session, next(iter(session.new)))
++
++
++def test_daily_renewal_is_utc_and_recovery_never_releases_admission(
++    database, monkeypatch
++):
++    install_daily_indexes(database)
++    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
++    monkeypatch.setattr(storage, "DAILY_ROWS", 1)
++    with Session(database) as session:
++        base_row(session)
++        first = row()
++        session.add(first)
++        assert storage.encode_new_snapshot(session, first)
++        session.commit()
++        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "false")
++        assert storage.expand_snapshot(session, Snapshot, first.id)
++        session.commit()
++        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "true")
++        second = row()
++        session.add(second)
++        assert not storage.encode_new_snapshot(session, second)
++        session.rollback()
++        # Only fixture time changes; archived admission remains charged to its
++        # original UTC day despite the database/session display timezone.
++        session.execute(text("SET TIME ZONE 'Pacific/Honolulu'"))
++        session.execute(text("""UPDATE raw_snapshot_dictionaries SET created_at =
++            (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
++            - interval '1 microsecond'"""))
++        session.commit()
++        third = row()
++        session.add(third)
++        assert storage.encode_new_snapshot(session, third)
++        session.commit()
++        assert (
++            session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) == 2
++        )
++
++
++def test_daily_bytes_bound_is_atomic_and_transaction_rollback_restores_room(
++    database, monkeypatch
++):
++    install_daily_indexes(database)
++    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
++    with Session(database) as first, Session(database) as second:
++        base_row(first)
++        child = row()
++        first.add(child)
++        assert storage.encode_new_snapshot(first, child)
++        size = first.scalar(text("SELECT encoded_bytes FROM raw_snapshot_dictionaries"))
++        monkeypatch.setattr(storage, "DAILY_BYTES", size)
++        other = row()
++        second.add(other)
++        assert not storage.encode_new_snapshot(second, other)  # lock held
++        first.rollback()
++        assert storage.encode_new_snapshot(second, other)  # exact byte bound fits
++        second.commit()
++        final = row()
++        first.add(final)
++        monkeypatch.setattr(storage, "DAILY_BYTES", size * 2 - 1)
++        assert not storage.encode_new_snapshot(
++            first, final
++        )  # positive room is too small
++        monkeypatch.setattr(storage, "DAILY_BYTES", size)
++        assert not storage.encode_new_snapshot(first, final)
++        first.commit()
++        assert final._stored_raw_content == mock_body()
++        assert (
++            first.scalar(
++                text("SELECT sum(encoded_bytes) FROM raw_snapshot_dictionaries")
++            )
++            == size
++        )
++
++
++def test_bounded_recent_lookup_reuses_old_anchor_and_adapts_changed_page(
++    database, monkeypatch
++):
++    install_daily_indexes(database)
++    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
++    monkeypatch.setattr(storage, "RECENT_BASE_ROWS", 2)
++    with Session(database) as session:
++        base = base_row(session)
++        for _ in range(4):
++            child = row()
++            session.add(child)
++            assert storage.encode_new_snapshot(session, child)
++            session.commit()
++            assert child.raw_content == mock_body()
++        assert set(
++            session.execute(
++                text("SELECT base_snapshot_id FROM raw_snapshot_dictionaries")
++            ).scalars()
++        ) == {base.id}
++        # An unrelated retained page version becomes plaintext when compression
++        # would not save space, and becomes the next exact-scope recent anchor.
++        changed = "".join(random.Random(719).choices(string.ascii_letters, k=100000))
++        new_base = row(changed)
++        session.add(new_base)
++        assert not storage.encode_new_snapshot(session, new_base)
++        session.commit()
++        following = row(changed)
++        session.add(following)
++        assert storage.encode_new_snapshot(session, following)
++        session.commit()
++        assert (
++            session.scalar(
++                text(
++                    "SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"
++                ),
++                {"id": following.id},
++            )
++            == new_base.id
++        )
++
++
++def test_index_migration_with_used_ledger_is_additive_idempotent_and_reversible(
++    database,
++):
++    with Session(database) as session:
++        base_row(session)
++        child = row()
++        session.add(child)
++        assert storage.encode_new_snapshot(session, child)
++        session.commit()
++        original = child.raw_content
++        before = session.execute(text("SELECT * FROM raw_snapshot_dictionaries")).all()
++    path = (
++        Path(__file__).parents[1]
++        / "alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
++    )
++    with database.begin() as connection:
++        connection.execute(
++            text("CREATE TABLE alembic_version (version_num varchar(32) PRIMARY KEY)")
++        )
++        connection.execute(
++            text("INSERT INTO alembic_version VALUES (:revision)"),
++            {"revision": delivery.REVISION},
++        )
++        assert delivery.migrate(connection, path)
++        assert not delivery.migrate(connection, path)
++        assert (
++            connection.execute(text("SELECT * FROM raw_snapshot_dictionaries")).all()
++            == before
++        )
++        spec = importlib.util.spec_from_file_location("index_rollback_fixture", path)
++        module = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(module)
++        module.op = Operations(MigrationContext.configure(connection))
++        module.downgrade()
++        delivery.validate_schema(connection)
++    with Session(database) as session:
++        assert session.get(Snapshot, child.id).raw_content == original
++
++
++def test_large_historical_ledger_and_encoded_chain_keep_bounded_admission(
++    database, monkeypatch
++):
++    install_daily_indexes(database)
++    with Session(database) as session:
++        base = base_row(session)
++        packed = encode(
++            mock_body().encode(), base_id=base.id, base_body=mock_body().encode()
++        )
++        values = {
++            "base": base.id,
++            "body": packed,
++            "digest": base.content_hash,
++            "original": len(mock_body().encode()),
++            "encoded": len(packed.encode()),
++        }
++        session.execute(
++            text("""INSERT INTO raw_snapshots
++            (source_id,source_url,fetched_at,http_status,content_hash,parser_version,raw_content)
++            SELECT 1,'https://mock.invalid/card/1',now()-interval '2 days',200,:digest,
++                   'yuyutei-collector-v3',:body FROM generate_series(1,8193)"""),
++            values,
++        )
++        session.execute(
++            text("""INSERT INTO raw_snapshot_dictionaries
++            (id,base_snapshot_id,original_sha256,base_sha256,original_bytes,encoded_bytes,created_at)
++            SELECT id,:base,:digest,:digest,:original,:encoded,now()-interval '2 days'
++            FROM raw_snapshots WHERE id>:base"""),
++            values,
++        )
++        session.commit()
++        child = row()
++        session.add(child)
++        assert not storage.encode_new_snapshot(session, child)  # original200 unchanged
++        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
++        monkeypatch.setattr(storage, "DAILY_ROWS", 1)
++        assert storage.encode_new_snapshot(session, child)
++        session.commit()
++        assert child.raw_content == mock_body()
++        assert (
++            session.scalar(
++                text(
++                    "SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"
++                ),
++                {"id": child.id},
++            )
++            == base.id
++        )
++        other = row()
++        session.add(other)
++        assert not storage.encode_new_snapshot(
++            session, other
++        )  # today's charge retained

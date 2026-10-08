@@ -1,0 +1,162 @@
+frontend-build	Run cd apps/web && npm run build -- --webpack	﻿2026-10-08T03:23:17.5269869Z ##[group]Run cd apps/web && npm run build -- --webpack
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.5270427Z [36;1mcd apps/web && npm run build -- --webpack[0m
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.5328037Z shell: /usr/bin/bash -e {0}
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.5328256Z ##[endgroup]
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.6215472Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.6216313Z > web@0.1.0 build
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.6216802Z > next build --webpack
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.6217012Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:17.9282139Z ⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.4783704Z Attention: Next.js now collects completely anonymous telemetry regarding usage.
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.4784837Z This information is used to shape Next.js' roadmap and prioritize features.
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.4785767Z You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.4786490Z https://nextjs.org/telemetry
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.4786698Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.5279218Z ▲ Next.js 16.2.10 (webpack)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.5279762Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:18.6654076Z   Creating an optimized production build ...
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8144233Z Failed to compile.
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8144525Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8144762Z src/app/layout.tsx
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8145123Z An error occurred in `next/font`.
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8153914Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8154382Z TypeError: Cannot read properties of null (reading '1')
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8155342Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:122:78
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8156044Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8156426Z     at async Promise.all (index 0)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8157087Z     at async nextFontGoogleFontLoader (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:104:33)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8158030Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8158846Z     at async /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js:90:87
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8159687Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8160237Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8160377Z src/app/layout.tsx
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8160600Z An error occurred in `next/font`.
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8160747Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8160915Z TypeError: Cannot read properties of null (reading '1')
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8161483Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:122:78
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8162117Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8162473Z     at async Promise.all (index 0)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8163100Z     at async nextFontGoogleFontLoader (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:104:33)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8163968Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8164777Z     at async /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js:90:87
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8165644Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8166447Z     at tryRunOrWebpackError (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:316134)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8167632Z     at __webpack_require_module__ (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:131536)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8168544Z     at __nested_webpack_require_161494__ (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:130971)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8169342Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:131828
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8170391Z     at symbolIterator (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/neo-async/async.js:1:14444)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8171164Z     at done (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/neo-async/async.js:1:14824)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8172071Z     at Hook.eval [as callAsync] (eval at create (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:14:9224), <anonymous>:15:1)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8173045Z     at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:14:6378)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8173847Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:130691
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8174598Z     at symbolIterator (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/neo-async/async.js:1:14402)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8175091Z -- inner error --
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8175388Z TypeError: Cannot read properties of null (reading '1')
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8175981Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:122:78
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8176605Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8177057Z     at async Promise.all (index 0)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8177990Z     at async nextFontGoogleFontLoader (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:104:33)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8179279Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8180672Z     at async /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js:90:87
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8181942Z     at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8184478Z     at Object.<anonymous> (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[15].oneOf[2].use[1]!/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[15].oneOf[2].use[2]!/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Manrope","arguments":[{"subsets":["latin"],"weight":["400","500","600","700"],"variable":"--font-manrope","display":"swap"}],"variableName":"manrope"}:1:7)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8186525Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:962757
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8187405Z     at Hook.eval [as call] (eval at create (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:14:9002), <anonymous>:7:1)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8188321Z     at Hook.CALL_DELEGATE [as _call] (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:14:6272)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8189367Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:131569
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8190582Z     at tryRunOrWebpackError (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:316088)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8191633Z     at __webpack_require_module__ (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:131536)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8192621Z     at __nested_webpack_require_161494__ (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:130971)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8193454Z     at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/webpack/bundle5.js:29:131828
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8194221Z     at symbolIterator (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/neo-async/async.js:1:14444)
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8194620Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8196711Z Generated code for /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[15].oneOf[2].use[1]!/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js??ruleSet[1].rules[15].oneOf[2].use[2]!/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/font/google/target.css?{"path":"src/app/layout.tsx","import":"Manrope","arguments":[{"subsets":["latin"],"weight":["400","500","600","700"],"variable":"--font-manrope","display":"swap"}],"variableName":"manrope"}
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8202385Z 1 | throw new Error("Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js):\nTypeError: Cannot read properties of null (reading '1')\n    at /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:122:78\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async Promise.all (index 0)\n    at async nextFontGoogleFontLoader (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/compiled/@next/font/dist/google/loader.js:104:33)\n    at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)\n    at async /home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/build/webpack/loaders/next-font-loader/index.js:90:87\n    at async Span.traceAsyncFn (/home/runner/work/optcg-price-tracker/optcg-price-tracker/apps/web/node_modules/next/dist/trace/trace.js:164:20)");
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.8205808Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.9929711Z 
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:40.9931104Z > Build failed because of webpack errors
+frontend-build	Run cd apps/web && npm run build -- --webpack	2026-10-08T03:23:41.0101480Z ##[error]Process completed with exit code 1.
+staging-automerge	Wait for native merge while owning staging	﻿2026-10-08T03:23:22.0659981Z ##[group]Run for attempt in $(seq 1 120); do
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0661192Z [36;1mfor attempt in $(seq 1 120); do[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0662255Z [36;1m  gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0663108Z [36;1m  test "$(jq -r '.head.sha' /tmp/merged.json)" = "$HEAD"[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0663915Z [36;1m  merged=$(jq -r '.merged' /tmp/merged.json)[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0664641Z [36;1m  if [ "$merged" = true ]; then[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0665481Z [36;1m    echo "sha=$(jq -r '.merge_commit_sha' /tmp/merged.json)" >> "$GITHUB_OUTPUT"[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0666316Z [36;1m    exit 0[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0666810Z [36;1m  fi[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0667380Z [36;1m  test "$(jq -r '.state' /tmp/merged.json)" = open[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0668059Z [36;1m  sleep 15[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0668544Z [36;1mdone[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0669005Z [36;1mexit 1[0m
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0734419Z shell: /usr/bin/bash -e {0}
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0735024Z env:
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0738867Z   GH_TOKEN: ***
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0739409Z   REPO: Insomniac79ac/optcg-price-tracker
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0740022Z   PR: 79
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0740533Z   HEAD: ea9eb98e6c81e1b4c58ab055a7669bdc58617e42
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:23:22.0741188Z ##[endgroup]
+staging-automerge	Wait for native merge while owning staging	2026-10-08T03:54:30.6269578Z ##[error]Process completed with exit code 1.
+engineering-gate	Require every applicable job to succeed	﻿2026-10-08T03:38:20.7813008Z ##[group]Run python - <<'PY'
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7814511Z [36;1mpython - <<'PY'[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7815368Z [36;1mimport json, os[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7816559Z [36;1mresults = json.loads(os.environ['RESULTS'])[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7817833Z [36;1mfailures = [name for name, result in results.items()[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7819175Z [36;1m            if result['result'] != 'success'[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7820426Z [36;1m            and not (name == 'policy-gate' and os.environ['STAGING_PR'] == 'false'[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7821725Z [36;1m                     and result['result'] == 'skipped')][0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7822783Z [36;1mif failures:[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7824325Z [36;1m    raise SystemExit('Required checks failed or were skipped: ' + ', '.join(failures))[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.7825760Z [36;1mPY[0m
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.8661860Z shell: /usr/bin/bash -e {0}
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.8663450Z env:
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.8668784Z   RESULTS: {
+engineering-gate	Require every applicable job to succeed	  "policy-gate": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "agent-state-tests": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "check-secrets": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "prod-compose": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "release-check": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "backend-tests": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "worker-tests": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "collector-tests": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "railway-python-images": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "frontend-build": {
+engineering-gate	Require every applicable job to succeed	    "result": "failure",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  },
+engineering-gate	Require every applicable job to succeed	  "deploy-scripts-sanity": {
+engineering-gate	Require every applicable job to succeed	    "result": "success",
+engineering-gate	Require every applicable job to succeed	    "outputs": {}
+engineering-gate	Require every applicable job to succeed	  }
+engineering-gate	Require every applicable job to succeed	}
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.8675071Z   STAGING_PR: true
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.8676009Z ##[endgroup]
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.9132250Z Required checks failed or were skipped: frontend-build
+engineering-gate	Require every applicable job to succeed	2026-10-08T03:38:20.9177973Z ##[error]Process completed with exit code 1.

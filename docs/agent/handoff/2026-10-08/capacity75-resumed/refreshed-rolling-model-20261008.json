@@ -1,0 +1,1427 @@
+{
+  "semantics": "Forecast only; exact current due times, existing shared lane fairness, modulo9, lazy 9000/1800s budgets, RAW300 and discovery1200 reservations, measured actual MAX56 for normal operations. Added RAW population uniformly phased; NEW100 image capture admission is separate. Runtime stress averages observed worst603s/16 across each item; no claim every check has observed maximum runtime. Natural busy-peak proof is required before expansion.",
+  "source_input": "2026-10-08T02:03:57.650911+00:00",
+  "source_http": 0,
+  "database_writes": 0,
+  "scenarios": [
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8440,
+      "requests": 472640,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 4,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8064,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8383,
+      "requests": 469448,
+      "deadline_misses": 146,
+      "worst_lateness_seconds": 1991.1634480228386,
+      "late_by_shard": {
+        "5": 79,
+        "6": 67
+      },
+      "admission_stops": 16,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3000,
+      "max_used_lazy_window": 7952,
+      "examples": [
+        {
+          "id": 412,
+          "shard": 5,
+          "lag": 3625.5220569648736,
+          "time": 8203.046838907241
+        },
+        {
+          "id": 2548,
+          "shard": 5,
+          "lag": 3655.1214039878832,
+          "time": 8241.74458890724
+        },
+        {
+          "id": 1423,
+          "shard": 5,
+          "lag": 3685.613045894621,
+          "time": 8280.44233890724
+        },
+        {
+          "id": 1432,
+          "shard": 5,
+          "lag": 3716.3054948959325,
+          "time": 8319.14008890724
+        },
+        {
+          "id": 1441,
+          "shard": 5,
+          "lag": 3746.7437648963896,
+          "time": 8357.837838907239
+        },
+        {
+          "id": 430,
+          "shard": 5,
+          "lag": 3633.332454113006,
+          "time": 11803.046838907241
+        },
+        {
+          "id": 2638,
+          "shard": 5,
+          "lag": 3663.131060894011,
+          "time": 11841.74458890724
+        },
+        {
+          "id": 2647,
+          "shard": 5,
+          "lag": 3693.8558420772533,
+          "time": 11880.44233890724
+        },
+        {
+          "id": 1486,
+          "shard": 5,
+          "lag": 3724.3114091072057,
+          "time": 11919.14008890724
+        },
+        {
+          "id": 1495,
+          "shard": 5,
+          "lag": 3754.2393250656096,
+          "time": 11957.837838907239
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8726,
+      "requests": 488656,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 4,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8064,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8681,
+      "requests": 486136,
+      "deadline_misses": 225,
+      "worst_lateness_seconds": 3795.125627096175,
+      "late_by_shard": {
+        "6": 207,
+        "8": 5,
+        "5": 12,
+        "3": 1
+      },
+      "admission_stops": 24,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 7952,
+      "examples": [
+        {
+          "id": 839,
+          "shard": 6,
+          "lag": 5394.382299093246,
+          "time": 11983.046838907241
+        },
+        {
+          "id": 848,
+          "shard": 6,
+          "lag": 3748.4539249496447,
+          "time": 12021.74458890724
+        },
+        {
+          "id": 2009,
+          "shard": 6,
+          "lag": 3778.9535309905987,
+          "time": 12060.44233890724
+        },
+        {
+          "id": 3548,
+          "shard": 6,
+          "lag": 3809.233632913587,
+          "time": 12099.14008890724
+        },
+        {
+          "id": 2018,
+          "shard": 6,
+          "lag": 3839.0151100349394,
+          "time": 12137.837838907239
+        },
+        {
+          "id": 2027,
+          "shard": 6,
+          "lag": 3869.336877035137,
+          "time": 12176.535588907238
+        },
+        {
+          "id": 2558,
+          "shard": 6,
+          "lag": 3888.0945258884385,
+          "time": 12215.233338907237
+        },
+        {
+          "id": 2036,
+          "shard": 6,
+          "lag": 3918.1907000369974,
+          "time": 12253.931088907237
+        },
+        {
+          "id": 2045,
+          "shard": 6,
+          "lag": 3947.685840974802,
+          "time": 12292.628838907236
+        },
+        {
+          "id": 2054,
+          "shard": 6,
+          "lag": 3978.0089450263913,
+          "time": 12331.326588907235
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10278,
+      "requests": 575568,
+      "deadline_misses": 158,
+      "worst_lateness_seconds": 230.2567921161717,
+      "late_by_shard": {
+        "8": 69,
+        "0": 61,
+        "3": 9,
+        "4": 19
+      },
+      "admission_stops": 2,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8064,
+      "examples": [
+        {
+          "id": 1615,
+          "shard": 8,
+          "lag": 3641.970031929017,
+          "time": 8713.549088907243
+        },
+        {
+          "id": 1705,
+          "shard": 8,
+          "lag": 3716.6154329299934,
+          "time": 10513.549088907243
+        },
+        {
+          "id": 1714,
+          "shard": 8,
+          "lag": 3717.2460249900832,
+          "time": 10522.749088907243
+        },
+        {
+          "id": 1751,
+          "shard": 0,
+          "lag": 3732.4886979579933,
+          "time": 10873.549088907243
+        },
+        {
+          "id": 517,
+          "shard": 8,
+          "lag": 3609.855558109284,
+          "time": 12313.549088907243
+        },
+        {
+          "id": 3559,
+          "shard": 8,
+          "lag": 3610.8334690570846,
+          "time": 12322.749088907243
+        },
+        {
+          "id": 526,
+          "shard": 8,
+          "lag": 3611.9601050376914,
+          "time": 12331.949088907244
+        },
+        {
+          "id": 2569,
+          "shard": 8,
+          "lag": 3613.171524095538,
+          "time": 12341.149088907245
+        },
+        {
+          "id": 563,
+          "shard": 0,
+          "lag": 3621.0098950386055,
+          "time": 12673.549088907243
+        },
+        {
+          "id": 572,
+          "shard": 0,
+          "lag": 3622.4828690528884,
+          "time": 12682.749088907243
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10256,
+      "requests": 574336,
+      "deadline_misses": 373,
+      "worst_lateness_seconds": 4168.576842071525,
+      "late_by_shard": {
+        "6": 151,
+        "8": 91,
+        "3": 41,
+        "0": 58,
+        "4": 13,
+        "5": 19
+      },
+      "admission_stops": 23,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8008,
+      "examples": [
+        {
+          "id": 704,
+          "shard": 6,
+          "lag": 3709.9914990940088,
+          "time": 8383.046838907241
+        },
+        {
+          "id": 713,
+          "shard": 6,
+          "lag": 3740.1298819141375,
+          "time": 8421.74458890724
+        },
+        {
+          "id": 722,
+          "shard": 6,
+          "lag": 3770.3687150115948,
+          "time": 8460.44233890724
+        },
+        {
+          "id": 460,
+          "shard": 8,
+          "lag": 3679.324460891723,
+          "time": 8743.046838907241
+        },
+        {
+          "id": 1615,
+          "shard": 8,
+          "lag": 3710.165531929015,
+          "time": 8781.74458890724
+        },
+        {
+          "id": 1696,
+          "shard": 8,
+          "lag": 3754.282765058517,
+          "time": 10543.046838907241
+        },
+        {
+          "id": 1705,
+          "shard": 8,
+          "lag": 3784.8109329299914,
+          "time": 10581.74458890724
+        },
+        {
+          "id": 1714,
+          "shard": 8,
+          "lag": 3814.93927499008,
+          "time": 10620.44233890724
+        },
+        {
+          "id": 2654,
+          "shard": 3,
+          "lag": 3637.164256004333,
+          "time": 11443.046838907241
+        },
+        {
+          "id": 2663,
+          "shard": 3,
+          "lag": 3666.9967198925006,
+          "time": 11481.74458890724
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8463,
+      "requests": 473928,
+      "deadline_misses": 141,
+      "worst_lateness_seconds": 2017.7030189991056,
+      "late_by_shard": {
+        "6": 141
+      },
+      "admission_stops": 26,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": [
+        {
+          "id": 641,
+          "shard": 6,
+          "lag": 3776.5608920574196,
+          "time": 8353.549088907243
+        },
+        {
+          "id": 3494,
+          "shard": 6,
+          "lag": 3776.21521010399,
+          "time": 8362.749088907243
+        },
+        {
+          "id": 3503,
+          "shard": 6,
+          "lag": 3777.050198888781,
+          "time": 8371.949088907244
+        },
+        {
+          "id": 3512,
+          "shard": 6,
+          "lag": 3777.9718440055876,
+          "time": 8381.149088907245
+        },
+        {
+          "id": 650,
+          "shard": 6,
+          "lag": 3778.4394950866736,
+          "time": 8390.349088907245
+        },
+        {
+          "id": 3521,
+          "shard": 6,
+          "lag": 3779.2330200195356,
+          "time": 8399.549088907246
+        },
+        {
+          "id": 659,
+          "shard": 6,
+          "lag": 3780.091696882253,
+          "time": 8408.749088907247
+        },
+        {
+          "id": 668,
+          "shard": 6,
+          "lag": 3780.687963104254,
+          "time": 8417.949088907248
+        },
+        {
+          "id": 677,
+          "shard": 6,
+          "lag": 3780.2561600685185,
+          "time": 8427.149088907248
+        },
+        {
+          "id": 686,
+          "shard": 6,
+          "lag": 3780.98423695565,
+          "time": 8436.34908890725
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8449,
+      "requests": 473144,
+      "deadline_misses": 241,
+      "worst_lateness_seconds": 1800.0,
+      "late_by_shard": {
+        "3": 1,
+        "6": 205,
+        "5": 35
+      },
+      "admission_stops": 44,
+      "max_active_item_model": 5,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3000,
+      "max_used_lazy_window": 8344,
+      "examples": [
+        {
+          "id": 2546,
+          "shard": 3,
+          "lag": 3624.30867710495,
+          "time": 7843.046838907242
+        },
+        {
+          "id": 623,
+          "shard": 6,
+          "lag": 3823.114376930236,
+          "time": 8383.046838907241
+        },
+        {
+          "id": 632,
+          "shard": 6,
+          "lag": 3853.115246112822,
+          "time": 8421.74458890724
+        },
+        {
+          "id": 641,
+          "shard": 6,
+          "lag": 3883.454142057417,
+          "time": 8460.44233890724
+        },
+        {
+          "id": 3494,
+          "shard": 6,
+          "lag": 3912.606210103986,
+          "time": 8499.14008890724
+        },
+        {
+          "id": 3503,
+          "shard": 6,
+          "lag": 3942.9389488887755,
+          "time": 8537.837838907239
+        },
+        {
+          "id": 3512,
+          "shard": 6,
+          "lag": 3973.358344005581,
+          "time": 8576.535588907238
+        },
+        {
+          "id": 650,
+          "shard": 6,
+          "lag": 4003.3237450866654,
+          "time": 8615.233338907237
+        },
+        {
+          "id": 3521,
+          "shard": 6,
+          "lag": 4033.615020019526,
+          "time": 8653.931088907237
+        },
+        {
+          "id": 659,
+          "shard": 6,
+          "lag": 4063.971446882242,
+          "time": 8692.628838907236
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8765,
+      "requests": 490840,
+      "deadline_misses": 251,
+      "worst_lateness_seconds": 2063.703018999109,
+      "late_by_shard": {
+        "6": 154,
+        "5": 97
+      },
+      "admission_stops": 25,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": [
+        {
+          "id": 623,
+          "shard": 6,
+          "lag": 3793.6166269302375,
+          "time": 8353.549088907243
+        },
+        {
+          "id": 632,
+          "shard": 6,
+          "lag": 3794.119746112825,
+          "time": 8362.749088907243
+        },
+        {
+          "id": 641,
+          "shard": 6,
+          "lag": 3794.960892057421,
+          "time": 8371.949088907244
+        },
+        {
+          "id": 3494,
+          "shard": 6,
+          "lag": 3794.6152101039916,
+          "time": 8381.149088907245
+        },
+        {
+          "id": 3503,
+          "shard": 6,
+          "lag": 3795.4501988887823,
+          "time": 8390.349088907245
+        },
+        {
+          "id": 3512,
+          "shard": 6,
+          "lag": 3796.371844005589,
+          "time": 8399.549088907246
+        },
+        {
+          "id": 650,
+          "shard": 6,
+          "lag": 3796.839495086675,
+          "time": 8408.749088907247
+        },
+        {
+          "id": 3521,
+          "shard": 6,
+          "lag": 3797.633020019537,
+          "time": 8417.949088907248
+        },
+        {
+          "id": 659,
+          "shard": 6,
+          "lag": 3798.4916968822545,
+          "time": 8427.149088907248
+        },
+        {
+          "id": 668,
+          "shard": 6,
+          "lag": 3799.0879631042553,
+          "time": 8436.34908890725
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8733,
+      "requests": 489048,
+      "deadline_misses": 156,
+      "worst_lateness_seconds": 2098.894018999097,
+      "late_by_shard": {
+        "4": 25,
+        "6": 118,
+        "5": 13
+      },
+      "admission_stops": 47,
+      "max_active_item_model": 5,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8344,
+      "examples": [
+        {
+          "id": 3546,
+          "shard": 4,
+          "lag": 3616.6447209396356,
+          "time": 11623.046838907241
+        },
+        {
+          "id": 2682,
+          "shard": 4,
+          "lag": 3646.43242293167,
+          "time": 11661.74458890724
+        },
+        {
+          "id": 2691,
+          "shard": 4,
+          "lag": 3676.302662097929,
+          "time": 11700.44233890724
+        },
+        {
+          "id": 2700,
+          "shard": 4,
+          "lag": 3706.4214700374578,
+          "time": 11739.14008890724
+        },
+        {
+          "id": 2709,
+          "shard": 4,
+          "lag": 3736.0832710456816,
+          "time": 11777.837838907239
+        },
+        {
+          "id": 447,
+          "shard": 4,
+          "lag": 3765.7591981162986,
+          "time": 11816.535588907238
+        },
+        {
+          "id": 2036,
+          "shard": 6,
+          "lag": 3647.306450037002,
+          "time": 11983.046838907241
+        },
+        {
+          "id": 2045,
+          "shard": 6,
+          "lag": 3676.8015909748065,
+          "time": 12021.74458890724
+        },
+        {
+          "id": 2054,
+          "shard": 6,
+          "lag": 3707.124695026396,
+          "time": 12060.44233890724
+        },
+        {
+          "id": 2063,
+          "shard": 6,
+          "lag": 3737.475530973432,
+          "time": 12099.14008890724
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10282,
+      "requests": 575792,
+      "deadline_misses": 433,
+      "worst_lateness_seconds": 7337.075465011603,
+      "late_by_shard": {
+        "5": 171,
+        "6": 262
+      },
+      "admission_stops": 30,
+      "max_active_item_model": 2,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": [
+        {
+          "id": 100024,
+          "shard": 5,
+          "lag": 4899.743487589285,
+          "time": 8173.549088907242
+        },
+        {
+          "id": 1387,
+          "shard": 5,
+          "lag": 3694.9976109504696,
+          "time": 8182.7490889072415
+        },
+        {
+          "id": 403,
+          "shard": 5,
+          "lag": 3696.25426492691,
+          "time": 8191.949088907241
+        },
+        {
+          "id": 100033,
+          "shard": 5,
+          "lag": 3699.6663870950497,
+          "time": 8201.149088907241
+        },
+        {
+          "id": 1396,
+          "shard": 5,
+          "lag": 3705.725035905838,
+          "time": 8210.349088907242
+        },
+        {
+          "id": 3475,
+          "shard": 5,
+          "lag": 3706.9054810523994,
+          "time": 8219.549088907243
+        },
+        {
+          "id": 3484,
+          "shard": 5,
+          "lag": 3708.102800035478,
+          "time": 8228.749088907243
+        },
+        {
+          "id": 3493,
+          "shard": 5,
+          "lag": 3709.2854929924033,
+          "time": 8237.949088907244
+        },
+        {
+          "id": 1405,
+          "shard": 5,
+          "lag": 3710.343739080432,
+          "time": 8247.149088907245
+        },
+        {
+          "id": 3502,
+          "shard": 5,
+          "lag": 3711.528222084049,
+          "time": 8256.349088907245
+        }
+      ]
+    },
+    {
+      "batch": 24,
+      "cadence_seconds": 1800,
+      "stagger_seconds": 180,
+      "active_cap": 9,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10256,
+      "requests": 574336,
+      "deadline_misses": 353,
+      "worst_lateness_seconds": 3974.9693261127395,
+      "late_by_shard": {
+        "5": 107,
+        "6": 246
+      },
+      "admission_stops": 49,
+      "max_active_item_model": 5,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3000,
+      "max_used_lazy_window": 8400,
+      "examples": [
+        {
+          "id": 3493,
+          "shard": 5,
+          "lag": 3674.3832429924005,
+          "time": 8203.046838907241
+        },
+        {
+          "id": 1405,
+          "shard": 5,
+          "lag": 3704.939239080428,
+          "time": 8241.74458890724
+        },
+        {
+          "id": 3502,
+          "shard": 5,
+          "lag": 3735.6214720840435,
+          "time": 8280.44233890724
+        },
+        {
+          "id": 3511,
+          "shard": 5,
+          "lag": 3766.324957958219,
+          "time": 8319.14008890724
+        },
+        {
+          "id": 1414,
+          "shard": 5,
+          "lag": 3796.8588040065733,
+          "time": 8357.837838907239
+        },
+        {
+          "id": 3520,
+          "shard": 5,
+          "lag": 3827.3741499652824,
+          "time": 8396.535588907238
+        },
+        {
+          "id": 412,
+          "shard": 5,
+          "lag": 3857.70855696487,
+          "time": 8435.233338907237
+        },
+        {
+          "id": 2548,
+          "shard": 5,
+          "lag": 3887.3079039878794,
+          "time": 8473.931088907237
+        },
+        {
+          "id": 1423,
+          "shard": 5,
+          "lag": 3917.799545894617,
+          "time": 8512.628838907236
+        },
+        {
+          "id": 1432,
+          "shard": 5,
+          "lag": 3948.4919948959287,
+          "time": 8551.326588907235
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8592,
+      "requests": 481152,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 38,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8556,
+      "requests": 479136,
+      "deadline_misses": 190,
+      "worst_lateness_seconds": 3118.033901987066,
+      "late_by_shard": {
+        "7": 60,
+        "8": 130
+      },
+      "admission_stops": 25,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 177,
+      "max_reserved": 3000,
+      "max_used_lazy_window": 7784,
+      "examples": [
+        {
+          "id": 777,
+          "shard": 7,
+          "lag": 4754.4896129646295,
+          "time": 14923.046838907241
+        },
+        {
+          "id": 2577,
+          "shard": 7,
+          "lag": 4784.482652004241,
+          "time": 14961.74458890724
+        },
+        {
+          "id": 535,
+          "shard": 8,
+          "lag": 4516.447818902969,
+          "time": 14983.046838907241
+        },
+        {
+          "id": 3585,
+          "shard": 7,
+          "lag": 4814.863563024519,
+          "time": 15000.44233890724
+        },
+        {
+          "id": 544,
+          "shard": 8,
+          "lag": 4547.253681953429,
+          "time": 15021.74458890724
+        },
+        {
+          "id": 786,
+          "shard": 7,
+          "lag": 4844.602037063596,
+          "time": 15039.14008890724
+        },
+        {
+          "id": 3568,
+          "shard": 8,
+          "lag": 4576.91574188423,
+          "time": 15060.44233890724
+        },
+        {
+          "id": 795,
+          "shard": 7,
+          "lag": 4874.743086118695,
+          "time": 15077.837838907239
+        },
+        {
+          "id": 553,
+          "shard": 8,
+          "lag": 4607.350907913205,
+          "time": 15099.14008890724
+        },
+        {
+          "id": 804,
+          "shard": 7,
+          "lag": 4904.907968925472,
+          "time": 15116.535588907238
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8907,
+      "requests": 498792,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 46,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8852,
+      "requests": 495712,
+      "deadline_misses": 238,
+      "worst_lateness_seconds": 4435.200906093596,
+      "late_by_shard": {
+        "8": 117,
+        "7": 121
+      },
+      "admission_stops": 23,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 167,
+      "max_reserved": 3300,
+      "max_used_lazy_window": 7728,
+      "examples": [
+        {
+          "id": 1615,
+          "shard": 8,
+          "lag": 3611.4677819290155,
+          "time": 8683.046838907241
+        },
+        {
+          "id": 669,
+          "shard": 7,
+          "lag": 4616.036136058807,
+          "time": 11323.046838907241
+        },
+        {
+          "id": 1714,
+          "shard": 8,
+          "lag": 4577.543774990081,
+          "time": 11383.046838907241
+        },
+        {
+          "id": 100009,
+          "shard": 8,
+          "lag": 3969.7445889072405,
+          "time": 11421.74458890724
+        },
+        {
+          "id": 768,
+          "shard": 7,
+          "lag": 6278.670313028335,
+          "time": 14923.046838907241
+        },
+        {
+          "id": 777,
+          "shard": 7,
+          "lag": 4793.187362964629,
+          "time": 14961.74458890724
+        },
+        {
+          "id": 526,
+          "shard": 8,
+          "lag": 6263.057855037689,
+          "time": 14983.046838907241
+        },
+        {
+          "id": 2577,
+          "shard": 7,
+          "lag": 4823.18040200424,
+          "time": 15000.44233890724
+        },
+        {
+          "id": 2569,
+          "shard": 8,
+          "lag": 6293.767024095534,
+          "time": 15021.74458890724
+        },
+        {
+          "id": 3585,
+          "shard": 7,
+          "lag": 4853.561313024518,
+          "time": 15039.14008890724
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10469,
+      "requests": 586264,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 82,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3900,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 900,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10379,
+      "requests": 581224,
+      "deadline_misses": 351,
+      "worst_lateness_seconds": 9154.93927499008,
+      "late_by_shard": {
+        "7": 143,
+        "8": 208
+      },
+      "admission_stops": 23,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 192,
+      "max_reserved": 3900,
+      "max_used_lazy_window": 7952,
+      "examples": [
+        {
+          "id": 552,
+          "shard": 7,
+          "lag": 4741.236258892059,
+          "time": 9523.046838907241
+        },
+        {
+          "id": 561,
+          "shard": 7,
+          "lag": 4771.466249998091,
+          "time": 9561.74458890724
+        },
+        {
+          "id": 2559,
+          "shard": 7,
+          "lag": 4633.089863924026,
+          "time": 11323.046838907241
+        },
+        {
+          "id": 660,
+          "shard": 7,
+          "lag": 4663.29895597267,
+          "time": 11361.74458890724
+        },
+        {
+          "id": 100027,
+          "shard": 8,
+          "lag": 7700.015537424539,
+          "time": 11383.046838907241
+        },
+        {
+          "id": 669,
+          "shard": 7,
+          "lag": 4693.431636058805,
+          "time": 11400.44233890724
+        },
+        {
+          "id": 100036,
+          "shard": 8,
+          "lag": 6511.036186930305,
+          "time": 11421.74458890724
+        },
+        {
+          "id": 100053,
+          "shard": 7,
+          "lag": 4209.4860526634175,
+          "time": 11439.14008890724
+        },
+        {
+          "id": 433,
+          "shard": 8,
+          "lag": 6510.661806070326,
+          "time": 11460.44233890724
+        },
+        {
+          "id": 1534,
+          "shard": 8,
+          "lag": 6540.848894945142,
+          "time": 11499.14008890724
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8682,
+      "requests": 486192,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 36,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 0,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8622,
+      "requests": 482832,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 32,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 641,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8008,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 9002,
+      "requests": 504112,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 37,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 2700,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 100,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 8928,
+      "requests": 499968,
+      "deadline_misses": 1,
+      "worst_lateness_seconds": 282.13898196601804,
+      "late_by_shard": {
+        "8": 1
+      },
+      "admission_stops": 36,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 646,
+      "max_reserved": 3300,
+      "max_used_lazy_window": 8232,
+      "examples": [
+        {
+          "id": 2623,
+          "shard": 8,
+          "lag": 3882.138981966018,
+          "time": 19783.04683890724
+        }
+      ]
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 8.2,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10577,
+      "requests": 592312,
+      "deadline_misses": 0,
+      "worst_lateness_seconds": 0,
+      "late_by_shard": {},
+      "admission_stops": 100,
+      "max_active_item_model": 3,
+      "same_shard_overlap_skips": 0,
+      "max_reserved": 3900,
+      "max_used_lazy_window": 8456,
+      "examples": []
+    },
+    {
+      "batch": 16,
+      "cadence_seconds": 600,
+      "stagger_seconds": 60,
+      "active_cap": 4,
+      "raw_reservation": 300,
+      "added_phased_raw_mappings": 607,
+      "seconds_per_raw": 37.69775,
+      "boot_delay_proxy_seconds": 302,
+      "completed": 10477,
+      "requests": 586712,
+      "deadline_misses": 35,
+      "worst_lateness_seconds": 1455.088092071528,
+      "late_by_shard": {
+        "7": 2,
+        "6": 22,
+        "8": 11
+      },
+      "admission_stops": 43,
+      "max_active_item_model": 4,
+      "same_shard_overlap_skips": 763,
+      "max_reserved": 3900,
+      "max_used_lazy_window": 8176,
+      "examples": [
+        {
+          "id": 2181,
+          "shard": 7,
+          "lag": 3618.0637321109753,
+          "time": 17400.44233890724
+        },
+        {
+          "id": 2190,
+          "shard": 7,
+          "lag": 3648.2205039176915,
+          "time": 17439.14008890724
+        },
+        {
+          "id": 2468,
+          "shard": 6,
+          "lag": 3711.5325171031946,
+          "time": 19063.04683890724
+        },
+        {
+          "id": 2585,
+          "shard": 6,
+          "lag": 3741.4918540077197,
+          "time": 19101.74458890724
+        },
+        {
+          "id": 2477,
+          "shard": 6,
+          "lag": 3772.188053094862,
+          "time": 19140.44233890724
+        },
+        {
+          "id": 2486,
+          "shard": 6,
+          "lag": 3802.5233849201177,
+          "time": 19179.14008890724
+        },
+        {
+          "id": 2101,
+          "shard": 8,
+          "lag": 3897.623023895263,
+          "time": 19783.04683890724
+        },
+        {
+          "id": 2110,
+          "shard": 8,
+          "lag": 3928.5276709156024,
+          "time": 19821.74458890724
+        },
+        {
+          "id": 2623,
+          "shard": 8,
+          "lag": 3959.5344819660168,
+          "time": 19860.44233890724
+        },
+        {
+          "id": 100117,
+          "shard": 8,
+          "lag": 3939.3377824821982,
+          "time": 19899.14008890724
+        }
+      ]
+    }
+  ]
+}

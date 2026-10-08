@@ -1,0 +1,386 @@
+{
+  "collected_at": "2026-10-04T12:56:03.823363+00:00",
+  "database": {
+    "as_of": [
+      {
+        "at": "2026-10-04T12:56:11.558332+00:00",
+        "read_only": "on"
+      }
+    ],
+    "attempts_24h": [
+      {
+        "attempts": 51,
+        "kind": "refresh",
+        "latest": "2026-10-04T11:29:43.724152+00:00",
+        "name": "snkrdunk",
+        "outcome": "captured"
+      },
+      {
+        "attempts": 213,
+        "kind": "refresh",
+        "latest": "2026-10-04T12:30:06.342312+00:00",
+        "name": "snkrdunk",
+        "outcome": "no_listing"
+      },
+      {
+        "attempts": 218,
+        "kind": "refresh",
+        "latest": "2026-10-04T01:01:14.907514+00:00",
+        "name": "snkrdunk",
+        "outcome": "transient_failure"
+      },
+      {
+        "attempts": 22,
+        "kind": "validation",
+        "latest": "2026-10-04T08:29:43.439522+00:00",
+        "name": "snkrdunk",
+        "outcome": "completed"
+      },
+      {
+        "attempts": 66,
+        "kind": "discovery",
+        "latest": "2026-10-04T01:04:07.760185+00:00",
+        "name": "yuyutei",
+        "outcome": "completed"
+      },
+      {
+        "attempts": 2090,
+        "kind": "refresh",
+        "latest": "2026-10-04T12:49:47.839842+00:00",
+        "name": "yuyutei",
+        "outcome": "captured"
+      },
+      {
+        "attempts": 1,
+        "kind": "refresh",
+        "latest": "2026-10-04T02:04:35.959582+00:00",
+        "name": "yuyutei",
+        "outcome": "expired"
+      },
+      {
+        "attempts": 4,
+        "kind": "refresh",
+        "latest": "2026-10-04T10:16:04.780473+00:00",
+        "name": "yuyutei",
+        "outcome": "transient_failure"
+      }
+    ],
+    "budgets": [
+      {
+        "enabled": true,
+        "name": "yuyutei",
+        "paused_until": null,
+        "request_limit": 9000,
+        "reserved_requests": 0,
+        "used_requests": 0,
+        "window_seconds": 1800
+      },
+      {
+        "enabled": true,
+        "name": "snkrdunk",
+        "paused_until": null,
+        "request_limit": 3100,
+        "reserved_requests": 0,
+        "used_requests": 2967,
+        "window_seconds": 1800
+      }
+    ],
+    "categories": [
+      {
+        "count": 2100,
+        "price_category": "raw",
+        "price_type": "sell"
+      },
+      {
+        "count": 353,
+        "price_category": "raw",
+        "price_type": "floor"
+      }
+    ],
+    "coverage": [
+      {
+        "both_sources": 199,
+        "canonical_variants": 4316,
+        "one_or_more_sources": 2254,
+        "one_or_more_sources_pct": 52.2243,
+        "zero_sources": 2062
+      }
+    ],
+    "duplicate_active_exact_print_source_groups": 0,
+    "eligible": [
+      {
+        "count": 353,
+        "name": "snkrdunk"
+      },
+      {
+        "count": 2100,
+        "name": "yuyutei"
+      }
+    ],
+    "fingerprint": [
+      {
+        "name": "session is read-only",
+        "ok": true
+      },
+      {
+        "name": "fingerprint A - required tables",
+        "ok": true
+      },
+      {
+        "name": "fingerprint B - named indexes/constraints",
+        "ok": true
+      },
+      {
+        "name": "fingerprint C - print-lineage columns",
+        "ok": true
+      },
+      {
+        "name": "fingerprint D - alembic revision",
+        "ok": true
+      },
+      {
+        "name": "fingerprint E - non-empty invariants",
+        "ok": true
+      }
+    ],
+    "freshness": [
+      {
+        "check_older_than_24h": 0,
+        "name": "yuyutei",
+        "never_successfully_checked": 26,
+        "no_listing": 0,
+        "price_older_than_24h": 0,
+        "total": 2100
+      },
+      {
+        "check_older_than_24h": 0,
+        "name": "snkrdunk",
+        "never_successfully_checked": 89,
+        "no_listing": 213,
+        "price_older_than_24h": 1,
+        "total": 353
+      }
+    ],
+    "market_value": [
+      {
+        "intentional_gap_rows": 0,
+        "latest_published_date": "2026-10-03",
+        "scope_kind": "overall"
+      },
+      {
+        "intentional_gap_rows": 0,
+        "latest_published_date": "2026-10-03",
+        "scope_kind": "release"
+      }
+    ],
+    "psa10": [
+      {
+        "count": 0,
+        "latest": null
+      }
+    ],
+    "quarantined_identity": 22,
+    "receipts": [
+      {
+        "expected_print_count": 962,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-03",
+        "snapshot_row_count": 962
+      },
+      {
+        "expected_print_count": 653,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-02",
+        "snapshot_row_count": 653
+      },
+      {
+        "expected_print_count": 647,
+        "receipt_kind": "atomic",
+        "snapshot_date": "2026-10-01",
+        "snapshot_row_count": 647
+      }
+    ],
+    "revision": [
+      {
+        "version_num": "c4e8a1d7b902"
+      }
+    ],
+    "work": [
+      {
+        "count": 22,
+        "kind": "refresh",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "blocked"
+      },
+      {
+        "count": 331,
+        "kind": "refresh",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 22,
+        "kind": "validation",
+        "name": "snkrdunk",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 59,
+        "kind": "discovery",
+        "name": "yuyutei",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      },
+      {
+        "count": 2100,
+        "kind": "refresh",
+        "name": "yuyutei",
+        "policy_version": "current-price-v1",
+        "state": "pending"
+      }
+    ]
+  },
+  "environment": "staging",
+  "errors": [],
+  "frontend": {
+    "deployment_id": "dpl_BeBb7N2wXSMw68Ak45PUcn8qu92J",
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "sha": "0211aa6715036f2457bbc130efe3bbeccb4af5d9",
+    "status": "READY"
+  },
+  "mode": "live",
+  "railway": {
+    "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+    "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
+    "services": [
+      {
+        "deployment_id": "0e391ced-1628-4daa-975a-0cdc5c161e50",
+        "due_work_configured": false,
+        "git_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+        "name": "market-index-snapshot",
+        "reported_sha": "unknown",
+        "schedule_utc": "0 20 * * *",
+        "service_id": "8d2ee55a-992f-42e0-99a1-99e17df44dd2",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "24b03bfd-31a5-420c-baa9-0d600cda34c4",
+        "due_work_configured": false,
+        "git_sha": "e018d903f57b89ab1f0f9dc20641bbe43feed868",
+        "name": "optcg-price-tracker",
+        "reported_sha": "unknown",
+        "schedule_utc": null,
+        "service_id": "5290becf-6956-4c5c-ab16-01d865587e07",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "4e3aacb2-4058-4206-8669-fb3a1fdd3e0f",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "snkrdunk-collector",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "27,57 * * * *",
+        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "3fdd75fc-bb90-49b1-8fd5-448ac75c25c3",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-0",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "0,30 * * * *",
+        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "344afe97-cab9-4a82-904a-0823e5cf2129",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-1",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "3,33 * * * *",
+        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "e2e27f6c-8f3a-418c-9585-bc96df6e6757",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-2",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "6,36 * * * *",
+        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "79d748e9-a20e-404d-9c38-f72ef02f1722",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-3",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "9,39 * * * *",
+        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "9d66cc5f-7a08-41d2-a742-d440c65575fa",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-4-v2",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "12,42 * * * *",
+        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "65940e64-cd2b-4408-b8df-13377daa3192",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-5",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "15,45 * * * *",
+        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "3a501c8f-1474-4630-81ce-8981a516d96e",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-6",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "18,48 * * * *",
+        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "19fdf2c4-14a0-43cf-9c5a-f1db668f6db4",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-7",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "21,51 * * * *",
+        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+        "status": "SUCCESS"
+      },
+      {
+        "deployment_id": "28ecb5e3-c5ac-4023-8c1a-ad578ef75c51",
+        "due_work_configured": true,
+        "git_sha": "unknown",
+        "name": "yuyutei-collector-shard-8",
+        "reported_sha": "41966076ea6988f38436a3aab953d8bba896c7d8",
+        "schedule_utc": "24,54 * * * *",
+        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+        "status": "SUCCESS"
+      }
+    ]
+  },
+  "repository": {
+    "branch": "staging",
+    "name": "Insomniac79ac/optcg-price-tracker",
+    "sha": "cabe07f7f3411e28d9d2bcb5629a57fb1b05e742"
+  }
+}

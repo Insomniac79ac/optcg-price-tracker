@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-08T03:20:00Z",
+  "source_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+  "ci": 37717982746,
+  "conclusion": "success",
+  "artifact_id": 11526037188,
+  "zip_sha256": "a6fa66646d2b556e1ecb36e2ec0f092237fb0a106e3b088961e9b7e562a515ef",
+  "all_named_state_hashes_verified": true,
+  "strict_receipt_state_link_verified": true,
+  "schema": "f9e5b4a8c012",
+  "all10_independent_natural_receipts": "resume-census-20261008T031814.json",
+  "writers_on": 0,
+  "original_ledger": 16,
+  "encoded_originals_protected": 15,
+  "continuous_storage_savings_verified": false,
+  "followup": "Correct planner-sensitive body projection before writer activation; regression old202 evaluations vsnew<=34."
+}

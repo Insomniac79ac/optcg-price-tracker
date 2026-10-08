@@ -1,0 +1,10 @@
+{
+  "pr": 79,
+  "head": "ea9eb98e6c81e1b4c58ab055a7669bdc58617e42",
+  "status": "CI_RUNNING",
+  "source_deployed": false,
+  "writers_enabled": false,
+  "storage_query_regression": "prior202 vsnew34; tests121pass",
+  "patch_sha256": "dbf494b6c4b9f139f98bfe3d46a87640a6d1e6ae351841fddf91a18f209599db",
+  "new100": "UNPLANNED"
+}
