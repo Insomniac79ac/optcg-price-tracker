@@ -1,0 +1,12 @@
+{
+  "commit": "295746ae33c226c0989a51b84e26a79906ee939d",
+  "patch_sha256": "b67e541c94a86667a024999146090dbf2f80e091c2b5ccb53b940160f2d3a342",
+  "mock_local_postgres_tests_passed": 105,
+  "targeted_tests": 10,
+  "source_deployed": false,
+  "branch_pushed": false,
+  "source_http": 0,
+  "production_accessed": false,
+  "cadence_changed": false,
+  "purpose": "<=30s retry only if explicit four-slot contention and eligible affordable pending work for the shard; source pause/ownership/runtime/fairness/reservations remain authoritative."
+}

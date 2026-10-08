@@ -1,0 +1,16 @@
+staging-automerge	Deploy mission-scoped staging collectors	﻿2026-10-08T04:30:35.4346430Z ##[group]Run python scripts/deploy_staging_collectors.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-collector-rollout.json
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4347753Z [36;1mpython scripts/deploy_staging_collectors.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-collector-rollout.json[0m
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4412404Z shell: /usr/bin/bash -e {0}
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4412654Z env:
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4412955Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4413390Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4413830Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4414225Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4414601Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4414977Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4418036Z   GH_TOKEN: ***
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4418483Z   RAILWAY_TOKEN: ***
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4418745Z   MERGED_SHA: a6c080902895922ba60c4161d417255006b2bd1f
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.4419039Z ##[endgroup]
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.5053010Z Collector rollout requires reviewed staging AMBER preflight
+staging-automerge	Deploy mission-scoped staging collectors	2026-10-08T04:30:35.5151468Z ##[error]Process completed with exit code 1.

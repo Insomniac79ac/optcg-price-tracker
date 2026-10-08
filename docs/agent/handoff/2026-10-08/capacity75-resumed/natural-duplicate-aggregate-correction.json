@@ -1,0 +1,22 @@
+{
+  "target": "staging",
+  "source_requests": 0,
+  "database_writes": 0,
+  "production_accessed": false,
+  "aggregate_defect": "SQL GROUP BY NULL was incorrectly reported as duplicate exact identity. A NULL CardPrint is not an exact identity.",
+  "group": {
+    "source": "yuyutei",
+    "card_print_id": null,
+    "count": 6,
+    "mapping_ids": [
+      1,
+      13,
+      7,
+      9,
+      5,
+      3
+    ]
+  },
+  "correction": "Use existing coverage invariant: active, not superseded, non-NULL CardPrint grouped bysource/print, irrespective of approval status.",
+  "preserved": "All6 legacy rows untouched; original erroneous aggregate retained as evidence, corrected next census appended."
+}

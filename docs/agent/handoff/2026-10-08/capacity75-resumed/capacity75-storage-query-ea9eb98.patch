@@ -1,0 +1,362 @@
+diff --git a/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md b/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md
+index d730a5a..78890aa 100644
+--- a/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md
++++ b/docs/agent/RAW_STORAGE_DAILY_ADMISSION.md
+@@ -19,8 +19,11 @@ RAW-before-parse commits, CardPrint identity, and price semantics stay guarded.
+ Migration `f9e5b4a8c012` adds only a UTC ledger-time index and a compact scoped
+ RAW lookup index. The latter indexes source/parser/URL hash/ID for HTTP 200;
+ the writer also compares the entire URL. Building it does not inspect TOAST
+-bodies. Lookup examines at most 32 recent scoped bodies, then the oldest
+-retained scoped plaintext anchor. Every encoded child has an older plaintext
++bodies. Lookup first selects at most 32 scoped IDs without any body expression.
++A separate statement evaluates markers only for those IDs. If necessary,
++it separately selects the oldest scoped ID and checks that single marker,
++then locks and loads the exact retained plaintext base. This separation
++prevents a sort plan from evaluating body projections across scoped history. Every encoded child has an older plaintext
+ same-scope dependency. A page that no longer compresses efficiently remains
+ plaintext and becomes a recent anchor. The indexed daily ledger scan depends
+ on one day's admitted rows, rather than the lifetime ledger size.
+@@ -68,3 +71,10 @@ same-service turns are skipped, timing is not exact), and
+ Installed Railway 5.62.1 and GitHub CLI 2.88.0 help verified. Source budgets,
+ cadence, pacing, Yuyu four-claim bound, SNKR singleton, PSA10 OFF, production
+ boundary and historical evidence are unchanged by this delivery.
++
++The planner-sensitive projection fix is recorded in
++`evidence/raw-storage-query-preflight-20261008.json`. A localhost sorting-plan
++regression counted 202 body expression evaluations with the PR78 lookup and
++at most 34 with the revised lookup in the same 200-row plaintext fixture.
++The existing long encoded-chain test verifies oldest-anchor fallback. This
++query fix does not activate either mode or establish sustained savings.
+diff --git a/docs/agent/STAGING_MISSION.json b/docs/agent/STAGING_MISSION.json
+index 9b5aa92..2212bc7 100644
+--- a/docs/agent/STAGING_MISSION.json
++++ b/docs/agent/STAGING_MISSION.json
+@@ -1,8 +1,8 @@
+ {
+   "schema_version": 1,
+-  "mission": "Install bounded renewable RAW storage admission with writers OFF before natural validation",
++  "mission": "Bound RAW body evaluation before storage canary activation; keep every writer OFF",
+   "target": "staging",
+-  "classification": "AMBER",
++  "classification": "GREEN",
+   "red_decisions": {
+     "ambiguous_approval": false,
+     "destructive_migration": false,
+@@ -21,12 +21,7 @@
+     {
+       "files": [
+         "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
+-        "docs/agent/evidence/raw-storage-daily-preflight-20261008.json",
+-        "scripts/apply_staging_raw_dependency.py",
+-        "scripts/tests/test_apply_staging_raw_dependency.py",
+-        "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
+-        "services/api/app/models/raw_snapshot.py",
+-        "services/api/app/models/raw_snapshot_dictionary.py",
++        "docs/agent/evidence/raw-storage-query-preflight-20261008.json",
+         "services/api/app/services/raw_dictionary_storage.py",
+         "services/api/tests/test_raw_dictionary_storage_postgres.py"
+       ],
+@@ -34,13 +29,12 @@
+         "application",
+         "tests",
+         "documentation",
+-        "migration",
+         "staging_deployment"
+       ],
+-      "reason": "Replace lifetime scanning only for explicitly selected daily-v1 mode, add bounded scoped lookup and UTC row/byte admission under existing global lock. Deliver OFF, preserve default200/codec/e8 lineage/readers/portable backup. Allowlist index-only transition with exact parent/path/checksum and executable fixture rollback; no activation or volume expansion."
++      "reason": "Fix planner-sensitive marker projection using bounded ID selection before body inspection. Proven sorting-plan regression old202/new<=34. Keep writersOFF/f9/codec/default200/daily bounds, no schema or RAW/history writes, preserve all source scheduling/admission/identity safeguards."
+     }
+   ],
+-  "diff_sha256": "469c10b200491506e009c92d52d49d96fa7fe3b8f8d91504e369c1a5a86c7135",
++  "diff_sha256": "b03838f6aca01d56afe8460e6df8948108db0c520bd31d8938a9d240299c0085",
+   "deployment_verification": {
+     "api_sha": "merge",
+     "revision": "f9e5b4a8c012",
+@@ -54,61 +48,55 @@
+       {
+         "name": "snkrdunk-collector",
+         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+-        "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
++        "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
+       },
+       {
+         "name": "yuyutei-collector-shard-0",
+         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-        "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
++        "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+       },
+       {
+         "name": "yuyutei-collector-shard-1",
+         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+-        "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
++        "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
+       },
+       {
+         "name": "yuyutei-collector-shard-2",
+         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-        "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
++        "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
+       },
+       {
+         "name": "yuyutei-collector-shard-3",
+         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-        "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
++        "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
+       },
+       {
+         "name": "yuyutei-collector-shard-4-v2",
+         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+-        "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
++        "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
+       },
+       {
+         "name": "yuyutei-collector-shard-5",
+         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-        "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
++        "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
+       },
+       {
+         "name": "yuyutei-collector-shard-6",
+         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+-        "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
++        "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
+       },
+       {
+         "name": "yuyutei-collector-shard-7",
+         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+-        "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
++        "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
+       },
+       {
+         "name": "yuyutei-collector-shard-8",
+         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-        "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
++        "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
+       }
+     ],
+-    "yuyu_capacity_cadence": true,
+-    "raw_dependency_migration": {
+-      "parent": "e8c2d4f6a901",
+-      "revision": "f9e5b4a8c012",
+-      "file": "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
+-      "sha256": "47d3006731b04c8e522b3509278741ffedc804cefea9cea23a60b2eda5371db3"
+-    }
++    "yuyu_capacity_cadence": true
+   },
+   "safeguards": {
+     "impact": {
+@@ -126,52 +114,52 @@
+         {
+           "name": "snkrdunk-collector",
+           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+-          "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
++          "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
+         },
+         {
+           "name": "yuyutei-collector-shard-0",
+           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+-          "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
++          "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
+         },
+         {
+           "name": "yuyutei-collector-shard-1",
+           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+-          "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
++          "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
+         },
+         {
+           "name": "yuyutei-collector-shard-2",
+           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+-          "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
++          "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
+         },
+         {
+           "name": "yuyutei-collector-shard-3",
+           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+-          "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
++          "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
+         },
+         {
+           "name": "yuyutei-collector-shard-4-v2",
+           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+-          "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
++          "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
+         },
+         {
+           "name": "yuyutei-collector-shard-5",
+           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+-          "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
++          "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
+         },
+         {
+           "name": "yuyutei-collector-shard-6",
+           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+-          "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
++          "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
+         },
+         {
+           "name": "yuyutei-collector-shard-7",
+           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+-          "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
++          "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
+         },
+         {
+           "name": "yuyutei-collector-shard-8",
+           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+-          "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
++          "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
+         }
+       ],
+       "routes": [
+@@ -180,16 +168,16 @@
+       "dependencies": [
+         "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
+       ],
+-      "deployment_impact": "Add two small bounded RAW lookup/admission indexes and opt-in daily quota mode with writers OFF. Native API/all10 delivery. No codec, budget, schedule, source-volume or price changes.",
+-      "database_writes": 1,
++      "deployment_impact": "Native API/all10 query correction with writers OFF. Read-only existingf9 schema verification; no migration requested, data/schema/source volume/schedule/budget/pacing/claim/price changes.",
++      "database_writes": 0,
+       "source_requests": 0,
+       "estimated_runtime_minutes": 60
+     },
+     "recovery": {
+-      "artifact": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+-      "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
++      "artifact": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++      "procedure": "Retain all writersOFF and f9/readers/dependencies/portable backup19. Query-only native revert to4995007 is executable on the unchangedf9 schema. No RAW expansion or obsoletee8 delivery. Existing installed indexes only validated, not recreated.",
+       "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
+-      "backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
++      "backup": "No persistent data or schema mutation by this fix; current16 lossless canary copies/digests, protected15 rows and previous portable19 backup validation retained. Focused121 reader/storage/backup tests passed.",
+       "validation": [
+         "services/api/tests/test_raw_dictionary_storage_postgres.py",
+         "services/api/tests/test_raw_dictionary_backup.py",
+diff --git a/docs/agent/evidence/raw-storage-query-preflight-20261008.json b/docs/agent/evidence/raw-storage-query-preflight-20261008.json
+new file mode 100644
+index 0000000..fc23d29
+--- /dev/null
++++ b/docs/agent/evidence/raw-storage-query-preflight-20261008.json
+@@ -0,0 +1,40 @@
++{
++  "target": "staging",
++  "classification": "GREEN",
++  "observed_at": "2026-10-08T03:18:52.054296+00:00",
++  "before_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
++  "schema": "f9e5b4a8c012",
++  "delivery_verified_ci": 37717982746,
++  "strict_artifact_sha256": "a6fa66646d2b556e1ecb36e2ec0f092237fb0a106e3b088961e9b7e562a515ef",
++  "writers_on": 0,
++  "ledger_rows": 16,
++  "original_encoded_protected": 15,
++  "source_requests_added": 0,
++  "source_jobs_manually_invoked": 0,
++  "production_accessed": false,
++  "database_migrations_added": 0,
++  "raw_bodies_rewritten": 0,
++  "price_mapping_history_changes": 0,
++  "index_total_measured_bytes": 3129344,
++  "bug": "A marker projection with ORDER BY/LIMIT can evaluate on all scoped rows below a sort. ID-only LIMIT must precede the marker statement.",
++  "fix": "IDs only -> markers over <=32 IDs -> optional oldest ID/single marker -> exact guarded locked plaintext base. No body predicate on broad history.",
++  "real_postgres_regression": {
++    "fixture": "200 synthetic same-scope plaintext rows, index scan disabled to exercise sorting",
++    "prior_evaluations": 202,
++    "new_max_evaluations_fixture": 34,
++    "old_fails_new_passes": true
++  },
++  "select_only_benchmark": {
++    "rows_per_source": 12,
++    "prior_marker_max_ms": 337.988,
++    "bounded_id_marker_max_ms": 50.343,
++    "semantics": "Different cache states; timing comparison not natural writer or sustained storage proof. Body row bound separately verified on PostgreSQL fixture."
++  },
++  "validation": {
++    "focused_storage_reader_backup_tests_passed": 121,
++    "git_diff_check": "pass"
++  },
++  "rollback": "Keep all writers OFF. Native revert of only this query implementation to retained4995007 under samef9 revision/readers is executable; no bodies or ledger written. No migration is requested; strict schema guard verifies existing f9. No olde8 full delivery replay.",
++  "post_verification": "Native strict delivery artifact, all10 independent natural component receipts, all13 writer flagsOFF and original16 lossless originals. Only then fresh pinned SNKR canary preflight; ordinary nextdue10:32, empty cron is not writer proof.",
++  "safeguards": "No new mode, quota, codec, budget, schedule, pacing, mapping, identity or price semantics. PSA10OFF. Original35175 recovery and3676/3677 completed intents never replayed."
++}
+diff --git a/services/api/app/services/raw_dictionary_storage.py b/services/api/app/services/raw_dictionary_storage.py
+index 3442fd9..5288566 100644
+--- a/services/api/app/services/raw_dictionary_storage.py
++++ b/services/api/app/services/raw_dictionary_storage.py
+@@ -73,17 +73,27 @@ def dictionary_base(session, model, snapshot):
+     # Separate bounded projection from base loading: placing a raw-content
+     # filter outside an IN/LIMIT subquery can let PostgreSQL evaluate that
+     # predicate against unrelated historical rows before applying the IDs.
++    # Select IDs without a body expression. PostgreSQL may evaluate a projected
++    # expression before sorting scoped history, even when SQL has LIMIT 32.
++    # A second statement contains only the bounded IDs as its row predicate;
++    # the body marker is a projection, never a predicate on historical rows.
++    ids = session.scalars(
++        select(model.id).where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
++    ).all()
++    if not ids:
++        return None
+     projected = select(model.id, model._stored_raw_content.startswith(PREFIX))
+     recent = session.execute(
+-        projected.where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
++        projected.where(model.id.in_(ids)).order_by(model.id.desc())
+     ).all()
+     base_id = next(
+         (snapshot_id for snapshot_id, encoded in recent if not encoded), None
+     )
+     if base_id is None:
+-        oldest = session.execute(
+-            projected.where(*scope).order_by(model.id).limit(1)
+-        ).first()
++        oldest_id = session.scalar(
++            select(model.id).where(*scope).order_by(model.id).limit(1)
++        )
++        oldest = session.execute(projected.where(model.id == oldest_id)).first()
+         if oldest is None or oldest[1]:
+             return None
+         base_id = oldest[0]
+diff --git a/services/api/tests/test_raw_dictionary_storage_postgres.py b/services/api/tests/test_raw_dictionary_storage_postgres.py
+index d5a23c2..ea2a707 100644
+--- a/services/api/tests/test_raw_dictionary_storage_postgres.py
++++ b/services/api/tests/test_raw_dictionary_storage_postgres.py
+@@ -24,7 +24,7 @@ from sqlalchemy import (
+     text,
+ )
+ from sqlalchemy.exc import IntegrityError, OperationalError
+-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
++from sqlalchemy.orm import DeclarativeBase, Mapped, Session, aliased, mapped_column
+ 
+ from opcg_source_identity.raw_payload import (
+     PREFIX,
+@@ -114,6 +114,34 @@ def mock_body():
+     )
+ 
+ 
++def test_body_reads_are_bounded_even_when_planner_sorts_history(database):
++    # Count real PostgreSQL expression evaluations, including on a bitmap/sort
++    # plan. LIMIT on a projected body expression alone does not enforce this.
++    with database.begin() as connection:
++        connection.execute(text("CREATE SEQUENCE body_reads MINVALUE 0 START 0"))
++        connection.execute(text("""
++            CREATE FUNCTION count_body_read(value text) RETURNS text
++            LANGUAGE plpgsql STABLE COST 0.001 AS $$
++            BEGIN PERFORM nextval('body_reads'); RETURN value; END $$
++        """))
++    with Session(database) as session:
++        session.add_all(row("synthetic retained body") for _ in range(200))
++        session.commit()
++        session.execute(text("SET LOCAL enable_indexscan=off"))
++        counted = aliased(Snapshot)
++        counted._stored_raw_content = func.count_body_read(counted._stored_raw_content)
++        pending = row("synthetic retained body")
++        found = storage.dictionary_base(session, counted, pending)
++        assert found[0].id == 200
++        reads = session.execute(
++            text("SELECT last_value,is_called FROM body_reads")
++        ).one()
++        assert reads.is_called
++        # <=32 bounded marker reads and at most two exact-base expressions.
++        assert reads.last_value + 1 <= storage.RECENT_BASE_ROWS + 2
++        session.rollback()
++
++
+ def row(body=None, **changes):
+     body = body or mock_body()
+     values = dict(
