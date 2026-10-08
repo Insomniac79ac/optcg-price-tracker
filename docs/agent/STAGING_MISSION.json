@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Land 2026-10-08 capacity75 session-6 handoff evidence on staging (documentation only)",
+  "mission": "Land 2026-10-08 capacity75 session-7a morning-check note on staging (documentation only)",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,44 +20,23 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/handoff/2026-10-08/capacity75-session6/CONTINUATION.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/CURRENT_STATE-end.yaml",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/CURRENT_STATE-start.yaml",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/HANDOFF.md",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/ci/pr87-staging-delivery.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/collectors-start.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/coverage-latest.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/baseline-writer-off-turns.jsonl",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/daily-v1-preflight.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/flags-after-activation.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-snkrdunk-collector.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-0.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-1.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-2.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-3.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-4-v2.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-5.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-6.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-7.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/on-ok-yuyutei-collector-shard-8.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/pre-activation-db.jsonl",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/verify-first-turns.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/daily/volume-pre-activation.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/flags-start.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/state-evidence/staging-state-20ce9894c1f1638b.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/state-evidence/staging-state-cb6a178cc8ea646f.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/tools/rollout.py",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/tools/verify_canary.py",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/trial/trial-ok-yuyutei-collector-shard-1.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session6/trial/trial-ok-yuyutei-collector-shard-6.json"
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/NOTE.md",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/admission-skips.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/census.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/live-state.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/verify-since-activation.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/live.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/measure7a.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/skips.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/verify_canary.py"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Session-6 handoff, receipts and read-only tools under docs/agent/handoff/. Not read by any delivery, migration, verification or state script; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
+      "reason": "Session-7a read-only morning-check note, evidence and read-only tools under docs/agent/handoff/. Not read by any delivery, migration, verification or state script; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "53083754a02eb2f879af63c0c117935caa2c609edc3038b2eea5909b96ff1e3e",
+  "diff_sha256": "6980e604718cd44c48b9fea25ca4ef6bd1cb925397f6bcbab148f904a2e8a860",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
