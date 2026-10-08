@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-10-08T06:58:00Z",
+  "target": "staging",
+  "production_accessed": false,
+  "change": "Documentation-only delivery scope guard plus bounded verifier timeout retry; CI/verification code only",
+  "collector_rollout_requested": false,
+  "raw_dependency_migration_requested": false,
+  "installed_collector_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "installed_component_basis": "PR80 collector rollout evidence and local verifier receipt 2026-10-08T05:53:31Z (handoff/2026-10-08 capacity75-session3)",
+  "timing_rule": "No collector upload by this PR; SNKR writer test turn at/after 2026-10-08T10:32:04Z unaffected",
+  "schedules_budgets_pacing_claims_writers": "unchanged; no provider variable, cron, budget or writer mutation",
+  "database_writes": 0,
+  "source_requests": 0,
+  "local_tests": {
+    "test_staging_delivery_scope": 13,
+    "test_verify_staging_delivery": 13,
+    "test_staging_policy": 9,
+    "test_deploy_staging_collectors": 4,
+    "test_apply_staging_raw_dependency": 4,
+    "test_generate_staging_state": 17,
+    "test_snkr_discovery_component": 9,
+    "test_yuyu_raw_reader_component": 5,
+    "result": "all passed"
+  },
+  "rollback": "Native revert of this PR restores the prior workflows and verifier; no persistent state changes"
+}

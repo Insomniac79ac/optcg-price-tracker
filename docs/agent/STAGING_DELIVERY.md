@@ -152,3 +152,27 @@ Railway 5.62.1:
 - [GitHub deployment concurrency](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments)
 - [Vercel Git deployment](https://vercel.com/docs/git)
 - [Vercel Git configuration](https://vercel.com/docs/project-configuration/git-configuration)
+
+## Documentation-only scope and verifier timeouts (2026-10-08)
+
+Collector rollout and RAW DDL are already opt-in per PR: they act only on
+`deployment_verification.collector_services` / `raw_dependency_migration` in
+the PR's manifest. `scripts/staging_delivery_scope.py` adds a second, file-based
+guard that can only remove those two steps, never add work. It skips them only
+when every path changed by the merge (`merge^1..merge`, renames detected) is
+`docs/agent/handoff/**` or a `docs/**/*.md` file outside `docs/agent/evidence/`,
+plus the per-PR manifest declaration, and that manifest requests neither
+rollout nor migration. Paths read by delivery, migration, verification or state
+code (`STAGING_MISSION.json`, `CURRENT_STATE.yaml`, `docs/agent/evidence/**`)
+are never documentation. Renames crossing the allowlist, unknown statuses, an
+empty or undeterminable change set, or an unreadable manifest run the full
+delivery unchanged. Verification and state regeneration always run; the
+decision and file list are written to `latest-delivery-scope.json` and embedded
+as `delivery_scope` in `latest-staging-delivery.json`.
+
+Read-only verifier GETs retry only a socket timeout, at most twice (2s, 5s
+backoff), and the caller applies the identical assertion to the response. HTTP
+errors, redirects, content and invariant failures are never retried. Retries are
+recorded as `get_timeout_retries` in the delivery receipt. PR80's CI verify step
+failed on one such timeout among ~452 sale-exclusion GETs; an identical local
+rerun passed at 2026-10-08T05:53:31Z.
