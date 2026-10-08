@@ -157,7 +157,18 @@ jobs:
           pip install -r scripts/agent-state-requirements.txt playwright==1.58.0
           python -m playwright install --with-deps chromium
           npm install -g @railway/cli@5.62.1 vercel@60.1.3
+      - name: Decide documentation-only delivery scope
+        id: scope
+        env:
+          MERGED_SHA: ${{ steps.merge.outputs.sha }}
+        run: |
+          # Local Git only. Fails closed to the full delivery on any doubt.
+          python scripts/staging_delivery_scope.py --merge "$MERGED_SHA" --output docs/agent/evidence/latest-delivery-scope.json || true
+          decision=$(jq -r '.decision // "full"' docs/agent/evidence/latest-delivery-scope.json 2>/dev/null || echo full)
+          if [ "$decision" != skip ]; then decision=full; fi
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
       - name: Apply reviewed additive RAW dependency migration
+        if: steps.scope.outputs.decision != 'skip'
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
@@ -167,6 +178,7 @@ jobs:
           pip install -r scripts/staging-migration-requirements.txt
           python scripts/apply_staging_raw_dependency.py --manifest docs/agent/STAGING_MISSION.json --expected "$MERGED_SHA" --output docs/agent/evidence/latest-raw-dependency-migration.json
       - name: Deploy mission-scoped staging collectors
+        if: steps.scope.outputs.decision != 'skip'
         env:
           GH_TOKEN: ${{ github.token }}
           RAILWAY_TOKEN: ${{ secrets.STAGING_RAILWAY_TOKEN }}
@@ -187,7 +199,8 @@ jobs:
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],
                           '--api-sha', os.environ['EXPECTED'] if v['api_sha'] == 'merge' else v['api_sha'], '--revision', v['revision'],
-                          '--output', 'docs/agent/evidence/latest-staging-delivery.json', *extra], check=True)
+                          '--output', 'docs/agent/evidence/latest-staging-delivery.json',
+                          '--scope', 'docs/agent/evidence/latest-delivery-scope.json', *extra], check=True)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -198,6 +211,7 @@ jobs:
             docs/agent/evidence/latest-staging-delivery.json
             docs/agent/evidence/latest-collector-rollout.json
             docs/agent/evidence/latest-raw-dependency-migration.json
+            docs/agent/evidence/latest-delivery-scope.json
             docs/agent/evidence/staging-state-*.json
       - name: Disarm an unmerged request if delivery stops
         if: failure() || cancelled()
@@ -268,6 +282,7 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_generate_staging_state.py -v
       - run: python -m unittest discover -s scripts/tests -p test_staging_policy.py -v
       - run: python -m unittest discover -s scripts/tests -p test_verify_staging_delivery.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_staging_delivery_scope.py -v
       - run: python -m unittest discover -s scripts/tests -p test_operational_health.py -v
       - run: python -m unittest discover -s scripts/tests -p test_probe_staging_credentials.py -v
       - run: python -m unittest discover -s scripts/tests -p test_apply_staging_raw_dependency.py -v

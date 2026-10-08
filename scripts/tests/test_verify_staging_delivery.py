@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch, Mock
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -107,6 +107,58 @@ class VerificationTests(unittest.TestCase):
                 with self.assertRaises(state.VerificationError):
                     get('https://optcg-price-tracker-staging.vercel.app/api/version')
                 self.assertEqual(opener.open.call_count, 1)
+
+
+    def opener_with(self, *effects):
+        opener = Mock()
+        opener.open.side_effect = list(effects)
+        return opener
+
+    def body(self, text='{}'):
+        response = StringIO(text)
+        response.headers = {}
+        return response
+
+    def test_timeout_then_success_retries_and_records(self):
+        import verify_staging_delivery as v
+        v.timeout_retries.clear()
+        opener = self.opener_with(TimeoutError('read timed out'), URLError(TimeoutError('connect')), self.body('{"ok": true}'))
+        with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
+            self.assertEqual(get('https://optcg-price-tracker-staging.vercel.app/api/version'), {'ok': True})
+        self.assertEqual(opener.open.call_count, 3)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [2, 5])
+        self.assertEqual([r['attempt'] for r in v.timeout_retries], [1, 2])
+
+    def test_timeout_exhausted_fails_after_two_retries(self):
+        import verify_staging_delivery as v
+        v.timeout_retries.clear()
+        opener = self.opener_with(*[TimeoutError('timed out')] * 4)
+        with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep'):
+            with self.assertRaises(TimeoutError):
+                get('https://optcg-price-tracker-staging.vercel.app/api/version')
+        self.assertEqual(opener.open.call_count, 3)
+        self.assertEqual(len(v.timeout_retries), 2)
+
+    def test_non_timeout_failures_are_never_retried(self):
+        for error in (HTTPError('staging', 500, 'error', {}, None), URLError('connection refused'),
+                      state.VerificationError('Unexpected HTTP redirect; destination not verified')):
+            opener = self.opener_with(error, self.body())
+            with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener), patch('verify_staging_delivery.time.sleep') as sleep:
+                with self.assertRaises(type(error)):
+                    get('https://optcg-price-tracker-staging.vercel.app/api/version')
+            self.assertEqual(opener.open.call_count, 1)
+            sleep.assert_not_called()
+
+    def test_assertion_failure_on_content_is_not_retried(self):
+        # A sale price leak is a content assertion in the caller: get() returns
+        # once, the caller fails, and nothing re-requests to look for a better answer.
+        import verify_staging_delivery as v
+        opener = self.opener_with(self.body('{"observations": [{"id": 7}]}'), self.body('{"observations": []}'))
+        with patch('verify_staging_delivery.urllib.request.build_opener', return_value=opener):
+            with self.assertRaises(state.VerificationError):
+                history = get(v.API + '/prints/1/prices')
+                v.require(not {7} & {p['id'] for p in history['observations']}, 'Sale observation exposed in public history')
+        self.assertEqual(opener.open.call_count, 1)
 
 
 if __name__ == '__main__':

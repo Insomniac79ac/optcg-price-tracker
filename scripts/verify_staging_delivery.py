@@ -56,8 +56,35 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         )
 
 
+# A slow read-only GET may be retried after a socket timeout only. Callers
+# apply the identical assertion to the retried response; every other failure
+# (HTTP status, redirect, content, invariant) still fails immediately.
+TIMEOUT_RETRIES = 2
+TIMEOUT_BACKOFF_SECONDS = (2, 5)
+timeout_retries = []
+
+
+def is_timeout(error):
+    if isinstance(error, TimeoutError):
+        return True
+    return (isinstance(error, urllib.error.URLError)
+            and not isinstance(error, urllib.error.HTTPError)
+            and isinstance(error.reason, TimeoutError))
+
+
 def get(url):
     require(url.startswith((WEB + "/", API + "/")), "Non-staging URL refused")
+    for attempt in range(TIMEOUT_RETRIES + 1):
+        try:
+            return fetch(url)
+        except Exception as error:
+            if not is_timeout(error) or attempt == TIMEOUT_RETRIES:
+                raise
+            timeout_retries.append({"url": url, "attempt": attempt + 1})
+            time.sleep(TIMEOUT_BACKOFF_SECONDS[attempt])
+
+
+def fetch(url):
     opener = urllib.request.build_opener(NoRedirect)
     try:
         response = opener.open(url, timeout=30)
@@ -210,9 +237,11 @@ def main():
     parser.add_argument("--revision", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wait-seconds", type=int, default=900)
+    parser.add_argument("--scope", type=Path, help="Delivery scope decision evidence to embed")
     parser.add_argument("--check", action="append", default=[], help="Repository Python verification script; runs without shell interpolation")
     args = parser.parse_args()
     require(all(re.fullmatch("[0-9a-f]{40}", sha) for sha in (args.expected, args.api_sha)), "Full expected source SHAs required")
+    scope = json.loads(args.scope.read_text()) if args.scope else None
     deadline = time.monotonic() + args.wait_seconds
     evidence = wait_for_delivery(args.expected, args.api_sha, deadline)
     version = get(WEB + "/api/version")
@@ -245,6 +274,8 @@ def main():
               "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
               "migration_revision": args.revision, "routes": routes, "sale_invariant": sale,
               "state_evidence_sha256": snapshot["evidence"]["sha256"],
+              "get_timeout_retries": {"count": len(timeout_retries), "requests": timeout_retries},
+              "delivery_scope": scope,
               "production_accessed": False}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
