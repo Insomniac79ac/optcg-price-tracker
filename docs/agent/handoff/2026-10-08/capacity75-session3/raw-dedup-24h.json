@@ -1,0 +1,54 @@
+{
+  "observed_at": "2026-10-08T05:29:14.442196+00:00",
+  "target": "staging",
+  "source_http": 0,
+  "database_writes": 0,
+  "production_accessed": false,
+  "sql": "with recent as (\n  select r.id,s.name,r.parser_version,r.content_hash,r.source_url,pg_column_size(r.raw_content) stored\n  from raw_snapshots r join sources s on s.id=r.source_id\n  where r.fetched_at>=now()-interval '24 hours')\nselect name,parser_version,count(*) snapshots,sum(stored) stored_bytes,\n  count(*) filter(where exists(select 1 from raw_snapshots o where o.content_hash=recent.content_hash and o.id<recent.id)) identical_to_earlier,\n  sum(stored) filter(where exists(select 1 from raw_snapshots o where o.content_hash=recent.content_hash and o.id<recent.id)) identical_bytes,\n  count(*) filter(where exists(select 1 from raw_snapshots o where o.content_hash=recent.content_hash and o.source_url=recent.source_url and o.id<recent.id)) identical_same_url,\n  count(distinct content_hash) distinct_hashes\nfrom recent group by 1,2 order by 1,2",
+  "recent24h": [
+    {
+      "name": "snkrdunk",
+      "parser_version": "snkrdunk-collector-v2",
+      "snapshots": 574,
+      "stored_bytes": 64019612,
+      "identical_to_earlier": 0,
+      "identical_bytes": null,
+      "identical_same_url": 0,
+      "distinct_hashes": 574
+    },
+    {
+      "name": "snkrdunk",
+      "parser_version": "snkr-published-discovery-v1",
+      "snapshots": 40,
+      "stored_bytes": 18376113,
+      "identical_to_earlier": 11,
+      "identical_bytes": 8790869,
+      "identical_same_url": 11,
+      "distinct_hashes": 29
+    },
+    {
+      "name": "yuyutei",
+      "parser_version": "yuyutei-collector-v3",
+      "snapshots": 2753,
+      "stored_bytes": 101146412,
+      "identical_to_earlier": 0,
+      "identical_bytes": null,
+      "identical_same_url": 0,
+      "distinct_hashes": 2753
+    },
+    {
+      "name": "yuyutei",
+      "parser_version": "yuyutei-recurring-discovery-v1",
+      "snapshots": 134,
+      "stored_bytes": 4854045,
+      "identical_to_earlier": 0,
+      "identical_bytes": null,
+      "identical_same_url": 0,
+      "distinct_hashes": 134
+    }
+  ],
+  "all_time": {
+    "n": 36196,
+    "d": 35493
+  }
+}

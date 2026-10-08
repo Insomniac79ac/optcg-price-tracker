@@ -1,0 +1,35 @@
+{
+  "status": "session_boundary",
+  "written_at": "2026-10-08T05:58:00Z",
+  "objective_complete": false,
+  "staging_only": true,
+  "production_accessed": false,
+  "psa10": "OFF",
+  "first_constraint": "storage_capacity",
+  "staging_sha": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "database_revision": "f9e5b4a8c012",
+  "pr_status": {
+    "78": {"ci": "success", "delivery": "verified_strict_artifact_11526037188", "natural": "verified"},
+    "79": {"ci": "engineering_success_delivery_job_failed", "delivery": "api_frontend_only", "natural": "collector_code_verified_via_pr80"},
+    "80": {"ci_run": 37730392225, "ci": "engineering_success_staging_automerge_failed_verify_timeout", "delivery": "collectors_deployed_local_verifier_passed_2026-10-08T05:53:31Z", "natural": "all10_ran_on_1b1b64d; claim_wait_contention_not_yet_exercised"}
+  },
+  "coverage_measured_at": "2026-10-08T05:27:24Z",
+  "coverage": {"denominator": 4316, "mapped": 2635, "operational": 2630, "fresh_usable": 2398, "both_sources": 334, "zero_source": 1681, "target": 3237, "remaining": 607},
+  "storage_measured_at": "2026-10-08T05:28:19Z",
+  "storage": {"volume_mb": 3402.8, "limit_mb": 10000, "recurring_bytes_24h": 171965155, "days_to_3gib_reserve": [14.5, 16.4], "days_to_full": [28.4, 32.0]},
+  "yuyu_new100": "NOT_APPROVED_storage_guard_fails",
+  "writers": "all OFF; ledger 16 (15 encoded protected, 35175 expanded)",
+  "next_steps": [
+    "refresh live state and component identity",
+    "AMBER SNKR writer canary for one natural turn at/after 2026-10-08T10:32:04Z, then OFF and lossless verification",
+    "AMBER daily-v1 activation on 9 Yuyu + SNKR; >=24h natural physical-growth evidence",
+    "natural busy-window evidence for PR80 claim wait (02:00-06:00Z)",
+    "then NEW100 evaluation, SNKR discovery from 3676/3677 checkpoint, zero-source exact approvals"
+  ],
+  "earliest_recheck_utc": "2026-10-08T10:32:04Z",
+  "earliest_recheck_myt": "2026-10-08T18:32:04+08:00",
+  "never_replay": ["snkr intents 3676", "snkr intents 3677", "raw recovery 35175", "yuyu storage canary evidence", "recover_canary.py", "initial storage activation helper", "staging-automerge reruns for PR77-80"],
+  "no_source_jobs_manually_invoked": true,
+  "no_mapping_approvals": true,
+  "no_schedule_budget_pacing_writer_changes": true
+}

@@ -1,0 +1,62 @@
+{
+  "observed_at": "2026-10-08T05:28:19.682825+00:00",
+  "target": "staging",
+  "production_accessed": false,
+  "source_http": 0,
+  "database_writes": 0,
+  "payload_by_parser24h": [
+    {
+      "name": "snkrdunk",
+      "parser_version": "snkrdunk-collector-v2",
+      "snapshots": 574,
+      "stored_payload_bytes": 64019612,
+      "stored_row_bytes": 64117192
+    },
+    {
+      "name": "snkrdunk",
+      "parser_version": "snkr-published-discovery-v1",
+      "snapshots": 40,
+      "stored_payload_bytes": 18376113,
+      "stored_row_bytes": 18384353
+    },
+    {
+      "name": "yuyutei",
+      "parser_version": "yuyutei-collector-v3",
+      "snapshots": 2754,
+      "stored_payload_bytes": 101186094,
+      "stored_row_bytes": 101695664
+    },
+    {
+      "name": "yuyutei",
+      "parser_version": "yuyutei-recurring-discovery-v1",
+      "snapshots": 134,
+      "stored_payload_bytes": 4854045,
+      "stored_row_bytes": 4878215
+    }
+  ],
+  "observations24h": {
+    "rows": 2802,
+    "row_bytes": 249889
+  },
+  "events24h": {
+    "rows": 1018,
+    "row_bytes": 1655515
+  },
+  "volume": {
+    "average_mb": 3291.884288309827,
+    "current_mb": 3402.769329590857,
+    "limit_mb": 10000.0,
+    "max_mb": 3402.769329590857,
+    "mount_path": "/var/lib/postgresql/data",
+    "name": "postgres-volume"
+  },
+  "projection_semantics": "Current writer flags OFF, global all-time cap200; no continuous canary savings assumed. Partial calendar days and one-shot image/sitemap envelopes are separate. Payload is physically PostgreSQL-compressed; row bytes overlap payload and cannot be added again. Relation/index deltas and provider growth include overhead and variable WAL; these are not a stable recurring slope.",
+  "unknowns": [
+    "R2 quota",
+    "shared asset bucket footprint",
+    "provider log byte retention",
+    "ephemeral disk headroom",
+    "process-level browser RSS",
+    "future source allocation of607 exact identities"
+  ]
+}
