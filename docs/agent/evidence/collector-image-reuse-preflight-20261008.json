@@ -1,0 +1,11 @@
+{
+  "observed_at": "2026-10-08T13:12:26Z",
+  "target": "staging", "production_accessed": false,
+  "change": "collector_variables: usePreviousImageTag:true, original-digest pinning, automatic rollback to original verified upload, explicit restore; tooling/docs only",
+  "railway_semantics": {"docs": "docs.railway.com/reference/deployments and guides/manage-deployments: redeploy 'will use the source code from the selected deployment'; usePreviousImageTag undocumented", "schema": "deploymentRedeploy(id: String!, usePreviousImageTag: Boolean) - no description", "cli_5.62.1": "railway redeploy sends deploymentRedeploy(id) without the flag", "observed_build_logs_false": {"0edb80c6": "43 lines, cached layers, digest kept", "954d0f1d": "189 lines, full pip rebuild, digest changed"}, "true_behaviour": "to be observed in no-op trials; digest check enforced regardless"},
+  "collector_watch_paths_touched": false, "api_watch_paths_touched": false,
+  "collector_rollout_requested": false, "raw_dependency_migration_requested": false,
+  "database_writes": 0, "source_requests": 0,
+  "local_tests": {"scripts/tests (all)": "see PR", "test_collector_variables": 15},
+  "rollback": "Native revert; no persistent state changes"
+}

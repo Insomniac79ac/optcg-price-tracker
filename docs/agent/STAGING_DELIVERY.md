@@ -220,3 +220,17 @@ head. The verifier now exports its resolved API SHA to repository checks as
 when it is a full SHA, otherwise head. Its API-input continuity check still
 applies. A read-only replay against 852ccdc passed (SNKR runtime 18f66771 on
 1b1b64d).
+
+### Image reuse for settings-only redeploys (2026-10-08, session 6)
+
+Build logs show that `deploymentRedeploy(usePreviousImageTag:false)` schedules a
+build every time. 0edb80c6 used the cached layers and kept its digest; shard-6
+954d0f1d ran a full `pip install` rebuild and changed it.
+`collector_variables` now redeploys with `usePreviousImageTag:true`. Railway's
+docs and CLI do not describe that flag, so its effect is not trusted: every
+digest, marker, schedule, active-deployment and read-back check still applies.
+`--expect-digest` pins the original verified image, and a different active image
+is refused before any change. Any post-redeploy failure restores the previous
+effective values on the original verified upload, re-verifies it and refuses,
+or reports `ROLLBACK FAILED`. `--restore` puts the original image back
+explicitly. The build-log line count is recorded as evidence only.
