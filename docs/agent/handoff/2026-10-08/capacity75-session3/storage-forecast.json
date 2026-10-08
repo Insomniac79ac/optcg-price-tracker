@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-10-08T05:28:19.682825+00:00",
+  "measured": {
+    "volume_bytes": 3402769329.590857,
+    "limit_bytes": 10000000000.0,
+    "recurring_rows_bytes_24h": 171965155,
+    "provider_volume_slope_bytes_per_day_5h39m_window": 232103344.1027555
+  },
+  "model": {
+    "allowance": "20% index/page/TOAST/WAL MODEL allowance (not measured)",
+    "reserve_bytes": 3221225472,
+    "modelled_bytes_per_day": 206358186.0
+  },
+  "payload_plus_20pct": {
+    "d30_bytes": 9593514909.590857,
+    "d90_bytes": 21975006069.59086,
+    "days_to_reserve": 16.35992864566634,
+    "days_to_full": 31.969803564803303
+  },
+  "provider_volume_slope": {
+    "d30_bytes": 10365869652.673521,
+    "d90_bytes": 24292070298.838852,
+    "days_to_reserve": 14.54526737415096,
+    "days_to_full": 28.42367780572974
+  }
+}
