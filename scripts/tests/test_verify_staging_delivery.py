@@ -211,5 +211,12 @@ class SkippedApiBuildTests(unittest.TestCase):
         self.assertEqual((result["mode"], result["sha"], result["watched_changes"]), ("skip", "b" * 40, []))
 
 
+class ComponentEnvTests(unittest.TestCase):
+    def test_resolved_api_sha_is_exported_to_checks(self):
+        with patch("verify_staging_delivery.subprocess.run") as run:
+            run_component_checks(["scripts/verify_snkr_published_discovery_component.py"], "d" * 40)
+        self.assertEqual(run.call_args.kwargs["env"]["STAGING_RESOLVED_API_SHA"], "d" * 40)
+
+
 if __name__ == '__main__':
     unittest.main()

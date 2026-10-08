@@ -208,3 +208,15 @@ class ComponentVerificationTests(unittest.TestCase):
                     self.head, check.SNKR, collect=Mock(return_value=live), sleep=sleep
                 )
             sleep.assert_not_called()
+
+
+class ExpectedApiTests(unittest.TestCase):
+    def test_declared_sha_is_used_verbatim(self):
+        self.assertEqual(check.expected_api("c" * 40, "h" * 40, {"STAGING_RESOLVED_API_SHA": "d" * 40}), "c" * 40)
+
+    def test_merge_uses_resolved_skipped_build_sha(self):
+        self.assertEqual(check.expected_api("merge", "h" * 40, {"STAGING_RESOLVED_API_SHA": "d" * 40}), "d" * 40)
+
+    def test_merge_without_valid_resolution_expects_head(self):
+        self.assertEqual(check.expected_api("merge", "h" * 40, {}), "h" * 40)
+        self.assertEqual(check.expected_api("merge", "h" * 40, {"STAGING_RESOLVED_API_SHA": "bogus"}), "h" * 40)
