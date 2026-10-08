@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, Manrope } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 import { AuthSessionProvider } from "@/components/AuthSessionProvider";
@@ -14,9 +15,9 @@ import { brand } from "@/lib/brand";
 // means a missing/slow weight just falls back to the --font-sans/
 // --font-display/--font-mono system stack in globals.css rather than
 // blocking render - see docs/brand.md "Typography".
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const manrope = localFont({
+  src: "./fonts/Manrope-Variable.ttf",
+  weight: "400 700",
   variable: "--font-manrope",
   display: "swap",
 });

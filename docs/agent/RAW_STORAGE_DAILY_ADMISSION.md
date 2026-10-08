@@ -19,8 +19,11 @@ RAW-before-parse commits, CardPrint identity, and price semantics stay guarded.
 Migration `f9e5b4a8c012` adds only a UTC ledger-time index and a compact scoped
 RAW lookup index. The latter indexes source/parser/URL hash/ID for HTTP 200;
 the writer also compares the entire URL. Building it does not inspect TOAST
-bodies. Lookup examines at most 32 recent scoped bodies, then the oldest
-retained scoped plaintext anchor. Every encoded child has an older plaintext
+bodies. Lookup first selects at most 32 scoped IDs without any body expression.
+A separate statement evaluates markers only for those IDs. If necessary,
+it separately selects the oldest scoped ID and checks that single marker,
+then locks and loads the exact retained plaintext base. This separation
+prevents a sort plan from evaluating body projections across scoped history. Every encoded child has an older plaintext
 same-scope dependency. A page that no longer compresses efficiently remains
 plaintext and becomes a recent anchor. The indexed daily ledger scan depends
 on one day's admitted rows, rather than the lifetime ledger size.
@@ -68,3 +71,10 @@ same-service turns are skipped, timing is not exact), and
 Installed Railway 5.62.1 and GitHub CLI 2.88.0 help verified. Source budgets,
 cadence, pacing, Yuyu four-claim bound, SNKR singleton, PSA10 OFF, production
 boundary and historical evidence are unchanged by this delivery.
+
+The planner-sensitive projection fix is recorded in
+`evidence/raw-storage-query-preflight-20261008.json`. A localhost sorting-plan
+regression counted 202 body expression evaluations with the PR78 lookup and
+at most 34 with the revised lookup in the same 200-row plaintext fixture.
+The existing long encoded-chain test verifies oldest-anchor fallback. This
+query fix does not activate either mode or establish sustained savings.

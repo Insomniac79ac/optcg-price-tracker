@@ -1,0 +1,68 @@
+{
+  "target": "staging",
+  "classification": "GREEN",
+  "observed_at": "2026-10-08T03:18:52.054296+00:00",
+  "before_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+  "schema": "f9e5b4a8c012",
+  "delivery_verified_ci": 37717982746,
+  "strict_artifact_sha256": "a6fa66646d2b556e1ecb36e2ec0f092237fb0a106e3b088961e9b7e562a515ef",
+  "writers_on": 0,
+  "ledger_rows": 16,
+  "original_encoded_protected": 15,
+  "source_requests_added": 0,
+  "source_jobs_manually_invoked": 0,
+  "production_accessed": false,
+  "database_migrations_added": 0,
+  "raw_bodies_rewritten": 0,
+  "price_mapping_history_changes": 0,
+  "index_total_measured_bytes": 3129344,
+  "bug": "A marker projection with ORDER BY/LIMIT can evaluate on all scoped rows below a sort. ID-only LIMIT must precede the marker statement.",
+  "fix": "IDs only -> markers over <=32 IDs -> optional oldest ID/single marker -> exact guarded locked plaintext base. No body predicate on broad history.",
+  "real_postgres_regression": {
+    "fixture": "200 synthetic same-scope plaintext rows, index scan disabled to exercise sorting",
+    "prior_evaluations": 202,
+    "new_max_evaluations_fixture": 34,
+    "old_fails_new_passes": true
+  },
+  "select_only_benchmark": {
+    "rows_per_source": 12,
+    "prior_marker_max_ms": 337.988,
+    "bounded_id_marker_max_ms": 50.343,
+    "semantics": "Different cache states; timing comparison not natural writer or sustained storage proof. Body row bound separately verified on PostgreSQL fixture."
+  },
+  "validation": {
+    "focused_storage_reader_backup_tests_passed": 121,
+    "git_diff_check": "pass"
+  },
+  "rollback": "Keep all writers OFF. Native revert of only this query implementation to retained4995007 under samef9 revision/readers is executable; no bodies or ledger written. No migration is requested; strict schema guard verifies existing f9. No olde8 full delivery replay.",
+  "post_verification": "Native strict delivery artifact, all10 independent natural component receipts, all13 writer flagsOFF and original16 lossless originals. Only then fresh pinned SNKR canary preflight; ordinary nextdue10:32, empty cron is not writer proof.",
+  "safeguards": "No new mode, quota, codec, budget, schedule, pacing, mapping, identity or price semantics. PSA10OFF. Original35175 recovery and3676/3677 completed intents never replayed.",
+  "frontend_delivery_fix": {
+    "failed_ci": 37722437879,
+    "failed_job": 113132955150,
+    "failure": "next/font Google Manrope loader URL-extension regex returned null at loader.js122; source RAW code did not cause the frontend failure.",
+    "fix": "Bundle unmodified upstream Manrope variable TTF with SIL OFL via supported next/font/local; preserve family,400\u2013700 weights, --font-manrope, swap display; no framework update or CI check bypass.",
+    "upstream_commit": "b31870aff700ab7a1d74fa0c6887d95beb9e0037",
+    "font_git_blob": "75274da58537d6123b14f2cd0c355ad4681fc2b3",
+    "font_sha256": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6",
+    "font_bytes": 164700,
+    "license_git_blob": "e271172a9ed0cddc895aabb6509f1c7d880b492d",
+    "license_sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+    "validation": {
+      "next": "16.2.10",
+      "local_node": "24.14.0",
+      "CI_node": "20",
+      "lockfile_install": "npmci exact staging lockfile, cache and all artifacts in/tmp",
+      "webpack_full_build": "passed138 pages with TypeScript",
+      "emitted_font_same_digest": true,
+      "compiled_css_weight_range": "400 700",
+      "frontend_tests_passed": 1639,
+      "script_tests_passed": 21
+    },
+    "docs_checked_at": "2026-10-08",
+    "official_docs": "https://nextjs.org/docs/app/getting-started/fonts",
+    "source_jobs_invoked": 0,
+    "production_accessed": false,
+    "rollback": "Native revert of font-only commit restores previous Google import; font bytes/licenses and failed logs retained. No service config/schema/source history changed."
+  }
+}
