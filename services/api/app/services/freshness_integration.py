@@ -46,6 +46,8 @@ CATEGORIES = {
 MAX_BROWSER_ASSET_REDIRECTS = 8
 BROWSER_ADMISSION_VERSION = 3
 VALIDATION_ADMISSION_VERSION = 1
+CLAIM_CAP_RETRY_COUNT = 6
+CLAIM_CAP_RETRY_SECONDS = 5
 
 # Observed advertising hosts, never the source's application/API or artwork.
 ADVERTISING_HOSTS = frozenset(
@@ -561,21 +563,41 @@ def _drain(
                 if telemetry is not None:
                     telemetry["stopped_reason"] = "runtime_bound"
                 return results
-            ownership_check(session)
-            claims = claim_due(
-                session,
-                source_id,
-                owner,
-                limit=1,
-                lease=timedelta(seconds=mapping_seconds + 60),
-                clock=clock,
-                yuyutei_shard_index=shard_index,
-                supported_kinds={"refresh"}
-                | ({"discovery"} if discovery_runner else set()),
-            )
-            session.commit()
-            if not claims:
-                return results
+            # A full shared claim cap can clear while this scheduled consumer
+            # still has runtime. Retry only that explicit refusal for <=30s;
+            # release the admission transaction before every five-second wait.
+            # Other refusals retain their immediate stop and every retry uses
+            # the original locking, fairness, reservation and ownership guards.
+            for retry in range(CLAIM_CAP_RETRY_COUNT + 1):
+                ownership_check(session)
+                admission_status = {}
+                claims = claim_due(
+                    session,
+                    source_id,
+                    owner,
+                    limit=1,
+                    lease=timedelta(seconds=mapping_seconds + 60),
+                    clock=clock,
+                    yuyutei_shard_index=shard_index,
+                    supported_kinds={"refresh"}
+                    | ({"discovery"} if discovery_runner else set()),
+                    admission_status=admission_status,
+                )
+                session.commit()
+                if claims:
+                    break
+                capped = admission_status.get("reason") == "yuyu_active_claim_cap"
+                if (
+                    shard_index is None
+                    or not capped
+                    or retry == CLAIM_CAP_RETRY_COUNT
+                    or monotonic() + CLAIM_CAP_RETRY_SECONDS + mapping_seconds
+                    > deadline
+                ):
+                    if capped and telemetry is not None:
+                        telemetry["stopped_reason"] = "active_claim_wait_bound"
+                    return results
+                sleep(CLAIM_CAP_RETRY_SECONDS)
             attempt = Attempt(
                 session, claims[0], ownership_check=ownership_check, clock=clock
             )

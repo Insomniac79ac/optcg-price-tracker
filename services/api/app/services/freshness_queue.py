@@ -448,6 +448,7 @@ def claim_due(
     clock: UTCClock = utc_now,
     yuyutei_shard_index: int | None = None,
     supported_kinds: set[str] | None = None,
+    admission_status: dict | None = None,
 ) -> list[Claim]:
     """Reserve a processing chunk. The next chunk can be claimed immediately."""
     if not owner or len(owner) > 128 or not 1 <= limit <= 100 or lease <= timedelta(0):
@@ -459,6 +460,8 @@ def claim_due(
         ):
             raise ValueError("routing requires an existing Yuyu shard index in 0..8")
     budget = _budget(db, source_id)
+    if admission_status is not None:
+        admission_status.clear()
     now = require_utc(clock())
     _roll_window(budget, now)
     _recover_expired(db, budget, now)
@@ -478,6 +481,33 @@ def claim_due(
             )
         )
         limit = min(limit, max(0, YUYU_ACTIVE_CLAIM_LIMIT - active))
+        if limit == 0 and admission_status is not None:
+            # Do not make an empty, unaffordable or wrong-shard consumer wait.
+            # This projection only explains refusal; it cannot grant a claim.
+            pending = select(FreshnessWork.id).where(
+                FreshnessWork.source_id == source_id,
+                FreshnessWork.state == "pending",
+                FreshnessWork.next_due_at <= now,
+                FreshnessWork.estimated_request_cost
+                <= budget.request_limit
+                - budget.used_requests
+                - budget.reserved_requests,
+                or_(
+                    FreshnessWork.retry_not_before_at.is_(None),
+                    FreshnessWork.retry_not_before_at <= now,
+                ),
+            )
+            if supported_kinds is not None:
+                pending = pending.where(FreshnessWork.kind.in_(supported_kinds))
+            if yuyutei_shard_index is not None:
+                pending = pending.where(
+                    or_(
+                        FreshnessWork.kind != "refresh",
+                        FreshnessWork.source_card_mapping_id % 9 == yuyutei_shard_index,
+                    )
+                )
+            if db.scalar(pending.limit(1)) is not None:
+                admission_status["reason"] = "yuyu_active_claim_cap"
     claims: list[Claim] = []
     for _ in range(limit):
         remaining = (
