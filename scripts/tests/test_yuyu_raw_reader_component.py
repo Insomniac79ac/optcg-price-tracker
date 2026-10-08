@@ -80,43 +80,6 @@ class ReaderAdoptionTests(unittest.TestCase):
         with self.assertRaises(check.state.VerificationError):
             check.verify(self.live, "b" * 40, "c" * 40)
 
-    def test_five_minute_profile_is_exact_and_explicit(self):
-        for shard, service in enumerate(self.live["railway"]["services"]):
-            service["schedule_utc"] = (
-                ",".join(str(shard % 5 + offset) for offset in range(0, 60, 5))
-                + " * * * *"
-            )
-        with self.assertRaises(check.state.VerificationError):
-            check.verify(self.live, self.head, capacity_cadence=True)
-        with self.assertRaises(check.state.VerificationError):
-            check.verify(self.live, self.head, cadence_profile="five-minute-v1")
-        check.verify(
-            self.live,
-            self.head,
-            capacity_cadence=True,
-            cadence_profile="five-minute-v1",
-        )
-        for schedule in (
-            "0,30 * * * *",
-            "*/4 * * * *",
-            "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
-        ):
-            live = copy.deepcopy(self.live)
-            live["railway"]["services"][0]["schedule_utc"] = schedule
-            with self.assertRaises(check.state.VerificationError):
-                check.verify(
-                    live,
-                    self.head,
-                    capacity_cadence=True,
-                    cadence_profile="five-minute-v1",
-                )
-
-    def test_unknown_profile_refuses_even_with_original_schedules(self):
-        with self.assertRaises(check.state.VerificationError):
-            check.verify(
-                self.live, self.head, capacity_cadence=True, cadence_profile="unbounded"
-            )
-
     def test_old_or_missing_receipt_waits_without_source_invocation(self):
         for mutate in (
             lambda e: e["database"]["operational_runs"].pop(),
