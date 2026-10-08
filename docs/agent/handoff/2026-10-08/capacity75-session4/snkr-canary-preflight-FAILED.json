@@ -1,0 +1,9 @@
+{
+  "written_at": "2026-10-08T08:43:00Z",
+  "result": "PREFLIGHT_FAILED_writer_stays_OFF",
+  "reason": "snkrdunk-collector runs an unattested GitHub-source rebuild (deployments 0da9274b 07:25Z by interrupted session's variable change, then 518080ff 08:36Z by this session's mandatory OFF change). reported_sha=unknown, so verify_snkr_published_discovery_component.verify() (reported_sha == pinned component) cannot pass. Restoring the attested upload f3286a0a (cliMessage 'Structured RAW health exact commit 1b1b64d', canRedeploy=true) via deploymentRedeploy was denied by the session permission classifier; not worked around.",
+  "lesson": "railway variable set without --skip-deploys on a GitHub-connected collector rebuilds from branch HEAD and drops the exact-commit upload marker. Writer toggles must use --skip-deploys + deploymentRedeploy of the attested upload (deploy_staging_collectors.redeploy_uploaded semantics).",
+  "ledger_rows": 16, "ledger_max_created_at": "2026-10-07T23:06:05Z",
+  "snkr_attempts_since_0500Z": 0, "snkr_raw_since_0725Z": 0,
+  "source_jobs_triggered": 0, "production_accessed": false
+}

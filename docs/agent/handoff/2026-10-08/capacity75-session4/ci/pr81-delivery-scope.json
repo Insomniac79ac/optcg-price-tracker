@@ -1,0 +1,26 @@
+{
+  "base": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "merge": "f4b632d2d37f578f3f707cbee7243549be7ce320",
+  "decision": "full",
+  "files": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml",
+    "docs/agent/STAGING_DELIVERY.md",
+    "docs/agent/STAGING_MISSION.json",
+    "docs/agent/evidence/delivery-scope-preflight-20261008.json",
+    "scripts/staging_delivery_scope.py",
+    "scripts/tests/test_staging_delivery_scope.py",
+    "scripts/tests/test_verify_staging_delivery.py",
+    "scripts/verify_staging_delivery.py"
+  ],
+  "reason": "Non-documentation change",
+  "outside_allowlist": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-delivery.yml",
+    "docs/agent/evidence/delivery-scope-preflight-20261008.json",
+    "scripts/staging_delivery_scope.py",
+    "scripts/tests/test_staging_delivery_scope.py",
+    "scripts/tests/test_verify_staging_delivery.py",
+    "scripts/verify_staging_delivery.py"
+  ]
+}

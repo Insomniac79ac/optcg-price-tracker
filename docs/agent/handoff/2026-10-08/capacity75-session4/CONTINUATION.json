@@ -1,0 +1,22 @@
+{
+  "status": "session_boundary_human_decision",
+  "written_at": "2026-10-08T08:50:00Z",
+  "objective_complete": false,
+  "staging_only": true, "production_accessed": false, "psa10": "OFF",
+  "writers_at_end": "all OFF (SNKR false since 08:36:18Z; shard-0 false; shards 1-8 absent=default false)",
+  "staging_sha": "d42912b6d6d25b5a051d7b4373f027f38441db1b",
+  "component_sha": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "snkr_deployment": {"id": "518080ff-a987-4f23-ba96-2670a1bbfced", "source": "github d42912b6 (unattested)", "reported_sha": "unknown", "attested_upload_to_restore": "f3286a0a-421e-42f1-bc4b-b917a98cad3b"},
+  "first_constraint": "snkr_attestation_lost -> all staging delivery verifies fail; SNKR canary blocked",
+  "human_decision": "permit agent staging collector deploymentRedeploy (denied by permission classifier this session) or perform it manually",
+  "pr_status": {"81": "merged f4b632d; delivery verify failed (api_sha merge vs skipped API build)", "82": "merged d42912b; delivery skip verified 07:22:07Z"},
+  "snkr_test": "preflight_failed; writer OFF; ledger 16",
+  "daily_v1": "not enabled",
+  "snkr_due_window_utc": "10:32-18:02 daily (turns 10:57..17:57)",
+  "quiet_windows_utc": ["2026-10-09T02:00Z/2026-10-09T06:00Z", "SNKR canary: turn-45min .. OFF redeploy SUCCESS", "daily-v1: 24h from activation"],
+  "yuyu_requests": {"per_capture_mean": 55.42, "window_mean_pct": 35.8, "window_peak_pct": 97.2, "windows_over_80": 5, "windows_over_95": 2},
+  "coverage": {"denominator": 4316, "mapped": 2635, "operational": 2630, "fresh_usable": 2398, "both_sources": 334, "zero_source": 1681},
+  "storage": {"volume_mb": 3448.2, "measured_at": "2026-10-08T08:45Z", "forecast": "carried_forward_not_recomputed"},
+  "never_replay": ["snkr intents 3676", "snkr intents 3677", "raw recovery 35175", "yuyu storage canary evidence", "PR77-82 deliveries"],
+  "no_source_jobs_manually_invoked": true, "no_mapping_approvals": true
+}
