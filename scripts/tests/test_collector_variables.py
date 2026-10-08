@@ -27,7 +27,7 @@ def node(latest):
 class Harness:
     """Fake Railway: active upload clone, an older redeployable upload, a GitHub build."""
 
-    def __init__(self, stage_starts_deploy=False, clone_image=IMAGE, readback="true"):
+    def __init__(self, stage_starts_deploy=False, clone_image=IMAGE, readback=None, images=None):
         self.deployments = {
             "active": deployment("active"),
             "upload": deployment("upload", "REMOVED", redeploy=True),
@@ -36,8 +36,11 @@ class Harness:
         }
         self.latest = "active"
         self.stage_starts_deploy = stage_starts_deploy
-        self.clone_image = clone_image
+        # One image per redeploy, in order; default reuses the source image.
+        self.images = list(images) if images else [clone_image]
         self.readback = readback
+        self.vars = {"RAW_DICTIONARY_STORAGE_ENABLED": "false", "RAW_DICTIONARY_STORAGE_MODE": None, "APP_ENV": None}
+        self.queries = []
         self.commands = []
         self.redeployed = []
 
@@ -56,22 +59,37 @@ class Harness:
             return Mock(returncode=0, stdout="      --skip-deploys   Skip triggering deploys")
         if self.stage_starts_deploy:
             self.latest = "github"
+        for item in command:
+            key, sep, value = item.partition("=")
+            if sep and key in self.vars:
+                self.vars[key] = value
         return Mock(returncode=0, stdout="")
 
     def railway(self, query):
+        self.queries.append(query)
+        if "buildLogs" in query:
+            return {"buildLogs": []}
         source = re.search(r'deploymentRedeploy\(id:"([^"]+)"', query).group(1)
         self.redeployed.append(source)
-        self.deployments["clone"] = deployment("clone", image=self.clone_image)
-        self.latest = "clone"
-        return {"deploymentRedeploy": {"id": "clone"}}
+        name = f"clone{len(self.redeployed)}"
+        image = self.images[min(len(self.redeployed), len(self.images)) - 1]
+        self.deployments[name] = deployment(name, image=image)
+        self.latest = name
+        return {"deploymentRedeploy": {"id": name}}
 
-    def change(self, assignments=None):
+    def variables(self, sid):
+        if self.readback is not None:
+            return {**self.vars, "RAW_DICTIONARY_STORAGE_ENABLED": self.readback}
+        return dict(self.vars)
+
+    def change(self, assignments=None, **kw):
         return cv.change(
             "snkrdunk-collector", assignments or {"RAW_DICTIONARY_STORAGE_ENABLED": "true"},
             COMMIT, inspect=self.inspect, read=self.read, run=self.run, railway=self.railway,
-            variables=lambda sid: {"RAW_DICTIONARY_STORAGE_ENABLED": self.readback},
-            listing=lambda sid: ["active", "github", "upload"],
-            sleep=lambda s: None)
+            variables=self.variables, listing=self.listing, sleep=lambda s: None, **kw)
+
+    def listing(self, sid):
+        return [k for k in reversed(list(self.deployments)) if k not in ("active",)] + ["active"]
 
 
 class AssignmentTests(unittest.TestCase):
@@ -100,7 +118,8 @@ class ChangeTests(unittest.TestCase):
         self.assertEqual(stage[0][-1], "RAW_DICTIONARY_STORAGE_ENABLED=true")
         # Active clone is not redeployable; the older marked upload of the same image is.
         self.assertEqual(fake.redeployed, ["upload"])
-        self.assertEqual((receipt["deployment"], receipt["image_digest"]), ("clone", IMAGE))
+        self.assertEqual((receipt["deployment"], receipt["image_digest"]), ("clone1", IMAGE))
+        self.assertIn("usePreviousImageTag:true", next(q for q in fake.queries if "deploymentRedeploy" in q))
         self.assertEqual(receipt["marker"], cv.MARKER + COMMIT)
 
     def test_github_rebuild_is_never_a_source_or_active(self):
@@ -137,6 +156,58 @@ class ChangeTests(unittest.TestCase):
         fake.deployments["upload"]["canRedeploy"] = False
         with self.assertRaises(cv.state.VerificationError):
             fake.change()
+
+
+class ImageReuseTests(unittest.TestCase):
+    ENABLE = {"RAW_DICTIONARY_STORAGE_ENABLED": "true", "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+              "APP_ENV": "staging"}
+    REBUILT = "sha256:" + "9" * 64
+
+    def test_reused_image_passes_and_records_previous_values(self):
+        fake = Harness()
+        receipt = fake.change(self.ENABLE, expect_digest=IMAGE)
+        self.assertEqual(receipt["image_digest"], IMAGE)
+        self.assertEqual(receipt["original_digest"], IMAGE)
+        self.assertEqual(receipt["previous_values"]["RAW_DICTIONARY_STORAGE_ENABLED"], "false")
+        self.assertEqual(fake.vars, self.ENABLE)
+
+    def test_rebuilt_image_is_refused_and_rolled_back_to_original(self):
+        fake = Harness(images=[self.REBUILT, IMAGE])
+        with self.assertRaises(cv.state.VerificationError) as caught:
+            fake.change(self.ENABLE, expect_digest=IMAGE)
+        receipt = caught.exception.receipt
+        self.assertTrue(receipt["rollback_ok"])
+        self.assertEqual((receipt["refused_digest"], receipt["rollback_digest"]), (self.REBUILT, IMAGE))
+        # Writer back OFF on the original verified upload, never on the rebuilt clone.
+        self.assertEqual(fake.vars["RAW_DICTIONARY_STORAGE_ENABLED"], "false")
+        self.assertEqual(fake.vars["RAW_DICTIONARY_STORAGE_MODE"], "canary")
+        self.assertEqual(fake.redeployed, ["upload", "upload"])
+        self.assertEqual(fake.deployments[fake.latest]["meta"]["imageDigest"], IMAGE)
+
+    def test_failed_rollback_is_reported_loudly(self):
+        fake = Harness(images=[self.REBUILT, self.REBUILT])
+        with self.assertRaises(cv.state.VerificationError) as caught:
+            fake.change(self.ENABLE, expect_digest=IMAGE)
+        self.assertIn("ROLLBACK FAILED", str(caught.exception))
+        self.assertFalse(caught.exception.receipt["rollback_ok"])
+
+    def test_active_image_other_than_original_is_refused_before_any_change(self):
+        fake = Harness()
+        with self.assertRaises(cv.state.VerificationError):
+            fake.change(self.ENABLE, expect_digest=self.REBUILT)
+        self.assertEqual(fake.redeployed, [])
+        self.assertEqual([c for c in fake.commands if c[-1] != "--help"], [])
+
+    def test_restore_puts_original_digest_back_over_a_rebuilt_active(self):
+        fake = Harness()
+        fake.deployments["active"]["meta"]["imageDigest"] = self.REBUILT
+        off = {"RAW_DICTIONARY_STORAGE_ENABLED": "false", "RAW_DICTIONARY_STORAGE_MODE": "canary",
+               "APP_ENV": "staging"}
+        receipt = cv.restore("snkrdunk-collector", off, COMMIT, IMAGE, inspect=fake.inspect, read=fake.read,
+                             run=fake.run, railway=fake.railway, variables=fake.variables,
+                             listing=fake.listing, sleep=lambda s: None)
+        self.assertEqual((receipt["source_deployment"], receipt["image_digest"]), ("upload", IMAGE))
+        self.assertEqual(fake.vars, off)
 
 
 class OnlyPathTests(unittest.TestCase):
