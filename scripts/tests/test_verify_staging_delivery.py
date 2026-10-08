@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from io import StringIO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks
+from verify_staging_delivery import validate_state, get, state, wait_for_delivery, run_component_checks, decide_api, resolve_api_sha
 
 
 class VerificationTests(unittest.TestCase):
@@ -159,6 +159,56 @@ class VerificationTests(unittest.TestCase):
                 history = get(v.API + '/prints/1/prices')
                 v.require(not {7} & {p['id'] for p in history['observations']}, 'Sale observation exposed in public history')
         self.assertEqual(opener.open.call_count, 1)
+
+
+class SkippedApiBuildTests(unittest.TestCase):
+    merge, previous = "m" * 40, "p" * 40
+    patterns = ["services/api/**", "deploy/railway/api.Dockerfile"]
+    docs = ["docs/agent/handoff/x.md"]
+
+    def decide(self, changed, status, active, unchanged=True):
+        return decide_api(self.merge.replace("m", "a"), changed, self.patterns, status,
+                          active, lambda sha: unchanged)
+
+    def test_skipped_and_unchanged_passes_with_previous_sha(self):
+        self.assertEqual(self.decide(self.docs, "SKIPPED", "b" * 40), ("skip", "b" * 40))
+
+    def test_expected_build_missing_fails(self):
+        with self.assertRaises(state.VerificationError):
+            self.decide(["services/api/app/main.py"], "SKIPPED", "b" * 40)
+        with self.assertRaises(state.VerificationError):
+            self.decide(["deploy/railway/api.Dockerfile"], "SKIPPED", "b" * 40)
+
+    def test_unexpected_build_fails(self):
+        with self.assertRaises(state.VerificationError):
+            self.decide(self.docs, "SUCCESS", "a" * 40)
+        with self.assertRaises(state.VerificationError):
+            self.decide(self.docs, "SKIPPED", "a" * 40)
+
+    def test_skipped_but_watched_tree_differs_fails(self):
+        with self.assertRaises(state.VerificationError):
+            self.decide(self.docs, "SKIPPED", "b" * 40, unchanged=False)
+
+    def test_expected_build_waits_for_merge_sha(self):
+        self.assertEqual(self.decide(["services/api/app/main.py"], "BUILDING", "b" * 40), ("build", "a" * 40))
+
+    def test_undeterminable_diff_or_patterns_demand_a_build(self):
+        self.assertEqual(self.decide(None, None, "b" * 40), ("build", "a" * 40))
+        self.assertEqual(decide_api("a" * 40, self.docs, [], None, "b" * 40, lambda s: True), ("build", "a" * 40))
+        self.assertEqual(decide_api("a" * 40, self.docs, ["!docs/**"], None, "b" * 40, lambda s: True), ("build", "a" * 40))
+
+    def test_no_railway_decision_yet_is_pending_until_deadline(self):
+        self.assertEqual(self.decide(self.docs, None, "b" * 40), ("pending", None))
+        live = {"railway": {"services": [{"name": "optcg-price-tracker", "git_sha": "b" * 40}]}}
+        with patch.object(state, "sanitize", side_effect=lambda e: e):
+            with self.assertRaises(state.VerificationError):
+                resolve_api_sha("a" * 40, 0, collect=lambda: live, status=lambda m: None,
+                                patterns=lambda: self.patterns, changed=lambda m: self.docs,
+                                unchanged=lambda m, w: (lambda s: True), clock=lambda: 1, sleep=Mock())
+            result = resolve_api_sha("a" * 40, 10, collect=lambda: live, status=lambda m: "SKIPPED",
+                                     patterns=lambda: self.patterns, changed=lambda m: self.docs,
+                                     unchanged=lambda m, w: (lambda s: True), clock=lambda: 1, sleep=Mock())
+        self.assertEqual((result["mode"], result["sha"], result["watched_changes"]), ("skip", "b" * 40, []))
 
 
 if __name__ == '__main__':

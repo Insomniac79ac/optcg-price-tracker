@@ -143,7 +143,7 @@ jobs:
           v = m['deployment_verification']
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],
-                          '--api-sha', os.environ['EXPECTED'] if v['api_sha'] == 'merge' else v['api_sha'], '--revision', v['revision'],
+                          '--api-sha', v['api_sha'], '--revision', v['revision'],
                           '--output', 'docs/agent/evidence/latest-staging-delivery.json',
                           '--scope', 'docs/agent/evidence/latest-delivery-scope.json', *extra], check=True)
           PY

@@ -198,7 +198,7 @@ jobs:
           v = m['deployment_verification']
           extra = [arg for check in v.get('checks', []) for arg in ('--check', check)]
           subprocess.run(['python', 'scripts/verify_staging_delivery.py', '--expected', os.environ['EXPECTED'],
-                          '--api-sha', os.environ['EXPECTED'] if v['api_sha'] == 'merge' else v['api_sha'], '--revision', v['revision'],
+                          '--api-sha', v['api_sha'], '--revision', v['revision'],
                           '--output', 'docs/agent/evidence/latest-staging-delivery.json',
                           '--scope', 'docs/agent/evidence/latest-delivery-scope.json', *extra], check=True)
           PY
@@ -283,6 +283,7 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_staging_policy.py -v
       - run: python -m unittest discover -s scripts/tests -p test_verify_staging_delivery.py -v
       - run: python -m unittest discover -s scripts/tests -p test_staging_delivery_scope.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_collector_variables.py -v
       - run: python -m unittest discover -s scripts/tests -p test_operational_health.py -v
       - run: python -m unittest discover -s scripts/tests -p test_probe_staging_credentials.py -v
       - run: python -m unittest discover -s scripts/tests -p test_apply_staging_raw_dependency.py -v

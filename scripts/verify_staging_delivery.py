@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, destination-pinned post-merge verification; no deploy or job triggers."""
 import argparse
+import fnmatch
 from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
@@ -209,6 +210,108 @@ def browser_check():
         return results
 
 
+API_SERVICE = "5290becf-6956-4c5c-ab16-01d865587e07"
+SKIPPED = "SKIPPED"
+
+
+def watched(path, patterns):
+    """Railway watch-pattern match. Over-matching only demands a build (fail closed)."""
+    for pattern in patterns:
+        pattern = pattern.lstrip("/")
+        if pattern.endswith("/**") and path.startswith(pattern[:-2]):
+            return True
+        if fnmatch.fnmatchcase(path, pattern):
+            return True
+    return False
+
+
+def decide_api(merge, changed, patterns, merge_status, active_sha, unchanged):
+    """Expected API source for a merge whose manifest says api_sha=merge.
+
+    changed: files in merge^1..merge, or None if undeterminable.
+    merge_status: Railway status of the API deployment for the merge commit,
+    or None if Railway has not recorded one yet.
+    unchanged(sha): True when every watched path is identical in sha and merge.
+    Returns ("build", merge), ("skip", previous_sha) or ("pending", None).
+    """
+    determinable = (changed is not None and patterns
+                    and not any(p.startswith("!") for p in patterns))
+    must_build = not determinable or any(watched(f, patterns) for f in changed)
+    if must_build:
+        require(merge_status != SKIPPED, "Expected API build missing: Railway skipped the merge")
+        return "build", merge
+    if merge_status is None:
+        return "pending", None
+    require(merge_status == SKIPPED and active_sha != merge,
+            "Unexpected API build for a change outside its watch paths")
+    require(bool(re.fullmatch("[0-9a-f]{40}", active_sha or "")) and unchanged(active_sha),
+            "Skipped API source is not the verified previous build")
+    return "skip", active_sha
+
+
+def api_merge_status(merge, railway=None):
+    railway = railway or state.railway
+    rows = railway(
+        f'query {{ deployments(first:20, input:{{projectId:"{state.PROJECT}", '
+        f'environmentId:"{state.ENVIRONMENT}", serviceId:"{API_SERVICE}"}}) '
+        f'{{ edges {{ node {{ status createdAt meta }} }} }} }}'
+    )["deployments"]["edges"]
+    for row in rows:  # newest first
+        meta = row["node"].get("meta") or {}
+        meta = json.loads(meta) if isinstance(meta, str) else meta
+        if meta.get("commitHash") == merge:
+            return row["node"]["status"]
+    return None
+
+
+def api_watch_patterns(railway=None):
+    railway = railway or state.railway
+    row = railway(
+        f'query {{ serviceInstance(environmentId:"{state.ENVIRONMENT}", '
+        f'serviceId:"{API_SERVICE}") {{ watchPatterns }} }}'
+    )["serviceInstance"]
+    return list(row.get("watchPatterns") or [])
+
+
+def changed_files(merge):
+    try:
+        out = subprocess.check_output(
+            ["git", "diff", "--name-only", "--no-renames", merge + "^1", merge],
+            cwd=state.ROOT, text=True)
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    files = [line for line in out.splitlines() if line]
+    return files or None
+
+
+def tree_unchanged(merge, patterns):
+    def check(sha):
+        paths = [p.lstrip("/").removesuffix("/**") for p in patterns]
+        result = subprocess.run(["git", "diff", "--quiet", sha, merge, "--", *paths],
+                                cwd=state.ROOT)
+        return result.returncode == 0
+    return check
+
+
+def resolve_api_sha(merge, deadline, *, collect=None, status=api_merge_status,
+                    patterns=api_watch_patterns, changed=changed_files, unchanged=tree_unchanged,
+                    clock=time.monotonic, sleep=time.sleep):
+    """Resolve manifest api_sha=merge, accepting a legitimately skipped API build."""
+    collect = collect or state.collect_live
+    watch = patterns()
+    files = changed(merge)
+    while True:
+        evidence = state.sanitize(collect())
+        api = next(s for s in evidence["railway"]["services"] if s["name"] == "optcg-price-tracker")
+        mode, sha = decide_api(merge, files, watch, status(merge), api["git_sha"],
+                               unchanged(merge, watch))
+        if mode != "pending":
+            return {"mode": mode, "sha": sha, "watch_patterns": watch,
+                    "watched_changes": sorted(f for f in files or [] if watched(f, watch))}
+        require(clock() < deadline, "Railway recorded no API deployment decision for the merge")
+        sleep(min(15, max(0, deadline - clock())))
+
+
 def wait_for_delivery(expected, api_sha, deadline, *, collect=None, clock=time.monotonic,
                       sleep=time.sleep):
     """Native API and frontend builds finish independently of collector upload."""
@@ -240,9 +343,17 @@ def main():
     parser.add_argument("--scope", type=Path, help="Delivery scope decision evidence to embed")
     parser.add_argument("--check", action="append", default=[], help="Repository Python verification script; runs without shell interpolation")
     args = parser.parse_args()
-    require(all(re.fullmatch("[0-9a-f]{40}", sha) for sha in (args.expected, args.api_sha)), "Full expected source SHAs required")
+    require(re.fullmatch("[0-9a-f]{40}", args.expected)
+            and (args.api_sha == "merge" or re.fullmatch("[0-9a-f]{40}", args.api_sha)),
+            "Full expected source SHAs required")
     scope = json.loads(args.scope.read_text()) if args.scope else None
     deadline = time.monotonic() + args.wait_seconds
+    api_expectation = {"mode": "declared", "sha": args.api_sha}
+    if args.api_sha == "merge":
+        # A build Railway legitimately skipped keeps its verified previous source;
+        # a missing expected build or an unexpected build still fails.
+        api_expectation = resolve_api_sha(args.expected, deadline)
+        args.api_sha = api_expectation["sha"]
     evidence = wait_for_delivery(args.expected, args.api_sha, deadline)
     version = get(WEB + "/api/version")
     require(version["web"].get("source_commit") == args.expected,
@@ -276,6 +387,7 @@ def main():
               "state_evidence_sha256": snapshot["evidence"]["sha256"],
               "get_timeout_retries": {"count": len(timeout_retries), "requests": timeout_retries},
               "delivery_scope": scope,
+              "api_expectation": api_expectation,
               "production_accessed": False}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

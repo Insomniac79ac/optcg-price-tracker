@@ -176,3 +176,38 @@ errors, redirects, content and invariant failures are never retried. Retries are
 recorded as `get_timeout_retries` in the delivery receipt. PR80's CI verify step
 failed on one such timeout among ~452 sale-exclusion GETs; an identical local
 rerun passed at 2026-10-08T05:53:31Z.
+
+## Collector variables and skipped API builds (2026-10-08, session 5)
+
+A plain `railway variable set` on a GitHub-connected collector rebuilds it from
+the branch head and replaces the verified `railway up` upload, losing its
+exact-commit marker (snkrdunk-collector 0da9274b at 07:25Z and 518080ff at
+08:36Z). The verified upload f3286a0a was restored at 09:10Z (18f66771).
+`scripts/collector_variables.py` is now the only supported path. It accepts
+only the RAW writer keys and `APP_ENV=staging`. It requires the active
+deployment to carry the exact-commit marker. It stages with `--skip-deploys`
+and proves no deployment started. It then redeploys the newest marked,
+redeployable deployment with the identical image digest, because Railway
+refuses to redeploy the active one. Finally it waits for SUCCESS and checks
+schedule, start command, digest and read-back values. A repository scan test
+fails if any other tooling sets Railway variables. The admin password-hash
+helper is exempt only while it sets nothing but `ADMIN_LOGIN_*` keys with
+`--skip-deploys`, which never triggers a rebuild. An explicit collector refusal
+in it is deferred to the next collector release, because `services/api` is a
+collector image input and editing it now would break verified-upload
+continuity. `scripts/snkr_storage_canary.py` is the re-pinned canary helper on
+this path.
+
+Manifests may keep `api_sha: merge`. The verifier resolves it from the merge
+diff, the API service's Railway watch patterns, and Railway's record for the
+merge commit:
+
+- A watched change requires a build at the merge. A SKIPPED record fails as a
+  missing build.
+- An unwatched change requires a SKIPPED record. The active API must stay on
+  its previous SHA, with the watched tree byte-identical to the merge; any
+  build at the merge fails as unexpected.
+- An undeterminable diff, empty patterns or negated patterns demand a build.
+
+The decision is recorded as `api_expectation` in the delivery receipt. PR81
+(f4b632d) replays as `skip` on 1b1b64d.
