@@ -1,0 +1,40 @@
+{
+  "target": "staging",
+  "classification": "GREEN",
+  "observed_at": "2026-10-08T03:18:52.054296+00:00",
+  "before_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+  "schema": "f9e5b4a8c012",
+  "delivery_verified_ci": 37717982746,
+  "strict_artifact_sha256": "a6fa66646d2b556e1ecb36e2ec0f092237fb0a106e3b088961e9b7e562a515ef",
+  "writers_on": 0,
+  "ledger_rows": 16,
+  "original_encoded_protected": 15,
+  "source_requests_added": 0,
+  "source_jobs_manually_invoked": 0,
+  "production_accessed": false,
+  "database_migrations_added": 0,
+  "raw_bodies_rewritten": 0,
+  "price_mapping_history_changes": 0,
+  "index_total_measured_bytes": 3129344,
+  "bug": "A marker projection with ORDER BY/LIMIT can evaluate on all scoped rows below a sort. ID-only LIMIT must precede the marker statement.",
+  "fix": "IDs only -> markers over <=32 IDs -> optional oldest ID/single marker -> exact guarded locked plaintext base. No body predicate on broad history.",
+  "real_postgres_regression": {
+    "fixture": "200 synthetic same-scope plaintext rows, index scan disabled to exercise sorting",
+    "prior_evaluations": 202,
+    "new_max_evaluations_fixture": 34,
+    "old_fails_new_passes": true
+  },
+  "select_only_benchmark": {
+    "rows_per_source": 12,
+    "prior_marker_max_ms": 337.988,
+    "bounded_id_marker_max_ms": 50.343,
+    "semantics": "Different cache states; timing comparison not natural writer or sustained storage proof. Body row bound separately verified on PostgreSQL fixture."
+  },
+  "validation": {
+    "focused_storage_reader_backup_tests_passed": 121,
+    "git_diff_check": "pass"
+  },
+  "rollback": "Keep all writers OFF. Native revert of only this query implementation to retained4995007 under samef9 revision/readers is executable; no bodies or ledger written. No migration is requested; strict schema guard verifies existing f9. No olde8 full delivery replay.",
+  "post_verification": "Native strict delivery artifact, all10 independent natural component receipts, all13 writer flagsOFF and original16 lossless originals. Only then fresh pinned SNKR canary preflight; ordinary nextdue10:32, empty cron is not writer proof.",
+  "safeguards": "No new mode, quota, codec, budget, schedule, pacing, mapping, identity or price semantics. PSA10OFF. Original35175 recovery and3676/3677 completed intents never replayed."
+}
