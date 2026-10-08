@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Make verified-upload redeploys the only path for collector variable changes; verify legitimately skipped API builds against their previous verified SHA",
+  "mission": "Fix forward PR83: component checks use the delivery verifier's resolved API source for api_sha=merge",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,27 +20,21 @@
   "impacts": [
     {
       "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        ".github/workflows/staging-verify.yml",
         "docs/agent/STAGING_DELIVERY.md",
-        "docs/agent/evidence/safe-collector-variables-preflight-20261008.json",
-        "scripts/collector_variables.py",
-        "scripts/snkr_storage_canary.py",
-        "scripts/tests/test_collector_variables.py",
+        "scripts/tests/test_snkr_discovery_component.py",
         "scripts/tests/test_verify_staging_delivery.py",
+        "scripts/verify_snkr_published_discovery_component.py",
         "scripts/verify_staging_delivery.py"
       ],
       "effects": [
         "application",
         "tests",
-        "documentation",
-        "infrastructure"
+        "documentation"
       ],
-      "reason": "Tooling/CI only. New scripts/collector_variables.py stages collector variables with --skip-deploys and redeploys the identical verified upload (marker + image digest), refusing GitHub rebuilds; a scan test refuses any other variable setter. Re-pinned scripts/snkr_storage_canary.py uses it with every original check plus head/upload code identity. Verifier resolves api_sha=merge from watch patterns and Railway's merge record: skipped-and-unchanged passes on the previous SHA; missing expected build or unexpected build fails. No services/, packages/ or deploy/ change: no collector, API or market-index rebuild; no schema, cron, budget, pacing, claim or writer change; no collector rollout requested."
+      "reason": "Verification scripts only. verify_staging_delivery exports its resolved API SHA to repository checks; the SNKR component check uses it for api_sha=merge with continuity unchanged. No services/, packages/, deploy/ or workflow change: no Railway build, collector rollout, DDL, provider variable, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "2a7381e2d8ea938dac56c7fa6453398710b3521acf13d640aba31825dfea008d",
+  "diff_sha256": "f804c232e71ff3d61392ab4332e943545eb82b8744d80b85348c959928a24be5",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -51,53 +45,5 @@
     "snkr_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_reader_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_capacity_cadence": true
-  },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        {
-          "name": "Staging Postgres (read-only fingerprint, no migration)",
-          "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
-          "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
-          "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
-        },
-        {
-          "name": "Staging API (expected SKIPPED, stays 1b1b64d)",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-        }
-      ],
-      "routes": [
-        "GitHub Actions staging-automerge delivery job; read-only staging verification GETs"
-      ],
-      "dependencies": [
-        "Collectors stay on verified 1b1b64d uploads (SNKR 18f66771 restored 09:10Z); continuity checks pinned to 1b1b64d"
-      ],
-      "deployment_impact": "Vercel frontend build of unchanged app code only. No Railway service watch path touched, so API, market-index and collectors are expected SKIPPED. No collector upload, DDL, or provider variable/cron/budget/writer mutation.",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 45
-    },
-    "recovery": {
-      "artifact": "d42912b6d6d25b5a051d7b4373f027f38441db1b",
-      "procedure": "Native revert of this PR restores the previous workflows, verifier and tooling. No persistent state, collector image, schema or provider configuration changes, so no data restore is applicable.",
-      "trigger": "Any Railway service builds for this merge, verifier accepts a skip while watched paths changed, collector variable tool changes a variable without verified-upload redeploy, or engineering-gate failure",
-      "backup": "Not applicable: no database or provider state changes.",
-      "validation": [
-        "scripts/tests/test_collector_variables.py",
-        "scripts/tests/test_verify_staging_delivery.py",
-        "docs/agent/evidence/safe-collector-variables-preflight-20261008.json"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/verify_snkr_published_discovery_component.py",
-        "scripts/verify_yuyu_raw_reader_component.py"
-      ],
-      "observation_window": "Delivery verification for this merge (api_expectation=skip on 1b1b64d), then the next natural turn of every collector on its verified 1b1b64d upload with unchanged schedules, flags and budgets"
-    }
   }
 }
