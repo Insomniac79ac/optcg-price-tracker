@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Bound RAW body evaluation before storage canary activation; keep every writer OFF",
+  "mission": "Bound RAW body evaluation and repair Manrope build delivery; every writer remains OFF",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -32,9 +32,23 @@
         "staging_deployment"
       ],
       "reason": "Fix planner-sensitive marker projection using bounded ID selection before body inspection. Proven sorting-plan regression old202/new<=34. Keep writersOFF/f9/codec/default200/daily bounds, no schema or RAW/history writes, preserve all source scheduling/admission/identity safeguards."
+    },
+    {
+      "files": [
+        "apps/web/src/app/layout.tsx",
+        "apps/web/src/app/fonts/Manrope-Variable.ttf",
+        "apps/web/src/app/fonts/Manrope-OFL.txt",
+        "apps/web/src/app/fonts/README.md"
+      ],
+      "effects": [
+        "application",
+        "documentation",
+        "staging_deployment"
+      ],
+      "reason": "Repair observed unrelated frontend delivery blocker with the same unmodified licensed Manrope font bundled locally. Preserves typeface/weights/variable/swap and every CI/build/type check; <=170KiB asset pluslicense. No pricing, identity, schema/source or service configuration change."
     }
   ],
-  "diff_sha256": "b03838f6aca01d56afe8460e6df8948108db0c520bd31d8938a9d240299c0085",
+  "diff_sha256": "836dc4c2f34c373676e149a6d4489bd7db901ac4af64887c6d8c27d7b78cdb5f",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
