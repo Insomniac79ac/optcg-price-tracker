@@ -1,0 +1,72 @@
+{
+ "snkrdunk-collector": {
+  "deployment": "c7156df2-557b-43dd-b454-eb7e2e7dd746",
+  "status": "SUCCESS",
+  "digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+  "match": true,
+  "schedule": "27,57 * * * *"
+ },
+ "yuyutei-collector-shard-0": {
+  "deployment": "6905c9bd-ef18-459a-9683-5aa5d2cdb6f7",
+  "status": "SUCCESS",
+  "digest": "sha256:db319645658a746bd5e7544b46160a6ff86062d21ab8e13f7ef3765832f8a090",
+  "match": true,
+  "schedule": "0,30 * * * *"
+ },
+ "yuyutei-collector-shard-1": {
+  "deployment": "34e7d71a-d33c-4631-8b72-cfcf42ca5349",
+  "status": "SUCCESS",
+  "digest": "sha256:aa73054ac904aec1fb4b993c9524ef005494f8603fe7696aa73c5cfb5eebccb7",
+  "match": true,
+  "schedule": "3,33 * * * *"
+ },
+ "yuyutei-collector-shard-2": {
+  "deployment": "f990d4a1-bb23-4f09-a4ee-170c37c337d8",
+  "status": "SUCCESS",
+  "digest": "sha256:67dcc4fbda22eb3347441d38b988fba663742fe11bfe65c55f57761de0188c92",
+  "match": true,
+  "schedule": "6,36 * * * *"
+ },
+ "yuyutei-collector-shard-3": {
+  "deployment": "f695fae8-522a-488f-aaa0-b5b143d40600",
+  "status": "SUCCESS",
+  "digest": "sha256:388d56bfb72040a29ed5970314a24395b9bfcd122ad04a1f548f0882ae609668",
+  "match": true,
+  "schedule": "9,39 * * * *"
+ },
+ "yuyutei-collector-shard-4-v2": {
+  "deployment": "d4c20ffd-9d50-4ad7-a547-551efe0e7d23",
+  "status": "SUCCESS",
+  "digest": "sha256:94987582cc48f438ccafe2aeb6018697a5ea9a813947f35fe1ec43cc76a0f228",
+  "match": true,
+  "schedule": "12,42 * * * *"
+ },
+ "yuyutei-collector-shard-5": {
+  "deployment": "1a91d2fe-60b9-4e66-a45b-65b6bb5fd321",
+  "status": "SUCCESS",
+  "digest": "sha256:a2fcc0a40136e31a83237af0648cb483c2068779ca8f30682965be85c08baec9",
+  "match": true,
+  "schedule": "15,45 * * * *"
+ },
+ "yuyutei-collector-shard-6": {
+  "deployment": "d73332cc-d84c-4440-90cd-cc91f2a4240a",
+  "status": "SUCCESS",
+  "digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+  "match": true,
+  "schedule": "18,48 * * * *"
+ },
+ "yuyutei-collector-shard-7": {
+  "deployment": "e0473070-c327-4670-9582-b4dc609ba469",
+  "status": "SUCCESS",
+  "digest": "sha256:8f0649eb17395357a76430a48f55bc786154c7a18f5532e10c045cd38190d7a6",
+  "match": true,
+  "schedule": "21,51 * * * *"
+ },
+ "yuyutei-collector-shard-8": {
+  "deployment": "50613647-7947-414d-bf9d-df0d960697a6",
+  "status": "SUCCESS",
+  "digest": "sha256:2040bf9d501fa214e3c816925edf8eb224cdc0602dc2a2d6bc31695769fc787d",
+  "match": true,
+  "schedule": "24,54 * * * *"
+ }
+}

@@ -1,0 +1,20 @@
+{
+  "status": "observation_window",
+  "written_at": "2026-10-08T14:20:00Z",
+  "objective_complete": false,
+  "staging_only": true, "production_accessed": false, "psa10": "OFF",
+  "daily_v1": {"active": true, "services": 10, "first_activation": "2026-10-08T13:45:05Z", "last_activation": "2026-10-08T13:56:11Z", "window_end_utc": "2026-10-09T13:56:11Z", "window_end_myt": "2026-10-09T21:56:11+08:00", "rollback": "tools/rollout.py off (restore original digests, ENABLED=false MODE=canary)"},
+  "writers": "ON daily-v1 on all 10 (deliberate activation); APP_ENV=staging on all 10",
+  "collector_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "staging_sha": "7aa130b620b0d7455d60f3764d98776b26396e18",
+  "pr87": "merged 7aa130b; delivery green 13:40:10Z; no collector redeploy",
+  "image_reuse": "usePreviousImageTag:true observed: 0 build-log lines, digests unchanged (trials shard-6, shard-1; 10 activations)",
+  "first_turns": {"snkr_1357": {"encoded": 34, "lossless": true, "runtime_s": 166, "baseline_avg_s": 172, "denials": 0, "expired_leases": 0}, "yuyu": "no writer-eligible refresh turn yet; next due from 2026-10-08T19:00Z; verify first"},
+  "ledger_rows": 102, "recovery_selection": "ledger ids > 37711",
+  "pre_activation_storage": {"volume_mb": 3477.68, "db_bytes": 2641794751, "raw_bytes": 2492243968, "at": "2026-10-08T13:43Z"},
+  "quiet_windows_utc": ["2026-10-09T02:00Z/2026-10-09T06:00Z", "until 2026-10-09T13:56:11Z (daily-v1, rollback only)", "services/api changes (onchain plan) are collector releases: earliest 2026-10-09T13:56:11Z if 24h evidence passes"],
+  "coverage": {"mapped": 2635, "operational": 2630, "fresh_usable": 2398, "both_sources": 334, "zero_source": 1681},
+  "next_session_earliest": "2026-10-08T19:30Z for Yuyu first-turn check; full evaluation after 2026-10-09T13:56:11Z",
+  "never_replay": ["snkr intents 3676", "snkr intents 3677", "raw recovery 35175", "yuyu storage canary evidence", "PR77-87 deliveries"],
+  "no_source_jobs_manually_invoked": true, "no_mapping_approvals": true
+}

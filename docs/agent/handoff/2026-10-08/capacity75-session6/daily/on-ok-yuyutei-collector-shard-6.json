@@ -1,0 +1,33 @@
+{
+  "target": "staging",
+  "service": "yuyutei-collector-shard-6",
+  "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+  "verified_commit": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "previous_deployment": "39ea662f-a0c8-4c27-a952-bd6918d2041d",
+  "source_deployment": "4b56336b-4be1-4c49-ba0a-5a5072e3ee50",
+  "deployment": "64b19323-ef4f-4aed-925e-b8cc9b4800e2",
+  "image_digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+  "original_digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+  "status": "SUCCESS",
+  "marker": "Structured RAW health exact commit 1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "requested": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "previous_values": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "false",
+    "RAW_DICTIONARY_STORAGE_MODE": "canary",
+    "APP_ENV": "staging"
+  },
+  "observed": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "schedule": "18,48 * * * *",
+  "build_log_lines": 0,
+  "observed_at": "2026-10-08T13:52:42.409854+00:00",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}

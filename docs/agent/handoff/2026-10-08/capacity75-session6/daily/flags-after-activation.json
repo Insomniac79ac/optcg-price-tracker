@@ -1,0 +1,59 @@
+{
+ "snkrdunk-collector": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-0": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-1": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-2": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-3": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-4-v2": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-5": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-6": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-7": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "yuyutei-collector-shard-8": {
+  "APP_ENV": "staging",
+  "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+  "RAW_DICTIONARY_STORAGE_MODE": "daily-v1"
+ },
+ "optcg-price-tracker": {
+  "ADMIN_LOGIN_MAX_ATTEMPTS": "5",
+  "ADMIN_LOGIN_WINDOW_SECONDS": "900",
+  "APP_ENV": "staging",
+  "SNKRDUNK_REQUEST_DELAY_MS": "3000",
+  "YUYUTEI_REQUEST_DELAY_MS": "3000"
+ }
+}

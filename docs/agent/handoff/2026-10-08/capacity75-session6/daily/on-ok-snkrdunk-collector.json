@@ -1,0 +1,33 @@
+{
+  "target": "staging",
+  "service": "snkrdunk-collector",
+  "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+  "verified_commit": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "previous_deployment": "c7156df2-557b-43dd-b454-eb7e2e7dd746",
+  "source_deployment": "f3286a0a-421e-42f1-bc4b-b917a98cad3b",
+  "deployment": "13a65aff-ca9c-4922-843d-1d99bacded13",
+  "image_digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+  "original_digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+  "status": "SUCCESS",
+  "marker": "Structured RAW health exact commit 1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "requested": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "previous_values": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "false",
+    "RAW_DICTIONARY_STORAGE_MODE": "canary",
+    "APP_ENV": "staging"
+  },
+  "observed": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "schedule": "27,57 * * * *",
+  "build_log_lines": 0,
+  "observed_at": "2026-10-08T13:45:05.129315+00:00",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}
