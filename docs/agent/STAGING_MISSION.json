@@ -48,7 +48,7 @@
       "reason": "Repair observed unrelated frontend delivery blocker with the same unmodified licensed Manrope font bundled locally. Preserves typeface/weights/variable/swap and every CI/build/type check; <=170KiB asset pluslicense. No pricing, identity, schema/source or service configuration change."
     }
   ],
-  "diff_sha256": "836dc4c2f34c373676e149a6d4489bd7db901ac4af64887c6d8c27d7b78cdb5f",
+  "diff_sha256": "e1f841c8c2573af453aa68dcd782e5386c2cd4056399e6dbe44bf054d338346c",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
