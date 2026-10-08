@@ -1,0 +1,24 @@
+{
+  "written_at": "2026-10-08T13:45Z",
+  "classification": "AMBER",
+  "target": {"project": "c613898d-bf03-43a6-8813-761f72e1c00a", "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7 (staging)"},
+  "services": ["snkrdunk-collector", "yuyutei-collector-shard-0", "yuyutei-collector-shard-1", "yuyutei-collector-shard-2", "yuyutei-collector-shard-3", "yuyutei-collector-shard-5", "yuyutei-collector-shard-6", "yuyutei-collector-shard-7", "yuyutei-collector-shard-8", "yuyutei-collector-shard-4-v2"],
+  "mutation_manifest": "Per service, via scripts/collector_variables.change (merged 7aa130b) with --expect-digest = original verified digest (evidence/collectors-start.json): RAW_DICTIONARY_STORAGE_ENABLED=true, RAW_DICTIONARY_STORAGE_MODE=daily-v1, APP_ENV=staging (APP_ENV new on 4-v2, 7, 8). --skip-deploys then deploymentRedeploy(usePreviousImageTag:true) of the verified 1b1b64d upload; marker, digest, schedule, active deployment and read-back verified per service; automatic rollback to original upload on any mismatch",
+  "image_reuse_evidence": "No-op trials 13:42Z on shard-6 and shard-1: digests unchanged (3abc..., aa73...), 0 build-log lines (usePreviousImageTag:true schedules no build)",
+  "prerequisites": {
+    "snkr_writer_sample": "PASS 2026-10-08 11:57Z: 36/36 encoded, lossless by two decoders (session5 canary/verify-canary-1157.json)",
+    "yuyu_writer_sample": "16 prior canary rows + 16 partial daily-v1 rows (12:08-12:30Z), all lossless (session5 daily/verify-partial-daily-v1.json)",
+    "readers_and_components": "PR87 delivery 13:40:10Z: component checks passed on staging head 7aa130b, collectors 1b1b64d",
+    "indexes": "ix_raw_dictionary_created + ix_raw_snapshot_dictionary_scope present (session5 preflight)",
+    "flags_before": "writers OFF on all 10 (13:37Z)",
+    "claims": "0 expired, 0 open (13:37Z)"
+  },
+  "impact": {"daily_rows_cap": 8192, "daily_encoded_bytes_cap": 33554432, "estimated_encoded_bytes_per_day": "~15 MB", "source_requests_added": 0, "cron_budget_pacing_claims": "unchanged", "db_writes": "ledger rows + encoded representation of NEW snapshots only; no existing row changed"},
+  "storage": {"volume_mb": 3477.68, "max_mb_24h": 3482.03, "limit_mb": 10000, "reserve_bytes": 3221225472, "free_above_reserve_mb": "~3297", "db_bytes": 2641794751, "raw_bytes": 2492243968, "measured_at": "2026-10-08T13:43Z"},
+  "recovery_selection": "writer-owned ledger ids > 37711 (ledger 68 before activation); per-ID expand_snapshot only after independent SHA/length verification and rechecked space",
+  "rollback": "tools/rollout.py off: collector_variables.restore to ORIGINAL verified digest with ENABLED=false MODE=canary APP_ENV=staging on every service; allowed inside the 24h window and before 01:15Z/after 06:00Z",
+  "rollback_triggers": ["any change()/restore refusal during rollout (all-or-nothing)", "first-turn lossless SHA/length mismatch", "source denials or duplicate requests", "expired claims / reservation mismatch", "runtime regression beyond writer-off baseline + 10 s", "volume reserve threatened"],
+  "verification_plan": "Per service: digest==original, marker exact 1b1b64d, schedule unchanged, flags read back. After all 10: first natural turn of >=1 Yuyu shard and SNKR, every new encoded row lossless (independent zstd + package decoder), runtime vs writer-off baseline, 0 denials, 0 expired leases. 24h window starts at last activation.",
+  "time_limits": "start well before 00:00Z; all redeploys done by 01:15Z 2026-10-09; no redeploys 02:00-06:00Z",
+  "production_accessed": false
+}

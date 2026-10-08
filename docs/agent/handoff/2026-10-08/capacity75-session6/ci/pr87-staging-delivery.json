@@ -1,0 +1,62 @@
+{
+  "verified_at": "2026-10-08T13:40:10.836092+00:00",
+  "expected_commit": "7aa130b620b0d7455d60f3764d98776b26396e18",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_4LNikYBvEzKG4Mj1F7wxXbz2teid",
+    "status": "READY",
+    "sha": "7aa130b620b0d7455d60f3764d98776b26396e18"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 226,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "548c3c4dfc869c4859eff8d4bdc9a27b275aaeae9b7f82c81fa827f22a32107e",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "336706a417f76b48d6d6835ea09c15bdc3e7f457",
+    "merge": "7aa130b620b0d7455d60f3764d98776b26396e18",
+    "decision": "full",
+    "files": [
+      "docs/agent/STAGING_DELIVERY.md",
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/evidence/collector-image-reuse-preflight-20261008.json",
+      "scripts/collector_variables.py",
+      "scripts/tests/test_collector_variables.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      "docs/agent/evidence/collector-image-reuse-preflight-20261008.json",
+      "scripts/collector_variables.py",
+      "scripts/tests/test_collector_variables.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "skip",
+    "sha": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": []
+  },
+  "production_accessed": false
+}
