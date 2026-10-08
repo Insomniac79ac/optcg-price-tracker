@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Install bounded renewable RAW storage admission with writers OFF before natural validation",
+  "mission": "Bound RAW body evaluation and repair Manrope build delivery; every writer remains OFF",
   "target": "staging",
-  "classification": "AMBER",
+  "classification": "GREEN",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -21,12 +21,7 @@
     {
       "files": [
         "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
-        "docs/agent/evidence/raw-storage-daily-preflight-20261008.json",
-        "scripts/apply_staging_raw_dependency.py",
-        "scripts/tests/test_apply_staging_raw_dependency.py",
-        "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
-        "services/api/app/models/raw_snapshot.py",
-        "services/api/app/models/raw_snapshot_dictionary.py",
+        "docs/agent/evidence/raw-storage-query-preflight-20261008.json",
         "services/api/app/services/raw_dictionary_storage.py",
         "services/api/tests/test_raw_dictionary_storage_postgres.py"
       ],
@@ -34,13 +29,26 @@
         "application",
         "tests",
         "documentation",
-        "migration",
         "staging_deployment"
       ],
-      "reason": "Replace lifetime scanning only for explicitly selected daily-v1 mode, add bounded scoped lookup and UTC row/byte admission under existing global lock. Deliver OFF, preserve default200/codec/e8 lineage/readers/portable backup. Allowlist index-only transition with exact parent/path/checksum and executable fixture rollback; no activation or volume expansion."
+      "reason": "Fix planner-sensitive marker projection using bounded ID selection before body inspection. Proven sorting-plan regression old202/new<=34. Keep writersOFF/f9/codec/default200/daily bounds, no schema or RAW/history writes, preserve all source scheduling/admission/identity safeguards."
+    },
+    {
+      "files": [
+        "apps/web/src/app/layout.tsx",
+        "apps/web/src/app/fonts/Manrope-Variable.ttf",
+        "apps/web/src/app/fonts/Manrope-OFL.txt",
+        "apps/web/src/app/fonts/README.md"
+      ],
+      "effects": [
+        "application",
+        "documentation",
+        "staging_deployment"
+      ],
+      "reason": "Repair observed unrelated frontend delivery blocker with the same unmodified licensed Manrope font bundled locally. Preserves typeface/weights/variable/swap and every CI/build/type check; <=170KiB asset pluslicense. No pricing, identity, schema/source or service configuration change."
     }
   ],
-  "diff_sha256": "469c10b200491506e009c92d52d49d96fa7fe3b8f8d91504e369c1a5a86c7135",
+  "diff_sha256": "e1f841c8c2573af453aa68dcd782e5386c2cd4056399e6dbe44bf054d338346c",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -54,61 +62,55 @@
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
+        "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
       },
       {
         "name": "yuyutei-collector-shard-0",
         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
+        "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
       },
       {
         "name": "yuyutei-collector-shard-1",
         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
+        "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
       },
       {
         "name": "yuyutei-collector-shard-2",
         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
+        "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
       },
       {
         "name": "yuyutei-collector-shard-3",
         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
+        "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
       },
       {
         "name": "yuyutei-collector-shard-4-v2",
         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
+        "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
       },
       {
         "name": "yuyutei-collector-shard-5",
         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
+        "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
       },
       {
         "name": "yuyutei-collector-shard-6",
         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
+        "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
       },
       {
         "name": "yuyutei-collector-shard-7",
         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
+        "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
       },
       {
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
+        "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
       }
     ],
-    "yuyu_capacity_cadence": true,
-    "raw_dependency_migration": {
-      "parent": "e8c2d4f6a901",
-      "revision": "f9e5b4a8c012",
-      "file": "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
-      "sha256": "47d3006731b04c8e522b3509278741ffedc804cefea9cea23a60b2eda5371db3"
-    }
+    "yuyu_capacity_cadence": true
   },
   "safeguards": {
     "impact": {
@@ -126,52 +128,52 @@
         {
           "name": "snkrdunk-collector",
           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
+          "recovery_deployment_id": "f25dfb3f-0424-40f4-9e63-6d2bfa83f133"
         },
         {
           "name": "yuyutei-collector-shard-0",
           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
+          "recovery_deployment_id": "6426db78-71e8-4027-b561-56d15da53315"
         },
         {
           "name": "yuyutei-collector-shard-1",
           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
+          "recovery_deployment_id": "1473f16f-8972-4f62-9eaf-99166f5e787d"
         },
         {
           "name": "yuyutei-collector-shard-2",
           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
+          "recovery_deployment_id": "5651c9b2-0e4e-4ae2-8539-94f8b10c6593"
         },
         {
           "name": "yuyutei-collector-shard-3",
           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
+          "recovery_deployment_id": "5563c2a7-790a-4e4c-b5a6-04c025aaca4c"
         },
         {
           "name": "yuyutei-collector-shard-4-v2",
           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
+          "recovery_deployment_id": "ba196a45-acff-44d9-9813-8f5f1bd862ba"
         },
         {
           "name": "yuyutei-collector-shard-5",
           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
+          "recovery_deployment_id": "5d928d70-8102-4bd4-be9b-6bd1f910974a"
         },
         {
           "name": "yuyutei-collector-shard-6",
           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
+          "recovery_deployment_id": "708271bc-41ce-49e8-a9b4-73e8e31dfffa"
         },
         {
           "name": "yuyutei-collector-shard-7",
           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
+          "recovery_deployment_id": "7a47a093-0416-4cdf-8792-7fe279bb394c"
         },
         {
           "name": "yuyutei-collector-shard-8",
           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
+          "recovery_deployment_id": "28c05f0b-2b59-4049-b04d-75738d504c48"
         }
       ],
       "routes": [
@@ -180,16 +182,16 @@
       "dependencies": [
         "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
       ],
-      "deployment_impact": "Add two small bounded RAW lookup/admission indexes and opt-in daily quota mode with writers OFF. Native API/all10 delivery. No codec, budget, schedule, source-volume or price changes.",
-      "database_writes": 1,
+      "deployment_impact": "Native API/all10 query correction with writers OFF. Read-only existingf9 schema verification; no migration requested, data/schema/source volume/schedule/budget/pacing/claim/price changes.",
+      "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
-      "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
+      "artifact": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+      "procedure": "Retain all writersOFF and f9/readers/dependencies/portable backup19. Query-only native revert to4995007 is executable on the unchangedf9 schema. No RAW expansion or obsoletee8 delivery. Existing installed indexes only validated, not recreated.",
       "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
-      "backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
+      "backup": "No persistent data or schema mutation by this fix; current16 lossless canary copies/digests, protected15 rows and previous portable19 backup validation retained. Focused121 reader/storage/backup tests passed.",
       "validation": [
         "services/api/tests/test_raw_dictionary_storage_postgres.py",
         "services/api/tests/test_raw_dictionary_backup.py",

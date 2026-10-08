@@ -24,7 +24,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, aliased, mapped_column
 
 from opcg_source_identity.raw_payload import (
     PREFIX,
@@ -112,6 +112,34 @@ def mock_body():
         + "".join(generator.choices(string.ascii_letters + string.digits, k=100000))
         + "</body></html>"
     )
+
+
+def test_body_reads_are_bounded_even_when_planner_sorts_history(database):
+    # Count real PostgreSQL expression evaluations, including on a bitmap/sort
+    # plan. LIMIT on a projected body expression alone does not enforce this.
+    with database.begin() as connection:
+        connection.execute(text("CREATE SEQUENCE body_reads MINVALUE 0 START 0"))
+        connection.execute(text("""
+            CREATE FUNCTION count_body_read(value text) RETURNS text
+            LANGUAGE plpgsql STABLE COST 0.001 AS $$
+            BEGIN PERFORM nextval('body_reads'); RETURN value; END $$
+        """))
+    with Session(database) as session:
+        session.add_all(row("synthetic retained body") for _ in range(200))
+        session.commit()
+        session.execute(text("SET LOCAL enable_indexscan=off"))
+        counted = aliased(Snapshot)
+        counted._stored_raw_content = func.count_body_read(counted._stored_raw_content)
+        pending = row("synthetic retained body")
+        found = storage.dictionary_base(session, counted, pending)
+        assert found[0].id == 200
+        reads = session.execute(
+            text("SELECT last_value,is_called FROM body_reads")
+        ).one()
+        assert reads.is_called
+        # <=32 bounded marker reads and at most two exact-base expressions.
+        assert reads.last_value + 1 <= storage.RECENT_BASE_ROWS + 2
+        session.rollback()
 
 
 def row(body=None, **changes):

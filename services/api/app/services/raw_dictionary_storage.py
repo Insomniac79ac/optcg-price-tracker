@@ -73,17 +73,27 @@ def dictionary_base(session, model, snapshot):
     # Separate bounded projection from base loading: placing a raw-content
     # filter outside an IN/LIMIT subquery can let PostgreSQL evaluate that
     # predicate against unrelated historical rows before applying the IDs.
+    # Select IDs without a body expression. PostgreSQL may evaluate a projected
+    # expression before sorting scoped history, even when SQL has LIMIT 32.
+    # A second statement contains only the bounded IDs as its row predicate;
+    # the body marker is a projection, never a predicate on historical rows.
+    ids = session.scalars(
+        select(model.id).where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
+    ).all()
+    if not ids:
+        return None
     projected = select(model.id, model._stored_raw_content.startswith(PREFIX))
     recent = session.execute(
-        projected.where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
+        projected.where(model.id.in_(ids)).order_by(model.id.desc())
     ).all()
     base_id = next(
         (snapshot_id for snapshot_id, encoded in recent if not encoded), None
     )
     if base_id is None:
-        oldest = session.execute(
-            projected.where(*scope).order_by(model.id).limit(1)
-        ).first()
+        oldest_id = session.scalar(
+            select(model.id).where(*scope).order_by(model.id).limit(1)
+        )
+        oldest = session.execute(projected.where(model.id == oldest_id)).first()
         if oldest is None or oldest[1]:
             return None
         base_id = oldest[0]
