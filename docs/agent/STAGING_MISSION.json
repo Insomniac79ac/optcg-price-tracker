@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Bound Yuyu active captures before measured scheduler capacity expansion",
+  "mission": "Install bounded renewable RAW storage admission with writers OFF before natural validation",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,28 +20,30 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/YUYU_BOUNDED_ADMISSION.md",
-        "docs/agent/evidence/yuyu-bounded-admission-preflight-20261007.json",
-        "scripts/tests/test_yuyu_raw_reader_component.py",
-        "scripts/verify_yuyu_raw_reader_component.py",
-        "services/api/app/services/freshness_queue.py",
-        "services/api/tests/test_freshness_queue_postgres.py",
-        "services/yuyutei_collector/yuyutei_collector/config.py"
+        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
+        "docs/agent/evidence/raw-storage-daily-preflight-20261008.json",
+        "scripts/apply_staging_raw_dependency.py",
+        "scripts/tests/test_apply_staging_raw_dependency.py",
+        "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
+        "services/api/app/models/raw_snapshot.py",
+        "services/api/app/models/raw_snapshot_dictionary.py",
+        "services/api/app/services/raw_dictionary_storage.py",
+        "services/api/tests/test_raw_dictionary_storage_postgres.py"
       ],
       "effects": [
         "application",
         "tests",
         "documentation",
-        "source_envelope",
+        "migration",
         "staging_deployment"
       ],
-      "reason": "Enforce atomic Yuyu4 active-claim bound under existing shared admission lock before any cadence expansion; preserve source pacing/mod9/identity/recurrence. Recognise only declared uniform bounded schedule profile; do not activate schedule or added volume in delivery. Include measured forecast with explicit limitations and rollback."
+      "reason": "Replace lifetime scanning only for explicitly selected daily-v1 mode, add bounded scoped lookup and UTC row/byte admission under existing global lock. Deliver OFF, preserve default200/codec/e8 lineage/readers/portable backup. Allowlist index-only transition with exact parent/path/checksum and executable fixture rollback; no activation or volume expansion."
     }
   ],
-  "diff_sha256": "17a3d768dc66f731a18d5c3a2748e85a3916ef87e7a9fdd250b3077cec6ca258",
+  "diff_sha256": "469c10b200491506e009c92d52d49d96fa7fe3b8f8d91504e369c1a5a86c7135",
   "deployment_verification": {
     "api_sha": "merge",
-    "revision": "e8c2d4f6a901",
+    "revision": "f9e5b4a8c012",
     "checks": [
       "scripts/verify_snkr_published_discovery_component.py",
       "scripts/verify_yuyu_raw_reader_component.py"
@@ -52,55 +54,61 @@
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
+        "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
       },
       {
         "name": "yuyutei-collector-shard-0",
         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
+        "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
       },
       {
         "name": "yuyutei-collector-shard-1",
         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
+        "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
       },
       {
         "name": "yuyutei-collector-shard-2",
         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
+        "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
       },
       {
         "name": "yuyutei-collector-shard-3",
         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
+        "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
       },
       {
         "name": "yuyutei-collector-shard-4-v2",
         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
+        "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
       },
       {
         "name": "yuyutei-collector-shard-5",
         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
+        "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
       },
       {
         "name": "yuyutei-collector-shard-6",
         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
+        "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
       },
       {
         "name": "yuyutei-collector-shard-7",
         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
+        "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
       },
       {
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
+        "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
       }
     ],
-    "yuyu_capacity_cadence": true
+    "yuyu_capacity_cadence": true,
+    "raw_dependency_migration": {
+      "parent": "e8c2d4f6a901",
+      "revision": "f9e5b4a8c012",
+      "file": "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py",
+      "sha256": "47d3006731b04c8e522b3509278741ffedc804cefea9cea23a60b2eda5371db3"
+    }
   },
   "safeguards": {
     "impact": {
@@ -118,52 +126,52 @@
         {
           "name": "snkrdunk-collector",
           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "ad21ec72-acbc-4d1c-bcc9-1f8b40fc7e1c"
+          "recovery_deployment_id": "8a98779e-d5ed-489a-a9fd-e59118a7534a"
         },
         {
           "name": "yuyutei-collector-shard-0",
           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "af420f43-0062-406b-99ae-a9a2ebeeea17"
+          "recovery_deployment_id": "f9c38c0e-5420-42cc-a6b7-155114642158"
         },
         {
           "name": "yuyutei-collector-shard-1",
           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "df676a48-7346-452d-947c-29bfa89c6b2e"
+          "recovery_deployment_id": "34db5e3b-d8ba-481a-8dc8-29ca26c4ca11"
         },
         {
           "name": "yuyutei-collector-shard-2",
           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "92132bdd-fdfa-4c1e-853d-7dfb77113105"
+          "recovery_deployment_id": "dc25422c-a357-4597-be3c-abe127397c05"
         },
         {
           "name": "yuyutei-collector-shard-3",
           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "b73ef4df-3507-4b92-a444-2b56c20c74c8"
+          "recovery_deployment_id": "120f89be-50d6-43a3-9ffb-d00821262d2c"
         },
         {
           "name": "yuyutei-collector-shard-4-v2",
           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "e7621756-2076-4e0f-924f-5965a1a5b2d4"
+          "recovery_deployment_id": "fa34917b-cb29-4a4b-b33b-94fe4d0a8af8"
         },
         {
           "name": "yuyutei-collector-shard-5",
           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "7b65bcfc-e75e-477f-869f-c75f2ee6ec0c"
+          "recovery_deployment_id": "cfad98f0-9e76-461d-9ff1-ee446ec913e6"
         },
         {
           "name": "yuyutei-collector-shard-6",
           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "8f3d8e90-9224-482a-bd30-cc703880c22b"
+          "recovery_deployment_id": "3d9de3c8-6290-4ebd-900f-60c6c1dcc03f"
         },
         {
           "name": "yuyutei-collector-shard-7",
           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "81337f75-c208-423f-8b9c-8eb578b30728"
+          "recovery_deployment_id": "854e1d2a-b494-4898-bb3b-8f4809a7cfdd"
         },
         {
           "name": "yuyutei-collector-shard-8",
           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "bb1fef91-226a-4502-a8d0-28da1080833c"
+          "recovery_deployment_id": "b2f27b28-613b-4ba2-9b71-611160371edc"
         }
       ],
       "routes": [
@@ -172,19 +180,20 @@
       "dependencies": [
         "Existing pinned staging DB/source guards and reader codec; one additive dependency table; no R2 runtime access"
       ],
-      "deployment_impact": "Native API and all10 shared-package collector delivery, hard Yuyu4 active claims; existing cron/budgets/writers remain unchanged. Uniform explicitly declared legacy/ten-minute profile recognition does not activate cadence or volume.",
-      "database_writes": 0,
+      "deployment_impact": "Add two small bounded RAW lookup/admission indexes and opt-in daily quota mode with writers OFF. Native API/all10 delivery. No codec, budget, schedule, source-volume or price changes.",
+      "database_writes": 1,
       "source_requests": 0,
       "estimated_runtime_minutes": 60
     },
     "recovery": {
-      "artifact": "a1c4a4f4b66df50a4be1e6119cc8675abc62bedf",
-      "procedure": "Keep current cron; if separately tuned, restore original pinned all9 cron before reverting admission source. Keep e8 schema and shared raw readers. No evidence or price history removal.",
+      "artifact": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+      "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
       "trigger": "identity or raw hash mismatch; ownership/fencing failure; foreign key/integrity error; source denials/uncontrolled requests; unexpected writer activation; deadline/runtime regression",
-      "backup": "No historical rows changed and no migration; Git before source and live staging schedule receipts retained. Ordinary collector mutations remain fenced by existing queue.",
+      "backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
       "validation": [
-        "services/api/tests/test_freshness_queue_postgres.py",
-        "scripts/tests/test_yuyu_raw_reader_component.py"
+        "services/api/tests/test_raw_dictionary_storage_postgres.py",
+        "services/api/tests/test_raw_dictionary_backup.py",
+        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md"
       ]
     },
     "verification": {
@@ -197,7 +206,7 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "All9 and SNKR ordinary component receipts at existing schedules, exact current API/e8/frontend/sale/history guards. Separate normal 02\u201306 UTC busy peak for any later cadence or volume change."
+      "observation_window": "All10 current-source ordinary component receipts under original schedules. Writers OFF. Any subsequent activation requires separate fresh canary and sustained physical-growth, 30/90d headroom and natural RAW recurrence evidence."
     }
   }
 }

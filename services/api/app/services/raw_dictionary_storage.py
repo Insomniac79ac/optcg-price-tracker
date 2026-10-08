@@ -22,7 +22,80 @@ from opcg_source_identity.raw_payload import (
 PROJECT = "c613898d-bf03-43a6-8813-761f72e1c00a"
 PARSERS = frozenset({"yuyutei-collector-v3", "snkrdunk-collector-v2"})
 CANARY_LIMIT = 200
+DAILY_ROWS = 8192
+DAILY_BYTES = 32 * 1024 * 1024
+RECENT_BASE_ROWS = 32
 LOCK = 734027410
+
+
+def admission(session):
+    """Charge retained ledger rows; recovery never releases storage admission."""
+    mode = os.getenv("RAW_DICTIONARY_STORAGE_MODE", "canary")
+    if mode == "canary":
+        count = session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
+        return count < CANARY_LIMIT, None
+    if mode != "daily-v1":
+        raise RawPayloadError("unknown dictionary storage admission mode")
+    indexes = session.execute(text("""
+        SELECT indexname FROM pg_indexes WHERE schemaname=current_schema()
+        AND indexname IN ('ix_raw_dictionary_created', 'ix_raw_snapshot_dictionary_scope')
+    """)).scalars().all()
+    if len(indexes) != 2:
+        raise RawPayloadError(
+            "daily dictionary admission requires installed lookup indexes"
+        )
+    # Both bounds use the transaction's UTC day and match ledger server timestamps.
+    # The indexed scan is bounded by one admitted day, rather than lifetime history.
+    count, used = session.execute(text("""
+        SELECT count(*), coalesce(sum(encoded_bytes), 0)
+        FROM raw_snapshot_dictionaries
+        WHERE created_at >= date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+          AND created_at < (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE 'UTC'
+    """)).one()
+    return count < DAILY_ROWS and used < DAILY_BYTES, DAILY_BYTES - used
+
+
+def dictionary_base(session, model, snapshot):
+    """At most 32 recent bodies, then the oldest retained plaintext anchor.
+
+    The scope index avoids scanning unrelated URLs. An encoding always has an
+    older plaintext same-scope dependency, so the oldest surviving scoped row
+    cannot be encoded. Full URL equality still guards hash-index collisions.
+    A changed page that cannot encode is kept plain and becomes the recent base.
+    """
+    scope = (
+        model.source_id == snapshot.source_id,
+        model.parser_version == snapshot.parser_version,
+        func.md5(model.source_url) == func.md5(snapshot.source_url),
+        model.source_url == snapshot.source_url,
+        model.http_status == 200,
+    )
+    # Separate bounded projection from base loading: placing a raw-content
+    # filter outside an IN/LIMIT subquery can let PostgreSQL evaluate that
+    # predicate against unrelated historical rows before applying the IDs.
+    projected = select(model.id, model._stored_raw_content.startswith(PREFIX))
+    recent = session.execute(
+        projected.where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
+    ).all()
+    base_id = next(
+        (snapshot_id for snapshot_id, encoded in recent if not encoded), None
+    )
+    if base_id is None:
+        oldest = session.execute(
+            projected.where(*scope).order_by(model.id).limit(1)
+        ).first()
+        if oldest is None or oldest[1]:
+            return None
+        base_id = oldest[0]
+    # Retain the same-scope, plaintext, hash and shared-row-lock guards on the
+    # exact base used to encode; the projection cannot authorise a changed row.
+    return session.execute(
+        select(model, func.pg_column_size(model._stored_raw_content))
+        .where(
+            model.id == base_id, *scope, ~model._stored_raw_content.startswith(PREFIX)
+        )
+        .with_for_update(read=True)
+    ).first()
 
 
 def enabled():
@@ -41,8 +114,9 @@ def encode_new_snapshot(session, snapshot):
     """Return whether this NEW snapshot obtained a protected encoding.
 
     Try-lock admission avoids extending source-job deadlines behind another
-    writer. The global 200-row ceiling includes recovered rows; retries cannot
-    reset the canary. Missing/changed dictionaries remain newly captured plain
+    writer. Default canary admission retains the global 200-row ceiling.
+    Explicit daily-v1 admission needs installed indexes and UTC row/byte bounds;
+    recovered rows remain charged in both modes. Missing/changed dictionaries remain newly captured plain
     evidence; invalid hashes and lost transaction ownership fail closed.
     """
     with session.no_autoflush:
@@ -67,25 +141,13 @@ def _encode_new_snapshot(session, snapshot):
         text("SELECT pg_try_advisory_xact_lock(:lock)"), {"lock": LOCK}
     ):
         return False
-    count = session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
-    if count >= CANARY_LIMIT:
+    admitted, remaining_bytes = admission(session)
+    if not admitted:
         return False
     model = type(snapshot)
     # Prevent this pending INSERT from autoflushing into the base selection.
     with session.no_autoflush:
-        base_result = session.execute(
-            select(model, func.pg_column_size(model._stored_raw_content))
-            .where(
-                model.source_id == snapshot.source_id,
-                model.source_url == snapshot.source_url,
-                model.parser_version == snapshot.parser_version,
-                model.http_status == 200,
-                ~model._stored_raw_content.startswith(PREFIX),
-            )
-            .order_by(model.id.desc())
-            .limit(1)
-            .with_for_update(read=True)
-        ).first()
+        base_result = dictionary_base(session, model, snapshot)
     if base_result is None:
         return False
     base, current_stored_bytes = base_result
@@ -96,6 +158,8 @@ def _encode_new_snapshot(session, snapshot):
         return False
     packed = encode(body, base_id=base.id, base_body=base_body)
     packed_bytes = len(packed.encode("utf-8"))
+    if remaining_bytes is not None and packed_bytes > remaining_bytes:
+        return False
     # PostgreSQL already compresses plaintext. Require savings against measured
     # physical base bytes, not an inflated uncompressed HTML denominator.
     if packed_bytes * 4 > current_stored_bytes * 3:

@@ -24,6 +24,14 @@ REVISION = "e8c2d4f6a901"
 MIGRATION = (
     "services/api/alembic/versions/e8c2d4f6a901_protect_raw_dictionary_dependencies.py"
 )
+INDEX_REVISION = "f9e5b4a8c012"
+INDEX_MIGRATION = (
+    "services/api/alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
+)
+TRANSITIONS = {
+    REVISION: (PARENT, MIGRATION),
+    INDEX_REVISION: (REVISION, INDEX_MIGRATION),
+}
 
 
 def selection(manifest):
@@ -32,17 +40,17 @@ def selection(manifest):
     )
     if requested is None:
         return None
+    transition = TRANSITIONS.get(requested.get("revision"))
     if (
         manifest.get("target") != "staging"
         or manifest.get("classification") != "AMBER"
-        or requested.get("revision") != REVISION
-        or requested.get("parent") != PARENT
-        or requested.get("file") != MIGRATION
+        or transition is None
+        or (requested.get("parent"), requested.get("file")) != transition
         or set(requested) != {"revision", "parent", "file", "sha256"}
-        or manifest["deployment_verification"]["revision"] != REVISION
+        or manifest["deployment_verification"]["revision"] != requested["revision"]
     ):
         raise state.VerificationError("Unapproved RAW dependency migration")
-    path = state.ROOT / MIGRATION
+    path = state.ROOT / requested["file"]
     if hashlib.sha256(path.read_bytes()).hexdigest() != requested["sha256"]:
         raise state.VerificationError("Reviewed migration checksum mismatch")
     return requested
@@ -82,6 +90,15 @@ def migrate(connection, migration_path):
     from alembic.operations import Operations
     from sqlalchemy import text
 
+    selected = [
+        r
+        for r, (_, path) in TRANSITIONS.items()
+        if Path(path).name == migration_path.name
+    ]
+    if len(selected) != 1:
+        raise state.VerificationError("Unapproved RAW migration path")
+    revision = selected[0]
+    parent, _ = TRANSITIONS[revision]
     connection.execute(text("SET LOCAL lock_timeout='2s'"))
     connection.execute(text("SET LOCAL statement_timeout='30s'"))
     if not connection.scalar(text("SELECT pg_try_advisory_xact_lock(734027411)")):
@@ -91,12 +108,14 @@ def migrate(connection, migration_path):
         .scalars()
         .all()
     )
-    if revisions == [REVISION]:
+    if revisions == [revision]:
         validate_schema(connection)
+        if revision == INDEX_REVISION:
+            validate_indexes(connection)
         return False
-    if (
-        revisions != [PARENT]
-        or connection.scalar(text("SELECT to_regclass('raw_snapshot_dictionaries')"))
+    if revisions != [parent] or (
+        revision == REVISION
+        and connection.scalar(text("SELECT to_regclass('raw_snapshot_dictionaries')"))
         is not None
     ):
         raise state.VerificationError(
@@ -107,7 +126,7 @@ def migrate(connection, migration_path):
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    if module.revision != REVISION or module.down_revision != PARENT:
+    if module.revision != revision or module.down_revision != parent:
         raise state.VerificationError("RAW migration revision identity mismatch")
     # Bind this reviewed module to this exact connection. Do not depend on
     # process-global Alembic facade functions (which may be replaced by tests
@@ -116,14 +135,34 @@ def migrate(connection, migration_path):
     module.upgrade()
     result = connection.execute(
         text("UPDATE alembic_version SET version_num=:new WHERE version_num=:old"),
-        {"new": REVISION, "old": PARENT},
+        {"new": revision, "old": parent},
     )
     if result.rowcount != 1:
         raise state.VerificationError("RAW migration revision update was not singular")
     validate_schema(connection)
-    if connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) != 0:
+    if revision == INDEX_REVISION:
+        validate_indexes(connection)
+    elif connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) != 0:
         raise state.VerificationError("Additive dependency table must begin empty")
     return True
+
+
+def validate_indexes(connection):
+    from sqlalchemy import text
+
+    rows = dict(connection.execute(text("""
+        SELECT indexname, indexdef FROM pg_indexes WHERE schemaname=current_schema()
+          AND indexname IN ('ix_raw_dictionary_created','ix_raw_snapshot_dictionary_scope')
+    """)).all())
+    if (
+        len(rows) != 2
+        or "(created_at)" not in rows.get("ix_raw_dictionary_created", "")
+        or "(source_id, parser_version, md5((source_url)::text), id)"
+        not in rows.get("ix_raw_snapshot_dictionary_scope", "")
+        or "WHERE (http_status = 200)"
+        not in rows.get("ix_raw_snapshot_dictionary_scope", "")
+    ):
+        raise state.VerificationError("RAW bounded admission indexes mismatch")
 
 
 def validate_schema(connection):
@@ -165,7 +204,8 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     manifest = json.loads(args.manifest.read_text())
-    if selection(manifest) is None:
+    requested = selection(manifest)
+    if requested is None:
         return 0
     if not re.fullmatch("[0-9a-f]{40}", args.expected):
         raise state.VerificationError("Full merged revision required")
@@ -175,7 +215,7 @@ def main(argv=None):
     )
     if head != args.expected or branch["commit"]["sha"] != args.expected:
         raise state.VerificationError("Obsolete or unmerged RAW migration checkout")
-    allowed = frozenset({PARENT, REVISION})
+    allowed = frozenset({requested["parent"], requested["revision"]})
     before = state.collect_live(database_expected_revisions=allowed)
     state.write_snapshot(before, state.CANONICAL_OUTPUT)
     services = before["railway"]["services"]
@@ -240,7 +280,7 @@ def main(argv=None):
                         "Staging database migration fingerprint failed"
                     )
             with engine.begin() as connection:
-                changed = migrate(connection, state.ROOT / MIGRATION)
+                changed = migrate(connection, state.ROOT / requested["file"])
         finally:
             engine.dispose()
     except state.VerificationError:
@@ -262,7 +302,7 @@ def main(argv=None):
                 "environment_id": state.ENVIRONMENT,
                 "postgres_service_id": state.POSTGRES,
                 "merged_sha": args.expected,
-                "revision": REVISION,
+                "revision": requested["revision"],
                 "changed": changed,
                 "before_collected_at": before["collected_at"],
                 "after_collected_at": after["collected_at"],
