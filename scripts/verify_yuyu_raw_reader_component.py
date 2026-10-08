@@ -8,8 +8,17 @@ import generate_staging_state as state
 from verify_snkr_published_discovery_component import AdoptionPending
 
 
-def verify(live, head, component=None, *, capacity_cadence=False):
+def verify(
+    live,
+    head,
+    component=None,
+    *,
+    capacity_cadence=False,
+    cadence_profile="ten-minute-v1",
+):
     component = component or head
+    if cadence_profile not in {"ten-minute-v1", "five-minute-v1"}:
+        raise state.VerificationError("Unknown declared Yuyu cadence profile")
     if live["mode"] != "live" or live["repository"]["sha"] != head:
         raise state.VerificationError("Current merged staging source required")
     services = [
@@ -28,8 +37,11 @@ def verify(live, head, component=None, *, capacity_cadence=False):
         shard = int(service["name"].split("shard-")[1].split("-")[0])
         minute = shard * 3
         legacy = f"{minute},{minute+30} * * * *"
+        period = 5 if cadence_profile == "five-minute-v1" else 10
+        phase = shard % period
         bounded = (
-            ",".join(str(shard + offset) for offset in range(0, 60, 10)) + " * * * *"
+            ",".join(str(phase + offset) for offset in range(0, 60, period))
+            + " * * * *"
         )
         schedule = service["schedule_utc"]
         profiles.append(
@@ -102,6 +114,31 @@ def main():
     capacity_cadence = manifest["deployment_verification"].get(
         "yuyu_capacity_cadence", False
     )
+    cadence_profile = manifest["deployment_verification"].get(
+        "yuyu_cadence_profile", "ten-minute-v1"
+    )
+    if cadence_profile == "five-minute-v1":
+        if not capacity_cadence:
+            raise state.VerificationError(
+                "Five-minute profile requires explicit cadence declaration"
+            )
+        installed_retry = subprocess.check_output(
+            [
+                "git",
+                "show",
+                component + ":services/api/app/services/freshness_integration.py",
+            ],
+            cwd=state.ROOT,
+            text=True,
+        )
+        if (
+            "CLAIM_CAP_RETRY_COUNT = 6" not in installed_retry
+            or "CLAIM_CAP_RETRY_SECONDS = 5" not in installed_retry
+            or "admission_status=admission_status" not in installed_retry
+        ):
+            raise state.VerificationError(
+                "Five-minute profile requires installed bounded claim wait"
+            )
     if capacity_cadence:
         installed = subprocess.check_output(
             [
@@ -150,6 +187,7 @@ def main():
                 head,
                 component,
                 capacity_cadence=capacity_cadence,
+                cadence_profile=cadence_profile,
             )
             print(json.dumps(result, indent=2))
             return

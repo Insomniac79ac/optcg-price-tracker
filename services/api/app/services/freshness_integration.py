@@ -46,6 +46,8 @@ CATEGORIES = {
 MAX_BROWSER_ASSET_REDIRECTS = 8
 BROWSER_ADMISSION_VERSION = 3
 VALIDATION_ADMISSION_VERSION = 1
+CLAIM_CAP_RETRY_COUNT = 6
+CLAIM_CAP_RETRY_SECONDS = 5
 
 # Observed advertising hosts, never the source's application/API or artwork.
 ADVERTISING_HOSTS = frozenset(
@@ -566,7 +568,7 @@ def _drain(
             # release the admission transaction before every five-second wait.
             # Other refusals retain their immediate stop and every retry uses
             # the original locking, fairness, reservation and ownership guards.
-            for retry in range(7):
+            for retry in range(CLAIM_CAP_RETRY_COUNT + 1):
                 ownership_check(session)
                 admission_status = {}
                 claims = claim_due(
@@ -588,13 +590,14 @@ def _drain(
                 if (
                     shard_index is None
                     or not capped
-                    or retry == 6
-                    or monotonic() + 5 + mapping_seconds > deadline
+                    or retry == CLAIM_CAP_RETRY_COUNT
+                    or monotonic() + CLAIM_CAP_RETRY_SECONDS + mapping_seconds
+                    > deadline
                 ):
                     if capped and telemetry is not None:
                         telemetry["stopped_reason"] = "active_claim_wait_bound"
                     return results
-                sleep(5)
+                sleep(CLAIM_CAP_RETRY_SECONDS)
             attempt = Attempt(
                 session, claims[0], ownership_check=ownership_check, clock=clock
             )
