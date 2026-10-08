@@ -2,7 +2,7 @@ from opcg_source_identity.raw_payload import RawContentAccess
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -10,6 +10,16 @@ from app.db import Base
 
 class RawSnapshot(RawContentAccess, Base):
     __tablename__ = "raw_snapshots"
+    __table_args__ = (
+        Index(
+            "ix_raw_snapshot_dictionary_scope",
+            "source_id",
+            "parser_version",
+            text("md5(source_url)"),
+            "id",
+            postgresql_where=text("http_status = 200"),
+        ).ddl_if(dialect="postgresql"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     source_id: Mapped[int] = mapped_column(

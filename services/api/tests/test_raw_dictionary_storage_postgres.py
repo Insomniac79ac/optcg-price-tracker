@@ -361,3 +361,183 @@ def test_serialized_migration_is_additive_and_idempotent(database, monkeypatch):
             connection.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries"))
             == 0
         )
+
+
+def install_daily_indexes(database):
+    path = (
+        Path(__file__).parents[1]
+        / "alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
+    )
+    spec = importlib.util.spec_from_file_location("daily_index_fixture", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with database.begin() as connection:
+        module.op = Operations(MigrationContext.configure(connection))
+        module.upgrade()
+        delivery.validate_indexes(connection)
+    return module
+
+
+def test_daily_mode_requires_indexes_and_refuses_unknown_mode(database, monkeypatch):
+    with Session(database) as session:
+        base_row(session)
+        child = row()
+        session.add(child)
+        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
+        with pytest.raises(RawPayloadError, match="installed lookup indexes"):
+            storage.encode_new_snapshot(session, child)
+        session.rollback()
+        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "unknown")
+        session.add(row())
+        with pytest.raises(RawPayloadError, match="unknown dictionary"):
+            storage.encode_new_snapshot(session, next(iter(session.new)))
+
+
+def test_daily_renewal_is_utc_and_recovery_never_releases_admission(
+    database, monkeypatch
+):
+    install_daily_indexes(database)
+    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
+    monkeypatch.setattr(storage, "DAILY_ROWS", 1)
+    with Session(database) as session:
+        base_row(session)
+        first = row()
+        session.add(first)
+        assert storage.encode_new_snapshot(session, first)
+        session.commit()
+        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "false")
+        assert storage.expand_snapshot(session, Snapshot, first.id)
+        session.commit()
+        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_ENABLED", "true")
+        second = row()
+        session.add(second)
+        assert not storage.encode_new_snapshot(session, second)
+        session.rollback()
+        # Only fixture time changes; archived admission remains charged to its
+        # original UTC day despite the database/session display timezone.
+        session.execute(text("SET TIME ZONE 'Pacific/Honolulu'"))
+        session.execute(text("""UPDATE raw_snapshot_dictionaries SET created_at =
+            (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+            - interval '1 microsecond'"""))
+        session.commit()
+        third = row()
+        session.add(third)
+        assert storage.encode_new_snapshot(session, third)
+        session.commit()
+        assert (
+            session.scalar(text("SELECT count(*) FROM raw_snapshot_dictionaries")) == 2
+        )
+
+
+def test_daily_bytes_bound_is_atomic_and_transaction_rollback_restores_room(
+    database, monkeypatch
+):
+    install_daily_indexes(database)
+    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
+    with Session(database) as first, Session(database) as second:
+        base_row(first)
+        child = row()
+        first.add(child)
+        assert storage.encode_new_snapshot(first, child)
+        size = first.scalar(text("SELECT encoded_bytes FROM raw_snapshot_dictionaries"))
+        monkeypatch.setattr(storage, "DAILY_BYTES", size)
+        other = row()
+        second.add(other)
+        assert not storage.encode_new_snapshot(second, other)  # lock held
+        first.rollback()
+        assert storage.encode_new_snapshot(second, other)  # exact byte bound fits
+        second.commit()
+        final = row()
+        first.add(final)
+        monkeypatch.setattr(storage, "DAILY_BYTES", size * 2 - 1)
+        assert not storage.encode_new_snapshot(first, final)  # positive room is too small
+        monkeypatch.setattr(storage, "DAILY_BYTES", size)
+        assert not storage.encode_new_snapshot(first, final)
+        first.commit()
+        assert final._stored_raw_content == mock_body()
+        assert (
+            first.scalar(
+                text("SELECT sum(encoded_bytes) FROM raw_snapshot_dictionaries")
+            )
+            == size
+        )
+
+
+def test_bounded_recent_lookup_reuses_old_anchor_and_adapts_changed_page(
+    database, monkeypatch
+):
+    install_daily_indexes(database)
+    monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
+    monkeypatch.setattr(storage, "RECENT_BASE_ROWS", 2)
+    with Session(database) as session:
+        base = base_row(session)
+        for _ in range(4):
+            child = row()
+            session.add(child)
+            assert storage.encode_new_snapshot(session, child)
+            session.commit()
+            assert child.raw_content == mock_body()
+        assert set(
+            session.execute(
+                text("SELECT base_snapshot_id FROM raw_snapshot_dictionaries")
+            ).scalars()
+        ) == {base.id}
+        # An unrelated retained page version becomes plaintext when compression
+        # would not save space, and becomes the next exact-scope recent anchor.
+        changed = "".join(random.Random(719).choices(string.ascii_letters, k=100000))
+        new_base = row(changed)
+        session.add(new_base)
+        assert not storage.encode_new_snapshot(session, new_base)
+        session.commit()
+        following = row(changed)
+        session.add(following)
+        assert storage.encode_new_snapshot(session, following)
+        session.commit()
+        assert (
+            session.scalar(
+                text(
+                    "SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"
+                ),
+                {"id": following.id},
+            )
+            == new_base.id
+        )
+
+
+def test_index_migration_with_used_ledger_is_additive_idempotent_and_reversible(
+    database,
+):
+    with Session(database) as session:
+        base_row(session)
+        child = row()
+        session.add(child)
+        assert storage.encode_new_snapshot(session, child)
+        session.commit()
+        original = child.raw_content
+        before = session.execute(text("SELECT * FROM raw_snapshot_dictionaries")).all()
+    path = (
+        Path(__file__).parents[1]
+        / "alembic/versions/f9e5b4a8c012_index_bounded_raw_storage.py"
+    )
+    with database.begin() as connection:
+        connection.execute(
+            text("CREATE TABLE alembic_version (version_num varchar(32) PRIMARY KEY)")
+        )
+        connection.execute(
+            text("INSERT INTO alembic_version VALUES (:revision)"),
+            {"revision": delivery.REVISION},
+        )
+        assert delivery.migrate(connection, path)
+        assert not delivery.migrate(connection, path)
+        assert (
+            connection.execute(text("SELECT * FROM raw_snapshot_dictionaries")).all()
+            == before
+        )
+        spec = importlib.util.spec_from_file_location("index_rollback_fixture", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.op = Operations(MigrationContext.configure(connection))
+        module.downgrade()
+        delivery.validate_schema(connection)
+    with Session(database) as session:
+        assert session.get(Snapshot, child.id).raw_content == original

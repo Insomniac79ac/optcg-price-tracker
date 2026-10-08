@@ -1,0 +1,151 @@
+{
+  "target": "staging",
+  "classification": "AMBER",
+  "observed_at": "2026-10-08T02:04:09.049273+00:00",
+  "before_source_sha": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+  "before_revision": "e8c2d4f6a901",
+  "after_revision": "f9e5b4a8c012",
+  "production_accessed": false,
+  "source_requests": 0,
+  "manually_invoked_source_jobs": 0,
+  "baseline": {
+    "operational": 2630,
+    "target": 3237,
+    "remaining": 607,
+    "mapped": 2635,
+    "fresh_usable": 2398,
+    "dual": 334,
+    "zero": 1681,
+    "denominator": 4316
+  },
+  "storage_inputs": {
+    "observed_at": "2026-10-08T02:04:09.049273+00:00",
+    "target": "staging",
+    "production_accessed": false,
+    "source_http": 0,
+    "database_writes": 0,
+    "payload_by_parser24h": [
+      {
+        "name": "snkrdunk",
+        "parser_version": "snkrdunk-collector-v2",
+        "snapshots": 574,
+        "stored_payload_bytes": 64019612,
+        "stored_row_bytes": 64117192
+      },
+      {
+        "name": "snkrdunk",
+        "parser_version": "snkr-published-discovery-v1",
+        "snapshots": 40,
+        "stored_payload_bytes": 18376113,
+        "stored_row_bytes": 18384353
+      },
+      {
+        "name": "yuyutei",
+        "parser_version": "yuyutei-collector-v3",
+        "snapshots": 2724,
+        "stored_payload_bytes": 100114452,
+        "stored_row_bytes": 100618472
+      },
+      {
+        "name": "yuyutei",
+        "parser_version": "yuyutei-recurring-discovery-v1",
+        "snapshots": 134,
+        "stored_payload_bytes": 4856290,
+        "stored_row_bytes": 4880460
+      }
+    ],
+    "observations24h": {
+      "rows": 2772,
+      "row_bytes": 247175
+    },
+    "events24h": {
+      "rows": 1019,
+      "row_bytes": 1690802
+    },
+    "volume": {
+      "average_mb": 3262.707582684474,
+      "current_mb": 3362.246361088,
+      "limit_mb": 10000.0,
+      "max_mb": 3362.246361088,
+      "mount_path": "/var/lib/postgresql/data",
+      "name": "postgres-volume"
+    },
+    "projection_semantics": "Current writer flags OFF, global all-time cap200; no continuous canary savings assumed. Partial calendar days and one-shot image/sitemap envelopes are separate. Payload is physically PostgreSQL-compressed; row bytes overlap payload and cannot be added again. Relation/index deltas and provider growth include overhead and variable WAL; these are not a stable recurring slope.",
+    "unknowns": [
+      "R2 quota",
+      "shared asset bucket footprint",
+      "provider log byte retention",
+      "ephemeral disk headroom",
+      "process-level browser RSS",
+      "future source allocation of607 exact identities"
+    ]
+  },
+  "migration": {
+    "objects_added": [
+      "ix_raw_dictionary_created",
+      "ix_raw_snapshot_dictionary_scope"
+    ],
+    "raw_rows_rewritten": 0,
+    "ledger_rows_rewritten": 0,
+    "immutable_history_rewritten": 0,
+    "version_rows_updated": 1,
+    "raw_live_rows_observed": 34368,
+    "index_byte_envelope_model": 8388608,
+    "no_toast_body_scan": true,
+    "lock_timeout_seconds": 2,
+    "statement_timeout_seconds": 30,
+    "transactional_rollback_on_timeout": true
+  },
+  "configuration_change_on_delivery": null,
+  "writer_activation_on_delivery": false,
+  "admission": {
+    "default": "all-time200, unchanged",
+    "optional_mode": "daily-v1",
+    "utc_day_rows": 8192,
+    "utc_day_encoded_bytes": 33554432,
+    "nonblocking_global_transaction_lock": 734027410,
+    "recovery_never_refunds_charge": true
+  },
+  "lookup": {
+    "recent_scope_rows_bound": 32,
+    "fallback_oldest_scoped_plain_anchor": true,
+    "hash_index_full_url_equality": true,
+    "codec_changed": false
+  },
+  "rollback": {
+    "source": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+    "procedure": "Immediate reversible writer OFF and mode canary; tested OFF path bypasses admission/lookup. Retain f9 schema revision, e8 readers/dependency protection, backup19, every body and ledger. If source rollback needed, deliver a bounded revert of writer implementation to retained PR77 bytes while retaining current migration/revision. Never replay obsolete full PR77 CI against f9. Index-only downgrade is separately fixture-tested with used ledger; no evidence expansion/deletion is needed for OFF rollback.",
+    "data_backup": "No source bodies or ledger changed by index migration; retained original canary plaintexts, hashes and portable19 recovery remain protected. PostgreSQL fixtures verify migration with used ledger plus index-only downgrade and lossless reload.",
+    "broad_body_expansion_authorized": false,
+    "runtime_startup_compatibility": "Current API uvicorn only and due-collector start commands do not invoke Alembic. Source rollback retains new migration/revision for guarded native delivery."
+  },
+  "post_delivery": "Strict SHA/schema/API/frontend and all10 ordinary natural receipts; all13 writer flags OFF; no source/budget/cron change; retained15 encoded bodies still lossless.",
+  "activation_gate": "Separate fresh AMBER preflight; normal SNKR writer sample and both-source coverage/cost/physical savings/30d90d projections; no configured cap is measured headroom.",
+  "local_tests": {
+    "storage_reader_backup": 119,
+    "allowlisted_delivery": 4
+  },
+  "failure_triggers": [
+    "unexpected writer ON",
+    "schema/index mismatch",
+    "hash/lineage mismatch",
+    "new source denial",
+    "ownership or reservation leak",
+    "uncontrolled source requests",
+    "actionable deadline regression"
+  ],
+  "snkr_next_natural_raw_due": "2026-10-08T10:32:04.612116+00:00",
+  "new100": "UNPLANNED until sustained storage/admission/peak safeguards pass",
+  "official_references_checked_utc": "2026-10-08",
+  "references": [
+    "https://docs.railway.com/volumes/reference",
+    "https://docs.railway.com/cron-jobs",
+    "https://docs.sqlalchemy.org/en/20/core/constraints.html#sqlalchemy.schema.HasConditionalDDL.ddl_if",
+    "https://cli.github.com/manual/gh_pr_create"
+  ],
+  "installed_tool_versions": {
+    "Railway": "5.62.1",
+    "GitHubCLI": "2.88.0",
+    "local_SQLAlchemy": "2.1.1"
+  }
+}

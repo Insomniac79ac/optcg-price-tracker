@@ -18,6 +18,7 @@ class RawSnapshotDictionary(Base):
     __tablename__ = "raw_snapshot_dictionaries"
     __table_args__ = (
         Index("ix_raw_dictionary_base", "base_snapshot_id"),
+        Index("ix_raw_dictionary_created", "created_at"),
         CheckConstraint("base_snapshot_id < id", name="ck_raw_dictionary_older_base"),
         CheckConstraint(
             "original_bytes BETWEEN 1 AND 8388608 AND encoded_bytes > 0",
