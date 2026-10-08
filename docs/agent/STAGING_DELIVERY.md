@@ -211,3 +211,12 @@ merge commit:
 
 The decision is recorded as `api_expectation` in the delivery receipt. PR81
 (f4b632d) replays as `skip` on 1b1b64d.
+
+PR83's delivery (852ccdc) showed every Railway service SKIPPED and the main
+verifier resolved `api_sha: merge` correctly. It still failed, because the SNKR
+component check read `merge` from the manifest itself and expected the API at
+head. The verifier now exports its resolved API SHA to repository checks as
+`STAGING_RESOLVED_API_SHA`. The SNKR check uses it only for `merge` and only
+when it is a full SHA, otherwise head. Its API-input continuity check still
+applies. A read-only replay against 852ccdc passed (SNKR runtime 18f66771 on
+1b1b64d).

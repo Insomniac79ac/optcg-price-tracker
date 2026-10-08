@@ -2,6 +2,8 @@
 """Read-only verification of unchanged API bytes and naturally adopted SNKR bytes."""
 
 import json
+import os
+import re
 import subprocess
 import time
 
@@ -119,6 +121,19 @@ def wait_for_adoption(
             sleep(min(30, remaining))
 
 
+def expected_api(declared, head, environ=os.environ):
+    """api_sha=merge uses the delivery verifier's resolved API source when given.
+
+    verify_staging_delivery resolves a legitimately skipped API build to its
+    previous verified SHA and exports it; continuity() below still requires the
+    API inputs to be byte-identical between that SHA and head.
+    """
+    if declared != "merge":
+        return declared
+    resolved = environ.get("STAGING_RESOLVED_API_SHA", "")
+    return resolved if re.fullmatch("[0-9a-f]{40}", resolved) else head
+
+
 def main():
     head = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=state.ROOT, text=True
@@ -126,8 +141,7 @@ def main():
     mission = json.loads((state.ROOT / "docs/agent/STAGING_MISSION.json").read_text())
     expected = mission["deployment_verification"].get("snkr_component", SNKR)
     expected = head if expected == "merge" else expected
-    api_expected = mission["deployment_verification"]["api_sha"]
-    api_expected = head if api_expected == "merge" else api_expected
+    api_expected = expected_api(mission["deployment_verification"]["api_sha"], head)
     continuity(api_expected, head, API_PATHS)
     continuity(expected, head, SNKR_PATHS)
     print(

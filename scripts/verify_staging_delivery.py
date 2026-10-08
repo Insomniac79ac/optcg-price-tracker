@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -22,7 +23,7 @@ def require(condition, message):
         raise state.VerificationError(message)
 
 
-def run_component_checks(checks):
+def run_component_checks(checks, api_sha=None):
     paths = []
     for check in checks:
         path = (state.ROOT / check).resolve()
@@ -40,8 +41,12 @@ def run_component_checks(checks):
             "scripts/verify_snkr_published_discovery_component.py",
             "scripts/verify_yuyu_raw_reader_component.py",
         }
+        env = dict(os.environ)
+        if api_sha:
+            # Checks reading api_sha=merge use the API source resolved here.
+            env["STAGING_RESOLVED_API_SHA"] = api_sha
         subprocess.run(
-            ["python", str(path)], check=True, timeout=1860 if natural else 300
+            ["python", str(path)], check=True, timeout=1860 if natural else 300, env=env
         )
 
     # These checks only read provider/retained evidence, so adoption windows
@@ -371,7 +376,7 @@ def main():
     browser_check()
     sale = sale_audit()
     routes = browser_check()
-    run_component_checks(args.check)
+    run_component_checks(args.check, args.api_sha)
     # Re-read after browser/data checks, so a competing deployment cannot be called success.
     evidence = state.collect_live()
     validate_state(evidence, args.expected, args.api_sha, args.revision)
