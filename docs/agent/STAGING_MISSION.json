@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Fix forward PR83: component checks use the delivery verifier's resolved API source for api_sha=merge",
+  "mission": "Land 2026-10-08 capacity75 session-4 handoff evidence on staging (documentation only)",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,21 +20,31 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/STAGING_DELIVERY.md",
-        "scripts/tests/test_snkr_discovery_component.py",
-        "scripts/tests/test_verify_staging_delivery.py",
-        "scripts/verify_snkr_published_discovery_component.py",
-        "scripts/verify_staging_delivery.py"
+        "docs/agent/handoff/2026-10-08/capacity75-session4/CONTINUATION.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/CURRENT_STATE-end.yaml",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/CURRENT_STATE-start.yaml",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/HANDOFF.md",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/ci/pr81-delivery-scope.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/ci/pr82-staging-delivery.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/coverage-latest.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/flags-end.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/flags-start.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/snkr-canary-preflight-FAILED.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/snkr-writer-off-preflight.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/state-evidence/staging-state-78900b93f20a4009.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/state-evidence/staging-state-8b3d4c30a24875a0.json",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/tools/db.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/tools/deploys.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/tools/flags.py",
+        "docs/agent/handoff/2026-10-08/capacity75-session4/yuyu-windows-24h.jsonl"
       ],
       "effects": [
-        "application",
-        "tests",
         "documentation"
       ],
-      "reason": "Verification scripts only. verify_staging_delivery exports its resolved API SHA to repository checks; the SNKR component check uses it for api_sha=merge with continuity unchanged. No services/, packages/, deploy/ or workflow change: no Railway build, collector rollout, DDL, provider variable, cron, budget, pacing, claim or writer change."
+      "reason": "Verbatim session-4 handoff and evidence from handoff/2026-10-08-session4 (3581f05) plus the read-only tools and CI excerpts it references, all under docs/agent/handoff/. Not read by any delivery, migration, verification or state script; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "f804c232e71ff3d61392ab4332e943545eb82b8744d80b85348c959928a24be5",
+  "diff_sha256": "f170834c4859e1e9b390fc0e1973cc2943297e83286ce6b716dfeaf32f5cc232",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",

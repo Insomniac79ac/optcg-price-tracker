@@ -1,0 +1,73 @@
+{
+  "target": "staging",
+  "observed_at": "2026-10-08T08:44:50.727597+00:00",
+  "read_only": true,
+  "production_accessed": false,
+  "source_requests": 0,
+  "database_writes": 0,
+  "coverage": {
+    "denominator": 4316,
+    "exact_mapped": 2635,
+    "operational": 2630,
+    "fresh_regular_usable_price": 2398,
+    "dual_mapped": 334,
+    "zero_mapped": 1681,
+    "change_from2630_operational": 0,
+    "remaining_to75": 607
+  },
+  "duplicate_exact_print_source_groups": 0,
+  "existing_open_nonblocked_checks_older_than_24h": 0,
+  "open_nonblocked_without_first_success": 0,
+  "workload": [
+    {
+      "name": "snkrdunk",
+      "kind": "discovery",
+      "total": 2,
+      "blocked": 0,
+      "claimed": 0,
+      "expired_claims": 0,
+      "due": 0,
+      "oldest_due": null
+    },
+    {
+      "name": "snkrdunk",
+      "kind": "refresh",
+      "total": 353,
+      "blocked": 66,
+      "claimed": 0,
+      "expired_claims": 0,
+      "due": 0,
+      "oldest_due": null
+    },
+    {
+      "name": "snkrdunk",
+      "kind": "validation",
+      "total": 24,
+      "blocked": 23,
+      "claimed": 0,
+      "expired_claims": 0,
+      "due": 0,
+      "oldest_due": null
+    },
+    {
+      "name": "yuyutei",
+      "kind": "discovery",
+      "total": 585,
+      "blocked": 3,
+      "claimed": 0,
+      "expired_claims": 0,
+      "due": 0,
+      "oldest_due": null
+    },
+    {
+      "name": "yuyutei",
+      "kind": "refresh",
+      "total": 2619,
+      "blocked": 3,
+      "claimed": 1,
+      "expired_claims": 0,
+      "due": 30,
+      "oldest_due": "2026-10-08T07:56:05.998632+00:00"
+    }
+  ]
+}
