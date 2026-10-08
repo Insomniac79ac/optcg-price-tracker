@@ -30,6 +30,7 @@ from opcg_source_identity.raw_payload import (
     PREFIX,
     RawContentAccess,
     RawPayloadError,
+    encode,
     sha256,
 )
 from app.services import raw_dictionary_storage as storage
@@ -450,7 +451,9 @@ def test_daily_bytes_bound_is_atomic_and_transaction_rollback_restores_room(
         final = row()
         first.add(final)
         monkeypatch.setattr(storage, "DAILY_BYTES", size * 2 - 1)
-        assert not storage.encode_new_snapshot(first, final)  # positive room is too small
+        assert not storage.encode_new_snapshot(
+            first, final
+        )  # positive room is too small
         monkeypatch.setattr(storage, "DAILY_BYTES", size)
         assert not storage.encode_new_snapshot(first, final)
         first.commit()
@@ -541,3 +544,58 @@ def test_index_migration_with_used_ledger_is_additive_idempotent_and_reversible(
         delivery.validate_schema(connection)
     with Session(database) as session:
         assert session.get(Snapshot, child.id).raw_content == original
+
+
+def test_large_historical_ledger_and_encoded_chain_keep_bounded_admission(
+    database, monkeypatch
+):
+    install_daily_indexes(database)
+    with Session(database) as session:
+        base = base_row(session)
+        packed = encode(
+            mock_body().encode(), base_id=base.id, base_body=mock_body().encode()
+        )
+        values = {
+            "base": base.id,
+            "body": packed,
+            "digest": base.content_hash,
+            "original": len(mock_body().encode()),
+            "encoded": len(packed.encode()),
+        }
+        session.execute(
+            text("""INSERT INTO raw_snapshots
+            (source_id,source_url,fetched_at,http_status,content_hash,parser_version,raw_content)
+            SELECT 1,'https://mock.invalid/card/1',now()-interval '2 days',200,:digest,
+                   'yuyutei-collector-v3',:body FROM generate_series(1,8193)"""),
+            values,
+        )
+        session.execute(
+            text("""INSERT INTO raw_snapshot_dictionaries
+            (id,base_snapshot_id,original_sha256,base_sha256,original_bytes,encoded_bytes,created_at)
+            SELECT id,:base,:digest,:digest,:original,:encoded,now()-interval '2 days'
+            FROM raw_snapshots WHERE id>:base"""),
+            values,
+        )
+        session.commit()
+        child = row()
+        session.add(child)
+        assert not storage.encode_new_snapshot(session, child)  # original200 unchanged
+        monkeypatch.setenv("RAW_DICTIONARY_STORAGE_MODE", "daily-v1")
+        monkeypatch.setattr(storage, "DAILY_ROWS", 1)
+        assert storage.encode_new_snapshot(session, child)
+        session.commit()
+        assert child.raw_content == mock_body()
+        assert (
+            session.scalar(
+                text(
+                    "SELECT base_snapshot_id FROM raw_snapshot_dictionaries WHERE id=:id"
+                ),
+                {"id": child.id},
+            )
+            == base.id
+        )
+        other = row()
+        session.add(other)
+        assert not storage.encode_new_snapshot(
+            session, other
+        )  # today's charge retained

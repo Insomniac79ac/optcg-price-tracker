@@ -70,24 +70,32 @@ def dictionary_base(session, model, snapshot):
         model.source_url == snapshot.source_url,
         model.http_status == 200,
     )
-    recent = (
-        select(model.id).where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
+    # Separate bounded projection from base loading: placing a raw-content
+    # filter outside an IN/LIMIT subquery can let PostgreSQL evaluate that
+    # predicate against unrelated historical rows before applying the IDs.
+    projected = select(model.id, model._stored_raw_content.startswith(PREFIX))
+    recent = session.execute(
+        projected.where(*scope).order_by(model.id.desc()).limit(RECENT_BASE_ROWS)
+    ).all()
+    base_id = next(
+        (snapshot_id for snapshot_id, encoded in recent if not encoded), None
     )
-    plain = ~model._stored_raw_content.startswith(PREFIX)
-    query = select(model, func.pg_column_size(model._stored_raw_content))
-    result = session.execute(
-        query.where(model.id.in_(recent), plain)
-        .order_by(model.id.desc())
-        .limit(1)
+    if base_id is None:
+        oldest = session.execute(
+            projected.where(*scope).order_by(model.id).limit(1)
+        ).first()
+        if oldest is None or oldest[1]:
+            return None
+        base_id = oldest[0]
+    # Retain the same-scope, plaintext, hash and shared-row-lock guards on the
+    # exact base used to encode; the projection cannot authorise a changed row.
+    return session.execute(
+        select(model, func.pg_column_size(model._stored_raw_content))
+        .where(
+            model.id == base_id, *scope, ~model._stored_raw_content.startswith(PREFIX)
+        )
         .with_for_update(read=True)
     ).first()
-    if result is None:
-        # Avoid an unbounded search through an all-encoded recent chain.
-        oldest = select(model.id).where(*scope).order_by(model.id).limit(1)
-        result = session.execute(
-            query.where(model.id.in_(oldest), plain).limit(1).with_for_update(read=True)
-        ).first()
-    return result
 
 
 def enabled():

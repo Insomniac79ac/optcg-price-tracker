@@ -40,7 +40,7 @@
       "reason": "Replace lifetime scanning only for explicitly selected daily-v1 mode, add bounded scoped lookup and UTC row/byte admission under existing global lock. Deliver OFF, preserve default200/codec/e8 lineage/readers/portable backup. Allowlist index-only transition with exact parent/path/checksum and executable fixture rollback; no activation or volume expansion."
     }
   ],
-  "diff_sha256": "4ad4ce1556a531c2b5900ef7ec604e9567d7481ace6422f2f2f87b5e7bb17965",
+  "diff_sha256": "469c10b200491506e009c92d52d49d96fa7fe3b8f8d91504e369c1a5a86c7135",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",

@@ -110,7 +110,8 @@
     "recent_scope_rows_bound": 32,
     "fallback_oldest_scoped_plain_anchor": true,
     "hash_index_full_url_equality": true,
-    "codec_changed": false
+    "codec_changed": false,
+    "planner_reordering_guard": "Bounded ID/encoded-flag projection first; load only the selected exact base under shared lock. No raw filter outside a limited ID subquery."
   },
   "rollback": {
     "source": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
@@ -122,7 +123,7 @@
   "post_delivery": "Strict SHA/schema/API/frontend and all10 ordinary natural receipts; all13 writer flags OFF; no source/budget/cron change; retained15 encoded bodies still lossless.",
   "activation_gate": "Separate fresh AMBER preflight; normal SNKR writer sample and both-source coverage/cost/physical savings/30d90d projections; no configured cap is measured headroom.",
   "local_tests": {
-    "storage_reader_backup": 119,
+    "storage_reader_backup": 120,
     "allowlisted_delivery": 4
   },
   "failure_triggers": [
