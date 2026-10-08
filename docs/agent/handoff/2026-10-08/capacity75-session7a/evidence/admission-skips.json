@@ -1,0 +1,136 @@
+[
+ {
+  "id": 38417,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op01/10010",
+  "fetched_at": "2026-10-08 21:26:55.252011+00:00",
+  "created_at": "2026-10-08 21:26:55.252011+00:00",
+  "hash_ok": true,
+  "bytes": 223490,
+  "recent_scope_rows": 32,
+  "plaintext_in_recent": 32,
+  "would_be_base": 35082,
+  "base_col_bytes": 36662,
+  "packed_bytes": 2038,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38416,
+    "created_at": "2026-10-08 21:26:45.818635+00:00",
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943"
+   },
+   {
+    "id": 38418,
+    "created_at": "2026-10-08 21:26:55.188566+00:00",
+    "claimed_by": "yuyutei-due-7:ba20ea289f324edaafaff202dd2c8330"
+   },
+   {
+    "id": 38419,
+    "created_at": "2026-10-08 21:27:04.507501+00:00",
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-7:ba20ea289f324edaafaff202dd2c8330",
+    "claimed_at": "2026-10-08 21:26:41.164139+00:00",
+    "finished_at": "2026-10-08 21:26:56.321091+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943",
+    "claimed_at": "2026-10-08 21:26:47.322240+00:00",
+    "finished_at": "2026-10-08 21:26:55.539768+00:00"
+   }
+  ]
+ },
+ {
+  "id": 38440,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op11/10102",
+  "fetched_at": "2026-10-08 21:34:16.806230+00:00",
+  "created_at": "2026-10-08 21:34:16.806230+00:00",
+  "hash_ok": true,
+  "bytes": 225778,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 35097,
+  "base_col_bytes": 37217,
+  "packed_bytes": 1910,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38439,
+    "created_at": "2026-10-08 21:34:08.042021+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38441,
+    "created_at": "2026-10-08 21:34:16.804583+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38443,
+    "created_at": "2026-10-08 21:34:26.192826+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32",
+    "claimed_at": "2026-10-08 21:34:09.181440+00:00",
+    "finished_at": "2026-10-08 21:34:17.173850+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52",
+    "claimed_at": "2026-10-08 21:34:09.382876+00:00",
+    "finished_at": "2026-10-08 21:34:17.246611+00:00"
+   }
+  ]
+ },
+ {
+  "id": 38442,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op01/10129",
+  "fetched_at": "2026-10-08 21:34:26.263600+00:00",
+  "created_at": "2026-10-08 21:34:26.263600+00:00",
+  "hash_ok": true,
+  "bytes": 226438,
+  "recent_scope_rows": 32,
+  "plaintext_in_recent": 32,
+  "would_be_base": 35098,
+  "base_col_bytes": 37132,
+  "packed_bytes": 2018,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38441,
+    "created_at": "2026-10-08 21:34:16.804583+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38443,
+    "created_at": "2026-10-08 21:34:26.192826+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38444,
+    "created_at": "2026-10-08 21:34:35.273267+00:00",
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32"
+   },
+   {
+    "id": 38445,
+    "created_at": "2026-10-08 21:34:35.447251+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32",
+    "claimed_at": "2026-10-08 21:34:18.234067+00:00",
+    "finished_at": "2026-10-08 21:34:26.572030+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52",
+    "claimed_at": "2026-10-08 21:34:18.308394+00:00",
+    "finished_at": "2026-10-08 21:34:26.712935+00:00"
+   }
+  ]
+ }
+]
