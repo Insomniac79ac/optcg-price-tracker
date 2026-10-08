@@ -1,0 +1,123 @@
+{
+  "status": "paused_by_user",
+  "paused_at": "2026-10-08T00:33:02Z",
+  "objective_complete": false,
+  "staging_only": true,
+  "production_accessed": false,
+  "psa10": "OFF",
+  "canonical_denominator": 4316,
+  "operational_target": 3237,
+  "latest_coverage": {
+    "target": "staging",
+    "observed_at": "2026-10-08T00:20:43.841946+00:00",
+    "read_only": true,
+    "production_accessed": false,
+    "source_requests": 0,
+    "database_writes": 0,
+    "coverage": {
+      "denominator": 4316,
+      "exact_mapped": 2635,
+      "operational": 2630,
+      "fresh_regular_usable_price": 2398,
+      "dual_mapped": 334,
+      "zero_mapped": 1681,
+      "change_from2630_operational": 0,
+      "remaining_to75": 607
+    },
+    "duplicate_exact_print_source_groups": 0,
+    "existing_open_nonblocked_checks_older_than_24h": 0,
+    "open_nonblocked_without_first_success": 0,
+    "workload": [
+      {
+        "name": "snkrdunk",
+        "kind": "discovery",
+        "total": 2,
+        "blocked": 0,
+        "claimed": 0,
+        "expired_claims": 0,
+        "due": 0,
+        "oldest_due": null
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "refresh",
+        "total": 353,
+        "blocked": 66,
+        "claimed": 0,
+        "expired_claims": 0,
+        "due": 0,
+        "oldest_due": null
+      },
+      {
+        "name": "snkrdunk",
+        "kind": "validation",
+        "total": 24,
+        "blocked": 23,
+        "claimed": 0,
+        "expired_claims": 0,
+        "due": 0,
+        "oldest_due": null
+      },
+      {
+        "name": "yuyutei",
+        "kind": "discovery",
+        "total": 585,
+        "blocked": 3,
+        "claimed": 0,
+        "expired_claims": 0,
+        "due": 0,
+        "oldest_due": null
+      },
+      {
+        "name": "yuyutei",
+        "kind": "refresh",
+        "total": 2619,
+        "blocked": 3,
+        "claimed": 2,
+        "expired_claims": 0,
+        "due": 62,
+        "oldest_due": "2026-10-07T23:54:20.647641+00:00"
+      }
+    ]
+  },
+  "source_sha": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+  "pr": 77,
+  "pr_head": "9f3f24f1d20cbcf607608e1aeaf02b015df40215",
+  "ci": {
+    "id": 37703693900,
+    "status": "completed",
+    "conclusion": "success",
+    "strict_artifact_downloaded": false
+  },
+  "actual_all_ten_natural_components": "verified in ../2026-10-07/capacity75-resumed/pr77-natural-adoption.json",
+  "database_revision": "e8c2d4f6a901",
+  "snkr_completed_intents": [
+    3676,
+    3677
+  ],
+  "yuyu_new100": "UNPLANNED",
+  "cadence": "original30minute profiles unchanged",
+  "budgets": "Yuyu9000/1800, SNKR3100/1800 unchanged",
+  "admission": "PR77 atomically caps active Yuyu product claims at4",
+  "dictionary_writer_flags": "all13 relevant staging services OFF, checked00:31",
+  "dictionary_ledger": {
+    "all_time_used": 16,
+    "all_time_limit": 200,
+    "encoded_remaining": 15,
+    "expanded_snapshot": 35175,
+    "historical_evidence_preserved": true
+  },
+  "fresh_state_verified_at": "2026-10-08T00:27:05.153575Z",
+  "durable_evidence": "docs/agent/handoff/2026-10-07/capacity75-resumed",
+  "worktree": "/tmp/capacity75-resumed-20261007",
+  "worktree_head": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+  "root_dirty_edits_preserved": [
+    "services/api/tests/test_freshness_adapters_postgres.py",
+    "services/yuyutei_collector/yuyutei_collector/config.py",
+    "services/yuyutei_collector/yuyutei_collector/due.py"
+  ],
+  "no_source_jobs_manually_invoked": true,
+  "no_mapping_approvals_in_this_resumed_session": true,
+  "no_storage_resize": true,
+  "no_new_mission_actions_until_resume": true
+}

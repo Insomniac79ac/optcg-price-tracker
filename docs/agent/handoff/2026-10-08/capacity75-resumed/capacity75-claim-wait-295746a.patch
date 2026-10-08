@@ -1,0 +1,284 @@
+diff --git a/services/api/app/services/freshness_integration.py b/services/api/app/services/freshness_integration.py
+index 6dccb07..bf41a35 100644
+--- a/services/api/app/services/freshness_integration.py
++++ b/services/api/app/services/freshness_integration.py
+@@ -561,21 +561,40 @@ def _drain(
+                 if telemetry is not None:
+                     telemetry["stopped_reason"] = "runtime_bound"
+                 return results
+-            ownership_check(session)
+-            claims = claim_due(
+-                session,
+-                source_id,
+-                owner,
+-                limit=1,
+-                lease=timedelta(seconds=mapping_seconds + 60),
+-                clock=clock,
+-                yuyutei_shard_index=shard_index,
+-                supported_kinds={"refresh"}
+-                | ({"discovery"} if discovery_runner else set()),
+-            )
+-            session.commit()
+-            if not claims:
+-                return results
++            # A full shared claim cap can clear while this scheduled consumer
++            # still has runtime. Retry only that explicit refusal for <=30s;
++            # release the admission transaction before every five-second wait.
++            # Other refusals retain their immediate stop and every retry uses
++            # the original locking, fairness, reservation and ownership guards.
++            for retry in range(7):
++                ownership_check(session)
++                admission_status = {}
++                claims = claim_due(
++                    session,
++                    source_id,
++                    owner,
++                    limit=1,
++                    lease=timedelta(seconds=mapping_seconds + 60),
++                    clock=clock,
++                    yuyutei_shard_index=shard_index,
++                    supported_kinds={"refresh"}
++                    | ({"discovery"} if discovery_runner else set()),
++                    admission_status=admission_status,
++                )
++                session.commit()
++                if claims:
++                    break
++                capped = admission_status.get("reason") == "yuyu_active_claim_cap"
++                if (
++                    shard_index is None
++                    or not capped
++                    or retry == 6
++                    or monotonic() + 5 + mapping_seconds > deadline
++                ):
++                    if capped and telemetry is not None:
++                        telemetry["stopped_reason"] = "active_claim_wait_bound"
++                    return results
++                sleep(5)
+             attempt = Attempt(
+                 session, claims[0], ownership_check=ownership_check, clock=clock
+             )
+diff --git a/services/api/app/services/freshness_queue.py b/services/api/app/services/freshness_queue.py
+index bac53f5..cc917a6 100644
+--- a/services/api/app/services/freshness_queue.py
++++ b/services/api/app/services/freshness_queue.py
+@@ -448,6 +448,7 @@ def claim_due(
+     clock: UTCClock = utc_now,
+     yuyutei_shard_index: int | None = None,
+     supported_kinds: set[str] | None = None,
++    admission_status: dict | None = None,
+ ) -> list[Claim]:
+     """Reserve a processing chunk. The next chunk can be claimed immediately."""
+     if not owner or len(owner) > 128 or not 1 <= limit <= 100 or lease <= timedelta(0):
+@@ -459,6 +460,8 @@ def claim_due(
+         ):
+             raise ValueError("routing requires an existing Yuyu shard index in 0..8")
+     budget = _budget(db, source_id)
++    if admission_status is not None:
++        admission_status.clear()
+     now = require_utc(clock())
+     _roll_window(budget, now)
+     _recover_expired(db, budget, now)
+@@ -478,6 +481,33 @@ def claim_due(
+             )
+         )
+         limit = min(limit, max(0, YUYU_ACTIVE_CLAIM_LIMIT - active))
++        if limit == 0 and admission_status is not None:
++            # Do not make an empty, unaffordable or wrong-shard consumer wait.
++            # This projection only explains refusal; it cannot grant a claim.
++            pending = select(FreshnessWork.id).where(
++                FreshnessWork.source_id == source_id,
++                FreshnessWork.state == "pending",
++                FreshnessWork.next_due_at <= now,
++                FreshnessWork.estimated_request_cost
++                <= budget.request_limit
++                - budget.used_requests
++                - budget.reserved_requests,
++                or_(
++                    FreshnessWork.retry_not_before_at.is_(None),
++                    FreshnessWork.retry_not_before_at <= now,
++                ),
++            )
++            if supported_kinds is not None:
++                pending = pending.where(FreshnessWork.kind.in_(supported_kinds))
++            if yuyutei_shard_index is not None:
++                pending = pending.where(
++                    or_(
++                        FreshnessWork.kind != "refresh",
++                        FreshnessWork.source_card_mapping_id % 9 == yuyutei_shard_index,
++                    )
++                )
++            if db.scalar(pending.limit(1)) is not None:
++                admission_status["reason"] = "yuyu_active_claim_cap"
+     claims: list[Claim] = []
+     for _ in range(limit):
+         remaining = (
+diff --git a/services/api/tests/test_freshness_claim_wait_postgres.py b/services/api/tests/test_freshness_claim_wait_postgres.py
+new file mode 100644
+index 0000000..5d117cd
+--- /dev/null
++++ b/services/api/tests/test_freshness_claim_wait_postgres.py
+@@ -0,0 +1,163 @@
++"""Bounded contention recovery with mock outcomes and disposable localhost DB."""
++
++from datetime import timedelta
++from types import SimpleNamespace
++from collections import defaultdict
++
++import pytest
++from sqlalchemy import func, select
++
++from test_freshness_queue_postgres import db, T0, plan
++from app.models import (
++    FreshnessAttempt,
++    FreshnessPriceState,
++    FreshnessWork,
++    PriceObservation,
++    Source,
++    SourceCardMapping,
++    SourceDispatchBudget,
++)
++from app.services.freshness_integration import CaptureResult, _drain
++from app.services.freshness_queue import claim_due, complete_claim, plan_discovery_scope
++
++
++def occupied(db):
++    factory, source, mapping, _ = db
++    with factory.begin() as session:
++        session.get(Source, source).name = "yuyutei"
++        session.flush()
++        session.get(SourceCardMapping, mapping).source_url = (
++            "https://yuyu-tei.jp/sell/opc/card/op01/10001"
++        )
++        for i in range(4):
++            plan_discovery_scope(
++                session, source, f"held:{i}", due_at=T0, estimated_request_cost=10
++            )
++    with factory.begin() as session:
++        holders = claim_due(
++            session,
++            source,
++            "existing",
++            limit=4,
++            lease=timedelta(minutes=3),
++            clock=lambda: T0,
++            supported_kinds={"discovery"},
++        )
++    assert len(holders) == 4
++    own = plan(factory, mapping, cost=20)
++    return factory, source, mapping, own, holders
++
++
++@pytest.mark.parametrize(
++    "case",
++    [
++        "released",
++        "held",
++        "deadline",
++        "disabled",
++        "ownership_lost",
++        "unsharded",
++        "disabled_on_retry",
++        "empty",
++        "unaffordable",
++        "wrong_shard",
++    ],
++)
++def test_wait_never_bypasses_claim_budget_ownership_or_deadline(db, case):
++    factory, source, mapping, own, holders = occupied(db)
++    elapsed = [0]
++    waits, calls, checks = [], [], []
++    telemetry = defaultdict(int)
++    if case == "disabled":
++        with factory.begin() as session:
++            session.get(SourceDispatchBudget, source).enabled = False
++    if case in {"empty", "unaffordable"}:
++        with factory.begin() as session:
++            if case == "empty":
++                session.get(FreshnessWork, own).state = "blocked"
++            else:
++                session.get(SourceDispatchBudget, source).request_limit = 40
++
++    def sleep(seconds):
++        if not seconds:
++            return
++        waits.append(seconds)
++        elapsed[0] += seconds
++        if case in {"released", "disabled_on_retry"}:
++            with factory.begin() as session:
++                complete_claim(
++                    session,
++                    holders[0].claim_token,
++                    outcome="transient_failure",
++                    actual_request_cost=0,
++                    clock=lambda: T0 + timedelta(seconds=elapsed[0]),
++                )
++                if case == "disabled_on_retry":
++                    session.get(SourceDispatchBudget, source).enabled = False
++
++    def ownership(session):
++        checks.append(elapsed[0])
++        if case == "ownership_lost" and elapsed[0]:
++            raise RuntimeError("mock owner lost")
++
++    def runner(session, mapping_id, *, freshness):
++        calls.append(mapping_id)
++        assert (
++            session.scalar(
++                select(func.count())
++                .select_from(FreshnessWork)
++                .where(FreshnessWork.state == "claimed")
++            )
++            <= 4
++        )
++        freshness.result = CaptureResult(
++            "transient_failure", failure="mock no transport"
++        )
++        return SimpleNamespace(source_denied=False, reasons=[], stage="mock")
++
++    with factory() as session:
++        kwargs = dict(
++            runtime_seconds=182 if case == "deadline" else 1020,
++            mapping_seconds=180,
++            shard_index=(
++                None if case == "unsharded" else (mapping + (case == "wrong_shard")) % 9
++            ),
++            max_work=1,
++            delay_seconds=0,
++            clock=lambda: T0 + timedelta(seconds=elapsed[0]),
++            monotonic=lambda: elapsed[0],
++            sleep=sleep,
++            ownership_check=ownership,
++            telemetry=telemetry,
++        )
++        if case == "ownership_lost":
++            with pytest.raises(RuntimeError, match="owner lost"):
++                _drain(session, source, "waiting", runner, **kwargs)
++        else:
++            result = _drain(session, source, "waiting", runner, **kwargs)
++            assert len(result) == (1 if case == "released" else 0)
++    assert calls == ([mapping] if case == "released" else [])
++    expected_waits = (
++        [5] * 6
++        if case == "held"
++        else [5] if case in {"released", "ownership_lost", "disabled_on_retry"} else []
++    )
++    assert waits == expected_waits
++    assert sum(waits) <= 30
++    with factory() as session:
++        work = session.get(FreshnessWork, own)
++        assert work.attempt_count == (1 if case == "released" else 0)
++        assert work.state == ("blocked" if case == "empty" else "pending")
++        price_state = session.scalar(
++            select(FreshnessPriceState).where(FreshnessPriceState.work_id == own)
++        )
++        assert price_state.last_successfully_checked_at is None
++        assert session.scalar(select(func.count()).select_from(PriceObservation)) == 0
++        reserved = session.scalar(select(SourceDispatchBudget.reserved_requests))
++        assert reserved == (30 if case in {"released", "disabled_on_retry"} else 40)
++        unfinished = session.scalar(
++            select(func.count())
++            .select_from(FreshnessAttempt)
++            .where(FreshnessAttempt.outcome.is_(None))
++        )
++        assert unfinished == (3 if case in {"released", "disabled_on_retry"} else 4)

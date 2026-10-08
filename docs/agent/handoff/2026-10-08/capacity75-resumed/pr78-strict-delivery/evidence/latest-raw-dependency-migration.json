@@ -1,0 +1,14 @@
+{
+  "status": "SUCCESS",
+  "observed_at": "2026-10-08T02:43:18.452842+00:00",
+  "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
+  "postgres_service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e",
+  "merged_sha": "49950079b6fad1e865a74b345e34b27e9e2955f3",
+  "revision": "f9e5b4a8c012",
+  "changed": true,
+  "before_collected_at": "2026-10-08T02:43:01.615782+00:00",
+  "after_collected_at": "2026-10-08T02:43:14.033973+00:00",
+  "existing_evidence_rewritten": 0,
+  "source_requests": 0,
+  "writers_enabled": false
+}

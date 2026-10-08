@@ -1,0 +1,170 @@
+commit d1f000cf2651282a634f27c90311f42dae97a76f
+Author: Insomniac79ac <137761899+Insomniac79ac@users.noreply.github.com>
+Date:   Thu Oct 8 04:51:26 2026 +0000
+
+    Verify exact future cadence profiles behind bounded claim wait
+
+diff --git a/scripts/tests/test_yuyu_raw_reader_component.py b/scripts/tests/test_yuyu_raw_reader_component.py
+index 63e7cb1..afb6ced 100644
+--- a/scripts/tests/test_yuyu_raw_reader_component.py
++++ b/scripts/tests/test_yuyu_raw_reader_component.py
+@@ -80,6 +80,43 @@ class ReaderAdoptionTests(unittest.TestCase):
+         with self.assertRaises(check.state.VerificationError):
+             check.verify(self.live, "b" * 40, "c" * 40)
+ 
++    def test_five_minute_profile_is_exact_and_explicit(self):
++        for shard, service in enumerate(self.live["railway"]["services"]):
++            service["schedule_utc"] = (
++                ",".join(str(shard % 5 + offset) for offset in range(0, 60, 5))
++                + " * * * *"
++            )
++        with self.assertRaises(check.state.VerificationError):
++            check.verify(self.live, self.head, capacity_cadence=True)
++        with self.assertRaises(check.state.VerificationError):
++            check.verify(self.live, self.head, cadence_profile="five-minute-v1")
++        check.verify(
++            self.live,
++            self.head,
++            capacity_cadence=True,
++            cadence_profile="five-minute-v1",
++        )
++        for schedule in (
++            "0,30 * * * *",
++            "*/4 * * * *",
++            "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
++        ):
++            live = copy.deepcopy(self.live)
++            live["railway"]["services"][0]["schedule_utc"] = schedule
++            with self.assertRaises(check.state.VerificationError):
++                check.verify(
++                    live,
++                    self.head,
++                    capacity_cadence=True,
++                    cadence_profile="five-minute-v1",
++                )
++
++    def test_unknown_profile_refuses_even_with_original_schedules(self):
++        with self.assertRaises(check.state.VerificationError):
++            check.verify(
++                self.live, self.head, capacity_cadence=True, cadence_profile="unbounded"
++            )
++
+     def test_old_or_missing_receipt_waits_without_source_invocation(self):
+         for mutate in (
+             lambda e: e["database"]["operational_runs"].pop(),
+diff --git a/scripts/verify_yuyu_raw_reader_component.py b/scripts/verify_yuyu_raw_reader_component.py
+index 2d185b8..628fa40 100644
+--- a/scripts/verify_yuyu_raw_reader_component.py
++++ b/scripts/verify_yuyu_raw_reader_component.py
+@@ -8,8 +8,17 @@ import generate_staging_state as state
+ from verify_snkr_published_discovery_component import AdoptionPending
+ 
+ 
+-def verify(live, head, component=None, *, capacity_cadence=False):
++def verify(
++    live,
++    head,
++    component=None,
++    *,
++    capacity_cadence=False,
++    cadence_profile="ten-minute-v1",
++):
+     component = component or head
++    if cadence_profile not in {"ten-minute-v1", "five-minute-v1"}:
++        raise state.VerificationError("Unknown declared Yuyu cadence profile")
+     if live["mode"] != "live" or live["repository"]["sha"] != head:
+         raise state.VerificationError("Current merged staging source required")
+     services = [
+@@ -28,8 +37,11 @@ def verify(live, head, component=None, *, capacity_cadence=False):
+         shard = int(service["name"].split("shard-")[1].split("-")[0])
+         minute = shard * 3
+         legacy = f"{minute},{minute+30} * * * *"
++        period = 5 if cadence_profile == "five-minute-v1" else 10
++        phase = shard % period
+         bounded = (
+-            ",".join(str(shard + offset) for offset in range(0, 60, 10)) + " * * * *"
++            ",".join(str(phase + offset) for offset in range(0, 60, period))
++            + " * * * *"
+         )
+         schedule = service["schedule_utc"]
+         profiles.append(
+@@ -102,6 +114,31 @@ def main():
+     capacity_cadence = manifest["deployment_verification"].get(
+         "yuyu_capacity_cadence", False
+     )
++    cadence_profile = manifest["deployment_verification"].get(
++        "yuyu_cadence_profile", "ten-minute-v1"
++    )
++    if cadence_profile == "five-minute-v1":
++        if not capacity_cadence:
++            raise state.VerificationError(
++                "Five-minute profile requires explicit cadence declaration"
++            )
++        installed_retry = subprocess.check_output(
++            [
++                "git",
++                "show",
++                component + ":services/api/app/services/freshness_integration.py",
++            ],
++            cwd=state.ROOT,
++            text=True,
++        )
++        if (
++            "CLAIM_CAP_RETRY_COUNT = 6" not in installed_retry
++            or "CLAIM_CAP_RETRY_SECONDS = 5" not in installed_retry
++            or "admission_status=admission_status" not in installed_retry
++        ):
++            raise state.VerificationError(
++                "Five-minute profile requires installed bounded claim wait"
++            )
+     if capacity_cadence:
+         installed = subprocess.check_output(
+             [
+@@ -150,6 +187,7 @@ def main():
+                 head,
+                 component,
+                 capacity_cadence=capacity_cadence,
++                cadence_profile=cadence_profile,
+             )
+             print(json.dumps(result, indent=2))
+             return
+diff --git a/services/api/app/services/freshness_integration.py b/services/api/app/services/freshness_integration.py
+index bf41a35..2ef598a 100644
+--- a/services/api/app/services/freshness_integration.py
++++ b/services/api/app/services/freshness_integration.py
+@@ -46,6 +46,8 @@ CATEGORIES = {
+ MAX_BROWSER_ASSET_REDIRECTS = 8
+ BROWSER_ADMISSION_VERSION = 3
+ VALIDATION_ADMISSION_VERSION = 1
++CLAIM_CAP_RETRY_COUNT = 6
++CLAIM_CAP_RETRY_SECONDS = 5
+ 
+ # Observed advertising hosts, never the source's application/API or artwork.
+ ADVERTISING_HOSTS = frozenset(
+@@ -566,7 +568,7 @@ def _drain(
+             # release the admission transaction before every five-second wait.
+             # Other refusals retain their immediate stop and every retry uses
+             # the original locking, fairness, reservation and ownership guards.
+-            for retry in range(7):
++            for retry in range(CLAIM_CAP_RETRY_COUNT + 1):
+                 ownership_check(session)
+                 admission_status = {}
+                 claims = claim_due(
+@@ -588,13 +590,14 @@ def _drain(
+                 if (
+                     shard_index is None
+                     or not capped
+-                    or retry == 6
+-                    or monotonic() + 5 + mapping_seconds > deadline
++                    or retry == CLAIM_CAP_RETRY_COUNT
++                    or monotonic() + CLAIM_CAP_RETRY_SECONDS + mapping_seconds
++                    > deadline
+                 ):
+                     if capped and telemetry is not None:
+                         telemetry["stopped_reason"] = "active_claim_wait_bound"
+                     return results
+-                sleep(5)
++                sleep(CLAIM_CAP_RETRY_SECONDS)
+             attempt = Attempt(
+                 session, claims[0], ownership_check=ownership_check, clock=clock
+             )

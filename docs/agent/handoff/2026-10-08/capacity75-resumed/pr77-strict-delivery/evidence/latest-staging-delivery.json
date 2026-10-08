@@ -1,0 +1,31 @@
+{
+  "verified_at": "2026-10-08T00:31:20.724610+00:00",
+  "expected_commit": "c444790fcff71a99d6ff9fb548d133bc1b1dff66",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_7vzxb4nzuLdpeC5X6Ep9VbiQrGX1",
+    "status": "READY",
+    "sha": "c444790fcff71a99d6ff9fb548d133bc1b1dff66"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "e8c2d4f6a901",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 226,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "450e897481078e8feb7bd87d8b90fb72bed441f040ec58d2b43664f3cf83a77c",
+  "production_accessed": false
+}

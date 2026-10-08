@@ -1,0 +1,1970 @@
+{
+  "observed_at": "2026-10-08T02:03:16.821490+00:00",
+  "source_http": 0,
+  "database_writes": 0,
+  "natural_runs": {
+    "snkrdunk:None": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 18,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3541.291963,
+        "p50": 0.102967,
+        "p95": 269.94452055,
+        "max": 293.051358
+      },
+      "runtime_seconds_active": {
+        "n": 18,
+        "sum": 3538.104532,
+        "p50": 203.99223849999998,
+        "p95": 286.3975733,
+        "max": 293.051358
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 289,
+        "p50": 0.0,
+        "p95": 19.65,
+        "max": 20
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 44807,
+        "p50": 0.0,
+        "p95": 2923.3,
+        "max": 2934
+      },
+      "requests_per_minute_active": {
+        "n": 18,
+        "sum": 13244.317472801258,
+        "p50": 708.3179655837871,
+        "p95": 1119.7750138802314,
+        "max": 1134.1039085656207
+      },
+      "work": {
+        "attempted": 289,
+        "listed": 50,
+        "no_listing": 237,
+        "raw_snapshots": 289,
+        "accepted_observations": 50,
+        "completed": 2,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 0,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 66,
+      "stopped_reasons": {
+        "null": 48
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:0": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 26,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3102.409319,
+        "p50": 19.6458115,
+        "p95": 157.78416749999997,
+        "max": 445.632444
+      },
+      "runtime_seconds_active": {
+        "n": 26,
+        "sum": 3093.782094,
+        "p50": 128.419646,
+        "p95": 172.11784675,
+        "max": 445.632444
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 322,
+        "p50": 2.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17911,
+        "p50": 111.0,
+        "p95": 892.65,
+        "max": 896
+      },
+      "requests_per_minute_active": {
+        "n": 26,
+        "sum": 9560.113750672663,
+        "p50": 395.0221832500956,
+        "p95": 420.2663500999764,
+        "max": 421.60362571513093
+      },
+      "work": {
+        "attempted": 322,
+        "listed": 306,
+        "no_listing": 0,
+        "raw_snapshots": 321,
+        "accepted_observations": 306,
+        "completed": 15,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 1,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 5,
+      "stopped_reasons": {
+        "work_bound": 17,
+        "null": 31
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:1": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 28,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3054.159889,
+        "p50": 60.904766,
+        "p95": 142.3740126,
+        "max": 388.857181
+      },
+      "runtime_seconds_active": {
+        "n": 28,
+        "sum": 3051.728648,
+        "p50": 109.39519000000001,
+        "p95": 145.17777719999998,
+        "max": 388.857181
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 320,
+        "p50": 7.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17696,
+        "p50": 387.5,
+        "p95": 886.65,
+        "max": 890
+      },
+      "requests_per_minute_active": {
+        "n": 28,
+        "sum": 10385.882015565345,
+        "p50": 383.69752207493633,
+        "p95": 396.3498007463386,
+        "max": 396.9570755435808
+      },
+      "work": {
+        "attempted": 320,
+        "listed": 298,
+        "no_listing": 0,
+        "raw_snapshots": 319,
+        "accepted_observations": 298,
+        "completed": 21,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 1,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 8,
+      "stopped_reasons": {
+        "null": 35,
+        "work_bound": 13
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:2": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 28,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3006.582212,
+        "p50": 50.056430000000006,
+        "p95": 160.32708499999998,
+        "max": 173.063096
+      },
+      "runtime_seconds_active": {
+        "n": 28,
+        "sum": 3003.0120229999998,
+        "p50": 125.1291665,
+        "p95": 166.15027389999997,
+        "max": 173.063096
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 309,
+        "p50": 5.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17086,
+        "p50": 276.0,
+        "p95": 885.0,
+        "max": 895
+      },
+      "requests_per_minute_active": {
+        "n": 28,
+        "sum": 9430.04567668343,
+        "p50": 344.6729224200991,
+        "p95": 365.19248512012484,
+        "max": 365.90040654937866
+      },
+      "work": {
+        "attempted": 309,
+        "listed": 306,
+        "no_listing": 0,
+        "raw_snapshots": 309,
+        "accepted_observations": 306,
+        "completed": 3,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 0,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 9,
+      "stopped_reasons": {
+        "work_bound": 12,
+        "null": 36
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:3": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 27,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3274.752779,
+        "p50": 40.834374,
+        "p95": 162.46515104999997,
+        "max": 563.199729
+      },
+      "runtime_seconds_active": {
+        "n": 27,
+        "sum": 3271.016291,
+        "p50": 135.260613,
+        "p95": 179.4534857,
+        "max": 563.199729
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 316,
+        "p50": 4.5,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17444,
+        "p50": 247.5,
+        "p95": 886.0,
+        "max": 890
+      },
+      "requests_per_minute_active": {
+        "n": 27,
+        "sum": 9614.525881964093,
+        "p50": 381.8076899596016,
+        "p95": 392.72278762030874,
+        "max": 393.7910733312018
+      },
+      "work": {
+        "attempted": 316,
+        "listed": 307,
+        "no_listing": 0,
+        "raw_snapshots": 314,
+        "accepted_observations": 307,
+        "completed": 7,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 2,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 6,
+      "stopped_reasons": {
+        "work_bound": 14,
+        "null": 34
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:4": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 27,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 2873.624348,
+        "p50": 64.245054,
+        "p95": 147.5126716,
+        "max": 317.393624
+      },
+      "runtime_seconds_active": {
+        "n": 27,
+        "sum": 2871.695938,
+        "p50": 96.598477,
+        "p95": 149.5031972,
+        "max": 317.393624
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 309,
+        "p50": 7.5,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17116,
+        "p50": 412.5,
+        "p95": 886.65,
+        "max": 894
+      },
+      "requests_per_minute_active": {
+        "n": 27,
+        "sum": 10104.795528237155,
+        "p50": 382.16643117509693,
+        "p95": 397.43292415781474,
+        "max": 410.1581366837003
+      },
+      "work": {
+        "attempted": 309,
+        "listed": 306,
+        "no_listing": 0,
+        "raw_snapshots": 309,
+        "accepted_observations": 306,
+        "completed": 3,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 0,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 4,
+      "stopped_reasons": {
+        "null": 37,
+        "work_bound": 11
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:5": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 28,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 2779.233833,
+        "p50": 46.760261,
+        "p95": 144.5329448,
+        "max": 258.139873
+      },
+      "runtime_seconds_active": {
+        "n": 28,
+        "sum": 2777.022461,
+        "p50": 106.881866,
+        "p95": 150.90818620000002,
+        "max": 258.139873
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 312,
+        "p50": 5.5,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17318,
+        "p50": 305.5,
+        "p95": 890.65,
+        "max": 891
+      },
+      "requests_per_minute_active": {
+        "n": 28,
+        "sum": 10692.940561749585,
+        "p50": 396.1022765660432,
+        "p95": 413.8008585590513,
+        "max": 417.4637437827846
+      },
+      "work": {
+        "attempted": 312,
+        "listed": 307,
+        "no_listing": 0,
+        "raw_snapshots": 312,
+        "accepted_observations": 307,
+        "completed": 5,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 0,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 9,
+      "stopped_reasons": {
+        "work_bound": 11,
+        "null": 37
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:6": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 25,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 2713.18647,
+        "p50": 26.2609535,
+        "p95": 142.98639185,
+        "max": 162.180984
+      },
+      "runtime_seconds_active": {
+        "n": 25,
+        "sum": 2709.360472,
+        "p50": 130.209467,
+        "p95": 146.9527832,
+        "max": 162.180984
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 307,
+        "p50": 3.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 16985,
+        "p50": 165.5,
+        "p95": 885.65,
+        "max": 896
+      },
+      "requests_per_minute_active": {
+        "n": 25,
+        "sum": 9364.249088864877,
+        "p50": 385.5834814408144,
+        "p95": 398.9076421510222,
+        "max": 400.0828535218475
+      },
+      "work": {
+        "attempted": 307,
+        "listed": 306,
+        "no_listing": 0,
+        "raw_snapshots": 306,
+        "accepted_observations": 306,
+        "completed": 0,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 1,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 9,
+      "stopped_reasons": {
+        "null": 36,
+        "work_bound": 12
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:7": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 24,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 2596.513667,
+        "p50": 4.628909500000001,
+        "p95": 139.94716885,
+        "max": 151.740398
+      },
+      "runtime_seconds_active": {
+        "n": 24,
+        "sum": 2593.2761,
+        "p50": 132.443049,
+        "p95": 141.93516115,
+        "max": 151.740398
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 301,
+        "p50": 0.5,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 16654,
+        "p50": 28.0,
+        "p95": 887.0,
+        "max": 894
+      },
+      "requests_per_minute_active": {
+        "n": 24,
+        "sum": 9194.823399737248,
+        "p50": 385.48554232584803,
+        "p95": 399.2420898074522,
+        "max": 426.4935673137684
+      },
+      "work": {
+        "attempted": 301,
+        "listed": 300,
+        "no_listing": 0,
+        "raw_snapshots": 301,
+        "accepted_observations": 300,
+        "completed": 1,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 0,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 7,
+      "stopped_reasons": {
+        "null": 35,
+        "work_bound": 13
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    },
+    "yuyutei:8": {
+      "natural_completed_runs24h": 48,
+      "active_runs24h": 25,
+      "runtime_seconds_all": {
+        "n": 48,
+        "sum": 3062.419781,
+        "p50": 17.348301,
+        "p95": 132.3049327,
+        "max": 603.163039
+      },
+      "runtime_seconds_active": {
+        "n": 25,
+        "sum": 3059.783796,
+        "p50": 128.458011,
+        "p95": 134.69829199999998,
+        "max": 603.163039
+      },
+      "checks_per_execution": {
+        "n": 48,
+        "sum": 307,
+        "p50": 2.0,
+        "p95": 16.0,
+        "max": 16
+      },
+      "requests_per_execution": {
+        "n": 48,
+        "sum": 17074,
+        "p50": 111.0,
+        "p95": 891.0,
+        "max": 896
+      },
+      "requests_per_minute_active": {
+        "n": 25,
+        "sum": 9500.711098626929,
+        "p50": 407.83154082059576,
+        "p95": 416.4694663784462,
+        "max": 419.97920419471393
+      },
+      "work": {
+        "attempted": 307,
+        "listed": 292,
+        "no_listing": 0,
+        "raw_snapshots": 304,
+        "accepted_observations": 292,
+        "completed": 12,
+        "discovery_progress": 0
+      },
+      "failure": {
+        "transient": 3,
+        "parsing": 0,
+        "identity": 0,
+        "optional_resource": 0,
+        "http_403": 0,
+        "http_429": 0,
+        "challenge": 0,
+        "unexpected_skip": 0
+      },
+      "safety_max": {
+        "claims_remaining": 0,
+        "expired_claims": 0,
+        "reservations_remaining": 0,
+        "reservation_overruns": 0,
+        "duplicate_requests": 0,
+        "wrong_shard": 0
+      },
+      "deadline_miss_snapshot_max": 9,
+      "stopped_reasons": {
+        "null": 35,
+        "work_bound": 13
+      },
+      "trigger_provenance": "unknown in receipts; ordinary due-path operation, no operator source invocation"
+    }
+  },
+  "attempt_outcomes24h": {
+    "('yuyutei', 'refresh', 'captured')": {
+      "attempts": 2725,
+      "request_cost": {
+        "n": 2725,
+        "sum": 150977,
+        "p50": 55.0,
+        "p95": 56.0,
+        "max": 56
+      },
+      "runtime_seconds": {
+        "n": 2725,
+        "sum": 20301.753281,
+        "p50": 7.034562,
+        "p95": 8.4267208,
+        "max": 144.128434
+      }
+    },
+    "('yuyutei', 'refresh', 'transient_failure')": {
+      "attempts": 7,
+      "request_cost": {
+        "n": 7,
+        "sum": 388,
+        "p50": 55.0,
+        "p95": 56.0,
+        "max": 56
+      },
+      "runtime_seconds": {
+        "n": 7,
+        "sum": 912.589877,
+        "p50": 179.70846,
+        "p95": 180.1570505,
+        "max": 180.207362
+      }
+    },
+    "('yuyutei', 'discovery', 'completed')": {
+      "attempts": 67,
+      "request_cost": {
+        "n": 67,
+        "sum": 3725,
+        "p50": 56.0,
+        "p95": 56.0,
+        "max": 56
+      },
+      "runtime_seconds": {
+        "n": 67,
+        "sum": 703.295198,
+        "p50": 9.341,
+        "p95": 12.713515,
+        "max": 59.30015
+      }
+    },
+    "('yuyutei', 'discovery', 'transient_failure')": {
+      "attempts": 1,
+      "request_cost": {
+        "n": 1,
+        "sum": 27,
+        "p50": 27.0,
+        "p95": 27.0,
+        "max": 27
+      },
+      "runtime_seconds": {
+        "n": 1,
+        "sum": 179.777742,
+        "p50": 179.777742,
+        "p95": 179.777742,
+        "max": 179.777742
+      }
+    },
+    "('snkrdunk', 'refresh', 'no_listing')": {
+      "attempts": 237,
+      "request_cost": {
+        "n": 237,
+        "sum": 36242,
+        "p50": 150.0,
+        "p95": 172.0,
+        "max": 186
+      },
+      "runtime_seconds": {
+        "n": 237,
+        "sum": 2482.124195,
+        "p50": 10.506612,
+        "p95": 13.2666606,
+        "max": 28.0161
+      }
+    },
+    "('snkrdunk', 'refresh', 'captured')": {
+      "attempts": 50,
+      "request_cost": {
+        "n": 50,
+        "sum": 8366,
+        "p50": 169.0,
+        "p95": 185.2,
+        "max": 198
+      },
+      "runtime_seconds": {
+        "n": 50,
+        "sum": 459.629796,
+        "p50": 9.0246105,
+        "p95": 11.575952249999999,
+        "max": 13.51332
+      }
+    },
+    "('snkrdunk', 'discovery', 'completed')": {
+      "attempts": 2,
+      "request_cost": {
+        "n": 2,
+        "sum": 199,
+        "p50": 99.5,
+        "p95": 108.05,
+        "max": 109
+      },
+      "runtime_seconds": {
+        "n": 2,
+        "sum": 98.091861,
+        "p50": 49.0459305,
+        "p95": 63.29638425,
+        "max": 64.879768
+      }
+    }
+  },
+  "database_bytes": 2528155327,
+  "relations": [
+    {
+      "relname": "raw_snapshots",
+      "total_bytes": 2383560704,
+      "table_bytes": 2376318976,
+      "index_bytes": 7241728,
+      "estimated_rows": 34187.0,
+      "n_live_tup": 34368,
+      "n_dead_tup": 0,
+      "last_autovacuum": "2026-10-08T00:49:50.103620+00:00"
+    },
+    {
+      "relname": "source_mapping_proposal_groups",
+      "total_bytes": 42106880,
+      "table_bytes": 33406976,
+      "index_bytes": 8699904,
+      "estimated_rows": 21412.0,
+      "n_live_tup": 21894,
+      "n_dead_tup": 626,
+      "last_autovacuum": "2026-10-07T13:38:31.869451+00:00"
+    },
+    {
+      "relname": "market_index_snapshots",
+      "total_bytes": 24641536,
+      "table_bytes": 21594112,
+      "index_bytes": 3047424,
+      "estimated_rows": 26288.0,
+      "n_live_tup": 26288,
+      "n_dead_tup": 0,
+      "last_autovacuum": "2026-10-05T20:02:01.281236+00:00"
+    },
+    {
+      "relname": "source_mapping_proposal_alternatives",
+      "total_bytes": 11976704,
+      "table_bytes": 7430144,
+      "index_bytes": 4546560,
+      "estimated_rows": 34135.0,
+      "n_live_tup": 34930,
+      "n_dead_tup": 540,
+      "last_autovacuum": "2026-10-06T04:57:11.034869+00:00"
+    },
+    {
+      "relname": "freshness_attempts",
+      "total_bytes": 11321344,
+      "table_bytes": 8896512,
+      "index_bytes": 2424832,
+      "estimated_rows": 14183.0,
+      "n_live_tup": 14188,
+      "n_dead_tup": 1462,
+      "last_autovacuum": "2026-10-07T21:34:44.589541+00:00"
+    },
+    {
+      "relname": "price_observations",
+      "total_bytes": 10575872,
+      "table_bytes": 2859008,
+      "index_bytes": 7716864,
+      "estimated_rows": 25236.0,
+      "n_live_tup": 27262,
+      "n_dead_tup": 0,
+      "last_autovacuum": "2026-10-07T04:48:15.893947+00:00"
+    },
+    {
+      "relname": "app_log_events",
+      "total_bytes": 6004736,
+      "table_bytes": 5545984,
+      "index_bytes": 458752,
+      "estimated_rows": 3667.0,
+      "n_live_tup": 3863,
+      "n_dead_tup": 0,
+      "last_autovacuum": "2026-10-06T19:12:59.704259+00:00"
+    },
+    {
+      "relname": "source_collection_attempts",
+      "total_bytes": 5840896,
+      "table_bytes": 1949696,
+      "index_bytes": 3891200,
+      "estimated_rows": 15103.0,
+      "n_live_tup": 15457,
+      "n_dead_tup": 1470,
+      "last_autovacuum": "2026-09-30T17:07:14.978964+00:00"
+    },
+    {
+      "relname": "yuyutei_candidates",
+      "total_bytes": 4579328,
+      "table_bytes": 3448832,
+      "index_bytes": 1130496,
+      "estimated_rows": 4783.0,
+      "n_live_tup": 4783,
+      "n_dead_tup": 709,
+      "last_autovacuum": "2026-10-07T13:40:30.954658+00:00"
+    },
+    {
+      "relname": "freshness_work",
+      "total_bytes": 3661824,
+      "table_bytes": 2334720,
+      "index_bytes": 1327104,
+      "estimated_rows": 3583.0,
+      "n_live_tup": 3583,
+      "n_dead_tup": 711,
+      "last_autovacuum": "2026-10-07T23:46:48.208124+00:00"
+    },
+    {
+      "relname": "source_card_mappings",
+      "total_bytes": 3162112,
+      "table_bytes": 1318912,
+      "index_bytes": 1843200,
+      "estimated_rows": 3006.0,
+      "n_live_tup": 3006,
+      "n_dead_tup": 4,
+      "last_autovacuum": "2026-10-04T02:13:52.937805+00:00"
+    },
+    {
+      "relname": "card_prints",
+      "total_bytes": 3104768,
+      "table_bytes": 2105344,
+      "index_bytes": 999424,
+      "estimated_rows": 4281.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "market_value_points",
+      "total_bytes": 1343488,
+      "table_bytes": 1089536,
+      "index_bytes": 253952,
+      "estimated_rows": 2700.0,
+      "n_live_tup": 2760,
+      "n_dead_tup": 120,
+      "last_autovacuum": "2026-09-27T09:59:41.676379+00:00"
+    },
+    {
+      "relname": "canonical_cards",
+      "total_bytes": 1253376,
+      "table_bytes": 704512,
+      "index_bytes": 548864,
+      "estimated_rows": 2710.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "snkrdunk_candidates",
+      "total_bytes": 802816,
+      "table_bytes": 540672,
+      "index_bytes": 262144,
+      "estimated_rows": 676.0,
+      "n_live_tup": 678,
+      "n_dead_tup": 0,
+      "last_autovacuum": "2026-10-02T15:41:36.542130+00:00"
+    },
+    {
+      "relname": "freshness_price_states",
+      "total_bytes": 606208,
+      "table_bytes": 425984,
+      "index_bytes": 180224,
+      "estimated_rows": 2972.0,
+      "n_live_tup": 2972,
+      "n_dead_tup": 367,
+      "last_autovacuum": "2026-10-04T10:42:07.143676+00:00"
+    },
+    {
+      "relname": "yuyutei_discovery_runs",
+      "total_bytes": 573440,
+      "table_bytes": 557056,
+      "index_bytes": 16384,
+      "estimated_rows": 311.0,
+      "n_live_tup": 332,
+      "n_dead_tup": 34,
+      "last_autovacuum": "2026-10-07T13:50:31.240738+00:00"
+    },
+    {
+      "relname": "market_intelligence_reports",
+      "total_bytes": 180224,
+      "table_bytes": 131072,
+      "index_bytes": 49152,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "market_signal_events",
+      "total_bytes": 172032,
+      "table_bytes": 57344,
+      "index_bytes": 114688,
+      "estimated_rows": 7.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "cards",
+      "total_bytes": 147456,
+      "table_bytes": 16384,
+      "index_bytes": 131072,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "job_locks",
+      "total_bytes": 131072,
+      "table_bytes": 49152,
+      "index_bytes": 81920,
+      "estimated_rows": 6.0,
+      "n_live_tup": 6,
+      "n_dead_tup": 16,
+      "last_autovacuum": "2026-10-05T20:02:01.173073+00:00"
+    },
+    {
+      "relname": "release_products",
+      "total_bytes": 131072,
+      "table_bytes": 81920,
+      "index_bytes": 49152,
+      "estimated_rows": 65.0,
+      "n_live_tup": 65,
+      "n_dead_tup": 59,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "release_product_aliases",
+      "total_bytes": 98304,
+      "table_bytes": 16384,
+      "index_bytes": 81920,
+      "estimated_rows": 14.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 10,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collector_notes",
+      "total_bytes": 90112,
+      "table_bytes": 8192,
+      "index_bytes": 81920,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "snkrdunk_discovery_runs",
+      "total_bytes": 90112,
+      "table_bytes": 73728,
+      "index_bytes": 16384,
+      "estimated_rows": 9.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collector_activity_events",
+      "total_bytes": 81920,
+      "table_bytes": 8192,
+      "index_bytes": 73728,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "saved_views",
+      "total_bytes": 81920,
+      "table_bytes": 8192,
+      "index_bytes": 73728,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "source_dispatch_budgets",
+      "total_bytes": 73728,
+      "table_bytes": 40960,
+      "index_bytes": 32768,
+      "estimated_rows": 2.0,
+      "n_live_tup": 2,
+      "n_dead_tup": 10,
+      "last_autovacuum": "2026-10-08T01:56:51.877671+00:00"
+    },
+    {
+      "relname": "wishlist_items",
+      "total_bytes": 57344,
+      "table_bytes": 8192,
+      "index_bytes": 49152,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "alert_events",
+      "total_bytes": 57344,
+      "table_bytes": 8192,
+      "index_bytes": 49152,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "file_jobs",
+      "total_bytes": 57344,
+      "table_bytes": 8192,
+      "index_bytes": 49152,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "card_pirate_index_points",
+      "total_bytes": 57344,
+      "table_bytes": 8192,
+      "index_bytes": 49152,
+      "estimated_rows": -1.0,
+      "n_live_tup": 22,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collection_items",
+      "total_bytes": 49152,
+      "table_bytes": 8192,
+      "index_bytes": 40960,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collector_groups",
+      "total_bytes": 49152,
+      "table_bytes": 8192,
+      "index_bytes": 40960,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collector_tags",
+      "total_bytes": 49152,
+      "table_bytes": 8192,
+      "index_bytes": 40960,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "sources",
+      "total_bytes": 49152,
+      "table_bytes": 16384,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "import_validation_reports",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "portfolio_valuation_snapshots",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "grading_submissions",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "card_aliases",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "raw_snapshot_dictionaries",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 16,
+      "n_dead_tup": 1,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "market_index_snapshot_completions",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 9,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "market_report_digest_sends",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "alert_rules",
+      "total_bytes": 40960,
+      "table_bytes": 8192,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "analytics_digest_reports",
+      "total_bytes": 32768,
+      "table_bytes": 8192,
+      "index_bytes": 24576,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "dashboard_preferences",
+      "total_bytes": 32768,
+      "table_bytes": 8192,
+      "index_bytes": 24576,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "users",
+      "total_bytes": 32768,
+      "table_bytes": 8192,
+      "index_bytes": 24576,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collection_item_groups",
+      "total_bytes": 32768,
+      "table_bytes": 0,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "collection_item_tags",
+      "total_bytes": 32768,
+      "table_bytes": 0,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "card_tags",
+      "total_bytes": 32768,
+      "table_bytes": 0,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "market_workflow_runs",
+      "total_bytes": 32768,
+      "table_bytes": 8192,
+      "index_bytes": 24576,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "price_refresh_runs",
+      "total_bytes": 32768,
+      "table_bytes": 16384,
+      "index_bytes": 16384,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "search_history",
+      "total_bytes": 32768,
+      "table_bytes": 0,
+      "index_bytes": 32768,
+      "estimated_rows": -1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 0,
+      "last_autovacuum": null
+    },
+    {
+      "relname": "alembic_version",
+      "total_bytes": 24576,
+      "table_bytes": 8192,
+      "index_bytes": 16384,
+      "estimated_rows": 1.0,
+      "n_live_tup": 0,
+      "n_dead_tup": 11,
+      "last_autovacuum": null
+    }
+  ],
+  "raw_daily7d": [
+    {
+      "day_utc": "2026-10-01T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 88,
+      "stored_payload_bytes": 4525318,
+      "stored_row_bytes": 4541686
+    },
+    {
+      "day_utc": "2026-10-01T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 554,
+      "stored_payload_bytes": 22578375,
+      "stored_row_bytes": 22680865
+    },
+    {
+      "day_utc": "2026-10-02T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 89,
+      "stored_payload_bytes": 4713141,
+      "stored_row_bytes": 4729671
+    },
+    {
+      "day_utc": "2026-10-02T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 426,
+      "stored_payload_bytes": 17318407,
+      "stored_row_bytes": 17397217
+    },
+    {
+      "day_utc": "2026-10-03T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 561,
+      "stored_payload_bytes": 64854805,
+      "stored_row_bytes": 64950176
+    },
+    {
+      "day_utc": "2026-10-03T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 989,
+      "stored_payload_bytes": 40033326,
+      "stored_row_bytes": 40215583
+    },
+    {
+      "day_utc": "2026-10-04T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 730,
+      "stored_payload_bytes": 83191807,
+      "stored_row_bytes": 83316099
+    },
+    {
+      "day_utc": "2026-10-04T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 1917,
+      "stored_payload_bytes": 77766755,
+      "stored_row_bytes": 78120692
+    },
+    {
+      "day_utc": "2026-10-05T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 617,
+      "stored_payload_bytes": 71531858,
+      "stored_row_bytes": 71636740
+    },
+    {
+      "day_utc": "2026-10-05T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 1866,
+      "stored_payload_bytes": 75706657,
+      "stored_row_bytes": 76051159
+    },
+    {
+      "day_utc": "2026-10-06T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 756,
+      "stored_payload_bytes": 83771920,
+      "stored_row_bytes": 83900440
+    },
+    {
+      "day_utc": "2026-10-06T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 5230,
+      "stored_payload_bytes": 767719645,
+      "stored_row_bytes": 768725316
+    },
+    {
+      "day_utc": "2026-10-07T00:00:00+00:00",
+      "name": "snkrdunk",
+      "snapshots": 614,
+      "stored_payload_bytes": 82395725,
+      "stored_row_bytes": 82501545
+    },
+    {
+      "day_utc": "2026-10-07T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 2884,
+      "stored_payload_bytes": 105989748,
+      "stored_row_bytes": 106522748
+    },
+    {
+      "day_utc": "2026-10-08T00:00:00+00:00",
+      "name": "yuyutei",
+      "snapshots": 290,
+      "stored_payload_bytes": 10598592,
+      "stored_row_bytes": 10652158
+    }
+  ],
+  "workload": [
+    {
+      "name": "snkrdunk",
+      "shard": 0,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 5,
+      "due": 5,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-05T12:30:53.712280+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 0,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 34,
+      "due": 0,
+      "within23h": 34,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:57.407190+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 1,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 9,
+      "due": 9,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 6,
+      "never_checked": 3,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:48.114176+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 1,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 30,
+      "due": 0,
+      "within23h": 30,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:33:15.746213+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 2,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 6,
+      "due": 6,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 4,
+      "never_checked": 2,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.554670+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 2,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 33,
+      "due": 0,
+      "within23h": 33,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:04.612116+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 3,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 8,
+      "due": 8,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 3,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.563383+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 3,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 32,
+      "due": 0,
+      "within23h": 32,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:59:32.102952+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 4,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 7,
+      "due": 7,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 2,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.680291+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 4,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 33,
+      "due": 0,
+      "within23h": 33,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T11:00:08.184475+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 5,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 7,
+      "due": 7,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 4,
+      "never_checked": 3,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.873481+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 5,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 32,
+      "due": 0,
+      "within23h": 32,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:13.565493+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 6,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 9,
+      "due": 9,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 4,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.883577+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 6,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 30,
+      "due": 0,
+      "within23h": 30,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:22.344936+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 7,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 8,
+      "due": 8,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 3,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:47.064064+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 7,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 30,
+      "due": 0,
+      "within23h": 30,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:48.214129+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 8,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 7,
+      "due": 7,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 5,
+      "never_checked": 2,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-02T15:54:48.096335+00:00"
+    },
+    {
+      "name": "snkrdunk",
+      "shard": 8,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 33,
+      "due": 0,
+      "within23h": 33,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T10:32:30.858335+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 0,
+      "kind": "refresh",
+      "state": "claimed",
+      "total": 1,
+      "due": 1,
+      "within23h": 0,
+      "between23and24h": 1,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:00:39.147788+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 0,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 290,
+      "due": 14,
+      "within23h": 276,
+      "between23and24h": 14,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:00:57.672552+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 1,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 290,
+      "due": 7,
+      "within23h": 283,
+      "between23and24h": 7,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T01:37:47.342983+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 2,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 290,
+      "due": 7,
+      "within23h": 283,
+      "between23and24h": 7,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T01:40:45.995310+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 3,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 291,
+      "due": 0,
+      "within23h": 291,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:11:04.488741+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 4,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 1,
+      "due": 1,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 1,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-07T04:18:42.569115+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 4,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 290,
+      "due": 0,
+      "within23h": 290,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:14:39.712711+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 5,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 1,
+      "due": 1,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 1,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-07T04:47:55.754973+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 5,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 291,
+      "due": 0,
+      "within23h": 291,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:16:03.351278+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 6,
+      "kind": "refresh",
+      "state": "blocked",
+      "total": 1,
+      "due": 1,
+      "within23h": 0,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 1,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-06T05:13:10.196446+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 6,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 291,
+      "due": 0,
+      "within23h": 291,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:52:34.587486+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 7,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 292,
+      "due": 0,
+      "within23h": 292,
+      "between23and24h": 0,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T02:24:58.689498+00:00"
+    },
+    {
+      "name": "yuyutei",
+      "shard": 8,
+      "kind": "refresh",
+      "state": "pending",
+      "total": 290,
+      "due": 5,
+      "within23h": 285,
+      "between23and24h": 5,
+      "over24h": 0,
+      "never_checked": 0,
+      "backoff": 0,
+      "expired_claims": 0,
+      "oldest_next_due": "2026-10-08T01:58:01.364557+00:00"
+    }
+  ],
+  "storage_semantics": "pg_column_size measures PostgreSQL stored/compressed payload sizes; relation bytes include TOAST/index/page overhead. Calendar boundary days are partial. One-shot artwork captures are separated from recurring RAW costs.",
+  "unknowns": [
+    "R2 total footprint/quota until staging-only bucket ownership verified",
+    "provider log retention byte usage",
+    "ephemeral disk not reported by provider disk metric"
+  ]
+}

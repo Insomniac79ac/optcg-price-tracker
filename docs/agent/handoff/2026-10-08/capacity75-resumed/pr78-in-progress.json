@@ -1,0 +1,15 @@
+{
+  "pr": 78,
+  "head": "c4cb8b3957ae94c1ceb805c6e0a91a4ef26948cb",
+  "ci": 37717982746,
+  "status": "in_progress",
+  "source_deployed": false,
+  "writers_enabled": false,
+  "patch_sha256": "5cbdc1fc6832da56ac7af9df20ffc4b5da1e46b108051161bf47169982807fd7",
+  "tests": {
+    "local_storage_reader_backup": 120,
+    "delivery_allowlist": 4,
+    "policy_gate": "AMBER eligible"
+  },
+  "new100": "UNPLANNED"
+}

@@ -1,0 +1,5 @@
+{
+  "services/api/tests/test_freshness_adapters_postgres.py": "73d99242e0ac23bc10e8854956cc9cf0b420575425fef693a265fab6f55d58af",
+  "services/yuyutei_collector/yuyutei_collector/config.py": "b28396e05cd46f9970f759d05800440e655c9c3d69f7c292a07408dc8b5720a6",
+  "services/yuyutei_collector/yuyutei_collector/due.py": "47631d69eea5ad4003711f639944a79899632eb4eafbd30153677bd4d8f4a99a"
+}
