@@ -1,0 +1,26 @@
+{
+  "target": "staging",
+  "service": "yuyutei-collector-shard-3",
+  "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+  "verified_commit": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "previous_deployment": "7d85b51c-ad17-41aa-bd53-abb4bce607dd",
+  "source_deployment": "7d85b51c-ad17-41aa-bd53-abb4bce607dd",
+  "deployment": "c14b98cc-14dc-4f5b-978b-8d3de73e1d0e",
+  "image_digest": "sha256:388d56bfb72040a29ed5970314a24395b9bfcd122ad04a1f548f0882ae609668",
+  "status": "SUCCESS",
+  "marker": "Structured RAW health exact commit 1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "requested": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "observed": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "schedule": "9,39 * * * *",
+  "observed_at": "2026-10-08T12:12:58.929940+00:00",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}

@@ -1,0 +1,26 @@
+{
+  "target": "staging",
+  "service": "snkrdunk-collector",
+  "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+  "verified_commit": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "previous_deployment": "f05146ff-14a1-42fd-8805-f1358f07ca31",
+  "source_deployment": "f3286a0a-421e-42f1-bc4b-b917a98cad3b",
+  "deployment": "787e4536-7d83-4c14-86e1-82f9708fafee",
+  "image_digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+  "status": "SUCCESS",
+  "marker": "Structured RAW health exact commit 1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "requested": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "observed": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+  },
+  "schedule": "27,57 * * * *",
+  "observed_at": "2026-10-08T12:07:57.632187+00:00",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}

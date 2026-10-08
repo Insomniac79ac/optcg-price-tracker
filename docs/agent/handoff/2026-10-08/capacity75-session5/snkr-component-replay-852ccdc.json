@@ -1,0 +1,21 @@
+{
+  "api_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "snkr_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+  "snkr_actual_runtime_identity": {
+    "source": "snkrdunk",
+    "service": "snkrdunk-collector",
+    "shard": null,
+    "execution_id": "snkrdunk-due:89b187ab601448d5881905e853764a07",
+    "deployment_id": "18f66771-95c2-473b-8de0-65322c1148da",
+    "revision": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+    "image": null,
+    "scheduled_at": null,
+    "started_at": "2026-10-08T09:28:50.479737+00:00",
+    "finished_at": "2026-10-08T09:28:50.543670+00:00",
+    "runtime_seconds": 0.063933,
+    "trigger": "unknown"
+  },
+  "identity_basis": "Unchanged Git runtime inputs plus actual installed component receipt; platform Git may be unknown",
+  "source_jobs_triggered": 0,
+  "production_accessed": false
+}

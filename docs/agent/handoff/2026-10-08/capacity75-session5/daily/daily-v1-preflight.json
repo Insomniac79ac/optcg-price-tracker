@@ -1,0 +1,23 @@
+{
+  "written_at": "2026-10-08T12:07Z",
+  "classification": "AMBER",
+  "target": {"project": "c613898d-bf03-43a6-8813-761f72e1c00a", "environment": "05d1eac2-510d-4bd3-999e-fea9ead766b7 (staging)"},
+  "services": ["snkrdunk-collector", "yuyutei-collector-shard-0..3", "yuyutei-collector-shard-4-v2", "yuyutei-collector-shard-5..8"],
+  "mutation": "RAW_DICTIONARY_STORAGE_ENABLED=true, MODE=daily-v1, APP_ENV=staging (APP_ENV new on shards 1-8) via scripts/collector_variables.change only: --skip-deploys, then deploymentRedeploy of each service's verified 1b1b64d upload; marker + image digest + schedule + read-back checked",
+  "prerequisites": {
+    "snkr_writer_sample": "PASS 11:57Z turn: 36/36 encoded, all lossless by independent zstd + package decoder (canary/verify-canary-1157.json)",
+    "yuyu_writer_sample": "prior Yuyu canary: 15 encoded protected + 35175 expanded; all 16 re-verified lossless 2026-10-08 (evidence/verify-canary-dryrun-existing16.json)",
+    "readers_and_components": "canary preflight 11:35Z: y.verify + s.verify passed on staging head f05facf with component 1b1b64d; services/packages identical",
+    "indexes": "ix_raw_dictionary_created + ix_raw_snapshot_dictionary_scope present",
+    "flags_before": "all writers OFF (daily/flags-pre-daily.json)",
+    "delivery_receipt": "PR85 f05facf strict delivery success 10:47:55Z"
+  },
+  "bounds": {"daily_rows": 8192, "daily_encoded_bytes": 33554432, "estimated_encoded_bytes_per_day": "~15 MB (SNKR ~17.5 KB/row x ~580 bodies, Yuyu ~1.7 KB/row x ~2,700)", "source_requests_added": 0, "cron_budget_pacing_claims": "unchanged"},
+  "storage": {"volume_mb_before": 3475.83, "limit_mb": 10000, "reserve_bytes": 3221225472, "free_above_reserve_mb": "~3303"},
+  "recovery_selection": "writer-owned ledger ids > 37661 (ledger max before activation; ledger rows 52). Expansion only per-ID with existing OFF expand_snapshot after independent SHA/length verification and rechecked space; worst case returns growth to today's plaintext rate (~230-330 MB/day measured), within free space above reserve",
+  "rollback": "tools/daily_v1.py off: ENABLED=false, MODE=canary on all 10 via the same safe path (~15-25 min, turn-aware)",
+  "rollback_triggers": ["any lossless SHA/length mismatch", "source 403/429/denials or duplicate requests", "expired claims / reservation mismatch / singleton failure", "collector runtime regression beyond previous max +10s", "new actionable >24h backlog", "volume reserve threatened", "tool refusal mid-rollout (stop, assess, roll back activated services)"],
+  "observation": "24h natural physical-growth window from last activation; no collector redeploys except rollback; forecasts recomputed only after 24h",
+  "turn_safety": "each service redeployed only with no open attempt and >=4 min to its next cron turn",
+  "production_accessed": false
+}

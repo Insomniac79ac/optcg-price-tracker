@@ -1,0 +1,518 @@
+{
+  "target": "staging",
+  "read_only": true,
+  "source_requests": 0,
+  "database_writes": 0,
+  "turn": [
+    "2026-10-08T12:08:00Z",
+    "2026-10-08T12:31:00Z"
+  ],
+  "ledger_max_id_before": 37661,
+  "rows": [
+    {
+      "id": 37696,
+      "base_id": 34337,
+      "url": "https://yuyu-tei.jp/sell/opc/card/eb01/10017",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:09.701502+00:00",
+      "created_at": "2026-10-08 12:22:09.702110+00:00",
+      "original_sha256": "ec01939cfd354cc7d8fe2d2ae3cfd4b69eacf85819b0d329585091e1cd252299",
+      "original_bytes": 224775,
+      "encoded_bytes": 1690,
+      "stored_col_bytes": 1694,
+      "base_col_bytes": 36849,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37697,
+      "base_id": 34338,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op13/10070",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:18.042875+00:00",
+      "created_at": "2026-10-08 12:22:18.042947+00:00",
+      "original_sha256": "74abf46dbf643fa8fc500601e08fee4577ab09620a27ea07cddf198eaafe86a2",
+      "original_bytes": 223514,
+      "encoded_bytes": 2010,
+      "stored_col_bytes": 2010,
+      "base_col_bytes": 37193,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37698,
+      "base_id": 34339,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op15/10121",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:26.933670+00:00",
+      "created_at": "2026-10-08 12:22:26.933699+00:00",
+      "original_sha256": "1c65d558a46b59fffafacc5c6ae38e0e80db3e7bad10db4f3b60bc2da3c30c95",
+      "original_bytes": 224069,
+      "encoded_bytes": 2006,
+      "stored_col_bytes": 2006,
+      "base_col_bytes": 36782,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37699,
+      "base_id": 34340,
+      "url": "https://yuyu-tei.jp/sell/opc/card/eb01/10036",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:35.559692+00:00",
+      "created_at": "2026-10-08 12:22:35.559485+00:00",
+      "original_sha256": "6b38147e5fde76d2f76d84914082111027a2fd4ff1a91520b7a90fd14590b285",
+      "original_bytes": 224613,
+      "encoded_bytes": 1794,
+      "stored_col_bytes": 1798,
+      "base_col_bytes": 36813,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37700,
+      "base_id": 34341,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st02/10005",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:44.040848+00:00",
+      "created_at": "2026-10-08 12:22:44.040910+00:00",
+      "original_sha256": "4b09e41fd067cf876b4afff1dea0148b11ce23c5e613a80f525a85511432372b",
+      "original_bytes": 220064,
+      "encoded_bytes": 1234,
+      "stored_col_bytes": 1238,
+      "base_col_bytes": 36441,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37701,
+      "base_id": 34342,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op09/10140",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:22:52.803476+00:00",
+      "created_at": "2026-10-08 12:22:52.803257+00:00",
+      "original_sha256": "ed273e3b4bf85f0f3305dfcb73944c0a836b82e3c1d99ec0f7649795bb61b4de",
+      "original_bytes": 223207,
+      "encoded_bytes": 1894,
+      "stored_col_bytes": 1894,
+      "base_col_bytes": 36695,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37702,
+      "base_id": 34343,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op13/10116",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:01.265091+00:00",
+      "created_at": "2026-10-08 12:23:01.265145+00:00",
+      "original_sha256": "5eb697a9477cdbfb46325db5b43b73e27a5b6e198d1e59befbd753a9e5df07d8",
+      "original_bytes": 224093,
+      "encoded_bytes": 1862,
+      "stored_col_bytes": 1862,
+      "base_col_bytes": 36995,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37703,
+      "base_id": 34344,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op11/10012",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:10.246453+00:00",
+      "created_at": "2026-10-08 12:23:10.246594+00:00",
+      "original_sha256": "4825e3fe2825d95f186b6936611091cba351858ceb84ebdf82bb78cbeb3e014a",
+      "original_bytes": 223929,
+      "encoded_bytes": 2082,
+      "stored_col_bytes": 2082,
+      "base_col_bytes": 36627,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37704,
+      "base_id": 34345,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st36/10001",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:18.723552+00:00",
+      "created_at": "2026-10-08 12:23:18.724704+00:00",
+      "original_sha256": "36fbf2001f9dbfc6df32ebf73c486c0a4fee0381a235a4db2bc8ee53bf70c26a",
+      "original_bytes": 212539,
+      "encoded_bytes": 942,
+      "stored_col_bytes": 946,
+      "base_col_bytes": 35836,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37705,
+      "base_id": 34346,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op13/10019",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:27.620613+00:00",
+      "created_at": "2026-10-08 12:23:27.620727+00:00",
+      "original_sha256": "77d1e0293782f7cec15b13d7655da7d513881c4a62344860ef51239aa3901bf8",
+      "original_bytes": 224513,
+      "encoded_bytes": 2114,
+      "stored_col_bytes": 2114,
+      "base_col_bytes": 36926,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37706,
+      "base_id": 34347,
+      "url": "https://yuyu-tei.jp/sell/opc/card/eb02/10015",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:36.123987+00:00",
+      "created_at": "2026-10-08 12:23:36.123987+00:00",
+      "original_sha256": "45361a4c68ac5ca44ad7623abcf7a70362d27f50152a60dd0152ff52beff60fd",
+      "original_bytes": 224205,
+      "encoded_bytes": 1798,
+      "stored_col_bytes": 1802,
+      "base_col_bytes": 36652,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37707,
+      "base_id": 34348,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st11/10007",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:45.651227+00:00",
+      "created_at": "2026-10-08 12:23:45.651829+00:00",
+      "original_sha256": "e1ab5fbac2217f2d91c0ca79d81270ee6c62b49623686b565ac8579c606e608f",
+      "original_bytes": 213512,
+      "encoded_bytes": 930,
+      "stored_col_bytes": 934,
+      "base_col_bytes": 36392,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37708,
+      "base_id": 34349,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st17/10006",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:23:55.588473+00:00",
+      "created_at": "2026-10-08 12:23:55.588580+00:00",
+      "original_sha256": "9f21ab9956f86b2ddacb0cfa2d432d6b76ef7a1d8769ad081aae07d2b9bcceae",
+      "original_bytes": 213746,
+      "encoded_bytes": 1086,
+      "stored_col_bytes": 1090,
+      "base_col_bytes": 36144,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37709,
+      "base_id": 34350,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st26/10008",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:24:04.033577+00:00",
+      "created_at": "2026-10-08 12:24:04.033526+00:00",
+      "original_sha256": "7ecd82c95c64ae278cc67f5a1c91bd5e546050efa9bb2f5a300ddecc7d2a0bfb",
+      "original_bytes": 209582,
+      "encoded_bytes": 902,
+      "stored_col_bytes": 906,
+      "base_col_bytes": 35859,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37710,
+      "base_id": 34351,
+      "url": "https://yuyu-tei.jp/sell/opc/card/op13/10054",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:24:12.256234+00:00",
+      "created_at": "2026-10-08 12:24:12.256369+00:00",
+      "original_sha256": "9bdfba8b2345503f33702cd494a9deb35d058a22c9c50067cbdf1b86ab23b440",
+      "original_bytes": 224526,
+      "encoded_bytes": 2010,
+      "stored_col_bytes": 2010,
+      "base_col_bytes": 36872,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    },
+    {
+      "id": 37711,
+      "base_id": 34410,
+      "url": "https://yuyu-tei.jp/sell/opc/card/st15/10005",
+      "parser": "yuyutei-collector-v3",
+      "fetched_at": "2026-10-08 12:24:20.633214+00:00",
+      "created_at": "2026-10-08 12:24:20.633307+00:00",
+      "original_sha256": "7e06ec691a8c1416e60e5cbd32674c0627d2efd93b5ea7065a6deb8f12c6d16b",
+      "original_bytes": 225336,
+      "encoded_bytes": 1102,
+      "stored_col_bytes": 1106,
+      "base_col_bytes": 37340,
+      "checks": {
+        "encoded": true,
+        "base_plain_older_same_scope": true,
+        "base_hash": true,
+        "envelope_base_id": true,
+        "independent_sha": true,
+        "independent_len": true,
+        "package_equals_independent": true,
+        "encoded_bytes": true,
+        "http200": true
+      }
+    }
+  ],
+  "all_lossless": true,
+  "encoded_rows": 16,
+  "original_bytes_total": 3536223,
+  "encoded_bytes_total": 25456,
+  "stored_col_bytes_total": 25492,
+  "plaintext_col_bytes_estimate": 586416,
+  "snkr_raw_in_turn": {
+    "n": 28,
+    "ok200": 28,
+    "encoded": 0,
+    "col_bytes": 3136968
+  },
+  "snkr_attempts_in_turn": [
+    {
+      "outcome": "captured",
+      "n": 4,
+      "charged": 681,
+      "first_claim": "2026-10-08 12:27:33.837603+00:00",
+      "last_finish": "2026-10-08 12:29:18.599070+00:00",
+      "span_s": "104.761467"
+    },
+    {
+      "outcome": "no_listing",
+      "n": 10,
+      "charged": 1617,
+      "first_claim": "2026-10-08 12:27:05.877329+00:00",
+      "last_finish": "2026-10-08 12:29:10.198056+00:00",
+      "span_s": "124.320727"
+    }
+  ],
+  "leases": {
+    "expired": 0,
+    "claimed": 0
+  },
+  "open_attempts": 0,
+  "budget": {
+    "id": 2,
+    "source_id": 2,
+    "enabled": true,
+    "request_limit": 3100,
+    "window_seconds": 1800,
+    "window_started_at": "2026-10-08 12:23:57.124648+00:00",
+    "used_requests": 2298,
+    "reserved_requests": 0,
+    "paused_until": null,
+    "pause_reason": null,
+    "claim_sequence": 1687
+  },
+  "ledger_total": 68,
+  "lookup_explain": [
+    {
+      "id": 37696,
+      "execution_ms": 0.101,
+      "planning_ms": 0.134,
+      "shared_hit": 12,
+      "shared_read": 0
+    },
+    {
+      "id": 37697,
+      "execution_ms": 0.167,
+      "planning_ms": 0.138,
+      "shared_hit": 44,
+      "shared_read": 0
+    },
+    {
+      "id": 37698,
+      "execution_ms": 0.103,
+      "planning_ms": 0.162,
+      "shared_hit": 11,
+      "shared_read": 0
+    },
+    {
+      "id": 37699,
+      "execution_ms": 0.078,
+      "planning_ms": 0.131,
+      "shared_hit": 9,
+      "shared_read": 0
+    },
+    {
+      "id": 37700,
+      "execution_ms": 0.073,
+      "planning_ms": 0.135,
+      "shared_hit": 12,
+      "shared_read": 0
+    },
+    {
+      "id": 37701,
+      "execution_ms": 0.075,
+      "planning_ms": 0.144,
+      "shared_hit": 11,
+      "shared_read": 0
+    },
+    {
+      "id": 37702,
+      "execution_ms": 0.169,
+      "planning_ms": 0.177,
+      "shared_hit": 42,
+      "shared_read": 0
+    },
+    {
+      "id": 37703,
+      "execution_ms": 0.1,
+      "planning_ms": 0.169,
+      "shared_hit": 11,
+      "shared_read": 0
+    },
+    {
+      "id": 37704,
+      "execution_ms": 0.115,
+      "planning_ms": 0.135,
+      "shared_hit": 11,
+      "shared_read": 0
+    },
+    {
+      "id": 37705,
+      "execution_ms": 0.161,
+      "planning_ms": 0.132,
+      "shared_hit": 43,
+      "shared_read": 0
+    }
+  ]
+}
