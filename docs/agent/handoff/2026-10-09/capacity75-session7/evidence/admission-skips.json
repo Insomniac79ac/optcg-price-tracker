@@ -1,0 +1,333 @@
+[
+ {
+  "id": 38417,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op01/10010",
+  "fetched_at": "2026-10-08 21:26:55.252011+00:00",
+  "created_at": "2026-10-08 21:26:55.252011+00:00",
+  "hash_ok": true,
+  "bytes": 223490,
+  "recent_scope_rows": 32,
+  "plaintext_in_recent": 32,
+  "would_be_base": 35082,
+  "base_col_bytes": 36662,
+  "packed_bytes": 2038,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38416,
+    "created_at": "2026-10-08 21:26:45.818635+00:00",
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943"
+   },
+   {
+    "id": 38418,
+    "created_at": "2026-10-08 21:26:55.188566+00:00",
+    "claimed_by": "yuyutei-due-7:ba20ea289f324edaafaff202dd2c8330"
+   },
+   {
+    "id": 38419,
+    "created_at": "2026-10-08 21:27:04.507501+00:00",
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-7:ba20ea289f324edaafaff202dd2c8330",
+    "claimed_at": "2026-10-08 21:26:41.164139+00:00",
+    "finished_at": "2026-10-08 21:26:56.321091+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-8:1bcb2fd6e5454aa8925fc5ebf3dd4943",
+    "claimed_at": "2026-10-08 21:26:47.322240+00:00",
+    "finished_at": "2026-10-08 21:26:55.539768+00:00"
+   }
+  ]
+ },
+ {
+  "id": 38440,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op11/10102",
+  "fetched_at": "2026-10-08 21:34:16.806230+00:00",
+  "created_at": "2026-10-08 21:34:16.806230+00:00",
+  "hash_ok": true,
+  "bytes": 225778,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 35097,
+  "base_col_bytes": 37217,
+  "packed_bytes": 1910,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38439,
+    "created_at": "2026-10-08 21:34:08.042021+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38441,
+    "created_at": "2026-10-08 21:34:16.804583+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38443,
+    "created_at": "2026-10-08 21:34:26.192826+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32",
+    "claimed_at": "2026-10-08 21:34:09.181440+00:00",
+    "finished_at": "2026-10-08 21:34:17.173850+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52",
+    "claimed_at": "2026-10-08 21:34:09.382876+00:00",
+    "finished_at": "2026-10-08 21:34:17.246611+00:00"
+   }
+  ]
+ },
+ {
+  "id": 38442,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op01/10129",
+  "fetched_at": "2026-10-08 21:34:26.263600+00:00",
+  "created_at": "2026-10-08 21:34:26.263600+00:00",
+  "hash_ok": true,
+  "bytes": 226438,
+  "recent_scope_rows": 32,
+  "plaintext_in_recent": 32,
+  "would_be_base": 35098,
+  "base_col_bytes": 37132,
+  "packed_bytes": 2018,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 38441,
+    "created_at": "2026-10-08 21:34:16.804583+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38443,
+    "created_at": "2026-10-08 21:34:26.192826+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   },
+   {
+    "id": 38444,
+    "created_at": "2026-10-08 21:34:35.273267+00:00",
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32"
+   },
+   {
+    "id": 38445,
+    "created_at": "2026-10-08 21:34:35.447251+00:00",
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-0:d09af1a4795145c8949f08cd5f1d7f32",
+    "claimed_at": "2026-10-08 21:34:18.234067+00:00",
+    "finished_at": "2026-10-08 21:34:26.572030+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-1:bda0c9e196a24454ba34cd34c0c55c52",
+    "claimed_at": "2026-10-08 21:34:18.308394+00:00",
+    "finished_at": "2026-10-08 21:34:26.712935+00:00"
+   }
+  ]
+ },
+ {
+  "id": 40176,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op06/10133",
+  "fetched_at": "2026-10-09 06:23:20.466880+00:00",
+  "created_at": "2026-10-09 06:23:20.466880+00:00",
+  "hash_ok": true,
+  "bytes": 223777,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 36849,
+  "base_col_bytes": 36742,
+  "packed_bytes": 1998,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 40175,
+    "created_at": "2026-10-09 06:23:10.556469+00:00",
+    "claimed_by": "yuyutei-due-6:55ef7c3b669f4d8590c84fc646a9165f"
+   },
+   {
+    "id": 40177,
+    "created_at": "2026-10-09 06:23:20.437947+00:00",
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87"
+   },
+   {
+    "id": 40178,
+    "created_at": "2026-10-09 06:23:31.281302+00:00",
+    "claimed_by": "yuyutei-due-6:55ef7c3b669f4d8590c84fc646a9165f"
+   },
+   {
+    "id": 40179,
+    "created_at": "2026-10-09 06:23:32.660630+00:00",
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87",
+    "claimed_at": "2026-10-09 06:23:07.782761+00:00",
+    "finished_at": "2026-10-09 06:23:20.990049+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-6:55ef7c3b669f4d8590c84fc646a9165f",
+    "claimed_at": "2026-10-09 06:23:12.003102+00:00",
+    "finished_at": "2026-10-09 06:23:20.825524+00:00"
+   }
+  ]
+ },
+ {
+  "id": 40207,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op15/10023",
+  "fetched_at": "2026-10-09 06:26:19.724744+00:00",
+  "created_at": "2026-10-09 06:26:19.724744+00:00",
+  "hash_ok": true,
+  "bytes": 223440,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 36878,
+  "base_col_bytes": 36485,
+  "packed_bytes": 2090,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 40204,
+    "created_at": "2026-10-09 06:26:08.215839+00:00",
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87"
+   },
+   {
+    "id": 40205,
+    "created_at": "2026-10-09 06:26:11.601549+00:00",
+    "claimed_by": "yuyutei-due-8:23f0beae24f74b3090528c0e2bbddbd9"
+   },
+   {
+    "id": 40206,
+    "created_at": "2026-10-09 06:26:19.332752+00:00",
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87"
+   },
+   {
+    "id": 40208,
+    "created_at": "2026-10-09 06:26:28.937821+00:00",
+    "claimed_by": "yuyutei-due-8:23f0beae24f74b3090528c0e2bbddbd9"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-7:a1d750af3c384a2780b4d2346991ba87",
+    "claimed_at": "2026-10-09 06:26:09.904343+00:00",
+    "finished_at": "2026-10-09 06:26:20.625811+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-8:23f0beae24f74b3090528c0e2bbddbd9",
+    "claimed_at": "2026-10-09 06:26:12.904201+00:00",
+    "finished_at": "2026-10-09 06:26:20.798971+00:00"
+   }
+  ]
+ },
+ {
+  "id": 40429,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op07/10030",
+  "fetched_at": "2026-10-09 07:25:57.357112+00:00",
+  "created_at": "2026-10-09 07:25:57.357112+00:00",
+  "hash_ok": true,
+  "bytes": 223961,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 37097,
+  "base_col_bytes": 36624,
+  "packed_bytes": 1842,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 40427,
+    "created_at": "2026-10-09 07:25:45.064068+00:00",
+    "claimed_by": "yuyutei-due-7:63fcbee58c294a329d4eab3cd8c42af5"
+   },
+   {
+    "id": 40428,
+    "created_at": "2026-10-09 07:25:48.786750+00:00",
+    "claimed_by": "yuyutei-due-8:747dabad420f41a5868785b74e02cde2"
+   },
+   {
+    "id": 40430,
+    "created_at": "2026-10-09 07:25:57.326867+00:00",
+    "claimed_by": "yuyutei-due-7:63fcbee58c294a329d4eab3cd8c42af5"
+   },
+   {
+    "id": 40431,
+    "created_at": "2026-10-09 07:26:05.256844+00:00",
+    "claimed_by": "yuyutei-due-8:747dabad420f41a5868785b74e02cde2"
+   },
+   {
+    "id": 40432,
+    "created_at": "2026-10-09 07:26:09.062086+00:00",
+    "claimed_by": "yuyutei-due-7:63fcbee58c294a329d4eab3cd8c42af5"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-7:63fcbee58c294a329d4eab3cd8c42af5",
+    "claimed_at": "2026-10-09 07:25:47.102327+00:00",
+    "finished_at": "2026-10-09 07:25:58.084664+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-8:747dabad420f41a5868785b74e02cde2",
+    "claimed_at": "2026-10-09 07:25:50.088660+00:00",
+    "finished_at": "2026-10-09 07:25:57.565036+00:00"
+   }
+  ]
+ },
+ {
+  "id": 40748,
+  "url": "https://yuyu-tei.jp/sell/opc/card/op09/10141",
+  "fetched_at": "2026-10-09 10:10:35.443141+00:00",
+  "created_at": "2026-10-09 10:10:35.443141+00:00",
+  "hash_ok": true,
+  "bytes": 223393,
+  "recent_scope_rows": 5,
+  "plaintext_in_recent": 5,
+  "would_be_base": 37468,
+  "base_col_bytes": 37127,
+  "packed_bytes": 1410,
+  "savings_threshold_pass": true,
+  "ledger_rows_created_within_15s": [
+   {
+    "id": 40747,
+    "created_at": "2026-10-09 10:10:25.913488+00:00",
+    "claimed_by": "yuyutei-due-2:d6759c9a426144b0bec091becf2eb69e"
+   },
+   {
+    "id": 40749,
+    "created_at": "2026-10-09 10:10:35.412896+00:00",
+    "claimed_by": "yuyutei-due-3:1a21be891cfd4db6b3d56c12a33cb425"
+   },
+   {
+    "id": 40750,
+    "created_at": "2026-10-09 10:10:45.172386+00:00",
+    "claimed_by": "yuyutei-due-2:d6759c9a426144b0bec091becf2eb69e"
+   },
+   {
+    "id": 40751,
+    "created_at": "2026-10-09 10:10:49.137845+00:00",
+    "claimed_by": "yuyutei-due-3:1a21be891cfd4db6b3d56c12a33cb425"
+   }
+  ],
+  "overlapping_attempts": [
+   {
+    "claimed_by": "yuyutei-due-3:1a21be891cfd4db6b3d56c12a33cb425",
+    "claimed_at": "2026-10-09 10:10:22.073774+00:00",
+    "finished_at": "2026-10-09 10:10:36.371221+00:00"
+   },
+   {
+    "claimed_by": "yuyutei-due-2:d6759c9a426144b0bec091becf2eb69e",
+    "claimed_at": "2026-10-09 10:10:27.557982+00:00",
+    "finished_at": "2026-10-09 10:10:35.901592+00:00"
+   }
+  ]
+ }
+]

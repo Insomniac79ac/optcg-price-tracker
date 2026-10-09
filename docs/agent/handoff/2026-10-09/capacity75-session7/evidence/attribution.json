@@ -1,0 +1,1225 @@
+{
+ "target": "staging",
+ "read_only": true,
+ "source_requests": 0,
+ "database_writes": 0,
+ "windows": {
+  "pre_d2": [
+   "2026-10-06 13:45:05Z",
+   "2026-10-07 13:45:05Z"
+  ],
+  "pre_d1": [
+   "2026-10-07 13:45:05Z",
+   "2026-10-08 13:45:05Z"
+  ],
+  "on_seg1_to_7a": [
+   "2026-10-08 13:45:05Z",
+   "2026-10-08 22:12:37Z"
+  ],
+  "on_seg2_from_7a": [
+   "2026-10-08 22:12:37Z",
+   "2026-10-09 13:56:11Z"
+  ],
+  "on_24h": [
+   "2026-10-08 13:45:05Z",
+   "2026-10-09 13:45:05Z"
+  ]
+ },
+ "now": {
+  "now": "2026-10-09 14:24:47.059832+00:00",
+  "db_bytes": 2754385599,
+  "raw_total": 2588270592,
+  "raw_heap": 10911744,
+  "raw_idx": 13410304,
+  "raw_toast": 2533384192,
+  "raw_toast_idx": "29777920",
+  "lsn": "2/27D95420"
+ },
+ "toast_stats": [
+  {
+   "relname": "raw_snapshots",
+   "n_live_tup": 41107,
+   "n_dead_tup": 713,
+   "n_tup_ins": 33833,
+   "n_tup_upd": 3322,
+   "n_tup_del": 0,
+   "autovacuum_count": 6,
+   "last_autovacuum": "2026-10-08 00:49:50.103620+00:00",
+   "n_ins_since_vacuum": 5890
+  },
+  {
+   "relname": "pg_toast_16436",
+   "n_live_tup": 1114227,
+   "n_dead_tup": 14234,
+   "n_tup_ins": 1149310,
+   "n_tup_upd": 0,
+   "n_tup_del": 88495,
+   "autovacuum_count": 90,
+   "last_autovacuum": "2026-10-09 11:03:03.078939+00:00",
+   "n_ins_since_vacuum": 19959
+  }
+ ],
+ "wal_stats": {
+  "wal_records": 16391124,
+  "wal_fpi": 681595,
+  "wal_bytes": "8178706784",
+  "wal_buffers_full": 91233,
+  "stats_reset": "2026-09-16 04:59:40.313421+00:00"
+ },
+ "wal_dir": {
+  "files": 5,
+  "bytes": "83886080"
+ },
+ "by_kind": {
+  "pre_d2": [
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": false,
+    "n": 610,
+    "stored_col_bytes": 67750874,
+    "logical_bytes": 525149129,
+    "base_col_bytes": null,
+    "toasted_rows": 610
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyu-identity-evidence-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 1097,
+    "stored_col_bytes": 284642995,
+    "logical_bytes": 351939145,
+    "base_col_bytes": null,
+    "toasted_rows": 1097
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": false,
+    "n": 2664,
+    "stored_col_bytes": 98513425,
+    "logical_bytes": 595203186,
+    "base_col_bytes": null,
+    "toasted_rows": 2664
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 134,
+    "stored_col_bytes": 4864201,
+    "logical_bytes": 35290317,
+    "base_col_bytes": null,
+    "toasted_rows": 134
+   }
+  ],
+  "pre_d1": [
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": false,
+    "n": 572,
+    "stored_col_bytes": 63820412,
+    "logical_bytes": 496093285,
+    "base_col_bytes": null,
+    "toasted_rows": 572
+   },
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": true,
+    "n": 36,
+    "stored_col_bytes": 631330,
+    "logical_bytes": 31229577,
+    "base_col_bytes": 4011228,
+    "toasted_rows": 36
+   },
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkr-published-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 40,
+    "stored_col_bytes": 18376113,
+    "logical_bytes": 22422031,
+    "base_col_bytes": null,
+    "toasted_rows": 36
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": false,
+    "n": 2588,
+    "stored_col_bytes": 95552068,
+    "logical_bytes": 578546058,
+    "base_col_bytes": 35881,
+    "toasted_rows": 2588
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": true,
+    "n": 31,
+    "stored_col_bytes": 51634,
+    "logical_bytes": 6874633,
+    "base_col_bytes": 1141001,
+    "toasted_rows": 8
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 132,
+    "stored_col_bytes": 4786524,
+    "logical_bytes": 34946106,
+    "base_col_bytes": null,
+    "toasted_rows": 132
+   }
+  ],
+  "on_seg1_to_7a": [
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": true,
+    "n": 364,
+    "stored_col_bytes": 11687442,
+    "logical_bytes": 315561672,
+    "base_col_bytes": 42240656,
+    "toasted_rows": 364
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": false,
+    "n": 3,
+    "stored_col_bytes": 111382,
+    "logical_bytes": 675706,
+    "base_col_bytes": null,
+    "toasted_rows": 3
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": true,
+    "n": 159,
+    "stored_col_bytes": 244238,
+    "logical_bytes": 35364854,
+    "base_col_bytes": 5852846,
+    "toasted_rows": 18
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 46,
+    "stored_col_bytes": 1546258,
+    "logical_bytes": 9666417,
+    "base_col_bytes": null,
+    "toasted_rows": 46
+   }
+  ],
+  "on_seg2_from_7a": [
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": true,
+    "n": 244,
+    "stored_col_bytes": 8394930,
+    "logical_bytes": 210812973,
+    "base_col_bytes": 28597794,
+    "toasted_rows": 244
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": false,
+    "n": 4,
+    "stored_col_bytes": 147409,
+    "logical_bytes": 894571,
+    "base_col_bytes": null,
+    "toasted_rows": 4
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": true,
+    "n": 2450,
+    "stored_col_bytes": 4215848,
+    "logical_bytes": 549195952,
+    "base_col_bytes": 90479770,
+    "toasted_rows": 537
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 94,
+    "stored_col_bytes": 3514407,
+    "logical_bytes": 27007751,
+    "base_col_bytes": null,
+    "toasted_rows": 94
+   }
+  ],
+  "on_24h": [
+   {
+    "source": "snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "http_status": 200,
+    "encoded": true,
+    "n": 608,
+    "stored_col_bytes": 20082372,
+    "logical_bytes": 526374645,
+    "base_col_bytes": 70838450,
+    "toasted_rows": 608
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": false,
+    "n": 7,
+    "stored_col_bytes": 258791,
+    "logical_bytes": 1570277,
+    "base_col_bytes": null,
+    "toasted_rows": 7
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "http_status": 200,
+    "encoded": true,
+    "n": 2609,
+    "stored_col_bytes": 4460086,
+    "logical_bytes": 584560806,
+    "base_col_bytes": 96332616,
+    "toasted_rows": 555
+   },
+   {
+    "source": "yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "http_status": 200,
+    "encoded": false,
+    "n": 102,
+    "stored_col_bytes": 3690816,
+    "logical_bytes": 26751222,
+    "base_col_bytes": null,
+    "toasted_rows": 102
+   }
+  ]
+ },
+ "by_collector": {
+  "pre_d1": [
+   {
+    "collector": "no-attempt:snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": false,
+    "n": 286,
+    "stored_col_bytes": 50019137,
+    "logical_bytes": 426692487,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "no-attempt:snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": true,
+    "n": 18,
+    "stored_col_bytes": 554418,
+    "logical_bytes": 26927590,
+    "base_col_bytes": 3149982
+   },
+   {
+    "collector": "no-attempt:snkrdunk",
+    "parser_version": "snkr-published-discovery-v1",
+    "encoded": false,
+    "n": 38,
+    "stored_col_bytes": 18374529,
+    "logical_bytes": 22417927,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "no-attempt:yuyutei",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 1,
+    "stored_col_bytes": 29525,
+    "logical_bytes": 167584,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "no-attempt:yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 66,
+    "stored_col_bytes": 1750549,
+    "logical_bytes": 9897065,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "snkrdunk-due",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": false,
+    "n": 286,
+    "stored_col_bytes": 13801275,
+    "logical_bytes": 69400798,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "snkrdunk-due",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": true,
+    "n": 18,
+    "stored_col_bytes": 76912,
+    "logical_bytes": 4301987,
+    "base_col_bytes": 861246
+   },
+   {
+    "collector": "snkrdunk-due",
+    "parser_version": "snkr-published-discovery-v1",
+    "encoded": false,
+    "n": 2,
+    "stored_col_bytes": 1584,
+    "logical_bytes": 4104,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 276,
+    "stored_col_bytes": 10197696,
+    "logical_bytes": 61766354,
+    "base_col_bytes": 35881
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 15,
+    "stored_col_bytes": 26142,
+    "logical_bytes": 3338410,
+    "base_col_bytes": 554585
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 13,
+    "stored_col_bytes": 543292,
+    "logical_bytes": 3765373,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-1",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 290,
+    "stored_col_bytes": 10704405,
+    "logical_bytes": 64832604,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-1",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 9,
+    "stored_col_bytes": 369549,
+    "logical_bytes": 2490930,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-2",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 290,
+    "stored_col_bytes": 10729471,
+    "logical_bytes": 65023715,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-2",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 15,
+    "stored_col_bytes": 734883,
+    "logical_bytes": 6618371,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-3",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 291,
+    "stored_col_bytes": 10743921,
+    "logical_bytes": 65045068,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-3",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 3,
+    "stored_col_bytes": 135834,
+    "logical_bytes": 1091827,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-4",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 290,
+    "stored_col_bytes": 10702848,
+    "logical_bytes": 64789717,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-4",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 5,
+    "stored_col_bytes": 203691,
+    "logical_bytes": 1340705,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-5",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 291,
+    "stored_col_bytes": 10739411,
+    "logical_bytes": 64978259,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-5",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 4,
+    "stored_col_bytes": 161077,
+    "logical_bytes": 1037005,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 275,
+    "stored_col_bytes": 10152703,
+    "logical_bytes": 61500579,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 16,
+    "stored_col_bytes": 25492,
+    "logical_bytes": 3536223,
+    "base_col_bytes": 586416
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 2,
+    "stored_col_bytes": 107443,
+    "logical_bytes": 1039469,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-7",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 294,
+    "stored_col_bytes": 10853141,
+    "logical_bytes": 65705158,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-7",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 3,
+    "stored_col_bytes": 130028,
+    "logical_bytes": 978396,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-8",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 290,
+    "stored_col_bytes": 10698947,
+    "logical_bytes": 64737020,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-8",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 12,
+    "stored_col_bytes": 650178,
+    "logical_bytes": 6686965,
+    "base_col_bytes": null
+   }
+  ],
+  "on_24h": [
+   {
+    "collector": "no-attempt:snkrdunk",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": true,
+    "n": 304,
+    "stored_col_bytes": 18812044,
+    "logical_bytes": 452870263,
+    "base_col_bytes": 56158672
+   },
+   {
+    "collector": "no-attempt:yuyutei",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 51,
+    "stored_col_bytes": 1350702,
+    "logical_bytes": 7663473,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "snkrdunk-due",
+    "parser_version": "snkrdunk-collector-v2",
+    "encoded": true,
+    "n": 304,
+    "stored_col_bytes": 1270328,
+    "logical_bytes": 73504382,
+    "base_col_bytes": 14679778
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 2,
+    "stored_col_bytes": 74589,
+    "logical_bytes": 452216,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 289,
+    "stored_col_bytes": 516530,
+    "logical_bytes": 64820007,
+    "base_col_bytes": 10677932
+   },
+   {
+    "collector": "yuyutei-due-0",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 21,
+    "stored_col_bytes": 999495,
+    "logical_bytes": 8622166,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-1",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 290,
+    "stored_col_bytes": 498716,
+    "logical_bytes": 64985556,
+    "base_col_bytes": 10704405
+   },
+   {
+    "collector": "yuyutei-due-1",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 12,
+    "stored_col_bytes": 509300,
+    "logical_bytes": 3645427,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-2",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 1,
+    "stored_col_bytes": 36994,
+    "logical_bytes": 223393,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-2",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 289,
+    "stored_col_bytes": 477006,
+    "logical_bytes": 64924633,
+    "base_col_bytes": 10692344
+   },
+   {
+    "collector": "yuyutei-due-2",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 1,
+    "stored_col_bytes": 40977,
+    "logical_bytes": 269219,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-3",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 291,
+    "stored_col_bytes": 482806,
+    "logical_bytes": 65181719,
+    "base_col_bytes": 10743921
+   },
+   {
+    "collector": "yuyutei-due-3",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 2,
+    "stored_col_bytes": 96054,
+    "logical_bytes": 829441,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-4",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 290,
+    "stored_col_bytes": 492816,
+    "logical_bytes": 64923718,
+    "base_col_bytes": 10702848
+   },
+   {
+    "collector": "yuyutei-due-4",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 4,
+    "stored_col_bytes": 190286,
+    "logical_bytes": 1629959,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-5",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 291,
+    "stored_col_bytes": 484902,
+    "logical_bytes": 65112876,
+    "base_col_bytes": 10739411
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 1,
+    "stored_col_bytes": 36910,
+    "logical_bytes": 223777,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 290,
+    "stored_col_bytes": 500704,
+    "logical_bytes": 64960485,
+    "base_col_bytes": 10702377
+   },
+   {
+    "collector": "yuyutei-due-6",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 4,
+    "stored_col_bytes": 189413,
+    "logical_bytes": 1566752,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-7",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 292,
+    "stored_col_bytes": 505732,
+    "logical_bytes": 65421420,
+    "base_col_bytes": 10780202
+   },
+   {
+    "collector": "yuyutei-due-7",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 2,
+    "stored_col_bytes": 80967,
+    "logical_bytes": 522531,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-8",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": false,
+    "n": 3,
+    "stored_col_bytes": 110298,
+    "logical_bytes": 670891,
+    "base_col_bytes": null
+   },
+   {
+    "collector": "yuyutei-due-8",
+    "parser_version": "yuyutei-collector-v3",
+    "encoded": true,
+    "n": 287,
+    "stored_col_bytes": 500874,
+    "logical_bytes": 64230392,
+    "base_col_bytes": 10589176
+   },
+   {
+    "collector": "yuyutei-due-8",
+    "parser_version": "yuyutei-recurring-discovery-v1",
+    "encoded": false,
+    "n": 5,
+    "stored_col_bytes": 233622,
+    "logical_bytes": 2002254,
+    "base_col_bytes": null
+   }
+  ]
+ },
+ "same_url_vs_pre_activation": [
+  {
+   "source": "snkrdunk",
+   "rows": 644,
+   "rows_with_pre": 644,
+   "enc_col": 21357954,
+   "base_col": 75067035,
+   "pre_med_col": 73402191.0,
+   "enc_col_with_pre": 21357954,
+   "original_bytes": 557699789,
+   "pre_med_len": 561976848.0,
+   "avg_base_age_days": "3.40"
+  },
+  {
+   "source": "yuyutei",
+   "rows": 2609,
+   "rows_with_pre": 2609,
+   "enc_col": 4460086,
+   "base_col": 96332616,
+   "pre_med_col": 100507005.0,
+   "enc_col_with_pre": 4460086,
+   "original_bytes": 584560806,
+   "pre_med_len": 593289342.5,
+   "avg_base_age_days": "0.98"
+  }
+ ],
+ "delta_vs_base_age": [
+  {
+   "source": "snkrdunk",
+   "age_bucket_days": 1,
+   "n": 286,
+   "avg_enc_col": "7433",
+   "avg_base_col": "62609",
+   "avg_original": "381645",
+   "enc_over_base": "0.1187"
+  },
+  {
+   "source": "snkrdunk",
+   "age_bucket_days": 2,
+   "n": 68,
+   "avg_enc_col": "4550",
+   "avg_base_col": "48515",
+   "avg_original": "243450",
+   "enc_over_base": "0.0938"
+  },
+  {
+   "source": "snkrdunk",
+   "age_bucket_days": 6,
+   "n": 150,
+   "avg_enc_col": "65253",
+   "avg_base_col": "185731",
+   "avg_original": "1493880",
+   "enc_over_base": "0.3513"
+  },
+  {
+   "source": "snkrdunk",
+   "age_bucket_days": 7,
+   "n": 140,
+   "avg_enc_col": "65248",
+   "avg_base_col": "185731",
+   "avg_original": "1485091",
+   "enc_over_base": "0.3513"
+  },
+  {
+   "source": "yuyutei",
+   "age_bucket_days": 1,
+   "n": 2575,
+   "avg_enc_col": "1707",
+   "avg_base_col": "36924",
+   "avg_original": "224079",
+   "enc_over_base": "0.0462"
+  },
+  {
+   "source": "yuyutei",
+   "age_bucket_days": 2,
+   "n": 34,
+   "avg_enc_col": "1920",
+   "avg_base_col": "36828",
+   "avg_original": "222280",
+   "enc_over_base": "0.0521"
+  }
+ ],
+ "snkr_by_hour_incl_canary": [
+  {
+   "hr": "2026-10-08 11:00:00+00:00",
+   "n": 28,
+   "avg_enc_col": "17435",
+   "avg_base_col": "111267",
+   "avg_orig": "866503",
+   "saved_vs_base_col": "0.8433",
+   "saved_vs_logical": "0.9799",
+   "avg_base_age_days": "0.50",
+   "urls": 15
+  },
+  {
+   "hr": "2026-10-08 12:00:00+00:00",
+   "n": 8,
+   "avg_enc_col": "17895",
+   "avg_base_col": "111969",
+   "avg_orig": "870935",
+   "saved_vs_base_col": "0.8402",
+   "saved_vs_logical": "0.9795",
+   "avg_base_age_days": "0.49",
+   "urls": 5
+  },
+  {
+   "hr": "2026-10-08 13:00:00+00:00",
+   "n": 18,
+   "avg_enc_col": "18987",
+   "avg_base_col": "112415",
+   "avg_orig": "868863",
+   "saved_vs_base_col": "0.8311",
+   "saved_vs_logical": "0.9781",
+   "avg_base_age_days": "0.50",
+   "urls": 10
+  },
+  {
+   "hr": "2026-10-08 14:00:00+00:00",
+   "n": 52,
+   "avg_enc_col": "21145",
+   "avg_base_col": "113496",
+   "avg_orig": "870529",
+   "saved_vs_base_col": "0.8137",
+   "saved_vs_logical": "0.9757",
+   "avg_base_age_days": "0.84",
+   "urls": 27
+  },
+  {
+   "hr": "2026-10-08 15:00:00+00:00",
+   "n": 70,
+   "avg_enc_col": "35040",
+   "avg_base_col": "117293",
+   "avg_orig": "869832",
+   "saved_vs_base_col": "0.7013",
+   "saved_vs_logical": "0.9597",
+   "avg_base_age_days": "3.41",
+   "urls": 36
+  },
+  {
+   "hr": "2026-10-08 16:00:00+00:00",
+   "n": 72,
+   "avg_enc_col": "34812",
+   "avg_base_col": "116611",
+   "avg_orig": "865249",
+   "saved_vs_base_col": "0.7015",
+   "saved_vs_logical": "0.9598",
+   "avg_base_age_days": "3.43",
+   "urls": 37
+  },
+  {
+   "hr": "2026-10-08 17:00:00+00:00",
+   "n": 110,
+   "avg_enc_col": "34769",
+   "avg_base_col": "116513",
+   "avg_orig": "864460",
+   "saved_vs_base_col": "0.7016",
+   "saved_vs_logical": "0.9598",
+   "avg_base_age_days": "3.45",
+   "urls": 56
+  },
+  {
+   "hr": "2026-10-08 18:00:00+00:00",
+   "n": 42,
+   "avg_enc_col": "34816",
+   "avg_base_col": "116486",
+   "avg_orig": "866140",
+   "saved_vs_base_col": "0.7011",
+   "saved_vs_logical": "0.9598",
+   "avg_base_age_days": "3.48",
+   "urls": 22
+  },
+  {
+   "hr": "2026-10-09 10:00:00+00:00",
+   "n": 36,
+   "avg_enc_col": "34415",
+   "avg_base_col": "117733",
+   "avg_orig": "868061",
+   "saved_vs_base_col": "0.7077",
+   "saved_vs_logical": "0.9604",
+   "avg_base_age_days": "3.81",
+   "urls": 19
+  },
+  {
+   "hr": "2026-10-09 11:00:00+00:00",
+   "n": 100,
+   "avg_enc_col": "34101",
+   "avg_base_col": "116885",
+   "avg_orig": "861301",
+   "saved_vs_base_col": "0.7083",
+   "saved_vs_logical": "0.9604",
+   "avg_base_age_days": "4.00",
+   "urls": 51
+  },
+  {
+   "hr": "2026-10-09 12:00:00+00:00",
+   "n": 38,
+   "avg_enc_col": "34532",
+   "avg_base_col": "117279",
+   "avg_orig": "866278",
+   "saved_vs_base_col": "0.7056",
+   "saved_vs_logical": "0.9601",
+   "avg_base_age_days": "3.85",
+   "urls": 20
+  },
+  {
+   "hr": "2026-10-09 13:00:00+00:00",
+   "n": 70,
+   "avg_enc_col": "34767",
+   "avg_base_col": "117347",
+   "avg_orig": "864487",
+   "saved_vs_base_col": "0.7037",
+   "saved_vs_logical": "0.9598",
+   "avg_base_age_days": "4.10",
+   "urls": 36
+  },
+  {
+   "hr": "2026-10-09 14:00:00+00:00",
+   "n": 36,
+   "avg_enc_col": "35433",
+   "avg_base_col": "117461",
+   "avg_orig": "870143",
+   "saved_vs_base_col": "0.6983",
+   "saved_vs_logical": "0.9593",
+   "avg_base_age_days": "4.37",
+   "urls": 19
+  }
+ ],
+ "relations": [
+  {
+   "relname": "raw_snapshots",
+   "relkind": "r",
+   "total": 2588270592,
+   "main": 10911744,
+   "toast": 2533384192,
+   "idx": 13410304,
+   "n_live_tup": 41107,
+   "n_dead_tup": 713,
+   "n_tup_ins": 33833,
+   "n_tup_upd": 3322,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "source_mapping_proposal_groups",
+   "relkind": "r",
+   "total": 50544640,
+   "main": 40747008,
+   "toast": 0,
+   "idx": 9748480,
+   "n_live_tup": 25923,
+   "n_dead_tup": 4655,
+   "n_tup_ins": 27069,
+   "n_tup_upd": 23457,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "market_index_snapshots",
+   "relkind": "r",
+   "total": 27090944,
+   "main": 23707648,
+   "toast": 0,
+   "idx": 3342336,
+   "n_live_tup": 28915,
+   "n_dead_tup": 0,
+   "n_tup_ins": 23691,
+   "n_tup_upd": 0,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "freshness_attempts",
+   "relkind": "r",
+   "total": 14032896,
+   "main": 10772480,
+   "toast": 0,
+   "idx": 3219456,
+   "n_live_tup": 19347,
+   "n_dead_tup": 2579,
+   "n_tup_ins": 19349,
+   "n_tup_upd": 1752665,
+   "n_tup_del": 2
+  },
+  {
+   "relname": "source_mapping_proposal_alternatives",
+   "relkind": "r",
+   "total": 13615104,
+   "main": 8396800,
+   "toast": 0,
+   "idx": 5177344,
+   "n_live_tup": 40721,
+   "n_dead_tup": 0,
+   "n_tup_ins": 42498,
+   "n_tup_upd": 2171,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "price_observations",
+   "relkind": "r",
+   "total": 12378112,
+   "main": 3203072,
+   "toast": 0,
+   "idx": 9142272,
+   "n_live_tup": 31951,
+   "n_dead_tup": 0,
+   "n_tup_ins": 25707,
+   "n_tup_upd": 0,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "app_log_events",
+   "relkind": "r",
+   "total": 9109504,
+   "main": 8265728,
+   "toast": 163840,
+   "idx": 606208,
+   "n_live_tup": 5381,
+   "n_dead_tup": 0,
+   "n_tup_ins": 4282,
+   "n_tup_upd": 0,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "source_collection_attempts",
+   "relkind": "r",
+   "total": 5840896,
+   "main": 1908736,
+   "toast": 0,
+   "idx": 3891200,
+   "n_live_tup": 15457,
+   "n_dead_tup": 1470,
+   "n_tup_ins": 10150,
+   "n_tup_upd": 30417,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "yuyutei_candidates",
+   "relkind": "r",
+   "total": 4579328,
+   "main": 3407872,
+   "toast": 0,
+   "idx": 1130496,
+   "n_live_tup": 4783,
+   "n_dead_tup": 455,
+   "n_tup_ins": 630,
+   "n_tup_upd": 30961,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "freshness_work",
+   "relkind": "r",
+   "total": 3661824,
+   "main": 2293760,
+   "toast": 0,
+   "idx": 1327104,
+   "n_live_tup": 3583,
+   "n_dead_tup": 735,
+   "n_tup_ins": 3677,
+   "n_tup_upd": 59486,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "source_card_mappings",
+   "relkind": "r",
+   "total": 3162112,
+   "main": 1089536,
+   "toast": 147456,
+   "idx": 1843200,
+   "n_live_tup": 3006,
+   "n_dead_tup": 4,
+   "n_tup_ins": 2171,
+   "n_tup_upd": 4758,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "card_prints",
+   "relkind": "r",
+   "total": 3104768,
+   "main": 2064384,
+   "toast": 0,
+   "idx": 999424,
+   "n_live_tup": 0,
+   "n_dead_tup": 0,
+   "n_tup_ins": 0,
+   "n_tup_upd": 0,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "market_value_points",
+   "relkind": "r",
+   "total": 1359872,
+   "main": 1064960,
+   "toast": 0,
+   "idx": 253952,
+   "n_live_tup": 2820,
+   "n_dead_tup": 120,
+   "n_tup_ins": 2940,
+   "n_tup_upd": 0,
+   "n_tup_del": 120
+  },
+  {
+   "relname": "canonical_cards",
+   "relkind": "r",
+   "total": 1253376,
+   "main": 663552,
+   "toast": 0,
+   "idx": 548864,
+   "n_live_tup": 0,
+   "n_dead_tup": 0,
+   "n_tup_ins": 0,
+   "n_tup_upd": 0,
+   "n_tup_del": 0
+  },
+  {
+   "relname": "raw_snapshot_dictionaries",
+   "relkind": "r",
+   "total": 999424,
+   "main": 688128,
+   "toast": 0,
+   "idx": 278528,
+   "n_live_tup": 3321,
+   "n_dead_tup": 0,
+   "n_tup_ins": 3321,
+   "n_tup_upd": 1,
+   "n_tup_del": 0
+  }
+ ]
+}

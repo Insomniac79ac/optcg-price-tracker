@@ -1,0 +1,355 @@
+{
+ "observed_at": "2026-10-09T15:10:11.461376+00:00",
+ "services": {
+  "snkrdunk-collector": {
+   "latest": "13a65aff-ca9c-4922-843d-1d99bacded13",
+   "status": "SUCCESS",
+   "activation_deployment": "13a65aff-ca9c-4922-843d-1d99bacded13",
+   "same_as_activation": true,
+   "digest": "sha256:521ab4aafe3254883ef0d12d72b01e9b915efa92eb413a9958ee35d95a43f8f8",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:35.809Z",
+     "id": "e957af48-3b6a-4576-9de7-0b2aad5e3e64",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.389Z",
+     "id": "39a506c0-46ae-4c64-96f9-5f6f446f801d",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.695Z",
+     "id": "f0780629-95cc-4f5e-8d88-821f5d12de33",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.363Z",
+     "id": "cd0a48f4-7505-4035-8f72-2ca1298fcfaa",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "b64110bb-e328-4099-b689-f92546cc57fd",
+   "status": "SUCCESS",
+   "activation_deployment": "b64110bb-e328-4099-b689-f92546cc57fd",
+   "same_as_activation": true,
+   "digest": "sha256:db319645658a746bd5e7544b46160a6ff86062d21ab8e13f7ef3765832f8a090",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:36.047Z",
+     "id": "fe0eb6ec-e717-4a65-9c53-ed73efb77461",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.571Z",
+     "id": "57f4715d-7f88-4b0f-9757-cf2541bad6e9",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.761Z",
+     "id": "2d15bd0d-d234-46f3-9e12-948b63754997",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.404Z",
+     "id": "30934086-de0f-45ed-9081-db080541c3b5",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece",
+   "status": "SUCCESS",
+   "activation_deployment": "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece",
+   "same_as_activation": true,
+   "digest": "sha256:aa73054ac904aec1fb4b993c9524ef005494f8603fe7696aa73c5cfb5eebccb7",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:36.363Z",
+     "id": "e71bf9c9-7c4f-4679-862c-6acbbbe59ac8",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.975Z",
+     "id": "c79db5aa-92eb-4268-8d99-8e57f2c9a2a9",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:30.167Z",
+     "id": "8128cddf-2aee-4c37-b704-1e7f171c6f5e",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.886Z",
+     "id": "07c76dc6-f3ba-4382-a55a-a4a3fed1a80e",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "69ff7905-3e60-45b7-a1df-962abc717c5f",
+   "status": "SUCCESS",
+   "activation_deployment": "69ff7905-3e60-45b7-a1df-962abc717c5f",
+   "same_as_activation": true,
+   "digest": "sha256:67dcc4fbda22eb3347441d38b988fba663742fe11bfe65c55f57761de0188c92",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:35.835Z",
+     "id": "eebb754e-f332-4fa2-ab66-2a85c630b1a9",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.552Z",
+     "id": "32417f07-6835-4fb2-b989-d64b6e0697a1",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.696Z",
+     "id": "c3a224b2-c1c7-47dd-81f1-d6027d318e59",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.392Z",
+     "id": "9c5c9a7c-e2f6-4b6a-bfdf-e2ce6f7ebd23",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "7ddbd0f3-24ef-4bec-a647-1098c01159c6",
+   "status": "SUCCESS",
+   "activation_deployment": "7ddbd0f3-24ef-4bec-a647-1098c01159c6",
+   "same_as_activation": true,
+   "digest": "sha256:388d56bfb72040a29ed5970314a24395b9bfcd122ad04a1f548f0882ae609668",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:36.147Z",
+     "id": "9b97560b-50d0-410c-b5ac-db9407400f31",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.720Z",
+     "id": "99b70072-4ad9-43da-931e-b6f7529d5de8",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.864Z",
+     "id": "e0fc1106-d69f-4da1-9c55-30a8777a3e21",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.444Z",
+     "id": "9817c4cd-ca93-4df0-88bf-9e4f4201463d",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "a2e21e1e-5007-42bc-913c-8b761a334c62",
+   "status": "SUCCESS",
+   "activation_deployment": "a2e21e1e-5007-42bc-913c-8b761a334c62",
+   "same_as_activation": true,
+   "digest": "sha256:94987582cc48f438ccafe2aeb6018697a5ea9a813947f35fe1ec43cc76a0f228",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:35.830Z",
+     "id": "a96afa9f-a8e9-4845-aa3a-6041050deaf1",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.431Z",
+     "id": "de59ea1c-4f2d-4938-bb4b-8aa367f87980",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.605Z",
+     "id": "52ec0f62-4859-441a-ad02-38e01feef2d0",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.380Z",
+     "id": "1f3e5fd3-9680-4a25-b52a-80331f1d70ff",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "73702e82-0670-476f-82f5-3324689af3ec",
+   "status": "SUCCESS",
+   "activation_deployment": "73702e82-0670-476f-82f5-3324689af3ec",
+   "same_as_activation": true,
+   "digest": "sha256:a2fcc0a40136e31a83237af0648cb483c2068779ca8f30682965be85c08baec9",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:35.794Z",
+     "id": "7f377a81-3618-48df-a34e-cd43fe126c54",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.440Z",
+     "id": "65117f56-4a4d-4949-a64f-1e5545c8c439",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.690Z",
+     "id": "0b367e19-7e3a-4c1a-b413-a833949633d0",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.316Z",
+     "id": "56bfbe92-cd88-4177-8db8-db8d5eb00cfc",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "64b19323-ef4f-4aed-925e-b8cc9b4800e2",
+   "status": "SUCCESS",
+   "activation_deployment": "64b19323-ef4f-4aed-925e-b8cc9b4800e2",
+   "same_as_activation": true,
+   "digest": "sha256:3abc15a28a2b68d7cd3a1c3ef55934775ce50f3292a0580df6d67271ca5beb84",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:36.560Z",
+     "id": "740e1841-630f-4479-8f4c-f1726f2558e7",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.952Z",
+     "id": "119b25ce-378a-4e6c-95f3-d814c372eeea",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:30.126Z",
+     "id": "842993ef-fc42-49cb-a6a1-d7067609bc80",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:48.181Z",
+     "id": "e570993a-d21e-4745-a6ab-86d56119393b",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e",
+   "status": "SUCCESS",
+   "activation_deployment": "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e",
+   "same_as_activation": true,
+   "digest": "sha256:8f0649eb17395357a76430a48f55bc786154c7a18f5532e10c045cd38190d7a6",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:35.819Z",
+     "id": "7e579066-bd03-4d45-9db7-0899e0df2cce",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:26.530Z",
+     "id": "ddfa561e-adab-4d04-bee3-68aad9091cb6",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:29.736Z",
+     "id": "1efc745a-738d-46e0-a5f3-018598760c9e",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:47.347Z",
+     "id": "6fa5cc7d-fd58-4875-a522-4bbf1ca5224f",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "ce27c4a0-e5de-439b-b1e7-dfdf6af97328",
+   "status": "SUCCESS",
+   "activation_deployment": "ce27c4a0-e5de-439b-b1e7-dfdf6af97328",
+   "same_as_activation": true,
+   "digest": "sha256:2040bf9d501fa214e3c816925edf8eb224cdc0602dc2a2d6bc31695769fc787d",
+   "digest_is_original": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "deployments_created_after_activation": [
+    {
+     "createdAt": "2026-10-09T14:57:36.408Z",
+     "id": "16cc722b-f4dd-4bc5-9922-bec8959a1270",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-09T09:48:27.012Z",
+     "id": "e93e1e3f-47c0-4551-a35e-f6133d34c2d8",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T22:29:30.163Z",
+     "id": "11072409-8f72-485e-89ee-db5878afa48b",
+     "status": "SKIPPED"
+    },
+    {
+     "createdAt": "2026-10-08T14:30:48.199Z",
+     "id": "df30e75a-5923-49c0-bd46-a158d6b48b5b",
+     "status": "SKIPPED"
+    }
+   ]
+  }
+ }
+}

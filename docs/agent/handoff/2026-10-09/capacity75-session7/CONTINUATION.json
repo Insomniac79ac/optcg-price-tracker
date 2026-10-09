@@ -1,0 +1,110 @@
+{
+ "status": "session7_complete",
+ "written_at": "2026-10-09T15:12:00Z",
+ "objective_complete": false,
+ "staging_only": true,
+ "production_accessed": false,
+ "psa10": "OFF (NOT READY)",
+ "daily_v1": {
+  "active": true,
+  "services": 10,
+  "window_ended": "2026-10-09T13:56:11Z",
+  "rollback": "docs/agent/handoff/2026-10-08/capacity75-session6/tools/rollout.py off"
+ },
+ "storage_verdict": "PASS",
+ "storage": {
+  "volume_mb_now": 3597.93,
+  "volume_at": "2026-10-09T14:27:02Z",
+  "rates_mb_day": {
+   "volume_24h": 116.7,
+   "db_24h": 109.4,
+   "raw_24h": 93.3,
+   "db_since_7a": 66.4,
+   "volume_since_7a": 44.1
+  },
+  "baselines_carried_forward_mb_day": {
+   "recurring_payload": 172,
+   "volume": 208
+  },
+  "prior_24h_volume_measured": 228.9,
+  "new_row_stored_mb_day": {
+   "daily_v1": 28.5,
+   "writer_off_day_before": 164.8
+  },
+  "days_to_3GiB_reserve": {
+   "conservative": 27.3,
+   "steady": 47.9
+  },
+  "reserve_date_range": "2026-11-05..2026-11-26",
+  "physical_vs_toast_same_url": {
+   "snkrdunk_saved": 0.71,
+   "yuyutei_saved": 0.96
+  },
+  "gap_cause": "writer INSERTs plaintext then UPDATEs to encoded; dead plaintext TOAST reclaimed only after autovacuum",
+  "new100": "NOT allowed by storage on 90-day basis (needs 4.3-8.8 GB more); not approved"
+ },
+ "lossless": {
+  "rows": 3253,
+  "ids": "37937-41328",
+  "failures": 0,
+  "expanded": 0
+ },
+ "admission_skips_24h": {
+  "count": 7,
+  "source": "yuyutei",
+  "cause": "try-lock contention",
+  "rate": 0.0022
+ },
+ "busy_window": {
+  "peak_concurrent_yuyu_claims": 3,
+  "cap": 4,
+  "waits": 0,
+  "exercised": false
+ },
+ "runtime": {
+  "yuyu_attempt_avg_s": {
+   "writer_off": 7.97,
+   "daily_v1": 8.62
+  },
+  "full_turn_avg_s": {
+   "writer_off": 155.7,
+   "daily_v1": 156.3
+  },
+  "threatens_23h": false
+ },
+ "coverage": {
+  "mapped": 2635,
+  "operational": 2630,
+  "fresh_usable": 2399,
+  "both_sources": 334,
+  "zero_source": 1681
+ },
+ "pr91": {
+  "merged": "d4e1b88eef2e1867c5910a79c1ea889868dfe648",
+  "merged_at": "2026-10-09T14:57:32Z",
+  "classification": "AMBER",
+  "delivery": "green 15:09:17Z, scope full, no collector rollout, api skip on 1b1b64d",
+  "collectors_redeployed": false
+ },
+ "collector_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
+ "quiet_windows_utc": [
+  "none active",
+  "avoid collector redeploys 02:00-06:00Z (busy period)"
+ ],
+ "next_workstream": "Yuyu requests per capture (~55 vs 2 documents, 97% peak budget); include SNKR homepage-per-attempt request",
+ "storage_followups": [
+  "encode before first INSERT (collector release)",
+  "re-anchor high-frequency URLs: SNKR homepage 18.8 MB/day with 5-7 day bases",
+  "source_mapping_proposal_groups bloat"
+ ],
+ "owner_decision_needed": "storage runway 27-48 days to 3 GiB reserve: growth reductions vs irreversible volume resize",
+ "never_replay": [
+  "snkr intents 3676",
+  "snkr intents 3677",
+  "raw recovery 35175",
+  "yuyu storage canary evidence",
+  "PR77-87 and PR91 deliveries"
+ ],
+ "no_source_jobs_manually_invoked": true,
+ "no_mapping_approvals": true
+}

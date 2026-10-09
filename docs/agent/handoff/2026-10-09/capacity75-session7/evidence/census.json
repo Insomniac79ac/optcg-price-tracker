@@ -1,0 +1,725 @@
+{
+ "target": "staging",
+ "read_only": true,
+ "source_requests": 0,
+ "database_writes": 0,
+ "since": "2026-10-08T13:45:05Z",
+ "max_ledger_id": 99999999,
+ "ledger_by_collector": [
+  {
+   "collector": "snkrdunk-due",
+   "parser_version": "snkrdunk-collector-v2",
+   "rows": 644,
+   "min_id": 37937,
+   "max_id": 41328,
+   "original_bytes": 557699789,
+   "encoded_bytes": 21357954,
+   "base_col_bytes": 75067035
+  },
+  {
+   "collector": "yuyutei-due-0",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 289,
+   "min_id": 38363,
+   "max_id": 40834,
+   "original_bytes": 64820007,
+   "encoded_bytes": 516034,
+   "base_col_bytes": 10677932
+  },
+  {
+   "collector": "yuyutei-due-1",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 290,
+   "min_id": 38355,
+   "max_id": 40934,
+   "original_bytes": 64985556,
+   "encoded_bytes": 498124,
+   "base_col_bytes": 10704405
+  },
+  {
+   "collector": "yuyutei-due-2",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 289,
+   "min_id": 38453,
+   "max_id": 41022,
+   "original_bytes": 64924633,
+   "encoded_bytes": 476310,
+   "base_col_bytes": 10692344
+  },
+  {
+   "collector": "yuyutei-due-3",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 291,
+   "min_id": 38379,
+   "max_id": 41154,
+   "original_bytes": 65181719,
+   "encoded_bytes": 482162,
+   "base_col_bytes": 10743921
+  },
+  {
+   "collector": "yuyutei-due-4",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 290,
+   "min_id": 38395,
+   "max_id": 40877,
+   "original_bytes": 64923718,
+   "encoded_bytes": 492196,
+   "base_col_bytes": 10702848
+  },
+  {
+   "collector": "yuyutei-due-5",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 291,
+   "min_id": 38454,
+   "max_id": 41156,
+   "original_bytes": 65112876,
+   "encoded_bytes": 484206,
+   "base_col_bytes": 10739411
+  },
+  {
+   "collector": "yuyutei-due-6",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 290,
+   "min_id": 38339,
+   "max_id": 41098,
+   "original_bytes": 64960485,
+   "encoded_bytes": 500168,
+   "base_col_bytes": 10702377
+  },
+  {
+   "collector": "yuyutei-due-7",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 292,
+   "min_id": 38407,
+   "max_id": 41158,
+   "original_bytes": 65421420,
+   "encoded_bytes": 505224,
+   "base_col_bytes": 10780202
+  },
+  {
+   "collector": "yuyutei-due-8",
+   "parser_version": "yuyutei-collector-v3",
+   "rows": 287,
+   "min_id": 38347,
+   "max_id": 40980,
+   "original_bytes": 64230392,
+   "encoded_bytes": 500342,
+   "base_col_bytes": 10589176
+  }
+ ],
+ "raw_since_activation": [
+  {
+   "name": "snkrdunk",
+   "parser_version": "snkrdunk-collector-v2",
+   "http_status": 200,
+   "encoded": true,
+   "in_ledger": true,
+   "n": 644,
+   "col_bytes": 21357954,
+   "text_bytes": 21357954
+  },
+  {
+   "name": "yuyutei",
+   "parser_version": "yuyutei-collector-v3",
+   "http_status": 200,
+   "encoded": false,
+   "in_ledger": false,
+   "n": 7,
+   "col_bytes": 258791,
+   "text_bytes": 1570277
+  },
+  {
+   "name": "yuyutei",
+   "parser_version": "yuyutei-collector-v3",
+   "http_status": 200,
+   "encoded": true,
+   "in_ledger": true,
+   "n": 2609,
+   "col_bytes": 4460086,
+   "text_bytes": 4454766
+  },
+  {
+   "name": "yuyutei",
+   "parser_version": "yuyutei-recurring-discovery-v1",
+   "http_status": 200,
+   "encoded": false,
+   "in_ledger": false,
+   "n": 180,
+   "col_bytes": 6405850,
+   "text_bytes": 45086364
+  }
+ ],
+ "runs": [
+  {
+   "service": "snkrdunk-collector",
+   "runs": 49,
+   "work_runs": 19,
+   "avg_work_runtime_s": "159.4",
+   "max_runtime_s": "180.6",
+   "claimed": 322,
+   "raw_snapshots": 322,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "13a65aff-ca9c-4922-843d-1d99bacded13"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:01:21.805347+00:00",
+   "last": "2026-10-09 14:03:36.275907+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-0",
+   "runs": 49,
+   "work_runs": 24,
+   "avg_work_runtime_s": "119.8",
+   "max_runtime_s": "145.8",
+   "claimed": 322,
+   "raw_snapshots": 322,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "b64110bb-e328-4099-b689-f92546cc57fd"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:05:15.760105+00:00",
+   "last": "2026-10-09 14:06:37.645694+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-1",
+   "runs": 49,
+   "work_runs": 25,
+   "avg_work_runtime_s": "107.3",
+   "max_runtime_s": "151.4",
+   "claimed": 302,
+   "raw_snapshots": 302,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:09:11.829973+00:00",
+   "last": "2026-10-09 14:06:51.866635+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-2",
+   "runs": 49,
+   "work_runs": 24,
+   "avg_work_runtime_s": "115.1",
+   "max_runtime_s": "161.6",
+   "claimed": 293,
+   "raw_snapshots": 293,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "69ff7905-3e60-45b7-a1df-962abc717c5f"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:06:49.653458+00:00",
+   "last": "2026-10-09 14:06:29.027217+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-3",
+   "runs": 49,
+   "work_runs": 23,
+   "avg_work_runtime_s": "160.8",
+   "max_runtime_s": "211.0",
+   "claimed": 301,
+   "raw_snapshots": 301,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "7ddbd0f3-24ef-4bec-a647-1098c01159c6"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:12:57.601177+00:00",
+   "last": "2026-10-09 14:12:10.966633+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-4-v2",
+   "runs": 50,
+   "work_runs": 26,
+   "avg_work_runtime_s": "116.9",
+   "max_runtime_s": "206.1",
+   "claimed": 313,
+   "raw_snapshots": 312,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 1,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "a2e21e1e-5007-42bc-913c-8b761a334c62",
+    "d4c20ffd-9d50-4ad7-a547-551efe0e7d23"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 13:45:16.085641+00:00",
+   "last": "2026-10-09 14:12:20.268825+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-5",
+   "runs": 49,
+   "work_runs": 25,
+   "avg_work_runtime_s": "106.0",
+   "max_runtime_s": "173.9",
+   "claimed": 294,
+   "raw_snapshots": 294,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "73702e82-0670-476f-82f5-3324689af3ec"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 14:19:23.835315+00:00",
+   "last": "2026-10-09 14:18:55.663264+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-6",
+   "runs": 50,
+   "work_runs": 24,
+   "avg_work_runtime_s": "120.4",
+   "max_runtime_s": "173.0",
+   "claimed": 296,
+   "raw_snapshots": 295,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 1,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "39ea662f-a0c8-4c27-a952-bd6918d2041d",
+    "64b19323-ef4f-4aed-925e-b8cc9b4800e2"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 13:49:05.369396+00:00",
+   "last": "2026-10-09 14:22:30.544717+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-7",
+   "runs": 50,
+   "work_runs": 23,
+   "avg_work_runtime_s": "152.2",
+   "max_runtime_s": "215.9",
+   "claimed": 296,
+   "raw_snapshots": 296,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e",
+    "e0473070-c327-4670-9582-b4dc609ba469"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 13:52:17.258922+00:00",
+   "last": "2026-10-09 14:24:09.744206+00:00"
+  },
+  {
+   "service": "yuyutei-collector-shard-8",
+   "runs": 50,
+   "work_runs": 24,
+   "avg_work_runtime_s": "105.6",
+   "max_runtime_s": "144.3",
+   "claimed": 295,
+   "raw_snapshots": 295,
+   "expired_claims": 0,
+   "claims_remaining": 0,
+   "reservation_overruns": 0,
+   "duplicate_requests": 0,
+   "wrong_shard": 0,
+   "http_403": 0,
+   "http_429": 0,
+   "challenge": 0,
+   "transient": 0,
+   "parsing": 0,
+   "identity_fail": 0,
+   "unexpected_skip": 0,
+   "not_completed": 0,
+   "deployments": [
+    "ce27c4a0-e5de-439b-b1e7-dfdf6af97328"
+   ],
+   "revisions": [
+    "1b1b64d23555b5abc315f1aaa79f547784136f59"
+   ],
+   "first": "2026-10-08 13:58:09.966384+00:00",
+   "last": "2026-10-09 14:26:50.758286+00:00"
+  }
+ ],
+ "runs_post_activation": [
+  {
+   "service": "snkrdunk-collector",
+   "runs": 49,
+   "work_runs": 19,
+   "claimed": 322,
+   "avg_work_s": "159.4",
+   "max_s": "180.6",
+   "deployments": [
+    "13a65aff-ca9c-4922-843d-1d99bacded13"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-0",
+   "runs": 49,
+   "work_runs": 24,
+   "claimed": 322,
+   "avg_work_s": "119.8",
+   "max_s": "145.8",
+   "deployments": [
+    "b64110bb-e328-4099-b689-f92546cc57fd"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-1",
+   "runs": 49,
+   "work_runs": 25,
+   "claimed": 302,
+   "avg_work_s": "107.3",
+   "max_s": "151.4",
+   "deployments": [
+    "00f7e0fa-58db-4e40-a6e6-15c2d0cf3ece"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-2",
+   "runs": 49,
+   "work_runs": 24,
+   "claimed": 293,
+   "avg_work_s": "115.1",
+   "max_s": "161.6",
+   "deployments": [
+    "69ff7905-3e60-45b7-a1df-962abc717c5f"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-3",
+   "runs": 49,
+   "work_runs": 23,
+   "claimed": 301,
+   "avg_work_s": "160.8",
+   "max_s": "211.0",
+   "deployments": [
+    "7ddbd0f3-24ef-4bec-a647-1098c01159c6"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-4-v2",
+   "runs": 49,
+   "work_runs": 25,
+   "claimed": 308,
+   "avg_work_s": "118.5",
+   "max_s": "206.1",
+   "deployments": [
+    "a2e21e1e-5007-42bc-913c-8b761a334c62"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-5",
+   "runs": 49,
+   "work_runs": 25,
+   "claimed": 294,
+   "avg_work_s": "106.0",
+   "max_s": "173.9",
+   "deployments": [
+    "73702e82-0670-476f-82f5-3324689af3ec"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-6",
+   "runs": 49,
+   "work_runs": 24,
+   "claimed": 296,
+   "avg_work_s": "120.4",
+   "max_s": "173.0",
+   "deployments": [
+    "64b19323-ef4f-4aed-925e-b8cc9b4800e2"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-7",
+   "runs": 49,
+   "work_runs": 22,
+   "claimed": 294,
+   "avg_work_s": "158.3",
+   "max_s": "215.9",
+   "deployments": [
+    "6eaf9275-4ba6-4787-a9ab-c556ba1ddd1e"
+   ]
+  },
+  {
+   "service": "yuyutei-collector-shard-8",
+   "runs": 50,
+   "work_runs": 24,
+   "claimed": 295,
+   "avg_work_s": "105.6",
+   "max_s": "144.3",
+   "deployments": [
+    "ce27c4a0-e5de-439b-b1e7-dfdf6af97328"
+   ]
+  }
+ ],
+ "started_without_finish": [],
+ "attempt_outcomes": [
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 60
+  },
+  {
+   "name": "snkrdunk",
+   "kind": "refresh",
+   "outcome": "no_listing",
+   "n": 262
+  },
+  {
+   "name": "yuyutei",
+   "kind": "discovery",
+   "outcome": "completed",
+   "n": 89
+  },
+  {
+   "name": "yuyutei",
+   "kind": "refresh",
+   "outcome": "captured",
+   "n": 2616
+  },
+  {
+   "name": "yuyutei",
+   "kind": "refresh",
+   "outcome": "transient_failure",
+   "n": 2
+  }
+ ],
+ "peak_concurrent_yuyu_claims": [
+  {
+   "peak": 3
+  }
+ ],
+ "claims_now": [
+  {
+   "name": "yuyutei",
+   "claimed": 0,
+   "expired": 0
+  },
+  {
+   "name": "snkrdunk",
+   "claimed": 0,
+   "expired": 0
+  }
+ ],
+ "open_attempts": [
+  {
+   "n": 0,
+   "oldest": null
+  }
+ ],
+ "other_events": [
+  {
+   "event_type": "slow_request",
+   "service": "api",
+   "n": 15
+  },
+  {
+   "event_type": "lock_released",
+   "service": "api",
+   "n": 4
+  },
+  {
+   "event_type": "lock_acquired",
+   "service": "api",
+   "n": 4
+  }
+ ],
+ "due_work": [
+  {
+   "name": "snkrdunk",
+   "total": 353,
+   "le23h": 270,
+   "h23_24": 17,
+   "gt24h": 44,
+   "never_checked": 22,
+   "due_unblocked": 17,
+   "due_all": 83,
+   "overdue_gt24_or_never": 66,
+   "backoff": 0,
+   "claimed": 0,
+   "expired_claims": 0,
+   "blocked": 66
+  },
+  {
+   "name": "yuyutei",
+   "total": 2619,
+   "le23h": 2616,
+   "h23_24": 0,
+   "gt24h": 2,
+   "never_checked": 1,
+   "due_unblocked": 0,
+   "due_all": 3,
+   "overdue_gt24_or_never": 3,
+   "backoff": 0,
+   "claimed": 0,
+   "expired_claims": 0,
+   "blocked": 3
+  }
+ ],
+ "budgets": [
+  {
+   "name": "yuyutei",
+   "request_limit": 9000,
+   "window_seconds": 1800,
+   "window_started_at": "2026-10-09 14:23:57.124648+00:00",
+   "used_requests": 0,
+   "reserved_requests": 0,
+   "paused_until": null,
+   "pause_reason": null
+  },
+  {
+   "name": "snkrdunk",
+   "request_limit": 3100,
+   "window_seconds": 1800,
+   "window_started_at": "2026-10-09 13:53:57.124648+00:00",
+   "used_requests": 2863,
+   "reserved_requests": 0,
+   "paused_until": null,
+   "pause_reason": null
+  }
+ ],
+ "ledger_total": [
+  {
+   "n": 3321,
+   "max_id": 41328
+  }
+ ],
+ "db": [
+  {
+   "db_bytes": 2754385599,
+   "raw_bytes": 2588270592,
+   "ledger_bytes": 999424,
+   "now": "2026-10-09 14:26:56.091475+00:00"
+  }
+ ],
+ "volume": {
+  "observed_at": "2026-10-09T14:27:02.449284+00:00",
+  "environment": "staging",
+  "service": "Postgres",
+  "volumes": [
+   {
+    "average_mb": 3572.674236963108,
+    "current_mb": 3597.9276582912003,
+    "limit_mb": 10000.0,
+    "max_mb": 3609.5185574765715,
+    "mount_path": "/var/lib/postgresql/data",
+    "name": "postgres-volume"
+   }
+  ]
+ }
+}
