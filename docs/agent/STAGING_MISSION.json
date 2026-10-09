@@ -37,7 +37,7 @@
       "reason": "Verification tooling and CI only. New scripts/collector_runtime_inputs.py computes the services/api modules each collector imports (union at installed component and head); SNKR and Yuyu component checks fail on any change to those, to package data, packaging/requirements, the collector directory, its Dockerfile or the identity package, and fall back to the previous whole-directory set when the graph cannot be computed. ci.yml adds three unittest steps to agent-state-tests. No services/, packages/ or deploy/ change: no Railway build, collector rollout, DDL, provider variable, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "a4116a09b10bc6e733290fa0b158442198e6580c2bc542c719c5dca50febc474",
+  "diff_sha256": "caa2fddc329a256808f27cfda909a65afdc8f63cf6bdd69c884afc7e4434c8c2",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -61,7 +61,7 @@
       "dependencies": [
         "local Git objects only; no new Python dependency"
       ],
-      "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09T14:4xZ) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
+      "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09 ~14:30Z) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 25
