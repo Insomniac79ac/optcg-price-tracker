@@ -1,0 +1,183 @@
+{
+ "staging_head:snkrdunk": {
+  "sha": "137882096582797fe8119d0cf0e78b4bd540d784",
+  "full_path_changes": [],
+  "runtime_changes": [],
+  "basis": "unchanged",
+  "old_check": "PASS",
+  "new_check": "PASS"
+ },
+ "staging_head:yuyutei": {
+  "sha": "137882096582797fe8119d0cf0e78b4bd540d784",
+  "full_path_changes": [],
+  "runtime_changes": [],
+  "basis": "unchanged",
+  "old_check": "PASS",
+  "new_check": "PASS"
+ },
+ "authfix_1bae1c2:snkrdunk": {
+  "sha": "1bae1c2dffca57ecd20820b45f64029b10bd8808",
+  "full_path_changes": [
+   "services/api/app/api/market.py",
+   "services/api/tests/test_mutating_route_auth.py"
+  ],
+  "runtime_changes": [],
+  "basis": "import-graph",
+  "old_check": "FAIL",
+  "new_check": "PASS"
+ },
+ "authfix_1bae1c2:yuyutei": {
+  "sha": "1bae1c2dffca57ecd20820b45f64029b10bd8808",
+  "full_path_changes": [
+   "services/api/app/api/market.py",
+   "services/api/tests/test_mutating_route_auth.py"
+  ],
+  "runtime_changes": [],
+  "basis": "import-graph",
+  "old_check": "FAIL",
+  "new_check": "PASS"
+ },
+ "onchain_plan:snkrdunk": {
+  "sha": "c2279e4cc8381082c30a2766cf0af898730b7e3e",
+  "full_path_changes": [],
+  "runtime_changes": [],
+  "basis": "unchanged",
+  "old_check": "PASS",
+  "new_check": "PASS"
+ },
+ "onchain_plan:yuyutei": {
+  "sha": "c2279e4cc8381082c30a2766cf0af898730b7e3e",
+  "full_path_changes": [],
+  "runtime_changes": [],
+  "basis": "unchanged",
+  "old_check": "PASS",
+  "new_check": "PASS"
+ },
+ "history_snkr_parent_vs_commit": [
+  {
+   "commit": "818280e",
+   "subject": "Merge commit 'a6c080902895922ba60c4161d417255006b2bd1f' into",
+   "full": 2,
+   "runtime": [
+    "services/api/app/services/raw_dictionary_storage.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "d1f000c",
+   "subject": "Verify exact future cadence profiles behind bounded claim wa",
+   "full": 1,
+   "runtime": [
+    "services/api/app/services/freshness_integration.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "295746a",
+   "subject": "Retry full Yuyu claim slots within the existing runtime boun",
+   "full": 3,
+   "runtime": [
+    "services/api/app/services/freshness_integration.py",
+    "services/api/app/services/freshness_queue.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "ea9eb98",
+   "subject": "Bound RAW body projection after scoped ID selection",
+   "full": 2,
+   "runtime": [
+    "services/api/app/services/raw_dictionary_storage.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "c4cb8b3",
+   "subject": "Keep RAW body projection bounded under PostgreSQL planning",
+   "full": 2,
+   "runtime": [
+    "services/api/app/services/raw_dictionary_storage.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "2159728",
+   "subject": "Add bounded renewable RAW storage admission with writers off",
+   "full": 5,
+   "runtime": [
+    "services/api/app/models/raw_snapshot.py",
+    "services/api/app/models/raw_snapshot_dictionary.py",
+    "services/api/app/services/raw_dictionary_storage.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "36b8d20",
+   "subject": "Bound Yuyu active claims before scheduler capacity tuning",
+   "full": 2,
+   "runtime": [
+    "services/api/app/services/freshness_queue.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "877b0e3",
+   "subject": "Prepare bounded new RAW dictionary storage and protected rec",
+   "full": 9,
+   "runtime": [
+    "services/api/app/models/__init__.py",
+    "services/api/app/models/raw_snapshot_dictionary.py",
+    "services/api/app/services/freshness_integration.py",
+    "services/api/app/services/raw_dictionary_storage.py"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "33ac5c9",
+   "subject": "Install guarded RAW dictionary readers before staging storag",
+   "full": 6,
+   "runtime": [
+    "packages/opcg_source_identity/src/opcg_source_identity/raw_payload.py",
+    "services/api/app/models/raw_snapshot.py",
+    "services/api/requirements.txt",
+    "services/snkrdunk_collector/requirements.txt"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  },
+  {
+   "commit": "bf997c1",
+   "subject": "Bound physical proof registry capacity for continued staging",
+   "full": 2,
+   "runtime": [],
+   "basis": "import-graph",
+   "new": "PASS"
+  },
+  {
+   "commit": "21c60ce",
+   "subject": "Allow raw retention during serialized exact mapping approval",
+   "full": 2,
+   "runtime": [],
+   "basis": "import-graph",
+   "new": "PASS"
+  },
+  {
+   "commit": "02d9bfd",
+   "subject": "Deliver remaining 153 current-digest physical artwork proofs",
+   "full": 1,
+   "runtime": [
+    "services/api/app/services/evidence/positive_physical_artwork.json"
+   ],
+   "basis": "import-graph",
+   "new": "FAIL"
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+{
+ "inputs": {
+  "volume_now_mb": 3597.9276582912003,
+  "volume_at": "2026-10-09T14:27:02.449284+00:00",
+  "limit_mb": 10000.0,
+  "reserve_mb_3GiB": 3221.225472,
+  "new100_image_bound_mb": 887.045884,
+  "pre_activation": {
+   "volume_mb": 3477.6769626112,
+   "volume_at": "2026-10-08T13:43:29Z",
+   "db": 2641794751,
+   "raw": 2492243968,
+   "db_at": "2026-10-08T13:43:25Z"
+  },
+  "session7a": {
+   "volume_mb": 3568.06,
+   "db": 2709567167,
+   "raw": 2555740160,
+   "at": "2026-10-08T22:12:37Z"
+  }
+ },
+ "rates_mb_per_day": {
+  "volume_24h_mb_day": 116.7,
+  "db_24h_mb_day": 109.4,
+  "raw_24h_mb_day": 93.3,
+  "volume_since_7a_mb_day": 44.1,
+  "db_since_7a_mb_day": 66.4,
+  "raw_since_7a_mb_day": 48.2
+ },
+ "room_to_reserve_mb": 3180.8,
+ "scenarios": {
+  "conservative_full_24h_volume": {
+   "rate_mb_day": 116.7,
+   "days_to_reserve": 27.3,
+   "days_to_full": 54.8,
+   "volume_30d_mb": 7100,
+   "volume_90d_mb": 14103,
+   "need_30d_incl_reserve_mb": 10321,
+   "need_90d_incl_reserve_mb": 17324,
+   "new100_days_to_reserve": 19.7,
+   "new100_need_30d_incl_reserve_mb_all_snkr": 11415,
+   "new100_need_90d_incl_reserve_mb_all_snkr": 18832
+  },
+  "steady_since_7a_db": {
+   "rate_mb_day": 66.4,
+   "days_to_reserve": 47.9,
+   "days_to_full": 96.4,
+   "volume_30d_mb": 5590,
+   "volume_90d_mb": 9573,
+   "need_30d_incl_reserve_mb": 8811,
+   "need_90d_incl_reserve_mb": 12794,
+   "new100_days_to_reserve": 34.6,
+   "new100_need_30d_incl_reserve_mb_all_snkr": 9905,
+   "new100_need_90d_incl_reserve_mb_all_snkr": 14302
+  }
+ },
+ "new100_recurring_assumption": "all-SNKR worst case +6.9 MB/day stored (100 x (65 KB homepage delta + 4 KB item delta), measured per-row averages); all-Yuyu +0.2 MB/day"
+}
