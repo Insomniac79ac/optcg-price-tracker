@@ -37,7 +37,7 @@
       "reason": "Verification tooling and CI only. New scripts/collector_runtime_inputs.py computes the services/api modules each collector imports (union at installed component and head); SNKR and Yuyu component checks fail on any change to those, to package data, packaging/requirements, the collector directory, its Dockerfile or the identity package, and fall back to the previous whole-directory set when the graph cannot be computed. ci.yml adds three unittest steps to agent-state-tests. No services/, packages/ or deploy/ change: no Railway build, collector rollout, DDL, provider variable, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "52bb00f7448d94ef938138e693a68c7f7a4fc309623fd6e7ab2ec073e9d338f6",
+  "diff_sha256": "a4116a09b10bc6e733290fa0b158442198e6580c2bc542c719c5dca50febc474",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -67,11 +67,14 @@
       "estimated_runtime_minutes": 25
     },
     "recovery": {
-      "artifact": "1378820",
+      "artifact": "137882096582797fe8119d0cf0e78b4bd540d784",
       "procedure": "Open a PR reverting this merge (restores the whole-directory SNKR_PATHS/Yuyu git diff). Tooling-only; no Railway or database action.",
       "trigger": "Any evidence that a collector-executed module changed without failing continuity, or any CI/delivery verifier failure attributable to this change.",
       "backup": "Not applicable: no persistent state, schema, variable or deployment changes.",
-      "validation": "scripts/tests/test_collector_runtime_inputs.py"
+      "validation": [
+        "scripts/tests/test_collector_runtime_inputs.py",
+        "docs/agent/evidence/collector-continuity-preflight-20261009.json"
+      ]
     },
     "verification": {
       "required_checks": [
