@@ -1,6 +1,6 @@
 {
  "kind": "AMBER verification-change preflight",
- "written_at": "2026-10-09T15:05:00Z",
+ "written_at": "2026-10-09T14:39:36Z (commit time of e2c30c2; earlier value was a placeholder)",
  "target": "staging",
  "production_accessed": false,
  "source_requests": 0,
@@ -25,7 +25,7 @@
   "dependencies": [
    "local Git objects only; no new Python dependency"
   ],
-  "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09T14:4xZ) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
+  "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09 ~14:30Z) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
   "database_writes": 0,
   "source_requests": 0,
   "estimated_runtime_minutes": 25
