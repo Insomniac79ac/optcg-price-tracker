@@ -1,0 +1,259 @@
+{
+ "kind": "AMBER verification-change preflight",
+ "written_at": "2026-10-09T15:05:00Z",
+ "target": "staging",
+ "production_accessed": false,
+ "source_requests": 0,
+ "database_writes": 0,
+ "change": "SNKR and Yuyu component continuity narrowed from all of services/api to the collectors' Git-derived import graph (union at component and head), fail-closed to the previous whole-directory set.",
+ "files": [
+  "scripts/collector_runtime_inputs.py",
+  "scripts/verify_snkr_published_discovery_component.py",
+  "scripts/verify_yuyu_raw_reader_component.py",
+  "scripts/tests/test_collector_runtime_inputs.py",
+  ".github/workflows/ci.yml",
+  "docs/agent/STAGING_DELIVERY.md"
+ ],
+ "impact": {
+  "resources": [
+   "CI agent-state-tests job (3 added unittest steps)",
+   "staging delivery component checks (read-only verifiers)"
+  ],
+  "routes": [
+   "none"
+  ],
+  "dependencies": [
+   "local Git objects only; no new Python dependency"
+  ],
+  "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09T14:4xZ) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
+  "database_writes": 0,
+  "source_requests": 0,
+  "estimated_runtime_minutes": 25
+ },
+ "not_weaker_evidence": {
+  "tests": "scripts/tests/test_collector_runtime_inputs.py: 20 tests (imported, transitive, package-init, package-data, packaging, requirements, collector/identity/Dockerfile changes fail; new import expands set; removed import still counts; dynamic import, syntax error and unresolved app import fall back to full set; unknown component still fails).",
+  "mutation_checks": {
+   "empty_import_set": "11 failures",
+   "old_whole_directory_behaviour": "3 failures (narrowing assertions)"
+  },
+  "runtime_import_comparison": {
+   "snkrdunk": {
+    "loaded_app_modules": 58,
+    "static_set": 62,
+    "loaded_missing_from_static": 0
+   },
+   "yuyutei": {
+    "loaded_app_modules": 65,
+    "static_set": 73,
+    "loaded_missing_from_static": 0
+   }
+  },
+  "real_commits": {
+   "staging_head:snkrdunk": {
+    "sha": "137882096582797fe8119d0cf0e78b4bd540d784",
+    "full_path_changes": [],
+    "runtime_changes": [],
+    "basis": "unchanged",
+    "old_check": "PASS",
+    "new_check": "PASS"
+   },
+   "staging_head:yuyutei": {
+    "sha": "137882096582797fe8119d0cf0e78b4bd540d784",
+    "full_path_changes": [],
+    "runtime_changes": [],
+    "basis": "unchanged",
+    "old_check": "PASS",
+    "new_check": "PASS"
+   },
+   "authfix_1bae1c2:snkrdunk": {
+    "sha": "1bae1c2dffca57ecd20820b45f64029b10bd8808",
+    "full_path_changes": [
+     "services/api/app/api/market.py",
+     "services/api/tests/test_mutating_route_auth.py"
+    ],
+    "runtime_changes": [],
+    "basis": "import-graph",
+    "old_check": "FAIL",
+    "new_check": "PASS"
+   },
+   "authfix_1bae1c2:yuyutei": {
+    "sha": "1bae1c2dffca57ecd20820b45f64029b10bd8808",
+    "full_path_changes": [
+     "services/api/app/api/market.py",
+     "services/api/tests/test_mutating_route_auth.py"
+    ],
+    "runtime_changes": [],
+    "basis": "import-graph",
+    "old_check": "FAIL",
+    "new_check": "PASS"
+   },
+   "onchain_plan:snkrdunk": {
+    "sha": "c2279e4cc8381082c30a2766cf0af898730b7e3e",
+    "full_path_changes": [],
+    "runtime_changes": [],
+    "basis": "unchanged",
+    "old_check": "PASS",
+    "new_check": "PASS"
+   },
+   "onchain_plan:yuyutei": {
+    "sha": "c2279e4cc8381082c30a2766cf0af898730b7e3e",
+    "full_path_changes": [],
+    "runtime_changes": [],
+    "basis": "unchanged",
+    "old_check": "PASS",
+    "new_check": "PASS"
+   },
+   "history_snkr_parent_vs_commit": [
+    {
+     "commit": "818280e",
+     "subject": "Merge commit 'a6c080902895922ba60c4161d417255006b2bd1f' into",
+     "full": 2,
+     "runtime": [
+      "services/api/app/services/raw_dictionary_storage.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "d1f000c",
+     "subject": "Verify exact future cadence profiles behind bounded claim wa",
+     "full": 1,
+     "runtime": [
+      "services/api/app/services/freshness_integration.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "295746a",
+     "subject": "Retry full Yuyu claim slots within the existing runtime boun",
+     "full": 3,
+     "runtime": [
+      "services/api/app/services/freshness_integration.py",
+      "services/api/app/services/freshness_queue.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "ea9eb98",
+     "subject": "Bound RAW body projection after scoped ID selection",
+     "full": 2,
+     "runtime": [
+      "services/api/app/services/raw_dictionary_storage.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "c4cb8b3",
+     "subject": "Keep RAW body projection bounded under PostgreSQL planning",
+     "full": 2,
+     "runtime": [
+      "services/api/app/services/raw_dictionary_storage.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "2159728",
+     "subject": "Add bounded renewable RAW storage admission with writers off",
+     "full": 5,
+     "runtime": [
+      "services/api/app/models/raw_snapshot.py",
+      "services/api/app/models/raw_snapshot_dictionary.py",
+      "services/api/app/services/raw_dictionary_storage.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "36b8d20",
+     "subject": "Bound Yuyu active claims before scheduler capacity tuning",
+     "full": 2,
+     "runtime": [
+      "services/api/app/services/freshness_queue.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "877b0e3",
+     "subject": "Prepare bounded new RAW dictionary storage and protected rec",
+     "full": 9,
+     "runtime": [
+      "services/api/app/models/__init__.py",
+      "services/api/app/models/raw_snapshot_dictionary.py",
+      "services/api/app/services/freshness_integration.py",
+      "services/api/app/services/raw_dictionary_storage.py"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "33ac5c9",
+     "subject": "Install guarded RAW dictionary readers before staging storag",
+     "full": 6,
+     "runtime": [
+      "packages/opcg_source_identity/src/opcg_source_identity/raw_payload.py",
+      "services/api/app/models/raw_snapshot.py",
+      "services/api/requirements.txt",
+      "services/snkrdunk_collector/requirements.txt"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    },
+    {
+     "commit": "bf997c1",
+     "subject": "Bound physical proof registry capacity for continued staging",
+     "full": 2,
+     "runtime": [],
+     "basis": "import-graph",
+     "new": "PASS"
+    },
+    {
+     "commit": "21c60ce",
+     "subject": "Allow raw retention during serialized exact mapping approval",
+     "full": 2,
+     "runtime": [],
+     "basis": "import-graph",
+     "new": "PASS"
+    },
+    {
+     "commit": "02d9bfd",
+     "subject": "Deliver remaining 153 current-digest physical artwork proofs",
+     "full": 1,
+     "runtime": [
+      "services/api/app/services/evidence/positive_physical_artwork.json"
+     ],
+     "basis": "import-graph",
+     "new": "FAIL"
+    }
+   ]
+  }
+ },
+ "recovery": {
+  "artifact": "1378820",
+  "procedure": "Open a PR reverting this merge (restores the whole-directory SNKR_PATHS/Yuyu git diff). Tooling-only; no Railway or database action.",
+  "trigger": "Any evidence that a collector-executed module changed without failing continuity, or any CI/delivery verifier failure attributable to this change.",
+  "backup": "Not applicable: no persistent state, schema, variable or deployment changes.",
+  "validation": "scripts/tests/test_collector_runtime_inputs.py"
+ },
+ "verification": {
+  "required_checks": [
+   "engineering-gate"
+  ],
+  "post_change": [
+   "scripts/verify_staging_delivery.py",
+   "scripts/verify_snkr_published_discovery_component.py",
+   "scripts/verify_yuyu_raw_reader_component.py",
+   "scripts/generate_staging_state.py"
+  ],
+  "observation_window": "The staging delivery of this merge: every Railway service SKIPPED, API expectation skip, both component checks PASS with basis 'unchanged' on 1b1b64d, and the next natural collector receipts still report the activation deployments."
+ },
+ "quiet_windows_checked": {
+  "daily_v1_observation_end": "2026-10-09T13:56:11Z (ended)",
+  "pr80_busy_window": "02:00-06:00Z (outside)",
+  "collector_redeploy": "none"
+ }
+}

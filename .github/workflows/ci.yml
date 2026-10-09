@@ -287,6 +287,9 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p test_operational_health.py -v
       - run: python -m unittest discover -s scripts/tests -p test_probe_staging_credentials.py -v
       - run: python -m unittest discover -s scripts/tests -p test_apply_staging_raw_dependency.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_collector_runtime_inputs.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_snkr_discovery_component.py -v
+      - run: python -m unittest discover -s scripts/tests -p test_yuyu_raw_reader_component.py -v
 
   check-secrets:
     runs-on: ubuntu-latest

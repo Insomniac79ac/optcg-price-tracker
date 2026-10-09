@@ -234,3 +234,37 @@ is refused before any change. Any post-redeploy failure restores the previous
 effective values on the original verified upload, re-verifies it and refuses,
 or reports `ROLLBACK FAILED`. `--restore` puts the original image back
 explicitly. The build-log line count is recorded as evidence only.
+
+### Collector continuity follows the import graph (2026-10-09, session 7)
+
+Both collector images `pip install services/api`, but that installs only the
+`app` package and its package data, and a collector process executes only the
+`app` modules it can reach by import. `scripts/collector_runtime_inputs.py`
+derives that set from Git objects at the installed component and at head
+(union), starting from every non-test module in the collector directory. It
+follows transitive and function-local imports and package `__init__` chains.
+Both SNKR and Yuyu component checks use it through `collector_continuity`.
+
+A change still fails continuity when it touches:
+
+- the collector directory, its Dockerfile or `packages/opcg_source_identity`;
+- an imported `app` module at either commit, including one a new import adds;
+- any non-Python file under `services/api/app` (package data);
+- `services/api` packaging or requirements files.
+
+`services/api` files that collectors never install (`alembic/`, `tests/`,
+`scripts/`, `data/`, API service files) and unimported `app` modules no longer
+make an API change a collector release. The check fails closed: an unreadable
+commit, unparsable reachable module, unresolved `app` import or any dynamic
+import (`importlib.import_module`, `__import__`, etc.) falls back to the
+previous whole-directory path set. The only named exceptions are the untracked
+deploy-time markers `app.services.collector_build` and `*_delivery_revision`,
+which carry only the deployed revision and have no Git source to compare.
+
+Collector Railway watch patterns cover only their own directory and
+Dockerfile, so an API merge has never rebuilt a collector. The narrowing
+removes only the verification refusal. It does not change any image,
+deployment, schedule, budget or writer. Evidence:
+`evidence/collector-continuity-preflight-20261009.json`. The static set was
+compared with the `app` modules actually loaded by importing every collector
+module: SNKR 58 loaded, 62 static; Yuyu 65 loaded, 73 static; none missing.
