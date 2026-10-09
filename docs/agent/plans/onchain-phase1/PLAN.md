@@ -716,8 +716,8 @@ windows.
   gated on written permission.
 - **Brand positioning:**
   - An onchain section risks "crypto terminal" drift.
-  - Mitigations: inside Market, collector copy, no CTAs, affiliates, wallets or
-    tickers.
+  - Mitigations: inside Market, collector copy, no CTAs, wallets or tickers in the
+    price view. Wallet connect and partner packs are confined to the Packs tab (§F4).
   - The pack check must avoid gambling framing.
 - **Operational:**
   - API changes force collector releases (continuity).
