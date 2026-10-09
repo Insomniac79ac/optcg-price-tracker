@@ -1,5 +1,7 @@
 # Release candidate report - v1.0.0
 
+> **Environment status (2026-10-09):** there is no live production and `main` (last updated 2026-07-23) is not a release source; production remains RED. See `docs/agent/PROJECT_HANDOVER.md` §5 and §41.
+
 Phase 11 output: a practical snapshot of release-candidate readiness, produced by (and meant to be
 read alongside) `scripts/release_candidate_audit.sh`. This is not a marketing summary - it's the
 working document you fill in each time the audit is run, until every checklist item is checked and
