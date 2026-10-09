@@ -220,9 +220,20 @@ Known Railway project ID used by current tooling:
 
 c613898d-bf03-43a6-8813-761f72e1c00a
 
-Production exists but is RED / human-controlled.
+Environment status (owner statement, 2026-10-09):
 
-Never modify production without explicit human authorization.
+- Railway staging (project glistening-peace, environment
+  05d1eac2-510d-4bd3-999e-fea9ead766b7) is THE working environment.
+- Vercel has a single environment: the frontend at
+  optcg-price-tracker-staging.vercel.app. There is no live Vercel production.
+- The Railway production environment is obsolete and will be deprecated
+  (owner decision, executed separately).
+- The main branch (last updated 2026-07-23) is stale and is not a release
+  source.
+- A future production, if any, will be provisioned fresh from staging when
+  the owner decides.
+
+Production remains RED / human-controlled. See §41.
 
 ==================================================
 6. AUTHORITATIVE CARD IDENTITY
@@ -1163,6 +1174,17 @@ PSA10 NOT READY
 ==================================================
 
 PRODUCTION IS RED.
+
+Status (owner statement, 2026-10-09): there is no live production. The Railway
+production environment is obsolete and will be deprecated by a separate,
+owner-authorized action. The main branch (last updated 2026-07-23) is stale
+and is not a release source. A future production, if any, will be provisioned
+fresh from staging when the owner decides.
+
+This does not loosen the rule. No agent creates, deploys to, reads or deletes
+any production environment, old or new, without explicit owner authorization
+for that specific action. Do not delete the main branch, production config
+files or production resources as part of any other mission.
 
 Do not:
 

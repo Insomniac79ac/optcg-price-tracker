@@ -1,5 +1,7 @@
 # Release blockers - v1.0.0
 
+> **Environment status (2026-10-09):** there is no live production and `main` (last updated 2026-07-23) is not a release source; production remains RED. See `docs/agent/PROJECT_HANDOVER.md` §5 and §41.
+
 **No open release blockers.** Every row below is `fixed` or `deferred` (cosmetic, non-blocking) as
 of the 2026-07-23 v1.0.0 tagging pass - see `docs/release_candidate_report.md` for the full
 verification record (tests, audits, secrets check all re-run clean against this commit).

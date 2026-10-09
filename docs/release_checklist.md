@@ -1,5 +1,7 @@
 # Release checklist
 
+> **Environment status (2026-10-09):** there is no live production and `main` (last updated 2026-07-23) is not a release source; production remains RED. See `docs/agent/PROJECT_HANDOVER.md` §5 and §41.
+
 A repeatable checklist for cutting and shipping a release of the OPTCG price tracker. Pairs with
 `scripts/release_check.sh` (`make release-check`), which automates most of section A, and with
 `GET /admin/release-status` / the `/admin/release-status` web page, which automates most of

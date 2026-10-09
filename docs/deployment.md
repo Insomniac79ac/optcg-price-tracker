@@ -1,5 +1,7 @@
 # Deployment
 
+> **Environment status (2026-10-09):** there is no live production and `main` (last updated 2026-07-23) is not a release source; production remains RED. See `docs/agent/PROJECT_HANDOVER.md` §5 and §41.
+
 Deploying the OPTCG price tracker (api, web, worker, beat, postgres, redis) with
 `docker-compose.prod.yml`. This does not change any application behavior - it only wires up
 production-safe container config around the existing app.
