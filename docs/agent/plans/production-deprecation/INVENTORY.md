@@ -219,3 +219,88 @@ No references to production were found in:
 
 None of these steps touch staging services, collectors, cron or quiet windows. The
 only staging interaction is the before/after verification in c1–c2.
+
+---
+
+## 7. Step 2 attempt, 2026-10-09 10:32–10:45Z: STOPPED at preconditions (nothing executed)
+
+**Owner decisions recorded (2026-10-09):**
+- **No archive.** Production Postgres has zero tables and Redis holds only 3
+  leftover Celery binding keys (§4).
+- **Authorized for execution:**
+  - remove both production TCP proxies;
+  - delete the `production` environment;
+  - delete the GitHub deployment environment "glistening-peace / production".
+- **Not authorized:**
+  - deleting any service;
+  - touching staging resources or variables;
+  - rotating `ADMIN_TOKEN`;
+  - changing collectors;
+  - deleting `main` or prod-* tooling.
+
+**Precondition results:**
+
+| # | Precondition | Result |
+|---|---|---|
+| 1 | Capacity session 7 reported; no quiet window active or within 60 min | **FAIL.** At 10:32Z no session-7 handoff existed on `staging` or any branch (newest: session-7a, PR #89). The daily-v1 observation window is **active until 2026-10-09 13:56:11Z**, and session 7 reports only after it |
+| 2 | Re-read live IDs | Not re-run (stopped at 1). Inventory IDs: production `d84d1abf-04c5-4315-841c-1c8838ebec89` "production" vs staging `05d1eac2-510d-4bd3-999e-fea9ead766b7` "staging" |
+| 3 | Confirm that environment deletion removes only that environment's instances | **NOT CONFIRMED** (see below), so the owner deletes it in the dashboard |
+| 4 | Staging baseline | Not taken (stopped at 1) |
+
+**Evidence for precondition 3:**
+- The Railway public API schema (introspection, 10:35Z) has
+  `environmentDelete(id: String)`, described as "Deletes an environment."
+  - `serviceDelete(id, environmentId)` and `tcpProxyDelete(id)` also exist.
+- https://docs.railway.com/guides/manage-environments, "Delete an environment":
+  "This will delete the environment and all its deployments."
+- https://docs.railway.com/reference/environments: environments give "isolated
+  instances of all services in a project" and "you can make changes to a service
+  in an environment without affecting other environments."
+- No fetched page states that deleting an environment keeps the services, or
+  their instances, in other environments. This implies but does not explicitly
+  confirm the safety property.
+- https://docs.railway.com/guides/projects only says deleting a **project**
+  deletes all services and environments, and that the project-settings
+  **Danger** tab can delete specific **services**. That is the action to avoid.
+
+### Owner dashboard instructions (run only after session 7 reports and outside quiet windows)
+
+UI labels may differ slightly. Check the environment name and ID at every step.
+
+1. **Baseline.** Ask an agent to capture the staging baseline:
+   - 10 collectors on their activation deployments and digests with daily-v1
+     settings;
+   - API `/health`;
+   - Postgres and Redis reachable;
+   - staging verifier green.
+2. **Open production.** Open the project `glistening-peace` on railway.com. In the
+   environment switcher at the top, select **production**. The URL must contain
+   `environmentId=d84d1abf-04c5-4315-841c-1c8838ebec89`, **not** `05d1eac2-…`.
+3. **Remove the Postgres TCP proxy.** In production, open **Postgres → Settings →
+   Networking → Public Networking**. Delete the TCP proxy
+   `sakura.proxy.rlwy.net:21415`. Make sure it is 21415; staging's is 12258.
+4. **Remove the Redis TCP proxy.** In production, open **Redis → Settings →
+   Networking → Public Networking**. Delete the TCP proxy
+   `tokaido.proxy.rlwy.net:48223`.
+5. **Confirm the ports are closed.** Ask an agent to confirm with a TCP connect
+   that :21415 and :48223 no longer accept connections, and that staging is
+   unchanged.
+6. **Delete the environment.** Open **Project Settings → Environments**. On the
+   row named **production** (created 2026-07-23), choose **Delete** and confirm
+   the environment name.
+   - **Do NOT use Project Settings → Danger → delete service.** It deletes the
+     service in every environment, including the staging API, Redis and the
+     2.7 GB staging database.
+7. **Verify staging.** Ask an agent to re-run the full staging baseline
+   immediately. Every item must match step 1.
+8. **Delete the GitHub record.** On GitHub, go to repository
+   **Insomniac79ac/optcg-price-tracker → Settings → Environments →
+   "glistening-peace / production" → Delete environment** and confirm.
+9. **Docs follow-up (agent, docs-only path):**
+   - a clarifying line in `scripts/staging_db_read_check.py` (port 21415 was the
+     production proxy, now removed);
+   - a "done" record in this file;
+   - a PROJECT_HANDOVER §5/§41 note.
+   - `scripts/` is **not** on the docs-only allowlist, so the script edit
+     triggers full delivery. Deliver it in its own small PR outside quiet
+     windows, or leave it until the next scheduled release.
