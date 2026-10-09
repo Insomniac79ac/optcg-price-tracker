@@ -233,11 +233,14 @@
   }
  },
  "recovery": {
-  "artifact": "1378820",
+  "artifact": "137882096582797fe8119d0cf0e78b4bd540d784",
   "procedure": "Open a PR reverting this merge (restores the whole-directory SNKR_PATHS/Yuyu git diff). Tooling-only; no Railway or database action.",
   "trigger": "Any evidence that a collector-executed module changed without failing continuity, or any CI/delivery verifier failure attributable to this change.",
   "backup": "Not applicable: no persistent state, schema, variable or deployment changes.",
-  "validation": "scripts/tests/test_collector_runtime_inputs.py"
+  "validation": [
+   "scripts/tests/test_collector_runtime_inputs.py",
+   "docs/agent/evidence/collector-continuity-preflight-20261009.json"
+  ]
  },
  "verification": {
   "required_checks": [
