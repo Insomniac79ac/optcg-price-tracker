@@ -7,6 +7,7 @@ import re
 import subprocess
 import time
 
+import collector_runtime_inputs as runtime_inputs
 import generate_staging_state as state
 
 API = "1ddb234b8a0a51a2ad313359e22168182bf07dbd"
@@ -17,12 +18,9 @@ API_PATHS = (
     "packages/opcg_source_identity",
     "deploy/railway/api.Dockerfile",
 )
-SNKR_PATHS = (
-    "services/snkrdunk_collector",
-    "services/api",
-    "packages/opcg_source_identity",
-    "deploy/railway/snkrdunk-collector.Dockerfile",
-)
+# Whole-directory inputs; collector_continuity narrows services/api to the
+# collector's import graph and falls back to all of these when it cannot.
+SNKR_PATHS = runtime_inputs.full_paths("snkrdunk")
 
 
 def continuity(component, head, paths, *, run=subprocess.check_output):
@@ -35,6 +33,24 @@ def continuity(component, head, paths, *, run=subprocess.check_output):
         raise state.VerificationError(
             "Adopted component source differs from expected runtime inputs"
         )
+
+
+def collector_continuity(component, head, collector, *, run=subprocess.check_output):
+    """Fail when any input the installed collector can execute has changed.
+
+    services/api modules outside the collector's import graph at either commit
+    are not collector runtime inputs. Everything else under the full path set,
+    and every change when the graph cannot be computed, still fails.
+    """
+    changed, basis = runtime_inputs.changed_runtime_inputs(
+        component, head, collector, run=run
+    )
+    if changed:
+        raise state.VerificationError(
+            "Adopted component source differs from expected runtime inputs: "
+            + ", ".join(changed[:5])
+        )
+    return basis
 
 
 class AdoptionPending(state.VerificationError):
@@ -143,7 +159,7 @@ def main():
     expected = head if expected == "merge" else expected
     api_expected = expected_api(mission["deployment_verification"]["api_sha"], head)
     continuity(api_expected, head, API_PATHS)
-    continuity(expected, head, SNKR_PATHS)
+    collector_continuity(expected, head, "snkrdunk")
     print(
         json.dumps(
             wait_for_adoption(head, expected, api_expected=api_expected), indent=2

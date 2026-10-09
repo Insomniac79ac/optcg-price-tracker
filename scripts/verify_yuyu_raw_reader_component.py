@@ -5,7 +5,10 @@ import json
 import subprocess
 import time
 import generate_staging_state as state
-from verify_snkr_published_discovery_component import AdoptionPending
+from verify_snkr_published_discovery_component import (
+    AdoptionPending,
+    collector_continuity,
+)
 
 
 def verify(live, head, component=None, *, capacity_cadence=False):
@@ -123,25 +126,12 @@ def main():
 
         if not re.fullmatch("[0-9a-f]{40}", component):
             raise state.VerificationError("Full installed reader component required")
-        changed = subprocess.check_output(
-            [
-                "git",
-                "diff",
-                "--name-only",
-                component,
-                head,
-                "--",
-                "services/api",
-                "services/yuyutei_collector",
-                "packages/opcg_source_identity",
-            ],
-            cwd=state.ROOT,
-            text=True,
-        ).strip()
-        if changed:
+        try:
+            collector_continuity(component, head, "yuyutei")
+        except state.VerificationError as exc:
             raise state.VerificationError(
                 "Installed Yuyu reader runtime inputs changed"
-            )
+            ) from exc
     deadline = time.monotonic() + 1800
     while True:
         try:

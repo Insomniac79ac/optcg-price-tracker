@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "mission": "Record 2026-10-09 owner environment status: staging is the working environment, no live production (documentation only)",
+  "mission": "Narrow SNKR/Yuyu component continuity to the collectors' Git-derived import graph, fail-closed; tooling/CI only, no collector rollout",
   "target": "staging",
-  "classification": "GREEN",
+  "classification": "AMBER",
   "red_decisions": {
     "ambiguous_approval": false,
     "destructive_migration": false,
@@ -20,19 +20,24 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/PROJECT_HANDOVER.md",
-        "docs/deployment.md",
-        "docs/release_blockers.md",
-        "docs/release_candidate_report.md",
-        "docs/release_checklist.md"
+        ".github/workflows/ci.yml",
+        "docs/agent/STAGING_DELIVERY.md",
+        "docs/agent/evidence/collector-continuity-preflight-20261009.json",
+        "scripts/collector_runtime_inputs.py",
+        "scripts/tests/test_collector_runtime_inputs.py",
+        "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/verify_yuyu_raw_reader_component.py"
       ],
       "effects": [
-        "documentation"
+        "application",
+        "tests",
+        "documentation",
+        "infrastructure"
       ],
-      "reason": "Records the owner's 2026-10-09 environment statement in PROJECT_HANDOVER §5/§41 and adds a one-line pointer to four release/deployment docs. Production stays RED; no rule is loosened. Not read by any delivery, migration, verification or state script beyond file-presence audits; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
+      "reason": "Verification tooling and CI only. New scripts/collector_runtime_inputs.py computes the services/api modules each collector imports (union at installed component and head); SNKR and Yuyu component checks fail on any change to those, to package data, packaging/requirements, the collector directory, its Dockerfile or the identity package, and fall back to the previous whole-directory set when the graph cannot be computed. ci.yml adds three unittest steps to agent-state-tests. No services/, packages/ or deploy/ change: no Railway build, collector rollout, DDL, provider variable, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "667ea5fc08926c32e2342c7697e1d7e2c877946e20f4da8de3ed08e3166aba5f",
+  "diff_sha256": "caa2fddc329a256808f27cfda909a65afdc8f63cf6bdd69c884afc7e4434c8c2",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
@@ -43,5 +48,45 @@
     "snkr_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_reader_component": "1b1b64d23555b5abc315f1aaa79f547784136f59",
     "yuyu_capacity_cadence": true
+  },
+  "safeguards": {
+    "impact": {
+      "resources": [
+        "CI agent-state-tests job (3 added unittest steps)",
+        "staging delivery component checks (read-only verifiers)"
+      ],
+      "routes": [
+        "none"
+      ],
+      "dependencies": [
+        "local Git objects only; no new Python dependency"
+      ],
+      "deployment_impact": "None. No services/, packages/ or deploy/ change: Railway watch patterns (read 2026-10-09 ~14:30Z) skip API, worker, beat, market-index and every collector. No collector rollout requested. Images, schedules, budgets, pacing, claims and writers unchanged.",
+      "database_writes": 0,
+      "source_requests": 0,
+      "estimated_runtime_minutes": 25
+    },
+    "recovery": {
+      "artifact": "137882096582797fe8119d0cf0e78b4bd540d784",
+      "procedure": "Open a PR reverting this merge (restores the whole-directory SNKR_PATHS/Yuyu git diff). Tooling-only; no Railway or database action.",
+      "trigger": "Any evidence that a collector-executed module changed without failing continuity, or any CI/delivery verifier failure attributable to this change.",
+      "backup": "Not applicable: no persistent state, schema, variable or deployment changes.",
+      "validation": [
+        "scripts/tests/test_collector_runtime_inputs.py",
+        "docs/agent/evidence/collector-continuity-preflight-20261009.json"
+      ]
+    },
+    "verification": {
+      "required_checks": [
+        "engineering-gate"
+      ],
+      "post_change": [
+        "scripts/verify_staging_delivery.py",
+        "scripts/verify_snkr_published_discovery_component.py",
+        "scripts/verify_yuyu_raw_reader_component.py",
+        "scripts/generate_staging_state.py"
+      ],
+      "observation_window": "The staging delivery of this merge: every Railway service SKIPPED, API expectation skip, both component checks PASS with basis 'unchanged' on 1b1b64d, and the next natural collector receipts still report the activation deployments."
+    }
   }
 }
