@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import require_admin_token
 from app.core.pagination import pagination_response
 from app.db import get_db
 from app.services.public_price_payload import public_price_payload
@@ -263,7 +264,11 @@ def get_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     return _build_event_out(db, event)
 
 
-@router.patch("/signal-events/{event_id}", response_model=MarketSignalEventOut)
+@router.patch(
+    "/signal-events/{event_id}",
+    response_model=MarketSignalEventOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def update_market_signal_event(
     event_id: int, body: MarketSignalEventUpdateIn, db: Session = Depends(get_db)
 ):
@@ -296,7 +301,11 @@ def update_market_signal_event(
     return _build_event_out(db, event)
 
 
-@router.post("/signal-events/{event_id}/dismiss", response_model=MarketSignalEventOut)
+@router.post(
+    "/signal-events/{event_id}/dismiss",
+    response_model=MarketSignalEventOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def dismiss_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "dismissed"
@@ -308,7 +317,11 @@ def dismiss_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     return _build_event_out(db, event)
 
 
-@router.post("/signal-events/{event_id}/watch", response_model=MarketSignalEventOut)
+@router.post(
+    "/signal-events/{event_id}/watch",
+    response_model=MarketSignalEventOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def watch_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "watching"
@@ -320,7 +333,11 @@ def watch_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     return _build_event_out(db, event)
 
 
-@router.post("/signal-events/{event_id}/resolve", response_model=MarketSignalEventOut)
+@router.post(
+    "/signal-events/{event_id}/resolve",
+    response_model=MarketSignalEventOut,
+    dependencies=[Depends(require_admin_token)],
+)
 def resolve_market_signal_event(event_id: int, db: Session = Depends(get_db)):
     event = _get_event_or_404(db, event_id)
     event.status = "resolved"
