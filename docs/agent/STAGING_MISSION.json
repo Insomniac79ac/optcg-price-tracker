@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Land 2026-10-08 capacity75 session-7a morning-check note on staging (documentation only)",
+  "mission": "Record 2026-10-09 owner environment status: staging is the working environment, no live production (documentation only)",
   "target": "staging",
   "classification": "GREEN",
   "red_decisions": {
@@ -20,23 +20,19 @@
   "impacts": [
     {
       "files": [
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/NOTE.md",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/admission-skips.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/census.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/live-state.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/evidence/verify-since-activation.json",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/live.py",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/measure7a.py",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/skips.py",
-        "docs/agent/handoff/2026-10-08/capacity75-session7a/tools/verify_canary.py"
+        "docs/agent/PROJECT_HANDOVER.md",
+        "docs/deployment.md",
+        "docs/release_blockers.md",
+        "docs/release_candidate_report.md",
+        "docs/release_checklist.md"
       ],
       "effects": [
         "documentation"
       ],
-      "reason": "Session-7a read-only morning-check note, evidence and read-only tools under docs/agent/handoff/. Not read by any delivery, migration, verification or state script; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
+      "reason": "Records the owner's 2026-10-09 environment statement in PROJECT_HANDOVER §5/§41 and adds a one-line pointer to four release/deployment docs. Production stays RED; no rule is loosened. Not read by any delivery, migration, verification or state script beyond file-presence audits; no collector rollout, DDL, provider, cron, budget, pacing, claim or writer change."
     }
   ],
-  "diff_sha256": "6980e604718cd44c48b9fea25ca4ef6bd1cb925397f6bcbab148f904a2e8a860",
+  "diff_sha256": "667ea5fc08926c32e2342c7697e1d7e2c877946e20f4da8de3ed08e3166aba5f",
   "deployment_verification": {
     "api_sha": "merge",
     "revision": "f9e5b4a8c012",
