@@ -4,9 +4,15 @@ Status: **PLAN ONLY**, for owner review. Written 2026-10-08 on base `origin/stag
 336706a. No code, PR, deploy, staging write, wallet, key or transaction was made.
 Numbers are MEASURED (with source and time) or ESTIMATED.
 
+**Amendment 1 (2026-10-09):** adds workstream F (Packs: partner gacha integration),
+records the owner decisions of 2026-10-09, adds Robinhood Chain as an optional second
+anchor, and updates §E and the owner-decision list. Research was public sources and a
+few read-only GETs only; no account, key, wallet or transaction was created.
+
 Card Pirate becomes the independent price referee for the onchain One Piece card
-market. It is not a marketplace, vault, gacha operator, token issuer or price feed
-for leveraged products. Collector positioning ("not a crypto or trading terminal")
+market. It is not a marketplace, vault, token issuer or price feed for leveraged
+products. It does not operate gacha; it may host **partner-run** packs (workstream F)
+under the independence and disclosure rules in §F. Collector positioning ("not a crypto or trading terminal")
 and every invariant in `docs/agent/INVARIANTS.md` stay binding.
 
 The owner-referenced file "Blockchain models for TCG trading.md" was **not found**
@@ -92,6 +98,7 @@ from immutable rows, never stored per card.
 | Arbitrum, plain / EAS | $0.0012 / $0.015 | $0.04 / $0.46 | |
 | Polygon PoS, plain | $0.0006 | $0.02 | |
 | Ethereum L1, plain / EAS | $0.042 / $0.55 | $1.25 / $16.55 | Reference |
+| Robinhood Chain (Arbitrum Orbit), contract or calldata | <$0.01 (ESTIMATED from gasPrice 0.02 gwei, 25–50k gas; L1 data fee unmeasured) | <$0.30 (ESTIMATED) | Optional second anchor only, see below |
 
 Raw inputs (MEASURED):
 - Base gasPrice 0.006 gwei; GasPriceOracle l1BaseFee 0.670 gwei.
@@ -115,10 +122,27 @@ Raw inputs (MEASURED):
 2. **Base write-once anchor contract** (`mapping(uint64 day => bytes32)`, reverts on
    overwrite, emits `Anchored(day, payload)`), once custody is decided.
 3. EAS later only if a browsable attestation page is wanted.
+4. **Optional second anchor: Robinhood Chain**, same write-once contract, only after
+   the Base contract exists. Pre-conditions confirmed 2026-10-09 (MEASURED):
+   - Permissionless: "Anyone can interact with the network … and deploy smart
+     contracts" (docs.robinhood.com/chain). No allowlist or Robinhood account.
+   - Terms (docs.robinhood.com/chain/terms-of-service) bar only comprehensively
+     sanctioned jurisdictions (OFAC/UK/EU); Malaysia is not listed.
+   - Public RPC `https://rpc.mainnet.chain.robinhood.com` (keyless, rate-limited,
+     "not for production"); live `eth_chainId` = 4663, `eth_gasPrice` = 0.02 gwei.
+   - Public explorer: `https://robinhoodchain.blockscout.com`.
+   - Gas token ETH; canonical bridge via portal.arbitrum.io (≈10 min in, 7-day out).
+   - Mainnet date 2026-07-01 seen only on third-party pages (not verified officially).
+   It uses the same signer decision as Base; no extra work beyond a second deploy and
+   a second write in the anchor job. Skip it if that is not wanted.
 
 No token, ever.
 
-### A3. Key management: RED (owner decides; nothing created this session)
+### A3. Key management
+
+**Owner decision 2026-10-09: start with K0 (no key, Bitcoin timestamps only).** The
+Base (and optional Robinhood Chain) signer decision is **deferred**; K1–K3 below remain
+the options for that later decision.
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
@@ -275,7 +299,9 @@ with Japanese market prices, honestly and like-for-like.
 - Lives as **"Onchain" inside Market** (`/analytics` → "Onchain market" section), not
   as a separate crypto page.
 - Collector language ("graded cards held in vaults and traded as tokens").
-- No wallet connect, no affiliate links, no buy/sell CTAs, no token tickers in the UI.
+- No wallet connect, no affiliate links, no buy/sell CTAs, no token tickers in the
+  price parts of the view. The only exception is the separate **Packs** area defined
+  in §F (owner decision 2026-10-09), which has its own disclosure rules.
 
 ### B6. Storage and requests (ESTIMATED)
 
@@ -401,6 +427,171 @@ PSA10 stays **OFF** until then.
 
 ---
 
+## F. Packs (partner gacha integration)
+
+**Owner decision 2026-10-09:** partner gacha integration is in scope. Owner accepted
+risk. Card Pirate hosts **partner-run** packs. It never operates its own gacha, holds
+user funds or cards, sets odds, or funds buybacks.
+
+**Goal:** collectors can open a partner pack from inside Market and see, on the pack
+itself, how its contents compare with Card Pirate's own prices, with the commercial
+relationship disclosed.
+
+### F1. Partner options (research 2026-10-09)
+
+| Partner | Integration method | Settlement | Requirements on Card Pirate | Revenue terms | One Piece |
+|---|---|---|---|---|---|
+| **Collector Crypt (CC)**, wallet API | Documented server API (`docs.collectorcrypt.com/gacha/api`): `generatePack` returns a partially signed USDC transfer; the user signs in their own Solana wallet; `submitTransaction` → `openPack` (≤2 h, else auto-refund) → optional `buyback` (≤72 h). No iframe/SDK/Blinks found; demo repo `github.com/daxherrera/gacha-starter`; devnet at `dev-gacha.collectorcrypt.com` (MEASURED) | USDC on Solana; user pays the CC gacha wallet directly. Partner fees accrue in µUSDC and are paid to the partner's treasury wallet, **released manually by a CC admin** (MEASURED) | `x-api-key` (server-side secret; prefixes the onchain memo with the partner slug, e.g. `me-<uuid>`). Key needs `can_adopt` enabled on request. A receive-only Solana USDC address. Wallet-connect UI. No custody (MEASURED) | **Fee mechanics MEASURED:** per-pack fee carved out of pack EV, capped at min(10% of pack price, amount keeping EV ≥ pool floor). New accounts default to **split fee**: half on pack completion, half only if the card is bought back. **Headline rev share / partner ToS: not published** | Yes: `onepiece_50` $50, `onepiece_250` $250, `onepiece_1000` $1,000 (MEASURED `/api/machines`, 114 machines total). Partner variants `bf_op*`, `fb_op*` exist (`public:false`). **No language field; pools are mixed-language** (1/100 sampled names marked Japanese; PSA 72, Beckett 26, BGS 1, CGC 1, MEASURED) |
+| CC, invoiced API | Off-chain: partner runs accounts and payments; CC holds won cards; monthly invoice (packs − partner fee − buybacks + shipping); credit limit from $50,000 (MEASURED `/gacha/invoiced-api`) | Fiat/USDC invoice to partner | Own payments, user ledger, credit exposure: **custody of user funds**. Rejected | Same fee model | Same pools |
+| Phygitals B2B | **No public API, embed or white-label.** Powers Jupiter's packs incl. One Piece "Throne" (MEASURED docs.jup.ag gacha). Underdog Rips (sports only, US) and the Vegangster operator deal have no published method (Vegangster page 403) | USDC; Phygitals custodial; Privy embedded wallets (MEASURED ToS §3, §16) | Private negotiation (hello@phygitals.com). Creator Packs require supplying inventory; Vendor Program is listings only | **Undisclosed** | Yes (collection listed), language unstated; **odds and pools not published**; ToS §10–11 bans bots/scraping/distribution without written consent (MEASURED, still current) |
+| Phygitals referral | Personal referral link | In-app credits, "no cash value" | Guidelines: "personal and non-commercial", no domains/ads using the name (MEASURED) | "percentage of qualifying purchases"; the 1% figure **not confirmed** (in-app page 429) | — |
+| Courtyard referral | Personal referral link | Points → pack credit (5,000 pts = $25) or a $25+ buyback offer; sources conflict (MEASURED docs vs blog snippets) | Rules: personal and non-commercial, no cash value (MEASURED) | Credit only, first 6 referrals | — |
+| Jupiter gacha | Front-end only (uses CC and Phygitals) | USDC | — | No integrator/referral fee in gacha docs (MEASURED) | Yes (via CC/Phygitals) |
+| Beezie, Renaiss | No partner path found | — | — | Beezie 0.5% referral, Renaiss points only (ESTIMATED, third-party) | Unknown |
+
+**Conclusion:** the only real, documented, revenue-earning path is **CC wallet API with
+an adopted machine**. Referral programs pay credit only and forbid commercial site use:
+**not usable**. Phygitals is a later, negotiated option.
+
+**Partner activity figure:** "21 partner storefronts, $1.18M, five above $70K, ~6% of
+GMV" appears only in a third-party note (4Pillars research, read via search snippet;
+page 429). Whether $1.18M is revenue or GMV and which month is not confirmed. Treat as
+ESTIMATED.
+
+### F2. What Card Pirate runs (lightest option that earns revenue)
+
+| Option | Revenue | Card Pirate runs | Custody | Verdict |
+|---|---|---|---|---|
+| F-0. Display only (pack facts + value check, link to CC) | None (attribution is by API key, so a plain link earns nothing) | Nothing new beyond §B | None | Ships first, as part of session 7 |
+| **F-1. CC wallet API, adopted machine** | Per-pack fee | Server-side proxy route holding `x-api-key`; client wallet-connect; receive-only treasury address; event log | **None.** USDC goes user → CC gacha wallet; cards stay in CC vault, owned by the user's wallet | **Recommended** |
+| F-2. CC invoiced API | Per-pack fee | Payments, balances, user ledger, credit line | User funds | Rejected |
+
+**F-1 components:**
+- **Proxy:** Next.js route handlers in `apps/web` (`/api/packs/*`) that add the API key
+  and forward `generatePack`, `submitTransaction`, `openPack`, `pack/status` and
+  `buyback`. The key is a server-only env secret, never `NEXT_PUBLIC_*`, never
+  logged. Keeping it in `apps/web` avoids `services/api` and so needs **no collector
+  redeploy** (§E continuity rule).
+- **Wallet connect:** Solana wallet adapter (Phantom, Solflare, Backpack), only on
+  the Packs pages. Card Pirate never holds a key or signs for the user. One pack per
+  signature: the multi-pack `generateYoloPacks` endpoint is not exposed.
+- **Treasury:** a receive-only Solana USDC address created by the owner on their
+  hardware wallet. Card Pirate's servers hold **no private key**. CC releases fees to
+  that address manually, so no hot key or automation is needed. This is separate from
+  the deferred Base anchor-key decision.
+- **Rate limits:** CC states a 300/min/IP POST limit (MEASURED, §B1). The proxy uses
+  per-user and global limits well below that.
+
+### F3. Independence rules (hard)
+
+1. **Same check for every pack.** The pack value check (§B4) is computed with the
+   same code, inputs and Card Pirate prices for partner and non-partner packs. A
+   partner flag is not an input to it.
+2. **Shown on the partner pack itself,** including when the expected value is below the
+   pack price. It is never hidden, collapsed or reordered for partner packs.
+3. **Partners never influence displayed prices.** Partner data feeds only pack facts
+   (price, odds, pool, buyback %, their own insured values, labelled as theirs). It is
+   never a Card Pirate price input. Nothing from F writes to `market_index_snapshots`,
+   `market_value_points` or any observation table.
+4. **The fee lowers the pack's EV.** CC carves the partner fee from pack EV (MEASURED).
+   So:
+   - Card Pirate sets a **low fixed fee** (recommended ≤5% of pack price; owner sets).
+   - The fee is shown in dollars next to the price.
+   - The same machine bought directly from CC (without the Card Pirate fee) is listed
+     beside it, with its own EV. Collectors can pick the cheaper route.
+5. **Neutral on buyback.** CC's default split fee pays half the fee only on buyback,
+   which would reward Card Pirate for steering collectors to sell back. Ask CC to set
+   **non-split fee**. If refused, disclose it in the pack's disclosure line. In either
+   case, buyback is shown neutrally: the offer, Card Pirate's price for that card if it
+   is matched, and "keep" and "sell back" as equal-weight choices.
+6. **Ordering:** packs sort by price, never by fee or partner status.
+7. **Coverage honesty:** pools are mixed-language and Card Pirate prices only Japanese
+   prints. The value check states "Card Pirate can check N% of this pack's value" and
+   shows the platform's own values for the rest, labelled as theirs.
+   - Mitigation (outreach item): ask CC whether a partner can run a **Japanese-only
+     One Piece machine** (`can_build_machines` / `can_edit_hashlists` exist,
+     MEASURED). That would make the Card Pirate check meaningful.
+8. **Removal rule:** if a partner refuses to let the value check appear, or asks Card
+   Pirate to change a price, the partner pack is removed. The rule is written on the
+   methodology page.
+
+### F4. Placement, copy and disclosure
+
+- **Where:** Market → "Onchain market" → **Packs** tab, visually separate from price
+  charts. No pack content appears on card pages, Index or Market Value.
+- **Pack card (side by side):** pack price · Card Pirate fee · odds per tier · pool
+  (browsable, with grader/grade/language where known) · buyback rate and window ·
+  platform EV (theirs) · **Card Pirate value check** (coverage %, range) · same pack
+  direct from CC.
+- **Disclosure** next to the price on every partner pack: "Card Pirate earns $X if you
+  open this pack." Add "…and $Y more if you sell the card back" while split fee applies.
+  A methodology link explains the arrangement.
+- **Collector language:** "open a pack", "graded cards held in a vault", "sell back
+  within 3 days". No token tickers, "rip", "jackpot" or "win" language.
+- **No dark patterns:**
+  - No countdowns. The buyback deadline is a date, not a ticking timer.
+  - No streaks, daily rewards, loyalty tiers or free spins.
+  - No "near miss" or "so close" framing; no animation that teases higher tiers.
+  - No live winners feed (CC's Ably feed is not used).
+  - No multi-pack or auto-repeat.
+  - No pre-checked "open again".
+  - No push or email nudges.
+- **UI process:** the visual design goes through the CardPirate collector UI skill
+  and ATLAS loop as its own tranche (contract, before/after screenshots, fresh
+  visual reviewer).
+
+### F5. Accounts
+
+- **Browsing packs** needs no sign-in.
+- **Opening a pack** needs only a connected Solana wallet. Card Pirate creates no
+  separate account, which is the lightest option.
+- **Optional:** a signed-in collector (existing next-auth session used by
+  Collection/Wishlist) can save a wallet address, so pulled cards appear in My
+  Collection.
+  - No `plan/collector-v1` branch exists (checked 2026-10-09).
+  - When it lands, wallet linking should use its account model.
+
+### F6. Analytics, attribution and revenue tracking
+
+- **`pack_open_events`** (additive, in the web app's database or a new small table via
+  §E rules):
+  - Columns: `memo` (CC's, carries the slug), `machine_code`, `price_usdc`,
+    `fee_usdc`, `fee_mode` (`full|split`), `status`
+    (`generated|submitted|opened|refunded|bought_back`), `tx_signature`,
+    `created_at`, `updated_at`.
+  - Wallet address stored only as a salted hash. No IP or user agent.
+- **Daily reconciliation** (read-only):
+  - CC `getWinners?slug=<ours>` vs our events.
+  - Treasury USDC receipts via a public Solana RPC, matched to CC payout releases.
+  - Mismatches go to the admin page; nothing auto-corrects.
+- **Admin view:** opens per machine, fee earned vs fee released, refund and buyback
+  rates.
+- **Public transparency (recommended):** a monthly line on the methodology page: packs
+  opened via Card Pirate, fees earned.
+- **Page analytics:** aggregate counts only (views, value-check expands, opens). No
+  per-user funnel or retargeting.
+
+### F7. Storage and requests (ESTIMATED)
+
+- **Pack facts and pools:** already counted in §B6 (CC machines 1/day, pools 10–20/day).
+  F adds none.
+- **Per pack opened:** 3–5 user-initiated proxy calls to CC. They are not
+  collector-budget requests and do not touch the SNKR/Yuyu budgets.
+- **Reconciliation:** 2–5 requests/day.
+- **Storage:** about 1 KB per event. Even 1,000 opens/month is about 1 MB/month,
+  negligible against the capacity forecast.
+- **RAW rule:** reconciliation responses are persisted before parsing, under the same
+  invariant (<0.1 MB/day).
+
+### F8. Revenue size (ESTIMATED)
+
+- At a 5% fee: 100 Ocean Blue ($50) opens/month = $250/month, halved for cards not
+  bought back under split fee.
+- At a 5% fee: 20 Crew ($250) opens/month = $250/month.
+- Actual volume is unknown until launch.
+
+---
+
 ## E. Sequencing and dependencies
 
 **API-touching PRs imply a collector release** (continuity over `services/api`).
@@ -418,13 +609,23 @@ access. Public API endpoints still live in `services/api`.
 | # | Session / PR | Workstream | Class | Migration | Redeploys collectors? | Blocked by |
 |---|---|---|---|---|---|---|
 | 1 | Merkle builder + proof endpoint + OTS stamping (staging); `publication_anchors` table; methodology page draft | A | AMBER (additive migration) | yes (1 table) | **Yes** under (a), since it touches services/api | Quiet windows only |
-| 2 | Anchor contract (Base **Sepolia**), signer per custody decision, daily anchor job, open verifier script + static page | A | **RED decision first** (custody), then AMBER | no | No if built as separate worker | Owner key-custody decision |
+| 2 | Open verifier script + static page against OTS proofs (K0). Later: anchor contract on Base **Sepolia** (+ optional Robinhood Chain testnet), daily contract write | A | AMBER; contract part **RED decision first** (deferred Base key) | no | No if built as separate worker | Verifier: session 1. Contract: owner Base-key decision |
 | 3 | Launch tracker: `launch_items` model + admin curation UI + public "Upcoming" page | C | AMBER (additive migration) | yes | Yes under (a) | — |
 | 4 | Official JP/EN products/news watcher → RAW → admin proposal queue (≤2×/day) | C | AMBER (new source) | small | No (separate worker) | Session 3 |
 | 5 | PSA10 activation: planner wiring, instrument entry, gating, API series, UI category, verifiers | D | AMBER | maybe | **Yes** (collector + API) | Capacity mission: daily-v1 24h + forecast pass |
 | 6 | Onchain ingestion (CC API + Solana reads) + slab→CardPrint manual review queue (no public display) | B | AMBER (new source) | yes | Possibly (new worker) | Written terms permission; storage pass |
 | 7 | Public "Onchain market" in Market + pack value check | B | GREEN/AMBER | no | No | Sessions 5 & 6; permission on file |
 | 8 | Mainnet anchoring of production publications | A | **RED** (production) | — | — | Owner authorization |
+| 9 | Packs F-1 on **devnet**: `apps/web` proxy routes (server-only API key), wallet connect, `pack_open_events`, reconciliation job, admin view, Packs tab UI tranche (ATLAS loop) with disclosure and value check | F | AMBER (new external integration, additive table) | yes (1 table) | **No** (`apps/web` only) | Session 7 (value check); CC API key with `can_adopt` + written terms; CC devnet access |
+| 10 | Packs live on mainnet: adopted machine(s), treasury address, real USDC | F | **RED** (production, real money) | — | No | Session 9 verified on staging; owner treasury address; owner go-ahead |
+
+**Packs (F) placement in the order:** F-0 (display only) ships inside session 7.
+Session 9 can be built in parallel with session 8, because it needs neither PSA10
+activation nor anchoring, only the value check from session 7. Session 10 is last.
+F adds no collector capture, so it is not blocked by the capacity mission beyond what
+already blocks sessions 6–7 (B ingestion needs the storage pass). F touches no
+`services/api` code, so it causes no collector redeploys and is unaffected by quiet
+windows.
 
 **For each session:**
 - **Rollback:** native revert. Additive tables are left in place (no destructive
@@ -446,39 +647,57 @@ access. Public API endpoints still live in `services/api`.
 
 ---
 
-## Owner decisions (with recommended defaults)
+## Owner decisions
 
-1. **Key custody (RED).**
-   - Default: **K0 now (OTS only) → K1 later** (dedicated Railway secret hot key ≤$5,
-     contract owned by your hardware wallet/Safe, rotation documented).
-   - Tradeoff: K2 (KMS) is safer but adds a paid provider (also RED); K3 breaks
-     automation.
-2. **Chain.**
-   - Default: **Base** (write-once contract) + **OpenTimestamps**.
-   - Tradeoff: OP is ~3× cheaper but less collector-recognisable. EAS adds a
-     browsable page for ~$0.14/month. L1 is the strongest but costs $1.25–16.55/month.
-3. **Where the onchain view lives.**
-   - Default: **section inside Market** ("Onchain market").
-   - Tradeoff: a separate page is more visible but pulls the brand toward
-     "crypto terminal".
-4. **Gacha affiliate links.**
-   - Default: **No.**
-   - Tradeoff: revenue vs referee independence. Links would make Card Pirate a
-     promoter of a gambling-like product it is rating.
-5. **Launch tracker: automation vs curation.**
-   - Default: **auto-watch official Bandai JP/EN products/news only** into an admin
-     queue; **curate everything else**.
-   - Tradeoff: full curation is safest but laborious; X paid API (~$10/month) speeds
-     reprint news (new paid service: your call).
-6. **Data permissions (owner action).**
-   - Email Collector Crypt and Magic Eden for written display permission before any
-     B display.
-   - Accept exclusion of Phygitals, Courtyard and Renaiss unless they grant it.
-7. **Genesis/backfill policy.**
-   - Default: one labelled genesis anchor of all existing receipts; no per-day
-     backdating.
-8. **Continuity constraint.**
-   - Default: option (a), API PRs are scheduled collector releases.
+**Decided 2026-10-09 (final):**
+- Gacha integration in scope (owner accepted risk).
+- Anchoring: Base primary + OpenTimestamps; Robinhood Chain optional second anchor
+  (pre-conditions confirmed, §A2).
+- Key custody: start with K0 (OpenTimestamps only); Base key deferred.
+- Onchain view: a section inside Market.
+- Launch tracker: auto-watch Bandai official JP/EN products/news only; curate the rest.
+
+**Still open (with recommended defaults):**
+
+1. **Which partner to approach first.**
+   - Default: **Collector Crypt** (info@collectorcrypt.com, or a Discord ticket at
+     discord.gg/CollectorCrypt). It is the only partner with a documented API, a
+     partner fee model and published One Piece odds/pools. One email also covers the
+     §B data-display permission.
+   - Later: Phygitals (hello@phygitals.com), only if CC declines. Their terms are
+     private and their odds/pools unpublished, so the value check could not run.
+   - Magic Eden: still email for §B display permission (no pack partnership).
+2. **Outreach contents (CC email).** Ask for:
+   - an API key with `can_adopt` (and, if possible, `can_build_machines` /
+     `can_edit_hashlists`) plus devnet access;
+   - the partner terms of service and API-data licence, including **written
+     permission to display machine facts, odds, pools and insured values** (§B);
+   - **non-split (full) fee mode**, and the fee amount we intend (≤5%);
+   - whether a partner can run a **Japanese-only One Piece machine**;
+   - payout cadence for manual releases, minimum payout, and the treasury setup;
+   - KYC or geo requirements on partners and players (blocked-address rules);
+   - confirmation that Card Pirate may show its own independent value check, including
+     when EV is below price, on the partner pack;
+   - the actual revenue split, if any, beyond the adopted-machine fee.
+   Introduce Card Pirate as an independent Japanese-market One Piece price referee,
+   and state the independence rules (§F3) up front.
+3. **Card Pirate pack fee level.** Default ≤5% of pack price (CC cap is 10%).
+4. **Treasury address.** Default: a receive-only Solana USDC address on your
+   hardware wallet. No server key.
+5. **Base anchor key (deferred).** When ready: K1 (dedicated Railway secret hot key
+   ≤$5, contract owned by hardware wallet/Safe) is the recommended default; see §A3.
+6. **Robinhood Chain second anchor.** Default: add it with the Base contract (low
+   cost); skip if you prefer one chain.
+7. **X paid API for reprint news** (~$10/month ESTIMATED, new paid service). Default:
+   no; curate.
+8. **Data permissions (owner action).** Covered by outreach above for CC; email Magic
+   Eden separately. Phygitals, Courtyard, Renaiss stay excluded unless they grant it.
+9. **Genesis/backfill policy.** Default: one labelled genesis anchor of all existing
+   receipts; no per-day backdating.
+10. **Continuity constraint.** Default: option (a), API PRs are scheduled collector
+    releases.
+11. **Public fee transparency line.** Default: yes, monthly packs-opened and
+    fees-earned on the methodology page.
 
 ## Risks
 
@@ -504,6 +723,14 @@ access. Public API endpoints still live in `services/api`.
   - API changes force collector releases (continuity).
   - Public RPC history pruning (MEASURED) → store own tx refs and OTS proofs.
   - L2 sequencer/upgradability risk mitigated by OTS.
-- **Regulatory:** reporting EV of gacha packs could read as promotion. Keep it
-  descriptive, with no links. No feeds for leveraged products. No hosting of gacha,
-  pre-order tokens or fee-share tokens.
+- **Gacha (F):** owner accepted risk (2026-10-09). No feeds for leveraged products;
+  no pre-order tokens or fee-share tokens; Card Pirate never operates its own gacha.
+- **Independence perception (F):** earning from packs Card Pirate also rates.
+  Mitigated by §F3 rules (same check, disclosure, direct-from-CC comparison, neutral
+  buyback, removal rule) and the public fee line.
+- **Partner dependency (F):** CC fee payouts are manual and terms unpublished; the
+  API silently drops attribution on a wrong key (memo falls back to `cc-`, MEASURED).
+  The daily reconciliation catches both.
+- **Low check coverage (F):** pools are mixed-language (~1% Japanese in a 100-card
+  sample, MEASURED). Without a Japanese-only machine, the Card Pirate value check
+  covers a small share of pack value and must say so.
