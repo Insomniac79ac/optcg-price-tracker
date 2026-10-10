@@ -1401,3 +1401,147 @@ def test_turn_meter_rebinds_after_settle_and_reuses_the_attempt_fence(db):
         assert meter.attempt is None
         meter.bind(attempt, page)  # free to bind again after unbind
         context.route_web_socket.assert_called_once()
+
+
+class TurnTransport(Transport):
+    """Transport whose requests belong to the page that made them."""
+
+    def __init__(self, monkeypatch, failing=()):
+        super().__init__(monkeypatch)
+        self.failing = set(failing)
+        self.pages = []
+        self.context.new_page.side_effect = self.new_page
+        self.launches = 0
+
+        def start():
+            self.launches += 1
+            return self.playwright
+
+        self.playwright = MagicMock()
+        browser = MagicMock()
+        browser.new_context.return_value = self.context
+        self.playwright.chromium.launch.return_value = browser
+        self.factory = lambda: SimpleNamespace(start=start)
+
+    def new_page(self):
+        page = MagicMock()
+        page.context = self.context
+        page.goto.side_effect = lambda url, **kwargs: self.page_goto(page, url, **kwargs)
+        page.content.side_effect = lambda: self.body
+        page.title.side_effect = lambda: "Fixture"
+        self.pages.append(page)
+        return page
+
+    def page_goto(self, page, url, **kwargs):
+        self.page = page
+        response = self.goto(url, **kwargs)
+        return SimpleNamespace(**{**vars(response), "status": 404}) if url in self.failing else response
+
+    def goto(self, url, **kwargs):  # called via page_goto: attribute to that page
+        self.before_request()
+        self.page.url = url
+        self.body = (
+            HISTORY if "sales-histories" in url
+            else self.html if "/apparels/" in url else "<html>Home</html>"
+        )
+        route = MagicMock()
+        route.request = browser_request(url)
+        route.request.frame.page = self.page
+        self.page.main_frame = route.request.frame
+        route.fetch.side_effect = lambda **kwargs: self.get(url, **kwargs)
+        self.handler(route)
+        if route.abort.called:
+            raise RuntimeError("transport aborted before dispatch")
+        return self.response(url)
+
+
+def run_turn(factory, source, transport):
+    import functools
+    from snkrdunk_collector.browser import TurnBrowser
+
+    turn = TurnBrowser(playwright_factory=transport.factory)
+    try:
+        return turn, drain_with(
+            factory, source, functools.partial(collect.run_one_mapping_detailed, turn=turn)
+        )
+    finally:
+        turn.close()
+
+
+def drain_with(factory, source, runner):
+    with factory() as session:
+        return drain(session, source, "fixture", runner, runtime_seconds=1200,
+                     mapping_seconds=180, chunk_size=2, delay_seconds=0,
+                     clock=lambda: T0, sleep=lambda _: None)
+
+
+def homepage_snapshots(session):
+    return session.scalar(
+        select(func.count()).select_from(RawSnapshot)
+        .where(RawSnapshot.source_url == "https://snkrdunk.com/")
+    )
+
+
+def test_snkr_turn_warms_once_and_charges_each_attempt_only_its_own_requests(db, monkeypatch):
+    factory, source, mid, pid = db
+    ids = [mid] + [mapping(factory, source, pid, product) for product in range(200, 204)]
+    for item in ids:
+        seed(factory, item)
+    transport = TurnTransport(monkeypatch)
+    turn, results = run_turn(factory, source, transport)
+    assert len(results) == 5
+    assert transport.launches == 1 and turn.warmups == 1
+    assert transport.sent.count("https://snkrdunk.com/") == 1
+    product_requests = [u for u in transport.sent if "/apparels/" in u]
+    assert len(product_requests) == len(set(product_requests)) == 5
+    with factory() as session:
+        assert len(session.scalars(select(PriceObservation)).all()) == 10
+        assert homepage_snapshots(session) == 1  # stored once per warm-up
+        costs = session.execute(
+            select(FreshnessAttempt.actual_request_cost, FreshnessAttempt.reserved_request_cost)
+            .order_by(FreshnessAttempt.id)
+        ).all()
+        assert all(actual <= reserved for actual, reserved in costs)
+        # Only the warming attempt paid for the homepage.
+        assert [c for c, _ in costs] == [costs[0][0]] + [costs[0][0] - 1] * 4
+        assert sum(c for c, _ in costs) == len(transport.sent)
+    assert all(p.close.called for p in transport.pages)
+    transport.context.close.assert_called_once()  # at turn end only
+
+
+def test_snkr_turn_unclean_capture_discards_and_next_attempt_rewarms(db, monkeypatch):
+    factory, source, mid, pid = db
+    ids = [mid] + [mapping(factory, source, pid, product) for product in range(200, 203)]
+    for item in ids:
+        seed(factory, item)
+    with factory() as session:
+        failing = session.get(SourceCardMapping, ids[1]).source_url
+    transport = TurnTransport(monkeypatch, failing=[failing])
+    turn, results = run_turn(factory, source, transport)
+    assert len(results) == 4
+    assert transport.launches == 2 and turn.warmups == 2
+    assert transport.sent.count("https://snkrdunk.com/") == 2
+    with factory() as session:
+        assert homepage_snapshots(session) == 2
+
+
+def test_snkr_run_due_owns_and_always_closes_one_turn_browser(db, monkeypatch):
+    from snkrdunk_collector import due as snkr_due
+    from snkrdunk_collector.browser import TurnBrowser
+
+    factory, source, mid, _ = db
+    seen, closed = {}, []
+
+    def failing_drain(session, source_id, owner, runner, **kwargs):
+        seen["turn"] = runner.keywords["turn"]
+        raise RuntimeError("lease lost")
+
+    monkeypatch.setattr(snkr_due, "drain", failing_drain)
+    monkeypatch.setattr(TurnBrowser, "close", lambda self: closed.append(self))
+    with pytest.raises(RuntimeError):
+        snkr_due.run_due(session_factory=factory)
+    assert isinstance(seen["turn"], TurnBrowser) and closed == [seen["turn"]]
+
+    explicit = MagicMock()
+    monkeypatch.setattr(snkr_due, "drain", lambda session, source_id, owner, runner, **kw: [runner])
+    assert snkr_due.run_due(session_factory=factory, runner=explicit) == [explicit]

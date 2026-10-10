@@ -41,6 +41,7 @@ from snkrdunk_collector.browser import (
     DESKTOP_CHROME_UA,
     DESKTOP_VIEWPORT,
     HOMEPAGE_URL,
+    TURN_TEARDOWN_TIMEOUT_S,
     DeadlineExceeded,
     deadline,
     fetch_bytes,
@@ -158,10 +159,55 @@ def _load_mapping(session, mapping_id: int) -> tuple[SourceCardMapping | None, S
     return mapping, source, card_print, reasons
 
 
+def _capture_in_turn(turn, freshness, navigate, holder) -> bool:
+    """Capture on a new page in the turn's warmed context.
+
+    The attempt is bound to the turn meter for exactly the lifetime of its
+    page, and settled before it is unbound, so no other attempt is charged for
+    its traffic. Only an attempt that finds the turn cold captures (and pays
+    for, and stores) the homepage. Returns True only for a clean capture -
+    homepage (if captured) usable, product HTTP 200 and a normal page,
+    attempt neither stopped nor denied, routes settled, page closed - so the
+    turn may stay warm for the next attempt.
+    """
+    with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+        context = turn.ensure()
+        page = context.new_page()
+    turn.meter.bind(freshness, page)
+    try:
+        warm_up = not turn.warm
+        if warm_up:
+            turn.warmups += 1
+        homepage_ok = navigate(page, warm_up)
+        clean = (
+            homepage_ok
+            and holder["product_classification"] == "normal_page"
+            and holder["product_http_status"] == 200
+            and not freshness.stopped
+            and not freshness.denied
+        )
+        # As on the per-capture path, a stopped attempt raises here and is
+        # fenced by the caller; the browser is then discarded.
+        freshness.settle_browser(page)
+    finally:
+        turn.meter.unbind(freshness)
+    if clean:
+        try:
+            with deadline(TURN_TEARDOWN_TIMEOUT_S, "browser_teardown"):
+                page.close()
+        except Exception:
+            clean = False
+    if clean:
+        turn.warm = True
+    return clean
+
+
 def run_one_mapping_detailed(
     session, mapping_id: int, validate_only: bool = False, batch_run_id: str | None = None,
-    *, freshness=None,
+    *, freshness=None, turn=None,
 ) -> MappingOutcome:
+    if turn is not None and (freshness is None or validate_only):
+        raise ValueError("a reused turn browser requires a metered due attempt")
     if freshness is not None and validate_only:
         from app.services.source_recovery import _recovery_scope
 
@@ -218,203 +264,219 @@ def run_one_mapping_detailed(
         "sales_history_http_status": None,
     }
 
-    try:
-        with deadline(settings.TOTAL_RUN_TIMEOUT_S, "total_run"):
-            with sync_playwright() as p:
-                log_event("playwright_ready", playwright_version=pkg_version("playwright"))
-                with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
-                    browser = p.chromium.launch(headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000)
-                    context = browser.new_context(
-                        user_agent=DESKTOP_CHROME_UA,
-                        viewport=DESKTOP_VIEWPORT,
-                        locale="ja-JP",
-                        extra_http_headers={"Accept-Language": DESKTOP_ACCEPT_LANGUAGE},
-                        **({"service_workers": "block"} if freshness else {}),
-                    )
-                    if freshness:
-                        freshness.install_browser(context)
-                    page = context.new_page()
+    def navigate(page, warm_up):
+        """Homepage gate (when warming) and product capture on `page`."""
+        if warm_up:
+            # Stored as RAW, and the source-wide denial canary, on every
+            # warm-up (per capture, or once per warmed turn).
+            with deadline(settings.HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
+                homepage_step = capture_page(page, HOMEPAGE_URL)
+            log_event(
+                "homepage_result",
+                mapping_id=mapping.id,
+                http_status=homepage_step.get("http_status"),
+                classification=homepage_step.get("classification"),
+                error=homepage_step.get("error"),
+                batch_run_id=batch_run_id,
+            )
 
-                with deadline(settings.HOMEPAGE_NAV_TIMEOUT_S, "homepage_navigation"):
-                    homepage_step = capture_page(page, HOMEPAGE_URL)
+            homepage_ok = (
+                "error" not in homepage_step
+                and homepage_step.get("http_status") == 200
+                and homepage_step.get("classification") == "normal_page"
+            )
+        else:
+            # A turn whose context this homepage already warmed and gated.
+            homepage_ok = True
+
+        if not homepage_ok:
+            holder["product_classification"] = homepage_step.get("classification", "navigation_error")
+            log_event(
+                "homepage_gate_failed",
+                mapping_id=mapping.id,
+                reason=holder["product_classification"],
+                batch_run_id=batch_run_id,
+            )
+        else:
+            with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
+                product_step = capture_page(page, mapping.source_url)
+            log_event(
+                "product_result",
+                mapping_id=mapping.id,
+                http_status=product_step.get("http_status"),
+                classification=product_step.get("classification"),
+                error=product_step.get("error"),
+                batch_run_id=batch_run_id,
+            )
+            holder["product_classification"] = product_step.get("classification")
+            holder["product_http_status"] = product_step.get("http_status")
+
+            if product_step.get("classification") == "normal_page" and "error" not in product_step:
+                html = product_step["html"]
+                holder["product_html"] = html
+                holder["product_final_url"] = product_step["final_url"]
+
+                extraction = extract_product(
+                    html, product_step["final_url"], expected_card_code, expected_treatment
+                )
+                holder["extraction"] = extraction
+                # Every observed identity field is logged verbatim so
+                # a verification record can be reconstructed from the
+                # run's own evidence alone, without re-deriving
+                # anything from database metadata. `conditions` is
+                # the complete per-condition object (price_jpy +
+                # raw_text), NOT list(keys) - reducing it to its keys
+                # previously discarded every A-D price.
+                extracted_fields = extraction["extracted"]
                 log_event(
-                    "homepage_result",
+                    "extraction_result",
                     mapping_id=mapping.id,
-                    http_status=homepage_step.get("http_status"),
-                    classification=homepage_step.get("classification"),
-                    error=homepage_step.get("error"),
+                    extraction_status=extraction["extraction_status"],
+                    fail_reasons=extraction["fail_reasons"],
+                    observed_title=extracted_fields.get("title"),
+                    observed_card_name=extracted_fields.get("card_name"),
+                    observed_card_code=extracted_fields.get("card_code"),
+                    observed_rarity=extracted_fields.get("rarity"),
+                    observed_treatment=extracted_fields.get("treatment"),
+                    observed_page_language=extracted_fields.get("page_language"),
+                    observed_release_text=extracted_fields.get("release_text"),
+                    observed_release_product_code=extracted_fields.get("release_product_code"),
+                    observed_product_image_url=extracted_fields.get("product_image_url"),
+                    raw_floor_jpy=extracted_fields.get("raw_floor_jpy"),
+                    raw_floor_condition=extracted_fields.get("raw_floor_condition"),
+                    conditions=extracted_fields.get("conditions") or {},
+                    selector_version=extraction.get("selector_version"),
                     batch_run_id=batch_run_id,
                 )
 
-                homepage_ok = (
-                    "error" not in homepage_step
-                    and homepage_step.get("http_status") == 200
-                    and homepage_step.get("classification") == "normal_page"
+                candidate_image_url, artwork_error = artwork_url(
+                    extraction["extracted"].get("product_image_url"),
+                    product_step["final_url"],
+                )
+                official_image_url = card_print.image_url if card_print else None
+                if candidate_image_url and official_image_url:
+                    official_bytes = candidate_bytes = None
+                    try:
+                        with deadline(settings.IMAGE_FETCH_TIMEOUT_S, "image_fetch"):
+                            image_fetch = freshness.request_bytes if freshness else fetch_bytes
+                            official_bytes = image_fetch(page, official_image_url)
+                            candidate_bytes = image_fetch(page, candidate_image_url)
+                    except Exception:
+                        if freshness:
+                            freshness.check()  # budget/lease/source denial still fail closed
+                    if official_bytes and candidate_bytes:
+                        holder["artwork_comparison"] = compare_artwork(official_bytes, candidate_bytes)
+                    else:
+                        holder["artwork_comparison"] = {
+                            "match": False,
+                            "available": False,
+                            "error": "image_fetch_failed",
+                            "official_fetched": bool(official_bytes),
+                            "candidate_fetched": bool(candidate_bytes),
+                        }
+                else:
+                    holder["artwork_comparison"] = {
+                        "match": False,
+                        "available": False,
+                        "error": artwork_error or "missing_official_image_url",
+                    }
+                log_event(
+                    "artwork_comparison_complete",
+                    mapping_id=mapping.id,
+                    match=holder["artwork_comparison"].get("match"),
+                    hash_distances=holder["artwork_comparison"].get("hash_distances"),
+                    aspect_ratio_relative_diff=holder["artwork_comparison"].get("aspect_ratio_relative_diff"),
+                    batch_run_id=batch_run_id,
                 )
 
-                if not homepage_ok:
-                    holder["product_classification"] = homepage_step.get("classification", "navigation_error")
+                # Sold history: best-effort, evidence-only, never
+                # gates the write (see sales_history.py).
+                soup_for_link = BeautifulSoup(html, "html.parser")
+                history_href, history_link_diag = find_sales_history_link(soup_for_link)
+                # Sold history is not required by current-price work.
+                if history_href and freshness is None:
+                    history_url = urljoin(product_step["final_url"], history_href)
+                    with deadline(settings.SALES_HISTORY_NAV_TIMEOUT_S, "sales_history_navigation"):
+                        history_step = capture_page(page, history_url)
                     log_event(
-                        "homepage_gate_failed",
+                        "sales_history_result",
                         mapping_id=mapping.id,
-                        reason=holder["product_classification"],
+                        http_status=history_step.get("http_status"),
+                        classification=history_step.get("classification"),
                         batch_run_id=batch_run_id,
                     )
-                    if freshness:
-                        freshness.settle_browser(page)
-                    context.close()
-                    browser.close()
+                    if history_step.get("classification") == "normal_page" and "error" not in history_step:
+                        pid_match = re.search(r"/apparels/(\d+)", mapping.source_url)
+                        product_id = pid_match.group(1) if pid_match else None
+                        sold_history = parse_sales_history_page(history_step["html"], product_id)
+                        sold_history["link_diagnostics"] = history_link_diag
+                        sold_history["source_url"] = history_url
+                        holder["sold_history"] = sold_history
+                        holder["sales_history_html"] = history_step["html"]
+                        holder["sales_history_url"] = history_url
+                        holder["sales_history_http_status"] = history_step.get("http_status")
+                        log_event(
+                            "sold_history_extracted",
+                            mapping_id=mapping.id,
+                            availability_status=sold_history["availability_status"],
+                            raw_sales_count=len(sold_history["raw_sales"]),
+                            stable_identifier_available=sold_history["stable_identifier_available"],
+                            batch_run_id=batch_run_id,
+                        )
                 else:
-                    with deadline(settings.PRODUCT_NAV_TIMEOUT_S, "product_navigation"):
-                        product_step = capture_page(page, mapping.source_url)
-                    log_event(
-                        "product_result",
-                        mapping_id=mapping.id,
-                        http_status=product_step.get("http_status"),
-                        classification=product_step.get("classification"),
-                        error=product_step.get("error"),
-                        batch_run_id=batch_run_id,
-                    )
-                    holder["product_classification"] = product_step.get("classification")
-                    holder["product_http_status"] = product_step.get("http_status")
+                    holder["sold_history"] = {
+                        "availability_status": "not_exposed_on_current_product",
+                        "raw_sales": [],
+                        "stable_identifier_available": False,
+                        "link_diagnostics": history_link_diag,
+                    }
+        return homepage_ok
 
-                    if product_step.get("classification") == "normal_page" and "error" not in product_step:
-                        html = product_step["html"]
-                        holder["product_html"] = html
-                        holder["product_final_url"] = product_step["final_url"]
-
-                        extraction = extract_product(
-                            html, product_step["final_url"], expected_card_code, expected_treatment
-                        )
-                        holder["extraction"] = extraction
-                        # Every observed identity field is logged verbatim so
-                        # a verification record can be reconstructed from the
-                        # run's own evidence alone, without re-deriving
-                        # anything from database metadata. `conditions` is
-                        # the complete per-condition object (price_jpy +
-                        # raw_text), NOT list(keys) - reducing it to its keys
-                        # previously discarded every A-D price.
-                        extracted_fields = extraction["extracted"]
-                        log_event(
-                            "extraction_result",
-                            mapping_id=mapping.id,
-                            extraction_status=extraction["extraction_status"],
-                            fail_reasons=extraction["fail_reasons"],
-                            observed_title=extracted_fields.get("title"),
-                            observed_card_name=extracted_fields.get("card_name"),
-                            observed_card_code=extracted_fields.get("card_code"),
-                            observed_rarity=extracted_fields.get("rarity"),
-                            observed_treatment=extracted_fields.get("treatment"),
-                            observed_page_language=extracted_fields.get("page_language"),
-                            observed_release_text=extracted_fields.get("release_text"),
-                            observed_release_product_code=extracted_fields.get("release_product_code"),
-                            observed_product_image_url=extracted_fields.get("product_image_url"),
-                            raw_floor_jpy=extracted_fields.get("raw_floor_jpy"),
-                            raw_floor_condition=extracted_fields.get("raw_floor_condition"),
-                            conditions=extracted_fields.get("conditions") or {},
-                            selector_version=extraction.get("selector_version"),
-                            batch_run_id=batch_run_id,
-                        )
-
-                        candidate_image_url, artwork_error = artwork_url(
-                            extraction["extracted"].get("product_image_url"),
-                            product_step["final_url"],
-                        )
-                        official_image_url = card_print.image_url if card_print else None
-                        if candidate_image_url and official_image_url:
-                            official_bytes = candidate_bytes = None
-                            try:
-                                with deadline(settings.IMAGE_FETCH_TIMEOUT_S, "image_fetch"):
-                                    image_fetch = freshness.request_bytes if freshness else fetch_bytes
-                                    official_bytes = image_fetch(page, official_image_url)
-                                    candidate_bytes = image_fetch(page, candidate_image_url)
-                            except Exception:
-                                if freshness:
-                                    freshness.check()  # budget/lease/source denial still fail closed
-                            if official_bytes and candidate_bytes:
-                                holder["artwork_comparison"] = compare_artwork(official_bytes, candidate_bytes)
-                            else:
-                                holder["artwork_comparison"] = {
-                                    "match": False,
-                                    "available": False,
-                                    "error": "image_fetch_failed",
-                                    "official_fetched": bool(official_bytes),
-                                    "candidate_fetched": bool(candidate_bytes),
-                                }
-                        else:
-                            holder["artwork_comparison"] = {
-                                "match": False,
-                                "available": False,
-                                "error": artwork_error or "missing_official_image_url",
-                            }
-                        log_event(
-                            "artwork_comparison_complete",
-                            mapping_id=mapping.id,
-                            match=holder["artwork_comparison"].get("match"),
-                            hash_distances=holder["artwork_comparison"].get("hash_distances"),
-                            aspect_ratio_relative_diff=holder["artwork_comparison"].get("aspect_ratio_relative_diff"),
-                            batch_run_id=batch_run_id,
-                        )
-
-                        # Sold history: best-effort, evidence-only, never
-                        # gates the write (see sales_history.py).
-                        soup_for_link = BeautifulSoup(html, "html.parser")
-                        history_href, history_link_diag = find_sales_history_link(soup_for_link)
-                        # Sold history is not required by current-price work.
-                        if history_href and freshness is None:
-                            history_url = urljoin(product_step["final_url"], history_href)
-                            with deadline(settings.SALES_HISTORY_NAV_TIMEOUT_S, "sales_history_navigation"):
-                                history_step = capture_page(page, history_url)
-                            log_event(
-                                "sales_history_result",
-                                mapping_id=mapping.id,
-                                http_status=history_step.get("http_status"),
-                                classification=history_step.get("classification"),
-                                batch_run_id=batch_run_id,
+    turn_ok = False
+    try:
+        try:
+            with deadline(settings.TOTAL_RUN_TIMEOUT_S, "total_run"):
+                if turn is None:
+                    with sync_playwright() as p:
+                        log_event("playwright_ready", playwright_version=pkg_version("playwright"))
+                        with deadline(settings.BROWSER_LAUNCH_TIMEOUT_S, "browser_launch"):
+                            browser = p.chromium.launch(headless=True, timeout=settings.BROWSER_LAUNCH_TIMEOUT_S * 1000)
+                            context = browser.new_context(
+                                user_agent=DESKTOP_CHROME_UA,
+                                viewport=DESKTOP_VIEWPORT,
+                                locale="ja-JP",
+                                extra_http_headers={"Accept-Language": DESKTOP_ACCEPT_LANGUAGE},
+                                **({"service_workers": "block"} if freshness else {}),
                             )
-                            if history_step.get("classification") == "normal_page" and "error" not in history_step:
-                                pid_match = re.search(r"/apparels/(\d+)", mapping.source_url)
-                                product_id = pid_match.group(1) if pid_match else None
-                                sold_history = parse_sales_history_page(history_step["html"], product_id)
-                                sold_history["link_diagnostics"] = history_link_diag
-                                sold_history["source_url"] = history_url
-                                holder["sold_history"] = sold_history
-                                holder["sales_history_html"] = history_step["html"]
-                                holder["sales_history_url"] = history_url
-                                holder["sales_history_http_status"] = history_step.get("http_status")
-                                log_event(
-                                    "sold_history_extracted",
-                                    mapping_id=mapping.id,
-                                    availability_status=sold_history["availability_status"],
-                                    raw_sales_count=len(sold_history["raw_sales"]),
-                                    stable_identifier_available=sold_history["stable_identifier_available"],
-                                    batch_run_id=batch_run_id,
-                                )
-                        else:
-                            holder["sold_history"] = {
-                                "availability_status": "not_exposed_on_current_product",
-                                "raw_sales": [],
-                                "stable_identifier_available": False,
-                                "link_diagnostics": history_link_diag,
-                            }
+                            if freshness:
+                                freshness.install_browser(context)
+                            page = context.new_page()
 
-                    if freshness:
-                        freshness.settle_browser(page)
-                    context.close()
-                    browser.close()
-    except DeadlineExceeded as exc:
-        log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
-        return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"watchdog_triggered:{exc}"])
-    except LockLost:
-        # Must escape. This handler turns a failure into an outcome so the
-        # BATCH can carry on to the next mapping - which is exactly the wrong
-        # response to losing the lock, and its rollback() is what lets a dead
-        # connection silently come back as a live unlocked one.
-        raise
-    except Exception as exc:  # never leave a half-written row
-        session.rollback()
-        log_event("collection_error", mapping_id=mapping_id, error=f"{type(exc).__name__}: {exc}", batch_run_id=batch_run_id)
-        return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"{type(exc).__name__}: {exc}"])
+                        navigate(page, True)
+                        if freshness:
+                            freshness.settle_browser(page)
+                        context.close()
+                        browser.close()
+                else:
+                    turn_ok = _capture_in_turn(turn, freshness, navigate, holder)
+        except DeadlineExceeded as exc:
+            log_event("watchdog_triggered", mapping_id=mapping_id, label=str(exc), batch_run_id=batch_run_id)
+            return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"watchdog_triggered:{exc}"])
+        except LockLost:
+            # Must escape. This handler turns a failure into an outcome so the
+            # BATCH can carry on to the next mapping - which is exactly the wrong
+            # response to losing the lock, and its rollback() is what lets a dead
+            # connection silently come back as a live unlocked one.
+            raise
+        except Exception as exc:  # never leave a half-written row
+            session.rollback()
+            log_event("collection_error", mapping_id=mapping_id, error=f"{type(exc).__name__}: {exc}", batch_run_id=batch_run_id)
+            return MappingOutcome(mapping_id=mapping_id, stage="operational_error", reasons=[f"{type(exc).__name__}: {exc}"])
+    finally:
+        # Anything but a clean capture discards the warmed browser, so the
+        # next attempt starts (and captures the homepage) like a fresh run.
+        if turn is not None and not turn_ok:
+            turn.discard("attempt_not_clean")
 
     classification = holder["product_classification"]
     source_denied = classification in SOURCE_DENIAL_CLASSIFICATIONS
