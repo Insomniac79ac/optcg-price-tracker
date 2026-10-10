@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Capacity75 session 8 (2026-10-10): encode RAW snapshots before the first INSERT (no plaintext TOAST row version); collector releases now roll out one at a time with all-or-nothing rollback; collector_variables recovery scan widened; sequential ten-collector release, daily-v1 unchanged",
+  "mission": "Capacity75 session 8 (2026-10-10): request efficiency - one warmed browser context per due-work turn for both collectors (sequential ten-collector release); schedules, budgets, reservations and pacing unchanged",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,8 +20,8 @@
   "impacts": [
     {
       "files": [
-        "services/api/app/services/raw_dictionary_storage.py",
-        "services/api/tests/test_raw_dictionary_storage_postgres.py"
+        "services/api/app/services/freshness_integration.py",
+        "services/api/tests/test_freshness_adapters_postgres.py"
       ],
       "effects": [
         "application",
@@ -29,45 +29,57 @@
         "staging_deployment",
         "infrastructure"
       ],
-      "reason": "raw_dictionary_storage is in both collectors' import graph, so this is a collector release (all ten). The writer reserves the snapshot ID from the serial sequence after admission/base/savings checks, verifies reconstruction, then INSERTs the envelope once; previously a plaintext INSERT then UPDATE left a dead TOAST body until vacuum. Ledger (original_sha256/original_bytes/base) and content_hash unchanged; daily-v1 admission, try-lock, savings threshold, plaintext fallback, readers and backup19 unchanged. No schema change. Tests reproduce the defect with a PostgreSQL write trigger."
+      "reason": "Attempt's browser route handler moves into a method unchanged; new TurnMeter installs one context route per turn and forwards only requests from the bound attempt's own page, aborting everything else before dispatch (never charged). In both collectors' import graph: ten-collector release."
     },
     {
       "files": [
-        "scripts/collector_variables.py",
-        "scripts/tests/test_collector_variables.py"
+        "services/yuyutei_collector/yuyutei_collector/browser.py",
+        "services/yuyutei_collector/yuyutei_collector/collect.py",
+        "services/yuyutei_collector/yuyutei_collector/due.py",
+        "services/yuyutei_collector/tests/test_raw_before_parse.py",
+        "services/yuyutei_collector/tests/test_turn_browser.py"
       ],
       "effects": [
         "application",
-        "tests"
+        "tests",
+        "staging_deployment"
       ],
-      "reason": "Recovery-source scan widened from 20 to 100 deployments so the exact-image rollback/settings path still finds a redeployable copy behind SKIPPED merge records (SNKR had none within 20). Same allowlist, staging pins, digest and read-back checks."
+      "reason": "Yuyu TurnBrowser: one browser/context per turn, new page per attempt, homepage warm-up only when cold, discard after any non-clean capture, discovery discards the turn first. Legacy per-capture path unchanged."
     },
     {
       "files": [
-        "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
-        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
-        "docs/agent/STAGING_DELIVERY.md"
+        "services/snkrdunk_collector/snkrdunk_collector/browser.py",
+        "services/snkrdunk_collector/snkrdunk_collector/collect.py",
+        "services/snkrdunk_collector/snkrdunk_collector/due.py",
+        "services/snkrdunk_collector/tests/test_turn_discovery.py"
+      ],
+      "effects": [
+        "application",
+        "tests",
+        "staging_deployment"
+      ],
+      "reason": "SNKR TurnBrowser with identical context options; homepage stored and gated at each warm-up; recovery and explicit runners stay per-capture; discovery discards the turn first."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests"
+      ],
+      "reason": "agent-state-tests now runs the pytest-style sequential-rollout and recovery-scan tests (previously never collected by the unittest steps)."
+    },
+    {
+      "files": [
+        "docs/agent/COLLECTOR_TURN_BROWSER.md",
+        "docs/agent/evidence/turn-warmed-context-preflight-20261010.json"
       ],
       "effects": [
         "documentation",
         "state_observation"
       ],
-      "reason": "Documents the writer change and records the read-only fleet/storage preflight and rollback procedure."
-    },
-    {
-      "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml",
-        "scripts/deploy_staging_collectors.py",
-        "scripts/tests/test_deploy_staging_collectors.py",
-        "scripts/tests/test_operational_health.py"
-      ],
-      "effects": [
-        "infrastructure",
-        "tests",
-        "staging_deployment"
-      ],
-      "reason": "Delivery rollout becomes sequential: every collector's rollback source is proven before any upload; forward release starts only 06:00-23:00 UTC; each collector is uploaded only in its own safe slot (>=5 min after a fire, >=8 min before the next, no open attempt), followed to SUCCESS and re-verified (marker, schedule, start command, writer flags) before the next; any failure restores every touched collector newest-first via collector_variables.restore. Delivery job timeout 60 -> 180 min. Stricter than before; no new provider capability, credential or source request."
+      "reason": "Design, expected effect, verification and AMBER preflight."
     }
   ],
   "deployment_verification": {
@@ -84,52 +96,52 @@
       {
         "name": "snkrdunk-collector",
         "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "f3286a0a-421e-42f1-bc4b-b917a98cad3b"
+        "recovery_deployment_id": "df5d8fec-b931-4cd6-97eb-b412e55fea29"
       },
       {
         "name": "yuyutei-collector-shard-0",
         "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "0f1e22a7-d527-40d6-9f1b-b175bc51026e"
+        "recovery_deployment_id": "9fcd896a-be94-438f-8aee-8f70e7aa2285"
       },
       {
         "name": "yuyutei-collector-shard-1",
         "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "33b3b86b-aea3-4ac7-befd-b1a1b3a344df"
+        "recovery_deployment_id": "6fb87043-842b-45b1-8fac-88f421664d42"
       },
       {
         "name": "yuyutei-collector-shard-2",
         "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "605c7222-9d6d-4676-8c47-c6d17d2e006c"
+        "recovery_deployment_id": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4"
       },
       {
         "name": "yuyutei-collector-shard-3",
         "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "7d85b51c-ad17-41aa-bd53-abb4bce607dd"
+        "recovery_deployment_id": "eca877bc-7022-4a9d-82dd-7093ed3af3f7"
       },
       {
         "name": "yuyutei-collector-shard-4-v2",
         "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "d4c20ffd-9d50-4ad7-a547-551efe0e7d23"
+        "recovery_deployment_id": "cc31808f-1e04-4ed3-b116-ef57c86d34ef"
       },
       {
         "name": "yuyutei-collector-shard-5",
         "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "bd63f91f-ae5a-464d-8d3e-e400fe5b305d"
+        "recovery_deployment_id": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e"
       },
       {
         "name": "yuyutei-collector-shard-6",
         "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "4b56336b-4be1-4c49-ba0a-5a5072e3ee50"
+        "recovery_deployment_id": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3"
       },
       {
         "name": "yuyutei-collector-shard-7",
         "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "e0473070-c327-4670-9582-b4dc609ba469"
+        "recovery_deployment_id": "9855a237-c081-4ff9-9491-a156cfc3aa04"
       },
       {
         "name": "yuyutei-collector-shard-8",
         "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "50613647-7947-414d-bf9d-df0d960697a6"
+        "recovery_deployment_id": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6"
       }
     ]
   },
@@ -137,7 +149,7 @@
     "impact": {
       "resources": [
         {
-          "name": "Staging Postgres (no migration; writer rows only through ordinary scheduled captures)",
+          "name": "Staging Postgres (no migration; ordinary scheduled captures only)",
           "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
           "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
           "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
@@ -149,76 +161,75 @@
         {
           "name": "snkrdunk-collector",
           "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "f3286a0a-421e-42f1-bc4b-b917a98cad3b"
+          "recovery_deployment_id": "df5d8fec-b931-4cd6-97eb-b412e55fea29"
         },
         {
           "name": "yuyutei-collector-shard-0",
           "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "0f1e22a7-d527-40d6-9f1b-b175bc51026e"
+          "recovery_deployment_id": "9fcd896a-be94-438f-8aee-8f70e7aa2285"
         },
         {
           "name": "yuyutei-collector-shard-1",
           "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "33b3b86b-aea3-4ac7-befd-b1a1b3a344df"
+          "recovery_deployment_id": "6fb87043-842b-45b1-8fac-88f421664d42"
         },
         {
           "name": "yuyutei-collector-shard-2",
           "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "605c7222-9d6d-4676-8c47-c6d17d2e006c"
+          "recovery_deployment_id": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4"
         },
         {
           "name": "yuyutei-collector-shard-3",
           "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "7d85b51c-ad17-41aa-bd53-abb4bce607dd"
+          "recovery_deployment_id": "eca877bc-7022-4a9d-82dd-7093ed3af3f7"
         },
         {
           "name": "yuyutei-collector-shard-4-v2",
           "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "d4c20ffd-9d50-4ad7-a547-551efe0e7d23"
+          "recovery_deployment_id": "cc31808f-1e04-4ed3-b116-ef57c86d34ef"
         },
         {
           "name": "yuyutei-collector-shard-5",
           "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "bd63f91f-ae5a-464d-8d3e-e400fe5b305d"
+          "recovery_deployment_id": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e"
         },
         {
           "name": "yuyutei-collector-shard-6",
           "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "4b56336b-4be1-4c49-ba0a-5a5072e3ee50"
+          "recovery_deployment_id": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3"
         },
         {
           "name": "yuyutei-collector-shard-7",
           "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "e0473070-c327-4670-9582-b4dc609ba469"
+          "recovery_deployment_id": "9855a237-c081-4ff9-9491-a156cfc3aa04"
         },
         {
           "name": "yuyutei-collector-shard-8",
           "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "50613647-7947-414d-bf9d-df0d960697a6"
+          "recovery_deployment_id": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6"
         }
       ],
       "routes": [
-        "Existing admitted ordinary RAW captures; no manual source invocation"
+        "Existing admitted ordinary due-work captures on yuyu-tei.jp and snkrdunk.com; fewer homepage and subresource requests per capture; no manual source invocation"
       ],
       "dependencies": [
-        "f9e5b4a8c012 schema, e8 dependency protection, readers and portable backup19 unchanged; envelope/ledger representation identical"
+        "Freshness admission/reservation/settle fence unchanged per attempt; f9e5b4a8c012 schema; daily-v1 writer unchanged"
       ],
-      "deployment_impact": "Native ten-collector image update plus API (shared package), released ONE AT A TIME by the sequential delivery rollout, each in its own safe slot and verified before the next. Crons, start commands, budgets, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each. Verifiers await completed natural runs on the new component for SNKR and all nine shards.",
+      "deployment_impact": "Native ten-collector image update plus API (shared package), released ONE AT A TIME by the sequential delivery rollout, each in its own safe slot and verified before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each.",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 150
     },
     "recovery": {
-      "artifact": "5be24267c085a41c779b10708a1bdec622c5f368",
-      "procedure": "Automatic and all-or-nothing: on any rollout failure the delivery restores every collector already touched, newest first, to its recorded original image (commit 1b1b64d, digests in the preflight) and flags via collector_variables.restore, verifying digest, marker, schedule, start command and variables after each. After delivery, the same restore is run manually per collector (scripts/collector_variables.py --restore --expect-digest) if a natural-run trigger fires; then native revert of this PR. Recovery sources are canRedeploy=true with the identical digest (fleet preflight 07:31Z; re-proven by the rollout before any upload). No data rollback: new rows use the identical envelope/ledger the activation readers decode. No RAW expansion, no Run Now.",
-      "trigger": "any lossless verification failure on a new encoded row; writer errors or collection failures above baseline; source denial, 403/429/challenge, duplicate or uncontrolled request, lease/reservation leak; deployment failure; schedule, start command or writer variable drift; 24h freshness regression",
-      "backup": "No schema or historical RAW change; existing 3,253+ encoded rows verified lossless in session 7 and re-verified with every new row after delivery. Activation images retained and redeployable.",
+      "artifact": "05f099db30e735605fb72b542699ac75559ad8d7",
+      "procedure": "python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <fleet_preflight.services[name].image_digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging --output <receipt>, one at a time; then native revert. Automatic during rollout: deploy_staging_collectors restores every touched collector newest-first to its recorded 05f099d image. No data rollback.",
+      "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression",
+      "backup": "No schema or stored-data change. 05f099d images retained and redeployable (fleet preflight 08:41Z).",
       "validation": [
-        "services/api/tests/test_raw_dictionary_storage_postgres.py",
-        "scripts/tests/test_collector_variables.py",
-        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
-        "scripts/tests/test_deploy_staging_collectors.py",
-        "scripts/tests/test_operational_health.py"
+        "services/yuyutei_collector/tests/test_turn_browser.py",
+        "services/snkrdunk_collector/tests/test_turn_discovery.py",
+        "services/api/tests/test_freshness_adapters_postgres.py",
+        "docs/agent/evidence/turn-warmed-context-preflight-20261010.json"
       ]
     },
     "verification": {
@@ -231,7 +242,7 @@
         "scripts/verify_yuyu_raw_reader_component.py",
         "scripts/generate_staging_state.py"
       ],
-      "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: every new encoded row lossless (verify_all), raw_snapshots n_tup_upd not increasing with encoded inserts, ledger rows/bytes within daily-v1 bounds, 0 denials/403/429/challenges, no lease or reservation leaks, freshness unchanged. Next collector release only after at least one natural turn per collector."
+      "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below baseline, captured/no_listing rates unchanged, identical prices on sampled URLs, 0 denials/403/429/challenges, optional_resource not rising, no lease or reservation leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups."
     }
   },
   "diff_sha256": "98cf468bbb44ee4dee8b51c06517346e168a412adb3810ce5a06f215e3144770"

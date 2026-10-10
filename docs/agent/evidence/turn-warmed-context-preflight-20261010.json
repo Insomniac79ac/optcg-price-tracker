@@ -1,0 +1,241 @@
+{
+ "schema_version": 1,
+ "target": "staging",
+ "written_at": "2026-10-10T08:50:00Z",
+ "change": "One warmed browser context per due-work turn for both collectors; turn-level meter delegating to the bound attempt; discovery discards the turn first.",
+ "unchanged": [
+  "schedules",
+  "source budgets and 1800s windows",
+  "300 reservations",
+  "inter-attempt delay",
+  "claim caps",
+  "SNKR singleton",
+  "drain",
+  "parsers",
+  "RAW policy (SNKR homepage stored at each warm-up)",
+  "browser context options",
+  "daily-v1 writer variables"
+ ],
+ "request_baseline": {
+  "source": "evidence/request-efficiency-measure.json (session 8 handoff), MEASURED from freshness_attempts.actual_request_cost, 24h before 08:03Z",
+  "summary_keys": [
+   "breakdown_per_capture",
+   "budget_peaks_72h",
+   "budgets_now",
+   "labels",
+   "metering_mechanism",
+   "observed_at",
+   "offline_replay_level1",
+   "options",
+   "parser_needs",
+   "per_capture_totals_24h",
+   "railway_logs",
+   "raw_storage_24h",
+   "scope",
+   "tools",
+   "warm_up_purpose"
+  ]
+ },
+ "measured_baseline_per_capture": {
+  "yuyu": 55.3,
+  "snkrdunk": 162.3,
+  "budget_peak_72h": {
+   "yuyu": "8745/9000",
+   "snkrdunk": "2959/3100"
+  }
+ },
+ "expected_ESTIMATE": {
+  "yuyu_per_capture": "31-37",
+  "snkrdunk_per_capture": "82-106",
+  "yuyu_peak": "55-65%",
+  "snkr_homepage_raw_mb_day": "18.9 -> ~1-3"
+ },
+ "source_safety": {
+  "uncharged_sends": "none: TurnMeter aborts every request not from the bound attempt's own page before dispatch",
+  "cross_attempt_charging": "settle-before-unbind plus page-ownership check",
+  "duplicate_requests": "none added; each product URL navigated once per attempt",
+  "pacing": "inter-attempt delay unchanged; a budget-bound SNKR turn finishes more due products per window, daily product fetches remain bounded by due work (23h dispatch)",
+  "identity_and_evasion": "no spoofing, rotation or new blocking; homepage warm-up kept at every (re)warm, including after any failure"
+ },
+ "defect_found_in_review": "Discovery claims run their own sync_playwright, which raises 'Sync API inside the asyncio loop' while the turn's Playwright is live in the same thread (reproduced locally). Fixed: discovery discards the turn first; regression tests in both collectors.",
+ "tests": {
+  "api_full": "4909 passed, 461 skipped (implementer run)",
+  "api_freshness_and_raw_storage_postgres": "76 passed",
+  "yuyu": "506 passed",
+  "snkrdunk": "560 passed",
+  "scripts": "193 passed",
+  "mutations_caught": [
+   "always-warm (Yuyu)",
+   "always-warm (SNKR)",
+   "dropped denial check",
+   "dropped page-ownership check"
+  ]
+ },
+ "fleet_preflight": {
+  "observed_at": "2026-10-10T08:41:47.204545+00:00",
+  "commit": "05f099db30e735605fb72b542699ac75559ad8d7",
+  "services": {
+   "snkrdunk-collector": {
+    "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
+    "active_deployment": "df5d8fec-b931-4cd6-97eb-b412e55fea29",
+    "status": "SUCCESS",
+    "image_digest": "sha256:0564a3fa33f3471737eed7deda08de6fb18c144696468add84e2f3c1d8135bf2",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "27,57 * * * *",
+    "rollback_source": "df5d8fec-b931-4cd6-97eb-b412e55fea29",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-0": {
+    "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
+    "active_deployment": "9fcd896a-be94-438f-8aee-8f70e7aa2285",
+    "status": "SUCCESS",
+    "image_digest": "sha256:428faa3bcde752c353ce3793ae89bf0fc739295a425545cae7a4d2e84d2f5722",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "0,30 * * * *",
+    "rollback_source": "9fcd896a-be94-438f-8aee-8f70e7aa2285",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-1": {
+    "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
+    "active_deployment": "6fb87043-842b-45b1-8fac-88f421664d42",
+    "status": "SUCCESS",
+    "image_digest": "sha256:2f1db17230b046aa3f97626d472ae16645797e78622a0ed0764b63d04f09d893",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "3,33 * * * *",
+    "rollback_source": "6fb87043-842b-45b1-8fac-88f421664d42",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-2": {
+    "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
+    "active_deployment": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4",
+    "status": "SUCCESS",
+    "image_digest": "sha256:a962bf728f05503433746a4350054a4323f1161fd2d0198c966858270dc478f1",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "6,36 * * * *",
+    "rollback_source": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-3": {
+    "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
+    "active_deployment": "eca877bc-7022-4a9d-82dd-7093ed3af3f7",
+    "status": "SUCCESS",
+    "image_digest": "sha256:26b58efa464ff215d77b03e7a831b5f56a2c301b4579a15547a5b4eb87df3097",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "9,39 * * * *",
+    "rollback_source": "eca877bc-7022-4a9d-82dd-7093ed3af3f7",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-4-v2": {
+    "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
+    "active_deployment": "cc31808f-1e04-4ed3-b116-ef57c86d34ef",
+    "status": "SUCCESS",
+    "image_digest": "sha256:2f637b14816bcacce4815a52248dd42a355f71faf4909aa9c7e049d4d729bf02",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "12,42 * * * *",
+    "rollback_source": "cc31808f-1e04-4ed3-b116-ef57c86d34ef",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-5": {
+    "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
+    "active_deployment": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e",
+    "status": "SUCCESS",
+    "image_digest": "sha256:daeb409b808986a2ff50bc103aaaf800becca11b081a98558c78240e30feba76",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "15,45 * * * *",
+    "rollback_source": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-6": {
+    "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
+    "active_deployment": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3",
+    "status": "SUCCESS",
+    "image_digest": "sha256:62fcfdf49acbdcf5df5f40ce022e9028bb07d99b37a8e8b58b0239dce96f8510",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "18,48 * * * *",
+    "rollback_source": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-7": {
+    "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
+    "active_deployment": "9855a237-c081-4ff9-9491-a156cfc3aa04",
+    "status": "SUCCESS",
+    "image_digest": "sha256:cac08f72a9784338539822687597cce201814a7dfda9dfa475ca3926783a6dbb",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "21,51 * * * *",
+    "rollback_source": "9855a237-c081-4ff9-9491-a156cfc3aa04",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   },
+   "yuyutei-collector-shard-8": {
+    "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
+    "active_deployment": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6",
+    "status": "SUCCESS",
+    "image_digest": "sha256:00a384924fb50837d1de95438a31b3e2fab6d41f6255a297b2ca4d75547fc054",
+    "marker": "Structured RAW health exact commit 05f099db30e735605fb72b542699ac75559ad8d7",
+    "cron": "24,54 * * * *",
+    "rollback_source": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6",
+    "rollback_source_can_redeploy": true,
+    "variables": {
+     "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+     "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+     "APP_ENV": "staging"
+    }
+   }
+  }
+ },
+ "rollout": "sequential delivery (PR #95): each collector in its own safe slot, verified before the next; automatic all-or-nothing restore to the 05f099d images above",
+ "release_gate": "at least one natural turn per collector on 05f099d observed before this release (session rule)",
+ "rollback": {
+  "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression",
+  "command": "python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <fleet_preflight.services[name].image_digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging --output <receipt>, one at a time; then native revert",
+  "data": "none: no schema or stored-representation change"
+ },
+ "busy_window": "02:00-06:00 UTC avoided (enforced by deploy_staging_collectors)",
+ "source_requests_by_delivery": 0,
+ "database_writes_by_delivery": 0,
+ "production_accessed": false
+}
