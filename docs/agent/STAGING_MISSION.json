@@ -25,9 +25,11 @@
       ],
       "effects": [
         "application",
-        "tests"
+        "tests",
+        "staging_deployment",
+        "infrastructure"
       ],
-      "reason": "original_source skipped nothing when a marked SKIPPED record (no imageDigest) was newest: digest() raised and aborted the recovery scan (rollback attempt 1, 10:00-10:29Z, made no change). It now skips image-less candidates. Regression test."
+      "reason": "original_source skipped nothing when a marked SKIPPED record (no imageDigest) was newest: digest() raised and aborted the recovery scan (rollback attempt 1, 10:00-10:29Z, made no change). It now skips image-less candidates. Regression test. This PR's merge requests the ten-collector sequential release of the merged PR #96 code (AMBER)."
     },
     {
       "files": [
@@ -201,5 +203,5 @@
       "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below the 24h baseline (Yuyu 55.3, SNKR 160-172; peaks 94.0%/95.4%), identical prices on sampled mappings, 0 denials/403/429/challenges, no reservation overrun or lease leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups. Unverified-build evidence already measured: 56 Yuyu captures avg 30.6-33.5 requests, 56/56 identical prices."
     }
   },
-  "diff_sha256": "32ef18d909ac97afd3f705104a5aef447428cbcc80bb7b0e97477e423be0c6af"
+  "diff_sha256": "1872df15501feabc79fe4f3a6ac7d90293197bb6fc7a107face3e7481d3a593b"
 }
