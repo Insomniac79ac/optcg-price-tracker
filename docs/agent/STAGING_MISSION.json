@@ -245,5 +245,5 @@
       "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below baseline, captured/no_listing rates unchanged, identical prices on sampled URLs, 0 denials/403/429/challenges, optional_resource not rising, no lease or reservation leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups."
     }
   },
-  "diff_sha256": "98cf468bbb44ee4dee8b51c06517346e168a412adb3810ce5a06f215e3144770"
+  "diff_sha256": "32ef18d909ac97afd3f705104a5aef447428cbcc80bb7b0e97477e423be0c6af"
 }
