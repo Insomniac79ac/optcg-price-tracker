@@ -1,0 +1,137 @@
+{
+ "read_only": true,
+ "source_requests": 0,
+ "collectors": {
+  "snkrdunk-collector": {
+   "verified_at": "2026-10-10T08:20:37.483420+00:00",
+   "deployment": "df5d8fec-b931-4cd6-97eb-b412e55fea29",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-0": {
+   "verified_at": "2026-10-10T08:22:31.928683+00:00",
+   "deployment": "9fcd896a-be94-438f-8aee-8f70e7aa2285",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-1": {
+   "verified_at": "2026-10-10T08:24:26.413907+00:00",
+   "deployment": "6fb87043-842b-45b1-8fac-88f421664d42",
+   "outcomes": [
+    {
+     "outcome": "captured",
+     "n": 7,
+     "last": "2026-10-10 08:38:26.072981+00:00",
+     "cost": 385
+    }
+   ],
+   "open_attempts": 0,
+   "natural_turn_seen": true
+  },
+  "yuyutei-collector-shard-2": {
+   "verified_at": "2026-10-10T08:26:51.994060+00:00",
+   "deployment": "021eedf0-0464-4bb0-a4c1-c13ba0ccfeb4",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-3": {
+   "verified_at": "2026-10-10T08:29:02.449683+00:00",
+   "deployment": "eca877bc-7022-4a9d-82dd-7093ed3af3f7",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "verified_at": "2026-10-10T08:31:12.950363+00:00",
+   "deployment": "cc31808f-1e04-4ed3-b116-ef57c86d34ef",
+   "outcomes": [
+    {
+     "outcome": "captured",
+     "n": 13,
+     "last": "2026-10-10 08:47:03.839405+00:00",
+     "cost": 716
+    }
+   ],
+   "open_attempts": 0,
+   "natural_turn_seen": true
+  },
+  "yuyutei-collector-shard-5": {
+   "verified_at": "2026-10-10T08:34:24.620687+00:00",
+   "deployment": "d7665de2-dc78-40e2-a9dd-31bc1bd4cb1e",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-6": {
+   "verified_at": "2026-10-10T08:36:03.601584+00:00",
+   "deployment": "2c06c710-b05e-40fc-a4d9-f04e572ce5d3",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-7": {
+   "verified_at": "2026-10-10T08:37:58.168314+00:00",
+   "deployment": "9855a237-c081-4ff9-9491-a156cfc3aa04",
+   "outcomes": [],
+   "open_attempts": 0,
+   "natural_turn_seen": false
+  },
+  "yuyutei-collector-shard-8": {
+   "verified_at": "2026-10-10T08:39:52.834911+00:00",
+   "deployment": "55bc3ad5-ecdb-4dfe-b723-9bc63a07b3f6",
+   "outcomes": [
+    {
+     "outcome": "captured",
+     "n": 3,
+     "last": "2026-10-10 08:58:59.762058+00:00",
+     "cost": 165
+    }
+   ],
+   "open_attempts": 0,
+   "natural_turn_seen": true
+  }
+ },
+ "observed_at": "2026-10-10 09:00:08.188545",
+ "ledger_since_last_release": {
+  "n": 16,
+  "bytes": 22768,
+  "min_id": 44014
+ },
+ "raw_since_last_release": {
+  "n": 16,
+  "min_id": 44014
+ },
+ "raw_stat_now": {
+  "n_tup_ins": 36494,
+  "n_tup_upd": 5924,
+  "toast_del": 149075,
+  "toast_ins": 1217961
+ },
+ "raw_stat_delta_vs_baseline": {
+  "ins": 90,
+  "upd": 67,
+  "toast_del": 1277
+ },
+ "denials_since_first_release": [],
+ "budgets": [
+  {
+   "name": "yuyutei",
+   "used_requests": 165,
+   "reserved_requests": 0,
+   "request_limit": 9000,
+   "window_started_at": "2026-10-10 08:53:57.124648+00:00",
+   "paused_until": null
+  },
+  {
+   "name": "snkrdunk",
+   "used_requests": 0,
+   "reserved_requests": 0,
+   "request_limit": 3100,
+   "window_started_at": "2026-10-10 08:53:57.124648+00:00",
+   "paused_until": null
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+{
+ "target": "staging",
+ "read_only": true,
+ "source_requests": 0,
+ "database_writes": 0,
+ "ledger_id_floor_exclusive": 37711,
+ "failures": [],
+ "expanded": [],
+ "by_source": {
+  "snkrdunk": {
+   "rows": 938,
+   "original_bytes": 811587303,
+   "encoded_bytes": 31787433
+  },
+  "yuyutei": {
+   "rows": 4940,
+   "original_bytes": 1106838473,
+   "encoded_bytes": 8585936
+  }
+ },
+ "ledger_max_id": 44029,
+ "rows_checked": 5878,
+ "last_id": 44029,
+ "all_lossless": true
+}

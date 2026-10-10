@@ -1,0 +1,228 @@
+{
+ "observed_at": "2026-10-10T13:22:40.609317+00:00",
+ "expected_commit": "05f099db30e735605fb72b542699ac75559ad8d7",
+ "since": "2026-10-10T11:01:00",
+ "services": {
+  "snkrdunk-collector": {
+   "latest": "bf28a669-1c48-4d79-9c67-30e3225170f8",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "27,57 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.603Z",
+     "id": "691d7b15-306d-4d34-89be-01566729738c",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-0": {
+   "latest": "6dbcce04-0e85-442b-883e-e01c1cf61d93",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "0,30 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.504Z",
+     "id": "c9a44646-97e7-48a3-aa6c-697ad99316ff",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-1": {
+   "latest": "19162cb7-ffa3-4451-af5e-9836b1dc77f3",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "3,33 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:48.142Z",
+     "id": "2ac60024-534e-4b63-96b4-8110a09603e1",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-2": {
+   "latest": "64001afc-7642-4c94-89ab-26bce593ec15",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "6,36 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.694Z",
+     "id": "4c34de51-bc2c-4abe-a3f9-f2db95d350e5",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-3": {
+   "latest": "758cf426-b342-4f90-bb6d-140608e5d9f2",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "9,39 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.560Z",
+     "id": "7d54bfa3-94bb-4cb5-9919-6c3dc322d241",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "latest": "7b05fe37-ab03-453b-a824-9979947d8f98",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "12,42 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.714Z",
+     "id": "9e302b0a-0c09-4d74-bb64-a8b945ed1514",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-5": {
+   "latest": "c0392329-5fca-40ab-85bf-078e13f60d4b",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "15,45 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.560Z",
+     "id": "0a583d74-a31f-46e5-8a5c-4373ae6c0402",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-6": {
+   "latest": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "18,48 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:48.520Z",
+     "id": "e87fbd86-cc74-490d-bf60-0bf69e558a45",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-7": {
+   "latest": "8215f924-cd1d-4abe-afdb-082e6e1208d0",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "21,51 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:47.493Z",
+     "id": "a085ad44-31cd-4aa6-9b41-a6e9f069ff66",
+     "status": "SKIPPED"
+    }
+   ]
+  },
+  "yuyutei-collector-shard-8": {
+   "latest": "2bc75473-311c-4205-a9fd-ba20882b206c",
+   "status": "SUCCESS",
+   "marker_05f099d": true,
+   "digest_is_verified_05f099d": true,
+   "cron": "24,54 * * * *",
+   "cron_unchanged": true,
+   "start_command_unchanged": true,
+   "vars": {
+    "RAW_DICTIONARY_STORAGE_ENABLED": "true",
+    "RAW_DICTIONARY_STORAGE_MODE": "daily-v1",
+    "APP_ENV": "staging"
+   },
+   "vars_unchanged": true,
+   "deployments_since": [
+    {
+     "createdAt": "2026-10-10T11:42:48.166Z",
+     "id": "b2ba13b3-fe55-4c24-95cb-ef66eebac5b0",
+     "status": "SKIPPED"
+    }
+   ]
+  }
+ },
+ "all_ok": true
+}

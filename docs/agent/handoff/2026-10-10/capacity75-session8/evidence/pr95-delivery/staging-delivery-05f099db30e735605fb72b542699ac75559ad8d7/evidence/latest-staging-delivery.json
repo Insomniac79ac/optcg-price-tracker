@@ -1,0 +1,80 @@
+{
+  "verified_at": "2026-10-10T08:59:11.570064+00:00",
+  "expected_commit": "05f099db30e735605fb72b542699ac75559ad8d7",
+  "frontend": {
+    "project_id": "prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr",
+    "deployment_id": "dpl_FkRfY6SaCoJrHyJjM6XxPr2VEWX9",
+    "status": "READY",
+    "sha": "05f099db30e735605fb72b542699ac75559ad8d7"
+  },
+  "api": {
+    "app": "opcg-price-tracker",
+    "version": "0.1.0",
+    "git_commit": "unknown",
+    "build_time": "unknown",
+    "app_env": "staging"
+  },
+  "api_identity_basis": "Railway deployment metadata; runtime SHA may be unknown",
+  "migration_revision": "f9e5b4a8c012",
+  "routes": [
+    "/",
+    "/prints/5661",
+    "/analytics"
+  ],
+  "sale_invariant": {
+    "public_sale_histories_checked": 227,
+    "sale_index_inputs": 0,
+    "gap_receipts": 0
+  },
+  "state_evidence_sha256": "61f200c9477ab9724a02c77bc83b74012e126d2073123d542e136b0a63e01908",
+  "get_timeout_retries": {
+    "count": 0,
+    "requests": []
+  },
+  "delivery_scope": {
+    "base": "5be24267c085a41c779b10708a1bdec622c5f368",
+    "merge": "05f099db30e735605fb72b542699ac75559ad8d7",
+    "decision": "full",
+    "files": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/staging-delivery.yml",
+      "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
+      "docs/agent/STAGING_DELIVERY.md",
+      "docs/agent/STAGING_MISSION.json",
+      "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+      "scripts/collector_variables.py",
+      "scripts/deploy_staging_collectors.py",
+      "scripts/tests/test_collector_variables.py",
+      "scripts/tests/test_deploy_staging_collectors.py",
+      "scripts/tests/test_operational_health.py",
+      "services/api/app/services/raw_dictionary_storage.py",
+      "services/api/tests/test_raw_dictionary_storage_postgres.py"
+    ],
+    "reason": "Non-documentation change",
+    "outside_allowlist": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/staging-delivery.yml",
+      "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+      "scripts/collector_variables.py",
+      "scripts/deploy_staging_collectors.py",
+      "scripts/tests/test_collector_variables.py",
+      "scripts/tests/test_deploy_staging_collectors.py",
+      "scripts/tests/test_operational_health.py",
+      "services/api/app/services/raw_dictionary_storage.py",
+      "services/api/tests/test_raw_dictionary_storage_postgres.py"
+    ]
+  },
+  "api_expectation": {
+    "mode": "build",
+    "sha": "05f099db30e735605fb72b542699ac75559ad8d7",
+    "watch_patterns": [
+      "services/api/**",
+      "deploy/railway/api.Dockerfile"
+    ],
+    "watched_changes": [
+      "services/api/app/services/raw_dictionary_storage.py",
+      "services/api/tests/test_raw_dictionary_storage_postgres.py"
+    ]
+  },
+  "production_accessed": false
+}

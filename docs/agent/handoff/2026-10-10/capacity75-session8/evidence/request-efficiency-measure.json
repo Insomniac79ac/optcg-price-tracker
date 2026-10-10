@@ -1,0 +1,477 @@
+{
+ "observed_at": "2026-10-10T08:03:30Z",
+ "scope": "READ-ONLY. No source request, no job, no DB write, no Railway mutation. Offline replay aborts every browser request before dispatch.",
+ "labels": {
+  "MEASURED": "taken directly from staging DB rows, Railway logs, or offline replay of retained RAW",
+  "ESTIMATE": "derived/inferred; method stated"
+ },
+ "metering_mechanism": {
+  "source": "services/api/app/services/freshness_integration.py Attempt.install_browser / admit / request_bytes; services/api/app/services/freshness_queue.py admit_request, claim_due, complete_claim",
+  "unit": "One grant (cost=1) per Playwright route callback that is actually dispatched via route.fetch, i.e. per outgoing request, BEFORE the network call. Each explicit asset redirect hop is another grant. Main-frame redirects are refused. Artwork bytes (SNKR) are separately metered via request_bytes (1 grant each). WebSockets closed, service workers blocked.",
+  "not_metered": "Requests aborted by unnecessary_browser_resource(): resource_type image/font/media, ADVERTISING_HOSTS (googletagmanager, doubleclick, googleadservices, facebook, ads-twitter, t.co, criteo, rentracks), google.com/measurement/conversion, bbc.bibian.co.jp, snkrdunk.com GET /v1/accounts/me. Also anything after browser_closing.",
+  "budget_accounting": "claim_due reserves work.estimated_request_cost (refresh 300, Yuyu discovery 1200) into source_dispatch_budgets.reserved_requests; admission requires estimate <= request_limit - used - reserved; admit_request refuses ordinals beyond the reservation; complete_claim moves reserved -> used_requests += actual_request_cost (expired claims charged full reservation). Window: fixed 1800s, used reset on rollover.",
+  "http_cache": "context.route('**/*') is installed for every freshness context; Playwright disables the HTTP cache when routing is enabled, so every page re-requests all its scripts/styles even inside one context (relevant to option 1 and option 4).",
+  "classification": "browser_request_role: main-frame navigation=required_document(critical); script/stylesheet/document(iframe)=optional_presentation; EVERYTHING ELSE (xhr/fetch/other, any host incl. third-party) = required_application (critical: a 403/429 pauses the source)."
+ },
+ "budgets_now": {
+  "query": "select * from source_dispatch_budgets",
+  "yuyutei": {
+   "request_limit": 9000,
+   "window_seconds": 1800
+  },
+  "snkrdunk": {
+   "request_limit": 3100,
+   "window_seconds": 1800
+  },
+  "label": "MEASURED"
+ },
+ "per_capture_totals_24h": {
+  "label": "MEASURED",
+  "query": "select s.name,w.kind,a.outcome,count(*),avg(a.actual_request_cost),percentile_cont(0.5),min,max,avg(reserved_request_cost) from freshness_attempts a join freshness_work w on w.id=a.work_id join sources s on s.id=w.source_id where a.finished_at > now()-interval '24 hours' group by 1,2,3",
+  "yuyutei_refresh_captured": {
+   "n": 2703,
+   "avg": 55.3,
+   "p50": 55,
+   "min": 55,
+   "max": 56,
+   "reserved": 300
+  },
+  "yuyutei_refresh_transient_failure": {
+   "n": 5,
+   "avg": 29.0,
+   "min": 19,
+   "max": 55
+  },
+  "yuyutei_discovery_completed": {
+   "n": 67,
+   "avg": 55.34
+  },
+  "snkrdunk_refresh_no_listing": {
+   "n": 237,
+   "avg": 160.32,
+   "p50": 159,
+   "min": 144,
+   "max": 190,
+   "reserved": 300
+  },
+  "snkrdunk_refresh_captured": {
+   "n": 50,
+   "avg": 171.7,
+   "p50": 172,
+   "min": 152,
+   "max": 196
+  },
+  "snkrdunk_refresh_all": {
+   "n": 287,
+   "avg": 162.3,
+   "total_requests_24h": 46580
+  },
+  "yuyutei_refresh_all": {
+   "n": 2694,
+   "avg": 55.25,
+   "total_requests_24h": 148842
+  },
+  "attempt_duration_s_avg": {
+   "yuyutei": 8.1,
+   "snkrdunk": 7.9
+  },
+  "attempts_per_turn_24h": {
+   "yuyutei": 12.52,
+   "snkrdunk": 16.88,
+   "query": "count(*)/count(distinct claimed_by) over 24h"
+  }
+ },
+ "budget_peaks_72h": {
+  "label": "MEASURED (window buckets aligned to current window_started_at 07:23:57.124648Z; actual_request_cost summed by finished_at; reservations in flight not included)",
+  "query": "with a as (select s.name, a.actual_request_cost c, floor((extract(epoch from a.finished_at)-extract(epoch from timestamptz '2026-10-10 07:23:57.124648+00'))/1800) b from freshness_attempts a join freshness_work w on w.id=a.work_id join sources s on s.id=w.source_id where a.finished_at > now()-interval '72 hours') select name,b,sum(c),count(*) from a group by 1,2 order by 3 desc",
+  "yuyutei": {
+   "peak_used": 8745,
+   "peak_pct": 97.2,
+   "peak_window_start": "2026-10-08T05:23:57Z",
+   "attempts_in_peak": 158,
+   "p95_used": 7964
+  },
+  "snkrdunk": {
+   "peak_used": 2959,
+   "peak_pct": 95.5,
+   "p95_used": 2939,
+   "max_attempts_per_window": 20,
+   "pattern": "every 30-min turn runs ~18 attempts in ~3 min and stops when used+300 reservation > 3100; SNKR is budget-saturated per turn (turn costs 2807-2958 MEASURED)"
+  }
+ },
+ "offline_replay_level1": {
+  "label": "MEASURED (offline replay; tools/replay_requests.py). Only requests initiated by the retained post-render DOM and inline scripts; second-order requests from external scripts/CSS are NOT visible.",
+  "pages": {
+   "43823": {
+    "raw_snapshot_id": 43823,
+    "url": "https://yuyu-tei.jp/sell/opc/card/op08/10064",
+    "attempted_total": 55,
+    "dropped_unmetered_total": 37,
+    "metered_total": 18,
+    "metered_by_type": {
+     "stylesheet": 9,
+     "script": 9
+    },
+    "metered_by_host": {
+     "stylesheet|cdn.jsdelivr.net": 1,
+     "stylesheet|cdnjs.cloudflare.com": 1,
+     "stylesheet|ajax.googleapis.com": 1,
+     "stylesheet|cdn.yuyu-tei.jp": 6,
+     "script|ajax.googleapis.com": 1,
+     "script|cdn.jsdelivr.net": 1,
+     "script|cdnjs.cloudflare.com": 1,
+     "script|cdn.yuyu-tei.jp": 6
+    },
+    "dropped_by_type": {
+     "script": 6,
+     "image": 31
+    },
+    "dropped_by_host": {
+     "www.rentracks.jp": 2,
+     "cdn.yuyu-tei.jp": 29,
+     "connect.facebook.net": 1,
+     "static.ads-twitter.com": 1,
+     "www.googletagmanager.com": 1,
+     "dynamic.criteo.com": 1,
+     "card.yuyu-tei.jp": 2
+    },
+    "errors": []
+   },
+   "43820": {
+    "raw_snapshot_id": 43820,
+    "url": "https://yuyu-tei.jp/sell/opc/card/op02/10068",
+    "attempted_total": 53,
+    "dropped_unmetered_total": 35,
+    "metered_total": 18,
+    "metered_by_type": {
+     "stylesheet": 9,
+     "script": 9
+    },
+    "metered_by_host": {
+     "stylesheet|cdn.jsdelivr.net": 1,
+     "stylesheet|cdnjs.cloudflare.com": 1,
+     "stylesheet|ajax.googleapis.com": 1,
+     "stylesheet|cdn.yuyu-tei.jp": 6,
+     "script|ajax.googleapis.com": 1,
+     "script|cdn.jsdelivr.net": 1,
+     "script|cdnjs.cloudflare.com": 1,
+     "script|cdn.yuyu-tei.jp": 6
+    },
+    "dropped_by_type": {
+     "script": 6,
+     "image": 29
+    },
+    "dropped_by_host": {
+     "www.rentracks.jp": 2,
+     "cdn.yuyu-tei.jp": 27,
+     "connect.facebook.net": 1,
+     "static.ads-twitter.com": 1,
+     "www.googletagmanager.com": 1,
+     "dynamic.criteo.com": 1,
+     "card.yuyu-tei.jp": 2
+    },
+    "errors": []
+   },
+   "43030": {
+    "raw_snapshot_id": 43030,
+    "url": "https://yuyu-tei.jp/",
+    "attempted_total": 66,
+    "dropped_unmetered_total": 50,
+    "metered_total": 16,
+    "metered_by_type": {
+     "stylesheet": 9,
+     "script": 7
+    },
+    "metered_by_host": {
+     "stylesheet|cdn.jsdelivr.net": 1,
+     "stylesheet|cdnjs.cloudflare.com": 1,
+     "stylesheet|ajax.googleapis.com": 1,
+     "stylesheet|cdn.yuyu-tei.jp": 6,
+     "script|ajax.googleapis.com": 1,
+     "script|cdn.jsdelivr.net": 1,
+     "script|cdnjs.cloudflare.com": 1,
+     "script|cdn.yuyu-tei.jp": 4
+    },
+    "dropped_by_type": {
+     "script": 6,
+     "image": 44
+    },
+    "dropped_by_host": {
+     "www.rentracks.jp": 2,
+     "cdn.yuyu-tei.jp": 44,
+     "connect.facebook.net": 1,
+     "static.ads-twitter.com": 1,
+     "www.googletagmanager.com": 1,
+     "dynamic.criteo.com": 1
+    },
+    "errors": []
+   },
+   "37890": {
+    "raw_snapshot_id": 37890,
+    "url": "https://snkrdunk.com/apparels/143380",
+    "attempted_total": 52,
+    "dropped_unmetered_total": 15,
+    "metered_total": 37,
+    "metered_by_type": {
+     "stylesheet": 12,
+     "script": 25
+    },
+    "metered_by_host": {
+     "stylesheet|snkrdunk.com": 12,
+     "script|snkrdunk.com": 24,
+     "script|cdn.channel.io": 1
+    },
+    "dropped_by_type": {
+     "script": 1,
+     "font": 4,
+     "image": 10
+    },
+    "dropped_by_host": {
+     "www.googletagmanager.com": 1,
+     "snkrdunk.com": 11,
+     "cdn.snkrdunk.com": 3
+    },
+    "errors": []
+   },
+   "37888": {
+    "raw_snapshot_id": 37888,
+    "url": "https://snkrdunk.com/apparels/142189",
+    "attempted_total": 51,
+    "dropped_unmetered_total": 13,
+    "metered_total": 38,
+    "metered_by_type": {
+     "stylesheet": 12,
+     "script": 26
+    },
+    "metered_by_host": {
+     "stylesheet|snkrdunk.com": 12,
+     "script|snkrdunk.com": 24,
+     "script|cdn.channel.io": 2
+    },
+    "dropped_by_type": {
+     "script": 1,
+     "font": 4,
+     "image": 8
+    },
+    "dropped_by_host": {
+     "www.googletagmanager.com": 1,
+     "snkrdunk.com": 10,
+     "cdn.snkrdunk.com": 2
+    },
+    "errors": []
+   },
+   "37889": {
+    "raw_snapshot_id": 37889,
+    "url": "https://snkrdunk.com/",
+    "attempted_total": 53,
+    "dropped_unmetered_total": 23,
+    "metered_total": 30,
+    "metered_by_type": {
+     "stylesheet": 8,
+     "script": 22
+    },
+    "metered_by_host": {
+     "stylesheet|snkrdunk.com": 8,
+     "script|snkrdunk.com": 20,
+     "script|cdn.channel.io": 2
+    },
+    "dropped_by_type": {
+     "script": 1,
+     "font": 4,
+     "image": 18
+    },
+    "dropped_by_host": {
+     "www.googletagmanager.com": 1,
+     "snkrdunk.com": 9,
+     "cdn.snkrdunk.com": 13
+    },
+    "errors": []
+   }
+  },
+  "cross_page_overlap_of_metered_urls": {
+   "yuyu_product_43823_vs_43820": "18/18 identical",
+   "yuyu_home_vs_product": "15 of 16 shared",
+   "snkr_item_37890_vs_37888": "37/37 identical",
+   "snkr_home_vs_item": "25 of 29 shared"
+  }
+ },
+ "breakdown_per_capture": {
+  "yuyutei": {
+   "documents": {
+    "n": 2,
+    "label": "MEASURED by code: homepage + product main-frame navigations (homepage stored as RAW only on gate failure)"
+   },
+   "stylesheet": {
+    "n": 18,
+    "label": "MEASURED level-1 (9 home + 9 product): cdn.yuyu-tei.jp 6+6, ajax.googleapis.com 1+1, cdn.jsdelivr.net 1+1, cdnjs.cloudflare.com 1+1"
+   },
+   "script": {
+    "n": 16,
+    "label": "MEASURED level-1 (7 home + 9 product): cdn.yuyu-tei.jp 4+6, ajax.googleapis.com, cdn.jsdelivr.net, cdnjs.cloudflare.com 1+1 each"
+   },
+   "xhr_fetch_and_second_order": {
+    "n": 19,
+    "label": "ESTIMATE = 55.3 measured - 36 level-1; includes first-party XHR such as GET https://yuyu-tei.jp/sell/opc/side_page_pc (MEASURED to exist: freshness_work.last_failure 'Route.fetch: Request context disposed ... side_page_pc'), script/CSS-initiated children"
+   },
+   "image_font_media": {
+    "n_metered": 0,
+    "dropped_unmetered_level1": "44 home + 31 product images",
+    "label": "MEASURED"
+   },
+   "iframe": {
+    "n": 0,
+    "label": "MEASURED level-1"
+   },
+   "third_party_metered": {
+    "n_level1": 6,
+    "hosts": [
+     "ajax.googleapis.com",
+     "cdn.jsdelivr.net",
+     "cdnjs.cloudflare.com"
+    ],
+    "purpose": "jQuery 3.1.0, Bootstrap 5.2.3, jQuery UI 1.12.1 - functional libraries, not analytics",
+    "label": "MEASURED"
+   },
+   "analytics_ads_dropped": {
+    "per_page": 6,
+    "hosts": [
+     "www.googletagmanager.com",
+     "connect.facebook.net",
+     "static.ads-twitter.com",
+     "dynamic.criteo.com",
+     "www.rentracks.jp x2"
+    ],
+    "label": "MEASURED (already unmetered)"
+   },
+   "homepage_phase_cost": {
+    "value": "~26 (range 17-26) of 55 => ~47%",
+    "label": "ESTIMATE from level-1 home 17 incl doc and failed attempts that stopped during the homepage phase at 17/19/26 requests (MEASURED attempts 15520,17416,20396,20475,20390,20452,15502)"
+   }
+  },
+  "snkrdunk": {
+   "documents": {
+    "n": 2,
+    "label": "MEASURED by code: homepage + product; BOTH persisted as RAW every attempt"
+   },
+   "artwork_request_bytes": {
+    "n": 2,
+    "hosts": [
+     "www.onepiece-cardgame.com (official)",
+     "cdn.snkrdunk.com/snkrdunk.com (candidate)"
+    ],
+    "label": "MEASURED by code; official image host MEASURED from card_prints.image_url"
+   },
+   "stylesheet": {
+    "n": 20,
+    "label": "MEASURED level-1 (8 home + 12 item), all snkrdunk.com"
+   },
+   "script": {
+    "n": 47,
+    "label": "MEASURED level-1 (22 home + 25 item): snkrdunk.com /_next/static/chunks (Turbopack, Next.js App Router - self.__next_f present) 20+24, cdn.channel.io 2+1"
+   },
+   "xhr_fetch_and_second_order": {
+    "n": 91,
+    "label": "ESTIMATE = 162.3 measured - 71 level-1/doc/artwork. Likely Next.js App Router RSC fetches (link prefetch), lazily loaded chunks, first-party API XHR (/v1, /v2/products/.../size-chips referenced in HTML), channel.io widget boot. Not individually measurable from retained data."
+   },
+   "image_font_media": {
+    "n_metered": 0,
+    "dropped_unmetered_level1": "fonts 4+4, images 18 home + 10 item",
+    "label": "MEASURED"
+   },
+   "iframe": {
+    "n": 0,
+    "note": "GTM noscript iframe present but GTM host is unmetered/aborted",
+    "label": "MEASURED"
+   },
+   "third_party_metered": {
+    "hosts": [
+     "cdn.channel.io (customer-support chat widget, 3 level-1 per capture + unknown children)",
+     "www.onepiece-cardgame.com (artwork evidence)"
+    ],
+    "label": "MEASURED level-1"
+   },
+   "homepage_phase_cost": {
+    "value": "~72 (range 60-85) of 162 => ~45%",
+    "label": "ESTIMATE: level-1 ratio 31/(31+38+2)=44% applied to total"
+   }
+  }
+ },
+ "parser_needs": {
+  "yuyutei": "extractor.py parses page.content() HTML with BeautifulSoup (JSON-LD Product.offers tier 1, DOM container tier 2). No XHR payload is read. Presentation scripts/styles are already 'optional_presentation'.",
+  "snkrdunk": "extractor.py parses page.content() (button[class$=__chip] price chips, img[class$=__mainImage], ld+json, retained gallery from embedded payload). No XHR payload is read. Whether the SSR HTML alone (JS disabled) contains the chips was NOT measured (would need a source request); keep scripts unblocked.",
+  "label": "MEASURED by code reading; SSR sufficiency = unverified"
+ },
+ "warm_up_purpose": {
+  "yuyutei": "browser.warm_up_homepage docstring: measured on Railway staging 2026-09-02 a cold navigation straight to a listing URL returned 403 while homepage-first returned 200; session state lives in the BrowserContext, so a warm-up only helps the SAME context.",
+  "snkrdunk": "commit 50b8855 collect.py docstring: 'Exactly one homepage request as a source-wide-denial canary'. Spike access stage navigated homepage first. No recorded 403-without-homepage evidence for SNKR.",
+  "scope_today": "Both collectors launch a NEW Chromium + NEW context + homepage warm-up PER CAPTURE (run_one_mapping_detailed), not per turn. drain() calls runner once per claim."
+ },
+ "raw_storage_24h": {
+  "label": "MEASURED",
+  "query": "select s.name, source_url in (homepages) home, count(*), sum(pg_column_size(raw_content)) from raw_snapshots r join sources s ... where fetched_at > now()-interval '24 hours' group by 1,2",
+  "snkrdunk_homepage": {
+   "rows": 287,
+   "stored_mb": 18.92,
+   "avg_stored_bytes": 65939,
+   "logical_html_bytes_example": 1497913
+  },
+  "snkrdunk_items": {
+   "rows": 287,
+   "stored_mb": 1.18
+  },
+  "yuyutei_items": {
+   "rows": 2772,
+   "stored_mb": 7.99
+  },
+  "yuyutei_homepage_discovery_only": {
+   "rows": 67,
+   "stored_mb": 1.75
+  }
+ },
+ "options": {
+  "1_reuse_warmed_context_per_turn": {
+   "yuyutei": {
+    "requests_per_capture": "31-37 (from 55.3; -33% to -44%)",
+    "budget_peak": "~4,950-5,820 / 9,000 = 55-65% (from 97.2%), turns are work-bound at 16 so peak scales with per-capture cost",
+    "raw_mb_day": "unchanged (homepage not stored on success)",
+    "label": "ESTIMATE: product ~29-35 + homepage 20-26 amortised over 12.5 attempts/turn; Playwright route still disables cache so product subresources are unchanged"
+   },
+   "snkrdunk": {
+    "requests_per_capture": "~82-106 (from 162.3; -35% to -49%)",
+    "budget_peak": "turns are budget-bound: peak stays ~90-95% while due backlog exists, but captures/window rise ~18 -> ~27-33 and daily requests drop 46,580 -> ~24k-30k; at today's per-window work (18) the peak would be ~1,500-1,900 = 48-62%",
+    "raw_mb_day": "homepage rows 287 -> ~17 (one per turn): 18.9 -> ~1.1 MB/day (-17.8 MB/day, ~63% of recurring new stored bytes)",
+    "label": "ESTIMATE"
+   }
+  },
+  "2_skip_snkr_homepage_when_warm_in_same_turn": {
+   "note": "Only meaningful with option 1 (a new context has no session state); numbers identical to option 1 SNKR. Variant 2b: persist the SNKR homepage only on gate failure (as Yuyu does) -> 0 MB/day homepage RAW. With option 2, the 're-anchor homepage' storage fix becomes effectively moot (~1 MB/day left; Yuyu discovery homepage 1.75 MB/day is the only remaining repeated URL).",
+   "label": "ESTIMATE"
+  },
+  "3_block_more_subresources_conservative": {
+   "snkrdunk": {
+    "block": "cdn.channel.io / *.channel.io (third-party support chat widget)",
+    "requests_per_capture": "-3 MEASURED level-1, -5 to -13 incl. children ESTIMATE (3-8%)",
+    "budget_peak": "~-3-8% requests; peak unchanged while budget-bound",
+    "raw_mb_day": "0",
+    "safety_gain": "channel.io XHR is currently 'required_application' (critical): a 403/429 from a third-party chat API would pause SNKR"
+   },
+   "yuyutei": {
+    "block": "nothing further recommended; remaining third-party are jQuery/Bootstrap/jQuery UI functional libraries (6/capture); analytics/ads/images/fonts already unmetered",
+    "requests_per_capture": "0"
+   },
+   "not_recommended": "Blocking first-party scripts, Next.js RSC prefetches, or library CDNs: changes rendered DOM and the request pattern the source sees; parser SSR sufficiency unverified.",
+   "label": "MEASURED level-1 + ESTIMATE"
+  },
+  "4_followup_turn_scoped_static_cache": {
+   "note": "Because routing disables the browser cache, a normal visitor would NOT re-request identical hashed scripts/styles on every product page. A per-turn in-memory cache honoring Cache-Control for GET 200 script/stylesheet responses would emulate ordinary caching (no network dispatch -> no grant). Level-1 product assets are 100% identical across product pages (MEASURED).",
+   "requests_per_capture": "Yuyu ~13-19, SNKR ~45-60 on top of option 1 (ESTIMATE)",
+   "label": "ESTIMATE; needs design review"
+  }
+ },
+ "tools": [
+  "tools/replay_requests.py (new)",
+  "tools/subresources.py",
+  "tools/db.py"
+ ],
+ "railway_logs": "railway logs -s snkrdunk-collector --lines 3000 (read-only): 469 attempts, zero browser_request_stopped / browser_response_denied events; no per-request breakdown is logged on success (MEASURED)."
+}

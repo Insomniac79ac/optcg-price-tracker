@@ -1,0 +1,50 @@
+{
+ "started_at": "2026-10-10T09:59:53.845105+00:00",
+ "completed_at": "2026-10-10T10:29:37.986632+00:00",
+ "commit": "05f099db30e735605fb72b542699ac75559ad8d7",
+ "results": {
+  "snkrdunk-collector": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-0": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-1": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-2": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-3": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-5": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-6": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-7": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-8": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  },
+  "yuyutei-collector-shard-4-v2": {
+   "ok": false,
+   "error": "Deployment has no image digest"
+  }
+ },
+ "all_ok": false,
+ "source_jobs_triggered": 0,
+ "production_accessed": false
+}

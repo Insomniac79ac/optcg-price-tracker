@@ -1,0 +1,617 @@
+# Generated staging observation; reverify before operational decisions.
+schema_version: 2
+verified_at: '2026-10-10T14:57:31.074238+00:00'
+target: staging
+collection_mode: live
+snapshot_semantics: observation only; not authorization, desired state or a capacity guarantee
+repository:
+  name: Insomniac79ac/optcg-price-tracker
+  branch: staging
+  sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+staging:
+  frontend_url: https://optcg-price-tracker-staging.vercel.app
+  api_url: https://optcg-price-tracker-staging.up.railway.app
+  database_revision: f9e5b4a8c012
+  frontend:
+    project_id: prj_DCbF7bhFkkAdfMQLZWvOQbxEDDhr
+    deployment_id: dpl_ELBBeFWkKbLTDym8HkBAbif27Pk4
+    status: READY
+    sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  services:
+  - name: market-index-snapshot
+    service_id: 8d2ee55a-992f-42e0-99a1-99e17df44dd2
+    due_work_configured: false
+    schedule_utc: 0 20 * * *
+    deployment_id: d9e91b9a-04c8-4c5f-9b88-4191f16e42c9
+    status: SUCCESS
+    git_sha: 419210dfb7a5a246b3d085a39b4e7c381aba655f
+    reported_sha: unknown
+  - name: optcg-price-tracker
+    service_id: 5290becf-6956-4c5c-ab16-01d865587e07
+    due_work_configured: false
+    schedule_utc: null
+    deployment_id: 76047494-8de1-4f98-b93e-a68e2b329e43
+    status: SUCCESS
+    git_sha: 419210dfb7a5a246b3d085a39b4e7c381aba655f
+    reported_sha: unknown
+  - name: snkrdunk-collector
+    service_id: 2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a
+    due_work_configured: true
+    schedule_utc: 27,57 * * * *
+    deployment_id: 59171f15-ee6b-4489-8470-f520b9e5e5f7
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-0
+    service_id: 6e39e82e-f73c-4eae-930c-7bf4dc7f2d67
+    due_work_configured: true
+    schedule_utc: 0,30 * * * *
+    deployment_id: 209fc53c-8e15-4fc1-aac0-cdd2b3380ed4
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-1
+    service_id: 8912a70e-0bc3-4e2f-89dd-8fab56af5acd
+    due_work_configured: true
+    schedule_utc: 3,33 * * * *
+    deployment_id: cb8156c3-d4e4-4320-9a17-51cacd139f79
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-2
+    service_id: 0169974d-e181-4454-8a0d-65733a76cdb3
+    due_work_configured: true
+    schedule_utc: 6,36 * * * *
+    deployment_id: f572ef86-6e19-4909-9a9b-a4009f42108c
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-3
+    service_id: 5150aeb3-108b-40ef-8091-7c796edb299a
+    due_work_configured: true
+    schedule_utc: 9,39 * * * *
+    deployment_id: 8a5889b1-c269-415b-a8ac-331cc6fbeb0b
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-4-v2
+    service_id: 2f4b87da-369d-4b95-8341-0123e6c1c442
+    due_work_configured: true
+    schedule_utc: 12,42 * * * *
+    deployment_id: 26808284-572d-4fea-bc93-f2fdefe51e85
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-5
+    service_id: 9666f7cb-516b-4bdd-a4dc-10ded8276b2e
+    due_work_configured: true
+    schedule_utc: 15,45 * * * *
+    deployment_id: a47093dc-ad60-4ede-ade4-7a42253a252a
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-6
+    service_id: 54051b0c-359d-47ec-8dcb-32535350c35f
+    due_work_configured: true
+    schedule_utc: 18,48 * * * *
+    deployment_id: 7dd74cd4-5073-4e0a-ad6c-7beb181db582
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-7
+    service_id: 0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3
+    due_work_configured: true
+    schedule_utc: 21,51 * * * *
+    deployment_id: d2c50819-5970-4935-b77e-cb3a3f66b64b
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  - name: yuyutei-collector-shard-8
+    service_id: f83b902e-f79c-49f4-a2f6-b13018be1926
+    due_work_configured: true
+    schedule_utc: 24,54 * * * *
+    deployment_id: f98f53b9-237b-48f1-9bf7-b8ce19acdfb1
+    status: SUCCESS
+    git_sha: unknown
+    reported_sha: a8522447c6933d05e94e01d5789cdcd5160c10da
+  collector_runtime_sha: unknown
+operational_health:
+  schema_version: 1
+  observed_at: '2026-10-10T14:57:31.074238+00:00'
+  target_hours: 24
+  dispatch_due_hours: 23
+  yuyu:
+    status: HEALTHY
+    reasons: []
+    action: silent_state_update
+    latest_execution:
+      source: yuyutei
+      service: yuyutei-collector-shard-8
+      shard: 8
+      execution_id: yuyutei-due-8:aa98f23af44c4fc0bd8206acd816b48b
+      deployment_id: f98f53b9-237b-48f1-9bf7-b8ce19acdfb1
+      revision: a8522447c6933d05e94e01d5789cdcd5160c10da
+      image: null
+      scheduled_at: null
+      started_at: '2026-10-10T14:57:11.065764+00:00'
+      finished_at: '2026-10-10T14:57:11.168581+00:00'
+      runtime_seconds: 0.102817
+      trigger: unknown
+    active_executions: []
+    latest_natural_run: null
+    trigger_provenance: unknown
+    deadline_compliance: unknown; instantaneous observation only
+    blocked_shards: []
+    identity_quarantine: 0
+    due_work:
+      eligible: 2616
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 2616
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+    budget:
+      request_headroom: 9000
+      utilization: 0.0
+      reserved_requests: 0
+      open_reservations: 0
+      reservation_mismatch: false
+      window_seconds: 1800
+      permanent_pause: false
+    evidence:
+      artifact: evidence/staging-state-adc4d54eeec60ef3.json
+      sha256: adc4d54eeec60ef31af88a476455c9b671da488ff8383c3f6c7d83253ac8280a
+      sections:
+      - database.operational_due
+      - database.operational_runs
+  snkrdunk:
+    status: DEGRADED
+    reasons:
+    - deadline_misses
+    - due_work_deficit
+    - never_checked
+    action: autonomous_fix_forward
+    latest_execution:
+      source: snkrdunk
+      service: snkrdunk-collector
+      shard: null
+      execution_id: snkrdunk-due:90ab01dad8bc4eb6aa8705da0fd34d3d
+      deployment_id: 59171f15-ee6b-4489-8470-f520b9e5e5f7
+      revision: a8522447c6933d05e94e01d5789cdcd5160c10da
+      image: null
+      scheduled_at: null
+      started_at: '2026-10-10T14:31:06.177691+00:00'
+      finished_at: '2026-10-10T14:33:50.062992+00:00'
+      runtime_seconds: 163.885301
+      trigger: unknown
+    active_executions: []
+    latest_natural_run: null
+    trigger_provenance: unknown
+    deadline_compliance: not_met
+    blocked_shards: []
+    identity_quarantine: 66
+    due_work:
+      eligible: 353
+      due: 66
+      overdue: 66
+      claimed: 0
+      backoff: 0
+      quarantined: 66
+      never_checked: 22
+      within_23h: 287
+      between_23_24h: 0
+      over_24h: 44
+      expired_claims: 0
+    budget:
+      request_headroom: 3100
+      utilization: 0.9209677419354839
+      reserved_requests: 0
+      open_reservations: 0
+      reservation_mismatch: false
+      window_seconds: 1800
+      permanent_pause: false
+    evidence:
+      artifact: evidence/staging-state-adc4d54eeec60ef3.json
+      sha256: adc4d54eeec60ef31af88a476455c9b671da488ff8383c3f6c7d83253ac8280a
+      sections:
+      - database.operational_due
+      - database.operational_runs
+  raw_due_work:
+    status: DEGRADED
+    eligible: 2969
+    due: 66
+    overdue: 66
+    claimed: 0
+    backoff: 0
+    quarantined: 66
+    never_checked: 22
+    within_23h: 2903
+    between_23_24h: 0
+    over_24h: 44
+    expired_claims: 0
+    deadline_misses: 66
+    by_source_and_shard:
+    - source: snkrdunk
+      shard: null
+      eligible: 353
+      due: 66
+      overdue: 66
+      claimed: 0
+      backoff: 0
+      quarantined: 66
+      never_checked: 22
+      within_23h: 287
+      between_23_24h: 0
+      over_24h: 44
+      expired_claims: 0
+      retries: 21
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 15880.532672
+      successful_check_age_p95: 520891.011773
+      successful_check_age_max: 523623.122453
+      maximum_successful_revisit_gap_seconds: 163695.030986
+    - source: yuyutei
+      shard: 0
+      eligible: 291
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 291
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 42708.410984
+      successful_check_age_p95: 66165.7842425
+      successful_check_age_max: 66293.603387
+      maximum_successful_revisit_gap_seconds: 119183.057802
+    - source: yuyutei
+      shard: 1
+      eligible: 290
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 290
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 40789.257568
+      successful_check_age_p95: 66065.42295505
+      successful_check_age_max: 67931.91463
+      maximum_successful_revisit_gap_seconds: 119163.729329
+    - source: yuyutei
+      shard: 2
+      eligible: 290
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 290
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 36931.158786500004
+      successful_check_age_p95: 58806.4342255
+      successful_check_age_max: 65895.723051
+      maximum_successful_revisit_gap_seconds: 142241.690585
+    - source: yuyutei
+      shard: 3
+      eligible: 291
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 291
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 37070.956105
+      successful_check_age_p95: 65608.439194
+      successful_check_age_max: 65795.720321
+      maximum_successful_revisit_gap_seconds: 93792.84131
+    - source: yuyutei
+      shard: 4
+      eligible: 290
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 290
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 38505.1868565
+      successful_check_age_p95: 62048.60553375
+      successful_check_age_max: 65658.791944
+      maximum_successful_revisit_gap_seconds: 93237.821803
+    - source: yuyutei
+      shard: 5
+      eligible: 291
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 291
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 38298.915086
+      successful_check_age_p95: 63517.245165
+      successful_check_age_max: 63648.142434
+      maximum_successful_revisit_gap_seconds: 91332.440297
+    - source: yuyutei
+      shard: 6
+      eligible: 291
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 291
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 38267.896794
+      successful_check_age_p95: 65051.2747275
+      successful_check_age_max: 70517.692795
+      maximum_successful_revisit_gap_seconds: 122487.089474
+    - source: yuyutei
+      shard: 7
+      eligible: 292
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 292
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 38882.588095
+      successful_check_age_p95: 63074.27358195
+      successful_check_age_max: 64999.179235
+      maximum_successful_revisit_gap_seconds: 120252.617217
+    - source: yuyutei
+      shard: 8
+      eligible: 290
+      due: 0
+      overdue: 0
+      claimed: 0
+      backoff: 0
+      quarantined: 0
+      never_checked: 0
+      within_23h: 290
+      between_23_24h: 0
+      over_24h: 0
+      expired_claims: 0
+      retries: 0
+      unplanned: 0
+      oldest_actionable_due_at: null
+      successful_check_age_p50: 39731.4297085
+      successful_check_age_p95: 66541.38425585
+      successful_check_age_max: 70293.379814
+      maximum_successful_revisit_gap_seconds: 120657.499742
+coverage:
+  canonical_variants: 4316
+  one_or_more_sources: 2635
+  one_or_more_sources_pct: 61.0519
+  both_sources: 334
+  zero_sources: 1681
+  meaning: eligible exact-print mappings, including quarantined work; not operational health
+  duplicate_active_exact_print_source_groups: 0
+yuyu:
+  eligible_mappings: 2616
+  shards: 9
+  schedules_utc:
+    yuyutei-collector-shard-0: 0,30 * * * *
+    yuyutei-collector-shard-1: 3,33 * * * *
+    yuyutei-collector-shard-2: 6,36 * * * *
+    yuyutei-collector-shard-3: 9,39 * * * *
+    yuyutei-collector-shard-4-v2: 12,42 * * * *
+    yuyutei-collector-shard-5: 15,45 * * * *
+    yuyutei-collector-shard-6: 18,48 * * * *
+    yuyutei-collector-shard-7: 21,51 * * * *
+    yuyutei-collector-shard-8: 24,54 * * * *
+  admission_versions: unknown
+  promotion_semantics:
+    required_policy: sale provenance is internal only; never public/history/index/Market Value; never
+      substitute struck prices
+    live_end_to_end_revalidation: unknown
+  due_work:
+    blocked: 3
+    pending: 2616
+    attempts_24h: 2621
+    outcomes:
+    - name: yuyutei
+      kind: refresh
+      outcome: captured
+      attempts: 2616
+      latest: '2026-10-10T12:23:24.625320+00:00'
+    - name: yuyutei
+      kind: refresh
+      outcome: transient_failure
+      attempts: 5
+      latest: '2026-10-10T02:35:26.314076+00:00'
+  discovery:
+    blocked: 3
+    pending: 582
+    attempts_24h: 67
+    outcomes:
+    - name: yuyutei
+      kind: discovery
+      outcome: completed
+      attempts: 67
+      latest: '2026-10-10T14:14:26.997631+00:00'
+    continuous_consumer_health: unknown
+snkrdunk:
+  eligible_mappings: 353
+  batch_max: unknown
+  schedule: 27,57 * * * *
+  schedule_timezone: UTC
+  quarantined_identity: 23
+  due_work:
+    blocked: 66
+    pending: 287
+    attempts_24h: 323
+    outcomes:
+    - name: snkrdunk
+      kind: refresh
+      outcome: captured
+      attempts: 51
+      latest: '2026-10-10T14:33:45.209397+00:00'
+    - name: snkrdunk
+      kind: refresh
+      outcome: no_listing
+      attempts: 272
+      latest: '2026-10-10T14:33:49.035275+00:00'
+freshness:
+  standard_target_hours: 24
+  dispatch_due_hours: 23
+  deadline_compliance_status: not_met
+  by_source:
+    yuyutei:
+      total: 2619
+      never_successfully_checked: 1
+      check_older_than_24h: 2
+      price_older_than_24h: 2
+      no_listing: 0
+    snkrdunk:
+      total: 353
+      never_successfully_checked: 22
+      check_older_than_24h: 44
+      price_older_than_24h: 4
+      no_listing: 278
+  sustained_natural_cycle_compliance: unknown
+source_budgets:
+  yuyutei:
+    enabled: true
+    request_limit: 9000
+    window_seconds: 1800
+    used_requests: 0
+    reserved_requests: 0
+    paused_until: null
+    permanent_pause: false
+    window_started_at: '2026-10-10T14:53:57.124648+00:00'
+    open_reservations: 0
+    reservation_mismatch: false
+  snkrdunk:
+    enabled: true
+    request_limit: 3100
+    window_seconds: 1800
+    used_requests: 2855
+    reserved_requests: 0
+    paused_until: null
+    permanent_pause: false
+    window_started_at: '2026-10-10T14:23:57.124648+00:00'
+    open_reservations: 0
+    reservation_mismatch: false
+market_value:
+  latest_published_date: '2026-10-09'
+  historical_gaps:
+  - '2026-09-27'
+  - '2026-09-28'
+  historical_gap_rows: 0
+  latest_atomic_receipt:
+    snapshot_date: '2026-10-09'
+    receipt_kind: atomic
+    expected_print_count: 2626
+    snapshot_row_count: 2626
+  receipt_gate: required; observation is not a receipt-content audit
+features:
+  raw_due_work:
+    configured_sources:
+    - snkrdunk-collector
+    - yuyutei-collector-shard-0
+    - yuyutei-collector-shard-1
+    - yuyutei-collector-shard-2
+    - yuyutei-collector-shard-3
+    - yuyutei-collector-shard-4-v2
+    - yuyutei-collector-shard-5
+    - yuyutei-collector-shard-6
+    - yuyutei-collector-shard-7
+    - yuyutei-collector-shard-8
+    full_freshness_compliance: not_met
+  discovery:
+    yuyu:
+      blocked: 3
+      pending: 582
+    snkrdunk:
+      pending: 2
+    continuous_consumer_health: unknown
+  psa10:
+    live_observations: 0
+    freshness_categories:
+    - raw
+    live_activation: unknown
+    public_exposure: unknown
+blockers:
+- id: freshness-deadline-deficit
+  scope: operational freshness claim
+- id: snkrdunk-identity-quarantine
+  count: 23
+- id: deployment-provenance-divergence
+  scope: verify intended source before redeploying
+hard_invariants:
+  production_change_authorized: false
+  ambiguous_auto_approval: false
+  yuyu_sale_public: false
+  yuyu_sale_index_eligible: false
+  yuyu_sale_market_value_input: false
+hard_invariants_meaning: binding policy, not a live audit verdict
+unknown_reasons:
+  admission_versions: no version-bearing runtime receipt collected
+  batch_max: no effective runtime limit receipt collected
+  collector_runtime_sha: platform Git metadata and CLI-reported provenance do not independently verify
+    runtime bytes
+  feature_health: queue/configuration and recent attempts do not prove sustained health or public activation
+evidence:
+  artifact: evidence/staging-state-adc4d54eeec60ef3.json
+  sha256: adc4d54eeec60ef31af88a476455c9b671da488ff8383c3f6c7d83253ac8280a
+  collected_at: '2026-10-10T14:57:30.405395+00:00'
+  database_read_only: true
+  database_fingerprint: passed

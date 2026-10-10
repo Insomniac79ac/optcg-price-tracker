@@ -1,206 +1,137 @@
 {
-  "schema_version": 1,
-  "mission": "Capacity75 session 8 (2026-10-10): deliver PR #96's per-turn browser code (merged at 419210d, still undelivered because PR #97's delivery job failed on a transient HTTP 504 while waiting for the native merge) through the verified sequential rollout; merge-wait loops retry transient PR-read errors",
-  "target": "staging",
-  "classification": "AMBER",
-  "red_decisions": {
-    "ambiguous_approval": false,
-    "destructive_migration": false,
-    "identity_weakening": false,
-    "legal_compliance": false,
-    "major_product_or_brand": false,
-    "pricing_methodology": false,
-    "private_data_exposure": false,
-    "production": false,
-    "published_history_rewrite": false,
-    "security_or_secrets_policy": false,
-    "significant_recurring_cost": false,
-    "yuyu_sale_policy": false
-  },
-  "impacts": [
-    {
-      "files": [
-        ".github/workflows/ci.yml",
-        ".github/workflows/staging-delivery.yml"
-      ],
-      "effects": [
-        "infrastructure",
-        "staging_deployment",
-        "tests"
-      ],
-      "reason": "PR #97's merge-wait poll got HTTP 504 at 11:42:38Z; bash -e failed the delivery job, yet the armed native auto-merge landed 3d8421b at 11:42:44Z with no rollout. A failed or unparsable PR read is now one failed poll, retried within the same 120-poll budget; successful reads are checked exactly as before (head, merged, open). Stub test: two 504s then merged -> exit 0 with sha; two 504s then closed -> exit 1. This PR's merge requests the ten-collector sequential release of the merged PR #96 code (AMBER)."
-    },
-    {
-      "files": [
-        "docs/agent/STAGING_DELIVERY.md"
-      ],
-      "effects": [
-        "documentation"
-      ],
-      "reason": "Records the PR #97 merge-without-rollout, the retry, and the remaining disarm/merge race with its recovery (follow-up PR, never a re-run)."
-    }
+ "schema_version": 1,
+ "mission": "Land 2026-10-10 capacity75 session-8 handoff, evidence and owner storage brief on staging (documentation only)",
+ "target": "staging",
+ "classification": "GREEN",
+ "red_decisions": {
+  "ambiguous_approval": false,
+  "destructive_migration": false,
+  "identity_weakening": false,
+  "legal_compliance": false,
+  "major_product_or_brand": false,
+  "pricing_methodology": false,
+  "private_data_exposure": false,
+  "production": false,
+  "published_history_rewrite": false,
+  "security_or_secrets_policy": false,
+  "significant_recurring_cost": false,
+  "yuyu_sale_policy": false
+ },
+ "impacts": [
+  {
+   "files": [
+    "docs/agent/handoff/2026-10-10/capacity75-session8/CONTINUATION.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/CURRENT_STATE-end.yaml",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/CURRENT_STATE-start.yaml",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/HANDOFF.md",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/OWNER_STORAGE_BRIEF.md",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/fleet-after-pr95.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/fleet-after-pr98.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/fleet-preflight-A.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/live-after-pr98.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/live-after-rollback.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/live-before-pr98.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/live-state-recheck.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/live-state-start.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/natural-turns-05f099d-0903.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/natural-turns-a852244-1448.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/natural-turns-a852244-final.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/post-release-pr95-0900.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-credential-probe-bad3eb0385e3553e8dfc77149ea398632a6a148b/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/latest-collector-rollout.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-61f200c9477ab972.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-delivery/staging-delivery-05f099db30e735605fb72b542699ac75559ad8d7/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/latest-collector-rollout.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-c02d12aac916dd62.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr95-replay-delivery/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-credential-probe-fb63e4fcd39d118b3bc2c55ce563234d4d9c6828/latest-staging-credential-probe.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/CURRENT_STATE.yaml",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/latest-collector-rollout.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/latest-delivery-scope.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/latest-staging-delivery.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-25c54499ae7392a9.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-283aa82e7283f0d3.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-3391abad5c997c5a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-62809ffe916fe79b.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-8dcfbf959cb15f6a.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-a05c36274c28de29.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-adc4d54eeec60ef3.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/pr98-delivery/staging-delivery-a8522447c6933d05e94e01d5789cdcd5160c10da/evidence/staging-state-c09334b69a28b1a7.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/price-continuity-419210d-github-build.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/price-continuity-a852244-snkr-1500.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/price-continuity-baseline-0630-0815.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/proposal-groups-bloat.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/request-efficiency-measure.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/requests-after-a852244-1448.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/requests-after-a852244-final.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/requests-baseline-24h-0900.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/rollback-pr96-attempt1.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/rollback-pr96.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/staging-state-05d82c3e49eac5fe.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/storage-1335.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/storage-1515.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/storage-baseline-0723Z.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/storage-baseline-prerelease.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/verify-lossless-0905.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/verify-lossless-1335.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/volume-0810.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/volume-1350.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/evidence/volume-1515.json",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/attribution.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/bloat.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/census.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/coverage.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/db.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/fleet_preflight.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/forecast.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/live.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/live_now.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/natural_turns.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/post_release.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/price_continuity.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/replay_requests.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/requests_window.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/rollback_pr96.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/skips.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/storage_stats.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/subresources.py",
+    "docs/agent/handoff/2026-10-10/capacity75-session8/tools/verify_all.py"
+   ],
+   "effects": [
+    "documentation",
+    "state_observation"
+   ],
+   "reason": "Session-8 handoff, owner storage brief, read-only evidence and read-only measurement tools under docs/agent/handoff/ only. No services/, packages/, deploy/, scripts/ or workflow change: delivery scope skip, no collector rollout, no Railway build."
+  }
+ ],
+ "diff_sha256": "7b2fb88043c87ce98b616d47f873b5fe9d51e3fbcf2e92e0a946275a9284323c",
+ "deployment_verification": {
+  "api_sha": "merge",
+  "revision": "f9e5b4a8c012",
+  "checks": [
+   "scripts/verify_snkr_published_discovery_component.py",
+   "scripts/verify_yuyu_raw_reader_component.py"
   ],
-  "deployment_verification": {
-    "api_sha": "merge",
-    "revision": "f9e5b4a8c012",
-    "checks": [
-      "scripts/verify_snkr_published_discovery_component.py",
-      "scripts/verify_yuyu_raw_reader_component.py"
-    ],
-    "snkr_component": "merge",
-    "yuyu_reader_component": "merge",
-    "yuyu_capacity_cadence": true,
-    "collector_services": [
-      {
-        "name": "snkrdunk-collector",
-        "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-        "recovery_deployment_id": "bf28a669-1c48-4d79-9c67-30e3225170f8"
-      },
-      {
-        "name": "yuyutei-collector-shard-0",
-        "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-        "recovery_deployment_id": "6dbcce04-0e85-442b-883e-e01c1cf61d93"
-      },
-      {
-        "name": "yuyutei-collector-shard-1",
-        "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-        "recovery_deployment_id": "19162cb7-ffa3-4451-af5e-9836b1dc77f3"
-      },
-      {
-        "name": "yuyutei-collector-shard-2",
-        "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-        "recovery_deployment_id": "64001afc-7642-4c94-89ab-26bce593ec15"
-      },
-      {
-        "name": "yuyutei-collector-shard-3",
-        "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-        "recovery_deployment_id": "758cf426-b342-4f90-bb6d-140608e5d9f2"
-      },
-      {
-        "name": "yuyutei-collector-shard-4-v2",
-        "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-        "recovery_deployment_id": "7b05fe37-ab03-453b-a824-9979947d8f98"
-      },
-      {
-        "name": "yuyutei-collector-shard-5",
-        "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-        "recovery_deployment_id": "c0392329-5fca-40ab-85bf-078e13f60d4b"
-      },
-      {
-        "name": "yuyutei-collector-shard-6",
-        "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-        "recovery_deployment_id": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d"
-      },
-      {
-        "name": "yuyutei-collector-shard-7",
-        "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-        "recovery_deployment_id": "8215f924-cd1d-4abe-afdb-082e6e1208d0"
-      },
-      {
-        "name": "yuyutei-collector-shard-8",
-        "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-        "recovery_deployment_id": "2bc75473-311c-4205-a9fd-ba20882b206c"
-      }
-    ]
-  },
-  "safeguards": {
-    "impact": {
-      "resources": [
-        {
-          "name": "Staging Postgres (no migration; ordinary scheduled captures only)",
-          "project_id": "c613898d-bf03-43a6-8813-761f72e1c00a",
-          "environment_id": "05d1eac2-510d-4bd3-999e-fea9ead766b7",
-          "service_id": "08c557d4-9d74-43fa-a0ac-5a909e731f4e"
-        },
-        {
-          "name": "Staging API",
-          "service_id": "5290becf-6956-4c5c-ab16-01d865587e07"
-        },
-        {
-          "name": "snkrdunk-collector",
-          "service_id": "2d7ab69b-ec1f-4c66-8da1-9c8769a6d14a",
-          "recovery_deployment_id": "bf28a669-1c48-4d79-9c67-30e3225170f8"
-        },
-        {
-          "name": "yuyutei-collector-shard-0",
-          "service_id": "6e39e82e-f73c-4eae-930c-7bf4dc7f2d67",
-          "recovery_deployment_id": "6dbcce04-0e85-442b-883e-e01c1cf61d93"
-        },
-        {
-          "name": "yuyutei-collector-shard-1",
-          "service_id": "8912a70e-0bc3-4e2f-89dd-8fab56af5acd",
-          "recovery_deployment_id": "19162cb7-ffa3-4451-af5e-9836b1dc77f3"
-        },
-        {
-          "name": "yuyutei-collector-shard-2",
-          "service_id": "0169974d-e181-4454-8a0d-65733a76cdb3",
-          "recovery_deployment_id": "64001afc-7642-4c94-89ab-26bce593ec15"
-        },
-        {
-          "name": "yuyutei-collector-shard-3",
-          "service_id": "5150aeb3-108b-40ef-8091-7c796edb299a",
-          "recovery_deployment_id": "758cf426-b342-4f90-bb6d-140608e5d9f2"
-        },
-        {
-          "name": "yuyutei-collector-shard-4-v2",
-          "service_id": "2f4b87da-369d-4b95-8341-0123e6c1c442",
-          "recovery_deployment_id": "7b05fe37-ab03-453b-a824-9979947d8f98"
-        },
-        {
-          "name": "yuyutei-collector-shard-5",
-          "service_id": "9666f7cb-516b-4bdd-a4dc-10ded8276b2e",
-          "recovery_deployment_id": "c0392329-5fca-40ab-85bf-078e13f60d4b"
-        },
-        {
-          "name": "yuyutei-collector-shard-6",
-          "service_id": "54051b0c-359d-47ec-8dcb-32535350c35f",
-          "recovery_deployment_id": "51ac2b1d-6fa1-4056-ab82-bbd0b74e9b6d"
-        },
-        {
-          "name": "yuyutei-collector-shard-7",
-          "service_id": "0eb249e7-ba9f-4d39-bdd4-802c0a23f9f3",
-          "recovery_deployment_id": "8215f924-cd1d-4abe-afdb-082e6e1208d0"
-        },
-        {
-          "name": "yuyutei-collector-shard-8",
-          "service_id": "f83b902e-f79c-49f4-a2f6-b13018be1926",
-          "recovery_deployment_id": "2bc75473-311c-4205-a9fd-ba20882b206c"
-        }
-      ],
-      "routes": [
-        "Existing admitted ordinary due-work captures on yuyu-tei.jp and snkrdunk.com; fewer homepage and subresource requests per capture; no manual source invocation"
-      ],
-      "dependencies": [
-        "Freshness admission/reservation/settle fence unchanged per attempt; f9e5b4a8c012 schema; daily-v1 writer unchanged"
-      ],
-      "deployment_impact": "This merge changes no collector watch path (.github/workflows and docs only), so Railway builds no collector from GitHub. Its merge commit contains PR #96's code, which the sequential delivery uploads to each collector ONE AT A TIME in its own safe slot and verifies before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each. Collectors re-verified 13:22Z on their verified 05f099d images (session-8 handoff evidence/live-before-pr98.json).",
-      "database_writes": 0,
-      "source_requests": 0,
-      "estimated_runtime_minutes": 150
-    },
-    "recovery": {
-      "artifact": "05f099db30e735605fb72b542699ac75559ad8d7",
-      "procedure": "Automatic during rollout: every touched collector restored newest-first to its verified 05f099d image (deployments listed in collector_services, restored 10:35-11:00Z) via collector_variables.restore. After delivery: python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging, one at a time. A native revert of PR #96 touches collector paths and would again auto-build every collector; avoid it, restore images instead and fix forward.",
-      "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression; deployment failure; schedule or flag drift",
-      "backup": "No schema or stored-data change. Verified 05f099d images active and redeployable at 13:22Z (session-8 handoff evidence/live-before-pr98.json).",
-      "validation": [
-        "scripts/tests/test_collector_variables.py",
-        "scripts/tests/test_deploy_staging_collectors.py",
-        "docs/agent/evidence/turn-warmed-context-preflight-20261010.json"
-      ]
-    },
-    "verification": {
-      "required_checks": [
-        "engineering-gate"
-      ],
-      "post_change": [
-        "scripts/verify_staging_delivery.py",
-        "scripts/verify_snkr_published_discovery_component.py",
-        "scripts/verify_yuyu_raw_reader_component.py",
-        "scripts/generate_staging_state.py"
-      ],
-      "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below the 24h baseline (Yuyu 55.3, SNKR 160-172; peaks 94.0%/95.4%), identical prices on sampled mappings, 0 denials/403/429/challenges, no reservation overrun or lease leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups. Unverified-build evidence already measured: 56 Yuyu captures avg 30.6-33.5 requests, 56/56 identical prices."
-    }
-  },
-  "diff_sha256": "a60686e87256954d9b13b1be3cee9b75e3f2102ab6dbd52d52d3cb34f92fff85"
+  "snkr_component": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+  "yuyu_reader_component": "a8522447c6933d05e94e01d5789cdcd5160c10da",
+  "yuyu_capacity_cadence": true
+ }
 }

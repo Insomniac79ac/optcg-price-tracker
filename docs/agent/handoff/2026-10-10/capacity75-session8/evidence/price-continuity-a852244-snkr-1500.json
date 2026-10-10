@@ -1,0 +1,30 @@
+{
+ "window": [
+  "2026-10-10T14:04:30Z",
+  "2026-10-10T15:05Z"
+ ],
+ "read_only": true,
+ "summary": {
+  "observations": 1,
+  "with_previous": 1,
+  "identical_price": 1,
+  "identical_price_stock_promo": 1,
+  "changed": []
+ },
+ "rows": [
+  {
+   "id": 34968,
+   "m": 2133,
+   "price_type": "floor",
+   "price_jpy": 1100,
+   "stock_status": null,
+   "promotion_state": null,
+   "observed_at": "2026-10-10 14:33:44.497932+00:00",
+   "name": "snkrdunk",
+   "prev_price": 1100,
+   "prev_stock": null,
+   "prev_promo": null,
+   "prev_at": "2026-10-09 15:29:46.800671+00:00"
+  }
+ ]
+}
