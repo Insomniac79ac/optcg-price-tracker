@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Capacity75 session 8 (2026-10-10): encode RAW snapshots before the first INSERT (no plaintext TOAST row version); collector_variables recovery scan widened; native ten-collector release, daily-v1 unchanged",
+  "mission": "Capacity75 session 8 (2026-10-10): encode RAW snapshots before the first INSERT (no plaintext TOAST row version); collector releases now roll out one at a time with all-or-nothing rollback; collector_variables recovery scan widened; sequential ten-collector release, daily-v1 unchanged",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -45,13 +45,29 @@
     {
       "files": [
         "docs/agent/RAW_STORAGE_DAILY_ADMISSION.md",
-        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json"
+        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+        "docs/agent/STAGING_DELIVERY.md"
       ],
       "effects": [
         "documentation",
         "state_observation"
       ],
       "reason": "Documents the writer change and records the read-only fleet/storage preflight and rollback procedure."
+    },
+    {
+      "files": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/staging-delivery.yml",
+        "scripts/deploy_staging_collectors.py",
+        "scripts/tests/test_deploy_staging_collectors.py",
+        "scripts/tests/test_operational_health.py"
+      ],
+      "effects": [
+        "infrastructure",
+        "tests",
+        "staging_deployment"
+      ],
+      "reason": "Delivery rollout becomes sequential: every collector's rollback source is proven before any upload; forward release starts only 06:00-23:00 UTC; each collector is uploaded only in its own safe slot (>=5 min after a fire, >=8 min before the next, no open attempt), followed to SUCCESS and re-verified (marker, schedule, start command, writer flags) before the next; any failure restores every touched collector newest-first via collector_variables.restore. Delivery job timeout 60 -> 180 min. Stricter than before; no new provider capability, credential or source request."
     }
   ],
   "deployment_verification": {
@@ -187,20 +203,22 @@
       "dependencies": [
         "f9e5b4a8c012 schema, e8 dependency protection, readers and portable backup19 unchanged; envelope/ledger representation identical"
       ],
-      "deployment_impact": "Native ten-collector image update plus API (shared package). Crons, start commands, budgets, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified. Verifiers await completed natural runs on the new component for SNKR and all nine shards.",
+      "deployment_impact": "Native ten-collector image update plus API (shared package), released ONE AT A TIME by the sequential delivery rollout, each in its own safe slot and verified before the next. Crons, start commands, budgets, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each. Verifiers await completed natural runs on the new component for SNKR and all nine shards.",
       "database_writes": 0,
       "source_requests": 0,
-      "estimated_runtime_minutes": 60
+      "estimated_runtime_minutes": 150
     },
     "recovery": {
       "artifact": "5be24267c085a41c779b10708a1bdec622c5f368",
-      "procedure": "All-or-nothing: restore every collector, one at a time, to its activation image (commit 1b1b64d, digests in the preflight) with daily-v1 values via scripts/collector_variables.py --restore --expect-digest, verifying digest, marker, schedule, start command and variables after each; then native revert of this PR. Recovery sources listed in collector_services are canRedeploy=true with the identical digest (fleet preflight 07:31Z). No data rollback: new rows use the identical envelope/ledger the activation readers decode. No RAW expansion, no Run Now.",
+      "procedure": "Automatic and all-or-nothing: on any rollout failure the delivery restores every collector already touched, newest first, to its recorded original image (commit 1b1b64d, digests in the preflight) and flags via collector_variables.restore, verifying digest, marker, schedule, start command and variables after each. After delivery, the same restore is run manually per collector (scripts/collector_variables.py --restore --expect-digest) if a natural-run trigger fires; then native revert of this PR. Recovery sources are canRedeploy=true with the identical digest (fleet preflight 07:31Z; re-proven by the rollout before any upload). No data rollback: new rows use the identical envelope/ledger the activation readers decode. No RAW expansion, no Run Now.",
       "trigger": "any lossless verification failure on a new encoded row; writer errors or collection failures above baseline; source denial, 403/429/challenge, duplicate or uncontrolled request, lease/reservation leak; deployment failure; schedule, start command or writer variable drift; 24h freshness regression",
       "backup": "No schema or historical RAW change; existing 3,253+ encoded rows verified lossless in session 7 and re-verified with every new row after delivery. Activation images retained and redeployable.",
       "validation": [
         "services/api/tests/test_raw_dictionary_storage_postgres.py",
         "scripts/tests/test_collector_variables.py",
-        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json"
+        "docs/agent/evidence/raw-encode-before-insert-preflight-20261010.json",
+        "scripts/tests/test_deploy_staging_collectors.py",
+        "scripts/tests/test_operational_health.py"
       ]
     },
     "verification": {
