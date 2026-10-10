@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "mission": "Capacity75 session 8 (2026-10-10): deliver PR #96's per-turn browser code (already merged at 419210d) through the verified sequential rollout, after Railway's GitHub integration auto-built it on all ten collectors in parallel and they were restored to verified 05f099d images; recovery scan skips image-less marked records",
+  "mission": "Capacity75 session 8 (2026-10-10): deliver PR #96's per-turn browser code (merged at 419210d, still undelivered because PR #97's delivery job failed on a transient HTTP 504 while waiting for the native merge) through the verified sequential rollout; merge-wait loops retry transient PR-read errors",
   "target": "staging",
   "classification": "AMBER",
   "red_decisions": {
@@ -20,16 +20,15 @@
   "impacts": [
     {
       "files": [
-        "scripts/collector_variables.py",
-        "scripts/tests/test_collector_variables.py"
+        ".github/workflows/ci.yml",
+        ".github/workflows/staging-delivery.yml"
       ],
       "effects": [
-        "application",
-        "tests",
+        "infrastructure",
         "staging_deployment",
-        "infrastructure"
+        "tests"
       ],
-      "reason": "original_source skipped nothing when a marked SKIPPED record (no imageDigest) was newest: digest() raised and aborted the recovery scan (rollback attempt 1, 10:00-10:29Z, made no change). It now skips image-less candidates. Regression test. This PR's merge requests the ten-collector sequential release of the merged PR #96 code (AMBER)."
+      "reason": "PR #97's merge-wait poll got HTTP 504 at 11:42:38Z; bash -e failed the delivery job, yet the armed native auto-merge landed 3d8421b at 11:42:44Z with no rollout. A failed or unparsable PR read is now one failed poll, retried within the same 120-poll budget; successful reads are checked exactly as before (head, merged, open). Stub test: two 504s then merged -> exit 0 with sha; two 504s then closed -> exit 1. This PR's merge requests the ten-collector sequential release of the merged PR #96 code (AMBER)."
     },
     {
       "files": [
@@ -38,7 +37,7 @@
       "effects": [
         "documentation"
       ],
-      "reason": "Collector-directory merges deploy every collector at once via Railway watch patterns; deliver collector code with a scripts/docs-only follow-up PR; PR edits re-run delivery."
+      "reason": "Records the PR #97 merge-without-rollout, the retry, and the remaining disarm/merge race with its recovery (follow-up PR, never a re-run)."
     }
   ],
   "deployment_verification": {
@@ -174,7 +173,7 @@
       "dependencies": [
         "Freshness admission/reservation/settle fence unchanged per attempt; f9e5b4a8c012 schema; daily-v1 writer unchanged"
       ],
-      "deployment_impact": "This merge changes no collector watch path (scripts/docs only), so Railway builds no collector from GitHub. Its merge commit contains PR #96's code, which the sequential delivery uploads to each collector ONE AT A TIME in its own safe slot and verifies before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each.",
+      "deployment_impact": "This merge changes no collector watch path (.github/workflows and docs only), so Railway builds no collector from GitHub. Its merge commit contains PR #96's code, which the sequential delivery uploads to each collector ONE AT A TIME in its own safe slot and verifies before the next. Crons, start commands, budgets, reservations, pacing, claim cap, SNKR singleton and daily-v1 variables unchanged and re-verified after each. Collectors re-verified 13:22Z on their verified 05f099d images (session-8 handoff evidence/live-before-pr98.json).",
       "database_writes": 0,
       "source_requests": 0,
       "estimated_runtime_minutes": 150
@@ -183,7 +182,7 @@
       "artifact": "05f099db30e735605fb72b542699ac75559ad8d7",
       "procedure": "Automatic during rollout: every touched collector restored newest-first to its verified 05f099d image (deployments listed in collector_services, restored 10:35-11:00Z) via collector_variables.restore. After delivery: python3 scripts/collector_variables.py --service <name> --commit 05f099db30e735605fb72b542699ac75559ad8d7 --expect-digest <digest> --restore --set RAW_DICTIONARY_STORAGE_ENABLED=true --set RAW_DICTIONARY_STORAGE_MODE=daily-v1 --set APP_ENV=staging, one at a time. A native revert of PR #96 touches collector paths and would again auto-build every collector; avoid it, restore images instead and fix forward.",
       "trigger": "any 403/429/challenge/source_denial; capture or parse regression; requests per capture not lower; reservation exceeded; lease/reservation leak; turn browser errors above baseline; freshness regression; deployment failure; schedule or flag drift",
-      "backup": "No schema or stored-data change. Verified 05f099d images restored and redeployable (evidence/live-after-rollback in the session-8 handoff).",
+      "backup": "No schema or stored-data change. Verified 05f099d images active and redeployable at 13:22Z (session-8 handoff evidence/live-before-pr98.json).",
       "validation": [
         "scripts/tests/test_collector_variables.py",
         "scripts/tests/test_deploy_staging_collectors.py",
@@ -203,5 +202,5 @@
       "observation_window": "Delivery artifact plus completed natural runs on the new component for SNKR and all nine shards. Then: requests per capture and budget peak below the 24h baseline (Yuyu 55.3, SNKR 160-172; peaks 94.0%/95.4%), identical prices on sampled mappings, 0 denials/403/429/challenges, no reservation overrun or lease leak, freshness unchanged, SNKR homepage RAW rows ~ warm-ups. Unverified-build evidence already measured: 56 Yuyu captures avg 30.6-33.5 requests, 56/56 identical prices."
     }
   },
-  "diff_sha256": "1872df15501feabc79fe4f3a6ac7d90293197bb6fc7a107face3e7481d3a593b"
+  "diff_sha256": "a60686e87256954d9b13b1be3cee9b75e3f2102ab6dbd52d52d3cb34f92fff85"
 }

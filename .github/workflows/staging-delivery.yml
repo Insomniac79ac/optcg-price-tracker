@@ -77,7 +77,15 @@ jobs:
           HEAD: ${{ inputs.head }}
         run: |
           for attempt in $(seq 1 120); do
-            gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json
+            # A transient API error (PR #97: HTTP 504 at 11:42:38Z) is one failed
+            # poll, not a failed delivery: native auto-merge stays armed and would
+            # land the merge with no rollout. Retry within the same bounded budget;
+            # every successful read is still checked as before.
+            if ! gh api "repos/$REPO/pulls/$PR" > /tmp/merged.json || ! jq -e .number /tmp/merged.json > /dev/null; then
+              echo "::warning::PR read failed (attempt $attempt); retrying"
+              sleep 15
+              continue
+            fi
             test "$(jq -r '.head.sha' /tmp/merged.json)" = "$HEAD"
             merged=$(jq -r '.merged' /tmp/merged.json)
             if [ "$merged" = true ]; then
