@@ -220,5 +220,20 @@
  "busy_window": "Delivery 2026-10-10 ~08:00Z, outside 02:00-06:00Z.",
  "source_requests": 0,
  "database_writes_by_delivery": 0,
- "production_accessed": false
+ "production_accessed": false,
+ "sequential_rollout": {
+  "added_at": "2026-10-10T08:25:00Z",
+  "why": "Session-8 rule: any collector release one at a time with all-or-nothing rollback. The previous delivery uploaded all ten at once (e.g. 79ef941, 2026-10-05, ten in ~3 min) with no automatic rollback. Auto-merge on PR #95 was disarmed at ~07:50Z before merge; nothing was released.",
+  "order": [
+   "snkrdunk-collector",
+   "yuyutei-collector-shard-0..8 (shard-4-v2) in manifest order"
+  ],
+  "per_collector": "safe slot (>=5 min after its scheduled fire, >=8 min before the next, 0 open freshness_attempts for its claim prefix) -> railway up -> SUCCESS (1 build retry, 1 watched-snapshot redeploy) -> verify marker, SUCCESS, schedule, start command, writer flags -> next",
+  "busy_window": "forward release refused unless started 06:00-23:00 UTC (job bounded at 180 min)",
+  "rollback": "automatic on any failure: collector_variables.restore of every touched collector, newest first, to the recorded original image and flags, verified each; rollback slots ignore the busy window",
+  "rollback_preproof": "before any upload, every collector's active verified upload and a redeployable same-image source must resolve (collector_variables.original_source over the last 100 deployments)",
+  "unproven": "The CI rollback path uses `railway variable set --skip-deploys` (no-op re-set of identical writer flags) with STAGING_RAILWAY_TOKEN; that token's variable-write permission has not been exercised in CI. If it is refused, the rollout reports ROLLBACK INCOMPLETE and the operator runs the same restore locally (scripts/collector_variables.py --restore), as preflighted.",
+  "estimated_runtime_minutes": "~35-60 typical (10 x ~3 min builds plus slot waits); bounded by the 180-minute job",
+  "tests": "scripts/tests: 193 passed (sequential order, slot rules, busy window, rollback newest-first, no success receipt on failure, refusal without a rollback source, flag drift rollback)"
+ }
 }
